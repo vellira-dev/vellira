@@ -1,0 +1,51 @@
+name: Semantic Vocabulary Audit
+
+on:
+  push:
+    branches:
+      - refactor/semantic-vocabulary-v1
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refactor/semantic-vocabulary-v1
+      - name: Audit semantic vocabulary references
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          audit() {
+            label="$1"
+            pattern="$2"
+            echo
+            echo "===== ${label} ====="
+            git grep -n -E "$pattern" -- \
+              ':!packages/tokens/src/generated/**' \
+              ':!packages/tokens/dist/**' \
+              ':!.github/workflows/semantic-vocabulary-audit.yml' || true
+          }
+
+          audit 'surface.background' 'surface\.background|background:[[:space:]]*surface\.'
+          audit 'action.secondary' 'action\.secondary|semantic\.action\.secondary'
+          audit 'action.close' 'action\.close|semantic\.action\.close'
+          audit 'icons.primary' 'icons\.primary|semantic\.icons\.primary'
+          audit 'icons.hover' 'icons\.hover|semantic\.icons\.hover'
+          audit 'status strong' 'status\.[A-Za-z]+\.strong|status\[[^]]+\]\.strong|\.strong'
+          audit 'border.focus' 'border\.focus|semantic\.border\.focus'
+          audit 'focus.ring.offset' 'focus\.ring\.offset|ring\.offset'
+          audit 'overlay.popover' 'overlay\.popover|semantic\.overlay\.popover'
+          audit 'overlay.modal' 'overlay\.modal|semantic\.overlay\.modal'
+          audit 'navigation legacy roles' 'navigation\.(brandHover|tabHover|tabFocus|optionHover|optionActive|triggerHover)|\b(brandHover|tabHover|tabFocus|optionHover|optionActive|triggerHover)\b'
+          audit 'semantic action family' 'semantic\.action|\baction\.(primary|secondary|close|danger)\b'
+          audit 'semantic navigation family' 'semantic\.navigation|\bnavigation\.'
+
+          echo
+          echo '===== generated identity references (separate evidence) ====='
+          git grep -n -E 'surface-background|action-(secondary|close)|icons-(primary|hover)|status-[a-z]+-strong|border-focus|focus-ring-offset|overlay-(popover|modal)' -- \
+            'packages/tokens/src/generated/**' 'packages/tokens/dist/**' || true
