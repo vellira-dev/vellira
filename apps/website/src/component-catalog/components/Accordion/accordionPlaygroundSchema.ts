@@ -7,11 +7,6 @@ import type { AccordionPlaygroundValue } from './AccordionPlayground';
 
 export const accordionPlaygroundControls = [
   {
-    type: 'text',
-    key: 'value',
-    label: 'Value',
-  },
-  {
     type: 'toggle',
     key: 'collapsible',
     label: 'Collapsible',

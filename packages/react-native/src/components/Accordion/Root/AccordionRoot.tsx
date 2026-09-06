@@ -15,8 +15,7 @@ import { createStyles } from '../Accordion.styles';
 import { AccordionContent } from '../Content';
 import { AccordionItem } from '../Item';
 import { AccordionTrigger } from '../Trigger';
-
-import type { AccordionRootProps } from './types';
+import type { AccordionProps } from '../types';
 
 type InternalProps = {
   disabled?: boolean;
@@ -31,15 +30,11 @@ type InternalItemProps = {
   value: string;
 };
 
-export function AccordionRoot({
-  children,
-  type = 'single',
-  value,
-  defaultValue,
-  onValueChange,
-  collapsible = false,
-  disabled = false,
-}: AccordionRootProps) {
+export function AccordionRoot(props: AccordionProps) {
+  const { children, value, defaultValue, disabled = false } = props;
+  const type = props.type ?? 'single';
+  const collapsible =
+    props.type === 'multiple' ? false : (props.collapsible ?? false);
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const isControlled = value !== undefined;
@@ -61,23 +56,35 @@ export function AccordionRoot({
       if (disabled) return;
 
       const isExpanded = expandedValues.includes(itemValue);
-      const nextValues =
-        type === 'multiple'
-          ? isExpanded
-            ? expandedValues.filter((current) => current !== itemValue)
-            : [...expandedValues, itemValue]
-          : isExpanded
-            ? collapsible
-              ? []
-              : expandedValues
-            : [itemValue];
-      const nextValue =
-        type === 'multiple' ? nextValues : (nextValues[0] ?? '');
+
+      if (props.type === 'multiple') {
+        const nextValues = isExpanded
+          ? expandedValues.filter((current) => current !== itemValue)
+          : [...expandedValues, itemValue];
+
+        if (!isControlled) setUncontrolledValue(nextValues);
+        props.onValueChange?.(nextValues);
+        return;
+      }
+
+      const nextValues = isExpanded
+        ? collapsible
+          ? []
+          : expandedValues
+        : [itemValue];
+      const nextValue = nextValues[0] ?? '';
 
       if (!isControlled) setUncontrolledValue(nextValue);
-      onValueChange?.(nextValue as never);
+      props.onValueChange?.(nextValue);
     },
-    [collapsible, disabled, expandedValues, isControlled, onValueChange, type]
+    [
+      collapsible,
+      disabled,
+      expandedValues,
+      isControlled,
+      props.onValueChange,
+      props.type,
+    ]
   );
 
   const enhanceItem = (node: ReactNode): ReactNode => {

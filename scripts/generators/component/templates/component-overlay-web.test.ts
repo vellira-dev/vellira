@@ -6,17 +6,19 @@ import {
 } from './component-overlay-web';
 
 describe('web overlay templates', () => {
-  it('renders shared overlay state props', () => {
+  it('derives shared overlay state from @vellira-ui/types', () => {
     const result = renderWebOverlayTypesTemplate({
       componentName: 'Dialog',
     });
 
-    expect(result).toContain('open?: boolean');
-    expect(result).toContain('defaultOpen?: boolean');
-    expect(result).toContain('onOpenChange?: (open: boolean) => void');
+    expect(result).toContain("from '@vellira-ui/types'");
+    expect(result).toContain('BaseDialogProps');
+    expect(result).not.toContain('open?: boolean');
+    expect(result).not.toContain('defaultOpen?: boolean');
+    expect(result).not.toContain('onOpenChange?: (open: boolean) => void');
   });
 
-  it('renders browser-specific overlay behavior props', () => {
+  it('keeps browser-specific overlay behavior props in the web adapter', () => {
     const result = renderWebOverlayTypesTemplate({
       componentName: 'Dialog',
     });

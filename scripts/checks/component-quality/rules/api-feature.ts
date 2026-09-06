@@ -18,6 +18,7 @@ type SourceSnapshot = {
   indexSource: string;
   typesSource: string;
   implementationSource: string;
+  runtimeSource: string;
   combinedSource: string;
 };
 
@@ -98,12 +99,20 @@ function readSourceSnapshot(
       indexSource: '',
       typesSource: '',
       implementationSource: '',
+      runtimeSource: '',
       combinedSource: '',
     };
   }
 
   const sourceFiles = collectSourceFiles(componentDir);
   const combinedSource = sourceFiles
+    .map((filePath) => readIfExists(filePath))
+    .join('\n');
+  const runtimeSource = sourceFiles
+    .filter((filePath) => {
+      const fileName = path.basename(filePath);
+      return fileName !== 'types.ts' && fileName !== 'index.ts';
+    })
     .map((filePath) => readIfExists(filePath))
     .join('\n');
 
@@ -114,8 +123,36 @@ function readSourceSnapshot(
     implementationSource:
       readIfExists(path.join(componentDir, `${metadata.name}.tsx`)) ||
       readIfExists(path.join(componentDir, `${metadata.name}.ts`)),
+    runtimeSource,
     combinedSource,
   };
+}
+
+function hasLinkedRootPropsContract(
+  snapshot: SourceSnapshot,
+  componentName: string
+) {
+  const propsName = `${componentName}Props`;
+  const rootPropsName = `${componentName}RootProps`;
+
+  if (!snapshot.runtimeSource.includes(rootPropsName)) {
+    return false;
+  }
+
+  const rootTypesSource = readIfExists(
+    path.join(snapshot.componentDir, 'Root', 'types.ts')
+  );
+  const directAliases = [
+    `export type ${propsName} = ${rootPropsName};`,
+    `export type ${rootPropsName} = ${propsName};`,
+    `export interface ${propsName} extends ${rootPropsName}`,
+    `export interface ${rootPropsName} extends ${propsName}`,
+  ];
+
+  return directAliases.some(
+    (alias) =>
+      snapshot.typesSource.includes(alias) || rootTypesSource.includes(alias)
+  );
 }
 
 export const publicApiSurfaceRule: ComponentQualityRule = {
@@ -125,7 +162,7 @@ export const publicApiSurfaceRule: ComponentQualityRule = {
     severity: 'required',
     evaluation: 'automated',
     description:
-      'Checks that the component exposes its public symbol and Props contract.',
+      'Checks that the component exposes its public symbol and that its Props contract is tied to the callable implementation.',
   },
   evaluate(context) {
     const snapshot = readSourceSnapshot(
@@ -137,11 +174,12 @@ export const publicApiSurfaceRule: ComponentQualityRule = {
     const hasComponentExport = snapshot.indexSource.includes(
       context.metadata.name
     );
-    const hasPropsContract =
-      snapshot.typesSource.includes(propsName) ||
-      snapshot.combinedSource.includes(propsName);
+    const hasPropsContract = snapshot.typesSource.includes(propsName);
+    const propsTypeCallableComponent =
+      snapshot.runtimeSource.includes(propsName) ||
+      hasLinkedRootPropsContract(snapshot, context.metadata.name);
 
-    if (hasComponentExport && hasPropsContract) {
+    if (hasComponentExport && hasPropsContract && propsTypeCallableComponent) {
       return finding(publicApiSurfaceRule, context, 'pass', undefined, [
         path.relative(qualityRoot(context), snapshot.componentDir),
         propsName,
@@ -150,7 +188,10 @@ export const publicApiSurfaceRule: ComponentQualityRule = {
 
     const missing = [
       !hasComponentExport ? `public export for ${context.metadata.name}` : null,
-      !hasPropsContract ? `type contract ${propsName}` : null,
+      !hasPropsContract ? `top-level type contract ${propsName}` : null,
+      hasPropsContract && !propsTypeCallableComponent
+        ? `${propsName} linkage to the callable/root implementation`
+        : null,
     ].filter((value): value is string => value !== null);
 
     return finding(
@@ -160,6 +201,91 @@ export const publicApiSurfaceRule: ComponentQualityRule = {
       `Missing ${missing.join(' and ')}.`,
       [path.relative(qualityRoot(context), snapshot.componentDir)]
     );
+  },
+};
+
+function lowerCamel(value: string) {
+  return `${value[0]?.toLowerCase() ?? ''}${value.slice(1)}`;
+}
+
+export const sharedTypeContractRule: ComponentQualityRule = {
+  definition: {
+    id: 'api.shared-type-contract',
+    dimension: 'public-api',
+    severity: 'required',
+    evaluation: 'automated',
+    description:
+      'Checks canonical @vellira-ui/types ownership without imposing one renderer adapter shape.',
+  },
+  evaluate(context) {
+    const root = qualityRoot(context);
+    const snapshot = readSourceSnapshot(
+      root,
+      context.metadata,
+      context.platform
+    );
+    const sharedFileName = lowerCamel(context.metadata.name);
+    const sharedTypeFile = path.join(
+      root,
+      'packages',
+      'types',
+      'src',
+      `${sharedFileName}.ts`
+    );
+    const sharedTypeBarrel = path.join(
+      root,
+      'packages',
+      'types',
+      'src',
+      'index.ts'
+    );
+    const sharedSource = readIfExists(sharedTypeFile);
+    const barrelSource = readIfExists(sharedTypeBarrel);
+    const expectedSharedExport = `export * from './${sharedFileName}';`;
+    const dependencies = context.metadata.dependencies?.packages ?? [];
+    const declaresSharedDependency = dependencies.includes('@vellira-ui/types');
+    const hasSharedFile = fs.existsSync(sharedTypeFile);
+    const hasSharedBarrelExport = barrelSource.includes(expectedSharedExport);
+    const expectsSharedOwnership =
+      declaresSharedDependency || hasSharedFile || hasSharedBarrelExport;
+
+    if (!expectsSharedOwnership) {
+      return finding(sharedTypeContractRule, context, 'not-applicable');
+    }
+
+    const missing: string[] = [];
+
+    if (!declaresSharedDependency) {
+      missing.push('metadata dependency on @vellira-ui/types');
+    }
+
+    if (!hasSharedFile || sharedSource.trim().length === 0) {
+      missing.push('canonical shared type module');
+    }
+
+    if (!hasSharedBarrelExport) {
+      missing.push('shared types barrel export');
+    }
+
+    if (!snapshot.combinedSource.includes('@vellira-ui/types')) {
+      missing.push('renderer derivation/import from @vellira-ui/types');
+    }
+
+    return missing.length === 0
+      ? finding(sharedTypeContractRule, context, 'pass', undefined, [
+          path.relative(root, sharedTypeFile),
+          path.relative(root, snapshot.componentDir),
+        ])
+      : finding(
+          sharedTypeContractRule,
+          context,
+          'fail',
+          `Canonical shared type ownership is incomplete: ${missing.join(', ')}.`,
+          [
+            path.relative(root, sharedTypeFile),
+            path.relative(root, snapshot.componentDir),
+          ]
+        );
   },
 };
 
@@ -278,6 +404,7 @@ export const declaredCapabilitiesRule: ComponentQualityRule = {
 
 export const apiFeatureQualityRules: readonly ComponentQualityRule[] = [
   publicApiSurfaceRule,
+  sharedTypeContractRule,
   controlledContractRule,
   declaredCapabilitiesRule,
 ];

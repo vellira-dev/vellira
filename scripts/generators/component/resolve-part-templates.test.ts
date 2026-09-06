@@ -14,6 +14,7 @@ const plan: ComponentGenerationPlan = {
   category: 'navigation',
   profile: 'compound',
   control: 'value',
+  typeOwnership: 'shared',
   capabilities: [],
   icons: [],
   tokens: [],

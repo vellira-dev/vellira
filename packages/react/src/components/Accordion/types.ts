@@ -1,21 +1,14 @@
+import type { BaseAccordionProps } from '@vellira-ui/types';
 import type { ReactNode } from 'react';
 
-export type AccordionProps =
-  | {
+type WithChildren<T> = T extends unknown
+  ? T & {
       children?: ReactNode;
-      type?: 'single';
-      value?: string;
-      defaultValue?: string;
-      onValueChange?: (value: string) => void;
-      collapsible?: boolean;
-      disabled?: boolean;
     }
-  | {
-      children?: ReactNode;
-      type: 'multiple';
-      value?: string[];
-      defaultValue?: string[];
-      onValueChange?: (value: string[]) => void;
-      collapsible?: never;
-      disabled?: boolean;
-    };
+  : never;
+
+export type AccordionProps = WithChildren<BaseAccordionProps>;
+
+export type { AccordionContentProps } from './Content';
+export type { AccordionItemProps } from './Item';
+export type { AccordionTriggerProps } from './Trigger';

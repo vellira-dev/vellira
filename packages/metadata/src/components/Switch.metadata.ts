@@ -14,6 +14,9 @@ export const switchMetadata = defineComponentMetadata({
     'required',
     'invalid',
   ],
+  dependencies: {
+    packages: ['@vellira-ui/types'],
+  },
   requirements: {
     tests: true,
     storybook: true,

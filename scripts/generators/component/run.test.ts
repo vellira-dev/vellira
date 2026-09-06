@@ -73,6 +73,11 @@ describe('public API', () => {
     fs.writeFileSync(path.join(root, 'packages', packageName, 'API.md'), '');
   }
 
+  const sharedTypesDir = path.join(root, 'packages', 'types', 'src');
+
+  fs.mkdirSync(sharedTypesDir, { recursive: true });
+  fs.writeFileSync(path.join(sharedTypesDir, 'index.ts'), '');
+
   const metadataDir = path.join(
     root,
     'packages',

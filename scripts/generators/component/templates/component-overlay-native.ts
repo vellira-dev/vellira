@@ -3,13 +3,11 @@ import type { ComponentTemplateParams } from './component-types';
 export function renderNativeOverlayTypesTemplate({
   componentName,
 }: ComponentTemplateParams) {
-  return `import type { ReactNode } from 'react';
+  return `import type { Base${componentName}Props } from '@vellira-ui/types';
+import type { ReactNode } from 'react';
 
-export type ${componentName}Props = {
+export type ${componentName}Props = Base${componentName}Props & {
   children?: ReactNode;
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
   closeOnOutsidePress?: boolean;
   restoreFocus?: boolean;
 };

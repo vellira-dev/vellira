@@ -26,6 +26,7 @@ const createPlan = (
   category: 'utility',
   profile,
   control,
+  typeOwnership: profile === 'base' ? 'platform' : 'shared',
   capabilities: [],
   icons: [],
   tokens: [],

@@ -30,6 +30,11 @@ function createLayerBarrels(
     fs.writeFileSync(path.join(layerDir, 'index.ts'), '');
   }
 
+  const sharedTypesDir = path.join(root, 'packages', 'types', 'src');
+
+  fs.mkdirSync(sharedTypesDir, { recursive: true });
+  fs.writeFileSync(path.join(sharedTypesDir, 'index.ts'), '');
+
   const metadataDir = path.join(
     root,
     'packages',

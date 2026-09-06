@@ -2,11 +2,11 @@ import { Children, Fragment, isValidElement } from 'react';
 
 import type { ReactElement, ReactNode } from 'react';
 
-import type { AccordionRootProps } from './Root/types';
 import { AccordionContent } from './Content';
 import { AccordionItem } from './Item';
 import { AccordionRoot } from './Root';
 import { AccordionTrigger } from './Trigger';
+import type { AccordionProps } from './types';
 
 function flattenItems(children: ReactNode): ReactNode[] {
   return Children.toArray(children).flatMap((child) => {
@@ -23,7 +23,7 @@ function flattenItems(children: ReactNode): ReactNode[] {
 function AccordionRootWithFlattenedItems({
   children,
   ...props
-}: AccordionRootProps) {
+}: AccordionProps) {
   return <AccordionRoot {...props}>{flattenItems(children)}</AccordionRoot>;
 }
 

@@ -6,15 +6,19 @@ import {
 } from './component-overlay-part-web';
 
 describe('web overlay part templates', () => {
-  it('renders overlay Root state types', () => {
+  it('routes overlay Root through the component-level public props contract', () => {
     const types = renderWebOverlayPartTypesTemplate({
       componentName: 'Dialog',
       partName: 'Root',
     });
+    const root = renderWebOverlayPartComponentTemplate({
+      componentName: 'Dialog',
+      partName: 'Root',
+    });
 
-    expect(types).toContain('open?: boolean');
-    expect(types).toContain('defaultOpen?: boolean');
-    expect(types).toContain('onOpenChange?: (open: boolean) => void');
+    expect(types).not.toContain('DialogRootProps');
+    expect(root).toContain('DialogProps');
+    expect(root).toContain("from '../types'");
   });
 
   it('renders a browser overlay Trigger', () => {

@@ -554,6 +554,7 @@ function plan(root: string): ComponentGenerationPlan {
     category: 'data-display',
     profile: 'base',
     control: 'value',
+    typeOwnership: 'platform',
     capabilities: [],
     icons: [],
     tokens: [],

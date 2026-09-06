@@ -12,6 +12,9 @@ import type {
   ComponentProfileArg,
   FormControlKindArg,
 } from './cli';
+import { resolveComponentTypeOwnership } from './type-ownership';
+
+import type { ComponentTypeOwnership } from './type-ownership';
 
 export type ComponentTargetPackage = 'react' | 'react-native';
 
@@ -37,6 +40,7 @@ export type ComponentGenerationPlan = {
   category: ComponentGeneratorOptions['category'];
   profile: ComponentProfileArg;
   control: FormControlKindArg;
+  typeOwnership: ComponentTypeOwnership;
   capabilities: readonly ComponentCapability[];
   icons: readonly ComponentIconRequirement[];
   tokens: readonly string[];
@@ -169,6 +173,7 @@ export function createComponentGenerationPlan(params: {
     category: options.category,
     profile: options.profile,
     control: options.control ?? 'value',
+    typeOwnership: resolveComponentTypeOwnership(options),
     capabilities: options.capabilities ?? [],
     icons: options.icons ?? [],
     tokens: options.tokens ?? [],

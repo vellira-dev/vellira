@@ -1,8 +1,10 @@
 import {
   renderCompoundComponentTemplate,
+  renderCompoundTypesTemplate,
   renderFormControlComponentTemplate,
   renderFormControlTypesTemplate,
   renderNativeComponentTemplate,
+  renderSharedRendererTypesTemplate,
   renderTypesTemplate,
   renderWebComponentTemplate,
   renderNativeOverlayComponentTemplate,
@@ -44,8 +46,9 @@ export function resolveComponentTemplates(params: {
 
     case 'compound':
       return {
-        types: renderTypesTemplate({
+        types: renderCompoundTypesTemplate({
           componentName,
+          parts: plan.parts,
         }),
         component: renderCompoundComponentTemplate({
           componentName,
@@ -91,9 +94,10 @@ export function resolveComponentTemplates(params: {
 
     case 'base':
       return {
-        types: renderTypesTemplate({
-          componentName,
-        }),
+        types:
+          plan.typeOwnership === 'shared'
+            ? renderSharedRendererTypesTemplate({ componentName })
+            : renderTypesTemplate({ componentName }),
         component: target.isNative
           ? renderNativeComponentTemplate({
               componentName,

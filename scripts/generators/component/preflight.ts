@@ -105,6 +105,18 @@ export function validateComponentGenerationPlan(
     );
   }
 
+  if (plan.typeOwnership === 'shared') {
+    if (!fs.existsSync(plan.sharedTypesBarrelFile)) {
+      errors.push(
+        `Missing shared types barrel file: ${plan.sharedTypesBarrelFile}`
+      );
+    }
+
+    if (fs.existsSync(plan.sharedTypesFile)) {
+      existingTargets.push(plan.sharedTypesFile);
+    }
+  }
+
   if (!fs.existsSync(plan.metadataBarrelFile)) {
     errors.push(`Missing metadata barrel file: ${plan.metadataBarrelFile}`);
   } else {

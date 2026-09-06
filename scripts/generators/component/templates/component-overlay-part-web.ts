@@ -10,14 +10,8 @@ export function renderWebOverlayPartTypesTemplate({
 }: OverlayPartTemplateParams) {
   switch (partName) {
     case 'Root':
-      return `import type { ReactNode } from 'react';
-
-export type ${componentName}RootProps = {
-  children?: ReactNode;
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-};
+      return `// ${componentName}Root consumes the component-level ${componentName}Props contract.
+export {};
 `;
 
     case 'Trigger':
@@ -69,11 +63,9 @@ export function renderWebOverlayPartComponentTemplate({
 }: OverlayPartTemplateParams) {
   switch (partName) {
     case 'Root':
-      return `import type { ${componentName}RootProps } from './types';
+      return `import type { ${componentName}Props } from '../types';
 
-export function ${componentName}Root({
-  children,
-}: ${componentName}RootProps) {
+export function ${componentName}Root({ children }: ${componentName}Props) {
   return <>{children}</>;
 }
 `;

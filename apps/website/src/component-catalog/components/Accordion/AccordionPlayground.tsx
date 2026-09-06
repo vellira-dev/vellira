@@ -12,7 +12,6 @@ import { PlaygroundControlsFromSchema } from '../../shared/PlaygroundControls';
 import { accordionPlaygroundControls } from './accordionPlaygroundSchema';
 
 export type AccordionPlaygroundValue = {
-  value: string;
   collapsible: boolean;
   disabled: boolean;
 };
@@ -29,7 +28,6 @@ type AccordionPlaygroundProps = {
 };
 
 export const initialAccordionPlaygroundValue: AccordionPlaygroundValue = {
-  value: '',
   collapsible: false,
   disabled: false,
 };

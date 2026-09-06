@@ -452,6 +452,10 @@ const publicSymbolContracts = {
     'tokenPaths',
   ],
   'packages/types/src/index.ts': [
+    'BaseAccordionContentProps',
+    'BaseAccordionItemProps',
+    'BaseAccordionProps',
+    'BaseAccordionTriggerProps',
     'BaseButtonProps',
     'BaseCheckboxProps',
     'BaseDropdownContentProps',

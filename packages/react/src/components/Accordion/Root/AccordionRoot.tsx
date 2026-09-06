@@ -13,8 +13,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AccordionContent } from '../Content';
 import { AccordionItem } from '../Item';
 import { AccordionTrigger } from '../Trigger';
-
-import type { AccordionRootProps } from './types';
+import type { AccordionProps } from '../types';
 
 import styles from '../Accordion.module.scss';
 
@@ -34,15 +33,11 @@ type InternalItemProps = {
   value: string;
 };
 
-export function AccordionRoot({
-  children,
-  type = 'single',
-  value,
-  defaultValue,
-  onValueChange,
-  collapsible = false,
-  disabled = false,
-}: AccordionRootProps) {
+export function AccordionRoot(props: AccordionProps) {
+  const { children, value, defaultValue, disabled = false } = props;
+  const type = props.type ?? 'single';
+  const collapsible =
+    props.type === 'multiple' ? false : (props.collapsible ?? false);
   const instanceId = useId();
   const isControlled = value !== undefined;
   const [uncontrolledValue, setUncontrolledValue] = useState<string | string[]>(
@@ -63,24 +58,35 @@ export function AccordionRoot({
       if (disabled) return;
 
       const isExpanded = expandedValues.includes(itemValue);
-      let nextValues: string[];
 
-      if (type === 'multiple') {
-        nextValues = isExpanded
+      if (props.type === 'multiple') {
+        const nextValues = isExpanded
           ? expandedValues.filter((current) => current !== itemValue)
           : [...expandedValues, itemValue];
-      } else if (isExpanded) {
-        nextValues = collapsible ? [] : expandedValues;
-      } else {
-        nextValues = [itemValue];
+
+        if (!isControlled) setUncontrolledValue(nextValues);
+        props.onValueChange?.(nextValues);
+        return;
       }
 
-      const nextValue =
-        type === 'multiple' ? nextValues : (nextValues[0] ?? '');
+      const nextValues = isExpanded
+        ? collapsible
+          ? []
+          : expandedValues
+        : [itemValue];
+      const nextValue = nextValues[0] ?? '';
+
       if (!isControlled) setUncontrolledValue(nextValue);
-      onValueChange?.(nextValue as never);
+      props.onValueChange?.(nextValue);
     },
-    [collapsible, disabled, expandedValues, isControlled, onValueChange, type]
+    [
+      collapsible,
+      disabled,
+      expandedValues,
+      isControlled,
+      props.onValueChange,
+      props.type,
+    ]
   );
 
   const enhanceItem = (node: ReactNode): ReactNode => {

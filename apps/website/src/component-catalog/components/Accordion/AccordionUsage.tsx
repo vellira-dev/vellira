@@ -69,10 +69,6 @@ function createAccordionCode(
     </Accordion.Content>
   </Accordion.Item>`;
 
-  if (value.value) {
-    props.push(`value='${value.value}'`);
-  }
-
   if (value.collapsible) {
     props.push('collapsible');
   }

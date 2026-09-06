@@ -66,9 +66,15 @@ describe('component part templates', () => {
       isNative: false,
     });
 
-    expect(result).toContain('export type AccordionTriggerProps');
-    expect(result).toContain('disabled?: boolean');
-    expect(result).toContain('onActivate?: () => void');
+    expect(result).toContain(
+      "import type { BaseAccordionTriggerProps } from '@vellira-ui/types';"
+    );
+    expect(result).toContain(
+      'export type AccordionTriggerProps = BaseAccordionTriggerProps & {'
+    );
+    expect(result).toContain('children?: ReactNode');
+    expect(result).not.toContain('disabled?: boolean');
+    expect(result).not.toContain('onActivate?: () => void');
   });
 
   it('renders specialized Content types', () => {
@@ -78,8 +84,14 @@ describe('component part templates', () => {
       isNative: false,
     });
 
-    expect(result).toContain('export type AccordionContentProps');
-    expect(result).toContain('hidden?: boolean');
+    expect(result).toContain(
+      "import type { BaseAccordionContentProps } from '@vellira-ui/types';"
+    );
+    expect(result).toContain(
+      'export type AccordionContentProps = BaseAccordionContentProps & {'
+    );
+    expect(result).toContain('children?: ReactNode');
+    expect(result).not.toContain('hidden?: boolean');
   });
 
   it('renders part index', () => {

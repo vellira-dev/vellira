@@ -34,6 +34,24 @@ describe('renderMetadataTemplate', () => {
     );
   });
 
+  it('records the canonical shared type dependency for shared semantics', () => {
+    expect(renderMetadata()).toContain(`  dependencies: {
+    packages: ['@vellira-ui/types'],
+  },`);
+  });
+
+  it('lets the explicit ownership contract override capability inference', () => {
+    expect(renderMetadata({ typeOwnership: 'platform' })).not.toContain(
+      "packages: ['@vellira-ui/types']"
+    );
+    expect(
+      renderMetadata({
+        capabilities: [],
+        typeOwnership: 'shared',
+      })
+    ).toContain("packages: ['@vellira-ui/types']");
+  });
+
   it('defaults generated metadata to the standard component token contract', () => {
     expect(renderMetadata()).toContain(`  requirements: {
     tests: true,

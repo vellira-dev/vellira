@@ -14,6 +14,9 @@ export const accordionMetadata = defineComponentMetadata({
     'disabled',
     'keyboard',
   ],
+  dependencies: {
+    packages: ['@vellira-ui/types'],
+  },
   requirements: {
     tests: true,
     storybook: true,

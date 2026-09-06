@@ -11,13 +11,8 @@ export function AccordionDemo() {
   return (
     <AccordionPlayground
       platform='react'
-      renderAccordion={(value, onChange) => (
-        <Accordion
-          value={value.value || undefined}
-          onValueChange={(nextValue) => onChange('value', nextValue)}
-          collapsible={value.collapsible}
-          disabled={value.disabled}
-        >
+      renderAccordion={(value) => (
+        <Accordion collapsible={value.collapsible} disabled={value.disabled}>
           <Accordion.Item value='profile'>
             <Accordion.Trigger>Profile settings</Accordion.Trigger>
             <Accordion.Content>

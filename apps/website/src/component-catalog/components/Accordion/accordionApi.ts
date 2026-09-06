@@ -11,12 +11,6 @@ const reactAccordionApiSections: readonly ComponentApiSection[] = [
     name: 'Accordion',
     props: [
       {
-        name: 'children',
-        type: 'ReactNode',
-        description:
-          'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
-      },
-      {
         name: 'type',
         type: "'single' | 'multiple'",
         defaultValue: "'single'",
@@ -52,17 +46,17 @@ const reactAccordionApiSections: readonly ComponentApiSection[] = [
         defaultValue: 'false',
         description: 'Disables interaction for the root, item, or trigger.',
       },
-    ],
-  },
-  {
-    name: 'Accordion.Item',
-    props: [
       {
         name: 'children',
         type: 'ReactNode',
         description:
           'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
       },
+    ],
+  },
+  {
+    name: 'Accordion.Item',
+    props: [
       {
         name: 'value',
         type: 'string',
@@ -75,22 +69,28 @@ const reactAccordionApiSections: readonly ComponentApiSection[] = [
         defaultValue: 'false',
         description: 'Disables interaction for the root, item, or trigger.',
       },
-    ],
-  },
-  {
-    name: 'Accordion.Trigger',
-    props: [
       {
         name: 'children',
         type: 'ReactNode',
         description:
           'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
       },
+    ],
+  },
+  {
+    name: 'Accordion.Trigger',
+    props: [
       {
         name: 'disabled',
         type: 'boolean',
         defaultValue: 'false',
         description: 'Disables interaction for the root, item, or trigger.',
+      },
+      {
+        name: 'children',
+        type: 'ReactNode',
+        description:
+          'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
       },
     ],
   },
@@ -98,15 +98,15 @@ const reactAccordionApiSections: readonly ComponentApiSection[] = [
     name: 'Accordion.Content',
     props: [
       {
+        name: 'forceMount',
+        type: 'boolean',
+        description: 'Keeps content mounted even when the item is collapsed.',
+      },
+      {
         name: 'children',
         type: 'ReactNode',
         description:
           'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
-      },
-      {
-        name: 'forceMount',
-        type: 'boolean',
-        description: 'Keeps content mounted even when the item is collapsed.',
       },
     ],
   },
@@ -117,12 +117,6 @@ const nativeAccordionApiSections: readonly ComponentApiSection[] = [
     name: 'Accordion',
     props: [
       {
-        name: 'children',
-        type: 'ReactNode',
-        description:
-          'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
-      },
-      {
         name: 'type',
         type: "'single' | 'multiple'",
         defaultValue: "'single'",
@@ -158,17 +152,17 @@ const nativeAccordionApiSections: readonly ComponentApiSection[] = [
         defaultValue: 'false',
         description: 'Disables interaction for the root, item, or trigger.',
       },
-    ],
-  },
-  {
-    name: 'Accordion.Item',
-    props: [
       {
         name: 'children',
         type: 'ReactNode',
         description:
           'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
       },
+    ],
+  },
+  {
+    name: 'Accordion.Item',
+    props: [
       {
         name: 'value',
         type: 'string',
@@ -181,22 +175,28 @@ const nativeAccordionApiSections: readonly ComponentApiSection[] = [
         defaultValue: 'false',
         description: 'Disables interaction for the root, item, or trigger.',
       },
-    ],
-  },
-  {
-    name: 'Accordion.Trigger',
-    props: [
       {
         name: 'children',
         type: 'ReactNode',
         description:
           'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
       },
+    ],
+  },
+  {
+    name: 'Accordion.Trigger',
+    props: [
       {
         name: 'disabled',
         type: 'boolean',
         defaultValue: 'false',
         description: 'Disables interaction for the root, item, or trigger.',
+      },
+      {
+        name: 'children',
+        type: 'ReactNode',
+        description:
+          'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
       },
     ],
   },
@@ -204,15 +204,15 @@ const nativeAccordionApiSections: readonly ComponentApiSection[] = [
     name: 'Accordion.Content',
     props: [
       {
+        name: 'forceMount',
+        type: 'boolean',
+        description: 'Keeps content mounted even when the item is collapsed.',
+      },
+      {
         name: 'children',
         type: 'ReactNode',
         description:
           'Compound Accordion.Item, Accordion.Trigger, and Accordion.Content nodes.',
-      },
-      {
-        name: 'forceMount',
-        type: 'boolean',
-        description: 'Keeps content mounted even when the item is collapsed.',
       },
     ],
   },

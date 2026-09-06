@@ -8,6 +8,10 @@ import { generateComponentWebsitePage } from './website';
 import { checkPublicApiContractSynchronization } from './public-api-contract';
 import { checkComponentTokenContract } from './component-token-contract';
 import {
+  checkSharedTypesContract,
+  writeSharedTypesContract,
+} from './compound-shared-types';
+import {
   getGeneratedTokenTypesFile,
   synchronizeGeneratedTokenTypes,
 } from './token-types';
@@ -21,6 +25,12 @@ export type RunComponentGeneratorResult = {
   dryRun: boolean;
   check: boolean;
 };
+
+function generatesSharedTypes(
+  plan: ReturnType<typeof createComponentGenerationPlan>
+) {
+  return plan.typeOwnership === 'shared';
+}
 
 function getPlannedCreatedFiles(
   plan: ReturnType<typeof createComponentGenerationPlan>
@@ -38,7 +48,7 @@ function getPlannedCreatedFiles(
     );
   }
 
-  if (plan.profile === 'form-control') {
+  if (generatesSharedTypes(plan)) {
     files.push(plan.sharedTypesFile);
   }
 
@@ -95,7 +105,7 @@ function getPlannedUpdatedFiles(
     );
   }
 
-  if (plan.profile === 'form-control') {
+  if (generatesSharedTypes(plan)) {
     files.push(plan.sharedTypesBarrelFile);
   }
 
@@ -128,6 +138,7 @@ export async function runComponentGenerator(params: {
         targets: plan.targets,
       }),
       ...checkComponentTokenContract(plan),
+      ...checkSharedTypesContract(plan),
     ];
 
     if (driftedFiles.length > 0) {
@@ -157,6 +168,7 @@ export async function runComponentGenerator(params: {
     };
   }
 
+  const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
 
   const tokenTypesResult =
@@ -178,6 +190,7 @@ export async function runComponentGenerator(params: {
 
   const createdFiles = [
     ...new Set([
+      ...sharedTypesResult.createdFiles,
       ...result.createdFiles,
       ...tokenTypesResult.createdFiles,
       ...websiteResult.createdFiles,
@@ -188,6 +201,7 @@ export async function runComponentGenerator(params: {
 
   const updatedFiles = [
     ...new Set([
+      ...sharedTypesResult.updatedFiles,
       ...result.updatedFiles,
       ...tokenTypesResult.updatedFiles,
       ...websiteResult.updatedFiles,

@@ -3,6 +3,12 @@ import type {
   ComponentIconRequirement,
   ComponentTokenContract,
 } from '@vellira-ui/metadata';
+
+import {
+  hasSharedTypeSemantics,
+  type ComponentTypeOwnership,
+} from '../type-ownership';
+
 import type { ComponentTemplateParams } from './component-types';
 
 export type MetadataTemplateParams = ComponentTemplateParams & {
@@ -19,6 +25,7 @@ export type MetadataTemplateParams = ComponentTemplateParams & {
   platforms: readonly ('react' | 'react-native')[];
   profile: 'base' | 'form-control' | 'compound' | 'overlay';
   capabilities: readonly ComponentCapability[];
+  typeOwnership?: ComponentTypeOwnership;
   icons?: readonly ComponentIconRequirement[];
   tokens?: readonly string[];
   componentTokens?: ComponentTokenContract | false;
@@ -41,6 +48,7 @@ export function renderMetadataTemplate({
   platforms,
   profile,
   capabilities,
+  typeOwnership,
   icons = [],
   tokens = [],
   componentTokens = 'standard',
@@ -52,6 +60,14 @@ export function renderMetadataTemplate({
       : `[
 ${capabilities.map((capability) => `    '${capability}',`).join('\n')}
   ]`;
+  const ownsSharedTypes =
+    typeOwnership === 'shared' ||
+    (typeOwnership === undefined && hasSharedTypeSemantics(capabilities));
+  const dependenciesText = ownsSharedTypes
+    ? `  dependencies: {
+    packages: ['@vellira-ui/types'],
+  },\n`
+    : '';
   const resourceRequirementsText = [
     icons.length === 0
       ? null
@@ -85,7 +101,7 @@ export const ${metadataName} = defineComponentMetadata({
   profile: '${profile}',
   status: 'experimental',
   capabilities: ${capabilitiesText},
-  requirements: {
+${dependenciesText}  requirements: {
     tests: true,
     storybook: true,
     docs: true,

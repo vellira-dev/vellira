@@ -1,7 +1,6 @@
+import type { BaseAccordionItemProps } from '@vellira-ui/types';
 import type { ReactNode } from 'react';
 
-export type AccordionItemProps = {
+export type AccordionItemProps = BaseAccordionItemProps & {
   children?: ReactNode;
-  value: string;
-  disabled?: boolean;
 };
