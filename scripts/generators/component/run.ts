@@ -20,6 +20,12 @@ import {
   getGeneratedTokenTypesFile,
   synchronizeGeneratedTokenTypes,
 } from './token-types';
+import {
+  checkComponentTokenLifecycleContract,
+  ensureComponentTokenLifecycleContract,
+  getTokenLifecycleRegistryFile,
+  needsComponentTokenLifecycleMutation,
+} from './token-lifecycle-contract';
 
 import type { ComponentGeneratorOptions } from './cli';
 
@@ -108,6 +114,10 @@ function getPlannedUpdatedFiles(
       ...plan.tokenThemeTargets.map((target) => target.barrelFile),
       getGeneratedTokenTypesFile(plan.root)
     );
+
+    if (needsComponentTokenLifecycleMutation(plan.componentName)) {
+      files.push(getTokenLifecycleRegistryFile(plan.root));
+    }
   }
 
   if (generatesSharedTypes(plan)) {
@@ -142,6 +152,7 @@ export async function runComponentGenerator(params: {
         componentName: plan.componentName,
         targets: plan.targets,
       }),
+      ...checkComponentTokenLifecycleContract(plan),
       ...checkComponentTokenContract(plan),
       ...checkSharedTypesContract(plan),
       ...(await checkGeneratedPlanContract(plan)),
@@ -187,6 +198,9 @@ export async function runComponentGenerator(params: {
     };
   }
 
+  const lifecycleResult = { updatedFiles: [] as string[] };
+  ensureComponentTokenLifecycleContract({ plan, result: lifecycleResult });
+
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
 
@@ -220,6 +234,7 @@ export async function runComponentGenerator(params: {
 
   const updatedFiles = [
     ...new Set([
+      ...lifecycleResult.updatedFiles,
       ...sharedTypesResult.updatedFiles,
       ...result.updatedFiles,
       ...tokenTypesResult.updatedFiles,
