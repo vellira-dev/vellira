@@ -27,6 +27,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install direct web Storybook React peers
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook add -D --save-exact
+          @storybook/react@10.5.7
+          @storybook/react-dom-shim@10.5.7
+
       - name: Build packages and apps
         run: pnpm ci:build
 
@@ -61,7 +67,7 @@ jobs:
               if (fs.existsSync(packageJson)) {
                 const data = JSON.parse(fs.readFileSync(packageJson, 'utf8'));
                 if (data.name && data.version) {
-                  return `${data.name}@${data.version} (${resolved})`;
+                  return `${data.name}@${data.version} (${resolved}; real=${fs.realpathSync(resolved)})`;
                 }
               }
               const parent = path.dirname(directory);
@@ -108,5 +114,6 @@ jobs:
             react-resolution.log
             storybook-smoke.log
             storybook-smoke.status
+            apps/react-storybook/test-results
           if-no-files-found: error
           retention-days: 1
