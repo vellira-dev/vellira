@@ -1,0 +1,9 @@
+{
+  "title": "Enforcing TypeScript project ownership in Vellira",
+  "description": "TypeScript project ownership starts with verified typecheck entrypoints. How Vellira makes ownership explicit, rejects false authority, and keeps project wiring reviewable.",
+  "slug": "typescript-project-ownership",
+  "publishedAt": "2026-09-08",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}
