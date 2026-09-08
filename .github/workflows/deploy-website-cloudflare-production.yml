@@ -63,8 +63,25 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare skew protection secrets
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          jq -n \
+            --arg accountId "$CLOUDFLARE_ACCOUNT_ID" \
+            --arg apiToken "$CLOUDFLARE_API_TOKEN" \
+            '{CF_ACCOUNT_ID: $accountId, CF_WORKERS_SCRIPTS_API_TOKEN: $apiToken}' \
+            > "$RUNNER_TEMP/cloudflare-skew-secrets.json"
+
       - name: Deploy isolated production Worker candidate
-        run: pnpm --dir apps/website exec opennextjs-cloudflare deploy --config=wrangler.production.jsonc
+        run: >-
+          pnpm --dir apps/website exec opennextjs-cloudflare deploy
+          --config=wrangler.production.jsonc
+          --secrets-file="$RUNNER_TEMP/cloudflare-skew-secrets.json"
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
