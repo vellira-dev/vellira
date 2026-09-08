@@ -16,6 +16,10 @@ export function getTokenLifecycleRegistryFile(root: string) {
   return path.join(root, 'packages', 'metadata', 'src', 'tokenLifecycle.ts');
 }
 
+export function needsComponentTokenLifecycleMutation(componentName: string) {
+  return getComponentTokenLifecycle(componentName)?.status !== 'current';
+}
+
 function renderCurrentLifecycleEntry(componentName: string) {
   return `  ${componentName}: {\n    status: 'current',\n    public: true,\n    owner: '${componentName}',\n    purpose: 'Canonical ${componentName} component token contract.',\n  },\n`;
 }
