@@ -23,30 +23,36 @@ pnpm add @vellira-ui/tokens
 
 ## Usage
 
+Choose a named theme explicitly:
+
 ```ts
 import {
   darkTheme,
   highContrastTheme,
   lightTheme,
-  theme,
 } from '@vellira-ui/tokens';
 
-theme.semantic.surface.default;
-theme.semantic.text.primary;
-theme.semantic.border.default;
-theme.semantic.status.success.fg;
+darkTheme.semantic.surface.default;
+darkTheme.semantic.surface.panel;
+darkTheme.semantic.text.primary;
+darkTheme.semantic.border.default;
+darkTheme.semantic.status.success.fg;
 
-theme.components.button.primary.solid.default.bg;
-theme.components.input.default.bg;
+darkTheme.components.button.primary.solid.default.bg;
+darkTheme.components.input.default.bg;
 
-theme.tokens.typography.family.regular;
-theme.tokens.spacing[4];
-theme.tokens.radius.md;
+darkTheme.tokens.typography.family.regular;
+darkTheme.tokens.spacing[4];
+darkTheme.tokens.radius.md;
 
-lightTheme.name;
-darkTheme.name;
-highContrastTheme.name;
+lightTheme.name; // 'light'
+darkTheme.name; // 'dark'
+highContrastTheme.name; // 'high-contrast'
 ```
+
+There is no implicit current/default theme object. The historical `theme`
+export is a deprecated partial view of `darkTheme`; use `darkTheme` directly.
+The compatibility export is scheduled for removal in Vellira 3.0.0.
 
 ## Semantic Tokens
 
@@ -62,7 +68,6 @@ Current semantic groups include:
 - `focus`
 - `icons`
 - `menu`
-- `navigation`
 - `overlay`
 - `shadow`
 - `skeleton`
@@ -73,17 +78,22 @@ Current semantic groups include:
 Example:
 
 ```ts
-theme.semantic.surface.default;
-theme.semantic.surface.elevated;
+darkTheme.semantic.surface.canvas;
+darkTheme.semantic.surface.panel;
+darkTheme.semantic.surface.elevated;
 
-theme.semantic.text.primary;
-theme.semantic.text.secondary;
+darkTheme.semantic.text.primary;
+darkTheme.semantic.text.secondary;
 
-theme.semantic.border.default;
+darkTheme.semantic.border.default;
 
-theme.semantic.status.success.fg;
-theme.semantic.status.error.fg;
+darkTheme.semantic.status.success.fg;
+darkTheme.semantic.status.error.fg;
 ```
+
+`surface.canvas` is the application/root backdrop, `surface.panel` is bounded
+neutral container/chrome, and `surface.elevated` is reserved for genuinely
+raised or floating layers.
 
 Using semantic tokens instead of raw palette values keeps component styling
 consistent across renderers and themes.
@@ -94,12 +104,12 @@ Component tokens define renderer-neutral values for component states and
 surfaces.
 
 ```ts
-theme.components.button.primary.solid.default.bg;
-theme.components.input.focus.border;
-theme.components.dropdown.content.bg;
-theme.components.popover.content.bg;
-theme.components.modal.content.bg;
-theme.components.tooltip.content.bg;
+darkTheme.components.button.primary.solid.default.bg;
+darkTheme.components.input.focus.border;
+darkTheme.components.dropdown.content.bg;
+darkTheme.components.popover.content.bg;
+darkTheme.components.modal.content.bg;
+darkTheme.components.tooltip.content.bg;
 ```
 
 Color-like component tokens may use either colors or the literal `transparent`
@@ -117,11 +127,50 @@ Examples:
 
 ```css
 --color-mono-0
---surface-default
+--surface-canvas
+--surface-panel
 --text-primary
 --border-default
 --button-primary-solid-default-bg
 ```
+
+Canonical token-path types describe only the current renderer-neutral token
+contract. During Vellira 2.x, a bounded set of legacy CSS variables is still
+generated for migration compatibility. Those aliases remain in the generated
+CSS-variable name unions because they are actually emitted, but they are not
+canonical `TokenPath`/`ComponentTokenPath` entries and new code must not adopt
+them.
+
+The compatibility aliases, replacements, migration evidence, and removal
+release are tracked in
+`src/platform-output/component-token-web-compatibility.ts`. They are scheduled
+for removal in Vellira 3.0.0.
+
+## Public API deprecation policy
+
+Public token/theme cleanup follows one bounded policy:
+
+- named theme objects are canonical (`lightTheme`, `darkTheme`,
+  `highContrastTheme`);
+- deprecated root exports preserve their existing behavior during the 2.x
+  compatibility window and name a canonical replacement;
+- deprecated Web CSS variables remain platform-output aliases only and do not
+  re-enter canonical token-path unions;
+- every alias has migration/preservation evidence and an explicit removal
+  boundary;
+- Token Architecture Normalization V1 removes these compatibility aliases at
+  Vellira 3.0.0 unless a separately reviewed policy revision supersedes it.
+
+The machine-readable contract lives in `src/public-api-policy.ts`. The detailed
+architecture note is `docs/architecture/token-public-api-v1.md`.
+
+## React and React Native
+
+The shared theme/token source is renderer-neutral. React/Web consumers can use
+named theme objects or generated CSS variables. React Native consumes the same
+canonical component intent and resolves platform representation through the
+native output adapter; renderer-specific token branches are not part of the
+public canonical component contract.
 
 ## Documentation
 
@@ -170,8 +219,8 @@ The preservation contract covers the complete current public visual surface:
   overlay primitives and control-size values;
 - generated Web CSS variable names together with their serialized values, using
   the same serializer as the published `@vellira-ui/tokens/css` artifact;
-- the current React Native output contract, which consumes the canonical theme
-  objects directly until a dedicated native platform adapter is introduced.
+- the current React Native output contract derived from canonical component
+  intents and platform adapters.
 
 Normal token changes must not regenerate the baseline just to make a failure
 disappear. Instead, record the change in

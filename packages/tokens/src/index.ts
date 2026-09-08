@@ -41,6 +41,11 @@ export { controlSizes } from './tokens/controlSizes.js';
 export type { FontWeight } from './tokens/typography.js';
 export { fontWeights } from './tokens/typography.js';
 
+/**
+ * @deprecated Historical compatibility export. `theme` is a partial view of
+ * `darkTheme`, not a default/current theme contract. Use `darkTheme` directly.
+ * This alias is scheduled for removal in Vellira 3.0.0.
+ */
 export const theme = {
   semantic: darkTheme.semantic,
   components: darkTheme.components,
