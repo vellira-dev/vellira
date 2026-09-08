@@ -1,10 +1,12 @@
 import createMDX from '@next/mdx';
+import { getDeploymentId } from '@opennextjs/cloudflare';
 import type { NextConfig } from 'next';
 
 const withMDX = createMDX({});
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  deploymentId: getDeploymentId(),
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   transpilePackages: [
     '@vellira-ui/react',
