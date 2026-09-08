@@ -112,7 +112,6 @@ jobs:
           git add packages/tokens/src/tokens/typography.ts \
             packages/tokens/src/preservation/token-migrations.ts \
             packages/tokens/src/generated/token-types.ts \
-            packages/tokens/src/generated/tokens.css \
             .github/workflows/issue-927-token-bold-probe.yml
           git commit -m 'feat(tokens): add canonical bold font weight'
           git push origin HEAD:probe/token-bold-927
