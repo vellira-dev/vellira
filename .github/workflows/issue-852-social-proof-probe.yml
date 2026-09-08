@@ -114,6 +114,7 @@ jobs:
       - name: Validate website
         run: |
           pnpm website:typecheck
+          pnpm build
           pnpm website:build
 
       - name: Check diff
