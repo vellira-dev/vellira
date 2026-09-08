@@ -40,10 +40,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./css": "./dist/css/tokens.css"
+    "./css": {
+      "types": "./css.d.ts",
+      "default": "./dist/css/tokens.css"
+    }
   },
   "files": [
     "dist",
+    "css.d.ts",
     "README.md",
     "LICENSE"
   ],
