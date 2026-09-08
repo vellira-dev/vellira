@@ -1,4 +1,4 @@
-name: PR 907 Coverage Diagnostic
+name: PR 907 Storybook Diagnostic
 
 on:
   pull_request:
@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  coverage-diagnostic:
-    name: Coverage diagnostic
+  storybook-diagnostic:
+    name: Storybook diagnostic
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -30,23 +30,23 @@ jobs:
       - name: Build packages and apps
         run: pnpm ci:build
 
-      - name: Capture CI test output
+      - name: Capture Storybook E2E output
         shell: bash
         run: |
           set +e
-          pnpm ci:test > ci-test.log 2>&1
+          pnpm test:e2e:web > storybook-e2e.log 2>&1
           status=$?
           set -e
-          cat ci-test.log
-          printf '%s\n' "$status" > ci-test.status
+          cat storybook-e2e.log
+          printf '%s\n' "$status" > storybook-e2e.status
 
-      - name: Upload CI test diagnostic
+      - name: Upload Storybook diagnostic
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: pr907-ci-test-diagnostic
+          name: pr907-storybook-diagnostic
           path: |
-            ci-test.log
-            ci-test.status
+            storybook-e2e.log
+            storybook-e2e.status
           if-no-files-found: error
           retention-days: 1
