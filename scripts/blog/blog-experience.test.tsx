@@ -168,7 +168,9 @@ describe('Blog V1 index experience', () => {
     );
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toContain('/api/blog-metrics/articles/two-runtimes/like');
+    expect(calls[0]?.url).toContain(
+      '/api/blog-metrics/articles/two-runtimes/like'
+    );
     expect(calls[0]?.init?.credentials).toBe('include');
   });
 
@@ -337,8 +339,12 @@ describe('Blog V1 article experience', () => {
       'GET',
       'POST',
     ]);
-    expect(calls[0]?.url).toContain('/api/blog-metrics/articles/two-runtimes/like');
-    expect(calls[1]?.url).toContain('/api/blog-metrics/articles/two-runtimes/views');
+    expect(calls[0]?.url).toContain(
+      '/api/blog-metrics/articles/two-runtimes/like'
+    );
+    expect(calls[1]?.url).toContain(
+      '/api/blog-metrics/articles/two-runtimes/views'
+    );
     expect(calls[0]?.init?.credentials).toBe('include');
     expect(calls[1]?.init?.credentials).toBe('include');
   });
