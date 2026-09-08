@@ -1,9 +1,12 @@
 export const tokenPublicApiDeprecationPolicyV1 = {
   issue: '#889',
   removalRelease: '3.0.0',
+  cssRootTheme: 'light',
   rules: {
     namedThemes:
       'Public theme objects are named explicitly and their export names must agree with each runtime theme.name identity.',
+    cssDefault:
+      'Generated Web CSS uses Light for :root while the JavaScript package intentionally has no canonical implicit current/default theme export.',
     deprecatedExports:
       'A deprecated root export must preserve its existing runtime contract, carry a source @deprecated annotation, name a canonical replacement, and have machine-readable removal evidence.',
     deprecatedCssVariables:
