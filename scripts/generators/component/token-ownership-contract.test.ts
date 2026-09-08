@@ -12,11 +12,12 @@ import {
 
 describe('Generator V2 token ownership authority', () => {
   it('keeps every current metadata-backed token family aligned with componentMetadata', () => {
-    const metadataNames = componentMetadata.map((metadata) => metadata.name).sort();
+    const metadataNames = componentMetadata
+      .map((metadata) => metadata.name)
+      .sort();
     const currentMetadataOwners = Object.entries(componentTokenLifecycle)
       .filter(
-        ([, lifecycle]) =>
-          lifecycle.status === 'current' && lifecycle.public
+        ([, lifecycle]) => lifecycle.status === 'current' && lifecycle.public
       )
       .map(([name]) => name)
       .sort();

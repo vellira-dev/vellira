@@ -17,7 +17,9 @@ export function needsComponentTokenLifecycleMutation(componentName: string) {
   return getComponentTokenLifecycle(componentName)?.status === 'reserved';
 }
 
-export function assertComponentTokenLifecycleCanMaterialize(componentName: string) {
+export function assertComponentTokenLifecycleCanMaterialize(
+  componentName: string
+) {
   const lifecycle = getComponentTokenLifecycle(componentName);
 
   if (!lifecycle) {

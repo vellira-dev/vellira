@@ -138,15 +138,21 @@ export const semanticTokenLifecycle = {
     public: true,
     authority: 'shared-lower-level',
     owner: 'semantic-foundation',
-    purpose: 'Shared semantic border roles consumed by component token families.',
-    consumerEvidence: ['components.Button', 'components.Dropdown', 'components.Tabs'],
+    purpose:
+      'Shared semantic border roles consumed by component token families.',
+    consumerEvidence: [
+      'components.Button',
+      'components.Dropdown',
+      'components.Tabs',
+    ],
   },
   control: {
     status: 'current',
     public: true,
     authority: 'component-input',
     owner: 'form-controls',
-    purpose: 'Shared control-state roles for form-control component token families.',
+    purpose:
+      'Shared control-state roles for form-control component token families.',
     consumerEvidence: ['components.Checkbox', 'components.Radio'],
   },
   divider: {
@@ -163,7 +169,11 @@ export const semanticTokenLifecycle = {
     authority: 'shared-lower-level',
     owner: 'interaction-foundation',
     purpose: 'Canonical shared focus-ring semantics.',
-    consumerEvidence: ['components.Checkbox', 'components.Dropdown', 'components.Tabs'],
+    consumerEvidence: [
+      'components.Checkbox',
+      'components.Dropdown',
+      'components.Tabs',
+    ],
   },
   icons: {
     status: 'current',
@@ -178,7 +188,8 @@ export const semanticTokenLifecycle = {
     public: true,
     authority: 'component-input',
     owner: 'menu-patterns',
-    purpose: 'Shared menu roles consumed by menu-like component token families.',
+    purpose:
+      'Shared menu roles consumed by menu-like component token families.',
     consumerEvidence: ['components.Dropdown', 'components.ContextMenu'],
   },
   navigation: {
@@ -196,7 +207,11 @@ export const semanticTokenLifecycle = {
     authority: 'shared-lower-level',
     owner: 'overlay-foundation',
     purpose: 'Shared overlay/backdrop semantic roles.',
-    consumerEvidence: ['components.Modal', 'components.Popover', 'components.Tooltip'],
+    consumerEvidence: [
+      'components.Modal',
+      'components.Popover',
+      'components.Tooltip',
+    ],
   },
   shadow: {
     status: 'current',
@@ -228,7 +243,11 @@ export const semanticTokenLifecycle = {
     authority: 'shared-lower-level',
     owner: 'surface-foundation',
     purpose: 'Canonical semantic surface/background roles.',
-    consumerEvidence: ['components.Button', 'components.Dropdown', 'components.Tabs'],
+    consumerEvidence: [
+      'components.Button',
+      'components.Dropdown',
+      'components.Tabs',
+    ],
   },
   text: {
     status: 'current',
@@ -236,7 +255,11 @@ export const semanticTokenLifecycle = {
     authority: 'shared-lower-level',
     owner: 'typography-foundation',
     purpose: 'Canonical semantic text color roles.',
-    consumerEvidence: ['components.Button', 'components.Checkbox', 'components.Dropdown'],
+    consumerEvidence: [
+      'components.Button',
+      'components.Checkbox',
+      'components.Dropdown',
+    ],
   },
 } as const satisfies Record<string, SemanticTokenLifecycleEntry>;
 

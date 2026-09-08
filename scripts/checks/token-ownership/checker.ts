@@ -68,11 +68,9 @@ function pushInventoryFindings(params: {
   actual: readonly string[];
   expectedPublic: ReadonlySet<string>;
   unclassifiedCode:
-    | 'unclassified-component-family'
-    | 'unclassified-semantic-namespace';
+    'unclassified-component-family' | 'unclassified-semantic-namespace';
   missingCode:
-    | 'missing-public-component-family'
-    | 'missing-public-semantic-namespace';
+    'missing-public-component-family' | 'missing-public-semantic-namespace';
   path: string;
   findings: TokenOwnershipFinding[];
 }) {
