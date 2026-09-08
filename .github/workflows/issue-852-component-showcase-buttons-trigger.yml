@@ -1,0 +1,12 @@
+name: Issue 852 ComponentShowcase button probe trigger
+
+on:
+  push:
+    branches:
+      - probe/852-component-showcase-buttons
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo trigger
