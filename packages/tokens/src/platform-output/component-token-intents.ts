@@ -1,6 +1,16 @@
-export const componentShadowLevels = ['sm', 'md', 'lg', 'xl'] as const;
+import {
+  createFocusRingShadowToken,
+  createSemanticShadowTokens,
+  type ElevationShadowLevel,
+  elevationShadowLevels,
+  type ReactNativeShadowOutput as CanonicalReactNativeShadowOutput,
+  resolveReactNativeElevationShadow,
+  type ShadowThemeName,
+} from '../effects/shadow-system.js';
 
-export type ComponentShadowLevel = (typeof componentShadowLevels)[number];
+export const componentShadowLevels = elevationShadowLevels;
+
+export type ComponentShadowLevel = ElevationShadowLevel;
 
 export type ComponentElevationShadowIntent = Readonly<{
   kind: 'shadow';
@@ -31,14 +41,7 @@ export type ComponentViewportHeightIntent = Readonly<{
 export type ComponentPlatformIntent =
   ComponentShadowIntent | ComponentViewportHeightIntent;
 
-export type ReactNativeShadowOutput = Readonly<{
-  x: number;
-  y: number;
-  blur: number;
-  color: string;
-  opacity: number;
-  elevation: number;
-}>;
+export type ReactNativeShadowOutput = CanonicalReactNativeShadowOutput;
 
 export type ComponentPlatformOutputSources = Readonly<{
   web: {
@@ -51,17 +54,7 @@ export type ComponentPlatformOutputSources = Readonly<{
 }>;
 
 type ComponentOutputThemeSources = Readonly<{
-  semantic: {
-    focus: {
-      ring: {
-        shadow: string;
-      };
-    };
-    shadow: Readonly<Record<ComponentShadowLevel, string>>;
-  };
-  tokens: {
-    shadows: Readonly<Record<'sm' | 'md' | 'lg', ReactNativeShadowOutput>>;
-  };
+  name: ShadowThemeName;
 }>;
 
 type WebAdaptedIntent<T> = T extends ComponentPlatformIntent ? string : never;
@@ -163,24 +156,24 @@ export function isComponentPlatformIntent(
 export function createComponentPlatformOutputSources(
   theme: ComponentOutputThemeSources
 ): ComponentPlatformOutputSources {
+  const shadow = createSemanticShadowTokens(theme.name);
+
   return {
     web: {
       shadow: {
-        sm: theme.semantic.shadow.sm,
-        md: theme.semantic.shadow.md,
-        lg: theme.semantic.shadow.lg,
-        xl: theme.semantic.shadow.xl,
+        sm: shadow.sm,
+        md: shadow.md,
+        lg: shadow.lg,
+        xl: shadow.xl,
       },
-      focusRingShadow: theme.semantic.focus.ring.shadow,
+      focusRingShadow: createFocusRingShadowToken(theme.name),
     },
     reactNative: {
       shadow: {
-        sm: theme.tokens.shadows.sm,
-        md: theme.tokens.shadows.md,
-        lg: theme.tokens.shadows.lg,
-        // Preserve current native Modal output. #885 owns the later authority
-        // decision for whether an independent structured xl shadow is needed.
-        xl: theme.tokens.shadows.lg,
+        sm: resolveReactNativeElevationShadow('sm'),
+        md: resolveReactNativeElevationShadow('md'),
+        lg: resolveReactNativeElevationShadow('lg'),
+        xl: resolveReactNativeElevationShadow('xl'),
       },
     },
   };

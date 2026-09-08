@@ -14,13 +14,13 @@ Semantic names describe **purpose**, not a primitive hue, renderer, interaction 
 - **text** — foreground hierarchy (`primary → secondary → muted → subtle → disabled`) plus brand and interaction-specific text roles.
 - **icons** — icon foreground hierarchy. `interactive`/`interactiveHover` describe interaction; `brand` remains a distinct identity role.
 - **border / divider** — structural borders and separators. `border.interactive` is generic interaction emphasis; actual focus indication belongs to `focus.ring`.
-- **focus** — focus indication only. `ring.offsetColor` is explicitly a color, not geometric spacing.
+- **focus** — focus indication only. `ring.offsetColor` is explicitly a color, not geometric spacing. The focus-ring shadow is derived from the shared structured effect authority rather than authored as a CSS-only value.
 - **status** — success/error/warning/info paint with explicit `fg`, `bg`, `border`, `ring`, and `emphasisFg` consumption roles.
 - **action** — reusable action palettes. `primary` is the main brand action, `accent` is the cyan secondary-brand hue, `neutral` is non-brand action chrome, and `danger` is destructive action paint.
 - **control** — generic form-control state paint using the canonical interaction vocabulary from #882.
 - **menu** — menu-specific current/highlighted semantics where `active` is a real persistent/current domain state.
 - **overlay** — `backdrop`, `tooltip`, `floating`, and `dialog`; names describe presentation purpose rather than Popover/Modal component history.
-- **shadow** — semantic elevation references. Renderer-neutral shadow/elevation ownership is handled by the later #885 boundary work.
+- **shadow** — semantic elevation references (`sm`, `md`, `lg`, `xl`) plus `inset`. Their public CSS strings are derived from the canonical structured #885 shadow/elevation model; they are not an independent Web design authority.
 
 ## Surface ownership correction
 

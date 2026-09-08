@@ -34,6 +34,17 @@ type ComponentPlatformIntent =
 type ReactNativeShadowOutput =
   NativeTheme['tokens']['shadows'][keyof NativeTheme['tokens']['shadows']];
 
+type ReactNativeShadowLevel = keyof NativeTheme['tokens']['shadows'];
+
+const reactNativeShadowApproximationLevel = {
+  sm: 'sm',
+  md: 'md',
+  lg: 'lg',
+  xl: 'lg',
+} as const satisfies Readonly<
+  Record<ComponentShadowLevel, ReactNativeShadowLevel>
+>;
+
 type WebAdaptedIntent<T> = T extends ComponentPlatformIntent ? string : never;
 
 type ReactNativeAdaptedIntent<T> = T extends ComponentElevationShadowIntent
@@ -135,9 +146,10 @@ function resolveIntentForReactNative(
 
   if (intent.role === 'focus-ring' || intent.role === 'none') return null;
 
-  // Preserve current native Modal output. #885 owns whether the canonical
-  // shadow model needs an independent native approximation for xl.
-  const nativeLevel = intent.level === 'xl' ? 'lg' : intent.level;
+  // The numeric output is derived from the canonical #885 shadow model inside
+  // @vellira-ui/tokens. This renderer-owned map only expresses the documented
+  // RN approximation policy: xl preserves the historical lg native effect.
+  const nativeLevel = reactNativeShadowApproximationLevel[intent.level];
   return theme.tokens.shadows[nativeLevel];
 }
 

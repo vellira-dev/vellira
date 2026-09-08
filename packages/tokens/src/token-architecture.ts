@@ -466,8 +466,8 @@ export const semanticVocabularyV1 = {
   },
   shadow: {
     purpose:
-      'Semantic elevation references; renderer ownership is normalized separately.',
-    roles: ['sm', 'md', 'lg', 'xl'],
+      'Semantic shadow references derived from the canonical structured #885 authority; Web strings are renderer output, not authored design values.',
+    roles: ['sm', 'md', 'lg', 'xl', 'inset'],
   },
 } as const;
 
@@ -596,6 +596,11 @@ export const canonicalSemanticRolePaths = [
   'overlay.floating.border',
   'overlay.dialog.bg',
   'overlay.dialog.border',
+  'shadow.sm',
+  'shadow.md',
+  'shadow.lg',
+  'shadow.xl',
+  'shadow.inset',
 ] as const;
 
 export const componentTokenFactoryModel = {
