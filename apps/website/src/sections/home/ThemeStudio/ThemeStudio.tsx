@@ -312,14 +312,27 @@ export function ThemeStudio() {
 
                 <div className={styles.optionGrid}>
                   {accentOptions.map((option) => (
-                    <button
+                    <Button
                       key={option.value}
                       type='button'
+                      appearance='outline'
+                      color={accent === option.value ? option.value : 'neutral'}
+                      size='sm'
+                      shape='rounded'
+                      fullWidth
+                      aria-pressed={accent === option.value}
                       data-accent={option.value}
                       className={
                         accent === option.value
                           ? styles.activeOption
                           : styles.option
+                      }
+                      iconStart={
+                        <span
+                          className={styles.colorSwatch}
+                          data-accent={option.value}
+                          aria-hidden='true'
+                        />
                       }
                       onClick={() => {
                         pauseAutomation();
@@ -331,13 +344,8 @@ export function ThemeStudio() {
                         setAccent(option.value);
                       }}
                     >
-                      <span
-                        className={styles.colorSwatch}
-                        data-accent={option.value}
-                        aria-hidden='true'
-                      />
                       {option.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -361,9 +369,15 @@ export function ThemeStudio() {
 
                 <div className={styles.radiusPicker}>
                   {radiusOptions.map((option) => (
-                    <button
+                    <Button
                       key={option.value}
                       type='button'
+                      appearance='outline'
+                      color={radius === option.value ? 'primary' : 'neutral'}
+                      size='sm'
+                      shape='rounded'
+                      fullWidth
+                      aria-pressed={radius === option.value}
                       className={
                         radius === option.value
                           ? styles.activeRadius
@@ -380,7 +394,7 @@ export function ThemeStudio() {
                       }}
                     >
                       {option.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -401,9 +415,15 @@ export function ThemeStudio() {
 
                 <div className={styles.segmentedControl}>
                   {themeOptions.map((option) => (
-                    <button
+                    <Button
                       key={option.value}
                       type='button'
+                      appearance='outline'
+                      color={themeMode === option.value ? 'primary' : 'neutral'}
+                      size='sm'
+                      shape='rounded'
+                      fullWidth
+                      aria-pressed={themeMode === option.value}
                       className={
                         themeMode === option.value
                           ? styles.activeSegment
@@ -420,7 +440,7 @@ export function ThemeStudio() {
                       }}
                     >
                       {option.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -441,9 +461,15 @@ export function ThemeStudio() {
 
                 <div className={styles.segmentedControl}>
                   {densityOptions.map((option) => (
-                    <button
+                    <Button
                       key={option.value}
                       type='button'
+                      appearance='outline'
+                      color={density === option.value ? 'primary' : 'neutral'}
+                      size='sm'
+                      shape='rounded'
+                      fullWidth
+                      aria-pressed={density === option.value}
                       className={
                         density === option.value
                           ? styles.activeSegment
@@ -456,7 +482,7 @@ export function ThemeStudio() {
                       }}
                     >
                       {option.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
