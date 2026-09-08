@@ -1,10 +1,13 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -34,8 +37,20 @@ type ComponentNavigationProviderProps = {
 export function ComponentNavigationProvider({
   children,
 }: ComponentNavigationProviderProps) {
+  const pathname = usePathname();
+  const previousPathname = useRef(pathname);
   const [open, setOpen] = useState(false);
   const [mainOpen, setMainOpen] = useState(false);
+
+  useEffect(() => {
+    if (previousPathname.current === pathname) {
+      return;
+    }
+
+    previousPathname.current = pathname;
+    setOpen(false);
+    setMainOpen(false);
+  }, [pathname]);
 
   const setMainNavigationOpen = useCallback((nextOpen: boolean) => {
     setOpen(false);

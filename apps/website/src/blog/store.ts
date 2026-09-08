@@ -1,6 +1,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 
+import { getBlogArticleMetadataRegistryEntries } from './article-modules';
 import {
   assertBlogSlug,
   assertUniqueBlogSlugs,
@@ -139,10 +140,30 @@ export async function readPublishedBlogArticleMetadataFromDirectory(
   return getPublishedBlogArticleMetadataFromCorpus(metadata);
 }
 
+function readRegisteredBlogArticleMetadata(): BlogArticleMetadata[] {
+  const metadata = getBlogArticleMetadataRegistryEntries().map((entry) => {
+    const source = `blog registry:${entry.slug}`;
+    const parsed = parseBlogArticleMetadata(entry.metadata, source);
+
+    if (parsed.slug !== entry.slug) {
+      throw new Error(
+        `${source}: metadata slug ${parsed.slug} must match registry slug ${entry.slug}`
+      );
+    }
+
+    return parsed;
+  });
+
+  assertUniqueBlogSlugs(metadata, 'blog registry');
+  return metadata;
+}
+
 export async function getPublishedBlogArticles(): Promise<
   BlogArticleMetadata[]
 > {
-  return readPublishedBlogArticleMetadataFromDirectory(BLOG_CONTENT_DIRECTORY);
+  return getPublishedBlogArticleMetadataFromCorpus(
+    readRegisteredBlogArticleMetadata()
+  );
 }
 
 export async function getPublishedBlogArticleMetadata(
@@ -150,9 +171,7 @@ export async function getPublishedBlogArticleMetadata(
 ): Promise<BlogArticleMetadata | null> {
   assertBlogSlug(slug);
 
-  const metadata = await readBlogArticleMetadataFromDirectory(
-    BLOG_CONTENT_DIRECTORY
-  );
+  const metadata = readRegisteredBlogArticleMetadata();
   const article = metadata.find((candidate) => candidate.slug === slug);
 
   if (article === undefined || article.draft) {

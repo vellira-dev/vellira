@@ -14,8 +14,8 @@
     "@vellira-ui/assets": "workspace:*",
     "@vellira-ui/react": "workspace:^",
     "@vellira-ui/tokens": "workspace:*",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

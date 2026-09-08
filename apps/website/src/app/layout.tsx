@@ -67,12 +67,14 @@ interface RootLayoutProps {
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
+  const isVercelRuntime = process.env.VERCEL === '1';
+
   return (
     <html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
       <body>
         <JsonLd />
         <WebsiteProviders>{children}</WebsiteProviders>
-        <Analytics />
+        {isVercelRuntime ? <Analytics /> : null}
       </body>
     </html>
   );

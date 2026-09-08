@@ -28,6 +28,7 @@ export function ComponentSidebar({
             >
               <Link
                 href={`/components/${component.slug}`}
+                prefetch={false}
                 aria-current={
                   component.slug === activeSlug ? 'page' : undefined
                 }

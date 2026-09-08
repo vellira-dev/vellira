@@ -21,6 +21,7 @@ export interface BlogLikeWriteResponse extends BlogMetricsWriteResponse {
 export type BlogMetricsBySlug = Record<string, BlogMetrics>;
 
 const DEFAULT_BLOG_METRICS_API_BASE_URL = 'https://api.vellira.dev';
+const BLOG_METRICS_ACTOR_PROXY_BASE_PATH = '/api/blog-metrics';
 const BLOG_METRICS_AGGREGATE_REVALIDATE_SECONDS = 300;
 
 type BlogMetricsRequestInit = RequestInit & {
@@ -45,6 +46,10 @@ function getBlogMetricsApiBaseUrl(): string {
 
 function createBlogMetricsApiUrl(path: string): URL {
   return new URL(path, `${getBlogMetricsApiBaseUrl()}/`);
+}
+
+function createBlogMetricsActorProxyPath(path: string): string {
+  return `${BLOG_METRICS_ACTOR_PROXY_BASE_PATH}/${path.replace(/^\/+/, '')}`;
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
@@ -115,7 +120,7 @@ function parseBlogLikeWriteResponse(value: unknown): BlogLikeWriteResponse {
 }
 
 async function requestBlogMetricsJson(
-  url: URL,
+  url: string | URL,
   init: BlogMetricsRequestInit = {},
   options: BlogMetricsRequestOptions = {}
 ): Promise<unknown> {
@@ -197,8 +202,8 @@ export async function fetchBlogMetricsBatch(
 export async function registerBlogArticleView(
   slug: string
 ): Promise<BlogMetricsWriteResponse> {
-  const url = createBlogMetricsApiUrl(
-    `v1/blog/articles/${encodeURIComponent(slug)}/views`
+  const url = createBlogMetricsActorProxyPath(
+    `articles/${encodeURIComponent(slug)}/views`
   );
   const json = await requestBlogMetricsJson(url, {
     method: 'POST',
@@ -212,8 +217,8 @@ export async function registerBlogArticleView(
 export async function fetchBlogArticleLike(
   slug: string
 ): Promise<BlogLikeState> {
-  const url = createBlogMetricsApiUrl(
-    `v1/blog/articles/${encodeURIComponent(slug)}/like`
+  const url = createBlogMetricsActorProxyPath(
+    `articles/${encodeURIComponent(slug)}/like`
   );
   const json = await requestBlogMetricsJson(
     url,
@@ -230,8 +235,8 @@ export async function fetchBlogArticleLike(
 export async function likeBlogArticle(
   slug: string
 ): Promise<BlogLikeWriteResponse> {
-  const url = createBlogMetricsApiUrl(
-    `v1/blog/articles/${encodeURIComponent(slug)}/like`
+  const url = createBlogMetricsActorProxyPath(
+    `articles/${encodeURIComponent(slug)}/like`
   );
   const json = await requestBlogMetricsJson(url, {
     method: 'PUT',
@@ -245,8 +250,8 @@ export async function likeBlogArticle(
 export async function unlikeBlogArticle(
   slug: string
 ): Promise<BlogLikeWriteResponse> {
-  const url = createBlogMetricsApiUrl(
-    `v1/blog/articles/${encodeURIComponent(slug)}/like`
+  const url = createBlogMetricsActorProxyPath(
+    `articles/${encodeURIComponent(slug)}/like`
   );
   const json = await requestBlogMetricsJson(url, {
     method: 'DELETE',

@@ -300,9 +300,12 @@ export function ComponentShowcase() {
           >
             <div className={styles.componentPicker}>
               {components.map((component) => (
-                <button
+                <Button
                   key={component.value}
                   type='button'
+                  appearance='ghost'
+                  color='neutral'
+                  size='sm'
                   className={styles.componentButton}
                   data-active={activeComponent === component.value}
                   onClick={() => {
@@ -324,7 +327,7 @@ export function ComponentShowcase() {
                   <span className={styles.componentButtonLabel}>
                     {component.label}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -476,9 +479,12 @@ export function ComponentShowcase() {
                         aria-label='Dropdown examples'
                       >
                         {dropdownExamples.map((example) => (
-                          <button
+                          <Button
                             key={example.value}
                             type='button'
+                            appearance='ghost'
+                            color='neutral'
+                            size='sm'
                             role='tab'
                             aria-selected={dropdownExample === example.value}
                             className={styles.dropdownSwitchButton}
@@ -488,7 +494,7 @@ export function ComponentShowcase() {
                             }}
                           >
                             {example.label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </motion.div>
@@ -527,7 +533,12 @@ export function ComponentShowcase() {
                             asChild
                             className={styles.dropdownTriggerButton}
                           >
-                            <button type='button'>
+                            <Button
+                              type='button'
+                              appearance='outline'
+                              color='neutral'
+                              size='sm'
+                            >
                               <span>
                                 {dropdownExample === 'actions' && 'Actions'}
                                 {dropdownExample === 'access' && 'Invite'}
@@ -538,7 +549,7 @@ export function ComponentShowcase() {
                                 size={16}
                                 aria-hidden='true'
                               />
-                            </button>
+                            </Button>
                           </Dropdown.Trigger>
 
                           <Dropdown.Content

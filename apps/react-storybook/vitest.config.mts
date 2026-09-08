@@ -14,6 +14,7 @@ const webSrc = path.resolve(dirname, '../../packages/react/src');
 
 export default defineConfig({
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: [
       {
         find: '@vellira-ui/icons/lottie',

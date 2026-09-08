@@ -65,11 +65,7 @@ export function ComponentNavigationShell({
 
           <div className={styles.mobileSurface}>
             <div className={styles.mobileHeader}>
-              <Link
-                href='/'
-                className={styles.mobileBrand}
-                onClick={closeNavigation}
-              >
+              <Link href='/' className={styles.mobileBrand}>
                 <Image
                   src='/brand/logos/logo-gradient.svg'
                   alt='Vellira'
@@ -98,10 +94,7 @@ export function ComponentNavigationShell({
               </div>
 
               <div className={styles.mobilePanelContent}>
-                <ComponentSidebar
-                  activeSlug={activeSlug}
-                  onNavigate={closeNavigation}
-                />
+                <ComponentSidebar activeSlug={activeSlug} />
               </div>
             </aside>
           </div>

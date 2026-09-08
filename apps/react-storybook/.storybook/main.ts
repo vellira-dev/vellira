@@ -39,6 +39,7 @@ const config: StorybookConfig = {
     return mergeConfig(config, {
       root: storybookRoot,
       resolve: {
+        dedupe: ['react', 'react-dom'],
         alias: [
           {
             find: '@vellira-ui/icons/lottie',
