@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.99.0",
+  "version": "2.100.0",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -16,6 +16,8 @@
     "check:source-hygiene:json": "node scripts/check-source-hygiene.mjs --json",
     "check:ts-project-coverage": "tsx scripts/checks/ts-project-coverage/checker.ts",
     "check:ts-project-coverage:json": "tsx scripts/checks/ts-project-coverage/checker.ts --json",
+    "check:vellira-ui-usage": "tsx scripts/checks/vellira-ui-usage/cli.ts",
+    "check:vellira-ui-usage:json": "tsx scripts/checks/vellira-ui-usage/cli.ts --json",
     "check:component": "tsx scripts/checks/component-completeness/check-components.ts",
     "check:component-quality": "tsx scripts/checks/component-quality/cli.ts",
     "check:component-quality:json": "tsx scripts/checks/component-quality/cli.ts --all --json",

@@ -89,8 +89,23 @@ export function canonicalTokenRegistryPath(root: string) {
 }
 
 export function canonicalTokenPaths(root: string): Set<string> | null {
-  const filePath = canonicalTokenRegistryPath(root);
+  return readCanonicalStringArray(
+    canonicalTokenRegistryPath(root),
+    'tokenPaths'
+  );
+}
 
+export function canonicalCssVariableNames(root: string): Set<string> | null {
+  return readCanonicalStringArray(
+    canonicalTokenRegistryPath(root),
+    'cssVariableNames'
+  );
+}
+
+function readCanonicalStringArray(
+  filePath: string,
+  variableName: string
+): Set<string> | null {
   if (!fs.existsSync(filePath)) {
     return null;
   }
@@ -124,7 +139,7 @@ export function canonicalTokenPaths(root: string): Set<string> | null {
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
-      node.name.text === 'tokenPaths' &&
+      node.name.text === variableName &&
       node.initializer
     ) {
       const initializer = unwrapExpression(node.initializer);
