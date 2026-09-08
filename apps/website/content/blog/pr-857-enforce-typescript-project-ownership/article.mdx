@@ -1,0 +1,104 @@
+Repository tooling is easy to overestimate from filenames alone. The useful engineering question is which relationships the inspected evidence actually establishes. In this change, `check:ts-project-coverage:json` provides the validation command, the declared configuration establishes input authority, `scripts/checks/ts-project-coverage/checker.ts` identifies the implementation surface, and the checker result fields make outcomes observable. Those surfaces define the reviewable slice of the tooling story. The article can explain how that evidenced slice fits together, why its boundaries matter during review, and where maintainers should look when the represented wiring changes. It cannot fill gaps with plausible adjacent roles simply because they are common in repository tooling. Keeping the prose limited to present evidence turns changed filenames into a reviewable account without treating an unseen part of the path as established. That same boundary gives future reviewers a precise place to resume investigation when the represented surfaces evolve.
+
+## Problem and constraint
+
+The problem is not file discovery by itself but authority across connected repository surfaces. A checker can exist without an obvious invocation path, a configuration file can exist without showing how it is consumed, and tests can describe edge cases without proving that CI reaches the same code. `check:ts-project-coverage:json` supplies the checker command, `tsc -p tsconfig.json --noEmit` and `turbo run typecheck` are configured typecheck entrypoints, and checker results include `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints`. Together, those surfaces identify the boundary a reviewer has to preserve when those surfaces change. The constraint is equally important: the article must stay within those inspected connections rather than filling gaps with assumptions about the rest of the repository.
+
+The maintenance risk is coordination across the repository-owned surfaces that are actually represented in the change, not the mere presence of TypeScript files. Here, `check:ts-project-coverage:json` exposes `scripts/checks/ts-project-coverage/checker.ts` as the validation command, `tsc -p tsconfig.json --noEmit` and `turbo run typecheck` are configured typecheck entrypoints, `scripts/checks/ts-project-coverage/checker.ts` exposes `runTsProjectCoverageCheck` as a checker source surface, `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints` make checker outcomes observable, and focused static test cases make ownership edge cases visible for review. Those evidenced surfaces form a reviewable boundary because each one contributes a different kind of authority or observability to the tooling story. When one represented surface changes without the others, ownership can become harder to reason about even if every individual file still looks valid. Framing the problem this way keeps the article useful without assuming adjacent automation, configuration, or implementation that is not present in the evidence. The constraint for maintainers is therefore to preserve the relationships the bundle can actually prove, compare changes across those represented surfaces, and treat any unrepresented part of the tooling path as a separate question that requires its own repository evidence.
+
+<details>
+<summary>Verified source details</summary>
+
+{/* vellira-claim:sha256:3805af99594fb75a8c3ad862f0ca124dfd3eb4a6b7d41750a04af3b65c2c3c4e */}
+Merged pull request #857 changed 32 bounded public repository paths at revision 3a62226d1f16e5b8730f4319fdf72a19ab5306c0.
+
+</details>
+
+## What changed
+
+The change is grounded in the tooling surfaces present in the inspected evidence. `check:ts-project-coverage:json` provides the validation command, the declared configuration establishes input authority, `scripts/checks/ts-project-coverage/checker.ts` identifies the implementation surface, and the checker result fields make outcomes observable. Reading the change through only those evidenced roles keeps the explanation tied to the source-backed path instead of treating a collection of changed filenames as a design on its own.
+
+The concrete change is best read as a set of distinct responsibilities rather than a single “checker added” event. `check:ts-project-coverage:json` exposes `scripts/checks/ts-project-coverage/checker.ts` as the validation command, `tsc -p tsconfig.json --noEmit` and `turbo run typecheck` are configured typecheck entrypoints, `scripts/checks/ts-project-coverage/checker.ts` exposes `runTsProjectCoverageCheck` as a checker source surface, `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints` make checker outcomes observable, and focused static test cases make ownership edge cases visible for review. Those responsibilities are intentionally separate: each evidenced role answers a different review question and none of them should be treated as proof that an unrepresented neighboring role exists. Keeping the roles separate gives future changes a stable review path because a maintainer can identify which evidenced responsibility moved and then inspect the represented surfaces that should still agree with it. This is enough to make the change substantive without inventing a workflow, project-reference layer, implementation export, or other adjacent surface that the bounded bundle does not contain. The depth comes from explaining the relationships among the facts that are present, not from widening the technical scope beyond the selected repository evidence.
+
+<details>
+<summary>Verified source details</summary>
+
+{/* vellira-claim:sha256:a1ef84bcb75a84103d5215016b27b3817f8f1ecb9ae7cfd8e8f8fc5a74843a47 */}
+Pinned package script package.json defines `check:ts-project-coverage:json` with checker command `scripts/checks/ts-project-coverage/checker.ts`.
+
+{/* vellira-claim:sha256:44507b8c6acb30f9aa117bcdbfb5cf0bfa9281fdf1745f204592390a7d860c51 */}
+Pinned package script package.json defines `check:ts-project-coverage` with checker command `scripts/checks/ts-project-coverage/checker.ts`.
+
+</details>
+
+## How it works
+
+The mechanism is easiest to understand as a chain. `scripts/checks/ts-project-coverage/checker.ts` exports `runTsProjectCoverageCheck`, `check:ts-project-coverage:json` names the checker command, the entrypoint configuration lists `tsc -p tsconfig.json --noEmit` and `turbo run typecheck`, and the checker result shape includes `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints`. Together, those repository-owned artifacts give the checker explicit inputs, an invocation path, and observable result fields that a maintainer can inspect. The important design choice is that the article follows those concrete links instead of guessing behavior from file names. That makes configuration drift easier to reason about because a review can identify which link changed and which adjacent surfaces should move with it. The focused tests cover “does not treat a stale root solution reference as ownership authority”, “does not treat an orphan tsconfig as ownership authority”, and using a verified typecheck entrypoint and recursive project references as ownership authority. Those names describe what the suite exercises; they do not independently prove runtime behavior or repository state outside the inspected change.
+
+<details>
+<summary>Verified source details</summary>
+
+{/* vellira-claim:sha256:9074b69aa3fc16510a91734776e7e025d005271a6ee7fba56a6bac5b574cf3cc */}
+Pinned tooling source scripts/checks/ts-project-coverage/checker.ts exports runTsProjectCoverageCheck.
+
+{/* vellira-claim:sha256:477f8d19ffef5422352c6e9308ce9bef926226b4a3666b160e8989ffe4d73631 */}
+Pinned tooling source scripts/checks/ts-project-coverage/checker.ts represents checker result fields `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints`.
+
+</details>
+
+## Integration and enforcement
+
+This part of the change is about explicit tooling wiring rather than inferred repository shape. The entrypoint configuration lists `tsc -p tsconfig.json --noEmit` and `turbo run typecheck`. That matters because maintainers need a concrete command, configuration source, or checker output to review. A checker file by itself does not explain how the repository reaches it, and a configuration file by itself does not explain which command consumes it. Connecting those surfaces turns the implementation into a maintainable path without inventing behavior beyond the inspected source.
+
+Integration is about making the evidenced validation path traceable. `check:ts-project-coverage:json` exposes `scripts/checks/ts-project-coverage/checker.ts` as the validation command, `tsc -p tsconfig.json --noEmit` and `turbo run typecheck` are configured typecheck entrypoints, and `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints` make checker outcomes observable. The selected evidence does not establish a workflow invocation, so this discussion stops at the repository-owned surfaces that are actually present. This distinction prevents CI or any other missing layer from becoming an assumed property of the article. It also keeps failures actionable: a reviewer can compare each represented link with the neighboring links that the bundle actually contains, then ask for additional evidence only if the problem crosses into an unrepresented role. The enforcement story is therefore concrete without being overstated. It describes how the selected invocation, authority, automation, or outcome surfaces fit together when they are present, and it leaves every absent surface outside the verified path instead of filling the gap with a plausible repository convention.
+
+<details>
+<summary>Verified source details</summary>
+
+{/* vellira-claim:sha256:78e0f65a96969a7938c3a8ee38552a5b6697acbfc00f698ea7de2a3e95d30139 */}
+Pinned tooling config scripts/checks/ts-project-coverage/entrypoints.json declares configured typecheck entrypoints `tsc -p tsconfig.json --noEmit`, `turbo run typecheck`, `tsc -p tsconfig.test.json --noEmit`, and `tsc -p tsconfig.tooling.json --noEmit`.
+
+</details>
+
+## Failure modes and edge cases
+
+The focused tests cover “does not treat a stale root solution reference as ownership authority” and “does not treat an orphan tsconfig as ownership authority”. Those cases give the section concrete review boundaries, but they are only the starting point for explanation. The reader still needs to understand why those cases matter, how they relate to the changed source, and which conclusions should remain outside the test evidence.
+
+The failure modes worth reviewing are authority mismatches rather than generic parser errors. In the inspected material, `check:ts-project-coverage:json` exposes `scripts/checks/ts-project-coverage/checker.ts` as the validation command, `tsc -p tsconfig.json --noEmit` and `turbo run typecheck` are configured typecheck entrypoints, `scripts/checks/ts-project-coverage/checker.ts` exposes `runTsProjectCoverageCheck` as a checker source surface, `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints` make checker outcomes observable, and focused static test cases make ownership edge cases visible for review. That set gives maintainers concrete boundaries for asking whether the represented pieces still tell the same story. A configuration fact, result field, command surface, implementation export, workflow, or test case is useful here only when it exists in the selected evidence; none of those categories should be inferred merely because it would normally appear in similar tooling. This makes failure analysis more precise. Reviewers can trace the evidenced boundary first, distinguish observable outputs from coverage examples and authority inputs, and ask for additional repository proof only when a failure involves a surface the current bundle does not represent. The article can therefore explain failure modes deeply without inventing runtime semantics or hidden automation.
+
+<details>
+<summary>Verified source details</summary>
+
+{/* vellira-claim:sha256:43eb969f26d9b9555dbf8ccd03e198e48193f4101c9ebe92c4bca4b7c9c64f60 */}
+Pinned test evidence defines a static coverage case named “does not treat a stale root solution reference as ownership authority”.
+
+{/* vellira-claim:sha256:072382ae7ce781e9de41ca236bac89b3952edab69e0b2910bffeea2d5aee0fd7 */}
+Pinned test evidence defines a static coverage case named “does not treat an orphan tsconfig as ownership authority”.
+
+</details>
+
+## Practical takeaway
+
+For maintainers, the practical lesson is to review tooling as an explicit chain of repository-owned surfaces rather than as a collection of filenames. `check:ts-project-coverage:json` supplies the checker command, `tsc -p tsconfig.json --noEmit` and `turbo run typecheck` are configured typecheck entrypoints, and checker results include `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints`. Those links make it possible to ask precise questions at each step: which command starts the check, which configuration shapes its inputs, which source implements the checker, which result fields make failures visible, and which focused tests define the review edge cases. When one link moves without the others, the review has a concrete place to investigate instead of relying on convention.
+
+<details>
+<summary>Verified source details</summary>
+
+{/* vellira-claim:sha256:4c3c9c276a142eb32f297efbc75cfd001b41412a53139bf20d61f66b95571071 */}
+Pinned test evidence defines a static coverage case named “uses a verified typecheck entrypoint and recursive project references as ownership authority”.
+
+</details>
+
+## Current limitations
+
+The boundary matters because repository tooling is only as strong as the relationships among the package-script command, the declared configuration, the checker implementation, the checker result shape, and the focused test cases. This article can explain those connected surfaces and the maintenance problem they address, but it should not turn the existence of a config file or a test name into a broader guarantee about every repository path. Keeping that distinction visible makes the trade-off useful: the change can establish an explicit review path without pretending that uninspected code or runtime behavior has been proven by the article.
+
+The boundary remains explicit even for a rich tooling change. The bundle establishes a package-script command surface, declared configuration authority, a checker implementation surface, structured checker outcomes, and focused test coverage boundaries. The selected evidence does not establish a workflow invocation, so the article should not present those roles as part of the verified path. The checker can describe the graph and outcomes represented by those sources at the pinned revision; it cannot guarantee that a future configuration, generated path, package script, workflow, or test will automatically become part of the same reviewable path. New repository surfaces still need their own evidence and focused coverage before the article can treat them as established. Keeping that limit visible is what lets the prose become more detailed without becoming less trustworthy: depth comes from explaining the relationships that are actually present, not from filling missing technical roles with plausible assumptions.
+
+<details>
+<summary>Source scope</summary>
+
+{/* vellira-claim:sha256:38fc2857f88dc6d9383e8bbe277baa5412098bce08d78c81c034abaab28fa7d7 */}
+Technical authority is bounded to merged public PR metadata and selected public file snapshots pinned to the referenced merge revisions; unselected repository content is not used to authorize article claims.
+
+</details>

@@ -1,0 +1,9 @@
+{
+  "title": "Enforcing TypeScript project ownership in Vellira",
+  "description": "How Vellira connects a repository checker to configured typecheck entrypoints and checker result fields, with focused coverage for “does not treat a stale root solution reference as ownership authority” and “does not treat an orphan tsconfig as ownership authority”.",
+  "slug": "pr-857-enforce-typescript-project-ownership",
+  "publishedAt": "2026-09-05",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}

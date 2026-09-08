@@ -23,6 +23,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
       import('../../content/blog/cross-platform-form-vellira/article.mdx'),
     'design-system-component-generator': () =>
       import('../../content/blog/design-system-component-generator/article.mdx'),
+    'pr-857-enforce-typescript-project-ownership': () =>
+      import('../../content/blog/pr-857-enforce-typescript-project-ownership/article.mdx'),
     'production-ready-cross-platform-component': () =>
       import('../../content/blog/production-ready-cross-platform-component/article.mdx'),
     'quality-gates-before-component-growth': () =>
