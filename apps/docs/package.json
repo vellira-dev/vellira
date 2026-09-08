@@ -20,6 +20,7 @@
   "devDependencies": {
     "@vellira-ui/assets": "workspace:*",
     "@vellira-ui/metadata": "workspace:*",
+    "@vellira-ui/tokens": "workspace:*",
     "vitepress": "^1.6.4"
   }
 }
