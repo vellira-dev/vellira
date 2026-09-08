@@ -15,7 +15,8 @@ export type TokenOwnershipFindingCode =
   | 'unclassified-semantic-namespace'
   | 'missing-public-semantic-namespace'
   | 'missing-component-metadata-owner'
-  | 'invalid-current-component-owner';
+  | 'invalid-current-component-owner'
+  | 'missing-semantic-consumer-evidence';
 
 export type TokenOwnershipFinding = {
   code: TokenOwnershipFindingCode;
@@ -197,6 +198,18 @@ export function checkTokenOwnership(root: string): TokenOwnershipReport {
       findings.push({
         code: 'missing-component-metadata-owner',
         message: `Current component-token family "${family}" references missing component metadata owner "${lifecycle.owner}".`,
+        path: 'packages/metadata/src/tokenLifecycle.ts',
+      });
+    }
+  }
+
+  for (const [namespace, lifecycle] of Object.entries(semanticTokenLifecycle)) {
+    if (lifecycle.status !== 'current') continue;
+
+    if (lifecycle.consumerEvidence.length === 0) {
+      findings.push({
+        code: 'missing-semantic-consumer-evidence',
+        message: `Current semantic namespace "${namespace}" has no declared consumer evidence.`,
         path: 'packages/metadata/src/tokenLifecycle.ts',
       });
     }
