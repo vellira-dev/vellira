@@ -107,25 +107,38 @@ jobs:
           const fs = require('node:fs');
           const before = JSON.parse(fs.readFileSync('/tmp/audit-before.json', 'utf8'));
           const after = JSON.parse(fs.readFileSync('/tmp/audit-after.json', 'utf8'));
-          const target = 'apps/website/src/component-catalog/shared/ComponentApi/ComponentApi.module.css';
-          const beforeFindings = before.findings.filter((finding) => finding.path === target);
-          const afterFindings = after.findings.filter((finding) => finding.path === target);
-          const beforeMono = beforeFindings.filter((finding) => finding.detected === '--font-family-mono');
-          const afterMono = afterFindings.filter((finding) => finding.detected === '--font-family-mono');
+          const apiPath = 'apps/website/src/component-catalog/shared/ComponentApi/ComponentApi.module.css';
+          const extraMonoPaths = [
+            'apps/website/src/component-catalog/shared/ComponentCodeBlock/ComponentCodeBlock.module.css',
+            'apps/website/src/component-catalog/shared/ComponentAccessibility/ComponentAccessibility.module.css',
+          ];
+          const beforeApi = before.findings.filter((finding) => finding.path === apiPath);
+          const afterApi = after.findings.filter((finding) => finding.path === apiPath);
+          const beforeApiMono = beforeApi.filter((finding) => finding.detected === '--font-family-mono');
+          const afterApiMono = afterApi.filter((finding) => finding.detected === '--font-family-mono');
 
-          if (before.summary.findings !== 131 || after.summary.findings !== 129) {
-            throw new Error(`expected global 131 -> 129, got ${before.summary.findings} -> ${after.summary.findings}`);
+          if (before.summary.findings !== 131 || after.summary.findings !== 127) {
+            throw new Error(`expected global 131 -> 127, got ${before.summary.findings} -> ${after.summary.findings}`);
           }
-          if (beforeFindings.length !== 11 || afterFindings.length !== 9) {
-            throw new Error(`expected ComponentApi 11 -> 9, got ${beforeFindings.length} -> ${afterFindings.length}`);
+          if (beforeApi.length !== 11 || afterApi.length !== 9) {
+            throw new Error(`expected ComponentApi 11 -> 9, got ${beforeApi.length} -> ${afterApi.length}`);
           }
-          if (beforeMono.length !== 2 || afterMono.length !== 0) {
-            throw new Error(`expected mono findings 2 -> 0, got ${beforeMono.length} -> ${afterMono.length}`);
+          if (beforeApiMono.length !== 2 || afterApiMono.length !== 0) {
+            throw new Error(`expected ComponentApi mono findings 2 -> 0, got ${beforeApiMono.length} -> ${afterApiMono.length}`);
+          }
+          for (const path of extraMonoPaths) {
+            const beforeMono = before.findings.filter((finding) => finding.path === path && finding.detected === '--font-family-mono');
+            const afterMono = after.findings.filter((finding) => finding.path === path && finding.detected === '--font-family-mono');
+            if (beforeMono.length !== 1 || afterMono.length !== 0) {
+              throw new Error(`expected ${path} mono finding 1 -> 0, got ${beforeMono.length} -> ${afterMono.length}`);
+            }
           }
 
           console.log('ComponentApi findings: 11 -> 9');
-          console.log('font-family-mono findings: 2 -> 0');
-          console.log('Global findings: 131 -> 129');
+          console.log('ComponentApi font-family-mono findings: 2 -> 0');
+          console.log('ComponentCodeBlock font-family-mono findings: 1 -> 0');
+          console.log('ComponentAccessibility font-family-mono findings: 1 -> 0');
+          console.log('Global findings: 131 -> 127');
           NODE
 
       - name: Check diff
