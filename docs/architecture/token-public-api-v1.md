@@ -15,6 +15,11 @@ object choose one of the named themes explicitly. The string form
 `high-contrast` is the serialized theme identity; the camel-cased
 `highContrastTheme` identifier is the TypeScript export name.
 
+The generated Web CSS has a separate, explicit browser default: Light values are
+emitted for `:root` as well as the `light` data-theme selectors. This CSS fallback
+does not make `lightTheme` an implicit JavaScript default and does not justify a
+generic `theme` export.
+
 The historical root export `theme` is not a default theme. It is a partial view
 of `darkTheme` containing only `semantic`, `components`, and `tokens`. It remains
 available only as a deprecated 2.x compatibility export and is scheduled for
@@ -84,6 +89,7 @@ must not be reintroduced into canonical component tokens for compatibility.
 `public-api-v1.test.ts` locks:
 
 - named export ↔ runtime `theme.name` agreement;
+- Light as the generated CSS `:root` default without defining a JavaScript default;
 - the exact historical `theme` compatibility shape and its source deprecation;
 - migration evidence for every generated Web compatibility alias;
 - exclusion of legacy aliases from canonical component token paths;
