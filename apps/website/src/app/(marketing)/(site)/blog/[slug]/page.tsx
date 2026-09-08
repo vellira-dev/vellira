@@ -21,8 +21,6 @@ interface BlogArticlePageProps {
   }>;
 }
 
-export const dynamicParams = false;
-
 export async function generateStaticParams() {
   const articles = await getPublishedBlogArticles();
 

@@ -1,0 +1,137 @@
+name: Deploy Website Cloudflare Production Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Select DEPLOY_CANDIDATE to deploy the isolated production Worker. This does not attach vellira.dev.'
+        required: true
+        type: choice
+        default: DO_NOT_DEPLOY
+        options:
+          - DO_NOT_DEPLOY
+          - DEPLOY_CANDIDATE
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-cloudflare-production
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 22.22.0
+  PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
+
+jobs:
+  deploy:
+    name: Build and deploy isolated production candidate
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY_CANDIDATE'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build website dependencies
+        run: pnpm exec turbo run build --filter='@vellira-ui/website^...'
+
+      - name: Sync website brand
+        run: pnpm --dir apps/website run sync:brand
+
+      - name: Build production Worker candidate
+        run: pnpm --dir apps/website exec opennextjs-cloudflare build --config=wrangler.production.jsonc
+
+      - name: Verify production config has no public custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep --fixed-strings --quiet 'vellira.dev' apps/website/wrangler.production.jsonc; then
+            echo 'Production candidate config unexpectedly contains vellira.dev before cutover.' >&2
+            exit 1
+          fi
+
+      - name: Deploy isolated production Worker candidate
+        run: pnpm --dir apps/website exec opennextjs-cloudflare deploy --config=wrangler.production.jsonc
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Smoke test production Worker candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+
+          check_route() {
+            local path="$1"
+            shift
+            local body
+            local status
+            local expected
+            local matches
+            body="$(mktemp)"
+
+            for attempt in 1 2 3 4 5; do
+              status="$(curl --location --silent --show-error \
+                --header 'Cache-Control: no-cache' \
+                --output "$body" --write-out '%{http_code}' \
+                "$PRODUCTION_WORKER_URL$path" || true)"
+
+              matches=true
+              if [[ "$status" == "200" ]]; then
+                for expected in "$@"; do
+                  if ! grep --fixed-strings --quiet "$expected" "$body"; then
+                    matches=false
+                    break
+                  fi
+                done
+              else
+                matches=false
+              fi
+
+              if [[ "$matches" == "true" ]]; then
+                echo "OK $path"
+                rm -f "$body"
+                return 0
+              fi
+
+              echo "Attempt $attempt failed for $path: HTTP $status"
+              sleep 2
+            done
+
+            echo "Production candidate smoke failed for $path" >&2
+            sed -n '1,40p' "$body" >&2
+            rm -f "$body"
+            return 1
+          }
+
+          check_route '/' 'Vellira'
+          check_route '/components/switch' 'Switch component for Vellira applications.'
+          check_route '/blog' 'Practical engineering notes on design systems'
+          check_route '/blog/two-runtimes' 'One Design System, Two Runtimes' 'data-language="ts"'
+          check_route '/blog/rss.xml' '<rss version="2.0"'
+          check_route '/sitemap.xml' '<urlset'
+          check_route '/robots.txt' 'User-Agent: *'
+
+      - name: Install Chromium for static chunk smoke
+        run: pnpm --filter @vellira-ui/react-storybook run playwright:install
+
+      - name: Smoke test production static chunk integrity
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-static-chunk-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
