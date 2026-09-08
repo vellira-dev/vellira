@@ -9,6 +9,9 @@ const dirname =
     ? __dirname
     : path.dirname(fileURLToPath(import.meta.url));
 const storybookRoot = path.resolve(dirname, '..');
+const repositoryRoot = path.resolve(dirname, '../../..');
+const reactRoot = path.resolve(repositoryRoot, 'node_modules/react');
+const reactDomRoot = path.resolve(repositoryRoot, 'node_modules/react-dom');
 
 const config: StorybookConfig = {
   framework: {
@@ -41,6 +44,14 @@ const config: StorybookConfig = {
       resolve: {
         dedupe: ['react', 'react-dom'],
         alias: [
+          {
+            find: 'react-dom',
+            replacement: reactDomRoot,
+          },
+          {
+            find: 'react',
+            replacement: reactRoot,
+          },
           {
             find: '@vellira-ui/icons/lottie',
             replacement: path.resolve(
