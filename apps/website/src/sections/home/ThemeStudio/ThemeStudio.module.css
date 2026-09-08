@@ -200,13 +200,13 @@
 }
 
 .connector[data-accent='danger'] {
-  --token-signal-color: var(--color-danger-500);
+  --token-signal-color: var(--color-error-500);
 }
 
 .connector[data-accent='danger'] span {
-  background: var(--color-danger-500);
+  background: var(--color-error-500);
   box-shadow: 0 0 0 5px
-    color-mix(in srgb, var(--color-danger-500) 12%, transparent);
+    color-mix(in srgb, var(--color-error-500) 12%, transparent);
 }
 
 .connector[data-flow='color'] {
@@ -290,7 +290,7 @@
 }
 
 .controlHeading code {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-xs);
   font-weight: 500;
@@ -369,9 +369,9 @@
 }
 
 .activeOption[data-accent='danger'] {
-  border-color: var(--color-danger-500);
+  border-color: var(--color-error-500);
   box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--color-danger-500) 10%, transparent);
+    color-mix(in srgb, var(--color-error-500) 10%, transparent);
 }
 
 .colorSwatch {
@@ -397,7 +397,7 @@
 }
 
 .colorSwatch[data-accent='danger'] {
-  background: var(--color-danger-500);
+  background: var(--color-error-500);
 }
 
 .radiusPicker,
@@ -499,7 +499,7 @@
 }
 
 .themeFrame[data-accent='danger'] {
-  --studio-accent: var(--color-danger-500);
+  --studio-accent: var(--color-error-500);
 }
 
 .themeFrame[data-accent='neutral'],
@@ -950,7 +950,7 @@
 }
 
 .statsGrid strong {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xxl);
 }
 
 .changeConsole,
@@ -990,7 +990,7 @@
 }
 
 .consoleHeader code {
-  color: color-mix(in srgb, var(--text-tertiary) 72%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 72%, transparent);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-xs);
 }
