@@ -74,7 +74,8 @@ export const componentTokenWebCompatibilityAliases = [
     variable: '--popover-content-shadow-native-elevation',
     replacementPath: 'components.popover.content.shadow',
     replacementVariable: '--popover-content-shadow',
-    migrationId: '884-remove-components-popover-content-shadow-native-elevation',
+    migrationId:
+      '884-remove-components-popover-content-shadow-native-elevation',
     issue: '#889',
     removeIn: '3.0.0',
   },

@@ -26,11 +26,7 @@ pnpm add @vellira-ui/tokens
 Choose a named theme explicitly:
 
 ```ts
-import {
-  darkTheme,
-  highContrastTheme,
-  lightTheme,
-} from '@vellira-ui/tokens';
+import { darkTheme, highContrastTheme, lightTheme } from '@vellira-ui/tokens';
 
 darkTheme.semantic.surface.default;
 darkTheme.semantic.surface.panel;
