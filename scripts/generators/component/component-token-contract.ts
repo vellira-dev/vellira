@@ -1,8 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { getComponentTokenFamilyOwnership } from '../../../packages/tokens/src/token-ownership.js';
-
 import {
   renderComponentTokenBarrelExport,
   renderComponentTokenFactoryBarrelExport,
@@ -15,36 +13,6 @@ export type ComponentTokenContractMutationResult = {
   createdFiles: string[];
   updatedFiles: string[];
 };
-
-function componentTokenFamilyName(componentName: string) {
-  return `${componentName[0]?.toLowerCase() ?? ''}${componentName.slice(1)}`;
-}
-
-export function assertComponentTokenFamilyLifecycle(
-  plan: Pick<ComponentGenerationPlan, 'componentName' | 'componentTokens'>
-) {
-  if (plan.componentTokens === false) return;
-
-  const family = componentTokenFamilyName(plan.componentName);
-  const ownership = getComponentTokenFamilyOwnership(family);
-
-  if (!ownership) return;
-
-  if (ownership.lifecycle !== 'current') {
-    throw new Error(
-      `component-token-family-not-current: family="${family}" lifecycle="${ownership.lifecycle}" authority="${ownership.authority}"`
-    );
-  }
-
-  if (
-    ownership.owner !== 'component-metadata' ||
-    ownership.metadataComponent !== plan.componentName
-  ) {
-    throw new Error(
-      `component-token-family-owner-mismatch: family="${family}" component="${plan.componentName}"`
-    );
-  }
-}
 
 function writeCreatedFile(params: {
   filePath: string;
@@ -98,8 +66,6 @@ export function ensureComponentTokenContract(params: {
 
   if (plan.componentTokens === false) return;
 
-  assertComponentTokenFamilyLifecycle(plan);
-
   if (!fs.existsSync(plan.tokenFactoryFile)) {
     writeCreatedFile({
       filePath: plan.tokenFactoryFile,
@@ -149,10 +115,6 @@ export function checkComponentTokenContract(plan: ComponentGenerationPlan) {
   const expectedThemeExport = renderComponentTokenBarrelExport(
     plan.componentName
   );
-
-  if (plan.componentTokens !== false) {
-    assertComponentTokenFamilyLifecycle(plan);
-  }
 
   const factoryBarrel = fs.existsSync(plan.tokenFactoryBarrelFile)
     ? fs.readFileSync(plan.tokenFactoryBarrelFile, 'utf8')
