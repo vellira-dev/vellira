@@ -44,7 +44,7 @@ Do not switch the public hostname until all of the following are true:
 1. The latest staging deployment is green on a clean dependency graph with OpenNext as the only Cloudflare adapter.
 2. The browser smoke suite is green, including blog metrics/CORS and mobile navigation.
 3. No intermittent Worker 5xx/limit outcome is reproducible.
-4. The latest blocker-class fix has completed a minimum **24-hour staging soak** without a new blocker.
+4. The latest blocker-class fix has been followed by at least **two consecutive green staging validations**, with no reproducible Worker 5xx/limit regression.
 5. The production Worker `vellira-website` has been built from the intended `main` revision and verified on its `workers.dev` hostname before receiving the public domain.
 6. The current Vercel production deployment remains intact and its DNS state is recorded for rollback.
 7. The previous Cloudflare production Worker version ID, when one exists, is recorded before any replacement deploy.
