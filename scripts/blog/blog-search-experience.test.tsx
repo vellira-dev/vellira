@@ -128,7 +128,10 @@ describe('blog search experience', () => {
 
     expect(batchMetricsRequest).not.toContain('api.vellira.dev');
 
-    const batchMetricsUrl = new URL(batchMetricsRequest, 'https://vellira.test');
+    const batchMetricsUrl = new URL(
+      batchMetricsRequest,
+      'https://vellira.test'
+    );
     expect(batchMetricsUrl.searchParams.getAll('slug')).toEqual(
       articles.map((article) => article.slug)
     );
