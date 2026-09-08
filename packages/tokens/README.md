@@ -46,9 +46,13 @@ darkTheme.name; // 'dark'
 highContrastTheme.name; // 'high-contrast'
 ```
 
-There is no implicit current/default theme object. The historical `theme`
-export is a deprecated partial view of `darkTheme`; use `darkTheme` directly.
-The compatibility export is scheduled for removal in Vellira 3.0.0.
+There is no implicit current/default JavaScript theme object. The historical
+`theme` export is a deprecated partial view of `darkTheme`; use `darkTheme`
+directly. The compatibility export is scheduled for removal in Vellira 3.0.0.
+
+The generated Web CSS separately uses Light values for `:root`, so pages without
+a theme attribute have a deterministic browser fallback. That CSS default does
+not make `lightTheme` an implicit JavaScript default.
 
 ## Semantic Tokens
 
