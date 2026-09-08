@@ -9,12 +9,7 @@
   "workers_dev": true,
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS",
-    "run_worker_first": true
-  },
-  "vars": {
-    "CF_WORKER_NAME": "vellira-website",
-    "CF_PREVIEW_DOMAIN": "vellira"
+    "binding": "ASSETS"
   },
   "observability": {
     "enabled": true
