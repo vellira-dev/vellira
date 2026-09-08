@@ -39,19 +39,11 @@ const config: StorybookConfig = {
   ],
 
   async viteFinal(config) {
-    return mergeConfig(config, {
+    const merged = mergeConfig(config, {
       root: storybookRoot,
       resolve: {
         dedupe: ['react', 'react-dom'],
         alias: [
-          {
-            find: 'react-dom',
-            replacement: reactDomRoot,
-          },
-          {
-            find: 'react',
-            replacement: reactRoot,
-          },
           {
             find: '@vellira-ui/icons/lottie',
             replacement: path.resolve(
@@ -93,6 +85,33 @@ const config: StorybookConfig = {
         chunkSizeWarningLimit: 1200,
       },
     });
+
+    const existingAliases = merged.resolve?.alias;
+    const aliases = Array.isArray(existingAliases)
+      ? existingAliases
+      : Object.entries(existingAliases ?? {}).map(([find, replacement]) => ({
+          find,
+          replacement,
+        }));
+
+    return {
+      ...merged,
+      resolve: {
+        ...merged.resolve,
+        dedupe: ['react', 'react-dom', ...(merged.resolve?.dedupe ?? [])],
+        alias: [
+          {
+            find: 'react-dom',
+            replacement: reactDomRoot,
+          },
+          {
+            find: 'react',
+            replacement: reactRoot,
+          },
+          ...aliases,
+        ],
+      },
+    };
   },
 };
 
