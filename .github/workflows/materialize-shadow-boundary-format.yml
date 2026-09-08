@@ -1,14 +1,15 @@
-name: Materialize shadow boundary formatting
+name: Sync shadow authority branch with main
 
 on:
   push:
     branches: [refactor/unified-shadow-elevation-v1]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  format:
+  sync:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -25,11 +26,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Materialize canonical Prettier output
+      - name: Merge latest main and remove temporary workflow
+        shell: bash
         run: |
-          pnpm exec prettier packages/tokens/src/effects/shadow-platform-boundary.test.ts --write
-          echo '=== FORMATTED FILE START ==='
-          cat packages/tokens/src/effects/shadow-platform-boundary.test.ts
-          echo '=== FORMATTED FILE END ==='
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
           git fetch origin main
-          git diff --check origin/main
+          git merge --no-commit --no-ff origin/main
+          git rm .github/workflows/materialize-shadow-boundary-format.yml
+
+          pnpm exec prettier packages/tokens/src/effects/shadow-platform-boundary.test.ts --check
+          git diff --check
+
+          git commit -m 'chore(tokens): sync shadow authority branch with main'
+          git push origin HEAD:refactor/unified-shadow-elevation-v1
