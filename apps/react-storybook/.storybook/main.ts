@@ -42,6 +42,7 @@ const config: StorybookConfig = {
     const merged = mergeConfig(config, {
       root: storybookRoot,
       resolve: {
+        preserveSymlinks: true,
         dedupe: ['react', 'react-dom'],
         alias: [
           {
@@ -98,6 +99,7 @@ const config: StorybookConfig = {
       ...merged,
       resolve: {
         ...merged.resolve,
+        preserveSymlinks: true,
         dedupe: ['react', 'react-dom', ...(merged.resolve?.dedupe ?? [])],
         alias: [
           {
