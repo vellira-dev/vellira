@@ -1,0 +1,17 @@
+name: Issue 852 mono font-family evidence
+
+on:
+  push:
+    branches:
+      - probe/852-component-api-audit
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Print mono-family evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -RInE --exclude-dir=node_modules --exclude-dir=.git -- '(font-family[^;]*(mono|Menlo|Consolas|Courier)|fontFamily.*(mono|Menlo|Consolas|Courier)|ui-monospace|SFMono|--font-family-mono)' apps packages scripts || true
