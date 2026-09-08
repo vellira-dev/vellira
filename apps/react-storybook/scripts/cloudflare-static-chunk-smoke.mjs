@@ -12,6 +12,7 @@ const context = await browser.newContext();
 const page = await context.newPage();
 const criticalDiagnostics = [];
 const abortedChunkUrls = new Set();
+const abortedRouterRequests = new Map();
 
 function isSameOrigin(url) {
   return new URL(url).origin === origin;
@@ -53,6 +54,28 @@ function describeRouterRequest(request) {
   ].join(' ');
 }
 
+function getRouterReplayHeaders(request) {
+  const source = request.headers();
+  const replayHeaders = {
+    'Cache-Control': 'no-cache',
+  };
+
+  for (const name of [
+    'accept',
+    'rsc',
+    'next-router-prefetch',
+    'next-router-segment-prefetch',
+    'next-router-state-tree',
+    'next-url',
+  ]) {
+    if (source[name]) {
+      replayHeaders[name] = source[name];
+    }
+  }
+
+  return replayHeaders;
+}
+
 function recordCritical(diagnostic) {
   if (!criticalDiagnostics.includes(diagnostic)) {
     criticalDiagnostics.push(diagnostic);
@@ -78,6 +101,16 @@ page.on('response', (response) => {
 
 page.on('requestfailed', (request) => {
   if (isNextRouterDataRequest(request)) {
+    if (request.failure()?.errorText === 'net::ERR_ABORTED') {
+      const description = describeRouterRequest(request);
+      abortedRouterRequests.set(description, {
+        description,
+        url: request.url(),
+        headers: getRouterReplayHeaders(request),
+      });
+      return;
+    }
+
     recordCritical(
       `router data requestfailed: ${describeRouterRequest(request)} ` +
         `${request.failure()?.errorText ?? ''}`
@@ -188,9 +221,33 @@ async function verifyAbortedChunkUrls(stage) {
   }
 }
 
+async function verifyAbortedRouterRequests(stage) {
+  const requests = [...abortedRouterRequests.values()];
+  abortedRouterRequests.clear();
+
+  for (const request of requests) {
+    const response = await context.request.get(request.url, {
+      failOnStatusCode: false,
+      headers: request.headers,
+    });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Aborted router prefetch is not serviceable during ${stage}: ` +
+          `${response.status()} ${request.description}`
+      );
+    }
+
+    console.log(
+      `OK aborted router prefetch remains serviceable: ${response.status()} ${request.description}`
+    );
+  }
+}
+
 async function settleAndVerifyChunks(stage) {
   await page.waitForTimeout(700);
   await verifyAbortedChunkUrls(stage);
+  await verifyAbortedRouterRequests(stage);
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
@@ -285,6 +342,7 @@ try {
   await verifyClientRoutes('/blog', blogRoutes);
   await verifyClientRoutes('/components', componentRoutes);
   await verifyAbortedChunkUrls('final verification');
+  await verifyAbortedRouterRequests('final verification');
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
@@ -294,8 +352,9 @@ try {
 } catch (error) {
   try {
     await verifyAbortedChunkUrls('failure cleanup');
+    await verifyAbortedRouterRequests('failure cleanup');
   } catch (probeError) {
-    recordCritical(`aborted chunk verification failed: ${probeError}`);
+    recordCritical(`aborted request verification failed: ${probeError}`);
   }
 
   console.error(`Cloudflare static chunk smoke failed at ${page.url()}`);
