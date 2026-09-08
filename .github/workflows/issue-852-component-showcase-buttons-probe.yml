@@ -42,7 +42,7 @@ jobs:
           }
 
           replaceExact(
-`                <button
+          `                <button
                   key={component.value}
                   type='button'
                   className={styles.componentButton}
@@ -51,7 +51,7 @@ jobs:
                     selectComponent(component.value);
                   }}
                 >`,
-`                <Button
+          `                <Button
                   key={component.value}
                   type='button'
                   appearance='ghost'
@@ -66,18 +66,18 @@ jobs:
           );
 
           replaceExact(
-`                  <span className={styles.componentButtonLabel}>
+          `                  <span className={styles.componentButtonLabel}>
                     {component.label}
                   </span>
                 </button>`,
-`                  <span className={styles.componentButtonLabel}>
+          `                  <span className={styles.componentButtonLabel}>
                     {component.label}
                   </span>
                 </Button>`
           );
 
           replaceExact(
-`                          <button
+          `                          <button
                             key={example.value}
                             type='button'
                             role='tab'
@@ -88,7 +88,7 @@ jobs:
                               setDropdownExample(example.value);
                             }}
                           >`,
-`                          <Button
+          `                          <Button
                             key={example.value}
                             type='button'
                             appearance='ghost'
@@ -105,14 +105,14 @@ jobs:
           );
 
           replaceExact(
-`                            {example.label}
+          `                            {example.label}
                           </button>`,
-`                            {example.label}
+          `                            {example.label}
                           </Button>`
           );
 
           replaceExact(
-`                            <button type='button'>
+          `                            <button type='button'>
                               <span>
                                 {dropdownExample === 'actions' && 'Actions'}
                                 {dropdownExample === 'access' && 'Invite'}
@@ -124,7 +124,7 @@ jobs:
                                 aria-hidden='true'
                               />
                             </button>`,
-`                            <Button
+          `                            <Button
                               type='button'
                               appearance='outline'
                               color='neutral'
