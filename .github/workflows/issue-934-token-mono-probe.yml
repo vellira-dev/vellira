@@ -1,0 +1,147 @@
+name: Issue 934 canonical mono token probe
+
+on:
+  push:
+    branches:
+      - probe/token-mono-934
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: probe/token-mono-934
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture stacked baseline audit
+        run: pnpm check:vellira-ui-usage:json > /tmp/audit-before.json
+
+      - name: Add canonical mono family and preservation evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const typographyPath = 'packages/tokens/src/tokens/typography.ts';
+          let typography = fs.readFileSync(typographyPath, 'utf8');
+          const familyAnchor = "    base: \"'Vellira Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif\",\n\n    extraLight:";
+          if ((typography.split(familyAnchor).length - 1) !== 1) {
+            throw new Error('typography family anchor must occur exactly once');
+          }
+          typography = typography.replace(
+            familyAnchor,
+            "    base: \"'Vellira Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif\",\n    mono: \"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace\",\n\n    extraLight:"
+          );
+          fs.writeFileSync(typographyPath, typography);
+
+          const migrationsPath = 'packages/tokens/src/preservation/token-migrations.ts';
+          let migrations = fs.readFileSync(migrationsPath, 'utf8');
+          const manifestAnchor = 'export const tokenMigrationManifestV1 = [';
+          if ((migrations.split(manifestAnchor).length - 1) !== 1) {
+            throw new Error('migration manifest anchor must occur exactly once');
+          }
+          const addition = [
+            "const monoFontFamilyAdditionV1 = {",
+            "  id: '934-font-family-mono-addition',",
+            "  kind: 'addition',",
+            "  issue: '#934',",
+            "  reason:",
+            "    'Canonicalize the existing first-party system monospace stack already repeated across website code surfaces and the docs theme so consumers do not need raw font stacks or undeclared aliases.',",
+            "  to: 'tokens.typography.family.mono',",
+            "} as const satisfies TokenMigrationEntry;",
+            '',
+          ].join('\n');
+          migrations = migrations.replace(manifestAnchor, addition + manifestAnchor);
+          const boldEntry = '  boldFontWeightAdditionV1,';
+          if ((migrations.split(boldEntry).length - 1) !== 1) {
+            throw new Error('bold manifest entry must occur exactly once');
+          }
+          migrations = migrations.replace(boldEntry, boldEntry + '\n  monoFontFamilyAdditionV1,');
+          fs.writeFileSync(migrationsPath, migrations);
+          NODE
+
+      - name: Generate token authority
+        run: pnpm --filter @vellira-ui/tokens run build:tokens
+
+      - name: Format tracked token files
+        run: |
+          pnpm exec prettier \
+            packages/tokens/src/tokens/typography.ts \
+            packages/tokens/src/preservation/token-migrations.ts \
+            packages/tokens/src/generated/token-types.ts \
+            --write
+
+      - name: Assert generated mono authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F -- '--font-family-mono:' packages/tokens/src/generated/tokens.css
+          grep -F -- "tokens.typography.family.mono" packages/tokens/src/generated/token-types.ts
+          grep -F -- "--font-family-mono" packages/tokens/src/generated/token-types.ts
+
+      - name: Validate token preservation and package
+        run: |
+          pnpm --filter @vellira-ui/tokens preservation:check
+          pnpm --filter @vellira-ui/tokens typecheck
+          pnpm --filter @vellira-ui/tokens test
+
+      - name: Verify exact consumer audit impact
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:vellira-ui-usage:json > /tmp/audit-after.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync('/tmp/audit-before.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('/tmp/audit-after.json', 'utf8'));
+          const target = 'apps/website/src/component-catalog/shared/ComponentApi/ComponentApi.module.css';
+          const beforeFindings = before.findings.filter((finding) => finding.path === target);
+          const afterFindings = after.findings.filter((finding) => finding.path === target);
+          const beforeMono = beforeFindings.filter((finding) => finding.detected === '--font-family-mono');
+          const afterMono = afterFindings.filter((finding) => finding.detected === '--font-family-mono');
+
+          if (before.summary.findings !== 131 || after.summary.findings !== 129) {
+            throw new Error(`expected global 131 -> 129, got ${before.summary.findings} -> ${after.summary.findings}`);
+          }
+          if (beforeFindings.length !== 11 || afterFindings.length !== 9) {
+            throw new Error(`expected ComponentApi 11 -> 9, got ${beforeFindings.length} -> ${afterFindings.length}`);
+          }
+          if (beforeMono.length !== 2 || afterMono.length !== 0) {
+            throw new Error(`expected mono findings 2 -> 0, got ${beforeMono.length} -> ${afterMono.length}`);
+          }
+
+          console.log('ComponentApi findings: 11 -> 9');
+          console.log('font-family-mono findings: 2 -> 0');
+          console.log('Global findings: 131 -> 129');
+          NODE
+
+      - name: Check diff
+        run: git diff --check
+
+      - name: Commit validated production tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/issue-934-token-mono-probe.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            packages/tokens/src/tokens/typography.ts \
+            packages/tokens/src/preservation/token-migrations.ts \
+            packages/tokens/src/generated/token-types.ts \
+            .github/workflows/issue-934-token-mono-probe.yml
+          git commit -m 'feat(tokens): add canonical mono font-family resource'
+          git push origin HEAD:probe/token-mono-934
