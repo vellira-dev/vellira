@@ -63,6 +63,13 @@ describe('Semantic Vocabulary V1', () => {
       'danger',
     ]);
     expect(semanticVocabularyV1.focus.roles).toContain('ring.offsetColor');
+    expect(semanticVocabularyV1.shadow.roles).toEqual([
+      'sm',
+      'md',
+      'lg',
+      'xl',
+      'inset',
+    ]);
   });
 
   it('keeps panel separate from canvas and preserves the former bounded-container values', () => {

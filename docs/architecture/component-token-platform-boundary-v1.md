@@ -33,6 +33,8 @@ The canonical component path remains component-semantic (`content.shadow`, `cont
 
 Platform adapters are renderer-owned implementation details, not part of the supported `@vellira-ui/tokens` public API. The tokens package owns canonical intent construction, validation and Web token serialization. The React Native package owns its runtime Web/native adaptation from the same canonical theme contract. Neither renderer may introduce a second authored design value to perform that adaptation.
 
+Shadow/elevation design values are now owned by the structured #885 authority in `packages/tokens/src/effects/shadow-system.ts`. `semantic.shadow.*`, `semantic.focus.ring.shadow`, and `tokens.shadows.*` are derived compatibility outputs, not parallel design sources. Native approximation is explicit platform-output policy; it may select a canonical approximation but may not author replacement geometry or paint.
+
 ## Generator rule
 
 Generator V2 must emit renderer-neutral component-token contracts by default. Generated canonical contracts must not introduce `web`, `native`, `native*`, CSS-only shadow strings, or React Native style-object branches. Platform differences belong in platform-output adapters.
@@ -41,4 +43,4 @@ Generator V2 must emit renderer-neutral component-token contracts by default. Ge
 
 The token architecture must provide a deterministic leakage check over every `theme.components.*` family. Known renderer-key patterns are rejected fail-closed. Representation-specific values must be wrapped in an approved renderer-neutral intent and resolved by the platform-output layer.
 
-This boundary intentionally does not consolidate the underlying shadow/elevation authorities. That authority normalization is owned by #885; #884 ensures components no longer encode the renderer split themselves.
+#884 established the renderer-neutral component boundary. #885 completes the underlying effect ownership: component shadow intent now resolves from one structured shadow/elevation authority instead of independent Web and native design tables.
