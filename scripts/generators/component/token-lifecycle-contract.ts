@@ -9,19 +9,46 @@ export type TokenLifecycleContractMutationResult = {
   updatedFiles: string[];
 };
 
-const COMPONENT_REGISTRY_END =
-  '} as const satisfies Record<string, ComponentTokenLifecycleEntry>;';
-
 export function getTokenLifecycleRegistryFile(root: string) {
   return path.join(root, 'packages', 'metadata', 'src', 'tokenLifecycle.ts');
 }
 
 export function needsComponentTokenLifecycleMutation(componentName: string) {
-  return getComponentTokenLifecycle(componentName)?.status !== 'current';
+  return getComponentTokenLifecycle(componentName)?.status === 'reserved';
 }
 
-function renderCurrentLifecycleEntry(componentName: string) {
-  return `  ${componentName}: {\n    status: 'current',\n    public: true,\n    owner: '${componentName}',\n    purpose: 'Canonical ${componentName} component token contract.',\n  },\n`;
+export function assertComponentTokenLifecycleCanMaterialize(componentName: string) {
+  const lifecycle = getComponentTokenLifecycle(componentName);
+
+  if (!lifecycle) {
+    throw new Error(
+      `unregistered-component-token-family: component="${componentName}"; reserve the family in packages/metadata/src/tokenLifecycle.ts before Generator V2 may materialize it`
+    );
+  }
+
+  if (lifecycle.status === 'deprecated') {
+    throw new Error(
+      `deprecated-component-token-family: component="${componentName}" owner="${lifecycle.owner}"`
+    );
+  }
+
+  if (lifecycle.status === 'current') {
+    if (lifecycle.owner !== componentName || !lifecycle.public) {
+      throw new Error(
+        `invalid-current-component-token-family: component="${componentName}" owner="${lifecycle.owner}" public=${String(lifecycle.public)}`
+      );
+    }
+
+    return lifecycle;
+  }
+
+  if (lifecycle.owner !== componentName || !lifecycle.public) {
+    throw new Error(
+      `invalid-reserved-component-token-family: component="${componentName}" owner="${lifecycle.owner}" public=${String(lifecycle.public)}`
+    );
+  }
+
+  return lifecycle;
 }
 
 export function ensureComponentTokenLifecycleContract(params: {
@@ -32,13 +59,11 @@ export function ensureComponentTokenLifecycleContract(params: {
 
   if (plan.componentTokens === false) return;
 
-  const lifecycle = getComponentTokenLifecycle(plan.componentName);
+  const lifecycle = assertComponentTokenLifecycleCanMaterialize(
+    plan.componentName
+  );
 
-  if (lifecycle?.status === 'deprecated') {
-    throw new Error(
-      `deprecated-component-token-family: component="${plan.componentName}" owner="${lifecycle.owner}"`
-    );
-  }
+  if (lifecycle.status === 'current') return;
 
   const registryFile = getTokenLifecycleRegistryFile(plan.root);
 
@@ -46,34 +71,18 @@ export function ensureComponentTokenLifecycleContract(params: {
     throw new Error(`Missing token lifecycle registry: ${registryFile}`);
   }
 
-  if (lifecycle?.status === 'current') return;
-
   let source = fs.readFileSync(registryFile, 'utf8');
+  const entryPattern = new RegExp(
+    `(\\n  ${plan.componentName}: \\{\\n    status: )'reserved'`
+  );
 
-  if (lifecycle?.status === 'reserved') {
-    const entryPattern = new RegExp(
-      `(\\n  ${plan.componentName}: \\{\\n    status: )'reserved'`
+  if (!entryPattern.test(source)) {
+    throw new Error(
+      `Invalid reserved token lifecycle entry for ${plan.componentName} in ${registryFile}`
     );
-
-    if (!entryPattern.test(source)) {
-      throw new Error(
-        `Invalid reserved token lifecycle entry for ${plan.componentName} in ${registryFile}`
-      );
-    }
-
-    source = source.replace(entryPattern, `$1'current'`);
-  } else {
-    const markerIndex = source.indexOf(COMPONENT_REGISTRY_END);
-
-    if (markerIndex < 0) {
-      throw new Error(
-        `Invalid component token lifecycle registry in ${registryFile}`
-      );
-    }
-
-    source = `${source.slice(0, markerIndex)}${renderCurrentLifecycleEntry(plan.componentName)}${source.slice(markerIndex)}`;
   }
 
+  source = source.replace(entryPattern, `$1'current'`);
   fs.writeFileSync(registryFile, source);
 
   if (!result.updatedFiles.includes(registryFile)) {
