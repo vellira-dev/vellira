@@ -9,9 +9,6 @@ const dirname =
     ? __dirname
     : path.dirname(fileURLToPath(import.meta.url));
 const storybookRoot = path.resolve(dirname, '..');
-const repositoryRoot = path.resolve(dirname, '../../..');
-const reactRoot = path.resolve(repositoryRoot, 'node_modules/react');
-const reactDomRoot = path.resolve(repositoryRoot, 'node_modules/react-dom');
 
 const config: StorybookConfig = {
   framework: {
@@ -39,7 +36,7 @@ const config: StorybookConfig = {
   ],
 
   async viteFinal(config) {
-    const merged = mergeConfig(config, {
+    return mergeConfig(config, {
       root: storybookRoot,
       resolve: {
         dedupe: ['react', 'react-dom'],
@@ -85,33 +82,6 @@ const config: StorybookConfig = {
         chunkSizeWarningLimit: 1200,
       },
     });
-
-    const existingAliases = merged.resolve?.alias;
-    const aliases = Array.isArray(existingAliases)
-      ? existingAliases
-      : Object.entries(existingAliases ?? {}).map(([find, replacement]) => ({
-          find,
-          replacement,
-        }));
-
-    return {
-      ...merged,
-      resolve: {
-        ...merged.resolve,
-        dedupe: ['react', 'react-dom', ...(merged.resolve?.dedupe ?? [])],
-        alias: [
-          {
-            find: 'react-dom',
-            replacement: reactDomRoot,
-          },
-          {
-            find: 'react',
-            replacement: reactRoot,
-          },
-          ...aliases,
-        ],
-      },
-    };
   },
 };
 
