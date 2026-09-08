@@ -1,0 +1,83 @@
+name: Issue 852 ThemeStudio token adoption probe
+
+on:
+  push:
+    branches:
+      - probe/852-theme-studio-tokens
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: probe/852-theme-studio-tokens
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Capture future baseline audit
+        run: pnpm check:vellira-ui-usage:json > /tmp/audit-before.json
+      - name: Migrate ThemeStudio legacy token aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/website/src/sections/home/ThemeStudio/ThemeStudio.module.css';
+          let source = fs.readFileSync(path, 'utf8');
+          function replaceExact(before, after, expected) {
+            const count = source.split(before).length - 1;
+            if (count !== expected) throw new Error(`${before} expected ${expected}, got ${count}`);
+            source = source.split(before).join(after);
+          }
+          replaceExact('var(--color-danger-500)', 'var(--color-error-500)', 7);
+          replaceExact('var(--text-tertiary)', 'var(--text-muted)', 2);
+          replaceExact('var(--font-size-2xl)', 'var(--font-size-xxl)', 1);
+          fs.writeFileSync(path, source);
+          NODE
+      - name: Format migrated CSS
+        run: pnpm exec prettier apps/website/src/sections/home/ThemeStudio/ThemeStudio.module.css --write
+      - name: Verify exact audit delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:vellira-ui-usage:json > /tmp/audit-after.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync('/tmp/audit-before.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('/tmp/audit-after.json', 'utf8'));
+          const prefix = 'apps/website/src/sections/home/ThemeStudio/';
+          const beforeTarget = before.findings.filter((f) => f.path.startsWith(prefix));
+          const afterTarget = after.findings.filter((f) => f.path.startsWith(prefix));
+          const remainingBypass = afterTarget.filter((f) => f.ruleId === 'vellira-ui.existing-component-bypass');
+          if (before.summary.findings !== 118 || after.summary.findings !== 108) throw new Error(`expected global 118 -> 108, got ${before.summary.findings} -> ${after.summary.findings}`);
+          if (beforeTarget.length !== 14 || afterTarget.length !== 4 || remainingBypass.length !== 4) throw new Error(`expected ThemeStudio 14 -> 4 button bypasses, got ${JSON.stringify(afterTarget)}`);
+          console.log('ThemeStudio findings: 14 -> 4');
+          console.log('ThemeStudio token findings: 10 -> 0');
+          console.log('Global findings: 118 -> 108');
+          NODE
+      - name: Validate website
+        run: |
+          pnpm website:typecheck
+          pnpm build
+          pnpm website:build
+      - name: Check diff
+        run: git diff --check
+      - name: Commit validated production tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/issue-852-theme-studio-token-probe.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/website/src/sections/home/ThemeStudio/ThemeStudio.module.css .github/workflows/issue-852-theme-studio-token-probe.yml
+          git commit -m 'refactor(website): migrate ThemeStudio to canonical tokens'
+          git push origin HEAD:probe/852-theme-studio-tokens
