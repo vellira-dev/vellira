@@ -1,0 +1,172 @@
+A green TypeScript command answers a question about the project it checks. A repository maintainer has another question: which project is responsible for each source file? When those questions are confused, adding another configuration can look like a fix even though nobody has explained why that configuration should count.
+
+Vellira makes project ownership an explicit tooling concern. The checker has named package scripts, a configuration of typecheck entrypoints, and structured result fields. Its tests describe a verified typecheck entrypoint and recursive project references as ownership authority and deliberately exercise alternatives that must not qualify.
+
+The useful design question is how to keep that ownership contract understandable as projects move, commands change, and configurations accumulate. The command interface, the accepted starting points, and the failure scenarios each answer a different part of that question.
+
+## Problem and constraint
+
+Consider a maintenance change that adds a TypeScript configuration beside some source files. The file is easy to find in review. What is harder to see is whether it belongs to a typecheck path the repository actually recognizes. Counting configurations would answer the first question and leave the second unresolved.
+
+The ownership tests make that distinction concrete: they name a stale root solution reference and an orphan tsconfig as cases that must not confer authority. In other words, a plausible-looking configuration relationship can be the very thing a negative test is meant to reject.
+
+This is why ownership deserves its own contract. A type error and an ownership gap call for different investigations. One asks whether code satisfies a project’s types; the other asks whether the project is an accepted owner in the first place. Keeping the questions separate helps reviewers avoid fixing the appearance of coverage while leaving the responsibility for a file ambiguous.
+
+<details>
+<summary>Source details</summary>
+
+{/* vellira-claim:sha256:3805af99594fb75a8c3ad862f0ca124dfd3eb4a6b7d41750a04af3b65c2c3c4e */}
+Merged pull request #857 changed 32 bounded public repository paths at revision 3a62226d1f16e5b8730f4319fdf72a19ab5306c0.
+
+</details>
+
+## What changed
+
+The package script interface includes `check:ts-project-coverage:json` and `check:ts-project-coverage`. The corresponding checker command target is `scripts/checks/ts-project-coverage/checker.ts`. The source at `scripts/checks/ts-project-coverage/checker.ts` exports `runTsProjectCoverageCheck`.
+
+These names give a contributor two concrete places to begin: the package script definition for invocation, and the exported function for implementation. A source path alone is not necessarily a command to paste into a shell; the package script owns any launcher and arguments around it. Start with that definition when reproducing a check.
+
+There is a maintenance benefit to distinguishing those entrypoints. Renaming a script changes how contributors find the tool. Moving or renaming the exported function changes where its implementation is inspected. Neither edit should be treated as an incidental filename cleanup. Review the package declaration and the source together so a convenient command continues to lead to the intended checker.
+
+The export also gives code review a precise anchor. It identifies the implementation symbol without requiring an article, a contributor, or a future refactor to describe the tool only by its directory name.
+
+<details>
+<summary>Source details</summary>
+
+{/* vellira-claim:sha256:a1ef84bcb75a84103d5215016b27b3817f8f1ecb9ae7cfd8e8f8fc5a74843a47 */}
+Pinned package script package.json defines `check:ts-project-coverage:json` with checker command `scripts/checks/ts-project-coverage/checker.ts`.
+
+{/* vellira-claim:sha256:44507b8c6acb30f9aa117bcdbfb5cf0bfa9281fdf1745f204592390a7d860c51 */}
+Pinned package script package.json defines `check:ts-project-coverage` with checker command `scripts/checks/ts-project-coverage/checker.ts`.
+
+{/* vellira-claim:sha256:9074b69aa3fc16510a91734776e7e025d005271a6ee7fba56a6bac5b574cf3cc */}
+Pinned tooling source scripts/checks/ts-project-coverage/checker.ts exports runTsProjectCoverageCheck.
+
+</details>
+
+## How it works
+
+`scripts/checks/ts-project-coverage/entrypoints.json` declares these typecheck invocations:
+
+```text
+tsc -p tsconfig.json --noEmit
+turbo run typecheck
+tsc -p tsconfig.test.json --noEmit
+tsc -p tsconfig.tooling.json --noEmit
+```
+
+Treat this list as configuration, not as a transcript of commands that ran. A declaration names an intended starting point; verifying that starting point is a separate concern. That distinction matters whenever a package script is renamed or a typecheck command changes its arguments.
+
+The positive test scenario uses a verified typecheck entrypoint and recursive project references as ownership authority. The important relationship is between the verified entrypoint and the references reachable from it. A reference is meaningful in that context because it continues a path from an accepted starting point.
+
+For example, when reviewing a proposed configuration change, trace the intended typecheck invocation first, then follow the project references that are supposed to participate. Starting with an arbitrary configuration and working backward risks mistaking a leftover file for a deliberate entrypoint. This is a review procedure, not a description of the checker’s internal traversal algorithm.
+
+The separation gives the configuration a useful job: it makes the starting commands inspectable as data. A reviewer can discuss which commands belong in the set before discussing how the implementation evaluates ownership. That keeps policy decisions visible when the repository gains another typechecking context.
+
+One declared record shows how the command is associated with a project:
+
+```json
+{
+  "invocation": "tsc -p tsconfig.json --noEmit",
+  "packageJson": "packages/core/package.json",
+  "project": "packages/core/tsconfig.json",
+  "rootInvocation": "turbo run typecheck",
+  "rootScript": "typecheck",
+  "script": "typecheck"
+}
+```
+
+The project and package manifest are separate fields. That makes the declaration more precise than a bare command name: it identifies which script in which package is intended to cover which TypeScript project. When reviewing a rename, compare these fields together rather than changing the invocation string alone.
+
+<details>
+<summary>Source details</summary>
+
+{/* vellira-claim:sha256:0ec3a920c46745611facdfaf71ea2606061009cb5f6252f194e2334a501c15a4 */}
+Pinned tooling config scripts/checks/ts-project-coverage/entrypoints.json declares a typecheck entrypoint record `{"invocation": "tsc -p tsconfig.json --noEmit", "packageJson": "packages/core/package.json", "project": "packages/core/tsconfig.json", "rootInvocation": "turbo run typecheck", "rootScript": "typecheck", "script": "typecheck"}`.
+
+{/* vellira-claim:sha256:78e0f65a96969a7938c3a8ee38552a5b6697acbfc00f698ea7de2a3e95d30139 */}
+Pinned tooling config scripts/checks/ts-project-coverage/entrypoints.json declares configured typecheck entrypoints `tsc -p tsconfig.json --noEmit`, `turbo run typecheck`, `tsc -p tsconfig.test.json --noEmit`, and `tsc -p tsconfig.tooling.json --noEmit`.
+
+{/* vellira-claim:sha256:4c3c9c276a142eb32f297efbc75cfd001b41412a53139bf20d61f66b95571071 */}
+Pinned test evidence defines a static coverage case named “uses a verified typecheck entrypoint and recursive project references as ownership authority”.
+
+</details>
+
+## Failure modes and edge cases
+
+One negative test names a stale root solution reference: the scenario does not treat it as ownership authority.
+
+A stale root reference is a historical connection. The useful question in review is whether it still participates in the current ownership policy. Otherwise, an old edge can make the project graph look more complete than the accepted entrypoints justify. A negative test preserves that distinction when the root configuration is edited later.
+
+One negative test names an orphan tsconfig: the scenario does not treat it as ownership authority.
+
+An orphan configuration presents the opposite review trap: the configuration exists, but there is no accepted connection that makes it an owner. Adding a configuration file is therefore not, by itself, a satisfying response to an ownership problem. The proposed fix needs to explain how the project joins the intended typecheck path.
+
+Negative cases matter alongside the positive entrypoint case. Accepting too much can hide a gap; rejecting a legitimate path can make the check noisy. A useful regression suite protects both directions. When extending ownership policy, add a case for the newly accepted relationship and a nearby case that should still be rejected. That pair makes the intended distinction easier to understand than another happy-path example alone.
+
+Keep the reason for rejection explicit in the test. A scenario that happens to fail because its fixture is malformed would not protect the ownership decision being discussed. During review, check that the setup reaches the intended authority question and that the assertion distinguishes rejection from an unrelated execution error.
+
+<details>
+<summary>Source details</summary>
+
+{/* vellira-claim:sha256:43eb969f26d9b9555dbf8ccd03e198e48193f4101c9ebe92c4bca4b7c9c64f60 */}
+Pinned test evidence defines a static coverage case named “does not treat a stale root solution reference as ownership authority”.
+
+{/* vellira-claim:sha256:072382ae7ce781e9de41ca236bac89b3952edab69e0b2910bffeea2d5aee0fd7 */}
+Pinned test evidence defines a static coverage case named “does not treat an orphan tsconfig as ownership authority”.
+
+</details>
+
+## Integration and enforcement
+
+A checker becomes easier to diagnose when its report distinguishes the questions a maintainer needs to ask. The source identifies these result fields:
+
+```text
+unownedFiles
+conflictingFiles
+verifiedEntrypoints
+```
+
+For an ownership investigation, begin with the unowned and conflicting file categories. Then inspect the verified-entrypoint information before deciding which configuration should change. That order helps separate a file-ownership problem from a disagreement about the accepted starting points.
+
+These are field names, not an example result or a declaration that every collection is empty. The distinction is practical: an API shape can tell a contributor where to look, while the actual run must supply the values. A clean-looking interface is no substitute for inspecting the report produced by the command.
+
+The integration described here stops at the package scripts; it does not establish which CI workflow invokes them. A package command is an invocation interface; automation is an additional integration with its own trigger and failure handling. Review that integration explicitly before relying on the checker as a pull-request gate.
+
+<details>
+<summary>Source details</summary>
+
+{/* vellira-claim:sha256:477f8d19ffef5422352c6e9308ce9bef926226b4a3666b160e8989ffe4d73631 */}
+Pinned tooling source scripts/checks/ts-project-coverage/checker.ts represents checker result fields `unownedFiles`, `conflictingFiles`, and `verifiedEntrypoints`.
+
+</details>
+
+## Maintenance implications
+
+The recurring maintenance decision is when to change `scripts/checks/ts-project-coverage/entrypoints.json`. A new typecheck command, a renamed package script, or a rearranged project graph should prompt a review of the declared entrypoints. Copying the previous configuration can preserve syntax while losing the reason a project was included.
+
+Ask the change author to explain which starting point should grant ownership and why. That explanation should be specific enough to turn into a focused test. If a proposed exception amounts to accepting every configuration found on disk, compare it with the negative cases before broadening the policy.
+
+There is a trade-off here. Explicit entrypoints require deliberate upkeep as the repository changes. In exchange, the ownership policy stays reviewable instead of being inferred afresh from directory layout. The goal is to spend that effort on decisions that change responsibility for files, while keeping command names and result contracts stable enough for contributors to use without rediscovering the tool.
+
+## Current limitations
+
+Project ownership is one layer of repository correctness. Even a correctly owned file can contain a type error or a behavioral defect. Treat an ownership check as a companion to compilation and tests, not as a replacement for either.
+
+The implementation interface and named scenarios discussed here also leave some questions open: the complete file-discovery rules, the handling of every reference shape, and the exact values returned for an unusual repository state. Consult `runTsProjectCoverageCheck` in `scripts/checks/ts-project-coverage/checker.ts` for those details before extending the checker. A new graph shape deserves its own test; it should not acquire a guarantee merely because an existing test covers a similar-looking configuration.
+
+<details>
+<summary>Source details</summary>
+
+{/* vellira-claim:sha256:38fc2857f88dc6d9383e8bbe277baa5412098bce08d78c81c034abaab28fa7d7 */}
+Technical authority is bounded to merged public PR metadata and selected public file snapshots pinned to the referenced merge revisions; unselected repository content is not used to authorize article claims.
+
+</details>
+
+## Practical takeaway
+
+When a change creates an ownership question, start with the declared typecheck entrypoint and work outward. Read the package script, check the configuration it is supposed to represent, and compare the intended project relationship with the positive and negative test scenarios. Then inspect the checker’s structured report to decide what actually needs to change.
+
+For a contributor, the useful habit is to include that ownership explanation in the same review as the new project or configuration. It is much easier to discuss why a project should count while its purpose is fresh than to reconstruct the answer after several more configurations have appeared.
+
+The lasting benefit is a smaller question for the next reviewer: not whether a configuration happens to exist, but whether the proposed relationship belongs in the repository’s accepted ownership contract.
