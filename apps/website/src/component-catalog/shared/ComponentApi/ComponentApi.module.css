@@ -29,7 +29,7 @@
 
 .count {
   flex-shrink: 0;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
@@ -100,7 +100,7 @@
 
 .table th {
   padding: var(--space-3) var(--space-4);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   background: var(--surface-subtle);
@@ -178,17 +178,17 @@
 
 .required {
   padding: 2px 6px;
-  color: var(--color-danger-600);
+  color: var(--color-error-600);
   font-size: 10px;
   font-weight: var(--font-weight-semibold);
   line-height: 1.4;
   text-transform: uppercase;
-  background: color-mix(in srgb, var(--color-danger-500) 8%, transparent);
+  background: color-mix(in srgb, var(--color-error-500) 8%, transparent);
   border-radius: var(--radius-full);
 }
 
 .empty {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 .propDescription {
@@ -196,7 +196,7 @@
 }
 
 .inheritedPropDescription {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   line-height: 1.5;
   overflow-wrap: break-word;
@@ -223,7 +223,7 @@
 
 .inheritedCount {
   flex-shrink: 0;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
@@ -287,7 +287,7 @@
 }
 
 .typeDetails summary span {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
@@ -349,7 +349,7 @@
 
   .table td::before {
     content: attr(data-label);
-    color: var(--text-tertiary);
+    color: var(--text-muted);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
     line-height: 1.5;
