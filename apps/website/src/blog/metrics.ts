@@ -150,8 +150,7 @@ export async function fetchBlogMetricsBatch(
     searchParams.append('slug', slug);
   }
 
-  const url =
-    `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
+  const url = `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
   const json = await requestBlogMetricsJson(
     url,
     {
