@@ -614,9 +614,18 @@ const boldFontWeightAdditionV1 = {
   to: 'tokens.typography.weight.bold',
 } as const satisfies TokenMigrationEntry;
 
+const monoFontFamilyAdditionV1 = {
+  id: '934-font-family-mono-addition',
+  kind: 'addition',
+  issue: '#934',
+  reason:
+    'Canonicalize the existing first-party system monospace stack already repeated across website code surfaces and the docs theme so consumers do not need raw font stacks or undeclared aliases.',
+  to: 'tokens.typography.family.mono',
+} as const satisfies TokenMigrationEntry;
 export const tokenMigrationManifestV1 = [
   ...stateVocabularyRenameMigrationsV1,
   boldFontWeightAdditionV1,
+  monoFontFamilyAdditionV1,
   ...platformNeutralComponentRepresentationMigrationsV1,
   ...platformNeutralLegacyCanonicalRemovalMigrationsV1,
   platformNeutralPopoverShadowMigrationV1,
