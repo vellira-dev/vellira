@@ -14,12 +14,12 @@ import { highContrastTheme } from './highContrast/theme.js';
 import { theme } from './index.js';
 import { lightTheme } from './light/theme.js';
 import { componentTokenWebCompatibilityAliases } from './platform-output/component-token-web-compatibility.js';
+import { tokenMigrationManifestV1 } from './preservation/token-migrations.js';
 import {
   legacyPublicExportAliasesV1,
   publicThemeContractsV1,
   tokenPublicApiDeprecationPolicyV1,
 } from './public-api-policy.js';
-import { tokenMigrationManifestV1 } from './preservation/token-migrations.js';
 
 const migrationIds = new Set(tokenMigrationManifestV1.map(({ id }) => id));
 
