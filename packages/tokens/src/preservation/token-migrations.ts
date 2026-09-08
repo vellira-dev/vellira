@@ -605,8 +605,18 @@ const platformNeutralPopoverWebAdditionV1 = {
   to: 'components.popover.content.shadow',
 } as const satisfies TokenMigrationEntry;
 
+const boldFontWeightAdditionV1 = {
+  id: '927-font-weight-bold-addition',
+  kind: 'addition',
+  issue: '#927',
+  reason:
+    'Add the canonical 700 bold weight already represented by the VelliraSans-Bold family so first-party consumers do not need a raw value or local token alias.',
+  to: 'tokens.typography.weight.bold',
+} as const satisfies TokenMigrationEntry;
+
 export const tokenMigrationManifestV1 = [
   ...stateVocabularyRenameMigrationsV1,
+  boldFontWeightAdditionV1,
   ...platformNeutralComponentRepresentationMigrationsV1,
   ...platformNeutralLegacyCanonicalRemovalMigrationsV1,
   platformNeutralPopoverShadowMigrationV1,
