@@ -122,9 +122,7 @@ async function requestBlogMetricsJson(
 }
 
 export async function fetchBlogMetrics(slug: string): Promise<BlogMetrics> {
-  const url = createBlogMetricsProxyPath(
-    `metrics/${encodeURIComponent(slug)}`
-  );
+  const url = createBlogMetricsProxyPath(`metrics/${encodeURIComponent(slug)}`);
   const json = await requestBlogMetricsJson(
     url,
     {
@@ -152,7 +150,8 @@ export async function fetchBlogMetricsBatch(
     searchParams.append('slug', slug);
   }
 
-  const url = `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
+  const url =
+    `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
   const json = await requestBlogMetricsJson(
     url,
     {
