@@ -40,7 +40,7 @@
 .cardEyebrow {
   color: var(--color-primary-400);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -49,7 +49,7 @@
   margin: var(--space-5) 0 0;
   color: var(--text-primary);
   font-size: clamp(42px, 6vw, 68px);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   line-height: 1.02;
   letter-spacing: 0;
 }
@@ -156,7 +156,7 @@
   padding: 0 var(--space-3);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   white-space: nowrap;
   background: var(--surface-default);
   border: 1px solid var(--border-muted);
@@ -258,7 +258,7 @@
 .branchSelector {
   display: flex;
   align-items: center;
-  min-height: var(--space-9);
+  min-height: calc(var(--space-8) + var(--space-1));
   padding: 0 var(--space-3);
   color: var(--text-primary);
   background: var(--surface-default);
@@ -276,9 +276,9 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-sm);
   gap: var(--space-3);
 }
@@ -287,7 +287,7 @@
 .commitLink {
   display: inline-flex;
   align-items: center;
-  min-height: var(--space-9);
+  min-height: calc(var(--space-8) + var(--space-1));
   padding: 0 var(--space-3);
   color: inherit;
   background: var(--surface-default);
@@ -387,7 +387,7 @@
 .workflowKicker {
   color: var(--color-success-600);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
 }
 
@@ -438,7 +438,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: calc(var(--space-11) + var(--space-1));
+  min-height: var(--space-12);
   padding: 4px var(--space-3);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
@@ -514,7 +514,7 @@
 .checkResult {
   display: inline-flex;
   align-items: center;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   gap: var(--space-1);
@@ -541,16 +541,16 @@
 
 .repositoryFooter span {
   padding: 0;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   background: transparent;
   border: 0;
 }
 
 .repositoryFooter span:not(:last-child)::after {
   margin-left: var(--space-3);
-  color: color-mix(in srgb, var(--text-tertiary) 58%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 58%, transparent);
   content: '•';
 }
 
@@ -661,9 +661,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -736,7 +736,7 @@
 }
 
 .releaseMetric span {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
@@ -766,7 +766,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   line-height: 1.45;
   gap: var(--space-3);
@@ -850,7 +850,7 @@
 
   .description {
     margin-top: var(--space-4);
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-md);
     line-height: 1.58;
   }
 
