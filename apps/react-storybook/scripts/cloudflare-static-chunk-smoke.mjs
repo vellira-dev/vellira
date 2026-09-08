@@ -123,9 +123,40 @@ async function goto(path) {
   await waitForRenderedBody(path, response);
 }
 
+async function verifyAbortedChunkUrls(stage) {
+  const urls = [...abortedChunkUrls];
+  abortedChunkUrls.clear();
+
+  for (const url of urls) {
+    const response = await context.request.get(url, {
+      failOnStatusCode: false,
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Aborted static chunk is missing during ${stage}: ${response.status()} GET ${url}`
+      );
+    }
+
+    console.log(`OK aborted navigation asset still exists: ${url}`);
+  }
+}
+
+async function settleAndVerifyChunks(stage) {
+  await page.waitForTimeout(700);
+  await verifyAbortedChunkUrls(stage);
+
+  if (criticalDiagnostics.length > 0) {
+    throw new Error(
+      `Cloudflare static chunk failures detected during ${stage}:\n${criticalDiagnostics.join('\n')}`
+    );
+  }
+}
+
 async function collectRoutes(indexPath, prefix) {
   await goto(indexPath);
-  await page.waitForTimeout(500);
+  await settleAndVerifyChunks(`route discovery ${indexPath}`);
 
   const hrefs = await page
     .locator(`a[href^="${prefix}"]`)
@@ -138,37 +169,59 @@ async function collectRoutes(indexPath, prefix) {
     .sort();
 }
 
+async function verifyGlobalHeaderNavigation() {
+  await goto('/');
+  await settleAndVerifyChunks('home load and header prefetch');
+
+  const primaryNavigation = page.locator(
+    'nav[aria-label="Primary navigation"]'
+  );
+
+  const blogLink = primaryNavigation.locator('a[href="/blog"]');
+  await blogLink.waitFor({ state: 'visible', timeout: 15_000 });
+  await blogLink.click();
+  await page.waitForURL(`${baseUrl}/blog`, { timeout: 15_000 });
+  await waitForRenderedBody('/blog');
+  await settleAndVerifyChunks('primary navigation / -> /blog');
+
+  const componentsLink = page
+    .locator('nav[aria-label="Primary navigation"]')
+    .locator('a[href="/components"]');
+  await componentsLink.waitFor({ state: 'visible', timeout: 15_000 });
+  await componentsLink.click();
+  await page.waitForURL(`${baseUrl}/components`, { timeout: 15_000 });
+  await waitForRenderedBody('/components');
+  await settleAndVerifyChunks('primary navigation /blog -> /components');
+
+  const brandLink = page.locator('header a[href="/"]').first();
+  await brandLink.waitFor({ state: 'visible', timeout: 15_000 });
+  await brandLink.click();
+  await page.waitForURL(`${baseUrl}/`, { timeout: 15_000 });
+  await waitForRenderedBody('/');
+  await settleAndVerifyChunks('brand navigation /components -> /');
+
+  console.log('OK global header navigation and prefetch chunk integrity');
+}
+
 async function verifyClientRoutes(indexPath, routes) {
   for (const href of routes) {
     await goto(indexPath);
+    await settleAndVerifyChunks(`document load ${indexPath}`);
 
     const link = page.locator(`a[href="${href}"]`).first();
     await link.waitFor({ state: 'visible', timeout: 15_000 });
     await link.click();
     await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
     await waitForRenderedBody(href);
-    await page.waitForTimeout(300);
+    await settleAndVerifyChunks(`client navigation ${indexPath} -> ${href}`);
 
     console.log(`OK chunk navigation ${indexPath} -> ${href}`);
   }
 }
 
-async function verifyAbortedChunkUrls() {
-  for (const url of abortedChunkUrls) {
-    const response = await context.request.get(url, {
-      failOnStatusCode: false,
-      headers: { 'Cache-Control': 'no-cache' },
-    });
-
-    if (!response.ok()) {
-      recordCritical(`aborted chunk probe: ${response.status()} GET ${url}`);
-    } else {
-      console.log(`OK aborted navigation asset still exists: ${url}`);
-    }
-  }
-}
-
 try {
+  await verifyGlobalHeaderNavigation();
+
   const blogRoutes = await collectRoutes('/blog', '/blog/');
   const componentRoutes = await collectRoutes('/components', '/components/');
 
@@ -186,7 +239,7 @@ try {
 
   await verifyClientRoutes('/blog', blogRoutes);
   await verifyClientRoutes('/components', componentRoutes);
-  await verifyAbortedChunkUrls();
+  await verifyAbortedChunkUrls('final verification');
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
@@ -195,7 +248,7 @@ try {
   }
 } catch (error) {
   try {
-    await verifyAbortedChunkUrls();
+    await verifyAbortedChunkUrls('failure cleanup');
   } catch (probeError) {
     recordCritical(`aborted chunk verification failed: ${probeError}`);
   }
