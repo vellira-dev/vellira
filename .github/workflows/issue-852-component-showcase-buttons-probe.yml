@@ -1,0 +1,187 @@
+name: Issue 852 ComponentShowcase button adoption probe
+
+on:
+  push:
+    branches:
+      - probe/852-component-showcase-buttons
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture baseline audit
+        run: pnpm check:vellira-ui-usage:json > /tmp/vellira-ui-before.json
+
+      - name: Adopt canonical Button for all ComponentShowcase button bypasses
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/website/src/sections/home/ComponentShowcase/ComponentShowcase.tsx';
+          let source = fs.readFileSync(path, 'utf8');
+
+          function replaceExact(before, after, expected = 1) {
+            const count = source.split(before).length - 1;
+            if (count !== expected) {
+              throw new Error(`${JSON.stringify(before)} expected ${expected} occurrences, got ${count}`);
+            }
+            source = source.split(before).join(after);
+          }
+
+          replaceExact(
+`                <button
+                  key={component.value}
+                  type='button'
+                  className={styles.componentButton}
+                  data-active={activeComponent === component.value}
+                  onClick={() => {
+                    selectComponent(component.value);
+                  }}
+                >`,
+`                <Button
+                  key={component.value}
+                  type='button'
+                  appearance='ghost'
+                  color='neutral'
+                  size='sm'
+                  className={styles.componentButton}
+                  data-active={activeComponent === component.value}
+                  onClick={() => {
+                    selectComponent(component.value);
+                  }}
+                >`
+          );
+
+          replaceExact(
+`                  <span className={styles.componentButtonLabel}>
+                    {component.label}
+                  </span>
+                </button>`,
+`                  <span className={styles.componentButtonLabel}>
+                    {component.label}
+                  </span>
+                </Button>`
+          );
+
+          replaceExact(
+`                          <button
+                            key={example.value}
+                            type='button'
+                            role='tab'
+                            aria-selected={dropdownExample === example.value}
+                            className={styles.dropdownSwitchButton}
+                            data-active={dropdownExample === example.value}
+                            onClick={() => {
+                              setDropdownExample(example.value);
+                            }}
+                          >`,
+`                          <Button
+                            key={example.value}
+                            type='button'
+                            appearance='ghost'
+                            color='neutral'
+                            size='sm'
+                            role='tab'
+                            aria-selected={dropdownExample === example.value}
+                            className={styles.dropdownSwitchButton}
+                            data-active={dropdownExample === example.value}
+                            onClick={() => {
+                              setDropdownExample(example.value);
+                            }}
+                          >`
+          );
+
+          replaceExact(
+`                            {example.label}
+                          </button>`,
+`                            {example.label}
+                          </Button>`
+          );
+
+          replaceExact(
+`                            <button type='button'>
+                              <span>
+                                {dropdownExample === 'actions' && 'Actions'}
+                                {dropdownExample === 'access' && 'Invite'}
+                                {dropdownExample === 'command' && 'Search'}
+                              </span>
+                              <ChevronDown
+                                className={styles.dropdownTriggerIcon}
+                                size={16}
+                                aria-hidden='true'
+                              />
+                            </button>`,
+`                            <Button
+                              type='button'
+                              appearance='outline'
+                              color='neutral'
+                              size='sm'
+                            >
+                              <span>
+                                {dropdownExample === 'actions' && 'Actions'}
+                                {dropdownExample === 'access' && 'Invite'}
+                                {dropdownExample === 'command' && 'Search'}
+                              </span>
+                              <ChevronDown
+                                className={styles.dropdownTriggerIcon}
+                                size={16}
+                                aria-hidden='true'
+                              />
+                            </Button>`
+          );
+
+          fs.writeFileSync(path, source);
+          NODE
+
+      - name: Format migrated TSX
+        run: pnpm exec prettier apps/website/src/sections/home/ComponentShowcase/ComponentShowcase.tsx --write
+
+      - name: Verify exact audit delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:vellira-ui-usage:json > /tmp/vellira-ui-after.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync('/tmp/vellira-ui-before.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('/tmp/vellira-ui-after.json', 'utf8'));
+          const prefix = 'apps/website/src/sections/home/ComponentShowcase/';
+          const beforeTarget = before.findings.filter((finding) => finding.path.startsWith(prefix));
+          const afterTarget = after.findings.filter((finding) => finding.path.startsWith(prefix));
+          const beforeBypass = beforeTarget.filter((finding) => finding.ruleId === 'vellira-ui.existing-component-bypass');
+
+          if (beforeTarget.length !== 3 || beforeBypass.length !== 3) {
+            throw new Error(`expected exactly 3 ComponentShowcase button bypasses before migration, got ${JSON.stringify(beforeTarget)}`);
+          }
+          if (afterTarget.length !== 0) {
+            throw new Error(`expected ComponentShowcase findings to reach zero, got ${JSON.stringify(afterTarget)}`);
+          }
+          if (before.summary.findings !== 131 || after.summary.findings !== 128) {
+            throw new Error(`expected global findings 131 -> 128, got ${before.summary.findings} -> ${after.summary.findings}`);
+          }
+
+          console.log('ComponentShowcase findings: 3 -> 0');
+          console.log('Global findings: 131 -> 128');
+          NODE
+
+      - name: Validate website
+        run: |
+          pnpm website:typecheck
+          pnpm build
+          pnpm website:build
+
+      - name: Check diff
+        run: git diff --check
