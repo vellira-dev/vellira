@@ -139,7 +139,7 @@ describe('Blog V1 index experience', () => {
 
     const { calls } = installArticleMetricsFetch((call) => {
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({
@@ -168,7 +168,7 @@ describe('Blog V1 index experience', () => {
     );
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toContain('/v1/blog/articles/two-runtimes/like');
+    expect(calls[0]?.url).toContain('/api/blog-metrics/articles/two-runtimes/like');
     expect(calls[0]?.init?.credentials).toBe('include');
   });
 
@@ -308,14 +308,14 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'two-runtimes', liked: false });
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/views') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/views') &&
         call.init?.method === 'POST'
       ) {
         return jsonResponse({
@@ -337,8 +337,8 @@ describe('Blog V1 article experience', () => {
       'GET',
       'POST',
     ]);
-    expect(calls[0]?.url).toContain('/v1/blog/articles/two-runtimes/like');
-    expect(calls[1]?.url).toContain('/v1/blog/articles/two-runtimes/views');
+    expect(calls[0]?.url).toContain('/api/blog-metrics/articles/two-runtimes/like');
+    expect(calls[1]?.url).toContain('/api/blog-metrics/articles/two-runtimes/views');
     expect(calls[0]?.init?.credentials).toBe('include');
     expect(calls[1]?.init?.credentials).toBe('include');
   });
@@ -346,7 +346,7 @@ describe('Blog V1 article experience', () => {
   it('retries liked-state read once before registering the article view', async () => {
     const { calls } = installArticleMetricsFetch((call) => {
       if (
-        call.url.endsWith('/v1/blog/articles/retry-runtime/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/retry-runtime/like') &&
         !call.init?.method &&
         calls.length === 1
       ) {
@@ -354,14 +354,14 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/retry-runtime/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/retry-runtime/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'retry-runtime', liked: true });
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/retry-runtime/views') &&
+        call.url.endsWith('/api/blog-metrics/articles/retry-runtime/views') &&
         call.init?.method === 'POST'
       ) {
         return jsonResponse({
@@ -407,14 +407,14 @@ describe('Blog V1 article experience', () => {
     let resolveView: ((response: Response) => void) | undefined;
     const { calls } = installArticleMetricsFetch((call) => {
       if (
-        call.url.endsWith('/v1/blog/articles/strict-runtime/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/strict-runtime/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'strict-runtime', liked: false });
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/strict-runtime/views') &&
+        call.url.endsWith('/api/blog-metrics/articles/strict-runtime/views') &&
         call.init?.method === 'POST'
       ) {
         return new Promise<Response>((resolve) => {
@@ -463,7 +463,7 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'two-runtimes', liked: true });
@@ -489,7 +489,7 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'two-runtimes', liked: false });
@@ -535,7 +535,7 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'two-runtimes', liked: true });
@@ -584,7 +584,7 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'two-runtimes', liked: false });
@@ -634,7 +634,7 @@ describe('Blog V1 article experience', () => {
       }
 
       if (
-        call.url.endsWith('/v1/blog/articles/two-runtimes/like') &&
+        call.url.endsWith('/api/blog-metrics/articles/two-runtimes/like') &&
         !call.init?.method
       ) {
         return jsonResponse({ slug: 'two-runtimes', liked: false });
