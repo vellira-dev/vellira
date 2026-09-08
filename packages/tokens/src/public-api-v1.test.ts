@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { generateTokenCss } from '../scripts/token-css-output.js';
 import { darkTheme } from './dark/theme.js';
 import {
   componentTokenPaths,
@@ -42,6 +43,21 @@ describe('public token API V1', () => {
 
     expect(new Set(themeNames)).toEqual(
       new Set(publicThemeContractsV1.map(({ themeName }) => themeName))
+    );
+  });
+
+  it('keeps Light as the generated CSS root default without inventing a JS default theme', () => {
+    expect(tokenPublicApiDeprecationPolicyV1.cssRootTheme).toBe('light');
+
+    const css = generateTokenCss();
+    expect(css).toContain(
+      ":root,\n[data-theme='light'],\n[data-vellira-theme='light'] {"
+    );
+    expect(css).toContain(
+      "[data-theme='dark'],\n[data-vellira-theme='dark'] {"
+    );
+    expect(css).toContain(
+      "[data-theme='high-contrast'],\n[data-vellira-theme='high-contrast'] {"
     );
   });
 
