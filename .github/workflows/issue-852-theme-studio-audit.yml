@@ -1,0 +1,31 @@
+name: Issue 852 ThemeStudio audit
+
+on:
+  push:
+    branches:
+      - probe/852-theme-studio-audit
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Print exact ThemeStudio findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:vellira-ui-usage:json > /tmp/audit.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const audit = JSON.parse(fs.readFileSync('/tmp/audit.json', 'utf8'));
+          const findings = audit.findings.filter((finding) => finding.path.includes('/ThemeStudio/'));
+          console.log(`GLOBAL_FINDINGS=${audit.summary.findings}`);
+          console.log(`THEME_STUDIO_FINDINGS=${findings.length}`);
+          console.log(JSON.stringify(findings, null, 2));
+          NODE
