@@ -11,6 +11,7 @@ export type FontWeight = (typeof fontWeights)[keyof typeof fontWeights];
 export const typography = {
   family: {
     base: "'Vellira Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
 
     extraLight: 'VelliraSans-ExtraLight',
     regular: 'VelliraSans-Regular',
