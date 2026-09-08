@@ -25,6 +25,34 @@ function isNextStaticChunk(url) {
   return new URL(url).pathname.startsWith('/_next/static/');
 }
 
+function isNextRouterDataRequest(request) {
+  if (!isSameOrigin(request.url()) || request.method() !== 'GET') {
+    return false;
+  }
+
+  const url = new URL(request.url());
+  const headers = request.headers();
+
+  return (
+    url.searchParams.has('_rsc') ||
+    headers.rsc === '1' ||
+    headers['next-router-prefetch'] === '1' ||
+    Boolean(headers['next-router-segment-prefetch'])
+  );
+}
+
+function describeRouterRequest(request) {
+  const headers = request.headers();
+
+  return [
+    `${request.method()} ${request.url()}`,
+    `resourceType=${request.resourceType()}`,
+    `rsc=${headers.rsc ?? ''}`,
+    `next-router-prefetch=${headers['next-router-prefetch'] ?? ''}`,
+    `next-router-segment-prefetch=${headers['next-router-segment-prefetch'] ?? ''}`,
+  ].join(' ');
+}
+
 function recordCritical(diagnostic) {
   if (!criticalDiagnostics.includes(diagnostic)) {
     criticalDiagnostics.push(diagnostic);
@@ -37,9 +65,26 @@ page.on('response', (response) => {
       `chunk response: ${response.status()} ${response.request().method()} ${response.url()}`
     );
   }
+
+  if (
+    isNextRouterDataRequest(response.request()) &&
+    response.status() >= 400
+  ) {
+    recordCritical(
+      `router data response: ${response.status()} ${describeRouterRequest(response.request())}`
+    );
+  }
 });
 
 page.on('requestfailed', (request) => {
+  if (isNextRouterDataRequest(request)) {
+    recordCritical(
+      `router data requestfailed: ${describeRouterRequest(request)} ` +
+        `${request.failure()?.errorText ?? ''}`
+    );
+    return;
+  }
+
   if (!isNextStaticChunk(request.url())) {
     return;
   }
@@ -149,7 +194,7 @@ async function settleAndVerifyChunks(stage) {
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
-      `Cloudflare static chunk failures detected during ${stage}:\n${criticalDiagnostics.join('\n')}`
+      `Cloudflare navigation/static failures detected during ${stage}:\n${criticalDiagnostics.join('\n')}`
     );
   }
 }
@@ -200,7 +245,7 @@ async function verifyGlobalHeaderNavigation() {
   await waitForRenderedBody('/');
   await settleAndVerifyChunks('brand navigation /components -> /');
 
-  console.log('OK global header navigation and prefetch chunk integrity');
+  console.log('OK global header navigation and router/static integrity');
 }
 
 async function verifyClientRoutes(indexPath, routes) {
@@ -243,7 +288,7 @@ try {
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
-      `Cloudflare static chunk failures detected:\n${criticalDiagnostics.join('\n')}`
+      `Cloudflare navigation/static failures detected:\n${criticalDiagnostics.join('\n')}`
     );
   }
 } catch (error) {
@@ -263,4 +308,6 @@ try {
 }
 
 await browser.close();
-console.log('OK Cloudflare static chunk integrity across discovered client routes');
+console.log(
+  'OK Cloudflare router prefetch and static chunk integrity across discovered client routes'
+);
