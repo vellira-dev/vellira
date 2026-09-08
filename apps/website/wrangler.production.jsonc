@@ -9,7 +9,18 @@
   "workers_dev": true,
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    "CF_WORKER_NAME": "vellira-website",
+    "CF_PREVIEW_DOMAIN": "vellira"
+  },
+  "secrets": {
+    "required": [
+      "CF_ACCOUNT_ID",
+      "CF_WORKERS_SCRIPTS_API_TOKEN"
+    ]
   },
   "observability": {
     "enabled": true
