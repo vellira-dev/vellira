@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { generateTokenCss } from '../scripts/token-css-output.js';
+
 import { darkTheme } from './dark/theme.js';
 import {
   componentTokenPaths,
@@ -11,10 +12,10 @@ import {
   themeNames,
 } from './generated/token-types.js';
 import { highContrastTheme } from './highContrast/theme.js';
-import { theme } from './index.js';
 import { lightTheme } from './light/theme.js';
 import { componentTokenWebCompatibilityAliases } from './platform-output/component-token-web-compatibility.js';
 import { tokenMigrationManifestV1 } from './preservation/token-migrations.js';
+import { theme } from './index.js';
 import {
   legacyPublicExportAliasesV1,
   publicThemeContractsV1,
