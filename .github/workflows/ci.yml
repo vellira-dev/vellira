@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -23,6 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
 
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
@@ -36,6 +39,21 @@ jobs:
 
       - name: Quality checks
         run: pnpm ci:quality
+
+      - name: Validate Blog publication state
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+        env:
+          VELLIRA_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          VELLIRA_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VELLIRA_PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if [[ "$VELLIRA_PR_HEAD_REF" == agent/content-article-* ]]; then
+            git fetch --no-tags --depth=2 origin "refs/heads/$VELLIRA_PR_HEAD_REF"
+          fi
+          pnpm exec tsx scripts/blog/check-publication-state.ts
 
       - name: Component Quality Checker
         id: component-quality
