@@ -8,6 +8,7 @@ on:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
       - 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-navigation-soak.mjs'
       - 'packages/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -130,6 +131,13 @@ jobs:
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-website-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+
+      - name: Soak test client navigation static assets
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-navigation-soak.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
 
