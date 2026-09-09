@@ -536,7 +536,9 @@ export { switchDocs };
     );
 
     expect(
-      tokenFactoryBarrel.match(/export \* from '\.\/createAvatarTokens\.js';/g)
+      tokenFactoryBarrel.match(
+        /export \* from '\.\/components\/createAvatarTokens\.js';/g
+      )
     ).toHaveLength(1);
 
     for (const tokenTarget of result.plan.tokenThemeTargets) {
