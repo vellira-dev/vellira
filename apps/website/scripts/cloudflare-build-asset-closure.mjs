@@ -3,10 +3,10 @@ import path from 'node:path';
 
 const websiteRoot = path.resolve('apps/website');
 const nextRoot = path.join(websiteRoot, '.next');
-const nextCssRoot = path.join(nextRoot, 'static/chunks');
+const nextStaticRoot = path.join(nextRoot, 'static');
 const openNextRoot = path.join(websiteRoot, '.open-next');
 const openNextAssetsRoot = path.join(openNextRoot, 'assets');
-const openNextCssRoot = path.join(openNextAssetsRoot, '_next/static/chunks');
+const openNextStaticRoot = path.join(openNextAssetsRoot, '_next/static');
 
 function listFiles(root) {
   if (!fs.existsSync(root)) {
@@ -43,16 +43,12 @@ function relativeCssSet(root) {
   );
 }
 
-function collectCssReferences(root, ignoredRoots = []) {
+function collectCssReferences(root) {
   const references = new Map();
   const cssAssetPattern =
-    /(?:\/?_next\/)?static\/chunks\/([A-Za-z0-9_./-]+\.css)/g;
+    /(?:\/?_next\/)?static\/([A-Za-z0-9_./-]+\.css)/g;
 
   for (const file of listFiles(root)) {
-    if (ignoredRoots.some((ignoredRoot) => file.startsWith(ignoredRoot))) {
-      continue;
-    }
-
     let stat;
     try {
       stat = fs.statSync(file);
@@ -126,11 +122,11 @@ if (expectedBuildId && nextBuildId !== expectedBuildId) {
   process.exit(1);
 }
 
-const nextCss = relativeCssSet(nextCssRoot);
-const openNextCss = relativeCssSet(openNextCssRoot);
+const nextCss = relativeCssSet(nextStaticRoot);
+const openNextCss = relativeCssSet(openNextStaticRoot);
 
 if (nextCss.size === 0) {
-  console.error('Next.js build emitted no CSS files under .next/static/chunks.');
+  console.error('Next.js build emitted no CSS files under .next/static.');
   process.exit(1);
 }
 
@@ -146,18 +142,18 @@ if (missingCopiedCss.length > 0) {
   process.exit(1);
 }
 
-const nextReferences = collectCssReferences(nextRoot, [nextCssRoot]);
+const nextReferences = collectCssReferences(nextRoot);
 const missingNextReferences = missingReferences(nextReferences, nextCss);
 
 if (missingNextReferences.length > 0) {
   printMissingReferences(
-    'Next.js output references CSS files absent from .next/static/chunks:',
+    'Next.js output references CSS files absent from .next/static:',
     missingNextReferences
   );
   process.exit(1);
 }
 
-const openNextReferences = collectCssReferences(openNextRoot, [openNextCssRoot]);
+const openNextReferences = collectCssReferences(openNextRoot);
 const missingOpenNextReferences = missingReferences(
   openNextReferences,
   openNextCss
