@@ -1,177 +1,166 @@
+/* global window */
 import { chromium } from '@playwright/test';
+import path from 'node:path';
+import {
+  captureDiagnostics,
+  waitForRoute,
+} from './cloudflare-browser-diagnostics.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
-
-if (!baseUrl) {
-  throw new Error('WEBSITE_URL is required.');
-}
-
-const baseOrigin = new URL(baseUrl).origin;
-const browser = await chromium.launch();
-const context = await browser.newContext();
-const page = await context.newPage();
-const staticFailures = [];
-
-function isSameOriginStaticAsset(url) {
-  const parsed = new URL(url);
-  return (
-    parsed.origin === baseOrigin &&
-    parsed.pathname.startsWith('/_next/static/')
-  );
-}
-
-function recordFailure(message) {
-  if (!staticFailures.includes(message)) {
-    staticFailures.push(message);
-  }
-}
-
-page.on('response', (response) => {
-  if (!isSameOriginStaticAsset(response.url()) || response.status() < 400) {
-    return;
-  }
-
-  const request = response.request();
-  recordFailure(
-    `static response ${response.status()} ${request.resourceType()} ${response.url()} ` +
-      `while=${page.url()}`
-  );
-});
-
-page.on('requestfailed', (request) => {
-  if (!isSameOriginStaticAsset(request.url())) {
-    return;
-  }
-
-  const errorText = request.failure()?.errorText ?? '';
-  recordFailure(
-    `static requestfailed ${request.resourceType()} ${request.url()} ` +
-      `${errorText} while=${page.url()}`
-  );
-});
-
-async function goto(path) {
-  await page.goto(`${baseUrl}${path}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
-  await page.locator('main').first().waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-}
-
-async function assertNoStaticFailures(stage) {
-  if (staticFailures.length === 0) {
-    return;
-  }
-
+if (!baseUrl) throw new Error('WEBSITE_URL is required.');
+// With 14 component routes and 6 articles, 15 rounds with a one-second dwell
+// cross the observed 300-second router stale-time within one browser document.
+const rounds = Number(process.env.SOAK_ROUNDS ?? 15);
+const dwellMs = Number(process.env.SOAK_DWELL_MS ?? 1_000);
+if (
+  !Number.isInteger(rounds) ||
+  rounds < 1 ||
+  !Number.isFinite(dwellMs) ||
+  dwellMs < 0
+) {
   throw new Error(
-    `Static asset failures detected during ${stage}:\n${staticFailures.join('\n')}`
+    'SOAK_ROUNDS must be positive and SOAK_DWELL_MS nonnegative.'
   );
 }
+const browser = await chromium.launch();
+const context = await browser.newContext({
+  viewport: { width: 1280, height: 900 },
+});
+const page = await context.newPage();
+const directory = path.resolve(
+  process.env.SOAK_ARTIFACT_DIR ?? 'test-results/cloudflare-soak'
+);
+const diagnostics = await captureDiagnostics(page, context, baseUrl, directory);
+const sidebarSelector = 'aside[aria-label="Component navigation"]';
+let documentToken;
 
-async function churnComponentRoutes() {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await goto('/components/switch');
+async function ready(href, title) {
+  await waitForRoute(page, diagnostics, baseUrl, href, title);
+  if (
+    documentToken &&
+    (await page.evaluate(() => window.__velliraSoakDocument)) !== documentToken
+  ) {
+    throw new Error(`Client navigation replaced the document at ${href}`);
+  }
+  await page.waitForTimeout(dwellMs);
+  diagnostics.assertHealthy(`settled ${href}`);
+}
 
-  const sidebarSelector = 'aside[aria-label="Component navigation"]';
+async function click(link, href, title) {
+  diagnostics.record('navigation', { href, title });
+  await link.click({ timeout: 15_000 });
+  await ready(href, title);
+}
+
+async function components() {
   const sidebar = page.locator(sidebarSelector).first();
   await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
-
-  const hrefs = await sidebar
+  const targets = await sidebar
     .locator('a[href^="/components/"]')
-    .evaluateAll((links) => [
-      ...new Set(
-        links
-          .map((link) => link.getAttribute('href'))
-          .filter((href) => href && href !== '/components')
-      ),
-    ]);
-
-  if (hrefs.length < 5) {
-    throw new Error(
-      `Expected at least 5 component routes for navigation soak, got ${hrefs.length}.`
+    .evaluateAll((links) =>
+      Array.from(
+        new Map(
+          links.map((link) => [
+            link.getAttribute('href'),
+            {
+              href: link.getAttribute('href'),
+              title: link.textContent.trim(),
+            },
+          ])
+        ).values()
+      )
     );
-  }
-
-  for (let round = 1; round <= 5; round += 1) {
-    for (const href of hrefs) {
-      const link = page
-        .locator(`${sidebarSelector} a[href="${href}"]`)
-        .first();
-      await link.waitFor({ state: 'visible', timeout: 15_000 });
-      await link.click();
-      await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-      await page.locator('main').first().waitFor({
-        state: 'visible',
-        timeout: 15_000,
-      });
-      await page.waitForTimeout(150);
-      await assertNoStaticFailures(`component round ${round} at ${href}`);
+  if (targets.length < 5)
+    throw new Error(
+      `Expected at least 5 component routes, got ${targets.length}`
+    );
+  for (let round = 1; round <= rounds; round++) {
+    for (const { href, title } of targets) {
+      await click(
+        page.locator(`${sidebarSelector} a[href="${href}"]`).first(),
+        href,
+        title
+      );
     }
-
+    await diagnostics.anchor(`component round ${round}`);
     console.log(
-      `OK component navigation soak round ${round}/${5} across ${hrefs.length} routes`
+      `OK component round ${round}/${rounds}: ${targets.length} routes`
     );
   }
 }
 
-async function churnBlogRoutes() {
-  await goto('/blog');
-
-  const hrefs = await page
+async function blog() {
+  await click(page.locator('header a[href="/blog"]').first(), '/blog', 'Blog');
+  const targets = await page
     .locator('main a[href^="/blog/"]')
-    .evaluateAll((links) => [
-      ...new Set(
-        links
-          .map((link) => link.getAttribute('href'))
-          .filter((href) => href && href !== '/blog')
-      ),
-    ]);
-
-  if (hrefs.length < 3) {
-    throw new Error(
-      `Expected at least 3 blog routes for navigation soak, got ${hrefs.length}.`
+    .evaluateAll((links) =>
+      Array.from(
+        new Map(
+          links
+            .filter((link) => link.closest('article')?.querySelector('h2'))
+            .map((link) => [
+              link.getAttribute('href'),
+              {
+                href: link.getAttribute('href'),
+                title: link
+                  .closest('article')
+                  ?.querySelector('h2')
+                  .textContent.trim(),
+              },
+            ])
+        ).values()
+      ).slice(0, 6)
     );
-  }
-
-  const targets = hrefs.slice(0, 6);
-  for (let round = 1; round <= 3; round += 1) {
-    for (const href of targets) {
-      await goto('/blog');
-      const link = page.locator(`main a[href="${href}"]`).first();
-      await link.waitFor({ state: 'visible', timeout: 15_000 });
-      await link.click();
-      await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-      await page.locator('main').first().waitFor({
-        state: 'visible',
-        timeout: 15_000,
-      });
-      await page.waitForTimeout(150);
-      await assertNoStaticFailures(`blog round ${round} at ${href}`);
+  if (targets.length < 3)
+    throw new Error(`Expected at least 3 blog routes, got ${targets.length}`);
+  for (let round = 1; round <= rounds; round++) {
+    for (const { href, title } of targets) {
+      await click(page.locator(`main a[href="${href}"]`).first(), href, title);
+      // History preserves the loaded runtime/router caches, unlike page.goto('/blog').
+      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 15_000 });
+      await ready('/blog', 'Blog');
     }
-
-    console.log(
-      `OK blog navigation soak round ${round}/${3} across ${targets.length} routes`
-    );
+    await diagnostics.anchor(`blog round ${round}`);
+    console.log(`OK blog round ${round}/${rounds}: ${targets.length} routes`);
   }
 }
 
+let failure;
 try {
-  await churnComponentRoutes();
-  await churnBlogRoutes();
+  await diagnostics.anchor('start');
+  const response = await page.goto(
+    new URL('/components/switch', baseUrl).href,
+    {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    }
+  );
+  if (!response?.ok())
+    throw new Error(
+      `Initial document status=${response?.status() ?? 'no-response'} URL=${page.url()}`
+    );
+  await ready('/components/switch', 'Switch');
+  documentToken = await page.evaluate(
+    () => (window.__velliraSoakDocument = crypto.randomUUID())
+  );
+  await components();
+  await blog();
   await page.waitForTimeout(5_000);
-  await assertNoStaticFailures('final preload settle');
-  console.log('OK Cloudflare navigation soak: no delayed /_next/static asset failures');
+  diagnostics.assertHealthy('final preload settle');
 } catch (error) {
-  console.error(`Cloudflare navigation soak failed at ${page.url()}`);
-  console.error(error);
-  for (const failure of staticFailures) {
-    console.error(failure);
+  failure = error;
+  console.error(`Cloudflare navigation soak failed at ${page.url()}`, error);
+  process.exitCode = 1;
+} finally {
+  try {
+    await diagnostics.finish(failure);
+    diagnostics.assertHealthy('diagnostic capture settle');
+    if (!failure) {
+      console.log(
+        'OK Cloudflare navigation soak: no delayed /_next/static asset failures'
+      );
+    }
+  } finally {
+    await browser.close();
   }
-  await browser.close();
-  process.exit(1);
 }
-
-await browser.close();

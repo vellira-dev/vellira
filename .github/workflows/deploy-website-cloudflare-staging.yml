@@ -9,6 +9,8 @@ on:
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
       - 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'
       - 'apps/react-storybook/scripts/cloudflare-navigation-soak.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-browser-diagnostics.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-browser-diagnostics.test.mjs'
       - 'packages/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -62,14 +64,26 @@ jobs:
       - name: Verify OpenNext CSS asset closure
         run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
 
+      - name: Test runtime asset auditing
+        run: node --test apps/website/scripts/cloudflare-build-runtime-audit.test.mjs
+
+      - name: Audit client manifests and Webpack runtime assets
+        run: node apps/website/scripts/cloudflare-build-runtime-audit.mjs
+
       - name: Add unique deployment asset anchor
         run: printf '%s\n' "$VELLIRA_BUILD_ID" > apps/website/.open-next/assets/__vellira_deploy.txt
 
       - name: Deploy website staging to Cloudflare Workers
+        id: worker-deploy
         run: pnpm --dir apps/website exec opennextjs-cloudflare deploy
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Audit assets after OpenNext deploy cache population
+        run: >-
+          node apps/website/scripts/cloudflare-build-runtime-audit.mjs
+          apps/website apps/website/.open-next/asset-audit-after-deploy.json
 
       - name: Smoke test deployed routes
         shell: bash
@@ -130,6 +144,11 @@ jobs:
       - name: Install Chromium for browser smoke
         run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
 
+      - name: Test browser forensic diagnostics
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node --test
+          scripts/cloudflare-browser-diagnostics.test.mjs
+
       - name: Smoke test navigation and actor metrics
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
@@ -145,8 +164,25 @@ jobs:
           WEBSITE_URL: ${{ env.STAGING_URL }}
 
       - name: Smoke test static chunk integrity
+        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
+
+      - name: Retain asset and browser forensic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cloudflare-forensics-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          include-hidden-files: true
+          path: |
+            apps/react-storybook/test-results/cloudflare-soak/
+            apps/website/.open-next/asset-audit*.json
+            apps/website/.open-next/cache/
+            apps/website/.next/*manifest.json
+            apps/website/.next/BUILD_ID
+            apps/website/.next/server/**/*manifest*
+            apps/website/.next/static/chunks/webpack-*.js
