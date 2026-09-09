@@ -57,6 +57,9 @@ jobs:
       - name: Build website for Cloudflare Workers
         run: pnpm --dir apps/website run build:opennext
 
+      - name: Verify OpenNext CSS asset closure
+        run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
+
       - name: Deploy website staging to Cloudflare Workers
         run: pnpm --dir apps/website exec opennextjs-cloudflare deploy
         env:
