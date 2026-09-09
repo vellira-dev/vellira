@@ -1,8 +1,10 @@
 export type SelectTokensConfig = Readonly<Record<string, unknown>>;
 
-export const createSelectTokens = <const TTokens extends SelectTokensConfig>(
+export function createSelectTokens<const TTokens extends SelectTokensConfig>(
   tokens: TTokens
-) => tokens;
+): TTokens {
+  return tokens;
+}
 
 export {
   createSelectIntentPalette,

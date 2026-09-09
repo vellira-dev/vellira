@@ -1,8 +1,10 @@
 export type CheckboxTokensConfig = Readonly<Record<string, unknown>>;
 
-export const createCheckboxTokens = <
+export function createCheckboxTokens<
   const TTokens extends CheckboxTokensConfig,
->(tokens: TTokens) => tokens;
+>(tokens: TTokens): TTokens {
+  return tokens;
+}
 
 export {
   createCheckboxIntentPalette,

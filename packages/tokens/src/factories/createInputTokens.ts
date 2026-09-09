@@ -1,8 +1,10 @@
 export type InputTokensConfig = Readonly<Record<string, unknown>>;
 
-export const createInputTokens = <const TTokens extends InputTokensConfig>(
+export function createInputTokens<const TTokens extends InputTokensConfig>(
   tokens: TTokens
-) => tokens;
+): TTokens {
+  return tokens;
+}
 
 export {
   createInputColorPalette,

@@ -1,8 +1,10 @@
 export type RadioTokensConfig = Readonly<Record<string, unknown>>;
 
-export const createRadioTokens = <const TTokens extends RadioTokensConfig>(
+export function createRadioTokens<const TTokens extends RadioTokensConfig>(
   tokens: TTokens
-) => tokens;
+): TTokens {
+  return tokens;
+}
 
 export {
   createRadioIntentPalette,

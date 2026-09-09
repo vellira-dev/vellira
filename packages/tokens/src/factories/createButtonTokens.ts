@@ -1,8 +1,10 @@
 export type ButtonTokensConfig = Readonly<Record<string, unknown>>;
 
-export const createButtonTokens = <const TTokens extends ButtonTokensConfig>(
+export function createButtonTokens<const TTokens extends ButtonTokensConfig>(
   tokens: TTokens
-) => tokens;
+): TTokens {
+  return tokens;
+}
 
 export {
   createButtonIntentPalette,
