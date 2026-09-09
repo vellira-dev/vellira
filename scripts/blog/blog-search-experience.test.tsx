@@ -101,7 +101,7 @@ describe('blog search experience', () => {
       'react'
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear input' }));
 
     expect(search).toHaveValue('');
     expect(
