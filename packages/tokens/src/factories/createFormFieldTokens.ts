@@ -4,9 +4,11 @@ type FormFieldStatus = {
 
 export type FormFieldTokensConfig = Readonly<Record<string, unknown>>;
 
-export const createFormFieldTokens = <
+export function createFormFieldTokens<
   const TTokens extends FormFieldTokensConfig,
->(tokens: TTokens) => tokens;
+>(tokens: TTokens): TTokens {
+  return tokens;
+}
 
 export type FormFieldThemeSources = {
   radius: {
