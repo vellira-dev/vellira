@@ -22,7 +22,7 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
-  VELLIRA_BUILD_ID: ${{ github.sha }}
+  VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   deploy:
@@ -63,6 +63,9 @@ jobs:
             echo 'Production candidate config unexpectedly contains vellira.dev before cutover.' >&2
             exit 1
           fi
+
+      - name: Add unique deployment asset anchor
+        run: printf '%s\n' "$VELLIRA_BUILD_ID" > apps/website/.open-next/assets/__vellira_deploy.txt
 
       - name: Deploy isolated production Worker candidate
         run: >-
