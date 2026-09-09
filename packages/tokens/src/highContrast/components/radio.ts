@@ -1,8 +1,9 @@
 import {
   createRadioPalette,
+  createRadioTokens,
   radioMotionTokens,
   radioSizeTokens,
-} from '../../factories/createRadioPalette.js';
+} from '../../factories/createRadioTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { control } from '../semantic/control.js';
@@ -120,7 +121,7 @@ const danger = createRadioPalette({
   },
 });
 
-export const radio = {
+export const radio = createRadioTokens({
   size: radioSizeTokens,
   motion: radioMotionTokens,
 
@@ -153,4 +154,4 @@ export const radio = {
     border: border.disabled,
     labelFg: text.disabled,
   },
-} as const;
+});

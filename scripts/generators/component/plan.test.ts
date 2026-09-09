@@ -84,6 +84,15 @@ describe('component generation plan', () => {
     expect(plan.metadataBarrelFile).toBe(
       path.join(root, 'packages/metadata/src/components/index.ts')
     );
+
+    expect(plan.tokenFactoryFile).toBe(
+      path.join(
+        root,
+        'packages/tokens/src/factories/createAvatarTokens.ts'
+      )
+    );
+    expect(plan.tokenFactoryFile).not.toContain('Palette');
+
     expect(plan.targets.map((target) => target.packageName)).toEqual([
       'react',
       'react-native',
