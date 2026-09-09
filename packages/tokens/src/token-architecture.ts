@@ -197,6 +197,7 @@ function resolveComponentValueKind(
       roleSegments[index]!,
       canonicalComponentNumericRoleFamilies
     );
+
     if (numericRoleKind) return numericRoleKind;
   }
 
