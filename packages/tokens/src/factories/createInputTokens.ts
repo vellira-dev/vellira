@@ -7,6 +7,7 @@ export const createInputTokens = <const TTokens extends InputTokensConfig>(
 export {
   createInputColorPalette,
   createInputIntentPalette,
+  createInputIntentPalette as createInputPalette,
 } from './palettes/createInputIntentPalette.js';
 export type {
   InputColorPaletteConfig,
