@@ -57,15 +57,15 @@ export function parseChangedBlogMetadataPaths(output: string): string[] {
     .filter((line) => BLOG_METADATA_PATH.test(line));
 }
 
-function changedBlogMetadataPaths(baseSha: string, headSha: string): string[] {
+function changedBlogMetadataPaths(): string[] {
   const output = execFileSync(
     'git',
     [
       'diff',
       '--name-only',
       '--diff-filter=AMRT',
-      baseSha,
-      headSha,
+      'HEAD^1',
+      'HEAD',
       '--',
       ':(glob)apps/website/content/blog/*/metadata.json',
     ],
@@ -76,16 +76,7 @@ function changedBlogMetadataPaths(baseSha: string, headSha: string): string[] {
 }
 
 async function main(): Promise<void> {
-  const baseSha = process.env.VELLIRA_PUBLICATION_BASE_SHA?.trim();
-  const headSha = process.env.VELLIRA_PUBLICATION_HEAD_SHA?.trim();
-
-  if (!baseSha || !headSha) {
-    throw new Error(
-      'VELLIRA_PUBLICATION_BASE_SHA and VELLIRA_PUBLICATION_HEAD_SHA are required'
-    );
-  }
-
-  const paths = changedBlogMetadataPaths(baseSha, headSha);
+  const paths = changedBlogMetadataPaths();
   const findings: PublicationStateFinding[] = [];
 
   for (const path of paths) {
