@@ -73,7 +73,9 @@ export function normalizePublishableMetadata(rawMetadata: string): string {
   if (parsed.draft === false) {
     const matches = rawMetadata.match(/"draft"\s*:\s*false\b/g) ?? [];
     if (matches.length !== 1) {
-      throw new Error('metadata draft:false must have one canonical JSON token');
+      throw new Error(
+        'metadata draft:false must have one canonical JSON token'
+      );
     }
     return rawMetadata;
   }
@@ -202,7 +204,8 @@ export function validateContentAgentApproval(
     if (input.parentArticleText !== input.articleText) {
       findings.push({
         path: input.articlePath,
-        message: 'idempotent publication approval must not mutate article prose',
+        message:
+          'idempotent publication approval must not mutate article prose',
       });
     }
   } else if (
@@ -222,11 +225,15 @@ export function validateContentAgentApproval(
         string,
         unknown
       >;
-      currentMetadata = JSON.parse(input.metadataText) as Record<string, unknown>;
+      currentMetadata = JSON.parse(input.metadataText) as Record<
+        string,
+        unknown
+      >;
     } catch {
       findings.push({
         path: input.metadataPath,
-        message: 'publication approval transition metadata must contain valid JSON',
+        message:
+          'publication approval transition metadata must contain valid JSON',
       });
     }
 
@@ -237,7 +244,8 @@ export function validateContentAgentApproval(
     ) {
       findings.push({
         path: input.metadataPath,
-        message: 'publication approval commit must transition draft:true to draft:false',
+        message:
+          'publication approval commit must transition draft:true to draft:false',
       });
     }
     if (input.parentArticleText !== input.articleText) {
@@ -247,7 +255,10 @@ export function validateContentAgentApproval(
       });
     }
     try {
-      if (normalizePublishableMetadata(input.parentMetadataText) !== input.metadataText) {
+      if (
+        normalizePublishableMetadata(input.parentMetadataText) !==
+        input.metadataText
+      ) {
         findings.push({
           path: input.metadataPath,
           message:
