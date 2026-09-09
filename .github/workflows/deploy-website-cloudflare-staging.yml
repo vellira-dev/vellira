@@ -124,7 +124,7 @@ jobs:
           check_route '/robots.txt' 'User-Agent: *'
 
       - name: Install Chromium for browser smoke
-        run: pnpm --filter @vellira-ui/react-storybook run playwright:install
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
 
       - name: Smoke test navigation and actor metrics
         run: >-
