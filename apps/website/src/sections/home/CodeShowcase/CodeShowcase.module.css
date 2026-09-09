@@ -244,7 +244,7 @@
   --syntax-component: var(--color-secondary-700);
   --syntax-prop: var(--color-warning-700);
   --syntax-string: var(--color-success-700);
-  --syntax-punctuation: var(--text-tertiary);
+  --syntax-punctuation: var(--text-muted);
 
   flex: 0 0 400px;
   height: 400px;
@@ -292,7 +292,7 @@
   bottom: 0;
   left: 58px;
   width: 1px;
-  background: color-mix(in srgb, var(--border-muted) 92%, var(--text-tertiary));
+  background: color-mix(in srgb, var(--border-muted) 92%, var(--text-muted));
   content: '';
 }
 
@@ -314,7 +314,7 @@
   position: relative;
   z-index: 1;
   padding-right: var(--space-3);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
   user-select: none;
@@ -369,7 +369,7 @@
   min-height: 30px;
   margin: var(--space-4) var(--space-4) var(--space-4);
   padding: 0 var(--space-2);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   background: var(--surface-default);
   border: 1px solid var(--border-muted);
@@ -487,7 +487,7 @@
 .previewCardHeader span,
 .planSummary span,
 .dropdownSurface span {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
