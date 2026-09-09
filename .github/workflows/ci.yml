@@ -42,7 +42,17 @@ jobs:
 
       - name: Validate Blog publication state
         if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-        run: pnpm exec tsx scripts/blog/check-publication-state.ts
+        env:
+          VELLIRA_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          VELLIRA_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VELLIRA_PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$VELLIRA_PR_HEAD_REF" == agent/content-article-* ]]; then
+            git fetch --no-tags --depth=2 origin "refs/heads/$VELLIRA_PR_HEAD_REF"
+          fi
+          pnpm exec tsx scripts/blog/check-publication-state.ts
 
       - name: Component Quality Checker
         id: component-quality
@@ -66,70 +76,51 @@ jobs:
               exit 1
             fi
 
-            echo "::warning::Component Quality Checker reported blocking quality findings. Advisory mode is active, so CI will continue."
+            echo "::warning::Component Quality Checker reported blocking findings, but enforcement is advisory during the rollout window."
           fi
-
-          exit 0
 
       - name: Generate Component Quality report
         if: always()
-        shell: bash
-        run: |
-          mkdir -p .artifacts/component-quality
-
-          set +e
-          pnpm check:component-quality:json \
-            > .artifacts/component-quality/report.json
-          status=$?
-          set -e
-
-          if [ "$status" -eq 2 ]; then
-            echo "::error::Failed to generate Component Quality Checker report."
-            exit 2
-          fi
+        run: pnpm check:component-quality:json -- --output .artifacts/component-quality/report.json
 
       - name: Upload Component Quality report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@v4
         with:
           name: component-quality-report
           path: .artifacts/component-quality/report.json
           if-no-files-found: error
-          retention-days: 14
 
       - name: Build packages and apps
-        run: pnpm ci:build
+        run: pnpm build
 
       - name: Build docs
-        run: pnpm docs:build
+        run: pnpm --filter @vellira/docs build
 
       - name: Typecheck
-        run: pnpm ci:typecheck
+        run: pnpm typecheck
 
       - name: Tooling tests
         run: pnpm test:tooling
 
       - name: IndexNow tests
-        run: node --test scripts/submit-indexnow.test.mjs
+        run: pnpm test:indexnow
 
       - name: Tests and coverage
-        run: pnpm ci:test
+        run: pnpm test:coverage
 
       - name: Visual regression
-        run: pnpm test:e2e:web:visual
-        env:
-          VELLIRA_VISUAL_ENVIRONMENT: playwright-v1.61.1-noble
+        run: pnpm test:visual
 
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
+          name: playwright-report
           path: |
-            apps/react-storybook/test-results
-            apps/react-storybook/playwright-report
+            playwright-report
+            test-results
           if-no-files-found: ignore
-          retention-days: 7
 
       - name: Smoke packages
-        run: pnpm ci:smoke
+        run: pnpm smoke:packages
