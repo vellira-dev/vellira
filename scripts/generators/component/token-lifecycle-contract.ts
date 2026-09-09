@@ -1,7 +1,12 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
-import { getComponentTokenLifecycle } from '@vellira-ui/metadata';
+import {
+  getTokenLifecycleRegistryFile,
+  promoteReservedTokenFamily,
+  readTokenLifecycleAuthority,
+} from '../../token-lifecycle/authority';
+
+export { getTokenLifecycleRegistryFile } from '../../token-lifecycle/authority';
 
 import type { ComponentGenerationPlan } from './plan';
 
@@ -9,18 +14,21 @@ export type TokenLifecycleContractMutationResult = {
   updatedFiles: string[];
 };
 
-export function getTokenLifecycleRegistryFile(root: string) {
-  return path.join(root, 'packages', 'metadata', 'src', 'tokenLifecycle.ts');
-}
-
-export function needsComponentTokenLifecycleMutation(componentName: string) {
-  return getComponentTokenLifecycle(componentName)?.status === 'reserved';
+export function needsComponentTokenLifecycleMutation(
+  componentName: string,
+  root = process.cwd()
+) {
+  return (
+    readTokenLifecycleAuthority(root).components[componentName]?.status ===
+    'reserved'
+  );
 }
 
 export function assertComponentTokenLifecycleCanMaterialize(
-  componentName: string
+  componentName: string,
+  root = process.cwd()
 ) {
-  const lifecycle = getComponentTokenLifecycle(componentName);
+  const lifecycle = readTokenLifecycleAuthority(root).components[componentName];
 
   if (!lifecycle) {
     throw new Error(
@@ -62,30 +70,16 @@ export function ensureComponentTokenLifecycleContract(params: {
   if (plan.componentTokens === false) return;
 
   const lifecycle = assertComponentTokenLifecycleCanMaterialize(
-    plan.componentName
+    plan.componentName,
+    plan.root
   );
 
   if (lifecycle.status === 'current') return;
 
-  const registryFile = getTokenLifecycleRegistryFile(plan.root);
-
-  if (!fs.existsSync(registryFile)) {
-    throw new Error(`Missing token lifecycle registry: ${registryFile}`);
-  }
-
-  let source = fs.readFileSync(registryFile, 'utf8');
-  const entryPattern = new RegExp(
-    `(\\n  ${plan.componentName}: \\{\\n    status: )'reserved'`
+  const registryFile = promoteReservedTokenFamily(
+    plan.root,
+    plan.componentName
   );
-
-  if (!entryPattern.test(source)) {
-    throw new Error(
-      `Invalid reserved token lifecycle entry for ${plan.componentName} in ${registryFile}`
-    );
-  }
-
-  source = source.replace(entryPattern, `$1'current'`);
-  fs.writeFileSync(registryFile, source);
 
   if (!result.updatedFiles.includes(registryFile)) {
     result.updatedFiles.push(registryFile);
@@ -97,7 +91,9 @@ export function checkComponentTokenLifecycleContract(
 ) {
   if (plan.componentTokens === false) return [];
 
-  const lifecycle = getComponentTokenLifecycle(plan.componentName);
+  const lifecycle = readTokenLifecycleAuthority(plan.root).components[
+    plan.componentName
+  ];
 
   if (
     lifecycle?.status === 'current' &&

@@ -115,7 +115,7 @@ function getPlannedUpdatedFiles(
       getGeneratedTokenTypesFile(plan.root)
     );
 
-    if (needsComponentTokenLifecycleMutation(plan.componentName)) {
+    if (needsComponentTokenLifecycleMutation(plan.componentName, plan.root)) {
       files.push(getTokenLifecycleRegistryFile(plan.root));
     }
   }
@@ -198,9 +198,6 @@ export async function runComponentGenerator(params: {
     };
   }
 
-  const lifecycleResult = { updatedFiles: [] as string[] };
-  ensureComponentTokenLifecycleContract({ plan, result: lifecycleResult });
-
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
 
@@ -220,6 +217,10 @@ export async function runComponentGenerator(params: {
     profile: plan.profile,
     category: plan.category,
   });
+
+  // Publish current ownership only after every generated surface succeeds.
+  const lifecycleResult = { updatedFiles: [] as string[] };
+  ensureComponentTokenLifecycleContract({ plan, result: lifecycleResult });
 
   const createdFiles = [
     ...new Set([

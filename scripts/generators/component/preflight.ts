@@ -5,6 +5,7 @@ import ts from 'typescript';
 
 import type { ComponentGenerationPlan } from './plan';
 import { getComponentProfile } from './profiles';
+import { assertComponentTokenLifecycleCanMaterialize } from './token-lifecycle-contract';
 import {
   canonicalAssetExists,
   canonicalAssetPath,
@@ -354,6 +355,16 @@ export function validateComponentGenerationPlan(
   const existingTargets: string[] = [];
   const profile = getComponentProfile(plan.profile);
   errors.push(...validateComponentGenerationAuthorities(plan));
+  if (plan.componentTokens !== false) {
+    try {
+      assertComponentTokenLifecycleCanMaterialize(
+        plan.componentName,
+        plan.root
+      );
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
 
   for (const target of plan.targets) {
     if (!fs.existsSync(target.barrelFile)) {
