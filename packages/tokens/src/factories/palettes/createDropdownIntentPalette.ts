@@ -1,4 +1,4 @@
-import type { createInputColorPalette } from './createInputPalette.js';
+import type { createInputColorPalette } from './createInputIntentPalette.js';
 
 type DropdownBasePalette = ReturnType<typeof createInputColorPalette>;
 type DropdownPaletteConfig = {
@@ -16,7 +16,7 @@ type DropdownPaletteConfig = {
   itemBadgeBorder?: string;
 };
 
-export const createDropdownPalette = (
+export const createDropdownIntentPalette = (
   palette: DropdownBasePalette,
   config: DropdownPaletteConfig = {}
 ) =>

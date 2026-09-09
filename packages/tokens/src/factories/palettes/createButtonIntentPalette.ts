@@ -35,7 +35,7 @@ export const transparent = {
   border: 'transparent',
 } as const;
 
-export const createButtonPalette = ({
+export const createButtonIntentPalette = ({
   ring,
   solid,
   fg,

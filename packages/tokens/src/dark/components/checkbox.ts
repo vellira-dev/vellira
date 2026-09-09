@@ -1,4 +1,7 @@
-import { createCheckboxPalette } from '../../factories/createCheckboxPalette.js';
+import {
+  createCheckboxPalette,
+  createCheckboxTokens,
+} from '../../factories/createCheckboxTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { control } from '../semantic/control.js';
@@ -117,7 +120,7 @@ const danger = createCheckboxPalette({
   },
 });
 
-export const checkbox = {
+export const checkbox = createCheckboxTokens({
   default: {
     bg: surface.elevated,
     fg: text.primary,
@@ -150,4 +153,4 @@ export const checkbox = {
     border: status.error.border,
     ring: status.error.ring,
   },
-} as const;
+});

@@ -32,6 +32,25 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Disable unrelated Google Chrome apt source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t chrome_sources < <(
+            grep -RIl 'dl.google.com/linux/chrome-stable/deb' /etc/apt/sources.list.d 2>/dev/null || true
+          )
+
+          if (( ${#chrome_sources[@]} == 0 )); then
+            echo 'No Google Chrome apt source found; nothing to disable.'
+            exit 0
+          fi
+
+          printf 'Disabling unrelated apt source(s):\n'
+          printf '  %s\n' "${chrome_sources[@]}"
+          for source in "${chrome_sources[@]}"; do
+            sudo mv "$source" "$source.disabled"
+          done
+
       - name: Install Playwright browsers
         run: pnpm ci:playwright
 
