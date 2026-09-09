@@ -2,12 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const websiteRoot = path.resolve('apps/website');
-const nextCssRoot = path.join(websiteRoot, '.next/static/chunks');
-const openNextCssRoot = path.join(
-  websiteRoot,
-  '.open-next/assets/_next/static/chunks'
-);
+const nextRoot = path.join(websiteRoot, '.next');
+const nextCssRoot = path.join(nextRoot, 'static/chunks');
 const openNextRoot = path.join(websiteRoot, '.open-next');
+const openNextCssRoot = path.join(
+  openNextRoot,
+  'assets/_next/static/chunks'
+);
 
 function listFiles(root) {
   if (!fs.existsSync(root)) {
@@ -32,17 +33,85 @@ function listFiles(root) {
   return files;
 }
 
+function toPosix(value) {
+  return value.split(path.sep).join('/');
+}
+
 function relativeCssSet(root) {
   return new Set(
     listFiles(root)
       .filter((file) => file.endsWith('.css'))
-      .map((file) => path.relative(root, file).split(path.sep).join('/'))
+      .map((file) => toPosix(path.relative(root, file)))
   );
+}
+
+function collectCssReferences(root, ignoredRoots = []) {
+  const references = new Map();
+  const cssAssetPattern =
+    /(?:\/?_next\/)?static\/chunks\/([A-Za-z0-9_./-]+\.css)/g;
+
+  for (const file of listFiles(root)) {
+    if (ignoredRoots.some((ignoredRoot) => file.startsWith(ignoredRoot))) {
+      continue;
+    }
+
+    let stat;
+    try {
+      stat = fs.statSync(file);
+    } catch {
+      continue;
+    }
+
+    if (stat.size > 10 * 1024 * 1024) {
+      continue;
+    }
+
+    let content;
+    try {
+      content = fs.readFileSync(file, 'utf8').replaceAll('\\/', '/');
+    } catch {
+      continue;
+    }
+
+    for (const match of content.matchAll(cssAssetPattern)) {
+      const assetPath = match[1];
+      const source = toPosix(path.relative(root, file));
+      const sources = references.get(assetPath) ?? new Set();
+      sources.add(source);
+      references.set(assetPath, sources);
+    }
+  }
+
+  return references;
+}
+
+function missingReferences(references, availableCss) {
+  return [...references.entries()]
+    .filter(([assetPath]) => !availableCss.has(assetPath))
+    .sort(([a], [b]) => a.localeCompare(b));
+}
+
+function printMissingReferences(label, missing) {
+  console.error(label);
+  for (const [assetPath, sources] of missing) {
+    console.error(`- ${assetPath}`);
+    for (const source of [...sources].sort()) {
+      console.error(`  referenced by ${source}`);
+    }
+  }
 }
 
 const nextCss = relativeCssSet(nextCssRoot);
 const openNextCss = relativeCssSet(openNextCssRoot);
-const missingCopiedCss = [...nextCss].filter((file) => !openNextCss.has(file)).sort();
+
+if (nextCss.size === 0) {
+  console.error('Next.js build emitted no CSS files under .next/static/chunks.');
+  process.exit(1);
+}
+
+const missingCopiedCss = [...nextCss]
+  .filter((file) => !openNextCss.has(file))
+  .sort();
 
 if (missingCopiedCss.length > 0) {
   console.error('OpenNext omitted CSS files emitted by Next.js:');
@@ -52,53 +121,34 @@ if (missingCopiedCss.length > 0) {
   process.exit(1);
 }
 
-const deployedCssBasenames = new Set(
-  [...openNextCss].map((file) => path.posix.basename(file))
-);
-const referencedCss = new Set();
-const cssTokenPattern = /[A-Za-z0-9_-]+\.css/g;
+const nextReferences = collectCssReferences(nextRoot, [nextCssRoot]);
+const missingNextReferences = missingReferences(nextReferences, nextCss);
 
-for (const file of listFiles(openNextRoot)) {
-  if (file.startsWith(openNextCssRoot)) {
-    continue;
-  }
-
-  let stat;
-  try {
-    stat = fs.statSync(file);
-  } catch {
-    continue;
-  }
-
-  if (stat.size > 10 * 1024 * 1024) {
-    continue;
-  }
-
-  let content;
-  try {
-    content = fs.readFileSync(file, 'utf8');
-  } catch {
-    continue;
-  }
-
-  for (const match of content.matchAll(cssTokenPattern)) {
-    referencedCss.add(match[0]);
-  }
+if (missingNextReferences.length > 0) {
+  printMissingReferences(
+    'Next.js output references CSS files absent from .next/static/chunks:',
+    missingNextReferences
+  );
+  process.exit(1);
 }
 
-const missingReferencedCss = [...referencedCss]
-  .filter((file) => !deployedCssBasenames.has(file))
-  .sort();
+const openNextReferences = collectCssReferences(openNextRoot, [openNextCssRoot]);
+const missingOpenNextReferences = missingReferences(
+  openNextReferences,
+  openNextCss
+);
 
-if (missingReferencedCss.length > 0) {
-  console.error('OpenNext output references CSS files absent from deployed static assets:');
-  for (const file of missingReferencedCss) {
-    console.error(`- ${file}`);
-  }
+if (missingOpenNextReferences.length > 0) {
+  printMissingReferences(
+    'OpenNext output references CSS files absent from deployed static assets:',
+    missingOpenNextReferences
+  );
   process.exit(1);
 }
 
 console.log(
   `OK OpenNext CSS asset closure: ${nextCss.size} Next CSS files, ` +
-    `${openNextCss.size} deployed CSS files, ${referencedCss.size} referenced CSS names.`
+    `${openNextCss.size} deployed CSS files, ` +
+    `${nextReferences.size} Next asset references, ` +
+    `${openNextReferences.size} OpenNext asset references.`
 );
