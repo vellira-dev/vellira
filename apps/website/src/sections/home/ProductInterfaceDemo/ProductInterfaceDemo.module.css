@@ -217,33 +217,21 @@
 
 .navigationItem,
 .activeNavigationItem {
-  display: flex;
-  align-items: center;
+  justify-content: space-between;
   min-height: 42px;
   padding: 0 11px;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: var(--font-size-xs);
   text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  gap: 10px;
 }
 
-.navigationItem:hover {
-  color: var(--text-primary);
-  background: var(--surface-subtle);
+.navigationContent {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-2);
 }
 
 .activeNavigationItem {
-  color: var(--text-primary);
-  font-weight: 600;
-  background: var(--surface-default);
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 0 0 1px var(--border-muted);
+  box-shadow: var(--shadow-sm);
 }
 
 .navigationIcon {
@@ -251,18 +239,6 @@
   width: 16px;
   height: 16px;
   opacity: 0.7;
-}
-
-.navigationBadge {
-  min-width: 24px;
-  margin-left: auto;
-  padding: 2px 8px;
-  color: var(--text-muted);
-  font-size: var(--font-size-xs);
-  text-align: center;
-  background: var(--surface-subtle);
-  border: 1px solid var(--border-muted);
-  border-radius: var(--radius-full);
 }
 
 .sidebarFooter {
