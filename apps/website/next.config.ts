@@ -26,6 +26,14 @@ const nextConfig: NextConfig = {
       'react-native': 'react-native-web',
     },
   },
+
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'react-native$': 'react-native-web',
+    };
+    return config;
+  },
 };
 
 export default withMDX(nextConfig);
