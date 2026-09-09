@@ -97,7 +97,7 @@
     "vite-plugin-dts": "^5.0.0",
     "vite-plugin-lib-inject-css": "^2.2.2",
     "vite-plugin-svgr": "^5.2.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "publishConfig": {
     "access": "public"
