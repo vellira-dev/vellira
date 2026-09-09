@@ -4,4 +4,7 @@ export const createDropdownTokens = <const TTokens extends DropdownTokensConfig>
   tokens: TTokens
 ) => tokens;
 
-export { createDropdownIntentPalette } from './palettes/createDropdownIntentPalette.js';
+export {
+  createDropdownIntentPalette,
+  createDropdownIntentPalette as createDropdownPalette,
+} from './palettes/createDropdownIntentPalette.js';
