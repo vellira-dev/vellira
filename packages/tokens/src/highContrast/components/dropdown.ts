@@ -1,6 +1,9 @@
 import { createComponentFocusRing } from '../../factories/componentFocusRing.js';
-import { createDropdownPalette } from '../../factories/createDropdownPalette.js';
-import { createInputColorPalette } from '../../factories/createInputPalette.js';
+import {
+  createDropdownPalette,
+  createDropdownTokens,
+} from '../../factories/createDropdownTokens.js';
+import { createInputColorPalette } from '../../factories/createInputTokens.js';
 import { createComponentShadowIntent } from '../../platform-output/component-token-intents.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
@@ -71,7 +74,7 @@ const danger = createInputColorPalette({
   ring: colors.error[300],
 });
 
-export const dropdown = {
+export const dropdown = createDropdownTokens({
   primary: createDropdownPalette(primary, {
     contentBorder: border.default,
     itemActiveRing: status.warning.border,
@@ -166,4 +169,4 @@ export const dropdown = {
     bg: border.default,
     fg: text.muted,
   },
-} as const;
+});
