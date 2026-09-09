@@ -2,6 +2,12 @@ type FormFieldStatus = {
   fg: string;
 };
 
+export type FormFieldTokensConfig = Readonly<Record<string, unknown>>;
+
+export const createFormFieldTokens = <
+  const TTokens extends FormFieldTokensConfig,
+>(tokens: TTokens) => tokens;
+
 export type FormFieldThemeSources = {
   radius: {
     full: number;
@@ -44,7 +50,7 @@ export const createFormFieldTokensFromTheme = ({
   status,
   text,
 }: FormFieldThemeSources) =>
-  ({
+  createFormFieldTokens({
     label: {
       fg: text.primary,
     },
@@ -139,4 +145,4 @@ export const createFormFieldTokensFromTheme = ({
         labelInfoFontSize: typography.size.sm,
       },
     },
-  }) as const;
+  });
