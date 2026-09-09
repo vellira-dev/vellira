@@ -109,7 +109,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`Publication state valid for ${paths.length} Blog V1 article(s).`);
+  console.log(
+    `Publication state valid for ${paths.length} Blog V1 article(s).`
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
