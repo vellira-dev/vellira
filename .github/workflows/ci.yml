@@ -37,6 +37,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Show publication gate Prettier diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec prettier scripts/blog/check-publication-state.ts --write
+          git diff --no-ext-diff -- scripts/blog/check-publication-state.ts
+          git checkout -- scripts/blog/check-publication-state.ts
+
       - name: Quality checks
         run: pnpm ci:quality
 
