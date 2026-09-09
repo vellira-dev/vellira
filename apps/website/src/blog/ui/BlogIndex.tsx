@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-import { Close, Search } from '@vellira-ui/icons';
-import { Button, Popover } from '@vellira-ui/react';
+import { Button, Input, Popover } from '@vellira-ui/react';
 
 import { Container } from '@/components/layout/Container';
 import type { BlogArticleMetadata } from '@/blog';
@@ -234,36 +233,18 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
             <>
               <div className={searchStyles.discoveryToolbar}>
                 <div className={searchStyles.toolbarInner}>
-                  <label className={searchStyles.search}>
-                    <Search
-                      aria-hidden='true'
-                      className={searchStyles.searchIcon}
-                    />
-
-                    <input
-                      type='search'
-                      value={query}
-                      onChange={(event) => updateQuery(event.target.value)}
-                      placeholder='Search articles...'
-                      aria-label='Search articles'
-                      className={searchStyles.searchInput}
-                    />
-
-                    {query && (
-                      <Button
-                        type='button'
-                        appearance='ghost'
-                        color='neutral'
-                        size='sm'
-                        shape='pill'
-                        iconOnly
-                        iconStart={<Close size={16} aria-hidden='true' />}
-                        className={searchStyles.clearSearch}
-                        aria-label='Clear search'
-                        onClick={() => updateQuery('')}
-                      />
-                    )}
-                  </label>
+                  <Input
+                    type='search'
+                    value={query}
+                    onValueChange={updateQuery}
+                    placeholder='Search articles...'
+                    aria-label='Search articles'
+                    color='neutral'
+                    variant='outline'
+                    size='md'
+                    clearable
+                    wrapperClassName={searchStyles.searchField}
+                  />
 
                   <div
                     className={searchStyles.filters}
