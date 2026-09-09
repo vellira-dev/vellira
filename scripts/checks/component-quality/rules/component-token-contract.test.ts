@@ -36,10 +36,15 @@ function metadata(): ComponentMetadata {
   };
 }
 
-function createTokenContract(root: string, layout: 'grouped' | 'flat' = 'grouped') {
+function createTokenContract(
+  root: string,
+  layout: 'grouped' | 'flat' = 'grouped'
+) {
   const factoriesRoot = path.join(root, 'packages/tokens/src/factories');
   const factoryDir =
-    layout === 'grouped' ? path.join(factoriesRoot, 'components') : factoriesRoot;
+    layout === 'grouped'
+      ? path.join(factoriesRoot, 'components')
+      : factoriesRoot;
   fs.mkdirSync(factoryDir, { recursive: true });
   fs.writeFileSync(
     path.join(factoryDir, 'createProbeTokens.ts'),
