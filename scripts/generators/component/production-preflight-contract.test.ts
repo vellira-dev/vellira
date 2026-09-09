@@ -7,6 +7,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createComponentGenerationPlan } from './plan';
 import { validateComponentGenerationPlan } from './preflight';
 
+import {
+  copyTokenLifecycleFixture,
+  reserveTokenLifecycleFixture,
+} from '../../token-lifecycle/fixtures/lifecycle';
+
 const roots: string[] = [];
 
 type DependencyPlatform = 'react' | 'react-native';
@@ -20,6 +25,8 @@ function tempRoot() {
 }
 
 function createRepositoryAuthorities(root: string) {
+  copyTokenLifecycleFixture(root);
+  reserveTokenLifecycleFixture(root, 'ContractProbe');
   for (const packageName of ['react', 'react-native']) {
     const layerDir = path.join(
       root,
