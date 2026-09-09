@@ -101,7 +101,7 @@
 }
 
 .previewDot[data-tone='danger'] {
-  background: var(--color-danger-400, var(--border-strong));
+  background: var(--color-error-400, var(--border-strong));
 }
 
 .previewDot[data-tone='warning'] {
@@ -113,7 +113,7 @@
 }
 
 .windowTitle {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: 600;
 }
@@ -197,7 +197,7 @@
 
 .brand span:not(.brandMark),
 .sidebarFooter span {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
 }
 
@@ -257,7 +257,7 @@
   min-width: 24px;
   margin-left: auto;
   padding: 2px 8px;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   text-align: center;
   background: var(--surface-subtle);
@@ -443,7 +443,7 @@
 }
 
 .workspacePreview span {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
 }
 
@@ -462,7 +462,7 @@
 }
 
 .details dt {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 .details dd {
@@ -492,7 +492,7 @@
 }
 
 .inspectorFooter span {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
 }
 
