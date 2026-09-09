@@ -104,14 +104,18 @@ function createComponentTokenStructureFixture(params: {
     'src',
     'factories'
   );
-  fs.mkdirSync(factoriesDir, { recursive: true });
+  const componentFactoriesDir = path.join(factoriesDir, 'components');
+  fs.mkdirSync(componentFactoriesDir, { recursive: true });
   fs.writeFileSync(
-    path.join(factoriesDir, `create${params.componentName}Tokens.ts`),
+    path.join(
+      componentFactoriesDir,
+      `create${params.componentName}Tokens.ts`
+    ),
     ''
   );
   fs.writeFileSync(
     path.join(factoriesDir, 'index.ts'),
-    `export * from './create${params.componentName}Tokens.js';\n`
+    `export * from './components/create${params.componentName}Tokens.js';\n`
   );
 
   for (const theme of ['light', 'dark', 'highContrast']) {
