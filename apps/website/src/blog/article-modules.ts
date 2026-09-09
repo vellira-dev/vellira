@@ -8,6 +8,7 @@ import designSystemComponentGeneratorMetadata from '../../content/blog/design-sy
 import productionReadyCrossPlatformComponentMetadata from '../../content/blog/production-ready-cross-platform-component/metadata.json';
 import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/quality-gates-before-component-growth/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
+import typescriptProjectOwnershipMetadata from '../../content/blog/typescript-project-ownership/metadata.json';
 
 export interface BlogMDXModule {
   default: ComponentType;
@@ -56,6 +57,10 @@ const blogArticleMetadataRegistryEntries = [
     metadata: qualityGatesBeforeComponentGrowthMetadata,
   },
   { slug: 'two-runtimes', metadata: twoRuntimesMetadata },
+  {
+    slug: 'typescript-project-ownership',
+    metadata: typescriptProjectOwnershipMetadata,
+  },
 ] as const satisfies readonly BlogArticleMetadataRegistryEntry[];
 
 const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
@@ -75,6 +80,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
     'quality-gates-before-component-growth': () =>
       import('../../content/blog/quality-gates-before-component-growth/article.mdx'),
     'two-runtimes': () => import('../../content/blog/two-runtimes/article.mdx'),
+    'typescript-project-ownership': () =>
+      import('../../content/blog/typescript-project-ownership/article.mdx'),
   };
 
 export function getBlogArticleMetadataRegistryEntries(): readonly BlogArticleMetadataRegistryEntry[] {
