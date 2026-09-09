@@ -635,7 +635,8 @@ export const maintainedComponentFactories = [
   },
   {
     name: 'createContextMenuTokens',
-    source: 'packages/tokens/src/factories/components/createContextMenuTokens.ts',
+    source:
+      'packages/tokens/src/factories/components/createContextMenuTokens.ts',
     semanticAdapter: 'createContextMenuTokensFromSemantics',
     stateKeys: ['default', 'hover', 'active', 'pressed', 'focus', 'disabled'],
   },
@@ -671,7 +672,8 @@ export const maintainedComponentFactories = [
   },
   {
     name: 'createRadioGroupTokens',
-    source: 'packages/tokens/src/factories/components/createRadioGroupTokens.ts',
+    source:
+      'packages/tokens/src/factories/components/createRadioGroupTokens.ts',
     semanticAdapter: 'createRadioGroupTokensFromSpacing',
     stateKeys: ['default'],
   },
