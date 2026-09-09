@@ -6,6 +6,7 @@ export const createRadioTokens = <const TTokens extends RadioTokensConfig>(
 
 export {
   createRadioIntentPalette,
+  createRadioIntentPalette as createRadioPalette,
   radioMotionTokens,
   radioSizeTokens,
 } from './palettes/createRadioIntentPalette.js';
