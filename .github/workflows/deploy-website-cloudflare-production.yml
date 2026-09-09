@@ -139,6 +139,13 @@ jobs:
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
 
+      - name: Soak test production client navigation static assets
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-navigation-soak.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
       - name: Smoke test production static chunk integrity
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
