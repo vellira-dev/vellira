@@ -5,6 +5,7 @@ import {
   parseChangedBlogMetadataPaths,
   publicationCandidateDigest,
   validateContentAgentApproval,
+  validateContentAgentCandidatePaths,
   validatePublicationMetadata,
 } from './check-publication-state';
 
@@ -82,6 +83,29 @@ describe('Blog publication state gate', () => {
         ].join('\n')
       )
     ).toEqual(['apps/website/content/blog/example/metadata.json']);
+  });
+
+  it('fails closed when a Content Agent Ready PR has no canonical metadata candidate', () => {
+    const findings = validateContentAgentCandidatePaths(
+      'agent/content-article-example',
+      []
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain('exactly one canonical Blog V1');
+  });
+
+  it('fails closed when a Content Agent Ready PR has multiple metadata candidates', () => {
+    expect(
+      validateContentAgentCandidatePaths('agent/content-article-example', [
+        metadataPath,
+        'apps/website/content/blog/second-article/metadata.json',
+      ])
+    ).toHaveLength(1);
+  });
+
+  it('does not impose the Content Agent candidate contract on ordinary PRs', () => {
+    expect(validateContentAgentCandidatePaths('fix/blog-copy', [])).toEqual([]);
   });
 
   it('pins the same publication candidate digest as the Python approval workflow', () => {
