@@ -54,9 +54,10 @@ function fixture(componentName = 'FutureExample') {
 
 describe('Generator V2 token ownership authority', () => {
   it('keeps every current metadata-backed token family aligned with componentMetadata', () => {
-    const metadataNames = componentMetadata
-      .map((metadata) => metadata.name)
-      .sort();
+    const tokenMetadata = componentMetadata.filter(
+      (metadata) => metadata.requirements?.componentTokens !== false
+    );
+    const metadataNames = tokenMetadata.map((metadata) => metadata.name).sort();
     const currentMetadataOwners = Object.entries(componentTokenLifecycle)
       .filter(
         ([, lifecycle]) => lifecycle.status === 'current' && lifecycle.public
@@ -66,7 +67,7 @@ describe('Generator V2 token ownership authority', () => {
 
     expect(currentMetadataOwners).toEqual(metadataNames);
 
-    for (const metadata of componentMetadata) {
+    for (const metadata of tokenMetadata) {
       expect(getComponentTokenLifecycle(metadata.name)).toMatchObject({
         status: 'current',
         public: true,

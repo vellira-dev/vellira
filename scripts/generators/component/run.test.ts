@@ -1607,6 +1607,10 @@ describe('component-token run intent', () => {
       expect(fs.existsSync(target.componentFile)).toBe(false);
     }
 
+    expect(
+      readTokenLifecycleAuthority(root).components.TokenlessProbe
+    ).toBeUndefined();
+
     expect(synchronizeGeneratedTokenTypes).not.toHaveBeenCalled();
 
     expect(readFile(result.plan.metadataFile)).toContain(
