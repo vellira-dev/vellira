@@ -176,39 +176,69 @@ async function blog() {
 let failure;
 try {
   await diagnostics.anchor('start');
-  const response = await page.goto(
-    new URL('/components/switch', baseUrl).href,
-    {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    }
+  const migrationUrl = new URL('/components/switch', baseUrl).href;
+  const migrationResponsePromise = page.waitForResponse(
+    (candidate) =>
+      candidate.url() === migrationUrl &&
+      candidate.status() === 307 &&
+      candidate.request().resourceType() === 'document',
+    { timeout: 30_000 }
   );
+  const response = await page.goto(migrationUrl, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  const migrationResponse = await migrationResponsePromise;
+
   if (!response?.ok())
     throw new Error(
       `Initial document status=${response?.status() ?? 'no-response'} URL=${page.url()}`
     );
 
-  // Playwright's synchronous headers() intentionally omits security-related
-  // response headers. Clear-Site-Data is itself a security response header, so
-  // inspect the complete header set when validating the one-shot migration.
-  const responseHeaders = await response.allHeaders();
-  const clearSiteData = responseHeaders['clear-site-data'] ?? '';
+  // The migration must be transparent to a normal browser navigation: the
+  // first request clears legacy cache in a no-store 307, stores the marker,
+  // and the browser immediately follows the redirect to the real document.
+  const migrationHeaders = await migrationResponse.allHeaders();
+  const clearSiteData = migrationHeaders['clear-site-data'] ?? '';
   if (!clearSiteData.includes('"cache"')) {
     throw new Error(
-      `Initial document did not clear legacy browser cache: ${JSON.stringify(clearSiteData)}`
+      `Migration redirect did not clear legacy browser cache: ${JSON.stringify(clearSiteData)}`
     );
+  }
+  const migrationCacheControl = (
+    migrationHeaders['cache-control'] ?? ''
+  ).toLowerCase();
+  if (
+    !migrationCacheControl.includes('private') ||
+    !migrationCacheControl.includes('no-store') ||
+    !migrationCacheControl.includes('max-age=0') ||
+    migrationCacheControl.includes('s-maxage')
+  ) {
+    throw new Error(
+      `Migration redirect is cacheable: ${JSON.stringify(migrationHeaders['cache-control'] ?? '')}`
+    );
+  }
+  if (migrationHeaders.location !== migrationUrl) {
+    throw new Error(
+      `Migration redirect changed destination: ${JSON.stringify(migrationHeaders.location ?? '')}`
+    );
+  }
+
+  const finalHeaders = await response.allHeaders();
+  if (finalHeaders['clear-site-data']) {
+    throw new Error('Clear-Site-Data leaked onto the rendered document');
   }
   const migrationCookie = (await context.cookies(baseUrl)).find(
     (cookie) => cookie.name === migrationCookieName && cookie.value === '1'
   );
   if (!migrationCookie) {
-    throw new Error('Initial document did not persist the RSC cache migration cookie');
+    throw new Error('Migration redirect did not persist the RSC cache marker cookie');
   }
 
   await ready('/components/switch', 'Switch');
 
-  // The migration cache clear is intentionally one-shot. A second full document
-  // load in the same browser context must keep the marker and omit the header.
+  // A second full document load in the same browser context must not run the
+  // migration again and must render directly without a redirect/manual reload.
   const reloadResponse = await page.reload({
     waitUntil: 'domcontentloaded',
     timeout: 30_000,
@@ -217,6 +247,9 @@ try {
     throw new Error(
       `Migration reload status=${reloadResponse?.status() ?? 'no-response'} URL=${page.url()}`
     );
+  }
+  if (reloadResponse.request().redirectedFrom()) {
+    throw new Error('RSC cache migration redirected the browser more than once');
   }
   const reloadHeaders = await reloadResponse.allHeaders();
   if (reloadHeaders['clear-site-data']) {
@@ -246,7 +279,7 @@ try {
     assertRscCachePolicy('diagnostic capture settle');
     if (!failure) {
       console.log(
-        `OK Cloudflare navigation soak: no delayed /_next/static asset failures; ${observedRscResponses} RSC responses were browser-no-store`
+        `OK Cloudflare navigation soak: transparent one-shot cache migration, no delayed /_next/static asset failures; ${observedRscResponses} RSC responses were browser-no-store`
       );
     }
   } finally {
