@@ -1,0 +1,186 @@
+A green TypeScript command can tell you that a project type-checks. It does not automatically tell you which project is responsible for every source file in a large repository.
+
+That distinction matters in a monorepo. A new `tsconfig.json` can sit next to source files and look perfectly legitimate while remaining disconnected from the typecheck paths the repository actually uses. If we treat file presence as ownership, stale references and orphan configurations can make the project graph look healthier than it is.
+
+Vellira handles this as a separate tooling problem: define the typecheck entrypoints the repository recognizes, follow the project relationships that are meant to extend from them, and report files whose ownership is missing or ambiguous. The goal is not to replace TypeScript. It is to make the boundary around TypeScript projects explicit enough that contributors can review and maintain it deliberately.
+
+## Why project ownership needs its own check
+
+Consider a maintenance change that adds a TypeScript configuration beside a group of source files. The new file is easy to spot in code review. The harder question is whether that configuration belongs to a typecheck path Vellira actually recognizes.
+
+Those are different questions:
+
+```text
+Does this configuration exist?
+Does this configuration participate in an accepted typecheck path?
+```
+
+Counting `tsconfig` files answers only the first one.
+
+This becomes important as a repository grows. Old project references can survive refactors. Experimental configurations can remain on disk after their original purpose disappears. A package can gain a new config that compiles locally but is not connected to the repository's intended validation structure.
+
+In all of those cases, TypeScript may still be doing exactly what it was asked to do. The problem is that the repository has not clearly answered who owns a file.
+
+That is why Vellira treats project ownership as a contract of its own. A type error asks whether code satisfies a project's types. An ownership gap asks whether the project itself is an accepted owner for that code. Keeping those questions separate makes reviews more precise and prevents a new configuration from being accepted merely because it looks plausible.
+
+## Make the command and implementation easy to find
+
+The public command interface exposes two package scripts:
+
+```text
+check:ts-project-coverage
+check:ts-project-coverage:json
+```
+
+Both lead to the same checker implementation:
+
+```text
+scripts/checks/ts-project-coverage/checker.ts
+```
+
+That source exports:
+
+```text
+runTsProjectCoverageCheck
+```
+
+This gives contributors two useful entry points into the tooling.
+
+The package scripts are where you start when you want to reproduce the check the way the repository exposes it. The exported function is where you start when you need to understand or change the implementation.
+
+Keeping those roles distinct sounds small, but it pays off during maintenance. Renaming a package script changes how contributors invoke the tool. Moving or renaming the exported function changes where the implementation lives. Neither should be treated as incidental cleanup if the other side still points at the old contract.
+
+A source path is also not necessarily a shell command. The package script may own launchers, arguments, or output mode. That is another reason to begin with the script definition when reproducing behavior instead of guessing from the checker filename.
+
+## Start from declared typecheck entrypoints
+
+The ownership check has an explicit configuration at:
+
+```text
+scripts/checks/ts-project-coverage/entrypoints.json
+```
+
+It declares the typecheck invocations that matter to the repository:
+
+```text
+tsc -p tsconfig.json --noEmit
+turbo run typecheck
+tsc -p tsconfig.test.json --noEmit
+tsc -p tsconfig.tooling.json --noEmit
+```
+
+The important idea is that these are declared starting points. A random `tsconfig` discovered somewhere in the repository does not become authoritative simply because it exists.
+
+A declared record can connect an invocation to the package and project it represents. For example:
+
+```json
+{
+  "invocation": "tsc -p tsconfig.json --noEmit",
+  "packageJson": "packages/core/package.json",
+  "project": "packages/core/tsconfig.json",
+  "rootInvocation": "turbo run typecheck",
+  "rootScript": "typecheck",
+  "script": "typecheck"
+}
+```
+
+This is more useful than storing only a command string. The record identifies the package manifest, the TypeScript project, the local script, and the root invocation that connects them.
+
+That relationship matters during refactors. A command can keep the same name while its arguments change. A package can move while a project reference still points at the previous location. A root script can remain valid while one of the projects it used to reach is no longer part of the intended graph.
+
+When reviewing a change, start from the declared typecheck entrypoint and follow the project references outward. Working backward from an arbitrary configuration is much more likely to make a leftover file look intentional.
+
+## Reject stale references and orphan configurations
+
+An ownership checker can be wrong in two directions: it can reject a legitimate project, or it can accept too much.
+
+The second failure is especially easy to miss because the repository appears more complete than it really is.
+
+Vellira's focused tests cover both sides of that boundary. One positive scenario uses a verified typecheck entrypoint with recursive project references. Negative scenarios explicitly cover a stale root solution reference and an orphan `tsconfig`.
+
+A stale root reference is a historical connection that still exists in configuration but no longer represents the current ownership policy. If the checker accepted every reference it found, an old edge in the graph could continue granting ownership after the real validation path had changed.
+
+An orphan `tsconfig` creates the opposite visual illusion. The configuration is present and may even look well formed, but nothing in the accepted typecheck path makes it responsible for the nearby files.
+
+This is why adding another config file is not, by itself, a satisfying fix for an ownership gap. The change also needs to explain how the project joins the intended validation path.
+
+The regression suite is most useful when it protects both acceptance and rejection. When a new relationship should become valid, add a positive case for it and keep a nearby negative case that still must not qualify. That pair documents the policy more clearly than another happy-path test alone.
+
+## Read the report before changing configuration
+
+The checker exposes structured result fields for the questions maintainers actually need to investigate:
+
+```text
+unownedFiles
+conflictingFiles
+verifiedEntrypoints
+```
+
+Those categories make the output more useful than a single pass/fail result.
+
+For an ownership problem, start with `unownedFiles` and `conflictingFiles`. They tell you where the repository cannot currently assign responsibility cleanly. Then inspect `verifiedEntrypoints` before deciding which configuration should change.
+
+That order helps avoid a common mistake: seeing an unowned file and immediately adding a new `tsconfig`, even though the real problem may be that an existing project is no longer reachable from the accepted entrypoints.
+
+The structured output is also useful in review. Include the relevant report values with a proposed repair so reviewers can see which file needs an owner, which relationship is ambiguous, and which entrypoints were recognized.
+
+This makes it easier to distinguish two very different changes that may touch the same files:
+
+```text
+repair stale project wiring
+change the ownership policy itself
+```
+
+The first restores an intended relationship. The second deliberately changes what the repository considers valid. They deserve different explanations and different regression coverage.
+
+## Keep the ownership policy maintainable
+
+The recurring maintenance decision is when to update:
+
+```text
+scripts/checks/ts-project-coverage/entrypoints.json
+```
+
+A new typecheck command, a renamed package script, or a rearranged project graph should all trigger a review of the declared entrypoints.
+
+The key question for the author is simple:
+
+> Which starting point should make this project an owner, and why?
+
+The answer should be specific enough to turn into a focused test.
+
+This explicit model does require upkeep. That is the trade-off. A repository that declares its accepted entrypoints has to maintain them as commands and project relationships evolve.
+
+In return, ownership stays reviewable instead of being inferred from directory layout on every run. The repository spends effort when responsibility for files actually changes, rather than relying on whichever configurations happen to be present at the time.
+
+There is another benefit: stable command names and result fields give contributors a consistent interface even while the project graph evolves behind it. The policy can change deliberately without forcing every consumer to rediscover how to invoke or interpret the tool.
+
+## Know what this check does not prove
+
+Project ownership is only one layer of repository correctness.
+
+A correctly owned file can still contain a type error. A project can be connected to an accepted entrypoint and still have failing tests. The checker should therefore sit alongside compilation and behavioral validation, not replace them.
+
+The public evidence discussed here also stops at the package-script boundary. It does not establish which CI workflow invokes those scripts. Automation has its own triggers, permissions, and failure handling, and that integration should be reviewed separately before treating the checker as a pull-request gate.
+
+Likewise, this article does not try to document every internal traversal rule inside `runTsProjectCoverageCheck`. If you are extending the checker to support a new project-graph shape, inspect the implementation and add a focused regression for that case.
+
+That boundary is intentional. The useful contract for contributors is the relationship between declared entrypoints, project ownership, rejected false positives, and structured results. The implementation can evolve as long as those externally meaningful rules remain explicit and tested.
+
+## A practical review workflow
+
+When a change creates a project-ownership question, a reliable review sequence looks like this:
+
+```text
+1. Start from the declared typecheck entrypoint.
+2. Read the package script that exposes the check.
+3. Confirm which TypeScript project the entrypoint is meant to represent.
+4. Follow the intended project references outward.
+5. Compare the relationship with positive and negative ownership tests.
+6. Inspect unownedFiles, conflictingFiles, and verifiedEntrypoints.
+7. Change configuration only after the missing or conflicting relationship is clear.
+```
+
+The most useful habit is to explain ownership in the same review that introduces a new project or configuration. It is much easier to record why a project should count while the architecture change is fresh than to reconstruct that decision months later from a directory full of `tsconfig` files.
+
+The long-term payoff is a smaller, sharper question for the next maintainer. Instead of asking whether a configuration happens to exist, the repository can ask whether the relationship belongs to the ownership contract it has deliberately chosen.
