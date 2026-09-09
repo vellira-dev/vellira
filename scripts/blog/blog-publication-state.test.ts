@@ -84,6 +84,19 @@ describe('Blog publication state gate', () => {
     ).toEqual(['apps/website/content/blog/example/metadata.json']);
   });
 
+  it('pins the same publication candidate digest as the Python approval workflow', () => {
+    expect(
+      publicationCandidateDigest(
+        metadataPath,
+        metadata(false),
+        articlePath,
+        'Reader-facing article body.\n'
+      )
+    ).toBe(
+      'sha256:b8915efa09b782057ab1d62d05e6c2129e76aeb0078f0ab1244d6e6d2f5f8245'
+    );
+  });
+
   it('accepts a Content Agent approval commit bound to the exact candidate', () => {
     const article = 'Reader-facing article body.\n';
     const currentMetadata = metadata(false);
