@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 
-const BLOG_METADATA_PATH = /^apps\/website\/content\/blog\/[^/]+\/metadata\.json$/;
+const BLOG_METADATA_PATH =
+  /^apps\/website\/content\/blog\/[^/]+\/metadata\.json$/;
 
 export interface PublicationStateFinding {
   path: string;
@@ -88,7 +89,9 @@ async function main(): Promise<void> {
   const findings: PublicationStateFinding[] = [];
 
   for (const path of paths) {
-    findings.push(...validatePublicationMetadata(path, await readFile(path, 'utf8')));
+    findings.push(
+      ...validatePublicationMetadata(path, await readFile(path, 'utf8'))
+    );
   }
 
   if (findings.length > 0) {
@@ -100,7 +103,9 @@ async function main(): Promise<void> {
   }
 
   if (paths.length === 0) {
-    console.log('No added or modified Blog V1 metadata requires publication validation.');
+    console.log(
+      'No added or modified Blog V1 metadata requires publication validation.'
+    );
     return;
   }
 
