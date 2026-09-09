@@ -19,6 +19,11 @@ vi.mock('../generators/component/token-types', () => ({
   synchronizeGeneratedTokenTypes: vi.fn(),
 }));
 
+import {
+  copyTokenLifecycleFixture,
+  reserveTokenLifecycleFixture,
+} from '../token-lifecycle/fixtures/lifecycle';
+
 const tempRoots: string[] = [];
 
 const INPUT: ComponentProductionInputV1 = {
@@ -47,6 +52,9 @@ function createRequiredRepositoryStructure(
   root: string,
   layer: 'primitives' | 'components' | 'patterns' = 'primitives'
 ) {
+  copyTokenLifecycleFixture(root);
+  reserveTokenLifecycleFixture(root, INPUT.componentName);
+
   for (const packageName of ['react', 'react-native']) {
     const sourceRoot = path.join(root, 'packages', packageName, 'src');
     const layerDir = path.join(sourceRoot, layer);
@@ -338,6 +346,7 @@ describe('runComponentProductionGeneration', () => {
     const root = createTempRoot();
 
     createRequiredRepositoryStructure(root);
+    reserveTokenLifecycleFixture(root, 'ResourceProbe');
     createIconRegistry(root, 'react');
     createIconRegistry(root, 'react-native');
     createTokenRegistry(root);
