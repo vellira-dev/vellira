@@ -118,6 +118,22 @@ export function parseApprovalTrailers(message: string): Map<string, string> {
   return trailers;
 }
 
+export function validateContentAgentCandidatePaths(
+  headRef: string,
+  metadataPaths: string[]
+): PublicationStateFinding[] {
+  if (!CONTENT_AGENT_BRANCH.test(headRef)) return [];
+  if (metadataPaths.length === 1) return [];
+
+  return [
+    {
+      path: 'apps/website/content/blog',
+      message:
+        'Content Agent publication approval requires exactly one canonical Blog V1 article candidate',
+    },
+  ];
+}
+
 export function validateContentAgentApproval(
   input: PublicationApprovalInput
 ): PublicationStateFinding[] {
@@ -288,51 +304,45 @@ async function main(): Promise<void> {
   }
 
   const headRef = process.env.VELLIRA_PR_HEAD_REF ?? '';
-  if (CONTENT_AGENT_BRANCH.test(headRef) && paths.length > 0) {
-    if (paths.length !== 1) {
-      findings.push({
-        path: 'apps/website/content/blog',
-        message:
-          'Content Agent publication approval requires exactly one canonical Blog V1 article candidate',
-      });
-    } else {
-      const metadataPath = paths[0]!;
-      const articlePath = metadataPath.replace(/metadata\.json$/, 'article.mdx');
-      const headSha = process.env.VELLIRA_PR_HEAD_SHA ?? '';
-      const prNumber = process.env.VELLIRA_PR_NUMBER ?? '';
-      try {
-        const parentSha = git('rev-parse', `${headSha}^`).trim();
-        const transitionChangedPaths = git(
-          'diff',
-          '--name-only',
+  findings.push(...validateContentAgentCandidatePaths(headRef, paths));
+
+  if (CONTENT_AGENT_BRANCH.test(headRef) && paths.length === 1) {
+    const metadataPath = paths[0]!;
+    const articlePath = metadataPath.replace(/metadata\.json$/, 'article.mdx');
+    const headSha = process.env.VELLIRA_PR_HEAD_SHA ?? '';
+    const prNumber = process.env.VELLIRA_PR_NUMBER ?? '';
+    try {
+      const parentSha = git('rev-parse', `${headSha}^`).trim();
+      const transitionChangedPaths = git(
+        'diff',
+        '--name-only',
+        parentSha,
+        headSha
+      )
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      findings.push(
+        ...validateContentAgentApproval({
+          prNumber,
+          headRef,
+          headSha,
           parentSha,
-          headSha
-        )
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean);
-        findings.push(
-          ...validateContentAgentApproval({
-            prNumber,
-            headRef,
-            headSha,
-            parentSha,
-            metadataPath,
-            metadataText: showFile(headSha, metadataPath),
-            articlePath,
-            articleText: showFile(headSha, articlePath),
-            parentMetadataText: showFile(parentSha, metadataPath),
-            parentArticleText: showFile(parentSha, articlePath),
-            commitMessage: git('show', '-s', '--format=%B', headSha),
-            transitionChangedPaths,
-          })
-        );
-      } catch (error) {
-        findings.push({
-          path: metadataPath,
-          message: `publication approval exact-candidate validation failed: ${String(error)}`,
-        });
-      }
+          metadataPath,
+          metadataText: showFile(headSha, metadataPath),
+          articlePath,
+          articleText: showFile(headSha, articlePath),
+          parentMetadataText: showFile(parentSha, metadataPath),
+          parentArticleText: showFile(parentSha, articlePath),
+          commitMessage: git('show', '-s', '--format=%B', headSha),
+          transitionChangedPaths,
+        })
+      );
+    } catch (error) {
+      findings.push({
+        path: metadataPath,
+        message: `publication approval exact-candidate validation failed: ${String(error)}`,
+      });
     }
   }
 
