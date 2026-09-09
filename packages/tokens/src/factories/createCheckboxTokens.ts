@@ -6,11 +6,11 @@ export function createCheckboxTokens<
   return tokens;
 }
 
-export {
-  createCheckboxIntentPalette,
-  createCheckboxIntentPalette as createCheckboxPalette,
-} from './palettes/createCheckboxIntentPalette.js';
 export type {
   CheckboxPaletteConfig,
   CheckboxState,
+} from './palettes/createCheckboxIntentPalette.js';
+export {
+  createCheckboxIntentPalette,
+  createCheckboxIntentPalette as createCheckboxPalette,
 } from './palettes/createCheckboxIntentPalette.js';
