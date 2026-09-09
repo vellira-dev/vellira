@@ -44,10 +44,6 @@ page.on('requestfailed', (request) => {
   }
 
   const errorText = request.failure()?.errorText ?? '';
-  if (errorText === 'net::ERR_ABORTED') {
-    return;
-  }
-
   recordFailure(
     `static requestfailed ${request.resourceType()} ${request.url()} ` +
       `${errorText} while=${page.url()}`
