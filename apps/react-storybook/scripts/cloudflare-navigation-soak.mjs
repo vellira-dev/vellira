@@ -188,7 +188,11 @@ try {
       `Initial document status=${response?.status() ?? 'no-response'} URL=${page.url()}`
     );
 
-  const clearSiteData = response.headers()['clear-site-data'] ?? '';
+  // Playwright's synchronous headers() intentionally omits security-related
+  // response headers. Clear-Site-Data is itself a security response header, so
+  // inspect the complete header set when validating the one-shot migration.
+  const responseHeaders = await response.allHeaders();
+  const clearSiteData = responseHeaders['clear-site-data'] ?? '';
   if (!clearSiteData.includes('"cache"')) {
     throw new Error(
       `Initial document did not clear legacy browser cache: ${JSON.stringify(clearSiteData)}`
@@ -214,7 +218,8 @@ try {
       `Migration reload status=${reloadResponse?.status() ?? 'no-response'} URL=${page.url()}`
     );
   }
-  if (reloadResponse.headers()['clear-site-data']) {
+  const reloadHeaders = await reloadResponse.allHeaders();
+  if (reloadHeaders['clear-site-data']) {
     throw new Error('RSC cache migration attempted to clear browser cache more than once');
   }
   await ready('/components/switch', 'Switch');
