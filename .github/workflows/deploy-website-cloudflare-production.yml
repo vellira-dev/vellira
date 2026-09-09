@@ -22,6 +22,7 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
+  VELLIRA_BUILD_ID: ${{ github.sha }}
 
 jobs:
   deploy:
