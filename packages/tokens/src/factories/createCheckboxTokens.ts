@@ -4,8 +4,8 @@ export const createCheckboxTokens = <
   const TTokens extends CheckboxTokensConfig,
 >(tokens: TTokens) => tokens;
 
-export { createCheckboxPalette } from './createCheckboxPalette.js';
+export { createCheckboxIntentPalette } from './palettes/createCheckboxIntentPalette.js';
 export type {
   CheckboxPaletteConfig,
   CheckboxState,
-} from './createCheckboxPalette.js';
+} from './palettes/createCheckboxIntentPalette.js';
