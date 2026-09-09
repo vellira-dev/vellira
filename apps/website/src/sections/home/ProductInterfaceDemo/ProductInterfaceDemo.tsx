@@ -306,26 +306,29 @@ export function ProductInterfaceDemo() {
                   const Icon = item.icon;
 
                   return (
-                    <button
+                    <Button
                       key={item.label}
                       type='button'
+                      appearance={item.active ? 'soft' : 'ghost'}
+                      color='neutral'
+                      size='sm'
+                      shape='rounded'
+                      fullWidth
+                      badge={item.badge}
                       className={
                         item.active
                           ? styles.activeNavigationItem
                           : styles.navigationItem
                       }
                     >
-                      <Icon
-                        className={styles.navigationIcon}
-                        aria-hidden='true'
-                      />
-                      {item.label}
-                      {item.badge ? (
-                        <span className={styles.navigationBadge}>
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </button>
+                      <span className={styles.navigationContent}>
+                        <Icon
+                          className={styles.navigationIcon}
+                          aria-hidden='true'
+                        />
+                        {item.label}
+                      </span>
+                    </Button>
                   );
                 })}
               </nav>
