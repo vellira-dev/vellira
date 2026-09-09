@@ -16,11 +16,13 @@ function isRscRequest(request) {
   );
 }
 
-function isDocumentRequest(request) {
-  if (request.method !== 'GET' || isRscRequest(request)) return false;
-
-  const acceptsHtml = request.headers.get('accept')?.includes('text/html');
-  return request.headers.get('sec-fetch-dest') === 'document' || acceptsHtml;
+function isBrowserDocumentNavigation(request) {
+  return (
+    request.method === 'GET' &&
+    !isRscRequest(request) &&
+    request.headers.get('sec-fetch-dest') === 'document' &&
+    request.headers.get('sec-fetch-mode') === 'navigate'
+  );
 }
 
 function hasCookie(request, name) {
@@ -38,8 +40,39 @@ function cloneResponse(response, headers) {
   });
 }
 
+function cacheMigrationRedirect(request) {
+  const headers = new Headers();
+  headers.set('Location', request.url);
+  headers.set('Cache-Control', RSC_CACHE_CONTROL);
+  headers.set('Clear-Site-Data', '"cache"');
+  headers.append(
+    'Set-Cookie',
+    `${RSC_CACHE_MIGRATION_COOKIE}=1; Path=/; Max-Age=${RSC_CACHE_MIGRATION_MAX_AGE}; HttpOnly; Secure; SameSite=Lax`
+  );
+
+  return new Response(null, {
+    status: 307,
+    headers,
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
+    // Existing visitors can already have build-specific RSC payloads in their
+    // browser HTTP cache. Clear that legacy cache before rendering the app,
+    // then redirect the browser back to the exact same URL. Set-Cookie is
+    // processed before the redirect is followed, so the second request goes
+    // straight to the real document without requiring a manual reload.
+    // Restrict this migration to real browser navigations so crawlers and API
+    // clients are never put behind a cookie-dependent redirect.
+    if (
+      new URL(request.url).protocol === 'https:' &&
+      isBrowserDocumentNavigation(request) &&
+      !hasCookie(request, RSC_CACHE_MIGRATION_COOKIE)
+    ) {
+      return cacheMigrationRedirect(request);
+    }
+
     const response = await handler.fetch(request, env, ctx);
 
     // App Router RSC/segment-prefetch payloads contain build-specific JS/CSS
@@ -48,24 +81,6 @@ export default {
     if (isRscRequest(request)) {
       const headers = new Headers(response.headers);
       headers.set('Cache-Control', RSC_CACHE_CONTROL);
-      return cloneResponse(response, headers);
-    }
-
-    // Browsers that visited staging before this fix can already have old RSC
-    // payloads in their HTTP cache. Clear that legacy cache exactly once on a
-    // secure top-level document response, then keep a durable marker cookie.
-    // Future RSC responses are protected by the no-store policy above.
-    if (
-      new URL(request.url).protocol === 'https:' &&
-      isDocumentRequest(request) &&
-      !hasCookie(request, RSC_CACHE_MIGRATION_COOKIE)
-    ) {
-      const headers = new Headers(response.headers);
-      headers.set('Clear-Site-Data', '"cache"');
-      headers.append(
-        'Set-Cookie',
-        `${RSC_CACHE_MIGRATION_COOKIE}=1; Path=/; Max-Age=${RSC_CACHE_MIGRATION_MAX_AGE}; HttpOnly; Secure; SameSite=Lax`
-      );
       return cloneResponse(response, headers);
     }
 
