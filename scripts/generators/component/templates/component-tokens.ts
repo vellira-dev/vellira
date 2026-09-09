@@ -297,7 +297,7 @@ export function renderThemeComponentTokensTemplate(
   const contract = resolveTemplateContract(params);
 
   if (contract === 'boolean-control') {
-    return `import { create${componentName}TokensFromSemantics } from '../../factories/create${componentName}Tokens.js';
+    return `import { create${componentName}TokensFromSemantics } from '../../factories/components/create${componentName}Tokens.js';
 import { control } from '../semantic/control.js';
 import { focus } from '../semantic/focus.js';
 import { status } from '../semantic/status.js';
@@ -311,7 +311,7 @@ export const ${tokenName} = create${componentName}TokensFromSemantics({
   }
 
   if (contract === 'disclosure') {
-    return `import { create${componentName}TokensFromSemantics } from '../../factories/create${componentName}Tokens.js';
+    return `import { create${componentName}TokensFromSemantics } from '../../factories/components/create${componentName}Tokens.js';
 import { border } from '../semantic/border.js';
 import { focus } from '../semantic/focus.js';
 import { surface } from '../semantic/surface.js';
@@ -326,7 +326,7 @@ export const ${tokenName} = create${componentName}TokensFromSemantics({
 `;
   }
 
-  return `import { create${componentName}Tokens } from '../../factories/create${componentName}Tokens.js';
+  return `import { create${componentName}Tokens } from '../../factories/components/create${componentName}Tokens.js';
 import { control } from '../semantic/control.js';
 import { focus } from '../semantic/focus.js';
 import { status } from '../semantic/status.js';
@@ -354,5 +354,5 @@ export function renderComponentTokenBarrelExport(componentName: string) {
 }
 
 export function renderComponentTokenFactoryBarrelExport(componentName: string) {
-  return `export * from './create${componentName}Tokens.js';`;
+  return `export * from './components/create${componentName}Tokens.js';`;
 }

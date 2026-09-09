@@ -1,9 +1,8 @@
-import { createComponentShadowIntent } from '../platform-output/component-token-intents.js';
-
+import { createComponentShadowIntent } from '../../platform-output/component-token-intents.js';
 import {
   createComponentFocusRing,
   type SemanticFocusRing,
-} from './componentFocusRing.js';
+} from '../shared/componentFocusRing.js';
 
 type ContextMenuState = {
   readonly bg: string;

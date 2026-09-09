@@ -1,7 +1,7 @@
 import {
   createTabsPalette,
   createTabsTokens,
-} from '../../factories/createTabsTokens.js';
+} from '../../factories/components/createTabsTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { withAlpha } from '../../utils/color.js';
 import { border } from '../semantic/border.js';

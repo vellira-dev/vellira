@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { createComponentFocusRing } from './factories/componentFocusRing.js';
 import {
   createContextMenuTokens,
   createContextMenuTokensFromSemantics,
-} from './factories/createContextMenuTokens.js';
+} from './factories/components/createContextMenuTokens.js';
 import {
   createModalTokens,
   createModalTokensFromSemantics,
-} from './factories/createModalTokens.js';
+} from './factories/components/createModalTokens.js';
+import { createComponentFocusRing } from './factories/shared/componentFocusRing.js';
 import { focus as lightFocus } from './light/semantic/focus.js';
 import { menu as lightMenu } from './light/semantic/menu.js';
 import { text as lightText } from './light/semantic/text.js';

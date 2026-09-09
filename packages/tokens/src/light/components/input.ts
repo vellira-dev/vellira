@@ -1,7 +1,7 @@
 import {
   createInputColorPalette,
   createInputTokens,
-} from '../../factories/createInputTokens.js';
+} from '../../factories/components/createInputTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { focus } from '../semantic/focus.js';

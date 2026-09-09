@@ -1,7 +1,7 @@
 import {
   type ComponentElevationShadowIntent,
   createComponentShadowIntent,
-} from '../platform-output/component-token-intents.js';
+} from '../../platform-output/component-token-intents.js';
 
 type TooltipContentTokens = {
   bg: string;

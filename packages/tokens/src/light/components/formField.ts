@@ -1,4 +1,4 @@
-import { createFormFieldTokensFromTheme } from '../../factories/createFormFieldTokens.js';
+import { createFormFieldTokensFromTheme } from '../../factories/components/createFormFieldTokens.js';
 import { radius } from '../../tokens/radius.js';
 import { spacing } from '../../tokens/spacing.js';
 import { typography } from '../../tokens/typography.js';

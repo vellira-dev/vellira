@@ -1,12 +1,11 @@
 import {
   createComponentShadowIntent,
   createComponentViewportHeightIntent,
-} from '../platform-output/component-token-intents.js';
-
+} from '../../platform-output/component-token-intents.js';
 import {
   createComponentFocusRing,
   type SemanticFocusRing,
-} from './componentFocusRing.js';
+} from '../shared/componentFocusRing.js';
 
 type ModalFocusRing = ReturnType<typeof createComponentFocusRing>;
 

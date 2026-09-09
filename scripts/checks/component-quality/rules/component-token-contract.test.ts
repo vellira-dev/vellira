@@ -36,16 +36,25 @@ function metadata(): ComponentMetadata {
   };
 }
 
-function createTokenContract(root: string) {
-  const factoryDir = path.join(root, 'packages/tokens/src/factories');
+function createTokenContract(
+  root: string,
+  layout: 'grouped' | 'flat' = 'grouped'
+) {
+  const factoriesRoot = path.join(root, 'packages/tokens/src/factories');
+  const factoryDir =
+    layout === 'grouped'
+      ? path.join(factoriesRoot, 'components')
+      : factoriesRoot;
   fs.mkdirSync(factoryDir, { recursive: true });
   fs.writeFileSync(
     path.join(factoryDir, 'createProbeTokens.ts'),
     'export {};\n'
   );
   fs.writeFileSync(
-    path.join(factoryDir, 'index.ts'),
-    "export * from './createProbeTokens.js';\n"
+    path.join(factoriesRoot, 'index.ts'),
+    layout === 'grouped'
+      ? "export * from './components/createProbeTokens.js';\n"
+      : "export * from './createProbeTokens.js';\n"
   );
 
   for (const theme of ['light', 'dark', 'highContrast']) {
@@ -90,6 +99,32 @@ describe('component token contract quality rule', () => {
       status: 'fail',
       evidence: [
         'packages/react/src/components/Probe/Probe.module.scss — missing Web component-token usage: expected CSS variables with prefix --probe-',
+      ],
+    });
+  });
+
+  it('rejects the legacy flat component factory layout', () => {
+    const root = createRoot();
+    createTokenContract(root, 'flat');
+
+    const componentDir = path.join(root, 'packages/react/src/components/Probe');
+    fs.mkdirSync(componentDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(componentDir, 'Probe.module.scss'),
+      '.root { color: var(--probe-default-fg); }\n'
+    );
+
+    const result = componentTokenContractRule.evaluate({
+      metadata: metadata(),
+      platform: 'react',
+      rootDir: root,
+    });
+
+    expect(result).toMatchObject({
+      status: 'fail',
+      evidence: [
+        'missing component token factory: packages/tokens/src/factories/components/createProbeTokens.ts',
+        'missing component token factory export: packages/tokens/src/factories/index.ts',
       ],
     });
   });
