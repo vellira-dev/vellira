@@ -5,10 +5,8 @@ const websiteRoot = path.resolve('apps/website');
 const nextRoot = path.join(websiteRoot, '.next');
 const nextCssRoot = path.join(nextRoot, 'static/chunks');
 const openNextRoot = path.join(websiteRoot, '.open-next');
-const openNextCssRoot = path.join(
-  openNextRoot,
-  'assets/_next/static/chunks'
-);
+const openNextAssetsRoot = path.join(openNextRoot, 'assets');
+const openNextCssRoot = path.join(openNextAssetsRoot, '_next/static/chunks');
 
 function listFiles(root) {
   if (!fs.existsSync(root)) {
@@ -101,6 +99,33 @@ function printMissingReferences(label, missing) {
   }
 }
 
+function readBuildId(file) {
+  if (!fs.existsSync(file)) {
+    console.error(`Missing build ID file: ${toPosix(path.relative(websiteRoot, file))}`);
+    process.exit(1);
+  }
+
+  return fs.readFileSync(file, 'utf8').trim();
+}
+
+const nextBuildId = readBuildId(path.join(nextRoot, 'BUILD_ID'));
+const openNextBuildId = readBuildId(path.join(openNextAssetsRoot, 'BUILD_ID'));
+const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
+
+if (nextBuildId !== openNextBuildId) {
+  console.error(
+    `OpenNext BUILD_ID mismatch: Next=${nextBuildId}, OpenNext=${openNextBuildId}.`
+  );
+  process.exit(1);
+}
+
+if (expectedBuildId && nextBuildId !== expectedBuildId) {
+  console.error(
+    `Cloudflare BUILD_ID mismatch: expected ${expectedBuildId}, got ${nextBuildId}.`
+  );
+  process.exit(1);
+}
+
 const nextCss = relativeCssSet(nextCssRoot);
 const openNextCss = relativeCssSet(openNextCssRoot);
 
@@ -147,8 +172,8 @@ if (missingOpenNextReferences.length > 0) {
 }
 
 console.log(
-  `OK OpenNext CSS asset closure: ${nextCss.size} Next CSS files, ` +
-    `${openNextCss.size} deployed CSS files, ` +
+  `OK OpenNext CSS asset closure: build ${nextBuildId}, ` +
+    `${nextCss.size} Next CSS files, ${openNextCss.size} deployed CSS files, ` +
     `${nextReferences.size} Next asset references, ` +
     `${openNextReferences.size} OpenNext asset references.`
 );
