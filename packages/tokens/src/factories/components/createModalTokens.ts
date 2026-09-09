@@ -2,7 +2,6 @@ import {
   createComponentShadowIntent,
   createComponentViewportHeightIntent,
 } from '../../platform-output/component-token-intents.js';
-
 import {
   createComponentFocusRing,
   type SemanticFocusRing,
