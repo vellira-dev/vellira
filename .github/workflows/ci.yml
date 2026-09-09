@@ -37,18 +37,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Show publication gate Prettier diff
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp scripts/blog/check-publication-state.ts /tmp/check-publication-state.before.ts
-          pnpm exec prettier scripts/blog/check-publication-state.ts --write
-          diff -u /tmp/check-publication-state.before.ts scripts/blog/check-publication-state.ts || true
-          echo "pwd=$(pwd)"
-          ls -la .git || true
-          git rev-parse --show-toplevel || true
-          cp /tmp/check-publication-state.before.ts scripts/blog/check-publication-state.ts
-
       - name: Quality checks
         run: pnpm ci:quality
 
@@ -61,6 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           if [[ "$VELLIRA_PR_HEAD_REF" == agent/content-article-* ]]; then
             git fetch --no-tags --depth=2 origin "refs/heads/$VELLIRA_PR_HEAD_REF"
           fi
@@ -88,51 +77,70 @@ jobs:
               exit 1
             fi
 
-            echo "::warning::Component Quality Checker reported blocking findings, but enforcement is advisory during the rollout window."
+            echo "::warning::Component Quality Checker reported blocking quality findings. Advisory mode is active, so CI will continue."
           fi
+
+          exit 0
 
       - name: Generate Component Quality report
         if: always()
-        run: pnpm check:component-quality:json -- --output .artifacts/component-quality/report.json
+        shell: bash
+        run: |
+          mkdir -p .artifacts/component-quality
+
+          set +e
+          pnpm check:component-quality:json \
+            > .artifacts/component-quality/report.json
+          status=$?
+          set -e
+
+          if [ "$status" -eq 2 ]; then
+            echo "::error::Failed to generate Component Quality Checker report."
+            exit 2
+          fi
 
       - name: Upload Component Quality report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: component-quality-report
           path: .artifacts/component-quality/report.json
           if-no-files-found: error
+          retention-days: 14
 
       - name: Build packages and apps
-        run: pnpm build
+        run: pnpm ci:build
 
       - name: Build docs
-        run: pnpm --filter @vellira/docs build
+        run: pnpm docs:build
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm ci:typecheck
 
       - name: Tooling tests
         run: pnpm test:tooling
 
       - name: IndexNow tests
-        run: pnpm test:indexnow
+        run: node --test scripts/submit-indexnow.test.mjs
 
       - name: Tests and coverage
-        run: pnpm test:coverage
+        run: pnpm ci:test
 
       - name: Visual regression
-        run: pnpm test:visual
+        run: pnpm test:e2e:web:visual
+        env:
+          VELLIRA_VISUAL_ENVIRONMENT: playwright-v1.61.1-noble
 
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: playwright-report
+          name: playwright-artifacts
           path: |
-            playwright-report
-            test-results
+            apps/react-storybook/test-results
+            apps/react-storybook/playwright-report
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Smoke packages
-        run: pnpm smoke:packages
+        run: pnpm ci:smoke
