@@ -26,6 +26,7 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
+  VELLIRA_BUILD_ID: ${{ github.sha }}
 
 jobs:
   deploy:
