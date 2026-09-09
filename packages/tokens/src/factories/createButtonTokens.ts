@@ -5,10 +5,10 @@ export const createButtonTokens = <const TTokens extends ButtonTokensConfig>(
 ) => tokens;
 
 export {
-  createButtonPalette,
+  createButtonIntentPalette,
   transparent,
-} from './createButtonPalette.js';
+} from './palettes/createButtonIntentPalette.js';
 export type {
   ButtonPaletteConfig,
   ButtonState,
-} from './createButtonPalette.js';
+} from './palettes/createButtonIntentPalette.js';
