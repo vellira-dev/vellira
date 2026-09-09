@@ -41,9 +41,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cp scripts/blog/check-publication-state.ts /tmp/check-publication-state.before.ts
           pnpm exec prettier scripts/blog/check-publication-state.ts --write
-          git diff --no-ext-diff -- scripts/blog/check-publication-state.ts
-          git checkout -- scripts/blog/check-publication-state.ts
+          diff -u /tmp/check-publication-state.before.ts scripts/blog/check-publication-state.ts || true
+          echo "pwd=$(pwd)"
+          ls -la .git || true
+          git rev-parse --show-toplevel || true
+          cp /tmp/check-publication-state.before.ts scripts/blog/check-publication-state.ts
 
       - name: Quality checks
         run: pnpm ci:quality
