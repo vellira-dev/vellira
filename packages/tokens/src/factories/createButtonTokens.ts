@@ -6,6 +6,7 @@ export const createButtonTokens = <const TTokens extends ButtonTokensConfig>(
 
 export {
   createButtonIntentPalette,
+  createButtonIntentPalette as createButtonPalette,
   transparent,
 } from './palettes/createButtonIntentPalette.js';
 export type {
