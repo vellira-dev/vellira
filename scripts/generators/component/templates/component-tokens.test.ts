@@ -33,53 +33,61 @@ describe('component token templates', () => {
     expect(result).toContain('errorRing: status.error.ring');
   });
 
-  it('generates thin boolean theme token entrypoints with canonical runtime ESM imports', () => {
-    const result = renderThemeComponentTokensTemplate({
-      componentName: 'Switch',
-      profile: 'form-control',
-      control: 'boolean',
-    });
+  it(
+    'generates thin boolean theme token entrypoints with canonical runtime ESM imports',
+    () => {
+      const result = renderThemeComponentTokensTemplate({
+        componentName: 'Switch',
+        profile: 'form-control',
+        control: 'boolean',
+      });
 
-    expect(result).toContain(
-      "import { createSwitchTokensFromSemantics } from '../../factories/components/createSwitchTokens.js';"
-    );
-    expect(result).toContain(
-      "import { control } from '../semantic/control.js';"
-    );
-    expect(result).toContain("import { focus } from '../semantic/focus.js';");
-    expect(result).toContain("import { status } from '../semantic/status.js';");
-    expect(result).toContain(
-      `export const switchTokens = createSwitchTokensFromSemantics({
+      expect(result).toContain(
+        "import { createSwitchTokensFromSemantics } from '../../factories/components/createSwitchTokens.js';"
+      );
+      expect(result).toContain(
+        "import { control } from '../semantic/control.js';"
+      );
+      expect(result).toContain("import { focus } from '../semantic/focus.js';");
+      expect(result).toContain("import { status } from '../semantic/status.js';");
+      expect(result).toContain(
+        `export const switchTokens = createSwitchTokensFromSemantics({
   control,
   focus,
   status,
 });`
-    );
-    expect(result).not.toContain("from '../../factories/createSwitchTokens.js'");
-    expect(result).not.toContain('createSwitchTokens({');
-    expect(result).not.toContain('geometry:');
-    expect(result).not.toContain('control.default.bg');
-    expect(result).not.toContain('control.selected.default.bg');
-    expect(result).not.toContain('control.selected.hover.bg');
-    expect(result).not.toContain('control.selected.pressed.bg');
-    expect(result).not.toContain('control.disabled.bg');
-    expect(result).not.toContain('status.error.border');
-    expect(result).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-  });
+      );
+      expect(result).not.toContain(
+        "from '../../factories/createSwitchTokens.js'"
+      );
+      expect(result).not.toContain('createSwitchTokens({');
+      expect(result).not.toContain('geometry:');
+      expect(result).not.toContain('control.default.bg');
+      expect(result).not.toContain('control.selected.default.bg');
+      expect(result).not.toContain('control.selected.hover.bg');
+      expect(result).not.toContain('control.selected.pressed.bg');
+      expect(result).not.toContain('control.disabled.bg');
+      expect(result).not.toContain('status.error.border');
+      expect(result).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    }
+  );
 
-  it('generates disclosure theme entrypoints from the grouped component factory namespace', () => {
-    const result = renderThemeComponentTokensTemplate({
-      componentName: 'Accordion',
-      componentTokens: 'disclosure',
-    });
+  it(
+    'generates disclosure theme entrypoints from the grouped component factory namespace',
+    () => {
+      const result = renderThemeComponentTokensTemplate({
+        componentName: 'Accordion',
+        componentTokens: 'disclosure',
+      });
 
-    expect(result).toContain(
-      "import { createAccordionTokensFromSemantics } from '../../factories/components/createAccordionTokens.js';"
-    );
-    expect(result).not.toContain(
-      "from '../../factories/createAccordionTokens.js'"
-    );
-  });
+      expect(result).toContain(
+        "import { createAccordionTokensFromSemantics } from '../../factories/components/createAccordionTokens.js';"
+      );
+      expect(result).not.toContain(
+        "from '../../factories/createAccordionTokens.js'"
+      );
+    }
+  );
 
   it('generates a safe generic component token scaffold for other profiles', () => {
     const factory = renderComponentTokenFactoryTemplate({
@@ -106,12 +114,15 @@ describe('component token templates', () => {
     expect(theme).toContain('disabled: control.disabled');
   });
 
-  it('renders idempotent barrel export lines for the grouped factory namespace', () => {
-    expect(renderComponentTokenFactoryBarrelExport('Switch')).toBe(
-      "export * from './components/createSwitchTokens.js';"
-    );
-    expect(renderComponentTokenBarrelExport('Switch')).toBe(
-      "export { switchTokens as switch } from './switch.js';"
-    );
-  });
+  it(
+    'renders idempotent barrel export lines for the grouped factory namespace',
+    () => {
+      expect(renderComponentTokenFactoryBarrelExport('Switch')).toBe(
+        "export * from './components/createSwitchTokens.js';"
+      );
+      expect(renderComponentTokenBarrelExport('Switch')).toBe(
+        "export { switchTokens as switch } from './switch.js';"
+      );
+    }
+  );
 });
