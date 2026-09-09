@@ -1,9 +1,9 @@
-import { createComponentFocusRing } from '../../factories/componentFocusRing.js';
+import { createComponentFocusRing } from '../../factories/shared/componentFocusRing.js';
 import {
   createDropdownPalette,
   createDropdownTokens,
-} from '../../factories/createDropdownTokens.js';
-import { createInputColorPalette } from '../../factories/createInputTokens.js';
+} from '../../factories/components/createDropdownTokens.js';
+import { createInputColorPalette } from '../../factories/components/createInputTokens.js';
 import { createComponentShadowIntent } from '../../platform-output/component-token-intents.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';

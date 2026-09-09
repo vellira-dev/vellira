@@ -9,9 +9,9 @@ export function createButtonTokens<const TTokens extends ButtonTokensConfig>(
 export type {
   ButtonPaletteConfig,
   ButtonState,
-} from './palettes/createButtonIntentPalette.js';
+} from '../palettes/createButtonIntentPalette.js';
 export {
   createButtonIntentPalette,
   createButtonIntentPalette as createButtonPalette,
   transparent,
-} from './palettes/createButtonIntentPalette.js';
+} from '../palettes/createButtonIntentPalette.js';
