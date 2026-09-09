@@ -10,6 +10,7 @@ import {
   getComponentDocsTargets,
 } from './docs';
 import { runComponentGenerator } from './run';
+import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
 import { generateComponentWebsitePage } from './website';
 import {
   getGeneratedTokenTypesFile,
@@ -46,6 +47,11 @@ vi.mock('./token-types', async () => {
   };
 });
 
+import {
+  copyTokenLifecycleFixture,
+  reserveTokenLifecycleFixture,
+} from '../../token-lifecycle/fixtures/lifecycle';
+
 const tempRoots: string[] = [];
 
 function createTempRoot() {
@@ -62,6 +68,9 @@ function createRequiredRepositoryStructure(
   root: string,
   layer: 'primitives' | 'components' | 'patterns' = 'primitives'
 ) {
+  copyTokenLifecycleFixture(root);
+  reserveTokenLifecycleFixture(root, 'Avatar');
+
   for (const packageName of ['react', 'react-native']) {
     const sourceRoot = path.join(root, 'packages', packageName, 'src');
     const layerDir = path.join(sourceRoot, layer);
@@ -625,6 +634,7 @@ export { switchDocs };
     const root = createTempRoot();
 
     createRequiredRepositoryStructure(root, 'components');
+    reserveTokenLifecycleFixture(root, 'Dialog');
 
     const result = await runComponentGenerator({
       root,
@@ -910,6 +920,7 @@ export { switchDocs };
     const root = createTempRoot();
 
     createRequiredRepositoryStructure(root, 'components');
+    reserveTokenLifecycleFixture(root, 'Dialog');
 
     const result = await runComponentGenerator({
       root,
@@ -941,6 +952,7 @@ export { switchDocs };
     const root = createTempRoot();
 
     createRequiredRepositoryStructure(root, 'components');
+    reserveTokenLifecycleFixture(root, 'Disclosure');
 
     await runComponentGenerator({
       root,
@@ -989,6 +1001,7 @@ export { switchDocs };
     const root = createTempRoot();
 
     createRequiredRepositoryStructure(root, 'components');
+    reserveTokenLifecycleFixture(root, 'Disclosure');
 
     await runComponentGenerator({
       root,
@@ -1040,6 +1053,7 @@ export { switchDocs };
     const root = createTempRoot();
 
     createRequiredRepositoryStructure(root, 'components');
+    reserveTokenLifecycleFixture(root, 'Disclosure');
 
     await runComponentGenerator({
       root,
@@ -1435,6 +1449,7 @@ describe('component-token run intent', () => {
   it('plans generated token types as an updated artifact in dry-run mode', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
+    reserveTokenLifecycleFixture(root, 'Avatar');
 
     const options = {
       componentName: 'Avatar',
@@ -1464,6 +1479,7 @@ describe('component-token run intent', () => {
   it('synchronizes generated token types once and reports changed artifacts during write', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
+    reserveTokenLifecycleFixture(root, 'Avatar');
 
     const options = {
       componentName: 'Avatar',
@@ -1498,6 +1514,7 @@ describe('component-token run intent', () => {
   it('does not report generated token types when synchronization is unchanged', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
+    reserveTokenLifecycleFixture(root, 'Avatar');
 
     const result = await runComponentGenerator({
       root,
@@ -1521,6 +1538,7 @@ describe('component-token run intent', () => {
   it('fails closed when generated token type synchronization fails', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
+    reserveTokenLifecycleFixture(root, 'Avatar');
 
     vi.mocked(synchronizeGeneratedTokenTypes).mockImplementation(() => {
       throw new Error('Generated token type synchronization failed.');
@@ -1542,12 +1560,17 @@ describe('component-token run intent', () => {
       })
     ).rejects.toThrow('Generated token type synchronization failed.');
 
+    expect(readTokenLifecycleAuthority(root).components.Avatar.status).toBe(
+      'reserved'
+    );
+
     expect(generateComponentWebsitePage).not.toHaveBeenCalled();
   });
 
   it('keeps explicit tokenless intent aligned across dry-run and write', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
+    reserveTokenLifecycleFixture(root, 'Avatar');
 
     const options = {
       componentName: 'TokenlessProbe',
@@ -1584,10 +1607,70 @@ describe('component-token run intent', () => {
       expect(fs.existsSync(target.componentFile)).toBe(false);
     }
 
+    expect(
+      readTokenLifecycleAuthority(root).components.TokenlessProbe
+    ).toBeUndefined();
+
     expect(synchronizeGeneratedTokenTypes).not.toHaveBeenCalled();
 
     expect(readFile(result.plan.metadataFile)).toContain(
       'componentTokens: false'
     );
+  });
+});
+
+describe('component generator lifecycle preflight', () => {
+  it.each([
+    { dryRun: true, force: false },
+    { dryRun: false, force: false },
+    { dryRun: false, force: true },
+  ])('rejects an unknown family before output in mode %j', async (mode) => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const before = fs.readdirSync(root, { recursive: true });
+    const registry = path.join(root, 'packages/metadata/src/tokenLifecycle.ts');
+    const source = readFile(registry);
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          componentName: 'UnknownFuture',
+          platform: 'both',
+          layer: 'primitives',
+          category: 'utility',
+          profile: 'base',
+          componentTokens: 'standard',
+          parts: [],
+          ...mode,
+        },
+      })
+    ).rejects.toThrow('unregistered-component-token-family');
+    expect(readFile(registry)).toBe(source);
+    expect(fs.readdirSync(root, { recursive: true })).toEqual(before);
+    expect(generateComponentWebsitePage).not.toHaveBeenCalled();
+    expect(synchronizeGeneratedTokenTypes).not.toHaveBeenCalled();
+  });
+
+  it('reports lifecycle drift through --check without promoting the reservation', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const options = {
+      componentName: 'Avatar',
+      platform: 'both',
+      layer: 'primitives',
+      category: 'data-display',
+      profile: 'base',
+      componentTokens: 'standard',
+      parts: [],
+      force: false,
+    } as const;
+    await runComponentGenerator({ root, options });
+    reserveTokenLifecycleFixture(root, 'Avatar');
+    const registry = path.join(root, 'packages/metadata/src/tokenLifecycle.ts');
+    const source = readFile(registry);
+    await expect(
+      runComponentGenerator({ root, options: { ...options, check: true } })
+    ).rejects.toThrow('packages/metadata/src/tokenLifecycle.ts');
+    expect(readFile(registry)).toBe(source);
   });
 });

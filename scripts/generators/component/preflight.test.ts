@@ -7,6 +7,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createComponentGenerationPlan } from './plan';
 import { validateComponentGenerationPlan } from './preflight';
 
+import {
+  copyTokenLifecycleFixture,
+  reserveTokenLifecycleFixture,
+} from '../../token-lifecycle/fixtures/lifecycle';
+
 const tempRoots: string[] = [];
 
 function createTempRoot() {
@@ -23,6 +28,9 @@ function createLayerBarrels(
   root: string,
   layer: 'primitives' | 'components' | 'patterns' = 'primitives'
 ) {
+  copyTokenLifecycleFixture(root);
+  reserveTokenLifecycleFixture(root, 'Avatar');
+
   for (const packageName of ['react', 'react-native']) {
     const layerDir = path.join(root, 'packages', packageName, 'src', layer);
 
