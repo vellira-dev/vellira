@@ -86,10 +86,7 @@ describe('component generation plan', () => {
     );
 
     expect(plan.tokenFactoryFile).toBe(
-      path.join(
-        root,
-        'packages/tokens/src/factories/createAvatarTokens.ts'
-      )
+      path.join(root, 'packages/tokens/src/factories/createAvatarTokens.ts')
     );
     expect(plan.tokenFactoryFile).not.toContain('Palette');
 
