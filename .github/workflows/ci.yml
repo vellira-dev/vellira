@@ -42,9 +42,6 @@ jobs:
 
       - name: Validate Blog publication state
         if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-        env:
-          VELLIRA_PUBLICATION_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          VELLIRA_PUBLICATION_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: pnpm exec tsx scripts/blog/check-publication-state.ts
 
       - name: Component Quality Checker
