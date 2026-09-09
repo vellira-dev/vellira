@@ -1,4 +1,7 @@
-import { createInputColorPalette } from '../../factories/createInputPalette.js';
+import {
+  createInputColorPalette,
+  createInputTokens,
+} from '../../factories/createInputTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { focus } from '../semantic/focus.js';
@@ -68,7 +71,7 @@ const danger = createInputColorPalette({
   ring: colors.error[500],
 });
 
-export const input = {
+export const input = createInputTokens({
   primary,
   neutral,
   success,
@@ -163,4 +166,4 @@ export const input = {
   spinner: {
     fg: icons.muted,
   },
-} as const;
+});

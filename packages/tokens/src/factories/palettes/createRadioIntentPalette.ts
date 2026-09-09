@@ -1,4 +1,4 @@
-import { typography } from '../tokens/typography.js';
+import { typography } from '../../tokens/typography.js';
 
 export type RadioState = {
   bg: string;
@@ -14,7 +14,7 @@ export type RadioPaletteConfig = {
   pressed: RadioState;
 };
 
-export const createRadioPalette = ({
+export const createRadioIntentPalette = ({
   ring,
   default: defaultState,
   hover,

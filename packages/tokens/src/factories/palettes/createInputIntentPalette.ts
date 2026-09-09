@@ -25,7 +25,7 @@ export type InputPaletteConfig = {
   };
 };
 
-export const createInputPalette = ({
+export const createInputIntentPalette = ({
   ring,
   outline,
   filled,
@@ -71,7 +71,7 @@ export const createInputColorPalette = ({
   softDefaultBorder = 'transparent',
   softHoverBorder = accent,
 }: InputColorPaletteConfig) =>
-  createInputPalette({
+  createInputIntentPalette({
     ring,
     outline: {
       default: {

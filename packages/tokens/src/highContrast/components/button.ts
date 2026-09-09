@@ -1,4 +1,7 @@
-import { createButtonPalette } from '../../factories/createButtonPalette.js';
+import {
+  createButtonPalette,
+  createButtonTokens,
+} from '../../factories/createButtonTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { status } from '../semantic/status.js';
@@ -154,7 +157,7 @@ const danger = createButtonPalette({
   pressedBorder: colors.error[500],
 });
 
-export const button = {
+export const button = createButtonTokens({
   primary,
   neutral,
   success,
@@ -166,4 +169,4 @@ export const button = {
     fg: text.disabled,
     border: border.disabled,
   },
-} as const;
+});

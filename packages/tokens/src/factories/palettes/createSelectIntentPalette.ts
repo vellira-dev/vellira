@@ -1,4 +1,4 @@
-import type { createInputColorPalette } from './createInputPalette.js';
+import type { createInputColorPalette } from './createInputIntentPalette.js';
 
 type SelectBasePalette = ReturnType<typeof createInputColorPalette>;
 type SelectVariantName = 'outline' | 'filled' | 'soft';
@@ -88,7 +88,7 @@ const createSelectVariant = (
   };
 };
 
-export const createSelectPalette = (
+export const createSelectIntentPalette = (
   palette: SelectBasePalette,
   config: SelectPaletteConfig = {}
 ) =>
