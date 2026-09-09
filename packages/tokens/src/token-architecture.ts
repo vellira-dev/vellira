@@ -606,7 +606,7 @@ export const canonicalSemanticRolePaths = [
 export const componentTokenFactoryModel = {
   canonicalName: 'create<Component>Tokens',
   legacyPaletteName:
-    'create<Component>Palette is retained when the component exposes intent palettes.',
+    'create<Component>Palette is a narrow intent-palette helper exposed through the canonical create<Component>Tokens module when needed; it is never a root full-component factory.',
   role: 'Factories compose semantic inputs and stable implementation primitives into component contracts.',
   transparentPrimitive:
     'transparent is an implementation primitive for absent paint, not a theme color.',
@@ -622,14 +622,14 @@ export const maintainedComponentFactories = [
     stateKeys: ['default', 'expanded', 'hover', 'pressed', 'disabled'],
   },
   {
-    name: 'createButtonPalette',
-    source: 'packages/tokens/src/factories/createButtonPalette.ts',
+    name: 'createButtonTokens',
+    source: 'packages/tokens/src/factories/createButtonTokens.ts',
     semanticAdapter: null,
     stateKeys: ['default', 'hover', 'pressed'],
   },
   {
-    name: 'createCheckboxPalette',
-    source: 'packages/tokens/src/factories/createCheckboxPalette.ts',
+    name: 'createCheckboxTokens',
+    source: 'packages/tokens/src/factories/createCheckboxTokens.ts',
     semanticAdapter: null,
     stateKeys: ['default', 'hover', 'pressed'],
   },
@@ -640,20 +640,20 @@ export const maintainedComponentFactories = [
     stateKeys: ['default', 'hover', 'active', 'pressed', 'focus', 'disabled'],
   },
   {
-    name: 'createDropdownPalette',
-    source: 'packages/tokens/src/factories/createDropdownPalette.ts',
+    name: 'createDropdownTokens',
+    source: 'packages/tokens/src/factories/createDropdownTokens.ts',
     semanticAdapter: null,
     stateKeys: ['default', 'hover', 'focus', 'active', 'pressed'],
   },
   {
-    name: 'createFormFieldTokensFromTheme',
+    name: 'createFormFieldTokens',
     source: 'packages/tokens/src/factories/createFormFieldTokens.ts',
     semanticAdapter: 'createFormFieldTokensFromTheme',
     stateKeys: ['default', 'error', 'success', 'warning', 'info', 'disabled'],
   },
   {
-    name: 'createInputPalette',
-    source: 'packages/tokens/src/factories/createInputPalette.ts',
+    name: 'createInputTokens',
+    source: 'packages/tokens/src/factories/createInputTokens.ts',
     semanticAdapter: null,
     stateKeys: ['default', 'hover', 'focus'],
   },
@@ -676,14 +676,14 @@ export const maintainedComponentFactories = [
     stateKeys: ['default'],
   },
   {
-    name: 'createRadioPalette',
-    source: 'packages/tokens/src/factories/createRadioPalette.ts',
+    name: 'createRadioTokens',
+    source: 'packages/tokens/src/factories/createRadioTokens.ts',
     semanticAdapter: null,
     stateKeys: ['default', 'hover', 'pressed'],
   },
   {
-    name: 'createSelectPalette',
-    source: 'packages/tokens/src/factories/createSelectPalette.ts',
+    name: 'createSelectTokens',
+    source: 'packages/tokens/src/factories/createSelectTokens.ts',
     semanticAdapter: null,
     stateKeys: [
       'default',

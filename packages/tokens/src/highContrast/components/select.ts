@@ -1,5 +1,8 @@
-import { createInputColorPalette } from '../../factories/createInputPalette.js';
-import { createSelectPalette } from '../../factories/createSelectPalette.js';
+import { createInputColorPalette } from '../../factories/createInputTokens.js';
+import {
+  createSelectPalette,
+  createSelectTokens,
+} from '../../factories/createSelectTokens.js';
 import {
   createComponentNoShadowIntent,
   createComponentShadowIntent,
@@ -121,7 +124,7 @@ const danger = createInputColorPalette({
   ring: colors.error[500],
 });
 
-export const select = {
+export const select = createSelectTokens({
   primary: createSelectPalette(primary, {
     optionActiveBorder: 'transparent',
     optionActiveBg: menu.item.active.bg,
@@ -354,4 +357,4 @@ export const select = {
       fg: status.error.fg,
     },
   },
-} as const;
+});

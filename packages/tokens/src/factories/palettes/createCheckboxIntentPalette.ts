@@ -12,7 +12,7 @@ export type CheckboxPaletteConfig = {
   pressed: CheckboxState;
 };
 
-export const createCheckboxPalette = ({
+export const createCheckboxIntentPalette = ({
   ring,
   default: defaultState,
   hover,
