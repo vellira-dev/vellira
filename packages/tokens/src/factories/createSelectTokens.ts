@@ -4,4 +4,4 @@ export const createSelectTokens = <const TTokens extends SelectTokensConfig>(
   tokens: TTokens
 ) => tokens;
 
-export { createSelectPalette } from './createSelectPalette.js';
+export { createSelectIntentPalette } from './palettes/createSelectIntentPalette.js';
