@@ -1,11 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  componentMetadata,
-  componentTokenLifecycle,
-  semanticTokenLifecycle,
-} from '@vellira-ui/metadata';
+import ts from 'typescript';
+
+import { componentMetadata } from '../../../packages/metadata/src/components';
+import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
 
 export type TokenOwnershipFindingCode =
   | 'theme-component-family-drift'
@@ -16,7 +15,9 @@ export type TokenOwnershipFindingCode =
   | 'missing-public-semantic-namespace'
   | 'missing-component-metadata-owner'
   | 'invalid-current-component-owner'
-  | 'missing-semantic-consumer-evidence';
+  | 'missing-semantic-consumer-evidence'
+  | 'invalid-semantic-consumer-evidence'
+  | 'invalid-current-component-public-state';
 
 export type TokenOwnershipFinding = {
   code: TokenOwnershipFindingCode;
@@ -34,23 +35,114 @@ export type TokenOwnershipReport = {
 const THEMES = ['light', 'dark', 'highContrast'] as const;
 
 function readBarrelExports(filePath: string) {
-  const source = fs.readFileSync(filePath, 'utf8');
+  const source = ts.createSourceFile(
+    filePath,
+    fs.readFileSync(filePath, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true
+  );
   const exports = new Set<string>();
-
-  for (const line of source.split(/\r?\n/)) {
-    const match = line.match(
-      /^export\s+\{\s*[$\w]+(?:\s+as\s+([$\w]+))?\s*\}\s+from/
-    );
-
-    if (!match) continue;
-
-    const directName = line.match(/^export\s+\{\s*([$\w]+)/)?.[1];
-    const exportedName = match[1] ?? directName;
-
-    if (exportedName) exports.add(exportedName);
+  for (const statement of source.statements) {
+    if (ts.isExportDeclaration(statement) && !statement.isTypeOnly) {
+      const clause = statement.exportClause;
+      if (!clause)
+        throw new Error(
+          `Token barrels require explicit named exports: ${filePath}`
+        );
+      if (ts.isNamespaceExport(clause)) exports.add(clause.name.text);
+      else
+        for (const element of clause.elements) {
+          if (!element.isTypeOnly) exports.add(element.name.text);
+        }
+    } else if (
+      ts.canHaveModifiers(statement) &&
+      ts
+        .getModifiers(statement)
+        ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+    ) {
+      throw new Error(
+        `Token barrels require explicit named exports: ${filePath}`
+      );
+    }
   }
-
   return [...exports].sort();
+}
+
+function hasSemanticConsumer(
+  root: string,
+  namespace: string,
+  evidence: string
+) {
+  const component = evidence.startsWith('components.')
+    ? evidence.slice('components.'.length)
+    : undefined;
+  const files = component
+    ? THEMES.map(
+        (theme) =>
+          `packages/tokens/src/${theme}/components/${componentTokenExportName(component)}.ts`
+      )
+    : [evidence];
+  return files.every((file) => {
+    if (
+      path.isAbsolute(file) ||
+      file.split('/').includes('..') ||
+      !/^(packages|apps)\//.test(file) ||
+      !/\.tsx?$/.test(file) ||
+      /\.(test|stories)\./.test(file)
+    )
+      return false;
+    const fullPath = path.join(root, file);
+    if (!fs.existsSync(fullPath)) return false;
+    const ast = ts.createSourceFile(
+      fullPath,
+      fs.readFileSync(fullPath, 'utf8'),
+      ts.ScriptTarget.Latest,
+      true
+    );
+    const bindings = new Set<string>();
+    for (const statement of ast.statements) {
+      if (
+        !ts.isImportDeclaration(statement) ||
+        !ts.isStringLiteral(statement.moduleSpecifier) ||
+        !statement.moduleSpecifier.text.endsWith(`/semantic/${namespace}.js`)
+      )
+        continue;
+      const imports = statement.importClause?.namedBindings;
+      if (imports && ts.isNamedImports(imports)) {
+        for (const entry of imports.elements) {
+          if ((entry.propertyName ?? entry.name).text === namespace)
+            bindings.add(entry.name.text);
+        }
+      }
+    }
+    let consumed = false;
+    function visit(node: ts.Node) {
+      if (
+        ts.isImportDeclaration(node) ||
+        ts.isExportDeclaration(node) ||
+        ts.isTypeNode(node)
+      )
+        return;
+      if (ts.isPropertyAccessExpression(node)) {
+        if (
+          (ts.isIdentifier(node.expression) &&
+            bindings.has(node.expression.text)) ||
+          (node.name.text === namespace &&
+            ts.isPropertyAccessExpression(node.expression) &&
+            node.expression.name.text === 'semantic')
+        )
+          consumed = true;
+      }
+      if (
+        ts.isShorthandPropertyAssignment(node) &&
+        bindings.has(node.name.text)
+      )
+        consumed = true;
+      ts.forEachChild(node, visit);
+    }
+    visit(ast);
+    return consumed;
+  });
 }
 
 function sameValues(left: readonly string[], right: readonly string[]) {
@@ -98,6 +190,10 @@ function pushInventoryFindings(params: {
 }
 
 export function checkTokenOwnership(root: string): TokenOwnershipReport {
+  const {
+    components: componentTokenLifecycle,
+    semantics: semanticTokenLifecycle,
+  } = readTokenLifecycleAuthority(root);
   const findings: TokenOwnershipFinding[] = [];
   const componentInventories = new Map<string, string[]>();
   const semanticInventories = new Map<string, string[]>();
@@ -161,27 +257,37 @@ export function checkTokenOwnership(root: string): TokenOwnershipReport {
       .map(([name]) => name)
   );
 
-  pushInventoryFindings({
-    actual: componentFamilies,
-    expectedPublic: publicComponentFamilies,
-    unclassifiedCode: 'unclassified-component-family',
-    missingCode: 'missing-public-component-family',
-    path: 'packages/tokens/src/light/components/index.ts',
-    findings,
-  });
-  pushInventoryFindings({
-    actual: semanticNamespaces,
-    expectedPublic: publicSemanticNamespaces,
-    unclassifiedCode: 'unclassified-semantic-namespace',
-    missingCode: 'missing-public-semantic-namespace',
-    path: 'packages/tokens/src/light/semantic/index.ts',
-    findings,
-  });
+  for (const theme of THEMES) {
+    pushInventoryFindings({
+      actual: componentInventories.get(theme) ?? [],
+      expectedPublic: publicComponentFamilies,
+      unclassifiedCode: 'unclassified-component-family',
+      missingCode: 'missing-public-component-family',
+      path: `packages/tokens/src/${theme}/components/index.ts`,
+      findings,
+    });
+    pushInventoryFindings({
+      actual: semanticInventories.get(theme) ?? [],
+      expectedPublic: publicSemanticNamespaces,
+      unclassifiedCode: 'unclassified-semantic-namespace',
+      missingCode: 'missing-public-semantic-namespace',
+      path: `packages/tokens/src/${theme}/semantic/index.ts`,
+      findings,
+    });
+  }
 
   const metadataNames = new Set(componentMetadata.map((entry) => entry.name));
 
   for (const [family, lifecycle] of Object.entries(componentTokenLifecycle)) {
     if (lifecycle.status !== 'current') continue;
+
+    if (!lifecycle.public) {
+      findings.push({
+        code: 'invalid-current-component-public-state',
+        message: `Current component-token family "${family}" must be public.`,
+        path: 'packages/metadata/src/tokenLifecycle.ts',
+      });
+    }
 
     if (lifecycle.owner !== family) {
       findings.push({
@@ -202,14 +308,24 @@ export function checkTokenOwnership(root: string): TokenOwnershipReport {
   }
 
   for (const [namespace, lifecycle] of Object.entries(semanticTokenLifecycle)) {
-    if (lifecycle.status !== 'current') continue;
-
-    if (lifecycle.consumerEvidence.length === 0) {
+    if (
+      lifecycle.status === 'current' &&
+      lifecycle.consumerEvidence.length === 0
+    ) {
       findings.push({
         code: 'missing-semantic-consumer-evidence',
         message: `Current semantic namespace "${namespace}" has no declared consumer evidence.`,
         path: 'packages/metadata/src/tokenLifecycle.ts',
       });
+    }
+    for (const evidence of lifecycle.consumerEvidence) {
+      if (!hasSemanticConsumer(root, namespace, evidence)) {
+        findings.push({
+          code: 'invalid-semantic-consumer-evidence',
+          message: `Semantic namespace "${namespace}" has no consuming reference at "${evidence}".`,
+          path: 'packages/metadata/src/tokenLifecycle.ts',
+        });
+      }
     }
   }
 

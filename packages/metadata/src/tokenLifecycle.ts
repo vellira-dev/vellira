@@ -13,6 +13,7 @@ export type SemanticTokenLifecycleEntry = {
   authority: 'component-input' | 'shared-lower-level' | 'compatibility';
   owner: string;
   purpose: string;
+  /** Component contracts (components.Name) or repository source paths with semantic access. */
   consumerEvidence: readonly string[];
 };
 
@@ -131,7 +132,7 @@ export const semanticTokenLifecycle = {
     owner: 'token-compatibility',
     purpose:
       'Legacy generic action palette; retained explicitly for compatibility while component intent tokens remain canonical.',
-    consumerEvidence: [],
+    consumerEvidence: ['apps/native-playground/App.tsx'],
   },
   border: {
     status: 'current',
@@ -156,12 +157,13 @@ export const semanticTokenLifecycle = {
     consumerEvidence: ['components.Checkbox', 'components.Radio'],
   },
   divider: {
-    status: 'current',
+    status: 'deprecated',
     public: true,
-    authority: 'shared-lower-level',
-    owner: 'semantic-foundation',
-    purpose: 'Shared divider roles used as lower-level visual semantics.',
-    consumerEvidence: ['public-semantic-contract'],
+    authority: 'compatibility',
+    owner: 'token-compatibility',
+    purpose:
+      'Legacy public divider roles without internal consumers; retained only for compatibility.',
+    consumerEvidence: [],
   },
   focus: {
     status: 'current',
@@ -181,7 +183,7 @@ export const semanticTokenLifecycle = {
     authority: 'shared-lower-level',
     owner: 'icon-foundation',
     purpose: 'Canonical semantic icon color roles.',
-    consumerEvidence: ['public-semantic-contract'],
+    consumerEvidence: ['components.Input', 'components.Select'],
   },
   menu: {
     status: 'current',
@@ -219,15 +221,18 @@ export const semanticTokenLifecycle = {
     authority: 'shared-lower-level',
     owner: 'semantic-foundation',
     purpose: 'Shared semantic elevation/shadow roles.',
-    consumerEvidence: ['component-platform-output'],
+    consumerEvidence: [
+      'packages/react-native/src/theme/componentTokenOutput.ts',
+    ],
   },
   skeleton: {
-    status: 'current',
+    status: 'deprecated',
     public: true,
-    authority: 'shared-lower-level',
-    owner: 'feedback-foundation',
-    purpose: 'Shared loading skeleton semantic roles.',
-    consumerEvidence: ['public-semantic-contract'],
+    authority: 'compatibility',
+    owner: 'token-compatibility',
+    purpose:
+      'Legacy public skeleton roles without internal consumers; retained only for compatibility.',
+    consumerEvidence: [],
   },
   status: {
     status: 'current',
@@ -246,7 +251,7 @@ export const semanticTokenLifecycle = {
     consumerEvidence: [
       'components.Button',
       'components.Dropdown',
-      'components.Tabs',
+      'components.Input',
     ],
   },
   text: {
@@ -269,6 +274,8 @@ export type SemanticTokenLifecycleName = keyof typeof semanticTokenLifecycle;
 export function getComponentTokenLifecycle(
   componentName: string
 ): ComponentTokenLifecycleEntry | undefined {
+  if (!Object.hasOwn(componentTokenLifecycle, componentName)) return undefined;
+
   return componentTokenLifecycle[
     componentName as ComponentTokenLifecycleName
   ] as ComponentTokenLifecycleEntry | undefined;
