@@ -43,12 +43,17 @@ function relativeCssSet(root) {
   );
 }
 
-function collectCssReferences(root) {
+function collectCssReferences(root, ignoredRelativeFiles = new Set()) {
   const references = new Map();
   const cssAssetPattern =
     /(?:\/?_next\/)?static\/([A-Za-z0-9_./-]+\.css)/g;
 
   for (const file of listFiles(root)) {
+    const source = toPosix(path.relative(root, file));
+    if (ignoredRelativeFiles.has(source)) {
+      continue;
+    }
+
     let stat;
     try {
       stat = fs.statSync(file);
@@ -69,7 +74,6 @@ function collectCssReferences(root) {
 
     for (const match of content.matchAll(cssAssetPattern)) {
       const assetPath = match[1];
-      const source = toPosix(path.relative(root, file));
       const sources = references.get(assetPath) ?? new Set();
       sources.add(source);
       references.set(assetPath, sources);
@@ -142,7 +146,9 @@ if (missingCopiedCss.length > 0) {
   process.exit(1);
 }
 
-const nextReferences = collectCssReferences(nextRoot);
+// `.next/trace` is build-profiler telemetry. Webpack records transient asset
+// names there while compiling, so it is not a runtime asset reference graph.
+const nextReferences = collectCssReferences(nextRoot, new Set(['trace']));
 const missingNextReferences = missingReferences(nextReferences, nextCss);
 
 if (missingNextReferences.length > 0) {
