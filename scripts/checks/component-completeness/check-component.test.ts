@@ -107,10 +107,7 @@ function createComponentTokenStructureFixture(params: {
   const componentFactoriesDir = path.join(factoriesDir, 'components');
   fs.mkdirSync(componentFactoriesDir, { recursive: true });
   fs.writeFileSync(
-    path.join(
-      componentFactoriesDir,
-      `create${params.componentName}Tokens.ts`
-    ),
+    path.join(componentFactoriesDir, `create${params.componentName}Tokens.ts`),
     ''
   );
   fs.writeFileSync(
