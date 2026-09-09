@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-import { Search } from '@vellira-ui/icons';
-import { Popover } from '@vellira-ui/react';
+import { Close, Search } from '@vellira-ui/icons';
+import { Button, Popover } from '@vellira-ui/react';
 
 import { Container } from '@/components/layout/Container';
 import type { BlogArticleMetadata } from '@/blog';
@@ -250,14 +250,18 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                     />
 
                     {query && (
-                      <button
+                      <Button
                         type='button'
+                        appearance='ghost'
+                        color='neutral'
+                        size='sm'
+                        shape='pill'
+                        iconOnly
+                        iconStart={<Close size={16} aria-hidden='true' />}
                         className={searchStyles.clearSearch}
                         aria-label='Clear search'
                         onClick={() => updateQuery('')}
-                      >
-                        ×
-                      </button>
+                      />
                     )}
                   </label>
 
@@ -266,8 +270,12 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                     role='group'
                     aria-label='Filter articles by topic'
                   >
-                    <button
+                    <Button
                       type='button'
+                      appearance='ghost'
+                      color='neutral'
+                      size='sm'
+                      shape='rounded'
                       className={[
                         searchStyles.filter,
                         !hasActiveFilters ? searchStyles.filterActive : null,
@@ -278,15 +286,19 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                       onClick={clearFilters}
                     >
                       All
-                    </button>
+                    </Button>
 
                     {inlineTopics.map((topic) => {
                       const active = selectedTopics.includes(topic.value);
 
                       return (
-                        <button
+                        <Button
                           key={topic.value}
                           type='button'
+                          appearance='ghost'
+                          color='neutral'
+                          size='sm'
+                          shape='rounded'
                           className={[
                             searchStyles.filter,
                             active ? searchStyles.filterActive : null,
@@ -297,15 +309,19 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                           onClick={() => toggleTopic(topic.value)}
                         >
                           {topic.label}
-                        </button>
+                        </Button>
                       );
                     })}
 
                     {moreTopics.length > 0 && (
                       <Popover side='bottom' align='end' sideOffset={10}>
                         <Popover.Trigger asChild>
-                          <button
+                          <Button
                             type='button'
+                            appearance='ghost'
+                            color='neutral'
+                            size='sm'
+                            shape='rounded'
                             className={[
                               searchStyles.moreFiltersTrigger,
                               hiddenSelectedCount > 0
@@ -314,14 +330,16 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                             ]
                               .filter(Boolean)
                               .join(' ')}
+                            badge={
+                              hiddenSelectedCount > 0 ? (
+                                <span className={searchStyles.filterCount}>
+                                  {hiddenSelectedCount}
+                                </span>
+                              ) : undefined
+                            }
                           >
-                            <span>More filters</span>
-                            {hiddenSelectedCount > 0 && (
-                              <span className={searchStyles.filterCount}>
-                                {hiddenSelectedCount}
-                              </span>
-                            )}
-                          </button>
+                            More filters
+                          </Button>
                         </Popover.Trigger>
 
                         <Popover.Content className={searchStyles.filterPanel}>
@@ -330,13 +348,17 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                               <strong>More topics</strong>
                             </Popover.Title>
                             {hasActiveFilters && (
-                              <button
+                              <Button
                                 type='button'
+                                appearance='ghost'
+                                color='neutral'
+                                size='sm'
+                                shape='rounded'
                                 className={searchStyles.clearFilters}
                                 onClick={clearFilters}
                               >
                                 Clear filters
-                              </button>
+                              </Button>
                             )}
                           </div>
 
@@ -351,9 +373,14 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                               );
 
                               return (
-                                <button
+                                <Button
                                   key={topic.value}
                                   type='button'
+                                  appearance='outline'
+                                  color='neutral'
+                                  size='sm'
+                                  shape='rounded'
+                                  fullWidth
                                   className={[
                                     searchStyles.panelFilter,
                                     active
@@ -364,15 +391,17 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                                     .join(' ')}
                                   aria-pressed={active}
                                   onClick={() => toggleTopic(topic.value)}
+                                  badge={
+                                    <span
+                                      className={searchStyles.topicFrequency}
+                                      aria-hidden='true'
+                                    >
+                                      {topic.count}
+                                    </span>
+                                  }
                                 >
-                                  <span>{topic.label}</span>
-                                  <span
-                                    className={searchStyles.topicFrequency}
-                                    aria-hidden='true'
-                                  >
-                                    {topic.count}
-                                  </span>
-                                </button>
+                                  {topic.label}
+                                </Button>
                               );
                             })}
                           </div>
@@ -444,14 +473,18 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                   <p className={styles.eyebrow}>No matches</p>
                   <h2>No articles found.</h2>
                   <p>No articles match the current search and topic filters.</p>
-                  <button
+                  <Button
                     type='button'
+                    appearance='outline'
+                    color='neutral'
+                    size='sm'
+                    shape='rounded'
                     className={searchStyles.resetSearch}
                     aria-label='Clear search and filters and show all articles'
                     onClick={resetDiscovery}
                   >
                     Reset search and filters
-                  </button>
+                  </Button>
                 </div>
               )}
             </>
