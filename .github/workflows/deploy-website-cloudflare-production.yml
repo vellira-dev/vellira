@@ -55,6 +55,9 @@ jobs:
       - name: Build production Worker candidate
         run: pnpm --dir apps/website exec opennextjs-cloudflare build --config=wrangler.production.jsonc
 
+      - name: Verify OpenNext CSS asset closure
+        run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
+
       - name: Verify production config has no public custom domain
         shell: bash
         run: |
