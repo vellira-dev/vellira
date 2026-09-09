@@ -27,7 +27,7 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
-  VELLIRA_BUILD_ID: ${{ github.sha }}
+  VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   deploy:
@@ -61,6 +61,9 @@ jobs:
 
       - name: Verify OpenNext CSS asset closure
         run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
+
+      - name: Add unique deployment asset anchor
+        run: printf '%s\n' "$VELLIRA_BUILD_ID" > apps/website/.open-next/assets/__vellira_deploy.txt
 
       - name: Deploy website staging to Cloudflare Workers
         run: pnpm --dir apps/website exec opennextjs-cloudflare deploy
