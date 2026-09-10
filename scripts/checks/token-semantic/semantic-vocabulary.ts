@@ -62,40 +62,8 @@ function finding(
   };
 }
 
-export function getSemanticVocabularyRolePaths(): string[] {
-  const paths: string[] = [];
-
-  for (const [namespace, descriptor] of Object.entries(semanticVocabularyV1)) {
-    const record = descriptor as {
-      roles: readonly string[];
-      intents?: readonly string[];
-      states?: readonly string[];
-    };
-
-    if (record.intents) {
-      for (const intent of record.intents) {
-        for (const role of record.roles) {
-          paths.push(`semantic.${namespace}.${intent}.${role}`);
-        }
-      }
-      continue;
-    }
-
-    if (record.states) {
-      for (const role of record.roles) {
-        for (const state of record.states) {
-          paths.push(`semantic.${namespace}.${role}.${state}`);
-        }
-      }
-      continue;
-    }
-
-    for (const role of record.roles) {
-      paths.push(`semantic.${namespace}.${role}`);
-    }
-  }
-
-  return paths.sort();
+export function getSemanticVocabularyNamespaces(): string[] {
+  return Object.keys(semanticVocabularyV1).sort();
 }
 
 export function auditSemanticMigrationPaths(
@@ -147,24 +115,24 @@ function auditTheme(
   themeName: string,
   directory: string,
   semantic: unknown,
-  declaredPaths: readonly string[],
+  namespaceNames: readonly string[],
   migrations: readonly SemanticMigration[]
 ): { checked: number; findings: FindingInput[] } {
   const sourcePath = `packages/tokens/src/${directory}/theme.ts`;
   const findings: FindingInput[] = [];
   let checked = 0;
 
-  for (const tokenPath of declaredPaths) {
+  for (const namespace of namespaceNames) {
     checked += 1;
-    if (!hasSemanticPath(semantic, tokenPath)) {
+    if (!hasSemanticPath(semantic, `semantic.${namespace}`)) {
       findings.push(
         finding(
-          'declared-semantic-role-missing',
+          'declared-semantic-namespace-missing',
           sourcePath,
-          tokenPath,
+          `semantic.${namespace}`,
           themeName,
-          `${tokenPath} is declared by semanticVocabularyV1 but missing from the theme.`,
-          'Every declared Semantic Vocabulary V1 role must exist in every maintained theme.',
+          `${namespace} is declared by semanticVocabularyV1 but missing from the theme.`,
+          'Every Semantic Vocabulary V1 namespace must exist in every maintained theme.',
           'not-applicable'
         )
       );
@@ -203,7 +171,7 @@ function auditTheme(
 export function checkTokenSemanticVocabulary(): RuleResult {
   const findings: FindingInput[] = [];
   let checked = 0;
-  const declaredPaths = getSemanticVocabularyRolePaths();
+  const namespaceNames = getSemanticVocabularyNamespaces();
   const migrations = tokenMigrationManifestV1.filter(
     (migration): migration is (typeof tokenMigrationManifestV1)[number] &
       SemanticMigration =>
@@ -234,7 +202,7 @@ export function checkTokenSemanticVocabulary(): RuleResult {
           `semantic.${namespace}`,
           null,
           `${namespace} declares no roles.`,
-          'Every Semantic Vocabulary V1 namespace must declare at least one role.',
+          'Every Semantic Vocabulary V1 namespace must declare at least one conceptual role.',
           'not-applicable'
         )
       );
@@ -252,7 +220,7 @@ export function checkTokenSemanticVocabulary(): RuleResult {
       themeName,
       directory,
       semantic,
-      declaredPaths,
+      namespaceNames,
       migrations
     );
     checked += result.checked;
@@ -262,7 +230,7 @@ export function checkTokenSemanticVocabulary(): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Semantic Vocabulary V1 declared roles, canonical semantic role paths, and #883 rename/removal migrations across Light, Dark, and High Contrast. Lifecycle authority remains owned by tokens.namespace-lifecycle; consumer-purpose correctness and generated CSS migration identity remain to be connected.',
+      'Semantic Vocabulary V1 namespace purposes, exact canonicalSemanticRolePaths, and #883 rename/removal migrations across Light, Dark, and High Contrast. Conceptual role labels are not assumed to be direct leaf paths; lifecycle authority remains owned by tokens.namespace-lifecycle, while consumer-purpose correctness and generated CSS migration identity remain to be connected.',
     checked,
     findings,
   };

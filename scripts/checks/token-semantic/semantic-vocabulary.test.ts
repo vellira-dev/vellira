@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   auditSemanticMigrationPaths,
   checkTokenSemanticVocabulary,
-  getSemanticVocabularyRolePaths,
+  getSemanticVocabularyNamespaces,
 } from './semantic-vocabulary';
 
 describe('semantic vocabulary audit adapter', () => {
@@ -14,14 +14,9 @@ describe('semantic vocabulary audit adapter', () => {
     expect(result.findings).toEqual([]);
   });
 
-  it('derives nested roles from the canonical V1 vocabulary', () => {
-    const paths = getSemanticVocabularyRolePaths();
-    expect(paths).toEqual(
-      expect.arrayContaining([
-        'semantic.action.accent.pressed',
-        'semantic.focus.ring.offsetColor',
-        'semantic.status.warning.emphasisFg',
-      ])
+  it('treats V1 roles as conceptual labels while exact paths stay separately authoritative', () => {
+    expect(getSemanticVocabularyNamespaces()).toEqual(
+      expect.arrayContaining(['control', 'focus', 'status', 'surface'])
     );
   });
 
