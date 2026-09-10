@@ -339,6 +339,18 @@ const previewVariants = {
   },
 };
 
+// Restore every reveal property when the reduced-motion preference hydrates.
+// Removing variants alone can leave inherited server-rendered hidden styles.
+const reducedMotionReveal = {
+  opacity: 1,
+  x: 0,
+  y: 0,
+  scale: 1,
+  rotateY: 0,
+  filter: 'blur(0px)',
+  transition: { duration: 0 },
+};
+
 export function CodeShowcase() {
   const shouldReduceMotion = useReducedMotion();
 
@@ -409,6 +421,7 @@ export function CodeShowcase() {
         <motion.div
           className={styles.showcase}
           variants={shouldReduceMotion ? undefined : workspaceVariants}
+          animate={shouldReduceMotion ? reducedMotionReveal : undefined}
           initial={shouldReduceMotion ? { opacity: 0 } : 'hidden'}
           whileInView={shouldReduceMotion ? { opacity: 1 } : 'visible'}
           transition={shouldReduceMotion ? { duration: 0.2 } : undefined}
@@ -417,6 +430,7 @@ export function CodeShowcase() {
           <motion.div
             className={styles.toolbar}
             variants={shouldReduceMotion ? undefined : panelVariants}
+            animate={shouldReduceMotion ? reducedMotionReveal : undefined}
           >
             <Tabs
               value={platform}
@@ -482,6 +496,7 @@ export function CodeShowcase() {
             <motion.div
               className={styles.editor}
               variants={shouldReduceMotion ? undefined : editorVariants}
+              animate={shouldReduceMotion ? reducedMotionReveal : undefined}
             >
               <div className={styles.editorHeader}>
                 <div className={styles.fileMeta}>
@@ -607,6 +622,7 @@ export function CodeShowcase() {
             <motion.div
               className={styles.preview}
               variants={shouldReduceMotion ? undefined : previewVariants}
+              animate={shouldReduceMotion ? reducedMotionReveal : undefined}
             >
               <div className={styles.previewHeader}>
                 <div>
@@ -841,6 +857,7 @@ export function CodeShowcase() {
           <motion.div
             className={styles.installBar}
             variants={shouldReduceMotion ? undefined : panelVariants}
+            animate={shouldReduceMotion ? reducedMotionReveal : undefined}
           >
             <div className={styles.command}>
               <span aria-hidden='true'>$</span>
