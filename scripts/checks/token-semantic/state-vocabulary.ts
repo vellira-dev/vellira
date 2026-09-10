@@ -114,7 +114,12 @@ function listSourceFiles(root: string): string[] {
     for (const entry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
       const child = path.posix.join(relativePath, entry.name);
       if (entry.isDirectory()) visit(child);
-      else if (entry.isFile() && entry.name.endsWith('.ts')) files.push(child);
+      else if (
+        entry.isFile() &&
+        entry.name.endsWith('.ts') &&
+        !entry.name.endsWith('.test.ts')
+      )
+        files.push(child);
     }
   }
 
