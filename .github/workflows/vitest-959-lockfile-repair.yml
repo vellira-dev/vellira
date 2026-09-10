@@ -65,6 +65,16 @@ jobs:
             }
             assert.deepEqual(after, before, `Unrelated manifest edits: ${filename}`);
           }
+          const oldLock = parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'vitest-959-before.yaml'), 'utf8'));
+          const lock = parse(fs.readFileSync('pnpm-lock.yaml', 'utf8'));
+          // Storybook owns these pre-existing assertion helpers; neither vitest nor mocker is exempted.
+          const storybookHelpers = new Set(['@vitest/expect@3.2.4', '@vitest/pretty-format@3.2.4', '@vitest/spy@3.2.4', '@vitest/utils@3.2.4']);
+          for (const section of ['packages', 'snapshots']) {
+            for (const key of storybookHelpers) {
+              assert.ok(oldLock[section][key], `Missing pre-existing Storybook helper ${key}`);
+              assert.deepEqual(lock[section][key], oldLock[section][key], `Do not modify Storybook's own helper ${key}`);
+            }
+          }
           function inspect(lock) {
             assert.equal(lock.lockfileVersion, '9.0');
             assert.ok(lock.packages && lock.snapshots && lock.importers, 'Missing lock sections');
@@ -80,7 +90,7 @@ jobs:
                 (inventory[name] ??= new Set()).add(version);
                 if (name === '@vitest/mocker') mockerSeen = true;
                 if (name === 'vitest') vitestSeen = true;
-                if (version !== '4.1.11') errors.push(`${section}: ${key}`);
+                if (version !== '4.1.11' && !storybookHelpers.has(key)) errors.push(`${section}: ${key}`);
               }
               if (!mockerSeen || !vitestSeen) errors.push(`${section}: missing required package`);
             }
@@ -95,8 +105,6 @@ jobs:
             }
             return { errors, inventory: Object.fromEntries(Object.entries(inventory).map(([name, versions]) => [name, [...versions].sort()])) };
           }
-          const oldLock = parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'vitest-959-before.yaml'), 'utf8'));
-          const lock = parse(fs.readFileSync('pnpm-lock.yaml', 'utf8'));
           const before = inspect(oldLock);
           assert.ok(before.errors.some(x => x.includes('@vitest/mocker@4.1.10')), 'Baseline must reproduce vulnerable mocker');
           const after = inspect(lock);
@@ -109,11 +117,20 @@ jobs:
           assert.ok(inspect(missing).errors.length > 0, 'Checker must fail closed when mocker is missing');
           assert.deepEqual(lock.overrides, oldLock.overrides, 'Supply-chain overrides changed');
           assert.deepEqual(lock.settings, oldLock.settings, 'Lock settings changed');
-          const web = lock.importers['apps/react-storybook'].devDependencies;
-          assert.equal(web['@playwright/test'].version, oldLock.importers['apps/react-storybook'].devDependencies['@playwright/test'].version);
-          assert.equal(web.storybook.version, oldLock.importers['apps/react-storybook'].devDependencies.storybook.version);
+          assert.deepEqual(Object.keys(lock.importers), Object.keys(oldLock.importers));
+          for (const [importer, entry] of Object.entries(lock.importers)) {
+            for (const kind of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+              assert.deepEqual(Object.keys(entry[kind] || {}), Object.keys(oldLock.importers[importer][kind] || {}));
+              for (const [name, dep] of Object.entries(entry[kind] || {})) {
+                if (name === 'vitest' || name.startsWith('@vitest/')) continue;
+                const old = oldLock.importers[importer][kind][name];
+                assert.equal(dep.specifier, old.specifier, `Unrelated specifier change: ${importer}/${name}`);
+                assert.equal(dep.version.split('(')[0], old.version.split('(')[0], `Unrelated direct upgrade: ${importer}/${name}`);
+              }
+            }
+          }
           execFileSync('git', ['diff', '--check'], { stdio: 'inherit' });
-          const evidence = { originalHead, changed, inventory: after.inventory, baselineRejected: true, vulnerableMockerRegressionRejected: true, missingMockerRejected: true, frozenInstallPassed: true, policyUnchanged: true };
+          const evidence = { originalHead, changed, inventory: after.inventory, unchangedStorybookHelpers: [...storybookHelpers], baselineRejected: true, vulnerableMockerRegressionRejected: true, missingMockerRejected: true, frozenInstallPassed: true, policyUnchanged: true, unrelatedDirectVersionsUnchanged: true };
           const entries = allowed.map(filename => {
             const content = fs.readFileSync(filename, 'utf8');
             const bytes = Buffer.from(content);
@@ -130,7 +147,15 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `payload_sha256=${digest}\n`);
           console.log(JSON.stringify(evidence, null, 2));
           NODE
+      - name: Preserve diagnostic diff
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/vitest-959-output"
+          git diff --stat
+          git diff > "$RUNNER_TEMP/vitest-959-output/diagnostic.patch"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
         with:
           name: vitest-959-repair
           path: ${{ runner.temp }}/vitest-959-output/
@@ -143,6 +168,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
