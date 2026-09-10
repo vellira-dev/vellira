@@ -38,9 +38,13 @@ jobs:
       - run: pnpm test:cloudflare-cache
       - name: Build actual OpenNext runtime
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          VELLIRA_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           VELLIRA_BUILD_ID: ${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
+          # PR events expose a synthetic merge SHA. This job deliberately builds
+          # the checked-out PR HEAD, never a deployable PR merge artifact.
+          test "$(git rev-parse HEAD)" = "$VELLIRA_CHECKOUT_SHA"
+          export GITHUB_SHA="$VELLIRA_CHECKOUT_SHA"
           pnpm exec turbo run build --filter='@vellira-ui/website^...'
           pnpm --dir apps/website run sync:brand
           pnpm --dir apps/website run build:opennext

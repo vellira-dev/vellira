@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { chromium, firefox, webkit, expect } from '@playwright/test';
 import {
@@ -36,7 +37,12 @@ for (const name of (
   const origin = await startMigrationOrigin(generations, directory);
   const browserDirectory = path.join(directory, name);
   await fs.mkdir(browserDirectory, { recursive: true });
-  const profile = await fs.mkdtemp(path.join(browserDirectory, 'profile-'));
+  // Browser profiles contain generated executable-looking files (Firefox's
+  // prefs.js). Keep them outside maintained source scans; evidence records the
+  // exact persistent directory reused throughout this run and after reopening.
+  const profile = await fs.mkdtemp(
+    path.join(os.tmpdir(), `vellira-${name}-profile-`)
+  );
   // Native browser preferences, not cookie/header interception. WebKit's
   // Playwright API does not expose its global cookie-accept policy.
   const cookiesDisabled = name === 'chromium' || name === 'firefox';
