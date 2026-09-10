@@ -450,11 +450,17 @@ export function CodeShowcase() {
               </Tabs.Content>
             </Tabs>
 
-            <div className={styles.examplePicker}>
+            <div
+              className={styles.examplePicker}
+              role='group'
+              aria-label='Code examples'
+            >
               {exampleNames.map((example) => (
-                <button
+                <Button
                   key={example}
                   type='button'
+                  appearance='bare'
+                  aria-pressed={activeExample === example}
                   className={
                     activeExample === example
                       ? styles.activeExample
@@ -467,7 +473,7 @@ export function CodeShowcase() {
                   }}
                 >
                   {example.charAt(0).toUpperCase() + example.slice(1)}
-                </button>
+                </Button>
               ))}
             </div>
           </motion.div>
