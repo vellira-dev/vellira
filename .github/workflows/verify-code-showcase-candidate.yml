@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: fe717ac2249780f923be5a4468238d96d4e7f804
+          ref: 1556ddbcdc5bb6902a0d4136432f886a66d557a7
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -28,15 +28,53 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Print exact canonical formatting diff
+      - name: Validate exact checkout and formatting
         shell: bash
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          test "$(git rev-parse HEAD)" = fe717ac2249780f923be5a4468238d96d4e7f804
-          pnpm exec prettier scripts/checks/vellira-ui-usage/code-showcase.test.ts --write
-          git diff --check
-          git diff -- scripts/checks/vellira-ui-usage/code-showcase.test.ts
+          test "$(git rev-parse HEAD)" = 1556ddbcdc5bb6902a0d4136432f886a66d557a7
+          pnpm exec prettier scripts/checks/vellira-ui-usage/code-showcase.test.ts --check
+      - name: Instrument screenshot paint and hit testing
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file = 'apps/react-storybook/scripts/code-showcase-website-smoke.mjs';
+          let source = fs.readFileSync(file, 'utf8');
+          const anchor = '          await picker.screenshot({ path: `${artifactDir}/${scenario}-${name.toLowerCase()}.png` });';
+          if (!source.includes(anchor)) throw new Error('Screenshot anchor missing');
+          source = source.replace(anchor, `
+                  const beforeCapture = await picker.evaluate((element) => {
+                    const rect = element.getBoundingClientRect();
+                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    const ancestors = [];
+                    for (let node = element; node; node = node.parentElement) {
+                      const style = getComputedStyle(node);
+                      ancestors.push({ tag: node.tagName, className: node.className, opacity: style.opacity, visibility: style.visibility, contentVisibility: style.contentVisibility });
+                    }
+                    return { rect: rect.toJSON(), hit: hit?.outerHTML.slice(0, 240), ancestors };
+                  });
+                  console.log('CAPTURE_BEFORE', scenario, name, JSON.stringify(beforeCapture));
+                  await picker.evaluate((element) => element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' }));
+                  await expect(picker).toBeInViewport();
+                  await expect.poll(() => picker.evaluate((element) => {
+                    for (let node = element; node; node = node.parentElement) {
+                      const style = getComputedStyle(node);
+                      if (Number(style.opacity) < 1 || style.visibility !== 'visible' || style.display === 'none') return false;
+                    }
+                    const rect = element.getBoundingClientRect();
+                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    return hit !== null && (hit === element || element.contains(hit));
+                  }), { message: 'Picker must be fully painted and unobscured before capture' }).toBe(true);
+                  const afterCapture = await picker.evaluate((element) => {
+                    const rect = element.getBoundingClientRect();
+                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    return { rect: rect.toJSON(), hit: hit?.outerHTML.slice(0, 240) };
+                  });
+                  console.log('CAPTURE_AFTER', scenario, name, JSON.stringify(afterCapture));
+          ` + anchor);
+          fs.writeFileSync(file, source);
+          NODE
       - name: Run targeted source and negative regressions
         run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/vellira-ui-usage/code-showcase.test.ts
       - name: Build candidate website and dependencies
