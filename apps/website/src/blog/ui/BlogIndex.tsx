@@ -240,7 +240,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                     placeholder='Search articles...'
                     aria-label='Search articles'
                     color='neutral'
-                    variant='outline'
+                    variant='bare'
                     size='md'
                     clearable
                     wrapperClassName={searchStyles.searchField}
@@ -253,7 +253,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                   >
                     <Button
                       type='button'
-                      appearance='ghost'
+                      appearance='bare'
                       color='neutral'
                       size='sm'
                       shape='rounded'
@@ -276,7 +276,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                         <Button
                           key={topic.value}
                           type='button'
-                          appearance='ghost'
+                          appearance='bare'
                           color='neutral'
                           size='sm'
                           shape='rounded'
@@ -299,7 +299,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                         <Popover.Trigger asChild>
                           <Button
                             type='button'
-                            appearance='ghost'
+                            appearance='bare'
                             color='neutral'
                             size='sm'
                             shape='rounded'
@@ -331,7 +331,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                             {hasActiveFilters && (
                               <Button
                                 type='button'
-                                appearance='ghost'
+                                appearance='bare'
                                 color='neutral'
                                 size='sm'
                                 shape='rounded'
@@ -357,7 +357,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                                 <Button
                                   key={topic.value}
                                   type='button'
-                                  appearance='outline'
+                                  appearance='bare'
                                   color='neutral'
                                   size='sm'
                                   shape='rounded'
@@ -381,7 +381,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                                     </span>
                                   }
                                 >
-                                  {topic.label}
+                                  <span>{topic.label}</span>
                                 </Button>
                               );
                             })}
@@ -456,7 +456,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                   <p>No articles match the current search and topic filters.</p>
                   <Button
                     type='button'
-                    appearance='outline'
+                    appearance='bare'
                     color='neutral'
                     size='sm'
                     shape='rounded'

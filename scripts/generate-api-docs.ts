@@ -92,9 +92,12 @@ const fallbackDescriptions: Record<string, string> = {
 const descriptionOverrides: Record<string, Record<string, string>> = {
   'web.InputProps.Input': {
     className: 'Extra CSS class for the input element.',
+    variant:
+      'Visual style: outline, filled, soft, or the web-only bare composition mode.',
   },
   'web.ButtonProps.Button': {
-    appearance: 'Visual style: solid, outline, ghost, soft, or link.',
+    appearance:
+      'Visual style: solid, outline, ghost, soft, link, or the web-only bare composition mode.',
     asChild:
       'Composes Button behavior and styling onto a single child element.',
     badge: 'Compact badge rendered after the label when not icon-only.',
