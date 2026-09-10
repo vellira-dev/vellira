@@ -26,17 +26,18 @@ unitless values, including dimensional strings such as a scale of `0.98px`.
 The report includes the eleven #890 rule families plus the consumer-reference
 rule required by the #909 header regression. An absent adapter is `not-run`,
 not a successful check. Family ownership, namespace lifecycle, CSS consumer
-references, and platform boundary currently report `partial`. Value preservation
+references, value kinds, and platform boundary report `partial`. Value preservation
 runs the complete existing #880 oracle; the remaining adapters stay `not-run`.
 
 ## Connected platform and preservation authorities
 
 `packages/tokens/src/platform-output/component-token-boundary.ts` contains the
-unchanged #884 scanner extracted from its package test. Both the original test
+shared #884 scanner extracted from its package test. Both the original test
 and the semantic audit now call it. Every component family in Light, Dark, and
 High Contrast is visited. `checked` counts these theme/family pairs. This adapter
-remains partial: the existing scanner does not prove every `native*` key or every
-renderer-specific representation, and its extraction does not claim otherwise.
+also rejects arbitrary `native*` and `reactNative*` keys, not just the original
+`nativeMaxHeight` example. It remains partial because broader renderer-specific
+representation and source-boundary coverage is not yet proven.
 Findings identify the resolved token path and originating theme barrel; no
 fictional authored line location is assigned to resolved runtime values.
 
@@ -49,6 +50,28 @@ platform, and token path. Missing/unreadable evidence remains a fatal execution
 error even in report mode. A preservation `complete` status describes running
 the #880 value oracle, not visual approval: screenshot regression is still a
 separate mandatory CI gate, and the full #890 report remains incomplete.
+
+## Connected value-kind authority
+
+The value-kind adapter invokes the existing `resolveTokenValueKind` and
+`serializeCssTokenValue` contracts for every scalar in all four theme layers:
+colors, semantics, components, and base tokens. Shared `controlSizes` is checked
+separately because it is not included in `theme.tokens`. There is no copied role
+vocabulary, unit map, or generator-only validator.
+
+Each invalid scalar produces a finding with the canonical token path, theme,
+source identity, and original serializer diagnostic. The scan accumulates all
+invalid leaves instead of stopping at the first one. Valid platform intents are
+atomic; malformed or unknown tagged objects, unsupported scalar types, empty
+branches, and cycles cannot produce an empty successful scan. Shared objects are
+visited at each path; inputs are never modified. `checked` counts scalar/intent
+leaves and invalid branches inspected, not files.
+
+This adapter remains partial: the existing serializer does not validate the full
+CSS string-expression grammar, and emitted CSS/artifact parity still requires
+integration. Running the scalar authority is useful evidence, not permission to
+mark those unproven requirements complete. The repository fixture exercises all
+maintained themes and shared control sizes alongside positive/negative fixtures.
 
 ## Consumer scan boundary
 

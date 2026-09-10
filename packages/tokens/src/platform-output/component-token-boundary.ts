@@ -40,7 +40,11 @@ export function scanCanonicalComponentTokens(
   for (const [key, child] of Object.entries(value)) {
     const childPath = path ? `${path}.${key}` : key;
 
-    if (rendererKeys.has(key)) {
+    if (
+      rendererKeys.has(key) ||
+      key.startsWith('native') ||
+      key.startsWith('reactNative')
+    ) {
       findings.push({
         path: childPath,
         reason: `renderer-specific canonical key "${key}"`,
