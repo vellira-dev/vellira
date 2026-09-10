@@ -113,7 +113,7 @@ export const input = createInputTokens({
 
   error: {
     border: status.error.border,
-    ring: status.error.fg,
+    ring: status.error.ring,
   },
 
   readOnly: {
@@ -137,8 +137,8 @@ export const input = createInputTokens({
 
   clearButton: {
     fg: icons.muted,
-    hoverFg: status.error.fg,
-    hoverBg: status.error.bg,
+    hoverFg: icons.danger,
+    hoverBg: 'rgba(251, 113, 133, 0.16)',
     focusBg: surface.subtle,
     pressedBg: surface.pressed,
   },
