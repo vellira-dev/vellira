@@ -167,6 +167,45 @@ jobs:
       - name: Build packages and apps
         run: pnpm ci:build
 
+      - name: CodeShowcase browser regression
+        timeout-minutes: 5
+        shell: bash
+        env:
+          VELLIRA_VISUAL_ENVIRONMENT: playwright-v1.61.1-noble
+        run: |
+          set -euo pipefail
+
+          pnpm --dir apps/website exec next start -p 3101 > /tmp/vellira-code-showcase-next.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          ready=false
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error http://127.0.0.1:3101/ > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [[ "$ready" != "true" ]]; then
+            cat /tmp/vellira-code-showcase-next.log >&2
+            exit 1
+          fi
+
+          WEBSITE_URL=http://127.0.0.1:3101 \
+            pnpm --filter @vellira-ui/react-storybook exec node \
+            scripts/code-showcase-website-smoke.mjs
+
+      - name: Upload CodeShowcase browser evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: code-showcase-browser-evidence
+          path: apps/react-storybook/test-results/code-showcase
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Build docs
         run: pnpm docs:build
 
