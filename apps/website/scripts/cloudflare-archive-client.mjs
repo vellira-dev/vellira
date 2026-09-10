@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { getPlatformProxy } from 'wrangler';
+import { unstable_getMiniflareWorkerOptions } from 'wrangler';
+import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+import { startArchiveSession } from './cloudflare-archive-session.mjs';
 
 export async function withRemoteArchive(config, operation) {
   const binding = config.r2_buckets?.find(
@@ -23,18 +25,38 @@ export async function withRemoteArchive(config, operation) {
         r2_buckets: [{ ...binding, remote: true }],
       })
     );
-    const proxy = await getPlatformProxy({
-      configPath,
-      remoteBindings: true,
-      persist: false,
-    });
+    const session = await startArchiveSession(configPath);
     try {
-      return await operation(
-        proxy.env.STATIC_ASSET_ARCHIVE,
-        binding.bucket_name
+      const { workerOptions, externalWorkers } =
+        unstable_getMiniflareWorkerOptions(configPath, undefined, {
+          remoteProxyConnectionString: session.connection,
+        });
+      // This inline, sourceless probe has no imports. Miniflare v5 rejects v4
+      // modulesRules for inline scripts; no application module rules are needed.
+      delete workerOptions.modulesRules;
+      const proxy = new Miniflare(
+        convertV4MiniflareOptions({
+          workers: [
+            {
+              ...workerOptions,
+              modules: true,
+              script:
+                'export default {fetch(){return new Response(null,{status:404})}}',
+            },
+            ...externalWorkers,
+          ],
+        })
       );
+      try {
+        return await operation(
+          await proxy.getR2Bucket('STATIC_ASSET_ARCHIVE'),
+          binding.bucket_name
+        );
+      } finally {
+        await proxy.dispose();
+      }
     } finally {
-      await proxy.dispose();
+      await session.dispose();
     }
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });

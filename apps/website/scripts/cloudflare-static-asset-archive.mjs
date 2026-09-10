@@ -73,10 +73,12 @@ export async function verifyArchivedAssets(bucket, inventory) {
   for (const asset of inventory) {
     const stored = await bucket.get(asset.key);
     assert.ok(stored, `Archive object missing: ${asset.pathname}`);
-    const hash = createHash('sha256');
-    for await (const chunk of stored.body) hash.update(chunk);
+    // Consume the R2 body within its RPC method. Iterating a remote-proxied
+    // stream from Node can outlive the request context and hang the proxy.
+    // This is build-time verification only; Worker asset responses still stream.
+    const bytes = Buffer.from(await stored.arrayBuffer());
     assert.equal(
-      hash.digest('hex'),
+      sha256(bytes),
       asset.sha256,
       `IMMUTABLE ASSET COLLISION: ${asset.pathname}`
     );

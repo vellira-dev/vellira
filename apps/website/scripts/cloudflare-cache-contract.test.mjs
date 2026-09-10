@@ -8,6 +8,7 @@ import vm from 'node:vm';
 import http from 'node:http';
 import { respondMigrationError } from './cloudflare-migration-origin.mjs';
 import { preflightArchive } from './cloudflare-archive-preflight.mjs';
+import { startArchiveSession } from './cloudflare-archive-session.mjs';
 import {
   readDeploymentConfig,
   validateDeploymentTarget,
@@ -32,6 +33,7 @@ import {
   sha256,
   recordArchivedDeployment,
   requireArchivedDeployment,
+  verifyArchivedAssets,
 } from './cloudflare-static-asset-archive.mjs';
 import { transportOptions, verifyNextPatch } from './next-rsc-patch-check.mjs';
 
@@ -87,6 +89,49 @@ test('installed Wrangler parses both actual deployment configs and rejects unsaf
       },
     ])
       assert.throws(() => validateDeploymentTarget(changed));
+  }
+});
+
+test('archive proxy runs on an independent thread and disposes or fails closed', async () => {
+  const temporary = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-archive-session-test-')
+  );
+  const fixture = path.join(temporary, 'session.mjs');
+  try {
+    await fs.writeFile(
+      fixture,
+      `
+      import { parentPort, workerData, isMainThread } from 'node:worker_threads';
+      if (isMainThread) throw new Error('Proxy must run off the caller event loop');
+      if (workerData === 'error') throw new Error('Proxy startup failed');
+      if (workerData === 'timeout') setInterval(() => {}, 1000);
+      else {
+        parentPort.postMessage({type: 'ready', connection: 'http://127.0.0.1:1234'});
+        parentPort.once('message', command => {
+          if (command !== 'dispose') throw new Error('Unexpected command');
+          parentPort.postMessage({type: 'disposed'});
+          parentPort.close();
+        });
+      }
+    `
+    );
+    const options = {
+      workerUrl: new URL(`file://${fixture}`),
+      timeoutMs: 5000,
+    };
+    const session = await startArchiveSession('normal', options);
+    assert.equal(session.connection.origin, 'http://127.0.0.1:1234');
+    await session.dispose();
+    await assert.rejects(
+      startArchiveSession('error', options),
+      /Proxy startup failed/
+    );
+    await assert.rejects(
+      startArchiveSession('timeout', { ...options, timeoutMs: 100 }),
+      { name: 'AbortError' }
+    );
+  } finally {
+    await fs.rm(temporary, { recursive: true, force: true });
   }
 });
 
@@ -388,6 +433,35 @@ test('HTML revalidates; APIs and hashed assets preserve their policy', () => {
       response
     );
   }
+});
+
+test('archive read-back consumes the RPC body method and still rejects byte corruption', async () => {
+  const bytes = Buffer.from('original immutable bytes');
+  const asset = {
+    key: 'assets/_next/static/a.js',
+    pathname: '/_next/static/a.js',
+    sha256: sha256(bytes),
+    size: bytes.length,
+    contentType: 'text/javascript; charset=utf-8',
+  };
+  let body = bytes;
+  const bucket = {
+    get: async () => ({
+      get body() {
+        throw new Error('Do not iterate a remote R2 stream across RPC contexts');
+      },
+      arrayBuffer: async () => body,
+      size: asset.size,
+      customMetadata: { sha256: asset.sha256 },
+      httpMetadata: {
+        contentType: asset.contentType,
+        cacheControl: IMMUTABLE_CACHE_CONTROL,
+      },
+    }),
+  };
+  await verifyArchivedAssets(bucket, [asset]);
+  body = Buffer.from('corrupted immutable bytes');
+  await assert.rejects(verifyArchivedAssets(bucket, [asset]), /COLLISION/);
 });
 
 test('immutable archive uses real R2 conditional writes, exact bytes and metadata', async () => {

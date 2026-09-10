@@ -195,6 +195,22 @@ initial backfill remain explicit operations; preflight never creates a bucket
 or accepts a missing predecessor. The checks must run under the deployment's
 actual CI credentials; local OAuth access alone does not establish CI access.
 
+The archive client hosts Wrangler's remote proxy server in a separate Node
+worker thread. Miniflare's synchronous binding-property RPC can block the calling
+event loop in `Atomics.wait`; hosting the HTTP proxy in that same loop caused a
+real remote-R2 deadlock during onboarding. The separate loop keeps the proxy
+responsive. Startup/disposal are bounded, the session URL stays in memory, and
+both Miniflare and the remote session are disposed. Archive algorithms, atomic
+create-only writes and complete read-back verification are unchanged. This uses
+the pinned Wrangler/Miniflare APIs, not a deployed public uploader Worker or an
+alternative unverified storage path.
+
+Build-time read-back consumes `R2ObjectBody.arrayBuffer()` within the RPC method
+before computing SHA-256, rather than iterating a remote-proxied body stream from
+Node across request contexts. Only this offline verifier buffers bodies (uploads
+already buffer each asset); deployed Worker responses continue to stream. Size,
+digest metadata, MIME and immutable cache policy are still checked independently.
+
 Rollback must retain this archive/freshness/transport architecture. Rolling back
 to a pre-contract Worker would restore the old failure mode (or cookie redirect).
 Use an earlier validated option-G deployment, or rebuild old application source
