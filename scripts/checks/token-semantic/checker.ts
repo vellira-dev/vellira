@@ -8,6 +8,7 @@ import type { FindingInput, RuleAdapter, RuleResult } from './contract';
 import { checkTokenCssReferences } from './css-repository';
 import { checkTokenFactoryConventions } from './factory-convention';
 import { checkTokenPlatformBoundary } from './platform-boundary';
+import { checkTokenSemanticDependencies } from './semantic-dependency';
 import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
 import { checkTokenShadowAuthority } from './shadow-authority';
 import { checkTokenStateVocabulary } from './state-vocabulary';
@@ -73,6 +74,10 @@ export function checkTokenSemantics(root: string) {
       run: () => checkTokenFactoryConventions(root),
     },
     { ruleId: 'tokens.platform-boundary', run: checkTokenPlatformBoundary },
+    {
+      ruleId: 'tokens.semantic-dependency',
+      run: () => checkTokenSemanticDependencies(root),
+    },
     {
       ruleId: 'tokens.shadow-authority',
       run: () => checkTokenShadowAuthority(root),
