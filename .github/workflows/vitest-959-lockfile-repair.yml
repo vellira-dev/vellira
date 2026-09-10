@@ -1,0 +1,191 @@
+name: Isolated Vitest 959 lockfile repair
+
+on:
+  push:
+    branches: [repair/vitest-959-lockfile-0ca05adb]
+    paths: [.github/workflows/vitest-959-lockfile-repair.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vitest-959-lockfile-repair
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.repository == 'vellira-dev/vellira' && github.ref == 'refs/heads/repair/vitest-959-lockfile-0ca05adb'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      payload_sha256: ${{ steps.verify.outputs.payload_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 0ca05adb5f2764b0cb51aec9c31e71dc7fa7f844
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+      - name: Regenerate only the Vitest browser and coverage patch update
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 0ca05adb5f2764b0cb51aec9c31e71dc7fa7f844
+          test "$(pnpm --version)" = 11.20.0
+          cp pnpm-lock.yaml "$RUNNER_TEMP/vitest-959-before.yaml"
+          pnpm -r update @vitest/browser-playwright@4.1.11 @vitest/coverage-v8@4.1.11 --lockfile-only --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify graph, exact scope and positive/negative regression evidence
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+          const assert = require('node:assert/strict');
+          const { execFileSync } = require('node:child_process');
+          const { parse } = require('yaml');
+          const originalHead = '0ca05adb5f2764b0cb51aec9c31e71dc7fa7f844';
+          const allowed = ['apps/react-storybook/package.json', 'packages/react-native/package.json', 'packages/react/package.json', 'pnpm-lock.yaml'].sort();
+          const changed = execFileSync('git', ['diff', '--name-only'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean).sort();
+          assert.deepEqual(changed, allowed, 'Unexpected changed paths');
+          for (const filename of allowed.filter(p => p.endsWith('package.json'))) {
+            const beforeText = execFileSync('git', ['show', `${originalHead}:${filename}`], { encoding: 'utf8' });
+            const before = JSON.parse(beforeText);
+            const after = JSON.parse(fs.readFileSync(filename, 'utf8'));
+            for (const name of ['@vitest/browser-playwright', '@vitest/coverage-v8']) {
+              if (before.devDependencies[name]) {
+                assert.equal(before.devDependencies[name], '^4.1.10');
+                before.devDependencies[name] = '^4.1.11';
+              }
+            }
+            assert.deepEqual(after, before, `Unrelated manifest edits: ${filename}`);
+          }
+          function inspect(lock) {
+            assert.equal(lock.lockfileVersion, '9.0');
+            assert.ok(lock.packages && lock.snapshots && lock.importers, 'Missing lock sections');
+            const inventory = {};
+            const errors = [];
+            for (const section of ['packages', 'snapshots']) {
+              let mockerSeen = false;
+              let vitestSeen = false;
+              for (const key of Object.keys(lock[section])) {
+                const match = /^(vitest|@vitest\/[^@]+)@([^()]+)(?:\(|$)/.exec(key);
+                if (!match) continue;
+                const [, name, version] = match;
+                (inventory[name] ??= new Set()).add(version);
+                if (name === '@vitest/mocker') mockerSeen = true;
+                if (name === 'vitest') vitestSeen = true;
+                if (version !== '4.1.11') errors.push(`${section}: ${key}`);
+              }
+              if (!mockerSeen || !vitestSeen) errors.push(`${section}: missing required package`);
+            }
+            for (const [importer, entry] of Object.entries(lock.importers)) {
+              for (const kind of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+                for (const [name, dep] of Object.entries(entry[kind] || {})) {
+                  if (name === 'vitest' || name.startsWith('@vitest/')) {
+                    if (!/^4\.1\.11(?:\(|$)/.test(dep.version)) errors.push(`${importer}: ${name} -> ${dep.version}`);
+                  }
+                }
+              }
+            }
+            return { errors, inventory: Object.fromEntries(Object.entries(inventory).map(([name, versions]) => [name, [...versions].sort()])) };
+          }
+          const oldLock = parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'vitest-959-before.yaml'), 'utf8'));
+          const lock = parse(fs.readFileSync('pnpm-lock.yaml', 'utf8'));
+          const before = inspect(oldLock);
+          assert.ok(before.errors.some(x => x.includes('@vitest/mocker@4.1.10')), 'Baseline must reproduce vulnerable mocker');
+          const after = inspect(lock);
+          assert.deepEqual(after.errors, [], 'Vitest graph is not fully aligned to the patched version');
+          const regression = structuredClone(lock);
+          regression.packages['@vitest/mocker@4.1.10'] = {};
+          assert.ok(inspect(regression).errors.length > 0, 'Checker must reject reintroduced vulnerable mocker');
+          const missing = structuredClone(lock);
+          for (const key of Object.keys(missing.packages)) if (key.startsWith('@vitest/mocker@')) delete missing.packages[key];
+          assert.ok(inspect(missing).errors.length > 0, 'Checker must fail closed when mocker is missing');
+          assert.deepEqual(lock.overrides, oldLock.overrides, 'Supply-chain overrides changed');
+          assert.deepEqual(lock.settings, oldLock.settings, 'Lock settings changed');
+          const web = lock.importers['apps/react-storybook'].devDependencies;
+          assert.equal(web['@playwright/test'].version, oldLock.importers['apps/react-storybook'].devDependencies['@playwright/test'].version);
+          assert.equal(web.storybook.version, oldLock.importers['apps/react-storybook'].devDependencies.storybook.version);
+          execFileSync('git', ['diff', '--check'], { stdio: 'inherit' });
+          const evidence = { originalHead, changed, inventory: after.inventory, baselineRejected: true, vulnerableMockerRegressionRejected: true, missingMockerRejected: true, frozenInstallPassed: true, policyUnchanged: true };
+          const entries = allowed.map(filename => {
+            const content = fs.readFileSync(filename, 'utf8');
+            const bytes = Buffer.from(content);
+            const gitBlobSha = crypto.createHash('sha1').update(Buffer.from(`blob ${bytes.length}\0`)).update(bytes).digest('hex');
+            return { path: filename, content, gitBlobSha };
+          });
+          const out = path.join(process.env.RUNNER_TEMP, 'vitest-959-output');
+          fs.mkdirSync(out, { recursive: true });
+          const payload = JSON.stringify({ evidence, entries });
+          fs.writeFileSync(path.join(out, 'repair.json'), payload);
+          fs.writeFileSync(path.join(out, 'evidence.json'), JSON.stringify(evidence, null, 2));
+          fs.writeFileSync(path.join(out, 'repair.patch'), execFileSync('git', ['diff', '--', ...allowed]));
+          const digest = crypto.createHash('sha256').update(payload).digest('hex');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `payload_sha256=${digest}\n`);
+          console.log(JSON.stringify(evidence, null, 2));
+          NODE
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: vitest-959-repair
+          path: ${{ runner.temp }}/vitest-959-output/
+          if-no-files-found: error
+          retention-days: 3
+
+  store-blobs:
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: vitest-959-repair
+          path: repair-input
+      - name: Store verified Git blobs only; never update a branch or create a PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_PAYLOAD_SHA256: ${{ needs.generate.outputs.payload_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const assert = require('node:assert/strict');
+          (async () => {
+            assert.equal(process.env.GITHUB_REPOSITORY, 'vellira-dev/vellira');
+            assert.equal(process.env.GITHUB_REF, 'refs/heads/repair/vitest-959-lockfile-0ca05adb');
+            const payload = fs.readFileSync('repair-input/repair.json');
+            assert.equal(crypto.createHash('sha256').update(payload).digest('hex'), process.env.EXPECTED_PAYLOAD_SHA256);
+            const { evidence, entries } = JSON.parse(payload);
+            assert.equal(evidence.originalHead, '0ca05adb5f2764b0cb51aec9c31e71dc7fa7f844');
+            assert.deepEqual(entries.map(e => e.path).sort(), ['apps/react-storybook/package.json', 'packages/react-native/package.json', 'packages/react/package.json', 'pnpm-lock.yaml'].sort());
+            const headers = { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' };
+            const prResponse = await fetch('https://api.github.com/repos/vellira-dev/vellira/pulls/959', { headers });
+            assert.ok(prResponse.ok, `PR read failed: ${prResponse.status}`);
+            const pr = await prResponse.json();
+            assert.equal(pr.state, 'open');
+            assert.equal(pr.draft, true);
+            assert.equal(pr.head.sha, evidence.originalHead, 'PR changed while generating; stop');
+            const results = [];
+            for (const entry of entries) {
+              const bytes = Buffer.from(entry.content);
+              const expected = crypto.createHash('sha1').update(Buffer.from(`blob ${bytes.length}\0`)).update(bytes).digest('hex');
+              assert.equal(expected, entry.gitBlobSha);
+              const response = await fetch('https://api.github.com/repos/vellira-dev/vellira/git/blobs', { method: 'POST', headers, body: JSON.stringify({ content: entry.content, encoding: 'utf-8' }) });
+              assert.ok(response.ok, `Blob upload failed: ${response.status}`);
+              const blob = await response.json();
+              assert.equal(blob.sha, expected);
+              results.push({ path: entry.path, sha: blob.sha, mode: '100644', type: 'blob' });
+            }
+            console.log('REPAIR_BLOBS=' + JSON.stringify(results));
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, 'Generated blobs only. No branch, main, deployment or PR state was modified.\n\n```json\n' + JSON.stringify({ ...evidence, blobs: results }, null, 2) + '\n```\n');
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
