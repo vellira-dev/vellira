@@ -33,6 +33,13 @@ const reactInputApiSections: readonly ComponentApiSection[] = [
         description: 'Called with the next string value.',
       },
       {
+        name: 'variant',
+        type: "'outline' | 'filled' | 'soft' | 'bare'",
+        defaultValue: "'outline'",
+        description:
+          'Visual variant. `bare` preserves Input behavior while composition owns field chrome.',
+      },
+      {
         name: 'id',
         type: 'string',
         description:
@@ -160,12 +167,6 @@ const reactInputApiSections: readonly ComponentApiSection[] = [
         type: "'primary' | 'success' | 'danger' | 'neutral' | 'warning'",
         defaultValue: "'primary'",
         description: 'Semantic color palette for the control.',
-      },
-      {
-        name: 'variant',
-        type: "'outline' | 'filled' | 'soft'",
-        defaultValue: "'outline'",
-        description: 'Visual variant for the control chrome.',
       },
       {
         name: 'disabled',

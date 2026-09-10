@@ -16,6 +16,13 @@ const reactButtonApiSections: readonly ComponentApiSection[] = [
         description: 'Visible button content.',
       },
       {
+        name: 'appearance',
+        type: "'solid' | 'outline' | 'ghost' | 'soft' | 'link' | 'bare'",
+        defaultValue: "'solid'",
+        description:
+          'Visual appearance. `bare` preserves Button behavior while composition owns chrome and geometry.',
+      },
+      {
         name: 'iconStart',
         type: 'ReactNode',
         description: 'Icon rendered before the button content.',
@@ -60,12 +67,6 @@ const reactButtonApiSections: readonly ComponentApiSection[] = [
         type: "'primary' | 'neutral' | 'success' | 'warning' | 'danger'",
         defaultValue: "'primary'",
         description: 'Visual tone for the button action.',
-      },
-      {
-        name: 'appearance',
-        type: "'solid' | 'outline' | 'ghost' | 'soft' | 'link'",
-        defaultValue: "'solid'",
-        description: 'Visual style for the button surface.',
       },
       {
         name: 'size',
