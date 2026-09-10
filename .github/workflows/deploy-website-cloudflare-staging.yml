@@ -53,6 +53,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify R2 access and active predecessor archive before building
+        run: node apps/website/scripts/cloudflare-archive-preflight.mjs wrangler.jsonc
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Build website dependencies
         run: pnpm exec turbo run build --filter='@vellira-ui/website^...'
 

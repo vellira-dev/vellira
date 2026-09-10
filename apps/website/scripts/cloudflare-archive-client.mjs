@@ -18,6 +18,7 @@ export async function withRemoteArchive(config, operation) {
       configPath,
       JSON.stringify({
         name: `${config.name}-archive-upload`,
+        account_id: config.account_id ?? process.env.CLOUDFLARE_ACCOUNT_ID,
         compatibility_date: config.compatibility_date,
         r2_buckets: [{ ...binding, remote: true }],
       })

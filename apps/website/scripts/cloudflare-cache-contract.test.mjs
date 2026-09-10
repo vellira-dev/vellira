@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import http from 'node:http';
 import { respondMigrationError } from './cloudflare-migration-origin.mjs';
+import { preflightArchive } from './cloudflare-archive-preflight.mjs';
 import {
   readDeploymentConfig,
   validateDeploymentTarget,
@@ -54,7 +55,10 @@ test('migration origin errors stay in server logs, not the non-cacheable HTTP re
   const body = await response.text();
   assert.equal(response.status, 500);
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8');
+  assert.equal(
+    response.headers.get('content-type'),
+    'text/plain; charset=utf-8'
+  );
   assert.equal(body, 'Internal Server Error');
   assert.ok(!body.includes(error.message));
   assert.ok(!body.includes(error.stack));
@@ -84,6 +88,109 @@ test('installed Wrangler parses both actual deployment configs and rejects unsaf
     ])
       assert.throws(() => validateDeploymentTarget(changed));
   }
+});
+
+test('archive preflight rejects wrong accounts/origins, unavailable storage and invalid active identities', async () => {
+  const config = readDeploymentConfig(
+    path.resolve(import.meta.dirname, '../wrangler.jsonc')
+  );
+  const base = 'https://vellira-website-staging.vellira.workers.dev';
+  const accountId = 'a'.repeat(32);
+  const unreachable = async () =>
+    assert.fail('Must fail before network access');
+  const options = {
+    accountId,
+    log: () => {},
+    fetchImpl: unreachable,
+    openArchive: unreachable,
+  };
+  await assert.rejects(
+    preflightArchive(config, base, { ...options, accountId: '' }),
+    /explicitly select/
+  );
+  await assert.rejects(
+    preflightArchive({ ...config, account_id: 'b'.repeat(32) }, base, options),
+    /accounts differ/
+  );
+  await assert.rejects(
+    preflightArchive(
+      config,
+      'https://vellira-website.vellira.workers.dev',
+      options
+    ),
+    /match the target/
+  );
+  for (const [body, status] of [
+    ['unavailable', 503],
+    ['', 200],
+    ['<html>error</html>', 200],
+    ['../bad', 200],
+  ]) {
+    await assert.rejects(
+      preflightArchive(config, base, {
+        ...options,
+        fetchImpl: async () => new Response(body, { status }),
+      }),
+      /Cannot identify|Invalid active/
+    );
+  }
+  const unavailable = Object.assign(new Error('R2 bucket not found'), {
+    code: 10085,
+  });
+  await assert.rejects(
+    preflightArchive(config, base, {
+      ...options,
+      fetchImpl: async () => new Response('build-A'),
+      openArchive: async () => {
+        throw unavailable;
+      },
+    }),
+    (error) => error === unavailable
+  );
+});
+
+test('both deployment workflows run blocking archive preflight before builds and browser tests', async () => {
+  for (const target of ['staging', 'production']) {
+    const workflow = await fs.readFile(
+      path.resolve(
+        import.meta.dirname,
+        `../../../.github/workflows/deploy-website-cloudflare-${target}.yml`
+      ),
+      'utf8'
+    );
+    const steps = workflow.split(/^ {6}- /m).slice(1);
+    const preflightIndex = steps.findIndex((step) =>
+      step.includes('scripts/cloudflare-archive-preflight.mjs')
+    );
+    assert.ok(preflightIndex >= 0);
+    const preflight = steps[preflightIndex];
+    assert.ok(
+      !preflight.includes('continue-on-error:') && !preflight.includes('if:')
+    );
+    for (const required of [
+      'WEBSITE_URL:',
+      'secrets.CLOUDFLARE_ACCOUNT_ID',
+      'secrets.CLOUDFLARE_API_TOKEN',
+      target === 'staging' ? 'wrangler.jsonc' : 'wrangler.production.jsonc',
+    ])
+      assert.ok(preflight.includes(required));
+    for (const marker of [
+      'Build website dependencies',
+      'test:cloudflare-migration',
+    ]) {
+      assert.ok(
+        steps.findIndex((step) => step.includes(marker)) > preflightIndex
+      );
+    }
+  }
+  const deploy = await fs.readFile(
+    path.join(import.meta.dirname, 'cloudflare-deploy.mjs'),
+    'utf8'
+  );
+  assert.ok(
+    deploy.indexOf('await requireArchivedDeployment(bucket, previousBuildId)') <
+      deploy.indexOf('const assets = await archiveAssets')
+  );
 });
 
 test('installed CJS/ESM transport and negative cache option contract', () => {
@@ -309,6 +416,59 @@ test('immutable archive uses real R2 conditional writes, exact bytes and metadat
     await recordArchivedDeployment(bucket, 'build-A', archived);
     await recordArchivedDeployment(bucket, 'build-A', archived);
     await requireArchivedDeployment(bucket, 'build-A');
+    const config = readDeploymentConfig(
+      path.resolve(import.meta.dirname, '../wrangler.jsonc')
+    );
+    const accountId = 'a'.repeat(32);
+    const events = [];
+    const options = {
+      accountId,
+      log: (event) => events.push(JSON.parse(event)),
+      fetchImpl: async (url, init) => {
+        assert.equal(url.pathname, '/BUILD_ID');
+        assert.ok(url.searchParams.get('archive-preflight'));
+        assert.equal(init.cache, 'no-store');
+        assert.equal(init.headers['Cache-Control'], 'no-cache');
+        assert.equal(init.redirect, 'error');
+        assert.ok(init.signal instanceof AbortSignal);
+        return new Response('build-A');
+      },
+      openArchive: async (selectedConfig, operation) => {
+        assert.equal(selectedConfig.account_id, accountId);
+        // No write methods: preflight can only inspect the actual local R2 data.
+        return operation({
+          head: (key) => bucket.head(key),
+          get: (key) => bucket.get(key),
+        });
+      },
+    };
+    const base = 'https://vellira-website-staging.vellira.workers.dev';
+    assert.equal(
+      (await preflightArchive(config, base, options)).previousBuildId,
+      'build-A'
+    );
+    assert.equal(events.at(-1).event, 'archive-preflight-passed');
+    await assert.rejects(
+      preflightArchive(config, base, {
+        ...options,
+        fetchImpl: async () => new Response('unarchived-build'),
+      }),
+      /has not been archived/
+    );
+    assert.equal(events.at(-1).event, 'archive-preflight-storage-readable');
+    // A present manifest is not sufficient: missing graph bytes must fail too.
+    const archivedObject = archived[0].key;
+    await assert.rejects(
+      preflightArchive(config, base, {
+        ...options,
+        openArchive: async (_config, operation) =>
+          operation({
+            head: (key) => bucket.head(key),
+            get: (key) => (key === archivedObject ? null : bucket.get(key)),
+          }),
+      }),
+      /Archive object missing/
+    );
     await assert.rejects(
       recordArchivedDeployment(bucket, 'build-A', [...archived, ...archived]),
       /identity reused/

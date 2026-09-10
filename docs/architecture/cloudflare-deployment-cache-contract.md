@@ -98,6 +98,18 @@ the website's `deploy:opennext` script). Deployment workflows retain their
 existing staging/production boundaries. Production remains a manually confirmed,
 main-only isolated candidate: this change attaches no public domain.
 
+Before step 1, both deployment workflows run `cloudflare-archive-preflight.mjs`
+immediately after dependency installation. It requires an explicit
+`CLOUDFLARE_ACCOUNT_ID`, validates the target origin/config, reads a cache-busted
+active `/BUILD_ID` with a timeout and no redirects, opens the same remote R2
+binding used by the uploader, and calls the existing `requireArchivedDeployment`
+to verify the predecessor's complete bytes and metadata. It emits account,
+Worker, bucket and predecessor identity diagnostics, but never writes archive
+objects or activates traffic. Missing R2, denied access, missing manifests and
+incomplete/corrupt graphs stop before website builds or browser tests. This is
+not a cached authorization to deploy: the activation-time gate below still
+re-reads and verifies the active predecessor.
+
 1. Build with `VELLIRA_BUILD_ID=<full Git SHA>-<GitHub run ID>-<run attempt>`.
    A deployable build without this explicit identity fails. When GitHub identity
    variables are present, each part must agree. Local Next builds get a unique
@@ -167,6 +179,21 @@ node apps/website/scripts/cloudflare-archive-backfill.mjs \
 This command verifies the supplied artifact's BUILD_ID and stores only immutable
 assets and an archive manifest. It never activates traffic. An unknown active
 identity is a blocker, not permission to skip predecessor retention.
+
+To check prerequisites without building or deploying, set `WEBSITE_URL` and
+`CLOUDFLARE_ACCOUNT_ID` (plus the CI API token when not using Wrangler OAuth):
+
+```sh
+node apps/website/scripts/cloudflare-archive-preflight.mjs wrangler.jsonc
+```
+
+Cloudflare control-plane R2 errors and remote-binding errors can differ: for
+example, the 2026-09-10 staging investigation saw control-plane `10042` (enable
+R2) and preview-binding `10085` (bucket not found) for the same account. A Worker
+deployment permission is not proof of available R2 storage. Provisioning and
+initial backfill remain explicit operations; preflight never creates a bucket
+or accepts a missing predecessor. The checks must run under the deployment's
+actual CI credentials; local OAuth access alone does not establish CI access.
 
 Rollback must retain this archive/freshness/transport architecture. Rolling back
 to a pre-contract Worker would restore the old failure mode (or cookie redirect).
