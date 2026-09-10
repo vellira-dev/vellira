@@ -66,13 +66,13 @@
   "devDependencies": {
     "@types/react": "^19.2.3",
     "@storybook/react-native": "^10.5.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^5.0.0",
     "jsdom": "^28.1.0",
     "react": "19.2.3",
     "storybook": "^10.5.0",
     "tsdown": "^0.22.13",
     "typescript": "6.0.3",
-    "vitest": "^4.1.10",
+    "vitest": "^5.0.0",
     "@types/react-dom": "^19.2.3",
     "react-dom": "19.2.3"
   },
