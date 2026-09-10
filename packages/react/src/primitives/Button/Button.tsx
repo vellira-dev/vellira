@@ -95,6 +95,7 @@ export const Button = forwardRef<
     );
 
     const isDisabled = disabled || loading;
+    const isBare = appearance === 'bare';
     const controlSize = controlSizes[size];
 
     const sizeStyle: ButtonSizeStyle = {
@@ -117,11 +118,11 @@ export const Button = forwardRef<
     const resolvedRel =
       target === '_blank' && !rel ? 'noreferrer noopener' : rel;
     const resolvedClassName = cn(
-      styles.button,
-      styles[color],
-      styles[appearance],
-      styles[size],
-      styles[shape],
+      isBare ? styles.bare : styles.button,
+      !isBare ? styles[color] : null,
+      !isBare ? styles[appearance] : null,
+      !isBare ? styles[size] : null,
+      !isBare ? styles[shape] : null,
       className,
       {
         [styles.disabled]: isDisabled,
@@ -179,15 +180,25 @@ export const Button = forwardRef<
         {!loading && iconStart && (
           <span className={styles.icon}>{iconStart}</span>
         )}
-        {content && !iconOnly && (
-          <span className={styles.label} data-measure={labelMeasure}>
-            <span className={styles.labelText}>{content}</span>
-          </span>
-        )}
-        {badge && !iconOnly && <span className={styles.badge}>{badge}</span>}
-        {shortcut && !iconOnly && (
-          <span className={styles.shortcut}>{shortcut}</span>
-        )}
+        {content &&
+          !iconOnly &&
+          (isBare ? (
+            content
+          ) : (
+            <span className={styles.label} data-measure={labelMeasure}>
+              <span className={styles.labelText}>{content}</span>
+            </span>
+          ))}
+        {badge &&
+          !iconOnly &&
+          (isBare ? badge : <span className={styles.badge}>{badge}</span>)}
+        {shortcut &&
+          !iconOnly &&
+          (isBare ? (
+            shortcut
+          ) : (
+            <span className={styles.shortcut}>{shortcut}</span>
+          ))}
         {!loading && iconEnd && <span className={styles.icon}>{iconEnd}</span>}
       </>
     );
