@@ -9,7 +9,9 @@ import { checkTokenFactoryConventions } from './factory-convention';
 const root = process.cwd();
 
 function copyFactoryTree() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-factory-audit-'));
+  const fixture = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-factory-audit-')
+  );
   const source = path.join(root, 'packages/tokens/src/factories');
   const target = path.join(fixture, 'packages/tokens/src/factories');
   fs.mkdirSync(path.dirname(target), { recursive: true });

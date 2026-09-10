@@ -41,7 +41,10 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
     const expectedSource = `packages/tokens/src/factories/components/${factory.name}.ts`;
     expectedSources.add(expectedSource);
 
-    if (!factoryNamePattern.test(factory.name) || factory.name.includes('Palette')) {
+    if (
+      !factoryNamePattern.test(factory.name) ||
+      factory.name.includes('Palette')
+    ) {
       findings.push(
         finding(
           'invalid-canonical-factory-name',
@@ -79,10 +82,7 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
     .readdirSync(componentsRoot, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
     .map((entry) =>
-      path.posix.join(
-        'packages/tokens/src/factories/components',
-        entry.name
-      )
+      path.posix.join('packages/tokens/src/factories/components', entry.name)
     );
 
   for (const source of componentFiles) {
