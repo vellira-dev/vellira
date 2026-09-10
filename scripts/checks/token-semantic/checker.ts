@@ -8,6 +8,7 @@ import type { FindingInput, RuleAdapter, RuleResult } from './contract';
 import { checkTokenCssReferences } from './css-repository';
 import { checkTokenFactoryConventions } from './factory-convention';
 import { checkTokenPlatformBoundary } from './platform-boundary';
+import { checkTokenStateVocabulary } from './state-vocabulary';
 import { checkTokenValueKinds } from './value-kind-repository';
 import { checkTokenVisualPreservation } from './visual-preservation';
 
@@ -57,6 +58,10 @@ export function checkTokenSemantics(root: string) {
   }
   const adapters: RuleAdapter[] = [
     { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
+    {
+      ruleId: 'tokens.state-vocabulary',
+      run: () => checkTokenStateVocabulary(root),
+    },
     {
       ruleId: 'tokens.factory-convention',
       run: () => checkTokenFactoryConventions(root),
