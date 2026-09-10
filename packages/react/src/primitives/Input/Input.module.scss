@@ -470,6 +470,92 @@
   color: var(--input-icon-inverse);
 }
 
+.bare {
+  --input-current-default-bg: transparent;
+  --input-current-default-fg: var(--text-primary);
+  --input-current-default-border: transparent;
+  --input-current-default-placeholder: var(--text-muted);
+  --input-current-default-icon: var(--input-icon-muted);
+  --input-current-hover-bg: transparent;
+  --input-current-hover-fg: var(--text-primary);
+  --input-current-hover-border: transparent;
+  --input-current-hover-placeholder: var(--text-muted);
+  --input-current-hover-icon: var(--input-icon-primary);
+  --input-current-focus-bg: transparent;
+  --input-current-focus-fg: var(--text-primary);
+  --input-current-focus-border: transparent;
+  --input-current-focus-placeholder: var(--text-muted);
+  --input-current-focus-icon: var(--input-icon-primary);
+  --input-current-ring: var(--focus-ring-color);
+
+  .input {
+    height: auto;
+    padding: 0;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .input:not(:disabled, :focus-visible, :read-only):hover,
+  .input:focus-visible {
+    color: var(--text-primary);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .input:disabled {
+    color: var(--input-disabled-fg);
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .input:read-only:not(:disabled) {
+    color: var(--input-read-only-fg);
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .hasLeftAdornment .input {
+    padding-left: calc(var(--input-icon-size) + var(--space-3));
+  }
+
+  .hasRightAdornment .input {
+    padding-right: calc(var(--space-8) + var(--space-1));
+  }
+
+  .startAdornment {
+    left: 0;
+    color: var(--input-icon-muted);
+  }
+
+  .endSlot {
+    right: 0;
+  }
+
+  .clearButton {
+    width: calc(var(--space-6) + var(--space-1));
+    height: calc(var(--space-6) + var(--space-1));
+    color: var(--text-muted);
+  }
+
+  .clearButton svg {
+    width: var(--space-4);
+    height: var(--space-4);
+  }
+
+  .clearButton:not(:disabled):hover {
+    color: var(--text-primary);
+    background-color: var(--surface-hover);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .input,
   .clearButton,

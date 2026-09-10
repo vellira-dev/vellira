@@ -1,4 +1,4 @@
-import type { BaseButtonProps } from '@vellira-ui/types';
+import type { BaseButtonProps, ButtonAppearance } from '@vellira-ui/types';
 import type {
   AnchorHTMLAttributes,
   ButtonHTMLAttributes,
@@ -7,7 +7,7 @@ import type {
 
 export interface ButtonProps
   extends
-    BaseButtonProps,
+    Omit<BaseButtonProps, 'appearance'>,
     Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color'>,
     Pick<
       AnchorHTMLAttributes<HTMLAnchorElement>,
@@ -15,6 +15,8 @@ export interface ButtonProps
     > {
   /** Visible button content. */
   children?: ReactNode;
+  /** Visual appearance. `bare` preserves Button behavior while composition owns chrome and geometry. */
+  appearance?: ButtonAppearance | 'bare';
   /** Icon rendered before the button content. */
   iconStart?: ReactNode;
   /** Icon rendered after the button content. */
