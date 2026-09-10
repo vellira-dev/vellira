@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { legitimatePersistentActiveStateDomainsV1 } from '../../../packages/tokens/src/token-architecture';
@@ -34,6 +38,25 @@ describe('state vocabulary audit adapter', () => {
         selectPattern!
       )
     ).toBe(false);
+  });
+
+  it('does not scan negative regression fixtures as production sources', () => {
+    const fixture = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'vellira-state-audit-')
+    );
+    try {
+      const fixturePath = path.join(
+        fixture,
+        'scripts/generators/component/templates/component-tokens.test.ts'
+      );
+      fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
+      fs.writeFileSync(fixturePath, 'pressed: control.active\n');
+
+      const result = checkTokenStateVocabulary(fixture);
+      expect(result.findings).toEqual([]);
+    } finally {
+      fs.rmSync(fixture, { recursive: true, force: true });
+    }
   });
 
   it.each([
