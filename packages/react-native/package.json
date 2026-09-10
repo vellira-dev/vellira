@@ -65,11 +65,11 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.3",
-    "@storybook/react-native": "^10.5.0",
+    "@storybook/react-native": "^10.6.0",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^28.1.0",
     "react": "19.2.8",
-    "storybook": "^10.5.0",
+    "storybook": "^10.6.0",
     "tsdown": "^0.22.13",
     "typescript": "6.0.3",
     "vitest": "^4.1.10",
