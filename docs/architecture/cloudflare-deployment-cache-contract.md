@@ -207,6 +207,15 @@ does not expose its global cookie-accept policy. WebKit/Safari bfcache and Safar
 real Block All Cookies setting require separately recorded real-Safari evidence
 if not observed in CI. A normal back/forward traversal is not bfcache proof.
 
+The dedicated bfcache case first waits for network quiescence, without routing
+interception. A Linux WebKit run completed the cache/asset transition assertions
+but reported a prefetch access-control error while its document was immediately
+unloaded. Do not silently filter this error: request/failure/navigation timestamps
+are recorded, the zero-pageerror assertion remains, and rapid unload with in-flight
+prefetch remains an additional cancellation/Safari investigation, not proven fixed
+by the archive. The CI browser container uses Playwright's recommended UID 1001;
+Firefox refuses root execution with the runner-owned home directory.
+
 Diagnostics distinguish CDP `fromDiskCache`, `requestServedFromCache`,
 `fromServiceWorker`, initiating requests, first bad asset and generation headers.
 Non-Chromium reports do not invent unavailable CDP fields. A cached `cf-ray` or

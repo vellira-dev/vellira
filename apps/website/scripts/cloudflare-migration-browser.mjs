@@ -96,12 +96,50 @@ for (const name of (
   let context;
   const capture = async (page, label) => {
     page.on('pageerror', (error) =>
-      report.events.push({ kind: 'pageerror', label, error: String(error) })
+      report.events.push({
+        kind: 'pageerror',
+        label,
+        at: Date.now(),
+        pageUrl: page.url(),
+        error: String(error),
+      })
     );
+    page.on('request', (request) =>
+      report.events.push({
+        kind: 'request',
+        label,
+        at: Date.now(),
+        pageUrl: page.url(),
+        url: request.url(),
+        document: request.isNavigationRequest(),
+        resourceType: request.resourceType(),
+      })
+    );
+    page.on('requestfailed', (request) =>
+      report.events.push({
+        kind: 'requestfailed',
+        label,
+        at: Date.now(),
+        pageUrl: page.url(),
+        url: request.url(),
+        error: request.failure()?.errorText,
+      })
+    );
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame())
+        report.events.push({
+          kind: 'document-navigation',
+          label,
+          at: Date.now(),
+          url: frame.url(),
+        });
+    });
     page.on('response', (response) => {
       report.events.push({
         kind: 'response',
         label,
+        at: Date.now(),
+        pageUrl: page.url(),
         url: response.url(),
         status: response.status(),
         headers: response.headers(),
@@ -360,6 +398,10 @@ for (const name of (
 
     await page.goto(origin.url);
     await ready(page);
+    // Establish a quiescent document for the bfcache case. This is a network
+    // observation, not interception/cache disabling. Rapid unload during an
+    // unfinished prefetch is a separate cancellation scenario (see contract).
+    await page.waitForLoadState('networkidle');
     await page.goto(`${origin.url}/outside`);
     await origin.activate('B');
     await page.goBack({ waitUntil: 'commit' });
