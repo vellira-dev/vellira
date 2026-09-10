@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import ts from 'typescript';
+
 import { canonicalCssVariableNames } from '../../design-resources/authority';
 import type { FindingInput, RuleResult } from './contract';
 import { auditCssReferences, declaredCssVariables } from './css-references';
@@ -45,16 +47,32 @@ function componentBoundary(sourcePath: string): ComponentBoundary | null {
 }
 
 function runtimeCustomPropertyAssignments(
+  sourcePath: string,
   source: string,
   prefix: string
 ): ReadonlySet<string> {
   const variables = new Set<string>();
-  for (const match of source.matchAll(
-    /['"](--[\w-]+)['"]\s*:\s*(?!string\b|number\b|boolean\b|unknown\b|never\b|undefined\b)/g
-  )) {
-    const variable = match[1];
-    if (variable?.startsWith(prefix)) variables.add(variable);
+  const sourceFile = ts.createSourceFile(
+    sourcePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    sourcePath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isPropertyAssignment(node) &&
+      (ts.isStringLiteral(node.name) ||
+        ts.isNoSubstitutionTemplateLiteral(node.name)) &&
+      node.name.text.startsWith(prefix)
+    ) {
+      variables.add(node.name.text);
+    }
+    ts.forEachChild(node, visit);
   }
+
+  visit(sourceFile);
   return variables;
 }
 
@@ -106,8 +124,13 @@ function componentProviderVariables(
         ) {
           continue;
         }
+        const runtimeSourcePath = path
+          .relative(root, absolutePath)
+          .split(path.sep)
+          .join('/');
         const source = fs.readFileSync(absolutePath, 'utf8');
         for (const variable of runtimeCustomPropertyAssignments(
+          runtimeSourcePath,
           source,
           prefix
         )) {
