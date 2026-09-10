@@ -17,15 +17,25 @@ const directory = path.resolve(
 );
 await fs.mkdir(directory, { recursive: true });
 const generations = await buildGenerations(directory);
+function git(...args) {
+  const result = spawnSync('git', args, { encoding: 'utf8' });
+  assert.equal(
+    result.status,
+    0,
+    `Cannot establish evidence provenance: ${result.stderr}`
+  );
+  return result.stdout.trim();
+}
 const provenance = {
-  head: spawnSync('git', ['rev-parse', 'HEAD'], {
-    encoding: 'utf8',
-  }).stdout.trim(),
-  worktreeClean:
-    spawnSync('git', ['status', '--porcelain'], {
-      encoding: 'utf8',
-    }).stdout.trim() === '',
+  head: git('rev-parse', 'HEAD'),
+  worktreeClean: git('status', '--porcelain') === '',
 };
+assert.match(provenance.head, /^[a-f0-9]{40}$/);
+if (process.env.CI === 'true')
+  assert.ok(
+    provenance.worktreeClean,
+    'Migration CI requires a clean exact-head checkout'
+  );
 const engines = { chromium, firefox, webkit };
 const reports = [];
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
