@@ -123,6 +123,60 @@ describe('maintained token CSS reference scan', () => {
     ]);
   });
 
+  it('resolves runtime custom-property assignments only inside the owning React component', () => {
+    const { root, write } = fixture();
+    write(
+      'packages/tokens/src/generated/token-types.ts',
+      "export const cssVariableNames = ['--surface-canvas', '--input-primary'] as const;\n"
+    );
+    write(
+      'packages/react/src/primitives/Input/Input.tsx',
+      "const style = { '--input-height': '40px' };\n"
+    );
+    write(
+      'packages/react/src/primitives/Input/Input.module.scss',
+      '.input { height: var(--input-height); }'
+    );
+    write(
+      'packages/react/src/components/Other/Other.module.scss',
+      '.other { height: var(--input-height); }'
+    );
+
+    const report = checkTokenCssReferences(root);
+    expect(report.findings).toEqual([
+      expect.objectContaining({
+        code: 'missing-token-variable',
+        sourcePath: 'packages/react/src/components/Other/Other.module.scss',
+        tokenPath: '--input-height',
+      }),
+    ]);
+  });
+
+  it('does not treat a type-only custom-property declaration as a runtime provider', () => {
+    const { root, write } = fixture();
+    write(
+      'packages/tokens/src/generated/token-types.ts',
+      "export const cssVariableNames = ['--surface-canvas', '--input-primary'] as const;\n"
+    );
+    write(
+      'packages/react/src/primitives/Input/Input.tsx',
+      "type SizeStyle = { '--input-height': string };\n"
+    );
+    write(
+      'packages/react/src/primitives/Input/Input.module.scss',
+      '.input { height: var(--input-height); }'
+    );
+
+    const report = checkTokenCssReferences(root);
+    expect(report.findings).toEqual([
+      expect.objectContaining({
+        code: 'missing-token-variable',
+        sourcePath: 'packages/react/src/primitives/Input/Input.module.scss',
+        tokenPath: '--input-height',
+      }),
+    ]);
+  });
+
   it('rejects an empty registry before scanning maintained roots', () => {
     const { root, write } = fixture();
     write(

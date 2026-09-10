@@ -23,35 +23,105 @@ function kebabCase(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-function componentRootProviderVariables(
-  root: string,
-  sourcePath: string
-): ReadonlySet<string> {
+type ComponentBoundary = {
+  rootPath: string;
+  componentName: string;
+  nestedStyle: boolean;
+};
+
+function componentBoundary(sourcePath: string): ComponentBoundary | null {
   const match = sourcePath.match(
     /^packages\/react\/src\/(components|primitives|patterns)\/([^/]+)\/(.+)$/
   );
-  if (!match) return new Set();
+  if (!match) return null;
 
   const [, category, componentName, remainder] = match;
-  if (!category || !componentName || !remainder.includes('/')) return new Set();
+  if (!category || !componentName || !remainder) return null;
+  return {
+    rootPath: `packages/react/src/${category}/${componentName}`,
+    componentName,
+    nestedStyle: remainder.includes('/'),
+  };
+}
 
-  const componentRoot = `packages/react/src/${category}/${componentName}`;
-  const providerCandidates = [
-    `${componentRoot}/${componentName}.module.scss`,
-    `${componentRoot}/${componentName}.module.css`,
-  ];
-  const prefix = `--${kebabCase(componentName)}-`;
+function runtimeCustomPropertyAssignments(
+  source: string,
+  prefix: string
+): ReadonlySet<string> {
+  const variables = new Set<string>();
+  for (const match of source.matchAll(
+    /['"](--[\w-]+)['"]\s*:\s*(?!string\b|number\b|boolean\b|unknown\b|never\b|undefined\b)/g
+  )) {
+    const variable = match[1];
+    if (variable?.startsWith(prefix)) variables.add(variable);
+  }
+  return variables;
+}
+
+function componentProviderVariables(
+  root: string,
+  sourcePath: string,
+  runtimeCache: Map<string, ReadonlySet<string>>
+): ReadonlySet<string> {
+  const boundary = componentBoundary(sourcePath);
+  if (!boundary) return new Set();
+
+  const prefix = `--${kebabCase(boundary.componentName)}-`;
   const variables = new Set<string>();
 
-  for (const providerPath of providerCandidates) {
-    const absolutePath = path.join(root, providerPath);
-    if (!fs.existsSync(absolutePath)) continue;
-    const providerSource = fs.readFileSync(absolutePath, 'utf8');
-    for (const variable of declaredCssVariables(providerPath, providerSource)) {
-      if (variable.startsWith(prefix)) variables.add(variable);
+  if (boundary.nestedStyle) {
+    for (const providerPath of [
+      `${boundary.rootPath}/${boundary.componentName}.module.scss`,
+      `${boundary.rootPath}/${boundary.componentName}.module.css`,
+    ]) {
+      const absolutePath = path.join(root, providerPath);
+      if (!fs.existsSync(absolutePath)) continue;
+      const providerSource = fs.readFileSync(absolutePath, 'utf8');
+      for (const variable of declaredCssVariables(
+        providerPath,
+        providerSource
+      )) {
+        if (variable.startsWith(prefix)) variables.add(variable);
+      }
     }
   }
 
+  let runtimeVariables = runtimeCache.get(boundary.rootPath);
+  if (!runtimeVariables) {
+    const discovered = new Set<string>();
+    const componentRoot = path.join(root, boundary.rootPath);
+
+    function walkRuntimeSources(directory: string) {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const absolutePath = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          walkRuntimeSources(absolutePath);
+          continue;
+        }
+        if (
+          !entry.isFile() ||
+          !/\.(ts|tsx)$/.test(entry.name) ||
+          /\.(?:test|stories)\.(?:ts|tsx)$/.test(entry.name) ||
+          entry.name.endsWith('.d.ts')
+        ) {
+          continue;
+        }
+        const source = fs.readFileSync(absolutePath, 'utf8');
+        for (const variable of runtimeCustomPropertyAssignments(
+          source,
+          prefix
+        )) {
+          discovered.add(variable);
+        }
+      }
+    }
+
+    walkRuntimeSources(componentRoot);
+    runtimeVariables = discovered;
+    runtimeCache.set(boundary.rootPath, runtimeVariables);
+  }
+
+  for (const variable of runtimeVariables) variables.add(variable);
   return variables;
 }
 
@@ -63,6 +133,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
     );
   }
   const findings: FindingInput[] = [];
+  const runtimeProviderCache = new Map<string, ReadonlySet<string>>();
   let checked = 0;
 
   function walk(
@@ -102,9 +173,10 @@ export function checkTokenCssReferences(root: string): RuleResult {
       if (!entry.isFile() || !/\.(css|scss)$/.test(entry.name)) continue;
       if (sourcePath === 'packages/tokens/src/generated/tokens.css') continue;
       const source = fs.readFileSync(absolutePath, 'utf8');
-      const providerVariables = componentRootProviderVariables(
+      const providerVariables = componentProviderVariables(
         root,
-        sourcePath
+        sourcePath,
+        runtimeProviderCache
       );
       checked += 1;
       findings.push(
@@ -127,7 +199,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS static var() references in apps/packages with component-root inheritance providers for nested React component styles. Imported providers, application-level providers, and dynamic references still require integration.',
+      'Authored CSS/SCSS static var() references in apps/packages with component-root inheritance and runtime CSSProperties providers within the same React component boundary. Imported providers, application-level providers, and dynamic references still require integration.',
     checked,
     findings,
   };
