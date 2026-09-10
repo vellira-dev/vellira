@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { auditCssReferences, maskCssNonCode } from './css-references';
+import {
+  auditCssReferences,
+  declaredCssVariables,
+  maskCssNonCode,
+} from './css-references';
 
 const variables = new Set([
   '--surface-canvas',
@@ -18,6 +22,23 @@ describe('token semantic CSS references', () => {
     const source =
       '.a { color: var(--text-primary); box-shadow: var(--popover-content-shadow-web); }';
     expect(scan(source)).toEqual([]);
+  });
+
+  it('accepts an explicitly proven provider variable', () => {
+    expect(
+      auditCssReferences(
+        'packages/react/src/components/Tabs/Trigger/style.scss',
+        '.a { color: var(--tabs-trigger-default-fg); }',
+        new Set(['--tabs-primary-trigger-default-fg']),
+        new Set(['--tabs-trigger-default-fg'])
+      )
+    ).toEqual([]);
+  });
+
+  it('extracts static declarations without reading comments or strings', () => {
+    expect([
+      ...declaredCssVariables('a.scss', '.a { --owned: 1; } // --fake: 2'),
+    ]).toEqual(['--owned']);
   });
 
   it('rejects removed tokens even with fallbacks', () => {

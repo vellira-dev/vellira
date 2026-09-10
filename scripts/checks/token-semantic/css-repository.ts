@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { canonicalCssVariableNames } from '../../design-resources/authority';
 import type { FindingInput, RuleResult } from './contract';
-import { auditCssReferences } from './css-references';
+import { auditCssReferences, declaredCssVariables } from './css-references';
 
 const ignoredDirectories = new Set([
   '.git',
@@ -18,6 +18,42 @@ const ignoredDirectories = new Set([
   'storybook-static',
   'vendor',
 ]);
+
+function kebabCase(value: string): string {
+  return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+function componentRootProviderVariables(
+  root: string,
+  sourcePath: string
+): ReadonlySet<string> {
+  const match = sourcePath.match(
+    /^packages\/react\/src\/(components|primitives|patterns)\/([^/]+)\/(.+)$/
+  );
+  if (!match) return new Set();
+
+  const [, category, componentName, remainder] = match;
+  if (!category || !componentName || !remainder.includes('/')) return new Set();
+
+  const componentRoot = `packages/react/src/${category}/${componentName}`;
+  const providerCandidates = [
+    `${componentRoot}/${componentName}.module.scss`,
+    `${componentRoot}/${componentName}.module.css`,
+  ];
+  const prefix = `--${kebabCase(componentName)}-`;
+  const variables = new Set<string>();
+
+  for (const providerPath of providerCandidates) {
+    const absolutePath = path.join(root, providerPath);
+    if (!fs.existsSync(absolutePath)) continue;
+    const providerSource = fs.readFileSync(absolutePath, 'utf8');
+    for (const variable of declaredCssVariables(providerPath, providerSource)) {
+      if (variable.startsWith(prefix)) variables.add(variable);
+    }
+  }
+
+  return variables;
+}
 
 export function checkTokenCssReferences(root: string): RuleResult {
   const variables = canonicalCssVariableNames(root);
@@ -66,9 +102,18 @@ export function checkTokenCssReferences(root: string): RuleResult {
       if (!entry.isFile() || !/\.(css|scss)$/.test(entry.name)) continue;
       if (sourcePath === 'packages/tokens/src/generated/tokens.css') continue;
       const source = fs.readFileSync(absolutePath, 'utf8');
+      const providerVariables = componentRootProviderVariables(
+        root,
+        sourcePath
+      );
       checked += 1;
       findings.push(
-        ...auditCssReferences(sourcePath, source, canonicalVariables)
+        ...auditCssReferences(
+          sourcePath,
+          source,
+          canonicalVariables,
+          providerVariables
+        )
       );
     }
   }
@@ -82,7 +127,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS static var() references in apps/packages; provider/import ownership and dynamic references still require integration.',
+      'Authored CSS/SCSS static var() references in apps/packages with component-root inheritance providers for nested React component styles. Imported providers, application-level providers, and dynamic references still require integration.',
     checked,
     findings,
   };

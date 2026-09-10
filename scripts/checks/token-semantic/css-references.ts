@@ -59,6 +59,16 @@ function namespace(variable: string): string {
   return variable.slice(2).split('-')[0] ?? '';
 }
 
+export function declaredCssVariables(
+  sourcePath: string,
+  source: string
+): ReadonlySet<string> {
+  const code = maskCssNonCode(source, sourcePath.endsWith('.scss'));
+  return new Set(
+    [...code.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/g)].map((match) => match[1])
+  );
+}
+
 /** Read the whole name, never a static prefix of a Sass interpolation. */
 function readVariableArgument(code: string, start: number): string {
   let braces = 0;
@@ -83,16 +93,15 @@ function readVariableArgument(code: string, start: number): string {
 export function auditCssReferences(
   sourcePath: string,
   source: string,
-  canonicalVariables: ReadonlySet<string>
+  canonicalVariables: ReadonlySet<string>,
+  providerVariables: ReadonlySet<string> = new Set()
 ): FindingInput[] {
   if (canonicalVariables.size === 0) {
     throw new Error('Canonical CSS-variable authority is empty.');
   }
   const code = maskCssNonCode(source, sourcePath.endsWith('.scss'));
   const prefixes = new Set([...canonicalVariables].map(namespace));
-  const declared = new Set(
-    [...code.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/g)].map((match) => match[1])
-  );
+  const declared = declaredCssVariables(sourcePath, source);
   const findings: FindingInput[] = [];
 
   for (const match of code.matchAll(/(?<![\w-])var\(\s*/gi)) {
@@ -122,7 +131,9 @@ export function auditCssReferences(
       });
       continue;
     }
-    if (canonicalVariables.has(variable)) continue;
+    if (canonicalVariables.has(variable) || providerVariables.has(variable)) {
+      continue;
+    }
     const tokenNamespace = prefixes.has(namespace(variable));
     // A declaration in one file never exempts consumers in unrelated files.
     // Unknown token-prefixed declarations still need ownership review.

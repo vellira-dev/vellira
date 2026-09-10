@@ -68,6 +68,61 @@ describe('maintained token CSS reference scan', () => {
     }
   );
 
+  it('resolves component-root custom properties only for nested styles of the same React component', () => {
+    const { root, write } = fixture();
+    write(
+      'packages/tokens/src/generated/token-types.ts',
+      "export const cssVariableNames = ['--surface-canvas', '--tabs-primary-trigger-default-fg'] as const;\n"
+    );
+    write(
+      'packages/react/src/components/Tabs/Tabs.module.scss',
+      '.tabs { --tabs-trigger-default-fg: var(--tabs-primary-trigger-default-fg); }'
+    );
+    write(
+      'packages/react/src/components/Tabs/Trigger/TabsTrigger.module.scss',
+      '.trigger { color: var(--tabs-trigger-default-fg); }'
+    );
+    write(
+      'packages/react/src/components/Other/Other.module.scss',
+      '.other { color: var(--tabs-trigger-default-fg); }'
+    );
+
+    const report = checkTokenCssReferences(root);
+    expect(report.findings).toEqual([
+      expect.objectContaining({
+        code: 'missing-token-variable',
+        sourcePath: 'packages/react/src/components/Other/Other.module.scss',
+        tokenPath: '--tabs-trigger-default-fg',
+      }),
+    ]);
+  });
+
+  it('does not expose a component-root provider to its own unrelated namespace', () => {
+    const { root, write } = fixture();
+    write(
+      'packages/tokens/src/generated/token-types.ts',
+      "export const cssVariableNames = ['--surface-canvas', '--tabs-primary'] as const;\n"
+    );
+    write(
+      'packages/react/src/components/Tabs/Tabs.module.scss',
+      '.tabs { --other-local: 1; }'
+    );
+    write(
+      'packages/react/src/components/Tabs/Trigger/TabsTrigger.module.scss',
+      '.trigger { color: var(--other-local); }'
+    );
+
+    const report = checkTokenCssReferences(root);
+    expect(report.findings).toEqual([
+      expect.objectContaining({
+        code: 'unclassified-css-variable',
+        sourcePath:
+          'packages/react/src/components/Tabs/Trigger/TabsTrigger.module.scss',
+        tokenPath: '--other-local',
+      }),
+    ]);
+  });
+
   it('rejects an empty registry before scanning maintained roots', () => {
     const { root, write } = fixture();
     write(
