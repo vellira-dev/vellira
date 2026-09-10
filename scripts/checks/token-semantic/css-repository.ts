@@ -29,7 +29,10 @@ export function checkTokenCssReferences(root: string): RuleResult {
   const findings: FindingInput[] = [];
   let checked = 0;
 
-  function walk(directory: string): void {
+  function walk(
+    directory: string,
+    canonicalVariables: ReadonlySet<string>
+  ): void {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (ignoredDirectories.has(entry.name)) continue;
       const absolutePath = path.join(directory, entry.name);
@@ -57,18 +60,22 @@ export function checkTokenCssReferences(root: string): RuleResult {
         continue;
       }
       if (entry.isDirectory()) {
-        walk(absolutePath);
+        walk(absolutePath, canonicalVariables);
         continue;
       }
       if (!entry.isFile() || !/\.(css|scss)$/.test(entry.name)) continue;
       if (sourcePath === 'packages/tokens/src/generated/tokens.css') continue;
       const source = fs.readFileSync(absolutePath, 'utf8');
       checked += 1;
-      findings.push(...auditCssReferences(sourcePath, source, variables));
+      findings.push(
+        ...auditCssReferences(sourcePath, source, canonicalVariables)
+      );
     }
   }
   // Missing maintained roots are errors, never an empty successful scan.
-  for (const name of ['apps', 'packages']) walk(path.join(root, name));
+  for (const name of ['apps', 'packages']) {
+    walk(path.join(root, name), variables);
+  }
   if (checked === 0) {
     throw new Error('No maintained CSS/SCSS files were scanned.');
   }
