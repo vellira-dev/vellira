@@ -70,8 +70,7 @@ describe('token semantic CSS references', () => {
   });
 
   it('ignores SCSS line comments', () => {
-    const source =
-      '// var(--text-missing)\n.a { color: var(--text-primary); }';
+    const source = '// var(--text-missing)\na { color: var(--text-primary) }';
     expect(scan(source, 'apps/probe/style.scss')).toEqual([]);
   });
 
