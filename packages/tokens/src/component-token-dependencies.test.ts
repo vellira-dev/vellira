@@ -84,13 +84,15 @@ describe('component token dependency contract', () => {
           ).toBeDefined();
         }
 
-        const usesInputPalette = source.includes('createInputColorPalette');
+        const usesExternalInputPalette =
+          entry.component !== 'input' &&
+          source.includes('createInputColorPalette');
         const inputPaletteEdge = allowedComponentFactoryDependencyEdgesV1.find(
           ({ from, symbol }) =>
             from === entry.component && symbol === 'createInputColorPalette'
         );
 
-        expect(usesInputPalette, `${theme}/${entry.file}`).toBe(
+        expect(usesExternalInputPalette, `${theme}/${entry.file}`).toBe(
           Boolean(inputPaletteEdge)
         );
       }
