@@ -76,7 +76,9 @@ describe('CodeShowcase canonical consumer contract', () => {
   it('has no remaining findings or exceptions in the maintained consumer', () => {
     const report = runVelliraUiUsageCheck();
     const findings = report.findings.filter(({ path }) => path === filePath);
-    const exceptions = report.exceptions.filter(({ path }) => path === filePath);
+    const exceptions = report.exceptions.filter(
+      ({ path }) => path === filePath
+    );
     expect(report.summary.filesScanned).toBeGreaterThan(0);
     expect(findings).toEqual([]);
     expect(exceptions).toEqual([]);
