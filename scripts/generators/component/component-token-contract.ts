@@ -7,6 +7,7 @@ import {
   renderComponentTokenFactoryTemplate,
   renderThemeComponentTokensTemplate,
 } from './templates';
+import { assertGeneratedThemeTokenDependencyPolicy } from './token-dependency-contract';
 import type { ComponentGenerationPlan } from './plan';
 
 export type ComponentTokenContractMutationResult = {
@@ -87,14 +88,17 @@ export function ensureComponentTokenContract(params: {
 
   for (const target of plan.tokenThemeTargets) {
     if (!fs.existsSync(target.componentFile)) {
+      const content = renderThemeComponentTokensTemplate({
+        componentName: plan.componentName,
+        componentTokens: plan.componentTokens,
+        profile: plan.profile,
+        control: plan.control,
+      });
+
+      assertGeneratedThemeTokenDependencyPolicy(content);
       writeCreatedFile({
         filePath: target.componentFile,
-        content: renderThemeComponentTokensTemplate({
-          componentName: plan.componentName,
-          componentTokens: plan.componentTokens,
-          profile: plan.profile,
-          control: plan.control,
-        }),
+        content,
         result,
       });
     }
@@ -172,6 +176,8 @@ export function checkComponentTokenContract(plan: ComponentGenerationPlan) {
       profile: plan.profile,
       control: plan.control,
     });
+
+    assertGeneratedThemeTokenDependencyPolicy(expectedTheme);
 
     if (!fs.existsSync(target.componentFile)) {
       drift.push(path.relative(plan.root, target.componentFile));

@@ -210,8 +210,8 @@ export const select = createSelectTokens({
 
   clearButton: {
     fg: icons.muted,
-    hoverFg: status.error.fg,
-    hoverBg: status.error.bg,
+    hoverFg: icons.danger,
+    hoverBg: colors.error[100],
     focusBg: surface.subtle,
     pressedBg: surface.pressed,
   },
