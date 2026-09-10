@@ -173,7 +173,9 @@ export function checkTokenSemanticVocabulary(): RuleResult {
   let checked = 0;
   const namespaceNames = getSemanticVocabularyNamespaces();
   const migrations = tokenMigrationManifestV1.filter(
-    (migration): migration is (typeof tokenMigrationManifestV1)[number] &
+    (
+      migration
+    ): migration is (typeof tokenMigrationManifestV1)[number] &
       SemanticMigration =>
       migration.issue === '#883' &&
       (migration.kind === 'rename' || migration.kind === 'remove')

@@ -128,7 +128,8 @@ export function auditComponentDependencySource(input: {
   }
 
   const usesExternalInputPalette =
-    input.component !== 'input' && input.source.includes('createInputColorPalette');
+    input.component !== 'input' &&
+    input.source.includes('createInputColorPalette');
   const inputPaletteEdge = allowedComponentFactoryDependencyEdgesV1.find(
     ({ from, symbol }) =>
       from === input.component && symbol === 'createInputColorPalette'
@@ -164,7 +165,9 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
       )
     );
   }
-  if (componentTokenDependencyPolicyV1.primitiveColors.default !== 'prohibited') {
+  if (
+    componentTokenDependencyPolicyV1.primitiveColors.default !== 'prohibited'
+  ) {
     findings.push(
       finding(
         'primitive-color-policy-weakened',
