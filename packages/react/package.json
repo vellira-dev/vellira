@@ -87,7 +87,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.0.3",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "axe-core": "^4.12.1",
     "jsdom": "^28.1.0",
     "lottie-web": "^5.13.0",
