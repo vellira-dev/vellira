@@ -64,17 +64,17 @@
     "@vellira-ui/types": "workspace:*"
   },
   "devDependencies": {
-    "@types/react": "^19.2.3",
     "@storybook/react-native": "^10.6.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@types/react": "^19.2.3",
+    "@types/react-dom": "^19.2.7",
+    "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^28.1.0",
     "react": "19.2.8",
+    "react-dom": "19.2.8",
     "storybook": "^10.6.0",
     "tsdown": "^0.22.13",
     "typescript": "6.0.3",
-    "vitest": "^4.1.10",
-    "@types/react-dom": "^19.2.7",
-    "react-dom": "19.2.8"
+    "vitest": "^4.1.11"
   },
   "publishConfig": {
     "access": "public"
