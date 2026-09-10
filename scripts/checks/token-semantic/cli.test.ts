@@ -28,6 +28,17 @@ describe('token semantic CLI', () => {
     const ruleIds = report.coverage.map((rule) => rule.ruleId);
     expect(ruleIds).toEqual(tokenSemanticRuleIds);
     expect(report.summary.runtimeErrors).toBe(0);
+    // Reuse this real CLI report instead of repeating a full repository audit.
+    const valueKinds = report.coverage.find(
+      (rule) => rule.ruleId === 'tokens.value-kind'
+    );
+    expect(valueKinds?.coverage).toBe('partial');
+    expect(valueKinds?.checked).toBeGreaterThan(0);
+    expect(
+      report.findings.filter(
+        (finding) => finding.ruleId === 'tokens.value-kind'
+      )
+    ).toEqual([]);
     const consumer = report.coverage.find(
       (rule) => rule.ruleId === 'tokens.consumer-reference'
     );
