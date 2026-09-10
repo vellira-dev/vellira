@@ -91,8 +91,8 @@
     "fast-glob": "^3.3.3",
     "lottie-web": "^5.13.0",
     "react": "19.2.3",
-    "react-native": "0.86.0",
-    "react-native-svg": "15.15.4"
+    "react-native": "0.87.1",
+    "react-native-svg": "15.15.5"
   },
   "publishConfig": {
     "access": "public"
