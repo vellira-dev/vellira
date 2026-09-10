@@ -9,6 +9,7 @@ import { checkTokenCssReferences } from './css-repository';
 import { checkTokenFactoryConventions } from './factory-convention';
 import { checkTokenPlatformBoundary } from './platform-boundary';
 import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
+import { checkTokenShadowAuthority } from './shadow-authority';
 import { checkTokenStateVocabulary } from './state-vocabulary';
 import { checkTokenValueKinds } from './value-kind-repository';
 import { checkTokenVisualPreservation } from './visual-preservation';
@@ -72,6 +73,10 @@ export function checkTokenSemantics(root: string) {
       run: () => checkTokenFactoryConventions(root),
     },
     { ruleId: 'tokens.platform-boundary', run: checkTokenPlatformBoundary },
+    {
+      ruleId: 'tokens.shadow-authority',
+      run: () => checkTokenShadowAuthority(root),
+    },
     {
       ruleId: 'tokens.visual-preservation',
       run: () => checkTokenVisualPreservation(root),
