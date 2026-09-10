@@ -7,9 +7,23 @@ import { chromium } from '@playwright/test';
 import {
   captureDiagnostics,
   waitForRoute,
+  diagnosticHeaders,
 } from './cloudflare-browser-diagnostics.mjs';
 
 const base = 'https://vellira-soak.test';
+test('cache diagnostics do not persist credential headers', () => {
+  assert.deepEqual(
+    diagnosticHeaders({
+      Cookie: 'secret',
+      'Set-Cookie': 'secret',
+      Authorization: 'secret',
+      'Proxy-Authorization': 'secret',
+      RSC: '1',
+      'x-vellira-request-id': 'id',
+    }),
+    { RSC: '1', 'x-vellira-request-id': 'id' }
+  );
+});
 test('heading readiness works without main; later failures retain HTTP, static and initiator evidence', async (t) => {
   const directory = await fs.mkdtemp(
     path.join(os.tmpdir(), 'vellira-browser-test-')
@@ -81,6 +95,14 @@ test('heading readiness works without main; later failures retain HTTP, static a
   assert.equal(result.finalUrl, `${base}/denied`);
   assert.equal(result.title, 'Denied');
   assert.equal(result.mainCount, 0);
+  assert.ok(result.firstBadAsset.url.includes('/_next/static/'));
+  assert.ok(result.cacheAttributionCaveat.includes('not proof'));
+  assert.ok(
+    result.events.some(
+      (event) =>
+        event.kind === 'network-source' && event.fromDiskCache === false
+    )
+  );
   assert.ok(result.events.some((e) => e.document && e.status === 403));
   assert.ok(result.errors.some((e) => e.status === 503));
   assert.ok(

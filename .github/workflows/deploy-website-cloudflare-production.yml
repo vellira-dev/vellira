@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: website-cloudflare-production
+  group: deploy-worker-vellira-website
   cancel-in-progress: false
 
 env:
@@ -73,15 +73,26 @@ jobs:
       - name: Audit client manifests and Webpack runtime assets
         run: node apps/website/scripts/cloudflare-build-runtime-audit.mjs
 
-      - name: Add unique deployment asset anchor
-        run: printf '%s\n' "$VELLIRA_BUILD_ID" > apps/website/.open-next/assets/__vellira_deploy.txt
+      - name: Verify cache, identity, and immutable archive contracts
+        run: pnpm test:cloudflare-cache
+
+      - name: Verify actual OpenNext runtime before remote archive or activation
+        run: |
+          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-local-runtime.mjs
+
+      - name: Install migration regression browsers
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install --with-deps chromium firefox webkit
+
+      - name: Prove same-origin multi-deployment browser migration before activation
+        run: pnpm test:cloudflare-migration
 
       - name: Deploy isolated production Worker candidate
         id: worker-deploy
         run: >-
-          pnpm --dir apps/website exec opennextjs-cloudflare deploy
-          --config=wrangler.production.jsonc
+          node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
         env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
@@ -147,6 +158,11 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
+      - name: Verify deployed identities, freshness and immutable bytes
+        run: node apps/website/scripts/cloudflare-runtime-contract.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
       - name: Install Chromium for browser smoke
         run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
 
@@ -186,7 +202,14 @@ jobs:
           include-hidden-files: true
           path: |
             apps/react-storybook/test-results/cloudflare-soak/
+            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
+            apps/react-storybook/test-results/cloudflare-migration/summary.json
+            apps/react-storybook/test-results/cloudflare-migration/*.log
             apps/website/.open-next/asset-audit*.json
+            apps/website/.open-next/archive-evidence.json
+            apps/website/.open-next/vellira-build.json
+            apps/website/.open-next/runtime-contract.json
+            apps/website/.open-next/local-runtime-contract.json
             apps/website/.open-next/cache/
             apps/website/.next/*manifest.json
             apps/website/.next/BUILD_ID

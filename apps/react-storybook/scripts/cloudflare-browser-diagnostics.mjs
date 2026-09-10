@@ -1,6 +1,20 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+export function diagnosticHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(headers).filter(
+      ([name]) =>
+        ![
+          'cookie',
+          'set-cookie',
+          'authorization',
+          'proxy-authorization',
+        ].includes(name.toLowerCase())
+    )
+  );
+}
+
 export async function captureDiagnostics(page, context, baseUrl, directory) {
   const origin = new URL(baseUrl).origin;
   const events = [];
@@ -26,17 +40,40 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
     snapshots: true,
     sources: true,
   });
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('Network.enable');
-  cdp.on('Network.requestWillBeSent', (event) => {
+  const cdp = await context.newCDPSession(page).catch(() => null);
+  if (cdp) await cdp.send('Network.enable');
+  else
+    record('capability', {
+      cdpCacheAttribution: false,
+      reason:
+        'Non-Chromium engine; correlate with origin logs, not inferred cf-ray',
+    });
+  cdp?.on('Network.requestWillBeSent', (event) => {
     if (sameOrigin(event.request.url)) {
       record('initiator', {
         requestId: event.requestId,
         url: event.request.url,
         resourceType: event.type,
         initiator: event.initiator,
+        documentURL: event.documentURL,
+        requestHeaders: diagnosticHeaders(event.request.headers),
       });
     }
+  });
+  cdp?.on('Network.requestServedFromCache', (event) => {
+    record('requestServedFromCache', { requestId: event.requestId });
+  });
+  cdp?.on('Network.responseReceived', (event) => {
+    if (!sameOrigin(event.response.url)) return;
+    record('network-source', {
+      requestId: event.requestId,
+      url: event.response.url,
+      fromDiskCache: event.response.fromDiskCache ?? false,
+      fromServiceWorker: event.response.fromServiceWorker ?? false,
+      fromPrefetchCache: event.response.fromPrefetchCache ?? false,
+      responseHeaders: diagnosticHeaders(event.response.headers),
+      protocol: event.response.protocol,
+    });
   });
   page.on('response', (response) => {
     const request = response.request();
@@ -47,6 +84,8 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
       status: response.status(),
       resourceType: request.resourceType(),
       document: request.isNavigationRequest(),
+      fromServiceWorker: response.fromServiceWorker(),
+      requestHeaders: diagnosticHeaders(request.headers()),
       headers: Object.fromEntries(
         [
           'content-type',
@@ -59,6 +98,15 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
           'x-nextjs-stale-time',
           'vary',
           'location',
+          'cdn-cache-control',
+          'cloudflare-cdn-cache-control',
+          'x-vellira-build-id',
+          'x-vellira-request-id',
+          'x-vellira-worker-version',
+          'x-vellira-asset-source',
+          'x-vellira-asset-sha256',
+          'x-deployment-id',
+          'x-nextjs-deployment-id',
         ]
           .filter((name) => headers[name])
           .map((name) => [name, headers[name]])
@@ -116,7 +164,11 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
       }
     },
     async anchor(stage) {
-      for (const pathname of ['/__vellira_deploy.txt', '/BUILD_ID']) {
+      for (const pathname of [
+        '/__vellira_runtime',
+        '/__vellira_deploy.txt',
+        '/BUILD_ID',
+      ]) {
         try {
           const response = await context.request.get(
             new URL(pathname, baseUrl).href,
@@ -130,6 +182,8 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
             pathname,
             status: response.status(),
             body: await response.text(),
+            evidenceSource:
+              'independent API request; not the browser HTTP cache',
           });
         } catch (error) {
           record('deployment', { stage, pathname, error: String(error) });
@@ -150,6 +204,14 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
           .catch(() => null),
         error: error?.stack ?? (error ? String(error) : null),
         staticFailures,
+        firstBadAsset: staticFailures[0] ?? null,
+        firstBadAssetInitiator:
+          events.find(
+            (event) =>
+              event.kind === 'initiator' && event.url === staticFailures[0]?.url
+          ) ?? null,
+        cacheAttributionCaveat:
+          'A cached cf-ray or request ID is not proof of a Worker execution. Correlate network-source events with origin request logs.',
         errors,
         events,
       };

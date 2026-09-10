@@ -7,5 +7,5 @@ const cloudflareConfig = defineCloudflareConfig({
 
 export default {
   ...cloudflareConfig,
-  buildCommand: 'next build --webpack',
+  buildCommand: 'node scripts/cloudflare-build.mjs',
 };

@@ -34,7 +34,6 @@ const directory = path.resolve(
 const diagnostics = await captureDiagnostics(page, context, baseUrl, directory);
 const sidebarSelector = 'aside[aria-label="Component navigation"]';
 const rscCachePolicyFailures = [];
-const migrationCookieName = '__Host-vellira-rsc-cache-v1';
 let observedRscResponses = 0;
 let documentToken;
 
@@ -176,84 +175,32 @@ async function blog() {
 let failure;
 try {
   await diagnostics.anchor('start');
-  const migrationUrl = new URL('/components/switch', baseUrl).href;
-  const migrationResponsePromise = page.waitForResponse(
-    (candidate) =>
-      candidate.url() === migrationUrl &&
-      candidate.status() === 307 &&
-      candidate.request().resourceType() === 'document',
-    { timeout: 30_000 }
+  const response = await page.goto(
+    new URL('/components/switch', baseUrl).href,
+    {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    }
   );
-  const response = await page.goto(migrationUrl, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
-  const migrationResponse = await migrationResponsePromise;
-
-  if (!response?.ok())
+  if (!response?.ok() || response.request().redirectedFrom()) {
     throw new Error(
-      `Initial document status=${response?.status() ?? 'no-response'} URL=${page.url()}`
-    );
-
-  // The migration must be transparent to a normal browser navigation: the
-  // first request clears legacy cache in a no-store 307, stores the marker,
-  // and the browser immediately follows the redirect to the real document.
-  const migrationHeaders = await migrationResponse.allHeaders();
-  const clearSiteData = migrationHeaders['clear-site-data'] ?? '';
-  if (!clearSiteData.includes('"cache"')) {
-    throw new Error(
-      `Migration redirect did not clear legacy browser cache: ${JSON.stringify(clearSiteData)}`
+      'Initial document must render directly without a migration redirect'
     );
   }
-  const migrationCacheControl = (
-    migrationHeaders['cache-control'] ?? ''
-  ).toLowerCase();
+  const headers = await response.allHeaders();
+  if (headers['clear-site-data'] || headers['set-cookie']) {
+    throw new Error(
+      'Document navigation must not clear caches or set migration state'
+    );
+  }
   if (
-    !migrationCacheControl.includes('private') ||
-    !migrationCacheControl.includes('no-store') ||
-    !migrationCacheControl.includes('max-age=0') ||
-    migrationCacheControl.includes('s-maxage')
+    headers['cache-control'] !== 'no-cache, max-age=0, must-revalidate' ||
+    headers['cloudflare-cdn-cache-control'] !== 'no-store'
   ) {
-    throw new Error(
-      `Migration redirect is cacheable: ${JSON.stringify(migrationHeaders['cache-control'] ?? '')}`
-    );
+    throw new Error('Document freshness policy is missing');
   }
-  if (migrationHeaders.location !== migrationUrl) {
-    throw new Error(
-      `Migration redirect changed destination: ${JSON.stringify(migrationHeaders.location ?? '')}`
-    );
-  }
-
-  const finalHeaders = await response.allHeaders();
-  if (finalHeaders['clear-site-data']) {
-    throw new Error('Clear-Site-Data leaked onto the rendered document');
-  }
-  const migrationCookie = (await context.cookies(baseUrl)).find(
-    (cookie) => cookie.name === migrationCookieName && cookie.value === '1'
-  );
-  if (!migrationCookie) {
-    throw new Error('Migration redirect did not persist the RSC cache marker cookie');
-  }
-
-  await ready('/components/switch', 'Switch');
-
-  // A second full document load in the same browser context must not run the
-  // migration again and must render directly without a redirect/manual reload.
-  const reloadResponse = await page.reload({
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
-  if (!reloadResponse?.ok()) {
-    throw new Error(
-      `Migration reload status=${reloadResponse?.status() ?? 'no-response'} URL=${page.url()}`
-    );
-  }
-  if (reloadResponse.request().redirectedFrom()) {
-    throw new Error('RSC cache migration redirected the browser more than once');
-  }
-  const reloadHeaders = await reloadResponse.allHeaders();
-  if (reloadHeaders['clear-site-data']) {
-    throw new Error('RSC cache migration attempted to clear browser cache more than once');
+  if (!headers['x-vellira-build-id'] || !headers['x-vellira-request-id']) {
+    throw new Error('Document deployment diagnostics are missing');
   }
   await ready('/components/switch', 'Switch');
 
@@ -266,7 +213,9 @@ try {
   diagnostics.assertHealthy('final preload settle');
   assertRscCachePolicy('final preload settle');
   if (observedRscResponses === 0) {
-    throw new Error('Navigation soak observed no RSC responses; cache-policy gate was vacuous');
+    throw new Error(
+      'Navigation soak observed no RSC responses; cache-policy gate was vacuous'
+    );
   }
 } catch (error) {
   failure = error;

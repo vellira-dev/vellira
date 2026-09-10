@@ -1,5 +1,9 @@
 # Cloudflare staging asset investigation
 
+Historical investigation. For the subsequent option-G implementation and its
+still-required release evidence, see the
+[deployment/browser-cache contract](cloudflare-deployment-cache-contract.md).
+
 Investigation baseline: PR #943, `130e5aa7a5e7d4681e264075fd1cb11117ab6516`.
 Recorded 2026-09-09, before implementation changes. The intermittent manual
 JS/CSS 404 remains unproven; this report does not declare the PR merge-ready.
