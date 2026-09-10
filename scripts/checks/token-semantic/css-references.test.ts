@@ -15,11 +15,9 @@ function scan(source: string, file = 'apps/probe/style.css') {
 
 describe('token semantic CSS references', () => {
   it('accepts current variables and compatibility names', () => {
-    expect(
-      scan(
-        '.a { color: var(--text-primary); box-shadow: var(--popover-content-shadow-web); }'
-      )
-    ).toEqual([]);
+    const source =
+      '.a { color: var(--text-primary); box-shadow: var(--popover-content-shadow-web); }';
+    expect(scan(source)).toEqual([]);
   });
 
   it('rejects removed tokens even with fallbacks', () => {
@@ -52,9 +50,8 @@ describe('token semantic CSS references', () => {
   });
 
   it('allows comments between the var opener and its name', () => {
-    expect(scan('.a { color: var(/* reason */ --text-missing); }')).toHaveLength(
-      1
-    );
+    const findings = scan('.a { color: var(/* reason */ --text-missing); }');
+    expect(findings).toHaveLength(1);
   });
 
   it('handles escaped quotes in content', () => {
@@ -73,39 +70,35 @@ describe('token semantic CSS references', () => {
   });
 
   it('ignores SCSS line comments', () => {
-    expect(
-      scan(
-        '// var(--text-missing)\n.a { color: var(--text-primary); }',
-        'apps/probe/style.scss'
-      )
-    ).toEqual([]);
+    const source =
+      '// var(--text-missing)\n.a { color: var(--text-primary); }';
+    expect(scan(source, 'apps/probe/style.scss')).toEqual([]);
   });
 
   it('accepts a non-token local declaration only in its own file', () => {
     expect(scan('.a { --local-gap: 4px; gap: var(--local-gap); }')).toEqual([]);
-    expect(
-      scan('.a { gap: var(--local-gap); }', 'packages/probe/other.css')[0]
-    ).toMatchObject({
+    const findings = scan(
+      '.a { gap: var(--local-gap); }',
+      'packages/probe/other.css'
+    );
+    expect(findings[0]).toMatchObject({
       code: 'unclassified-css-variable',
       severity: 'warning',
     });
   });
 
   it('does not whitelist token-prefixed local overrides', () => {
-    expect(
-      scan(
-        '.a { --surface-background: red; color: var(--surface-background); }'
-      )[0]
-    ).toMatchObject({
+    const source =
+      '.a { --surface-background: red; color: var(--surface-background); }';
+    expect(scan(source)[0]).toMatchObject({
       code: 'token-namespace-local-override',
       severity: 'warning',
     });
   });
 
   it('retains unknown provider names for ownership review', () => {
-    expect(
-      scan('.a { color: var(--thirdparty-foreground); }')[0]
-    ).toMatchObject({
+    const findings = scan('.a { color: var(--thirdparty-foreground); }');
+    expect(findings[0]).toMatchObject({
       code: 'unclassified-css-variable',
       severity: 'warning',
     });

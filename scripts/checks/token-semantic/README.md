@@ -43,6 +43,11 @@ variables are accepted only in their own source file. Other unresolved names and
 unfollowed source symlinks remain visible warnings. No declaration in an unrelated
 file can silently whitelist a missing token across the repository.
 
+The scanner reads full variable arguments. Dynamic Sass interpolations and escaped
+identifiers produce unresolved-expression warnings, not missing-token errors for
+truncated prefixes such as `--select-`. Static missing references inside nested
+fallbacks remain detectable. Expression expansion is not yet proven.
+
 Provider/import resolution, dynamic/escaped CSS identifiers, removed namespace
 classification from migration evidence, source-to-token replacement mapping,
 registry freshness, and other public API checks are still required before this

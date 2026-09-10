@@ -59,6 +59,27 @@ function namespace(variable: string): string {
   return variable.slice(2).split('-')[0] ?? '';
 }
 
+/** Read the whole name, never a static prefix of a Sass interpolation. */
+function readVariableArgument(code: string, start: number): string {
+  let braces = 0;
+  let parentheses = 0;
+  for (let index = start; index < code.length; index += 1) {
+    const character = code[index];
+    if (character === '{') braces += 1;
+    else if (character === '}' && braces > 0) braces -= 1;
+    else if (braces === 0) {
+      if (character === '(') parentheses += 1;
+      else if (character === ')') {
+        if (parentheses === 0) return code.slice(start, index).trim();
+        parentheses -= 1;
+      } else if (character === ',' && parentheses === 0) {
+        return code.slice(start, index).trim();
+      }
+    }
+  }
+  throw new Error('Unterminated CSS variable reference.');
+}
+
 export function auditCssReferences(
   sourcePath: string,
   source: string,
@@ -74,11 +95,34 @@ export function auditCssReferences(
   );
   const findings: FindingInput[] = [];
 
-  for (const match of code.matchAll(/(?<![\w-])var\(\s*(--[\w-]+)/gi)) {
-    const variable = match[1]!;
-    if (canonicalVariables.has(variable)) continue;
-    const index = match.index + match[0].indexOf(variable);
+  for (const match of code.matchAll(/(?<![\w-])var\(\s*/gi)) {
+    const index = match.index + match[0].length;
+    const variable = readVariableArgument(code, index);
     const before = source.slice(0, index);
+    const location = {
+      sourcePath,
+      tokenPath: variable,
+      line: before.split('\n').length,
+      column: index - before.lastIndexOf('\n'),
+      layer: 'consumer',
+      theme: null,
+      platform: 'web',
+    };
+    if (!/^--[\w-]+$/.test(variable)) {
+      findings.push({
+        ruleId: 'tokens.consumer-reference',
+        code: 'unresolved-css-variable-expression',
+        severity: 'warning',
+        ...location,
+        evidence: `Cannot statically resolve the full variable expression: ${variable}`,
+        expected: 'A complete static name resolved through its source owner.',
+        migrationStatus: 'untracked',
+        suggestedAction:
+          'Resolve interpolation/escapes before classifying this as a missing token.',
+      });
+      continue;
+    }
+    if (canonicalVariables.has(variable)) continue;
     const tokenNamespace = prefixes.has(namespace(variable));
     // A declaration in one file never exempts consumers in unrelated files.
     // Unknown token-prefixed declarations still need ownership review.
@@ -92,13 +136,7 @@ export function auditCssReferences(
           ? 'missing-token-variable'
           : 'unclassified-css-variable',
       severity: tokenNamespace && !local ? 'error' : 'warning',
-      sourcePath,
-      tokenPath: variable,
-      line: before.split('\n').length,
-      column: index - before.lastIndexOf('\n'),
-      layer: 'consumer',
-      theme: null,
-      platform: 'web',
+      ...location,
       evidence: `${variable} is absent from the canonical generated CSS-variable registry.`,
       expected:
         'A current token, registered compatibility alias, or proven local/provider owner.',

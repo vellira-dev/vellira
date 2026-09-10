@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { checkTokenSemantics } from './checker';
 import { tokenSemanticExitCode, tokenSemanticRuleIds } from './contract';
+import type { TokenSemanticReport } from './contract';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const cli = fileURLToPath(new URL('./cli.ts', import.meta.url));
@@ -22,18 +23,15 @@ describe('token semantic CLI', () => {
     const result = run('--json', '--report');
     expect(result.error).toBeUndefined();
     expect(result.status).toBe(0);
-    const report = JSON.parse(result.stdout);
+    const report: TokenSemanticReport = JSON.parse(result.stdout);
     expect(report.schemaVersion).toBe(1);
-    const ruleIds = report.coverage.map(
-      (rule: { ruleId: string }) => rule.ruleId
-    );
+    const ruleIds = report.coverage.map((rule) => rule.ruleId);
     expect(ruleIds).toEqual(tokenSemanticRuleIds);
     expect(report.summary.runtimeErrors).toBe(0);
     const consumer = report.coverage.find(
-      (rule: { ruleId: string }) =>
-        rule.ruleId === 'tokens.consumer-reference'
+      (rule) => rule.ruleId === 'tokens.consumer-reference'
     );
-    expect(consumer.checked).toBeGreaterThan(0);
+    expect(consumer?.checked).toBeGreaterThan(0);
   });
 
   it('uses the same report contract in strict mode', () => {
