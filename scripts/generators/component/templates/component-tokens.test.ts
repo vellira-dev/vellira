@@ -33,7 +33,7 @@ describe('component token templates', () => {
     expect(result).toContain('errorRing: status.error.ring');
   });
 
-  it('generates thin boolean theme token entrypoints with runtime ESM imports', () => {
+  it('generates boolean theme entrypoints from grouped factories', () => {
     const result = renderThemeComponentTokensTemplate({
       componentName: 'Switch',
       profile: 'form-control',
@@ -41,7 +41,7 @@ describe('component token templates', () => {
     });
 
     expect(result).toContain(
-      "import { createSwitchTokensFromSemantics } from '../../factories/createSwitchTokens.js';"
+      "import { createSwitchTokensFromSemantics } from '../../factories/components/createSwitchTokens.js';"
     );
     expect(result).toContain(
       "import { control } from '../semantic/control.js';"
@@ -55,6 +55,7 @@ describe('component token templates', () => {
   status,
 });`
     );
+    expect(result).not.toContain('../../factories/createSwitchTokens.js');
     expect(result).not.toContain('createSwitchTokens({');
     expect(result).not.toContain('geometry:');
     expect(result).not.toContain('control.default.bg');
@@ -64,6 +65,18 @@ describe('component token templates', () => {
     expect(result).not.toContain('control.disabled.bg');
     expect(result).not.toContain('status.error.border');
     expect(result).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  });
+
+  it('generates disclosure theme entrypoints from grouped factories', () => {
+    const result = renderThemeComponentTokensTemplate({
+      componentName: 'Accordion',
+      componentTokens: 'disclosure',
+    });
+
+    expect(result).toContain(
+      "import { createAccordionTokensFromSemantics } from '../../factories/components/createAccordionTokens.js';"
+    );
+    expect(result).not.toContain('../../factories/createAccordionTokens.js');
   });
 
   it('generates a safe generic component token scaffold for other profiles', () => {
@@ -80,6 +93,10 @@ describe('component token templates', () => {
 
     expect(factory).toContain('export type AvatarVisualState');
     expect(factory).toContain('export const createAvatarTokens');
+    expect(theme).toContain(
+      "import { createAvatarTokens } from '../../factories/components/createAvatarTokens.js';"
+    );
+    expect(theme).not.toContain('../../factories/createAvatarTokens.js');
     expect(theme).toContain('default: control.default');
     expect(theme).toContain('hover: control.hover');
     expect(theme).toContain('pressed: control.pressed');
@@ -87,9 +104,9 @@ describe('component token templates', () => {
     expect(theme).toContain('disabled: control.disabled');
   });
 
-  it('renders idempotent barrel export lines', () => {
+  it('renders grouped factory barrel exports', () => {
     expect(renderComponentTokenFactoryBarrelExport('Switch')).toBe(
-      "export * from './createSwitchTokens.js';"
+      "export * from './components/createSwitchTokens.js';"
     );
     expect(renderComponentTokenBarrelExport('Switch')).toBe(
       "export { switchTokens as switch } from './switch.js';"

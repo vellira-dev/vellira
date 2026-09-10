@@ -148,7 +148,7 @@ describe('interaction state vocabulary V1', () => {
 
   it('does not map pressed component contracts back to active semantics', () => {
     const sourceFiles = [
-      'packages/tokens/src/factories/createSwitchTokens.ts',
+      'packages/tokens/src/factories/components/createSwitchTokens.ts',
       'packages/tokens/src/light/components/input.ts',
       'packages/tokens/src/dark/components/input.ts',
       'packages/tokens/src/highContrast/components/input.ts',

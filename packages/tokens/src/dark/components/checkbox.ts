@@ -1,7 +1,7 @@
 import {
   createCheckboxPalette,
   createCheckboxTokens,
-} from '../../factories/createCheckboxTokens.js';
+} from '../../factories/components/createCheckboxTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { control } from '../semantic/control.js';

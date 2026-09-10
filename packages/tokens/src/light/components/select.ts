@@ -1,8 +1,8 @@
-import { createInputColorPalette } from '../../factories/createInputTokens.js';
+import { createInputColorPalette } from '../../factories/components/createInputTokens.js';
 import {
   createSelectPalette,
   createSelectTokens,
-} from '../../factories/createSelectTokens.js';
+} from '../../factories/components/createSelectTokens.js';
 import {
   createComponentNoShadowIntent,
   createComponentShadowIntent,

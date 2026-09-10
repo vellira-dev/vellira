@@ -1,7 +1,7 @@
 import {
   createButtonPalette,
   createButtonTokens,
-} from '../../factories/createButtonTokens.js';
+} from '../../factories/components/createButtonTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { status } from '../semantic/status.js';

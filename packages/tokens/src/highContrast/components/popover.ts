@@ -1,4 +1,4 @@
-import { createPopoverTokensFromTheme } from '../../factories/createPopoverTokens.js';
+import { createPopoverTokensFromTheme } from '../../factories/components/createPopoverTokens.js';
 import { radius } from '../../tokens/radius.js';
 import { spacing } from '../../tokens/spacing.js';
 import { overlay } from '../semantic/overlay.js';

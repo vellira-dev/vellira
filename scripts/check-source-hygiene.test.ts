@@ -9,7 +9,7 @@ describe('source hygiene theme component duplication classification', () => {
     const sources = new Map([
       [
         filePath,
-        `import { createSwitchTokensFromSemantics } from '../../factories/createSwitchTokens.js';
+        `import { createSwitchTokensFromSemantics } from '../../factories/components/createSwitchTokens.js';
 import { control } from '../semantic/control.js';
 import { focus } from '../semantic/focus.js';
 import { status } from '../semantic/status.js';
@@ -31,8 +31,8 @@ export const switchTokens = createSwitchTokensFromSemantics({
     const sources = new Map([
       [
         filePath,
-        `import { createSwitchTokensFromSemantics } from '../../factories/createSwitchTokens.js';
-import { createSwitchTokens } from '../../factories/createSwitchTokens.js';
+        `import { createSwitchTokensFromSemantics } from '../../factories/components/createSwitchTokens.js';
+import { createSwitchTokens } from '../../factories/components/createSwitchTokens.js';
 import { control } from '../semantic/control.js';
 import { focus } from '../semantic/focus.js';
 import { status } from '../semantic/status.js';
@@ -62,7 +62,7 @@ export const switchTokens = createSwitchTokens({
     const sources = new Map([
       [
         filePath,
-        `import { createSwitchTokensFromSemantics } from '../../factories/createSwitchTokens.js';
+        `import { createSwitchTokensFromSemantics } from '../../factories/components/createSwitchTokens.js';
 import { control } from '../semantic/control.js';
 import { focus } from '../semantic/focus.js';
 
@@ -84,7 +84,7 @@ export const switchTokens = createSwitchTokensFromSemantics(switchConfig);
     const sources = new Map([
       [
         filePath,
-        `import { createRadioGroupTokensFromSpacing } from '../../factories/createRadioGroupTokens.js';
+        `import { createRadioGroupTokensFromSpacing } from '../../factories/components/createRadioGroupTokens.js';
 import { spacing } from '../../tokens/spacing.js';
 
 export const radioGroup = createRadioGroupTokensFromSpacing(spacing);
@@ -93,5 +93,27 @@ export const radioGroup = createRadioGroupTokensFromSpacing(spacing);
     ]);
 
     expect(usesSharedThemeFactory(filePath, sources)).toBe(true);
+  });
+
+  it('rejects legacy flat factory paths after responsibility grouping', () => {
+    const filePath = '/repo/packages/tokens/src/light/components/switch.ts';
+    const sources = new Map([
+      [
+        filePath,
+        `import { createSwitchTokensFromSemantics } from '../../factories/createSwitchTokens.js';
+import { control } from '../semantic/control.js';
+import { focus } from '../semantic/focus.js';
+import { status } from '../semantic/status.js';
+
+export const switchTokens = createSwitchTokensFromSemantics({
+  control,
+  focus,
+  status,
+});
+`,
+      ],
+    ]);
+
+    expect(usesSharedThemeFactory(filePath, sources)).toBe(false);
   });
 });
