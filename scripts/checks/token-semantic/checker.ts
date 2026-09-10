@@ -7,6 +7,7 @@ import { runTokenSemanticAudit } from './contract';
 import type { FindingInput, RuleAdapter, RuleResult } from './contract';
 import { checkTokenCssReferences } from './css-repository';
 import { checkTokenPlatformBoundary } from './platform-boundary';
+import { checkTokenValueKinds } from './value-kind-repository';
 import { checkTokenVisualPreservation } from './visual-preservation';
 
 export function checkTokenSemantics(root: string) {
@@ -54,6 +55,7 @@ export function checkTokenSemantics(root: string) {
     };
   }
   const adapters: RuleAdapter[] = [
+    { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
     { ruleId: 'tokens.platform-boundary', run: checkTokenPlatformBoundary },
     {
       ruleId: 'tokens.visual-preservation',
