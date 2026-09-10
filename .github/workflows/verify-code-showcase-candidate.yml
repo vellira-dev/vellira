@@ -28,53 +28,76 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Validate exact checkout and formatting
+      - name: Prepare bounded reveal and browser-evidence fix
         shell: bash
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test "$(git rev-parse HEAD)" = 1556ddbcdc5bb6902a0d4136432f886a66d557a7
-          pnpm exec prettier scripts/checks/vellira-ui-usage/code-showcase.test.ts --check
-      - name: Instrument screenshot paint and hit testing
-        run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+          const component = 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx';
+          let source = fs.readFileSync(component, 'utf8');
+          const declaration = 'export function CodeShowcase() {';
+          if (!source.includes(declaration)) throw new Error('Component anchor missing');
+          source = source.replace(declaration, `// Restore every reveal property when the reduced-motion preference hydrates.
+          // Removing variants alone can leave inherited server-rendered hidden styles.
+          const reducedMotionReveal = {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotateY: 0,
+            filter: 'blur(0px)',
+            transition: { duration: 0 },
+          };
+
+          ` + declaration);
+          const variants = /^( +)variants=\{shouldReduceMotion \? undefined : (workspace|panel|editor|preview)Variants\}$/gm;
+          let count = 0;
+          source = source.replace(variants, (line, indent) => {
+            count += 1;
+            return line + '\n' + indent + 'animate={shouldReduceMotion ? reducedMotionReveal : undefined}';
+          });
+          if (count !== 5) throw new Error('Unexpected reveal site count: ' + count);
+          fs.writeFileSync(component, source);
+
           const file = 'apps/react-storybook/scripts/code-showcase-website-smoke.mjs';
-          let source = fs.readFileSync(file, 'utf8');
+          source = fs.readFileSync(file, 'utf8');
+          const guard = `async function ensurePickerPainted(picker) {
+            await picker.evaluate((element) =>
+              element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' })
+            );
+            await expect(picker).toBeInViewport();
+            await expect.poll(() => picker.evaluate((element) => {
+              for (let node = element; node; node = node.parentElement) {
+                const style = getComputedStyle(node);
+                if (Number(style.opacity) < 1 || style.visibility !== 'visible' || style.display === 'none') return false;
+              }
+              const rect = element.getBoundingClientRect();
+              const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+              return hit !== null && (hit === element || element.contains(hit));
+            }), { message: 'Picker must be fully painted and unobscured', timeout: 15000 }).toBe(true);
+          }
+
+          `;
+          source = source.replace("try {\n  for (const colorScheme", guard + "try {\n  for (const reducedMotion of ['reduce', 'no-preference']) {\n  for (const colorScheme");
+          source = source.replace('const scenario = `${colorScheme}-${viewport.width}`;', 'const scenario = `${reducedMotion}-${colorScheme}-${viewport.width}`;');
+          source = source.replace("reducedMotion: 'reduce',", 'reducedMotion,');
+          source = source.replace('        await expect(picker).toBeVisible();', '        await expect(picker).toBeVisible();\n        await ensurePickerPainted(picker);');
           const anchor = '          await picker.screenshot({ path: `${artifactDir}/${scenario}-${name.toLowerCase()}.png` });';
           if (!source.includes(anchor)) throw new Error('Screenshot anchor missing');
-          source = source.replace(anchor, `
-                  const beforeCapture = await picker.evaluate((element) => {
-                    const rect = element.getBoundingClientRect();
-                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-                    const ancestors = [];
-                    for (let node = element; node; node = node.parentElement) {
-                      const style = getComputedStyle(node);
-                      ancestors.push({ tag: node.tagName, className: node.className, opacity: style.opacity, visibility: style.visibility, contentVisibility: style.contentVisibility });
-                    }
-                    return { rect: rect.toJSON(), hit: hit?.outerHTML.slice(0, 240), ancestors };
-                  });
-                  console.log('CAPTURE_BEFORE', scenario, name, JSON.stringify(beforeCapture));
-                  await picker.evaluate((element) => element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' }));
-                  await expect(picker).toBeInViewport();
-                  await expect.poll(() => picker.evaluate((element) => {
-                    for (let node = element; node; node = node.parentElement) {
-                      const style = getComputedStyle(node);
-                      if (Number(style.opacity) < 1 || style.visibility !== 'visible' || style.display === 'none') return false;
-                    }
-                    const rect = element.getBoundingClientRect();
-                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-                    return hit !== null && (hit === element || element.contains(hit));
-                  }), { message: 'Picker must be fully painted and unobscured before capture' }).toBe(true);
-                  const afterCapture = await picker.evaluate((element) => {
-                    const rect = element.getBoundingClientRect();
-                    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-                    return { rect: rect.toJSON(), hit: hit?.outerHTML.slice(0, 240) };
-                  });
-                  console.log('CAPTURE_AFTER', scenario, name, JSON.stringify(afterCapture));
-          ` + anchor);
+          source = source.replace(anchor, '          await ensurePickerPainted(picker);\n' + anchor);
+          source = source.replace('  }\n} finally {\n  await writeFile', '  }\n  }\n} finally {\n  await writeFile');
           fs.writeFileSync(file, source);
           NODE
+          pnpm exec prettier apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx apps/react-storybook/scripts/code-showcase-website-smoke.mjs --write
+          git diff --check
+          git diff --stat
+          mkdir -p .artifacts/validated-code-showcase
+          cp apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx .artifacts/validated-code-showcase/
+          cp apps/react-storybook/scripts/code-showcase-website-smoke.mjs .artifacts/validated-code-showcase/
+          git hash-object apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx apps/react-storybook/scripts/code-showcase-website-smoke.mjs
       - name: Run targeted source and negative regressions
         run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/vellira-ui-usage/code-showcase.test.ts
       - name: Build candidate website and dependencies
@@ -105,4 +128,11 @@ jobs:
           name: isolated-code-showcase-evidence
           path: apps/react-storybook/test-results/code-showcase
           if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: validated-code-showcase-source
+          path: .artifacts/validated-code-showcase
+          if-no-files-found: error
           retention-days: 7
