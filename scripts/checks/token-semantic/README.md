@@ -25,9 +25,30 @@ unitless values, including dimensional strings such as a scale of `0.98px`.
 
 The report includes the eleven #890 rule families plus the consumer-reference
 rule required by the #909 header regression. An absent adapter is `not-run`,
-not a successful check. The three initial adapters explicitly report `partial`:
-family ownership, namespace lifecycle, and CSS consumer references. They expose
-useful evidence without claiming the rest of their accepted scope is complete.
+not a successful check. Family ownership, namespace lifecycle, CSS consumer
+references, and platform boundary currently report `partial`. Value preservation
+runs the complete existing #880 oracle; the remaining adapters stay `not-run`.
+
+## Connected platform and preservation authorities
+
+`packages/tokens/src/platform-output/component-token-boundary.ts` contains the
+unchanged #884 scanner extracted from its package test. Both the original test
+and the semantic audit now call it. Every component family in Light, Dark, and
+High Contrast is visited. `checked` counts these theme/family pairs. This adapter
+remains partial: the existing scanner does not prove every `native*` key or every
+renderer-specific representation, and its extraction does not claim otherwise.
+Findings identify the resolved token path and originating theme barrel; no
+fictional authored line location is assigned to resolved runtime values.
+
+The preservation adapter reads the immutable committed baseline and calls
+`verifyTokenPreservation` with the canonical migration manifest and pinned source
+revision. It does not create a replacement baseline or a second drift algorithm.
+`checked: 1` means one full verification invocation, not a count of scalar tokens.
+Canonical, Web, and React Native findings retain the original rule, theme,
+platform, and token path. Missing/unreadable evidence remains a fatal execution
+error even in report mode. A preservation `complete` status describes running
+the #880 value oracle, not visual approval: screenshot regression is still a
+separate mandatory CI gate, and the full #890 report remains incomplete.
 
 ## Consumer scan boundary
 

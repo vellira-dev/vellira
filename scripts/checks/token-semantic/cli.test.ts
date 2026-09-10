@@ -32,6 +32,20 @@ describe('token semantic CLI', () => {
       (rule) => rule.ruleId === 'tokens.consumer-reference'
     );
     expect(consumer?.checked).toBeGreaterThan(0);
+    const boundary = report.coverage.find(
+      (rule) => rule.ruleId === 'tokens.platform-boundary'
+    );
+    expect(boundary?.coverage).toBe('partial');
+    expect(boundary?.checked).toBeGreaterThan(0);
+    const preservation = report.coverage.find(
+      (rule) => rule.ruleId === 'tokens.visual-preservation'
+    );
+    expect(preservation).toMatchObject({ coverage: 'complete', checked: 1 });
+    expect(
+      report.findings.filter(
+        (finding) => finding.ruleId === 'tokens.visual-preservation'
+      )
+    ).toEqual([]);
   });
 
   it('uses the same report contract in strict mode', () => {

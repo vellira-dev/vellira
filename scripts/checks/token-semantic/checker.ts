@@ -6,6 +6,8 @@ import type { TokenOwnershipReport } from '../token-ownership/checker';
 import { runTokenSemanticAudit } from './contract';
 import type { FindingInput, RuleAdapter, RuleResult } from './contract';
 import { checkTokenCssReferences } from './css-repository';
+import { checkTokenPlatformBoundary } from './platform-boundary';
+import { checkTokenVisualPreservation } from './visual-preservation';
 
 export function checkTokenSemantics(root: string) {
   const authorityRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -52,6 +54,11 @@ export function checkTokenSemantics(root: string) {
     };
   }
   const adapters: RuleAdapter[] = [
+    { ruleId: 'tokens.platform-boundary', run: checkTokenPlatformBoundary },
+    {
+      ruleId: 'tokens.visual-preservation',
+      run: () => checkTokenVisualPreservation(root),
+    },
     { ruleId: 'tokens.component-ownership', run: () => ownershipRule(false) },
     { ruleId: 'tokens.namespace-lifecycle', run: () => ownershipRule(true) },
     {
