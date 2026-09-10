@@ -3,7 +3,7 @@ import {
   createRadioTokens,
   radioMotionTokens,
   radioSizeTokens,
-} from '../../factories/createRadioTokens.js';
+} from '../../factories/components/createRadioTokens.js';
 import { colors } from '../../primitives/colors.js';
 import { border } from '../semantic/border.js';
 import { control } from '../semantic/control.js';

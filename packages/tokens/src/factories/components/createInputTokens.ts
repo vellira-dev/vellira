@@ -10,9 +10,9 @@ export type {
   InputColorPaletteConfig,
   InputPaletteConfig,
   InputState,
-} from './palettes/createInputIntentPalette.js';
+} from '../palettes/createInputIntentPalette.js';
 export {
   createInputColorPalette,
   createInputIntentPalette,
   createInputIntentPalette as createInputPalette,
-} from './palettes/createInputIntentPalette.js';
+} from '../palettes/createInputIntentPalette.js';

@@ -283,6 +283,7 @@ export function createComponentGenerationPlan(params: {
       'tokens',
       'src',
       'factories',
+      'components',
       `create${options.componentName}Tokens.ts`
     ),
 

@@ -9,4 +9,4 @@ export function createDropdownTokens<
 export {
   createDropdownIntentPalette,
   createDropdownIntentPalette as createDropdownPalette,
-} from './palettes/createDropdownIntentPalette.js';
+} from '../palettes/createDropdownIntentPalette.js';

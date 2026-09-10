@@ -9,4 +9,4 @@ export function createSelectTokens<const TTokens extends SelectTokensConfig>(
 export {
   createSelectIntentPalette,
   createSelectIntentPalette as createSelectPalette,
-} from './palettes/createSelectIntentPalette.js';
+} from '../palettes/createSelectIntentPalette.js';

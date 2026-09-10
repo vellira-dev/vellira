@@ -407,7 +407,7 @@ export function usesSharedThemeFactory(filePath, sources) {
   }
 
   const importPattern =
-    /import\s+\{\s*(create[A-Z][A-Za-z0-9]*TokensFrom[A-Z][A-Za-z0-9]*)\s*\}\s+from\s+['"]\.\.\/\.\.\/factories\/create[A-Z][A-Za-z0-9]*Tokens\.js['"]/g;
+    /import\s+\{\s*(create[A-Z][A-Za-z0-9]*TokensFrom[A-Z][A-Za-z0-9]*)\s*\}\s+from\s+['"]\.\.\/\.\.\/factories\/components\/create[A-Z][A-Za-z0-9]*Tokens\.js['"]/g;
   const themeInputs = new Set(extractThemeInputImports(source));
 
   let match;

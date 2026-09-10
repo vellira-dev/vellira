@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { createComponentGenerationPlan } from '../../../generators/component/plan';
+import { renderComponentTokenFactoryBarrelExport } from '../../../generators/component/templates';
 import { qualityRoot } from '../root';
 import type {
   ComponentQualityRule,
@@ -41,28 +43,39 @@ function collectStyleFiles(
     .sort((left, right) => left.localeCompare(right));
 }
 
+function createTokenContractPlan(context: ComponentQualityRuleContext) {
+  return createComponentGenerationPlan({
+    root: qualityRoot(context),
+    options: {
+      componentName: context.metadata.name,
+      platform: context.platform === 'react' ? 'web' : 'native',
+      layer: context.metadata.layer,
+      category: context.metadata.category,
+      profile: context.metadata.profile,
+      capabilities: context.metadata.capabilities ?? [],
+      dependencies: context.metadata.dependencies,
+      icons: context.metadata.requirements.icons ?? [],
+      tokens: context.metadata.requirements.tokens ?? [],
+      assets: context.metadata.requirements.assets ?? [],
+      componentTokens: context.metadata.requirements.componentTokens,
+      parts: [],
+      force: false,
+      dryRun: false,
+      check: false,
+    },
+  });
+}
+
 function contractViolations(context: ComponentQualityRuleContext) {
   const root = qualityRoot(context);
   const componentName = context.metadata.name;
   const tokenName = lowerCamel(componentName);
   const violations: string[] = [];
-  const factoryFile = path.join(
-    root,
-    'packages',
-    'tokens',
-    'src',
-    'factories',
-    `create${componentName}Tokens.ts`
-  );
-  const factoryBarrel = path.join(
-    root,
-    'packages',
-    'tokens',
-    'src',
-    'factories',
-    'index.ts'
-  );
-  const expectedFactoryExport = `export * from './create${componentName}Tokens.js';`;
+  const plan = createTokenContractPlan(context);
+  const factoryFile = plan.tokenFactoryFile;
+  const factoryBarrel = plan.tokenFactoryBarrelFile;
+  const expectedFactoryExport =
+    renderComponentTokenFactoryBarrelExport(componentName);
 
   if (!fs.existsSync(factoryFile)) {
     violations.push(

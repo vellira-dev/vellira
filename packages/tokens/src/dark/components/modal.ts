@@ -1,4 +1,4 @@
-import { createModalTokensFromSemantics } from '../../factories/createModalTokens.js';
+import { createModalTokensFromSemantics } from '../../factories/components/createModalTokens.js';
 import { radius } from '../../tokens/radius.js';
 import { spacing } from '../../tokens/spacing.js';
 import { focus } from '../semantic/focus.js';

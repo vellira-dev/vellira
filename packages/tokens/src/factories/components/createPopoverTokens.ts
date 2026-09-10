@@ -1,4 +1,4 @@
-import { createComponentShadowIntent } from '../platform-output/component-token-intents.js';
+import { createComponentShadowIntent } from '../../platform-output/component-token-intents.js';
 
 type PopoverTokensConfig = {
   contentBg: string;

@@ -1,4 +1,4 @@
-import { createComponentFocusRingShadowIntent } from '../platform-output/component-token-intents.js';
+import { createComponentFocusRingShadowIntent } from '../../platform-output/component-token-intents.js';
 
 export type SemanticFocusRing = {
   readonly color: string;

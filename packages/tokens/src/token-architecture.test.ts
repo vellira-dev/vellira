@@ -32,7 +32,12 @@ const packageRoot = path.resolve(
   '..'
 );
 const repositoryRoot = path.resolve(packageRoot, '..', '..');
-const factoriesDirectory = path.join(packageRoot, 'src', 'factories');
+const factoriesDirectory = path.join(
+  packageRoot,
+  'src',
+  'factories',
+  'components'
+);
 
 const themes = [
   ['light', lightTheme],
