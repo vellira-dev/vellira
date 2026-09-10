@@ -26,6 +26,15 @@ const repository = path.resolve(import.meta.dirname, '../../..');
 const fixture = path.join(import.meta.dirname, 'fixtures/migration');
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export function respondMigrationError(outgoing, error) {
+  console.error('Migration origin request failed:', error);
+  outgoing.writeHead(500, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'no-store',
+  });
+  outgoing.end('Internal Server Error');
+}
+
 async function replaceFixture(directory, generation, color) {
   for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
     const filename = path.join(directory, entry.name);
@@ -274,8 +283,7 @@ export async function startMigrationOrigin(generations, directory) {
       if (request.method === 'HEAD' || !response.body) outgoing.end();
       else Readable.fromWeb(response.body).pipe(outgoing);
     } catch (error) {
-      outgoing.writeHead(500);
-      outgoing.end(String(error));
+      respondMigrationError(outgoing, error);
     }
   });
   await archiveAssets(archive, generations.A.assets);

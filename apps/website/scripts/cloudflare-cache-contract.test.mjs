@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
+import http from 'node:http';
+import { respondMigrationError } from './cloudflare-migration-origin.mjs';
 import {
   readDeploymentConfig,
   validateDeploymentTarget,
@@ -31,6 +33,34 @@ import {
   requireArchivedDeployment,
 } from './cloudflare-static-asset-archive.mjs';
 import { transportOptions, verifyNextPatch } from './next-rsc-patch-check.mjs';
+
+test('migration origin errors stay in server logs, not the non-cacheable HTTP response', async (t) => {
+  const error = new Error('private upstream detail: migration-secret-9381');
+  const log = t.mock.method(console, 'error', () => {});
+  const server = http.createServer((_incoming, outgoing) => {
+    try {
+      throw error;
+    } catch (caught) {
+      respondMigrationError(outgoing, caught);
+    }
+  });
+  t.after(async () => {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}`);
+  const body = await response.text();
+  assert.equal(response.status, 500);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8');
+  assert.equal(body, 'Internal Server Error');
+  assert.ok(!body.includes(error.message));
+  assert.ok(!body.includes(error.stack));
+  assert.equal(log.mock.callCount(), 1);
+  assert.equal(log.mock.calls[0].arguments[1], error);
+});
 
 test('installed Wrangler parses both actual deployment configs and rejects unsafe targets', () => {
   for (const filename of ['wrangler.jsonc', 'wrangler.production.jsonc']) {
