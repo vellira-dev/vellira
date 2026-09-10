@@ -131,7 +131,13 @@ describe('component token dependency contract', () => {
         expect(source, `${theme}/${file}`).not.toContain(
           'hoverBg: status.error.bg'
         );
-        expect(source, `${theme}/${file}`).toContain('hoverFg: icons.danger');
+
+        const expectedHoverFg =
+          theme === 'highContrast'
+            ? 'hoverFg: colors.error[400]'
+            : 'hoverFg: icons.danger';
+
+        expect(source, `${theme}/${file}`).toContain(expectedHoverFg);
       }
     }
   });

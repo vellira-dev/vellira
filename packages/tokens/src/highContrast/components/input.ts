@@ -183,7 +183,7 @@ export const input = createInputTokens({
 
   clearButton: {
     fg: icons.muted,
-    hoverFg: icons.danger,
+    hoverFg: colors.error[400],
     hoverBg: colors.error[950],
     focusBg: surface.subtle,
     pressedBg: surface.pressed,

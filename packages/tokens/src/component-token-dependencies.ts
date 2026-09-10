@@ -178,7 +178,7 @@ export const semanticDependencyRepairsV1 = [
     component: 'input',
     paths: ['clearButton.hoverFg', 'clearButton.hoverBg'],
     repair:
-      'Use canonical danger icon semantics for the foreground and explicit component-owned presentation for the destructive hover surface, preserving resolved values without depending on deprecated action semantics.',
+      'Use canonical danger icon semantics when value-equivalent; otherwise use explicit component-owned presentation paint to preserve the existing resolved value without depending on validation status.',
   },
   {
     component: 'input',
@@ -190,6 +190,6 @@ export const semanticDependencyRepairsV1 = [
     component: 'select',
     paths: ['clearButton.hoverFg', 'clearButton.hoverBg'],
     repair:
-      'Use canonical danger icon semantics for the foreground and explicit component-owned presentation for the destructive hover surface, preserving resolved values without depending on deprecated action semantics.',
+      'Use canonical danger icon semantics when value-equivalent; otherwise use explicit component-owned presentation paint to preserve the existing resolved value without depending on validation status.',
   },
 ] as const;
