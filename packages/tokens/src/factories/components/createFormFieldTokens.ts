@@ -43,6 +43,10 @@ export type FormFieldThemeSources = {
     muted: string;
     disabled: string;
   };
+  presentation: {
+    requiredMarkFg: string;
+    labelInfoBorder: string;
+  };
 };
 
 export const createFormFieldTokensFromTheme = ({
@@ -51,6 +55,7 @@ export const createFormFieldTokensFromTheme = ({
   typography,
   status,
   text,
+  presentation,
 }: FormFieldThemeSources) =>
   createFormFieldTokens({
     label: {
@@ -63,7 +68,7 @@ export const createFormFieldTokensFromTheme = ({
 
     labelInfo: {
       fg: text.secondary,
-      border: text.secondary,
+      border: presentation.labelInfoBorder,
       radius: radius.full,
     },
 
@@ -94,7 +99,7 @@ export const createFormFieldTokensFromTheme = ({
     },
 
     requiredMark: {
-      fg: status.error.fg,
+      fg: presentation.requiredMarkFg,
     },
 
     disabled: {
