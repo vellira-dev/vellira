@@ -37,6 +37,41 @@ import {
 } from './cloudflare-static-asset-archive.mjs';
 import { transportOptions, verifyNextPatch } from './next-rsc-patch-check.mjs';
 import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
+import { manualCommand } from './cloudflare-migration-manual.mjs';
+
+test('manual Safari controls use the existing archive-before-activation path and reject unknown commands', async () => {
+  const calls = [];
+  const origin = {
+    state: { generation: 'A', poison: false, archiveEnabled: true },
+    async activate(generation) {
+      calls.push(generation);
+      this.state.generation = generation;
+    },
+  };
+  for (const generation of ['B', 'C', 'A']) {
+    assert.equal(await manualCommand(origin, generation), false);
+    assert.equal(origin.state.generation, generation);
+  }
+  assert.deepEqual(calls, ['B', 'C', 'A']);
+  await manualCommand(origin, 'poison on');
+  assert.equal(origin.state.poison, true);
+  await manualCommand(origin, 'poison off');
+  assert.equal(origin.state.poison, false);
+  for (const command of ['status', 'check', 'save'])
+    assert.equal(await manualCommand(origin, command), false);
+  assert.equal(await manualCommand(origin, 'quit'), true);
+  for (const command of ['D', 'archive off', 'deploy', 'poison maybe'])
+    await assert.rejects(manualCommand(origin, command));
+  assert.equal(origin.state.archiveEnabled, true);
+  origin.activate = async () => {
+    throw new Error('Archive verification failed');
+  };
+  await assert.rejects(
+    manualCommand(origin, 'B'),
+    /Archive verification failed/
+  );
+  assert.equal(origin.state.generation, 'A');
+});
 
 test('runtime assets allow only verified UTF-8 JS/CSS wire MIME variants', () => {
   for (const [extension, mime, source] of [

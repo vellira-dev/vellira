@@ -5,6 +5,12 @@ Implementation baseline: PR #943, starting HEAD
 1.20.6). This document defines option G. It is not a declaration that the PR is
 ready: exact-final-HEAD CI, live staging, and the evidence below remain mandatory.
 
+Validated checkpoint: `dbcaea97e1bf037f1553b44a5772f4688dfe409f` has complete
+successful CI and staging evidence. See the [review record](cloudflare-pr943-review.md)
+for exact run IDs, required-check status and remaining gates; this does not carry
+that result forward to later commits. Operator commands are in the
+[runbook](../../apps/website/CLOUDFLARE_MIGRATION.md).
+
 During implementation, #943 advanced to `1fdea12c9dd41e51d872bd55aed941791a2a739a`
 by merging main. The option-G changes were carried onto that head without
 overwriting its token-factory, React, or lockfile updates. Earlier local results
@@ -267,6 +273,9 @@ cookie probes. WebKit runs the HTTP-cache/profile/navigation matrix, but Playwri
 does not expose its global cookie-accept policy. WebKit/Safari bfcache and Safari's
 real Block All Cookies setting require separately recorded real-Safari evidence
 if not observed in CI. A normal back/forward traversal is not bfcache proof.
+The [real-Safari checklist](cloudflare-safari-validation.md) enumerates the exact
+unclosed scenarios and provides a terminal-controlled runner using this same
+fixture/origin. Preparing that test is not a Safari pass.
 
 The dedicated bfcache case first waits for network quiescence, without routing
 interception. A Linux WebKit run completed the cache/asset transition assertions
@@ -305,10 +314,12 @@ OpenNext emitted copy errors for `hast-util-to-html`, `hast-util-whitespace` and
 tests passed, including a blog article. That does not replace the full live
 navigation/MDX smoke or prove every dynamic code path unaffected.
 
-At implementation time, the Cloudflare account rejected R2 with error 10042,
-"Please enable R2 through the Cloudflare Dashboard." Until enabled, bucket
-provisioning, remote archive upload and live staging activation cannot be proven.
-Keep #943 Draft, with no production cutover and no merge.
+The initial R2 10042/10085 onboarding blocker was resolved for staging on
+2026-09-10: the Standard archive bucket was provisioned, original active assets
+were provenance-checked/backfilled, and CI credentials passed predecessor and
+current archive verification through the complete `dbcaea97…` staging run.
+This is not proof of production bucket provisioning or historical asset coverage
+before that archived predecessor. Keep #943 Draft; no production cutover or merge.
 
 Sources: [Workers routing](https://developers.cloudflare.com/workers/static-assets/routing/worker-script/),
 [asset headers](https://developers.cloudflare.com/workers/static-assets/headers/),
