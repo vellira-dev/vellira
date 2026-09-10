@@ -234,6 +234,24 @@ action compatibility.
 
 ## Evidence and remaining release gates
 
+### Runtime asset MIME verification
+
+The live wire contract accepts `text/javascript` for `.js` and `text/css` for
+`.css`, either without parameters or with one `charset=utf-8` parameter (including
+the quoted value and case-insensitive MIME tokens). This applies only when the
+archive inventory declares the corresponding UTF-8 type and the exact body is
+valid UTF-8. Unknown, duplicate, malformed and non-UTF-8 parameters fail closed.
+Other types retain exact header matching; this is not a global MIME normalization.
+Status 200, SHA-256, immutable caching, full graph coverage and deployment identity
+remain independent required assertions. Archive metadata and objects are unchanged.
+
+This allowance follows actual staging evidence after run `34517438239`: 344 JS
+and 9 CSS resources served by Workers Assets omitted charset; 19 JS and 3 CSS
+archive fallbacks retained it. All 381 resources matched their original bytes and
+immutable policy; all six WOFF2 headers matched exactly. The generated CSS has no
+leading encoding declaration. Missing charset alone must not fail this verifier,
+but a matching header must never excuse corrupted bytes.
+
 `test:cloudflare-cache` covers installed transport execution, identities, streamed
 response policy, real R2 conditional/collision behavior and actual asset routing.
 `test:cloudflare-migration` builds materially different Next A/B/C graphs, switches

@@ -36,6 +36,114 @@ import {
   verifyArchivedAssets,
 } from './cloudflare-static-asset-archive.mjs';
 import { transportOptions, verifyNextPatch } from './next-rsc-patch-check.mjs';
+import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
+
+test('runtime assets allow only verified UTF-8 JS/CSS wire MIME variants', () => {
+  for (const [extension, mime, source] of [
+    ['js', 'text/javascript', 'console.log("Привет");'],
+    ['css', 'text/css', '.label::after { content: "Привет"; }'],
+  ]) {
+    const bytes = Buffer.from(source);
+    const asset = {
+      pathname: `/_next/static/chunks/example.${extension}`,
+      contentType: `${mime}; charset=utf-8`,
+      sha256: sha256(bytes),
+    };
+    const result = (
+      contentType,
+      body = bytes,
+      status = 200,
+      cache = IMMUTABLE_CACHE_CONTROL
+    ) => ({
+      bytes: body,
+      response: new Response(body, {
+        status,
+        headers: { 'content-type': contentType, 'cache-control': cache },
+      }),
+    });
+    for (const header of [
+      mime,
+      `${mime}; charset=utf-8`,
+      `${mime};charset="utf-8"`,
+      `${mime.toUpperCase()}; CHARSET=UTF-8`,
+    ])
+      assert.doesNotThrow(() => assertRuntimeAsset(asset, result(header)));
+
+    for (const header of [
+      'text/html',
+      'text/plain; charset=utf-8',
+      extension === 'js' ? 'text/css' : 'text/javascript',
+      'application/javascript',
+      `${mime}; charset=iso-8859-1`,
+      `${mime}; charset=utf-16`,
+      `${mime}; charset=utf8`,
+      `${mime}; foo=bar`,
+      `${mime}; charset=utf-8; foo=bar`,
+      `${mime}; charset=utf-8; charset=utf-8`,
+      `${mime}; charset="utf-8`,
+      `${mime};`,
+      `${mime}, ${mime}`,
+    ])
+      assert.throws(
+        () => assertRuntimeAsset(asset, result(header)),
+        /Content-Type/
+      );
+    const missing = result(mime);
+    missing.response.headers.delete('content-type');
+    assert.throws(() => assertRuntimeAsset(asset, missing), /Content-Type/);
+    assert.throws(
+      () =>
+        assertRuntimeAsset(
+          asset,
+          result(mime, Buffer.from(`${source}corrupt`))
+        ),
+      /SHA-256/
+    );
+    assert.throws(
+      () => assertRuntimeAsset(asset, result(mime, bytes, 404)),
+      /HTTP status/
+    );
+    assert.throws(
+      () => assertRuntimeAsset(asset, result(mime, bytes, 200, 'no-store')),
+      /immutable caching/
+    );
+    const invalidUtf8 = Buffer.from([0xc3, 0x28]);
+    for (const header of [mime, `${mime}; charset=utf-8`]) {
+      assert.throws(
+        () =>
+          assertRuntimeAsset(
+            { ...asset, sha256: sha256(invalidUtf8) },
+            result(header, invalidUtf8)
+          ),
+        /not valid UTF-8/
+      );
+    }
+  }
+});
+
+test('runtime MIME tolerance does not extend to fonts or other archive types', () => {
+  for (const [extension, contentType] of Object.entries(ASSET_CONTENT_TYPES)) {
+    if (extension === '.js' || extension === '.css') continue;
+    const bytes = Buffer.from('fixture');
+    const asset = {
+      pathname: `/_next/static/example${extension}`,
+      contentType,
+      sha256: sha256(bytes),
+    };
+    const response = new Response(bytes, {
+      headers: {
+        'content-type': contentType,
+        'cache-control': IMMUTABLE_CACHE_CONTROL,
+      },
+    });
+    assert.doesNotThrow(() => assertRuntimeAsset(asset, { response, bytes }));
+    response.headers.set('content-type', `${contentType}; charset=utf-8`);
+    assert.throws(
+      () => assertRuntimeAsset(asset, { response, bytes }),
+      /Content-Type/
+    );
+  }
+});
 
 test('migration origin errors stay in server logs, not the non-cacheable HTTP response', async (t) => {
   const error = new Error('private upstream detail: migration-secret-9381');
@@ -448,7 +556,9 @@ test('archive read-back consumes the RPC body method and still rejects byte corr
   const bucket = {
     get: async () => ({
       get body() {
-        throw new Error('Do not iterate a remote R2 stream across RPC contexts');
+        throw new Error(
+          'Do not iterate a remote R2 stream across RPC contexts'
+        );
       },
       arrayBuffer: async () => body,
       size: asset.size,

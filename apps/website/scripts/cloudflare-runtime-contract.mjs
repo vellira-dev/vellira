@@ -5,9 +5,9 @@ import { deploymentIdentity } from '../cloudflare/build-identity.mjs';
 import {
   HTML_CACHE_CONTROL,
   RSC_CACHE_CONTROL,
-  IMMUTABLE_CACHE_CONTROL,
 } from '../cloudflare/cache-policy.mjs';
 import { sha256 } from './cloudflare-static-asset-archive.mjs';
+import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
 import { rscProbe } from './cloudflare-rsc-probe.mjs';
 
 const base = process.env.WEBSITE_URL;
@@ -94,18 +94,7 @@ try {
     const result = await request(
       asset.pathname.split('/').map(encodeURIComponent).join('/')
     );
-    assert.equal(result.response.status, 200, asset.pathname);
-    assert.equal(sha256(result.bytes), asset.sha256, asset.pathname);
-    assert.equal(
-      result.response.headers.get('content-type'),
-      asset.contentType,
-      asset.pathname
-    );
-    assert.equal(
-      result.response.headers.get('cache-control'),
-      IMMUTABLE_CACHE_CONTROL,
-      asset.pathname
-    );
+    assertRuntimeAsset(asset, result);
   }
   passed = true;
   console.log(
