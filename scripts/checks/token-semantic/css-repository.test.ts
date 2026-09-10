@@ -44,6 +44,42 @@ describe('maintained token CSS reference scan', () => {
     expect(fs.readFileSync(file, 'utf8')).toBe(before);
   });
 
+  it.each(['apps', 'packages'])(
+    'uses the validated registry throughout nested %s directories',
+    (workspace) => {
+      const { root, write } = fixture();
+      const directory = `${workspace}/probe/nested/deeper`;
+      write(
+        `${directory}/valid.css`,
+        '.a { background: var(--surface-canvas); }'
+      );
+      const sourcePath = `${directory}/missing.scss`;
+      write(sourcePath, '.a { color: var(--surface-background); }');
+
+      const report = checkTokenCssReferences(root);
+      expect(report.checked).toBe(3);
+      expect(report.findings).toHaveLength(1);
+      expect(report.findings[0]).toMatchObject({
+        code: 'missing-token-variable',
+        severity: 'error',
+        sourcePath,
+        tokenPath: '--surface-background',
+      });
+    }
+  );
+
+  it('rejects an empty registry before scanning maintained roots', () => {
+    const { root, write } = fixture();
+    write(
+      'packages/tokens/src/generated/token-types.ts',
+      'export const cssVariableNames = [] as const;'
+    );
+    fs.rmSync(path.join(root, 'apps'), { recursive: true });
+    expect(() => checkTokenCssReferences(root)).toThrow(
+      'Missing, malformed, or empty generated CSS-variable registry.'
+    );
+  });
+
   it('ignores builds, not generated-looking authored comments', () => {
     const { root, write } = fixture();
     write(
