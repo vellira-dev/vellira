@@ -78,6 +78,22 @@ $button-appearances: solid, outline, ghost, soft, link;
   }
 }
 
+:where(.bare) {
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+:where(.bare:disabled),
+:where(.bare.loading) {
+  cursor: not-allowed;
+}
+
 .button:disabled,
 .button.loading {
   color: var(--button-disabled-fg);

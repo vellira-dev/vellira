@@ -4,12 +4,13 @@ import type {
   InputFormatter,
   InputMask,
   InputParser,
+  InputVariant,
 } from '@vellira-ui/types';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 export interface InputProps
   extends
-    InputBaseProps,
+    Omit<InputBaseProps, 'variant'>,
     Omit<
       ComponentPropsWithoutRef<'input'>,
       'color' | 'onChange' | 'prefix' | 'size'
@@ -23,6 +24,8 @@ export interface InputProps
   /** Called with the next string value. */
   onValueChange?: (value: string) => void;
 
+  /** Visual variant. `bare` preserves Input behavior while composition owns field chrome. */
+  variant?: InputVariant | 'bare';
   /** Control id. Inherits the generated FormField id when omitted. */
   id?: string;
   /** Native input name. */
