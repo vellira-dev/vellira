@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { selectComponentPageAuditComponents } from './audit-options';
 import { getGeneratedComponentPageComponents } from './component-page-components';
 import { resolvePageInput } from './model/resolve-page-input';
 import {
@@ -15,8 +16,10 @@ type AuditFailure = {
 };
 
 const root = process.cwd();
-const generatedComponentPageComponents =
-  getGeneratedComponentPageComponents(root);
+const generatedComponentPageComponents = selectComponentPageAuditComponents(
+  process.argv.slice(2),
+  getGeneratedComponentPageComponents(root)
+);
 const catalogRoot = path.join(
   root,
   'apps',

@@ -82,7 +82,10 @@ function runGenerator(
   );
 }
 
-function runAudit(fixture: string): {
+function runAudit(
+  fixture: string,
+  args: readonly string[] = ['--component', 'Button']
+): {
   status: number | null;
   stdout: string;
   stderr: string;
@@ -92,8 +95,7 @@ function runAudit(fixture: string): {
     [
       path.join(repoRoot(), 'node_modules/tsx/dist/cli.mjs'),
       'scripts/generators/component-page/audit-component-pages.ts',
-      '--component',
-      'Button',
+      ...args,
     ],
     {
       cwd: fixture,
@@ -249,7 +251,37 @@ describe('component page CLI check modes', () => {
     );
   }, 60_000);
 
-  it('fails audit through shared related metadata validation', () => {
+  it('audits only the selected component without rewriting generated files', () => {
+    const fixture = createCanonicalFixtureRepo();
+    const before = snapshotFiles(generatedButtonFiles(fixture));
+    const unrelatedUsage = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Input/InputUsage.tsx'
+    );
+    fs.unlinkSync(unrelatedUsage);
+
+    const result = runAudit(fixture);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toContain(
+      'Component page audit passed for 1 components.'
+    );
+    expectFilesUnchanged(before);
+    expect(fs.existsSync(unrelatedUsage)).toBe(false);
+  }, 60_000);
+
+  it('rejects unknown audit selections instead of silently running all components', () => {
+    const result = runAudit(repoRoot(), ['--component', 'NotAComponent']);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'Unknown generated component "NotAComponent"'
+    );
+    expect(result.stdout).not.toContain('Component page audit passed');
+  });
+
+  it('retains shared registry validation outside the selected component', () => {
     const fixture = createCanonicalFixtureRepo();
     const registryFile = path.join(
       fixture,
@@ -257,19 +289,18 @@ describe('component page CLI check modes', () => {
     );
     const source = fs.readFileSync(registryFile, 'utf8');
 
-    fs.writeFileSync(
-      registryFile,
-      source.replace(
-        "related: ['input', 'checkbox', 'modal']",
-        "related: ['Input']"
-      )
+    const invalidRegistry = source.replace(
+      /(\n  input: \{[\s\S]*?related: )\[[^\]]*\]/,
+      "$1['Input']"
     );
+    expect(invalidRegistry).not.toBe(source);
+    fs.writeFileSync(registryFile, invalidRegistry);
 
     const result = runAudit(fixture);
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      'button related[0] "Input" is invalid: unknown or non-canonical related component slug'
+      'input related[0] "Input" is invalid: unknown or non-canonical related component slug'
     );
   }, 60_000);
 });
