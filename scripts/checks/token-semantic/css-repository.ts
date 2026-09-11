@@ -5,6 +5,7 @@ import ts from 'typescript';
 
 import { canonicalCssVariableNames } from '../../design-resources/authority';
 import type { FindingInput, RuleResult } from './contract';
+import { componentAncestorProviderVariables } from './css-component-provider';
 import { auditCssReferences, declaredCssVariables } from './css-references';
 
 const ignoredDirectories = new Set([
@@ -260,6 +261,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   const runtimeProviderCache = new Map<string, ReadonlySet<string>>();
   const familyProviderCache = new Map<string, ReadonlySet<string>>();
   const applicationProviderCache = new Map<string, ReadonlySet<string>>();
+  const ancestorProviderCache = new Map<string, ReadonlySet<string>>();
   let checked = 0;
 
   function walk(
@@ -301,6 +303,11 @@ export function checkTokenCssReferences(root: string): RuleResult {
       const source = fs.readFileSync(absolutePath, 'utf8');
       const providerVariables = new Set([
         ...componentProviderVariables(root, sourcePath, runtimeProviderCache),
+        ...componentAncestorProviderVariables(
+          root,
+          sourcePath,
+          ancestorProviderCache
+        ),
         ...sameBasenameRuntimeProviderVariables(root, sourcePath),
         ...applicationWideProviderVariables(
           root,
@@ -335,7 +342,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS static var() references in apps/packages with exact same-module runtime providers, component-root inheritance/runtime providers, proven website root-global providers, and visible same-family provider candidates. Other imported/application-wide providers, proven cross-module ancestor ownership, and dynamic references still require integration.',
+      'Authored CSS/SCSS static var() references in apps/packages with exact same-module runtime providers, component-root providers, statically proven JSX ancestor providers, proven website root-global providers, and visible same-family provider candidates. Other imported/application-wide providers and dynamic references still require integration.',
     checked,
     findings,
   };
