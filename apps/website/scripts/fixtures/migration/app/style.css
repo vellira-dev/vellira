@@ -1,0 +1,13 @@
+/* Replaced per build: materially distinct CSS and client/lazy JS graphs. */
+body {
+  --generation: '__GENERATION__';
+
+  color: black;
+  background: __color__;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
