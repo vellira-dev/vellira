@@ -105,7 +105,10 @@ function resolveExportedSymbol(
       );
       if (exported) {
         for (const declaration of statement.declarationList.declarations) {
-          if (ts.isIdentifier(declaration.name) && declaration.name.text === symbolName) {
+          if (
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === symbolName
+          ) {
             locallyExported = true;
           }
         }
@@ -164,10 +167,9 @@ function resolveExportedSymbol(
 function importedRenderedTargets(
   root: string,
   sourcePath: string,
-  source: string,
+  parsed: ts.SourceFile,
   subtree: ts.Node
 ): ReadonlySet<string> {
-  const parsed = sourceFile(sourcePath, source);
   const imports = new Map<
     string,
     { importedName: string; moduleSpecifier: string }
@@ -217,26 +219,84 @@ function importedRenderedTargets(
   return targets;
 }
 
-function jsxElementUsesStyleClass(
-  element: ts.JsxElement,
+function textUsesStyleClass(
+  text: string,
   styleBinding: string,
-  className: string,
-  source: string
+  className: string
 ): boolean {
-  const classAttribute = element.openingElement.attributes.properties.find(
-    (attribute): attribute is ts.JsxAttribute =>
-      ts.isJsxAttribute(attribute) && attribute.name.getText() === 'className'
-  );
-  if (!classAttribute?.initializer) return false;
-
-  const text = classAttribute.initializer.getText(
-    sourceFile('provider.tsx', source)
-  );
   return (
     text.includes(`${styleBinding}.${className}`) ||
     text.includes(`${styleBinding}['${className}']`) ||
     text.includes(`${styleBinding}["${className}"]`)
   );
+}
+
+function variableInitializerUsesStyleClass(
+  parsed: ts.SourceFile,
+  variableName: string,
+  styleBinding: string,
+  className: string
+): boolean {
+  let matches = false;
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === variableName &&
+      node.initializer &&
+      textUsesStyleClass(
+        node.initializer.getText(parsed),
+        styleBinding,
+        className
+      )
+    ) {
+      matches = true;
+      return;
+    }
+    if (!matches) ts.forEachChild(node, visit);
+  }
+
+  visit(parsed);
+  return matches;
+}
+
+function jsxElementUsesStyleClass(
+  element: ts.JsxElement,
+  styleBinding: string,
+  className: string,
+  parsed: ts.SourceFile
+): boolean {
+  const classAttribute = element.openingElement.attributes.properties.find(
+    (attribute): attribute is ts.JsxAttribute =>
+      ts.isJsxAttribute(attribute) && attribute.name.getText(parsed) === 'className'
+  );
+  if (!classAttribute?.initializer) return false;
+
+  if (
+    textUsesStyleClass(
+      classAttribute.initializer.getText(parsed),
+      styleBinding,
+      className
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    ts.isJsxExpression(classAttribute.initializer) &&
+    classAttribute.initializer.expression &&
+    ts.isIdentifier(classAttribute.initializer.expression)
+  ) {
+    return variableInitializerUsesStyleClass(
+      parsed,
+      classAttribute.initializer.expression.text,
+      styleBinding,
+      className
+    );
+  }
+
+  return false;
 }
 
 function variableProviderClasses(
@@ -281,9 +341,8 @@ function styleImportBinding(
   root: string,
   sourcePath: string,
   stylePath: string,
-  source: string
+  parsed: ts.SourceFile
 ): string | null {
-  const parsed = sourceFile(sourcePath, source);
   for (const statement of parsed.statements) {
     if (!ts.isImportDeclaration(statement) || !statement.importClause?.name) {
       continue;
@@ -312,11 +371,12 @@ function providerVariablesInheritedBy(
     path.join(root, providerSourcePath),
     'utf8'
   );
+  const parsed = sourceFile(providerSourcePath, providerSource);
   const styleBinding = styleImportBinding(
     root,
     providerSourcePath,
     providerStylePath,
-    providerSource
+    parsed
   );
   if (!styleBinding) return new Set();
 
@@ -328,7 +388,6 @@ function providerVariablesInheritedBy(
     providerStylePath,
     providerStyleSource
   );
-  const parsed = sourceFile(providerSourcePath, providerSource);
   const variables = new Set<string>();
 
   function visit(node: ts.Node): void {
@@ -336,17 +395,12 @@ function providerVariablesInheritedBy(
       for (const [variable, classes] of classesByVariable) {
         if (
           [...classes].some((className) =>
-            jsxElementUsesStyleClass(
-              node,
-              styleBinding,
-              className,
-              providerSource
-            )
+            jsxElementUsesStyleClass(node, styleBinding, className, parsed)
           ) &&
           importedRenderedTargets(
             root,
             providerSourcePath,
-            providerSource,
+            parsed,
             node
           ).has(consumerSourcePath)
         ) {
