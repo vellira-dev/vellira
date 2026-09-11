@@ -1,6 +1,16 @@
 name: Deploy Docs Worker
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/docs/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/deploy-docs-worker.yml'
   push:
     branches: [main]
     paths:
@@ -46,6 +56,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # PRs exercise the deployment build on a fresh runner, without restored dist.
+      - name: Verify clean-checkout regression precondition
+        if: github.event_name == 'pull_request'
+        run: |
+          existing_dist="$(find apps packages -type d -name node_modules -prune -o -type d -name dist -print)"
+          if [ -n "$existing_dist" ]; then
+            printf 'Unexpected pre-existing workspace dist directories:\n%s\n' "$existing_dist"
+            exit 1
+          fi
+
+      - name: Build docs workspace dependencies
+        run: pnpm exec turbo run build --filter='@vellira-ui/docs^...'
+
       - name: Build docs
         run: pnpm docs:build
 
@@ -53,6 +76,7 @@ jobs:
         run: test -f "$DOCS_DIST_DIR/index.html"
 
       - name: Deploy docs to Cloudflare Workers
+        if: github.event_name != 'pull_request'
         run: >
           pnpm exec wrangler deploy
           --name "$CLOUDFLARE_WORKER_NAME"

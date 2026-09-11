@@ -20,36 +20,14 @@ export interface BlogLikeWriteResponse extends BlogMetricsWriteResponse {
 
 export type BlogMetricsBySlug = Record<string, BlogMetrics>;
 
-const DEFAULT_BLOG_METRICS_API_BASE_URL = 'https://api.vellira.dev';
-const BLOG_METRICS_ACTOR_PROXY_BASE_PATH = '/api/blog-metrics';
-const BLOG_METRICS_AGGREGATE_REVALIDATE_SECONDS = 300;
-
-type BlogMetricsRequestInit = RequestInit & {
-  next?: {
-    revalidate?: number;
-  };
-};
+const BLOG_METRICS_PROXY_BASE_PATH = '/api/blog-metrics';
 
 interface BlogMetricsRequestOptions {
   retries?: number;
 }
 
-function getBlogMetricsApiBaseUrl(): string {
-  const configuredBaseUrl =
-    process.env.NEXT_PUBLIC_BLOG_METRICS_API_BASE_URL?.trim();
-
-  return (configuredBaseUrl || DEFAULT_BLOG_METRICS_API_BASE_URL).replace(
-    /\/+$/,
-    ''
-  );
-}
-
-function createBlogMetricsApiUrl(path: string): URL {
-  return new URL(path, `${getBlogMetricsApiBaseUrl()}/`);
-}
-
-function createBlogMetricsActorProxyPath(path: string): string {
-  return `${BLOG_METRICS_ACTOR_PROXY_BASE_PATH}/${path.replace(/^\/+/, '')}`;
+function createBlogMetricsProxyPath(path: string): string {
+  return `${BLOG_METRICS_PROXY_BASE_PATH}/${path.replace(/^\/+/, '')}`;
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
@@ -121,7 +99,7 @@ function parseBlogLikeWriteResponse(value: unknown): BlogLikeWriteResponse {
 
 async function requestBlogMetricsJson(
   url: string | URL,
-  init: BlogMetricsRequestInit = {},
+  init: RequestInit = {},
   options: BlogMetricsRequestOptions = {}
 ): Promise<unknown> {
   let lastError: unknown;
@@ -144,13 +122,12 @@ async function requestBlogMetricsJson(
 }
 
 export async function fetchBlogMetrics(slug: string): Promise<BlogMetrics> {
-  const url = createBlogMetricsApiUrl(
-    `v1/blog/metrics/${encodeURIComponent(slug)}`
-  );
+  const url = createBlogMetricsProxyPath(`metrics/${encodeURIComponent(slug)}`);
   const json = await requestBlogMetricsJson(
     url,
     {
-      next: { revalidate: BLOG_METRICS_AGGREGATE_REVALIDATE_SECONDS },
+      credentials: 'include',
+      cache: 'no-store',
     },
     { retries: 1 }
   );
@@ -167,15 +144,17 @@ export async function fetchBlogMetricsBatch(
     return {};
   }
 
-  const url = createBlogMetricsApiUrl('v1/blog/metrics');
+  const searchParams = new URLSearchParams();
 
   for (const slug of uniqueSlugs) {
-    url.searchParams.append('slug', slug);
+    searchParams.append('slug', slug);
   }
 
+  const url = `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
   const json = await requestBlogMetricsJson(
     url,
     {
+      credentials: 'include',
       cache: 'no-store',
     },
     { retries: 1 }
@@ -202,7 +181,7 @@ export async function fetchBlogMetricsBatch(
 export async function registerBlogArticleView(
   slug: string
 ): Promise<BlogMetricsWriteResponse> {
-  const url = createBlogMetricsActorProxyPath(
+  const url = createBlogMetricsProxyPath(
     `articles/${encodeURIComponent(slug)}/views`
   );
   const json = await requestBlogMetricsJson(url, {
@@ -217,7 +196,7 @@ export async function registerBlogArticleView(
 export async function fetchBlogArticleLike(
   slug: string
 ): Promise<BlogLikeState> {
-  const url = createBlogMetricsActorProxyPath(
+  const url = createBlogMetricsProxyPath(
     `articles/${encodeURIComponent(slug)}/like`
   );
   const json = await requestBlogMetricsJson(
@@ -235,7 +214,7 @@ export async function fetchBlogArticleLike(
 export async function likeBlogArticle(
   slug: string
 ): Promise<BlogLikeWriteResponse> {
-  const url = createBlogMetricsActorProxyPath(
+  const url = createBlogMetricsProxyPath(
     `articles/${encodeURIComponent(slug)}/like`
   );
   const json = await requestBlogMetricsJson(url, {
@@ -250,7 +229,7 @@ export async function likeBlogArticle(
 export async function unlikeBlogArticle(
   slug: string
 ): Promise<BlogLikeWriteResponse> {
-  const url = createBlogMetricsActorProxyPath(
+  const url = createBlogMetricsProxyPath(
     `articles/${encodeURIComponent(slug)}/like`
   );
   const json = await requestBlogMetricsJson(url, {

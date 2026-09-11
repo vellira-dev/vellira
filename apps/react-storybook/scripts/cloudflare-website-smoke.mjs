@@ -15,7 +15,7 @@ const page = await context.newPage();
 const diagnostics = [];
 const criticalDiagnostics = [];
 const vercelRuntimeRequests = [];
-const directActorMetricRequests = [];
+const directMetricRequests = [];
 
 function sameOrigin(url) {
   return new URL(url).origin === baseOrigin;
@@ -25,13 +25,13 @@ function actorMetricsUrl(slug, suffix) {
   return `${baseUrl}/api/blog-metrics/articles/${slug}/${suffix}`;
 }
 
-function isDirectActorMetricRequest(url) {
+function isDirectMetricRequest(url) {
   const parsedUrl = new URL(url);
   if (parsedUrl.origin !== metricsApiOrigin) {
     return false;
   }
 
-  return /^\/v1\/blog\/articles\/[^/]+\/(?:views|like)$/.test(
+  return /^\/v1\/blog\/(?:metrics(?:\/[^/]+)?|articles\/[^/]+\/(?:views|like))$/.test(
     parsedUrl.pathname
   );
 }
@@ -53,13 +53,13 @@ page.on('request', (request) => {
     vercelRuntimeRequests.push(request.url());
   }
 
-  if (isDirectActorMetricRequest(request.url())) {
+  if (isDirectMetricRequest(request.url())) {
     const diagnostic =
-      `actor-specific metrics bypassed the first-party proxy: ` +
+      `blog metrics bypassed the first-party proxy: ` +
       `${request.method()} ${request.url()}`;
     diagnostics.push(diagnostic);
     criticalDiagnostics.push(diagnostic);
-    directActorMetricRequests.push(request.url());
+    directMetricRequests.push(request.url());
   }
 });
 
@@ -113,6 +113,40 @@ async function loadHomePage() {
     timeout: 15_000,
   });
   console.log('OK browser load /');
+}
+
+async function verifyBlogIndexMetricsProxy() {
+  const metricsResponsePromise = page.waitForResponse(
+    (response) => {
+      const parsedUrl = new URL(response.url());
+      return (
+        parsedUrl.origin === baseOrigin &&
+        parsedUrl.pathname === '/api/blog-metrics/metrics' &&
+        response.request().method() === 'GET'
+      );
+    },
+    { timeout: 15_000 }
+  );
+
+  await goto('/blog');
+  const response = await metricsResponsePromise;
+
+  if (!response.ok()) {
+    throw new Error(
+      `Blog aggregate metrics proxy failed with ${response.status()}.`
+    );
+  }
+
+  await page.locator('[aria-label$=" views"]').first().waitFor({
+    state: 'visible',
+    timeout: 15_000,
+  });
+  await page.locator('[aria-label*=" likes"]').first().waitFor({
+    state: 'visible',
+    timeout: 15_000,
+  });
+
+  console.log('OK blog aggregate metrics use same-origin proxy and render');
 }
 
 async function navigateByLink(startPath, href, expectedText) {
@@ -220,56 +254,65 @@ async function verifyBlogActorContinuity() {
     timeout: 15_000,
   });
 
-  const second = await loadArticleWithActorMetrics(
-    articlePath,
-    likeUrl,
-    viewUrl
-  );
+  for (let reloadAttempt = 1; reloadAttempt <= 3; reloadAttempt += 1) {
+    const repeated = await loadArticleWithActorMetrics(
+      articlePath,
+      likeUrl,
+      viewUrl
+    );
 
-  if (!second.likeState.liked) {
-    throw new Error('Like state was lost after a page reload.');
+    if (!repeated.likeState.liked) {
+      throw new Error(
+        `Like state was lost after reload ${reloadAttempt}.`
+      );
+    }
+
+    if (repeated.viewWrite.metrics.views !== first.viewWrite.metrics.views) {
+      throw new Error(
+        `Repeated view changed the count after reload ${reloadAttempt}: ` +
+          `first=${first.viewWrite.metrics.views} ` +
+          `repeated=${repeated.viewWrite.metrics.views}`
+      );
+    }
+
+    if (
+      typeof repeated.viewWrite.counted === 'boolean' &&
+      repeated.viewWrite.counted !== false
+    ) {
+      throw new Error(
+        `Repeated same-day view was counted after reload ${reloadAttempt}: ` +
+          JSON.stringify(repeated.viewWrite)
+      );
+    }
+
+    await page.getByRole('button', { name: 'Unlike this article' }).waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
   }
 
-  if (second.viewWrite.metrics.views !== first.viewWrite.metrics.views) {
-    throw new Error(
-      'Repeated view from the same actor changed the count: ' +
-        `first=${first.viewWrite.metrics.views} ` +
-        `second=${second.viewWrite.metrics.views}`
-    );
-  }
+  for (let repeat = 1; repeat <= 3; repeat += 1) {
+    const repeatedLikeResponse = await context.request.put(likeUrl, {
+      failOnStatusCode: false,
+    });
+    if (!repeatedLikeResponse.ok()) {
+      throw new Error(
+        `Repeated like PUT ${repeat} failed with ${repeatedLikeResponse.status()}.`
+      );
+    }
 
-  if (
-    typeof second.viewWrite.counted === 'boolean' &&
-    second.viewWrite.counted !== false
-  ) {
-    throw new Error(
-      `Repeated same-day view was counted: ${JSON.stringify(second.viewWrite)}`
-    );
-  }
-
-  await page.getByRole('button', { name: 'Unlike this article' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-
-  const repeatedLikeResponse = await context.request.put(likeUrl, {
-    failOnStatusCode: false,
-  });
-  if (!repeatedLikeResponse.ok()) {
-    throw new Error(
-      `Repeated like PUT failed with ${repeatedLikeResponse.status()}.`
-    );
-  }
-
-  const repeatedLikeWrite = await repeatedLikeResponse.json();
-  if (
-    repeatedLikeWrite?.liked !== true ||
-    repeatedLikeWrite?.changed !== false ||
-    repeatedLikeWrite?.metrics?.likes !== firstLikeWrite.metrics.likes
-  ) {
-    throw new Error(
-      `Repeated like was not idempotent: ${JSON.stringify(repeatedLikeWrite)}`
-    );
+    const repeatedLikeWrite = await repeatedLikeResponse.json();
+    if (
+      repeatedLikeWrite?.liked !== true ||
+      repeatedLikeWrite?.changed !== false ||
+      repeatedLikeWrite?.metrics?.likes !== firstLikeWrite.metrics.likes
+    ) {
+      throw new Error(
+        `Repeated like ${repeat} was not idempotent: ${JSON.stringify(
+          repeatedLikeWrite
+        )}`
+      );
+    }
   }
 
   const restoreResponse = await context.request.delete(likeUrl, {
@@ -287,7 +330,7 @@ async function verifyBlogActorContinuity() {
   }
 
   console.log(
-    'OK actor continuity: reload preserves like and repeated same-day view/like are no-ops'
+    'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
   );
 }
 
@@ -401,6 +444,7 @@ async function navigateWithinMobileComponentSidebar() {
 try {
   await page.setViewportSize({ width: 1280, height: 900 });
   await loadHomePage();
+  await verifyBlogIndexMetricsProxy();
   await navigateByLink(
     '/blog',
     '/blog/two-runtimes',
@@ -433,9 +477,9 @@ try {
       `Cloudflare emitted obsolete Vercel requests:\n${vercelRuntimeRequests.join('\n')}`
     );
   }
-  if (directActorMetricRequests.length > 0) {
+  if (directMetricRequests.length > 0) {
     throw new Error(
-      `Actor metrics bypassed same-origin proxy:\n${directActorMetricRequests.join('\n')}`
+      `Blog metrics bypassed same-origin proxy:\n${directMetricRequests.join('\n')}`
     );
   }
   if (criticalDiagnostics.length > 0) {

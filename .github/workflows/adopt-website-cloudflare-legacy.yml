@@ -1,0 +1,248 @@
+name: Adopt Isolated Legacy Website Archive Once
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'ONE-TIME exception for a0314de6 only. Requires separate reviewed activation authorization.'
+        required: true
+        type: choice
+        default: DO_NOT_ADOPT
+        options:
+          - DO_NOT_ADOPT
+          - ADOPT_ISOLATED_A0314DE6_ONCE
+
+      expected_main_sha:
+        description: 'Exact reviewed post-merge main SHA with successful main CI (not a PR or historical artifact).'
+        required: true
+        type: string
+      never_public_attestation:
+        description: 'Operator confirms this exact legacy Worker was never attached to public vellira.dev; this is historical attestation, not a current-state inference.'
+        required: true
+        type: choice
+        default: NOT_CONFIRMED
+        options:
+          - NOT_CONFIRMED
+          - I_CONFIRM_LEGACY_NEVER_PUBLIC
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-worker-vellira-website
+  cancel-in-progress: false
+
+env:
+  ADOPTION_MAIN_SHA: ${{ inputs.expected_main_sha }}
+  ADOPTION_CONFIRMATION: ${{ inputs.confirmation }}
+  ADOPTION_NEVER_PUBLIC: ${{ inputs.never_public_attestation }}
+  NODE_VERSION: 22.22.0
+  PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
+  VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  deploy:
+    name: One-time identity-locked legacy adoption
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'ADOPT_ISOLATED_A0314DE6_ONCE' && inputs.expected_main_sha == github.sha && inputs.never_public_attestation == 'I_CONFIRM_LEGACY_NEVER_PUBLIC'
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify exact legacy isolation, green main and pristine production R2 before building
+        run: node apps/website/scripts/cloudflare-adopt-isolated-legacy.mjs preflight
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Build website dependencies
+        run: pnpm exec turbo run build --filter='@vellira-ui/website^...'
+
+      - name: Sync website brand
+        run: pnpm --dir apps/website run sync:brand
+
+      - name: Build production Worker candidate
+        run: pnpm --dir apps/website exec opennextjs-cloudflare build --config=wrangler.production.jsonc
+
+      - name: Verify OpenNext CSS asset closure
+        run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
+
+      - name: Verify production config has no public custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep --fixed-strings --quiet 'vellira.dev' apps/website/wrangler.production.jsonc; then
+            echo 'Production candidate config unexpectedly contains vellira.dev before cutover.' >&2
+            exit 1
+          fi
+
+      - name: Test runtime asset auditing
+        run: node --test apps/website/scripts/cloudflare-build-runtime-audit.test.mjs
+
+      - name: Audit client manifests and Webpack runtime assets
+        run: node apps/website/scripts/cloudflare-build-runtime-audit.mjs
+
+      - name: Verify cache, identity, and immutable archive contracts
+        run: pnpm test:cloudflare-cache
+
+      - name: Verify actual OpenNext runtime before remote archive or activation
+        run: |
+          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-local-runtime.mjs
+
+      - name: Install migration regression browsers
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install --with-deps chromium firefox webkit
+
+      - name: Prove same-origin multi-deployment browser migration before activation
+        run: pnpm test:cloudflare-migration
+
+      - name: Adopt exact isolated legacy predecessor once
+        id: worker-deploy
+        run: >-
+          node apps/website/scripts/cloudflare-adopt-isolated-legacy.mjs adopt
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Audit assets after OpenNext deploy cache population
+        run: >-
+          node apps/website/scripts/cloudflare-build-runtime-audit.mjs
+          apps/website apps/website/.open-next/asset-audit-after-deploy.json
+
+      - name: Smoke test production Worker candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 15
+
+          check_route() {
+            local path="$1"
+            shift
+            local body
+            local status
+            local expected
+            local matches
+            body="$(mktemp)"
+
+            for attempt in 1 2 3 4 5; do
+              status="$(curl --location --silent --show-error \
+                --header 'Cache-Control: no-cache' \
+                --output "$body" --write-out '%{http_code}' \
+                "$PRODUCTION_WORKER_URL$path" || true)"
+
+              matches=true
+              if [[ "$status" == "200" ]]; then
+                for expected in "$@"; do
+                  if ! grep --fixed-strings --quiet "$expected" "$body"; then
+                    matches=false
+                    break
+                  fi
+                done
+              else
+                matches=false
+              fi
+
+              if [[ "$matches" == "true" ]]; then
+                echo "OK $path"
+                rm -f "$body"
+                return 0
+              fi
+
+              echo "Attempt $attempt failed for $path: HTTP $status"
+              sleep 2
+            done
+
+            echo "Production candidate smoke failed for $path" >&2
+            sed -n '1,40p' "$body" >&2
+            rm -f "$body"
+            return 1
+          }
+
+          check_route '/' 'Vellira'
+          check_route '/components/switch' 'Switch component for Vellira applications.'
+          check_route '/blog' 'Practical engineering notes on design systems'
+          check_route '/blog/two-runtimes' 'One Design System, Two Runtimes' 'data-language="ts"'
+          check_route '/blog/rss.xml' '<rss version="2.0"'
+          check_route '/sitemap.xml' '<urlset'
+          check_route '/robots.txt' 'User-Agent: *'
+
+      - name: Verify deployed identities, freshness and immutable bytes
+        run: node apps/website/scripts/cloudflare-runtime-contract.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Install Chromium for browser smoke
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
+
+      - name: Test browser forensic diagnostics
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node --test
+          scripts/cloudflare-browser-diagnostics.test.mjs
+
+      - name: Smoke test production navigation and actor metrics
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-website-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Soak test production client navigation static assets
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-navigation-soak.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Smoke test production static chunk integrity
+        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-static-chunk-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Retain asset and browser forensic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cloudflare-forensics-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          include-hidden-files: true
+          path: |
+            apps/react-storybook/test-results/cloudflare-soak/
+            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
+            apps/react-storybook/test-results/cloudflare-migration/summary.json
+            apps/react-storybook/test-results/cloudflare-migration/*.log
+            apps/website/.open-next/asset-audit*.json
+            apps/website/.open-next/legacy-adoption-result.json
+            apps/website/.open-next/archive-evidence.json
+            apps/website/.open-next/vellira-build.json
+            apps/website/.open-next/runtime-contract.json
+            apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/cache/
+            apps/website/.next/*manifest.json
+            apps/website/.next/BUILD_ID
+            apps/website/.next/server/**/*manifest*
+            apps/website/.next/static/chunks/webpack-*.js

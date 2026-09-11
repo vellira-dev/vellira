@@ -16,12 +16,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: website-cloudflare-production
+  group: deploy-worker-vellira-website
   cancel-in-progress: false
 
 env:
   NODE_VERSION: 22.22.0
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
+  VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   deploy:
@@ -45,6 +46,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify R2 access and active predecessor archive before building
+        run: node apps/website/scripts/cloudflare-archive-preflight.mjs wrangler.production.jsonc
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Build website dependencies
         run: pnpm exec turbo run build --filter='@vellira-ui/website^...'
 
@@ -53,6 +61,9 @@ jobs:
 
       - name: Build production Worker candidate
         run: pnpm --dir apps/website exec opennextjs-cloudflare build --config=wrangler.production.jsonc
+
+      - name: Verify OpenNext CSS asset closure
+        run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
 
       - name: Verify production config has no public custom domain
         shell: bash
@@ -63,11 +74,39 @@ jobs:
             exit 1
           fi
 
+      - name: Test runtime asset auditing
+        run: node --test apps/website/scripts/cloudflare-build-runtime-audit.test.mjs
+
+      - name: Audit client manifests and Webpack runtime assets
+        run: node apps/website/scripts/cloudflare-build-runtime-audit.mjs
+
+      - name: Verify cache, identity, and immutable archive contracts
+        run: pnpm test:cloudflare-cache
+
+      - name: Verify actual OpenNext runtime before remote archive or activation
+        run: |
+          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-local-runtime.mjs
+
+      - name: Install migration regression browsers
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install --with-deps chromium firefox webkit
+
+      - name: Prove same-origin multi-deployment browser migration before activation
+        run: pnpm test:cloudflare-migration
+
       - name: Deploy isolated production Worker candidate
-        run: pnpm --dir apps/website exec opennextjs-cloudflare deploy --config=wrangler.production.jsonc
+        id: worker-deploy
+        run: >-
+          node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
         env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Audit assets after OpenNext deploy cache population
+        run: >-
+          node apps/website/scripts/cloudflare-build-runtime-audit.mjs
+          apps/website apps/website/.open-next/asset-audit-after-deploy.json
 
       - name: Smoke test production Worker candidate
         shell: bash
@@ -126,12 +165,60 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
-      - name: Install Chromium for static chunk smoke
-        run: pnpm --filter @vellira-ui/react-storybook run playwright:install
+      - name: Verify deployed identities, freshness and immutable bytes
+        run: node apps/website/scripts/cloudflare-runtime-contract.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Install Chromium for browser smoke
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
+
+      - name: Test browser forensic diagnostics
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node --test
+          scripts/cloudflare-browser-diagnostics.test.mjs
+
+      - name: Smoke test production navigation and actor metrics
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-website-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Soak test production client navigation static assets
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-navigation-soak.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
 
       - name: Smoke test production static chunk integrity
+        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Retain asset and browser forensic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cloudflare-forensics-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          include-hidden-files: true
+          path: |
+            apps/react-storybook/test-results/cloudflare-soak/
+            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
+            apps/react-storybook/test-results/cloudflare-migration/summary.json
+            apps/react-storybook/test-results/cloudflare-migration/*.log
+            apps/website/.open-next/asset-audit*.json
+            apps/website/.open-next/archive-evidence.json
+            apps/website/.open-next/vellira-build.json
+            apps/website/.open-next/runtime-contract.json
+            apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/cache/
+            apps/website/.next/*manifest.json
+            apps/website/.next/BUILD_ID
+            apps/website/.next/server/**/*manifest*
+            apps/website/.next/static/chunks/webpack-*.js
