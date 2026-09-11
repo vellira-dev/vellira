@@ -101,7 +101,8 @@ export function auditComponentDependencySource(input: {
 
     const edge = allowedComponentFactoryDependencyEdgesV1.find(
       ({ from, to }) =>
-        from === input.component && factoryNameForComponent(to) === importedFactory
+        from === input.component &&
+        factoryNameForComponent(to) === importedFactory
     );
     if (!edge) {
       findings.push(
