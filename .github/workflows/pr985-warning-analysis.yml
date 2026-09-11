@@ -1,0 +1,88 @@
+name: PR 985 warning analysis
+
+on:
+  push:
+    branches: [probe/pr985-warning-analysis-20260911]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate warning analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/warning-analysis
+          pnpm --silent check:tokens-semantic:json > .artifacts/warning-analysis/report.json
+          python - <<'PY'
+          import json, re
+          from pathlib import Path
+          from collections import defaultdict
+
+          report = json.loads(Path('.artifacts/warning-analysis/report.json').read_text())
+          canonical_source = Path('packages/tokens/src/generated/token-types.ts').read_text()
+          canonical = set(re.findall(r"'(--[\w-]+)'", canonical_source))
+
+          declarations = defaultdict(list)
+          for root in (Path('apps'), Path('packages')):
+            for path in root.rglob('*'):
+              if not path.is_file() or path.suffix not in {'.css', '.scss'}:
+                continue
+              source = path.read_text()
+              for match in re.finditer(r'(?m)(--[\w-]+)\s*:', source):
+                line = source.count('\n', 0, match.start()) + 1
+                declarations[match.group(1)].append({'path': str(path), 'line': line})
+
+          rows = []
+          for finding in report['findings']:
+            if finding['severity'] != 'warning' or finding['ruleId'] != 'tokens.consumer-reference':
+              continue
+            token = finding.get('tokenPath') or ''
+            row = {
+              'code': finding['code'],
+              'sourcePath': finding['sourcePath'],
+              'line': finding['line'],
+              'tokenPath': token,
+              'declarations': declarations.get(token, []),
+              'sameFileDeclaration': any(item['path'] == finding['sourcePath'] for item in declarations.get(token, [])),
+            }
+            if '#{' in token:
+              pattern = re.escape(token)
+              pattern = re.sub(r'\\#\\\{\\\$[A-Za-z_][\w-]*\\\}', r'[^-]+', pattern)
+              regex = re.compile('^' + pattern + '$')
+              matches = sorted(name for name in canonical if regex.fullmatch(name))
+              row['canonicalTemplateMatches'] = matches
+              row['canonicalTemplateMatchCount'] = len(matches)
+            rows.append(row)
+
+          summary = {
+            'warnings': len(rows),
+            'byCode': {},
+            'unprovenSameFile': sum(1 for row in rows if row['code'] == 'unproven-provider-boundary' and row['sameFileDeclaration']),
+            'unprovenWithDeclaration': sum(1 for row in rows if row['code'] == 'unproven-provider-boundary' and row['declarations']),
+            'unclassifiedWithDeclaration': sum(1 for row in rows if row['code'] == 'unclassified-css-variable' and row['declarations']),
+            'dynamicWithCanonicalMatch': sum(1 for row in rows if row['code'] == 'unresolved-css-variable-expression' and row.get('canonicalTemplateMatchCount', 0) > 0),
+            'dynamicWithoutCanonicalMatch': sum(1 for row in rows if row['code'] == 'unresolved-css-variable-expression' and row.get('canonicalTemplateMatchCount', 0) == 0),
+          }
+          for code in sorted({row['code'] for row in rows}):
+            summary['byCode'][code] = sum(1 for row in rows if row['code'] == code)
+
+          Path('.artifacts/warning-analysis/analysis.json').write_text(json.dumps({'summary': summary, 'rows': rows}, indent=2))
+          print(json.dumps(summary, indent=2))
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: warning-analysis
+          path: .artifacts/warning-analysis/
+          if-no-files-found: error
+          retention-days: 3
