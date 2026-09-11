@@ -196,7 +196,8 @@ export function checkTokenSemanticVocabulary(): RuleResult {
         )
       );
     }
-    if (descriptor.roles.length === 0) {
+    const roles: readonly string[] = descriptor.roles;
+    if (roles.length === 0) {
       findings.push(
         finding(
           'semantic-namespace-roles-empty',
