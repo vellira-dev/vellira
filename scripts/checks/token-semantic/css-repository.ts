@@ -6,6 +6,7 @@ import ts from 'typescript';
 import { canonicalCssVariableNames } from '../../design-resources/authority';
 import type { FindingInput, RuleResult } from './contract';
 import { componentAncestorProviderVariables } from './css-component-provider';
+import { shikiProviderVariables } from './css-external-provider';
 import { auditCssReferences, declaredCssVariables } from './css-references';
 import { createScssVariableExpressionResolver } from './css-sass-expression';
 
@@ -291,6 +292,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   const familyProviderCache = new Map<string, ReadonlySet<string>>();
   const applicationProviderCache = new Map<string, ReadonlySet<string>>();
   const ancestorProviderCache = new Map<string, ReadonlySet<string>>();
+  const externalProviderCache = new Map<string, ReadonlySet<string>>();
   let checked = 0;
 
   function walk(
@@ -343,6 +345,12 @@ export function checkTokenCssReferences(root: string): RuleResult {
           sourcePath,
           applicationProviderCache
         ),
+        ...shikiProviderVariables(
+          root,
+          sourcePath,
+          source,
+          externalProviderCache
+        ),
       ]);
       const candidateProviderVariables = componentFamilyProviderCandidates(
         root,
@@ -376,7 +384,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS references in apps/packages with canonical/static providers, statically proven component and website ancestry, and bounded Sass list/@each/mixin expansion. Other imported providers, general Sass evaluation, and escaped identifiers remain incomplete.',
+      'Authored CSS/SCSS references in apps/packages with canonical/static providers, imported same-basename runtime providers, statically proven component/website/Shiki ownership, and bounded Sass list/@each/mixin expansion. General Sass evaluation, escaped identifiers, and other external provider contracts remain incomplete.',
     checked,
     findings,
   };
