@@ -61,7 +61,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.05em;

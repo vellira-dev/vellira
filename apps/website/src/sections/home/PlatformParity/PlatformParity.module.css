@@ -124,7 +124,7 @@
 }
 
 .platformLabel {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -216,7 +216,7 @@
 }
 
 .previewTitle small {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
 }
 
@@ -247,7 +247,7 @@
 }
 
 .tabPanel span {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: 600;
 }
@@ -557,7 +557,7 @@
   position: absolute;
   top: 18px;
   right: 20px;
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
