@@ -616,7 +616,8 @@
 
   .previewStage {
     min-height: 460px;
-    padding: var(--space-7) calc(var(--space-4) + var(--space-1));
+    padding: calc(var(--space-6) + var(--space-1))
+      calc(var(--space-4) + var(--space-1));
   }
 
   .previewCard {
