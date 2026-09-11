@@ -1,0 +1,112 @@
+name: PR 985 zero-error CSS cleanup probe
+
+on:
+  push:
+    branches: [probe/pr985-zero-error-css-cleanup-20260911]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply preservation-first cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          website = Path('apps/website')
+          tertiary_files = []
+          tertiary_count = 0
+          old = 'color: var(--text-tertiary);'
+          new = 'color: inherit;'
+          for path in sorted(website.rglob('*.css')):
+            source = path.read_text()
+            count = source.count(old)
+            if count:
+              source = source.replace(old, new)
+              path.write_text(source)
+              tertiary_files.append(str(path))
+              tertiary_count += count
+          if tertiary_count != 22:
+            raise SystemExit(f'expected exactly 22 text-tertiary color declarations, got {tertiary_count}')
+
+          replacements = {
+            'apps/website/src/sections/home/Hero/Hero.module.css': (
+              'background: var(--color-danger-400, var(--border-strong));',
+              'background: var(--border-strong);',
+            ),
+            'packages/react/src/components/Modal/Header/ModalHeader.module.scss': (
+              '    line-height: var(--line-height-normal);\n',
+              '',
+            ),
+            'packages/react/src/components/Dropdown/Trigger/DropdownTrigger.module.scss': (
+              'transform: rotate(var(--dropdown-rotate-angle, 90deg));',
+              'transform: rotate(90deg);',
+            ),
+          }
+          for file, (before, after) in replacements.items():
+            path = Path(file)
+            source = path.read_text()
+            actual = source.count(before)
+            if actual != 1:
+              raise SystemExit(f'{file}: expected one occurrence of {before!r}, got {actual}')
+            path.write_text(source.replace(before, after))
+
+          print(f'Replaced {tertiary_count} undefined text-tertiary declarations across {len(tertiary_files)} files.')
+          print('Applied 3 output-preserving stale-reference repairs.')
+          PY
+      - name: Format and validate diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --name-only -- '*.css' '*.scss')
+          test "${#files[@]}" -gt 0
+          pnpm exec prettier "${files[@]}" --write
+          pnpm exec prettier "${files[@]}" --check
+          git diff --check
+      - name: Verify zero-error semantic baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/zero-error-css
+          pnpm --silent check:tokens-semantic:json > .artifacts/zero-error-css/report.json
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('.artifacts/zero-error-css/report.json', 'utf8'));
+          if (report.summary.runtimeErrors !== 0) throw new Error(`runtimeErrors=${report.summary.runtimeErrors}`);
+          if (report.summary.errors !== 0) {
+            const errors = report.findings.filter((finding) => finding.severity === 'error');
+            throw new Error(`expected zero errors, got ${report.summary.errors}: ${JSON.stringify(errors.slice(0, 20))}`);
+          }
+          console.log(JSON.stringify(report.summary));
+          NODE
+      - name: Focused audit tests
+        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic
+      - name: Quality gate
+        run: pnpm ci:quality
+      - name: Persist validated cleanup on probe branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Roman Bakurov'
+          git config user.email 'ronbakurov@gmail.com'
+          git add apps/website packages/react
+          git commit -m 'fix(tokens): remove unresolved CSS references'
+          git push origin HEAD:probe/pr985-zero-error-css-cleanup-20260911
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: zero-error-css-cleanup-evidence
+          path: .artifacts/zero-error-css/
+          if-no-files-found: error
+          retention-days: 3
