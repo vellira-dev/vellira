@@ -101,6 +101,40 @@ function sameBasenameRuntimeProviderVariables(
   return variables;
 }
 
+function applicationWideProviderVariables(
+  root: string,
+  sourcePath: string,
+  cache: Map<string, ReadonlySet<string>>
+): ReadonlySet<string> {
+  if (!sourcePath.startsWith('apps/website/')) return new Set();
+
+  const cacheKey = 'apps/website';
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  const globalsPath = 'apps/website/src/styles/globals.css';
+  const layoutPath = 'apps/website/src/app/layout.tsx';
+  const absoluteGlobalsPath = path.join(root, globalsPath);
+  const absoluteLayoutPath = path.join(root, layoutPath);
+  const variables = new Set<string>();
+
+  if (
+    fs.existsSync(absoluteGlobalsPath) &&
+    fs.existsSync(absoluteLayoutPath) &&
+    /(?:import\s+['"]\.\.\/styles\/globals\.css['"]|from\s+['"]\.\.\/styles\/globals\.css['"])/.test(
+      fs.readFileSync(absoluteLayoutPath, 'utf8')
+    )
+  ) {
+    const globalsSource = fs.readFileSync(absoluteGlobalsPath, 'utf8');
+    for (const variable of declaredCssVariables(globalsPath, globalsSource)) {
+      variables.add(variable);
+    }
+  }
+
+  cache.set(cacheKey, variables);
+  return variables;
+}
+
 function componentProviderVariables(
   root: string,
   sourcePath: string,
@@ -225,6 +259,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   const findings: FindingInput[] = [];
   const runtimeProviderCache = new Map<string, ReadonlySet<string>>();
   const familyProviderCache = new Map<string, ReadonlySet<string>>();
+  const applicationProviderCache = new Map<string, ReadonlySet<string>>();
   let checked = 0;
 
   function walk(
@@ -267,6 +302,11 @@ export function checkTokenCssReferences(root: string): RuleResult {
       const providerVariables = new Set([
         ...componentProviderVariables(root, sourcePath, runtimeProviderCache),
         ...sameBasenameRuntimeProviderVariables(root, sourcePath),
+        ...applicationWideProviderVariables(
+          root,
+          sourcePath,
+          applicationProviderCache
+        ),
       ]);
       const candidateProviderVariables = componentFamilyProviderCandidates(
         root,
@@ -295,7 +335,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS static var() references in apps/packages with exact same-module runtime providers, component-root inheritance/runtime providers, and visible same-family provider candidates. Imported/application-wide providers, proven cross-module ancestor ownership, and dynamic references still require integration.',
+      'Authored CSS/SCSS static var() references in apps/packages with exact same-module runtime providers, component-root inheritance/runtime providers, proven website root-global providers, and visible same-family provider candidates. Other imported/application-wide providers, proven cross-module ancestor ownership, and dynamic references still require integration.',
     checked,
     findings,
   };
