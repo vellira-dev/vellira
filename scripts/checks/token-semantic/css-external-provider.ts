@@ -73,7 +73,8 @@ function configuredShikiAliases(sourcePath: string, source: string) {
           const themes = objectProperty(options, 'themes')?.initializer;
           if (themes && ts.isArrayLiteralExpression(themes)) {
             for (const element of themes.elements) {
-              if (ts.isStringLiteral(element)) configuredThemes.add(element.text);
+              if (ts.isStringLiteral(element))
+                configuredThemes.add(element.text);
             }
           }
         }
