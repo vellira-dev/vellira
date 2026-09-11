@@ -142,7 +142,8 @@ export function auditCssReferences(
         severity: 'warning',
         ...location,
         evidence: `${variable} has a provider in the same component family, but the scanner has not proven that provider is an ancestor/import owner of this stylesheet.`,
-        expected: 'A statically proven provider relationship or canonical token.',
+        expected:
+          'A statically proven provider relationship or canonical token.',
         migrationStatus: 'not-applicable',
         suggestedAction:
           'Prove the component provider relationship before marking this reference complete.',

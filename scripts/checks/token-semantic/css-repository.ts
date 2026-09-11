@@ -201,7 +201,10 @@ function componentFamilyProviderCandidates(
         .split(path.sep)
         .join('/');
       const providerSource = fs.readFileSync(absolutePath, 'utf8');
-      for (const variable of declaredCssVariables(providerPath, providerSource)) {
+      for (const variable of declaredCssVariables(
+        providerPath,
+        providerSource
+      )) {
         if (variable.startsWith(prefix)) variables.add(variable);
       }
     }
