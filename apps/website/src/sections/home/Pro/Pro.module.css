@@ -220,7 +220,7 @@
 .cardHeader h3 {
   margin: 0;
   color: var(--text-primary);
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xxl);
   line-height: 1.2;
   letter-spacing: 0;
 }
@@ -240,7 +240,7 @@
 }
 
 .proBadge {
-  min-height: calc(var(--space-9) + var(--space-1));
+  min-height: calc(calc(var(--space-8) + var(--space-1)) + var(--space-1));
   padding: 0 calc(var(--space-3) + var(--space-1));
   color: var(--color-primary-500);
   background: color-mix(
