@@ -94,7 +94,8 @@ export function auditCssReferences(
   sourcePath: string,
   source: string,
   canonicalVariables: ReadonlySet<string>,
-  providerVariables: ReadonlySet<string> = new Set()
+  providerVariables: ReadonlySet<string> = new Set(),
+  candidateProviderVariables: ReadonlySet<string> = new Set()
 ): FindingInput[] {
   if (canonicalVariables.size === 0) {
     throw new Error('Canonical CSS-variable authority is empty.');
@@ -132,6 +133,20 @@ export function auditCssReferences(
       continue;
     }
     if (canonicalVariables.has(variable) || providerVariables.has(variable)) {
+      continue;
+    }
+    if (candidateProviderVariables.has(variable)) {
+      findings.push({
+        ruleId: 'tokens.consumer-reference',
+        code: 'unproven-provider-boundary',
+        severity: 'warning',
+        ...location,
+        evidence: `${variable} has a provider in the same component family, but the scanner has not proven that provider is an ancestor/import owner of this stylesheet.`,
+        expected: 'A statically proven provider relationship or canonical token.',
+        migrationStatus: 'not-applicable',
+        suggestedAction:
+          'Prove the component provider relationship before marking this reference complete.',
+      });
       continue;
     }
     const tokenNamespace = prefixes.has(namespace(variable));
