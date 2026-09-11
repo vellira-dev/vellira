@@ -1,4 +1,4 @@
-name: Verify post-852 Vellira UI baseline
+name: Verify PlatformParity token migration
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -22,35 +22,63 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Capture exact post-852 baseline
+      - name: Apply and verify bounded PlatformParity token migration
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = c83761dd4a83eff4d514bc72cacd34de185cdd62
-          mkdir -p .artifacts/vellira-ui-baseline
-          pnpm check:vellira-ui-usage:json > .artifacts/vellira-ui-baseline/report.json
+          target='apps/website/src/sections/home/PlatformParity/PlatformParity.module.css'
+          mkdir -p .artifacts/platform-parity
+          pnpm check:vellira-ui-usage:json > /tmp/before.json
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          const report = JSON.parse(fs.readFileSync('.artifacts/vellira-ui-baseline/report.json', 'utf8'));
-          const byRule = new Map();
-          const byPath = new Map();
-          for (const finding of report.findings) {
-            byRule.set(finding.ruleId, (byRule.get(finding.ruleId) ?? 0) + 1);
-            byPath.set(finding.path, (byPath.get(finding.path) ?? 0) + 1);
+          const target = 'apps/website/src/sections/home/PlatformParity/PlatformParity.module.css';
+          const report = JSON.parse(fs.readFileSync('/tmp/before.json', 'utf8'));
+          const findings = report.findings.filter((f) => f.path === target);
+          if (report.summary.findings !== 79 || findings.length !== 5) {
+            throw new Error(`Unexpected baseline: repo=${report.summary.findings}, target=${findings.length}`);
           }
-          console.log('SUMMARY', JSON.stringify(report.summary));
-          console.log('RULES');
-          for (const [rule, count] of [...byRule].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]))) console.log(`${count}\t${rule}`);
-          console.log('TOP_PATHS');
-          for (const [path, count] of [...byPath].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0])).slice(0,30)) console.log(`${count}\t${path}`);
-          console.log('FINDINGS');
-          for (const finding of report.findings) {
-            console.log(JSON.stringify({ruleId:finding.ruleId,path:finding.path,line:finding.line,column:finding.column,detected:finding.detected,canonicalAlternative:finding.canonicalAlternative,nextAction:finding.nextAction,message:finding.message}));
+          const expected = new Map([
+            ['--text-tertiary', 4],
+            ['--font-size-base', 1],
+          ]);
+          const actual = new Map();
+          for (const finding of findings) actual.set(finding.detected, (actual.get(finding.detected) ?? 0) + 1);
+          for (const [token, count] of expected) {
+            if (actual.get(token) !== count) throw new Error(`Unexpected ${token} count: ${actual.get(token)}`);
           }
+          let source = fs.readFileSync(target, 'utf8');
+          source = source.replaceAll('var(--text-tertiary)', 'var(--text-muted)');
+          source = source.replaceAll('var(--font-size-base)', 'var(--font-size-md)');
+          fs.writeFileSync(target, source);
           NODE
+          pnpm exec prettier "$target" --write
+          git diff --check
+          pnpm check:vellira-ui-usage:json > /tmp/after.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const target = 'apps/website/src/sections/home/PlatformParity/PlatformParity.module.css';
+          const before = JSON.parse(fs.readFileSync('/tmp/before.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('/tmp/after.json', 'utf8'));
+          const targetAfter = after.findings.filter((f) => f.path === target);
+          if (targetAfter.length !== 0) throw new Error(`Target still has ${targetAfter.length} finding(s)`);
+          if (after.summary.findings !== 74) throw new Error(`Expected repo baseline 74, got ${after.summary.findings}`);
+          if (after.summary.exceptionsApplied !== 0) throw new Error('Unexpected checker exception');
+          if (after.summary.blockingFindings !== 0) throw new Error('Unexpected blocking finding in audit mode');
+          const untouchedBefore = before.findings.filter((f) => f.path !== target).map((f) => JSON.stringify(f));
+          const untouchedAfter = after.findings.filter((f) => f.path !== target).map((f) => JSON.stringify(f));
+          if (JSON.stringify(untouchedBefore) !== JSON.stringify(untouchedAfter)) {
+            throw new Error('Migration changed findings outside PlatformParity');
+          }
+          console.log('Verified Vellira UI baseline:', before.summary.findings, '->', after.summary.findings);
+          console.log('PlatformParity findings: 5 -> 0');
+          NODE
+          pnpm --filter @vellira-ui/website typecheck
+          cp "$target" .artifacts/platform-parity/PlatformParity.module.css
+          git diff -- "$target"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: post-852-vellira-ui-baseline
-          path: .artifacts/vellira-ui-baseline/report.json
+          name: validated-platform-parity-token-migration
+          path: .artifacts/platform-parity/PlatformParity.module.css
           if-no-files-found: error
           retention-days: 7
