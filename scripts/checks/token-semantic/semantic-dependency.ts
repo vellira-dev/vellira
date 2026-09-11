@@ -101,8 +101,7 @@ export function auditComponentDependencySource(input: {
 
     const edge = allowedComponentFactoryDependencyEdgesV1.find(
       ({ from, to }) =>
-        from === input.component &&
-        factoryNameForComponent(to) === importedFactory
+        from === input.component && factoryNameForComponent(to) === importedFactory
     );
     if (!edge) {
       findings.push(
@@ -282,7 +281,8 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
 
   for (const repair of semanticDependencyRepairsV1) {
     checked += 1;
-    if (repair.paths.length === 0 || !repair.repair.trim()) {
+    const repairPaths: readonly string[] = repair.paths;
+    if (repairPaths.length === 0 || !repair.repair.trim()) {
       findings.push(
         finding(
           'invalid-dependency-repair-evidence',
