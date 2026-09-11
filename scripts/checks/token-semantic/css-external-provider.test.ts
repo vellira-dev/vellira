@@ -15,7 +15,9 @@ afterEach(() => {
 });
 
 function fixture(ownerSource: string, withDependency = true) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-shiki-provider-'));
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-shiki-provider-')
+  );
   roots.push(root);
 
   function write(file: string, content: string) {
