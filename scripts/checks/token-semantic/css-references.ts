@@ -59,6 +59,18 @@ function namespace(variable: string): string {
   return variable.slice(2).split('-')[0] ?? '';
 }
 
+function kebabCase(value: string): string {
+  return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+function localComponentVariablePrefix(sourcePath: string): string | null {
+  const match = sourcePath.match(
+    /^packages\/react\/src\/(?:components|primitives|patterns)\/([^/]+)\//
+  );
+  const componentName = match?.[1];
+  return componentName ? `--${kebabCase(componentName)}-` : null;
+}
+
 export function declaredCssVariables(
   sourcePath: string,
   source: string
@@ -103,6 +115,7 @@ export function auditCssReferences(
   const code = maskCssNonCode(source, sourcePath.endsWith('.scss'));
   const prefixes = new Set([...canonicalVariables].map(namespace));
   const declared = declaredCssVariables(sourcePath, source);
+  const localComponentPrefix = localComponentVariablePrefix(sourcePath);
   const findings: FindingInput[] = [];
 
   for (const match of code.matchAll(/(?<![\w-])var\(\s*/gi)) {
@@ -135,6 +148,13 @@ export function auditCssReferences(
     if (canonicalVariables.has(variable) || providerVariables.has(variable)) {
       continue;
     }
+    if (
+      declared.has(variable) &&
+      localComponentPrefix !== null &&
+      variable.startsWith(localComponentPrefix)
+    ) {
+      continue;
+    }
     if (candidateProviderVariables.has(variable)) {
       findings.push({
         ruleId: 'tokens.consumer-reference',
@@ -152,7 +172,8 @@ export function auditCssReferences(
     }
     const tokenNamespace = prefixes.has(namespace(variable));
     // A declaration in one file never exempts consumers in unrelated files.
-    // Unknown token-prefixed declarations still need ownership review.
+    // Unknown token-prefixed declarations still need ownership review, except
+    // for component-owned implementation variables proven in their own family.
     if (declared.has(variable) && !tokenNamespace) continue;
     const local = declared.has(variable);
     findings.push({
