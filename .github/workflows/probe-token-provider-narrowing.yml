@@ -59,6 +59,8 @@ jobs:
           path.write_text(source)
           PY
           pnpm exec prettier scripts/checks/token-semantic/css-component-provider.ts --write
+      - name: Build packages and apps
+        run: pnpm ci:build
       - name: Validate tooling TypeScript
         run: pnpm typecheck:tooling
       - name: Validate provider regressions
