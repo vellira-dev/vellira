@@ -1,0 +1,134 @@
+name: PR 985 safe CSS cleanup probe
+
+on:
+  push:
+    branches: [probe/pr985-safe-css-cleanup-20260911]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply exact canonical replacements
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+            'apps/website/src/styles/globals.css': [
+              ('var(--action-primary-solid-default-fg)', 'var(--button-primary-solid-default-fg)', 1),
+              ('var(--action-primary-solid-default-bg)', 'var(--button-primary-solid-default-bg)', 1),
+              ('var(--action-primary-solid-default-border)', 'var(--button-primary-solid-default-border)', 1),
+              ('var(--action-primary-solid-hover-bg)', 'var(--button-primary-solid-hover-bg)', 1),
+              ('var(--action-primary-solid-hover-border)', 'var(--button-primary-solid-hover-border)', 1),
+            ],
+            'apps/website/src/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.module.css': [
+              ('var(--focus-ring)', 'var(--focus-ring-color)', 1),
+            ],
+            'apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css': [
+              ('var(--focus-ring)', 'var(--focus-ring-color)', 1),
+              ('var(--color-primary)', 'var(--focus-ring-color)', 1),
+              ('var(--text-danger)', 'var(--status-error-fg)', 1),
+            ],
+            'apps/website/src/sections/home/PlatformParity/PlatformParity.module.css': [
+              ('var(--font-size-base)', 'var(--font-size-md)', 1),
+            ],
+            'apps/website/src/sections/home/Pro/Pro.module.css': [
+              ('var(--font-size-2xl)', 'var(--font-size-xxl)', 1),
+              ('var(--space-9)', 'calc(var(--space-8) + var(--space-1))', 1),
+            ],
+            'apps/website/src/blog/ui/BlogExperience.module.css': [
+              ('var(--space-7)', 'calc(var(--space-6) + var(--space-1))', 1),
+            ],
+            'apps/website/src/component-catalog/shared/ComponentsPageHero/ComponentsPageHero.module.css': [
+              ('var(--space-7)', 'calc(var(--space-6) + var(--space-1))', 1),
+            ],
+            'apps/website/src/sections/home/QuickStart/QuickStart.module.css': [
+              ('var(--space-7)', 'calc(var(--space-6) + var(--space-1))', 1),
+            ],
+          }
+
+          changed = 0
+          for file, rules in replacements.items():
+            path = Path(file)
+            source = path.read_text()
+            for old, new, expected in rules:
+              actual = source.count(old)
+              if actual != expected:
+                raise SystemExit(f'{file}: expected {expected} occurrence(s) of {old}, found {actual}')
+              source = source.replace(old, new)
+              changed += actual
+            path.write_text(source)
+
+          if changed != 15:
+            raise SystemExit(f'expected exactly 15 replacements, got {changed}')
+          print(f'Applied {changed} exact replacements across {len(replacements)} files.')
+          PY
+      - name: Format candidate CSS files
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            apps/website/src/styles/globals.css
+            apps/website/src/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.module.css
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css
+            apps/website/src/sections/home/PlatformParity/PlatformParity.module.css
+            apps/website/src/sections/home/Pro/Pro.module.css
+            apps/website/src/blog/ui/BlogExperience.module.css
+            apps/website/src/component-catalog/shared/ComponentsPageHero/ComponentsPageHero.module.css
+            apps/website/src/sections/home/QuickStart/QuickStart.module.css
+          )
+          pnpm exec prettier "${files[@]}" --write
+          pnpm exec prettier "${files[@]}" --check
+          git diff --check
+      - name: Verify semantic report improvement
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/safe-css-cleanup
+          pnpm --silent check:tokens-semantic:json > .artifacts/safe-css-cleanup/report.json
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('.artifacts/safe-css-cleanup/report.json', 'utf8'));
+          if (report.summary.runtimeErrors !== 0) throw new Error(`runtimeErrors=${report.summary.runtimeErrors}`);
+          if (report.summary.errors !== 25) throw new Error(`expected 25 errors, got ${report.summary.errors}`);
+          const consumerErrors = report.findings.filter((finding) => finding.ruleId === 'tokens.consumer-reference' && finding.severity === 'error');
+          if (consumerErrors.length !== 25) throw new Error(`expected 25 consumer errors, got ${consumerErrors.length}`);
+          console.log(JSON.stringify(report.summary));
+          NODE
+      - name: Focused audit tests
+        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic
+      - name: Persist validated cleanup on probe branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Roman Bakurov'
+          git config user.email 'ronbakurov@gmail.com'
+          git add \
+            apps/website/src/styles/globals.css \
+            apps/website/src/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.module.css \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css \
+            apps/website/src/sections/home/PlatformParity/PlatformParity.module.css \
+            apps/website/src/sections/home/Pro/Pro.module.css \
+            apps/website/src/blog/ui/BlogExperience.module.css \
+            apps/website/src/component-catalog/shared/ComponentsPageHero/ComponentsPageHero.module.css \
+            apps/website/src/sections/home/QuickStart/QuickStart.module.css
+          git commit -m 'fix(website): replace stale CSS token references'
+          git push origin HEAD:probe/pr985-safe-css-cleanup-20260911
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: safe-css-cleanup-evidence
+          path: .artifacts/safe-css-cleanup/
+          if-no-files-found: error
+          retention-days: 3
