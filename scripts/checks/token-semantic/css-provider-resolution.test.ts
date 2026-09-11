@@ -79,6 +79,48 @@ describe('CSS provider resolution boundaries', () => {
     ]);
   });
 
+  it('accepts website root-global variables only when the root layout imports their provider', () => {
+    const { root, write } = fixture(['--surface-canvas']);
+    write(
+      'apps/website/src/styles/globals.css',
+      ':root { --site-gutter: 24px; --site-header-height: 68px; }'
+    );
+    write(
+      'apps/website/src/app/layout.tsx',
+      "import '../styles/globals.css';\nexport default function Layout() { return null; }\n"
+    );
+    write(
+      'apps/website/src/Probe/Probe.module.css',
+      '.probe { padding: var(--site-gutter); min-height: var(--site-header-height); }'
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([]);
+  });
+
+  it('does not treat an unimported global stylesheet as an application-wide provider', () => {
+    const { root, write } = fixture(['--surface-canvas']);
+    write(
+      'apps/website/src/styles/globals.css',
+      ':root { --site-gutter: 24px; }'
+    );
+    write(
+      'apps/website/src/app/layout.tsx',
+      'export default function Layout() { return null; }\n'
+    );
+    write(
+      'apps/website/src/Probe/Probe.module.css',
+      '.probe { padding: var(--site-gutter); }'
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([
+      expect.objectContaining({
+        code: 'unclassified-css-variable',
+        sourcePath: 'apps/website/src/Probe/Probe.module.css',
+        tokenPath: '--site-gutter',
+      }),
+    ]);
+  });
+
   it('does not let a different sibling source file provide a CSS module variable', () => {
     const { root, write } = fixture(['--surface-canvas', '--action-primary']);
     write(
