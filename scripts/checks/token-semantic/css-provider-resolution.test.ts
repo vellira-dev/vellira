@@ -50,6 +50,35 @@ describe('CSS provider resolution boundaries', () => {
     expect(checkTokenCssReferences(root).findings).toEqual([]);
   });
 
+  it('accepts a component-owned variable declared and consumed in the same stylesheet', () => {
+    const { root, write } = fixture([
+      '--surface-canvas',
+      '--radio-primary-default-bg',
+    ]);
+    write(
+      'packages/react/src/primitives/Radio/Radio.module.scss',
+      '.root { --radio-selected-bg: var(--radio-primary-default-bg); background: var(--radio-selected-bg); }'
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([]);
+  });
+
+  it('keeps semantic-namespace local aliases visible for ownership review', () => {
+    const { root, write } = fixture(['--surface-canvas']);
+    write(
+      'apps/website/src/Probe/Probe.module.css',
+      '.probe { --surface-local: red; color: var(--surface-local); }'
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([
+      expect.objectContaining({
+        code: 'token-namespace-local-override',
+        sourcePath: 'apps/website/src/Probe/Probe.module.css',
+        tokenPath: '--surface-local',
+      }),
+    ]);
+  });
+
   it('does not let a different sibling source file provide a CSS module variable', () => {
     const { root, write } = fixture(['--surface-canvas', '--action-primary']);
     write(
