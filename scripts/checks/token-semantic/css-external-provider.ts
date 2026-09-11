@@ -173,13 +173,10 @@ export function shikiProviderVariables(
   if (aliases.size === 0) return new Set();
 
   const variables = new Set<string>();
-  for (const match of source.matchAll(
-    /var\(\s*(--shiki-[A-Za-z0-9_-]+)/g
-  )) {
+  for (const match of source.matchAll(/var\(\s*(--shiki-[A-Za-z0-9_-]+)/g)) {
     const variable = match[1];
-    if (variable && shikiVariableAlias(variable, aliases)) {
+    if (variable && shikiVariableAlias(variable, aliases))
       variables.add(variable);
-    }
   }
   return variables;
 }
