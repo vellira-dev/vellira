@@ -61,14 +61,16 @@ jobs:
           console.log('verified browsers versions:', [...versions]);
           NODE
           git diff --check
-      - name: Run real Lighthouse website and docs gates
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter @vellira-ui/website build
-          pnpm docs:build
-          pnpm lighthouse:website
-          pnpm lighthouse:docs
+      - name: Build packages using canonical Lighthouse order
+        run: pnpm build
+      - name: Build website
+        run: pnpm --filter @vellira-ui/website build
+      - name: Run Lighthouse for website fail-closed in probe
+        run: pnpm lighthouse:website
+      - name: Build documentation
+        run: pnpm --filter @vellira-ui/docs build
+      - name: Run Lighthouse for documentation
+        run: pnpm lighthouse:docs
       - name: Preserve candidate files
         if: success()
         shell: bash
