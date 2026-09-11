@@ -68,6 +68,7 @@ jobs:
       - name: Prove website Lighthouse reaches audit and assertion phases
         shell: bash
         run: |
+          set +e
           set -uo pipefail
           pnpm lighthouse:website 2>&1 | tee "$RUNNER_TEMP/lighthouse-website.log"
           status=${PIPESTATUS[0]}
