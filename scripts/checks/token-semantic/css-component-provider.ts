@@ -382,6 +382,8 @@ function providerVariablesInheritedBy(
     parsed
   );
   if (!styleBinding) return new Set();
+  const resolvedProviderSourcePath = providerSourcePath;
+  const resolvedStyleBinding = styleBinding;
 
   const providerStyleSource = fs.readFileSync(
     path.join(root, providerStylePath),
@@ -398,11 +400,19 @@ function providerVariablesInheritedBy(
       for (const [variable, classes] of classesByVariable) {
         if (
           [...classes].some((className) =>
-            jsxElementUsesStyleClass(node, styleBinding, className, parsed)
+            jsxElementUsesStyleClass(
+              node,
+              resolvedStyleBinding,
+              className,
+              parsed
+            )
           ) &&
-          importedRenderedTargets(root, providerSourcePath, parsed, node).has(
-            consumerSourcePath
-          )
+          importedRenderedTargets(
+            root,
+            resolvedProviderSourcePath,
+            parsed,
+            node
+          ).has(consumerSourcePath)
         ) {
           variables.add(variable);
         }
@@ -430,6 +440,7 @@ export function componentAncestorProviderVariables(
     cache.set(sourcePath, empty);
     return empty;
   }
+  const resolvedConsumerSourcePath = consumerSourcePath;
 
   const prefix = `--${kebabCase(boundary.componentName)}-`;
   const variables = new Set<string>();
@@ -451,7 +462,7 @@ export function componentAncestorProviderVariables(
       for (const variable of providerVariablesInheritedBy(
         root,
         providerStylePath,
-        consumerSourcePath
+        resolvedConsumerSourcePath
       )) {
         if (variable.startsWith(prefix)) variables.add(variable);
       }
