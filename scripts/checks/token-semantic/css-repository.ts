@@ -109,7 +109,7 @@ function sameBasenameRuntimeProviderVariables(
   root: string,
   sourcePath: string
 ): ReadonlySet<string> {
-  const styleMatch = sourcePath.match(/^(.*)\.(?:css|scss)$/);
+  const styleMatch = sourcePath.match(/^(.*?)(?:\.module)?\.(?:css|scss)$/);
   if (!styleMatch?.[1]) return new Set();
 
   const variables = new Set<string>();
