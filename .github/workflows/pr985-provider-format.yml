@@ -5,7 +5,7 @@ on:
     branches: [probe/pr985-provider-format-20260911]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
@@ -31,6 +31,18 @@ jobs:
           pnpm exec prettier "${files[@]}" --check
           tar -czf .artifacts/provider-format/formatted-files.tgz "${files[@]}"
           git diff -- "${files[@]}" > .artifacts/provider-format/formatting.patch
+      - name: Persist exact formatting on probe branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- scripts/checks/token-semantic/css-references.ts scripts/checks/token-semantic/css-repository.ts; then
+            exit 0
+          fi
+          git config user.name 'Roman Bakurov'
+          git config user.email 'ronbakurov@gmail.com'
+          git add scripts/checks/token-semantic/css-references.ts scripts/checks/token-semantic/css-repository.ts
+          git commit -m 'style(tokens): format provider resolution audit'
+          git push origin HEAD:probe/pr985-provider-format-20260911
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: provider-format-evidence
