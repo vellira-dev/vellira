@@ -1,0 +1,86 @@
+name: Isolated security 968 preparation
+
+on:
+  push:
+    branches: [repair/security-968-puppeteer-browsers-v3]
+    paths: [.github/workflows/security-968-prepare.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: c83761dd4a83eff4d514bc72cacd34de185cdd62
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+      - name: Add bounded Puppeteer browsers v3 override and regenerate lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const p = 'pnpm-workspace.yaml';
+          let s = fs.readFileSync(p, 'utf8');
+          const anchor = "overrides:\n";
+          if (!s.includes(anchor)) throw new Error('overrides anchor missing');
+          if (s.includes("'@puppeteer/browsers':")) throw new Error('override already exists');
+          s = s.replace(anchor, `${anchor}  '@puppeteer/browsers': 3.0.6\n`);
+          fs.writeFileSync(p, s);
+          NODE
+          pnpm install --lockfile-only --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify extract-zip removal and parent-chain integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const { parse } = require('yaml');
+          const lock = parse(fs.readFileSync('pnpm-lock.yaml', 'utf8'));
+          const text = fs.readFileSync('pnpm-lock.yaml', 'utf8');
+          if (text.includes('extract-zip@')) throw new Error('extract-zip package remains');
+          if (text.includes('extract-zip:')) throw new Error('extract-zip dependency edge remains');
+          const versions = new Set();
+          for (const section of ['packages','snapshots']) {
+            for (const key of Object.keys(lock[section] || {})) {
+              const m = /^'@puppeteer\/browsers@([^(']+)|^@puppeteer\/browsers@([^(']+)/.exec(key);
+              if (m) versions.add(m[1] || m[2]);
+            }
+          }
+          if (![...versions].some(v => v.startsWith('3.0.6'))) throw new Error(`expected browsers 3.0.6, got ${[...versions]}`);
+          const root = lock.importers?.['.']?.devDependencies?.['@lhci/cli'];
+          if (!root || !String(root.version).startsWith('0.15.1')) throw new Error('LHCI baseline changed');
+          console.log('verified browsers versions:', [...versions]);
+          NODE
+          git diff --check
+      - name: Run real Lighthouse website and docs gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @vellira-ui/website build
+          pnpm docs:build
+          pnpm lighthouse:website
+          pnpm lighthouse:docs
+      - name: Preserve candidate files
+        if: success()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/security-968"
+          cp pnpm-workspace.yaml "$RUNNER_TEMP/security-968/"
+          cp pnpm-lock.yaml "$RUNNER_TEMP/security-968/"
+          git diff -- pnpm-workspace.yaml pnpm-lock.yaml > "$RUNNER_TEMP/security-968/candidate.patch"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: success()
+        with:
+          name: security-968-candidate
+          path: ${{ runner.temp }}/security-968/
+          if-no-files-found: error
+          retention-days: 3
