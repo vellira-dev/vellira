@@ -103,6 +103,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sleep 15
 
           check_route() {
             local path="$1"
@@ -141,7 +142,7 @@ jobs:
               sleep 2
             done
 
-            echo "Production smoke failed for $path" >&2
+            echo "Production candidate smoke failed for $path" >&2
             sed -n '1,40p' "$body" >&2
             rm -f "$body"
             return 1
