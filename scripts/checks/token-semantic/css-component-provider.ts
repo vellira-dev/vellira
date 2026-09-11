@@ -116,7 +116,8 @@ function resolveExportedSymbol(
     }
 
     if (
-      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement)) &&
       statement.name?.text === symbolName &&
       statement.modifiers?.some(
         (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
@@ -125,7 +126,8 @@ function resolveExportedSymbol(
       locallyExported = true;
     }
 
-    if (!ts.isExportDeclaration(statement) || !statement.moduleSpecifier) continue;
+    if (!ts.isExportDeclaration(statement) || !statement.moduleSpecifier)
+      continue;
     if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
 
     const targetModule = resolveRelativeModule(
@@ -269,7 +271,8 @@ function jsxElementUsesStyleClass(
 ): boolean {
   const classAttribute = element.openingElement.attributes.properties.find(
     (attribute): attribute is ts.JsxAttribute =>
-      ts.isJsxAttribute(attribute) && attribute.name.getText(parsed) === 'className'
+      ts.isJsxAttribute(attribute) &&
+      attribute.name.getText(parsed) === 'className'
   );
   if (!classAttribute?.initializer) return false;
 
@@ -397,12 +400,9 @@ function providerVariablesInheritedBy(
           [...classes].some((className) =>
             jsxElementUsesStyleClass(node, styleBinding, className, parsed)
           ) &&
-          importedRenderedTargets(
-            root,
-            providerSourcePath,
-            parsed,
-            node
-          ).has(consumerSourcePath)
+          importedRenderedTargets(root, providerSourcePath, parsed, node).has(
+            consumerSourcePath
+          )
         ) {
           variables.add(variable);
         }
