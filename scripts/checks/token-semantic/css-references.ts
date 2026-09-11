@@ -77,7 +77,9 @@ export function declaredCssVariables(
 ): ReadonlySet<string> {
   const code = maskCssNonCode(source, sourcePath.endsWith('.scss'));
   return new Set(
-    [...code.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/g)].map((match) => match[1])
+    [...code.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/g)].map(
+      (match) => match[1]
+    )
   );
 }
 
@@ -102,12 +104,25 @@ function readVariableArgument(code: string, start: number): string {
   throw new Error('Unterminated CSS variable reference.');
 }
 
+type DynamicVariableResolver = (
+  expression: string,
+  referenceIndex: number
+) => readonly string[] | null;
+
+function previewVariables(variables: readonly string[]): string {
+  const preview = variables.slice(0, 8).join(', ');
+  return variables.length > 8
+    ? `${preview}, … (${variables.length} total)`
+    : preview;
+}
+
 export function auditCssReferences(
   sourcePath: string,
   source: string,
   canonicalVariables: ReadonlySet<string>,
   providerVariables: ReadonlySet<string> = new Set(),
-  candidateProviderVariables: ReadonlySet<string> = new Set()
+  candidateProviderVariables: ReadonlySet<string> = new Set(),
+  resolveDynamicVariable: DynamicVariableResolver | null = null
 ): FindingInput[] {
   if (canonicalVariables.size === 0) {
     throw new Error('Canonical CSS-variable authority is empty.');
@@ -119,7 +134,8 @@ export function auditCssReferences(
   const findings: FindingInput[] = [];
 
   for (const match of code.matchAll(/(?<![\w-])var\(\s*/gi)) {
-    const index = match.index + match[0].length;
+    const matchIndex = match.index ?? 0;
+    const index = matchIndex + match[0].length;
     const variable = readVariableArgument(code, index);
     const before = source.slice(0, index);
     const location = {
@@ -132,6 +148,63 @@ export function auditCssReferences(
       platform: 'web',
     };
     if (!/^--[\w-]+$/.test(variable)) {
+      const expanded = resolveDynamicVariable?.(variable, matchIndex);
+      if (expanded && expanded.length > 0) {
+        const unresolved = expanded.filter((candidate) => {
+          if (
+            canonicalVariables.has(candidate) ||
+            providerVariables.has(candidate)
+          ) {
+            return false;
+          }
+          if (
+            declared.has(candidate) &&
+            localComponentPrefix !== null &&
+            candidate.startsWith(localComponentPrefix)
+          ) {
+            return false;
+          }
+          return true;
+        });
+        if (unresolved.length === 0) continue;
+
+        const missing = unresolved.filter(
+          (candidate) => !candidateProviderVariables.has(candidate)
+        );
+        const missingTokenVariables = missing.filter((candidate) =>
+          prefixes.has(namespace(candidate))
+        );
+        if (missingTokenVariables.length > 0) {
+          findings.push({
+            ruleId: 'tokens.consumer-reference',
+            code: 'missing-expanded-token-variable',
+            severity: 'error',
+            ...location,
+            evidence: `Static Sass expansion produced missing token variables: ${previewVariables(missingTokenVariables)}`,
+            expected:
+              'Every concrete Sass expansion must resolve through the canonical generated registry or a proven provider.',
+            migrationStatus: 'untracked',
+            suggestedAction:
+              'Repair the Sass token template or canonical registry; do not suppress the expansion.',
+          });
+          continue;
+        }
+
+        findings.push({
+          ruleId: 'tokens.consumer-reference',
+          code: 'unresolved-expanded-provider',
+          severity: 'warning',
+          ...location,
+          evidence: `Static Sass expansion produced variables without proven providers: ${previewVariables(unresolved)}`,
+          expected:
+            'Every concrete Sass expansion must have a canonical or statically proven provider owner.',
+          migrationStatus: 'untracked',
+          suggestedAction:
+            'Prove the expanded provider relationship before completing coverage.',
+        });
+        continue;
+      }
+
       findings.push({
         ruleId: 'tokens.consumer-reference',
         code: 'unresolved-css-variable-expression',
