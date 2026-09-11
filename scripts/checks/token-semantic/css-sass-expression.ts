@@ -101,7 +101,9 @@ function parseEachScopes(
 ): readonly EachScope[] {
   const scopes: EachScope[] = [];
 
-  for (const match of code.matchAll(/@each\s+\$([\w-]+)\s+in\s+([^{}]+)\{/g)) {
+  for (const match of code.matchAll(
+    /@each\s+\$([\w-]+)\s+in\s+([^{}]+)\{/g
+  )) {
     const variable = match[1];
     const rawValues = match[2];
     if (!variable || !rawValues || match.index === undefined) continue;
@@ -122,7 +124,9 @@ function parseEachScopes(
 function parseMixinDefinitions(code: string): readonly MixinDefinition[] {
   const definitions: MixinDefinition[] = [];
 
-  for (const match of code.matchAll(/@mixin\s+([\w-]+)\s*\(([^)]*)\)\s*\{/g)) {
+  for (const match of code.matchAll(
+    /@mixin\s+([\w-]+)\s*\(([^)]*)\)\s*\{/g
+  )) {
     const name = match[1];
     const rawParameters = match[2];
     if (!name || rawParameters === undefined || match.index === undefined) {
@@ -146,7 +150,9 @@ function parseMixinDefinitions(code: string): readonly MixinDefinition[] {
 function parseMixinIncludes(code: string): readonly MixinInclude[] {
   const includes: MixinInclude[] = [];
 
-  for (const match of code.matchAll(/@include\s+([\w-]+)\s*\(([^;]*?)\)\s*;/g)) {
+  for (const match of code.matchAll(
+    /@include\s+([\w-]+)\s*\(([^;]*?)\)\s*;/g
+  )) {
     const name = match[1];
     const rawArguments = match[2];
     if (!name || rawArguments === undefined || match.index === undefined) {
