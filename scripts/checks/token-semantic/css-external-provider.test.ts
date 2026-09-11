@@ -26,9 +26,7 @@ function fixture(ownerSource: string, withDependency = true) {
 
   write(
     'apps/website/package.json',
-    JSON.stringify({
-      dependencies: withDependency ? { shiki: '^4.4.2' } : {},
-    })
+    JSON.stringify({ dependencies: withDependency ? { shiki: '^4.4.2' } : {} })
   );
   write('apps/website/src/blog/ui/BlogCodeBlock.tsx', ownerSource);
 
