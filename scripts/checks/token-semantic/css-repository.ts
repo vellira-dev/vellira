@@ -49,7 +49,7 @@ function componentBoundary(sourcePath: string): ComponentBoundary | null {
 function runtimeCustomPropertyAssignments(
   sourcePath: string,
   source: string,
-  prefix: string
+  prefix: string | null
 ): ReadonlySet<string> {
   const variables = new Set<string>();
   const sourceFile = ts.createSourceFile(
@@ -65,7 +65,8 @@ function runtimeCustomPropertyAssignments(
       ts.isPropertyAssignment(node) &&
       (ts.isStringLiteral(node.name) ||
         ts.isNoSubstitutionTemplateLiteral(node.name)) &&
-      node.name.text.startsWith(prefix)
+      node.name.text.startsWith('--') &&
+      (prefix === null || node.name.text.startsWith(prefix))
     ) {
       variables.add(node.name.text);
     }
@@ -73,6 +74,30 @@ function runtimeCustomPropertyAssignments(
   }
 
   visit(sourceFile);
+  return variables;
+}
+
+function sameBasenameRuntimeProviderVariables(
+  root: string,
+  sourcePath: string
+): ReadonlySet<string> {
+  const moduleMatch = sourcePath.match(/^(.*)\.module\.(?:css|scss)$/);
+  if (!moduleMatch?.[1]) return new Set();
+
+  const variables = new Set<string>();
+  for (const extension of ['.ts', '.tsx']) {
+    const providerPath = `${moduleMatch[1]}${extension}`;
+    const absolutePath = path.join(root, providerPath);
+    if (!fs.existsSync(absolutePath)) continue;
+    const source = fs.readFileSync(absolutePath, 'utf8');
+    for (const variable of runtimeCustomPropertyAssignments(
+      providerPath,
+      source,
+      null
+    )) {
+      variables.add(variable);
+    }
+  }
   return variables;
 }
 
@@ -148,6 +173,45 @@ function componentProviderVariables(
   return variables;
 }
 
+function componentFamilyProviderCandidates(
+  root: string,
+  sourcePath: string,
+  cache: Map<string, ReadonlySet<string>>
+): ReadonlySet<string> {
+  const boundary = componentBoundary(sourcePath);
+  if (!boundary) return new Set();
+
+  const cached = cache.get(boundary.rootPath);
+  if (cached) return cached;
+
+  const prefix = `--${kebabCase(boundary.componentName)}-`;
+  const variables = new Set<string>();
+  const componentRoot = path.join(root, boundary.rootPath);
+
+  function walkStyles(directory: string) {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walkStyles(absolutePath);
+        continue;
+      }
+      if (!entry.isFile() || !/\.(?:css|scss)$/.test(entry.name)) continue;
+      const providerPath = path
+        .relative(root, absolutePath)
+        .split(path.sep)
+        .join('/');
+      const providerSource = fs.readFileSync(absolutePath, 'utf8');
+      for (const variable of declaredCssVariables(providerPath, providerSource)) {
+        if (variable.startsWith(prefix)) variables.add(variable);
+      }
+    }
+  }
+
+  walkStyles(componentRoot);
+  cache.set(boundary.rootPath, variables);
+  return variables;
+}
+
 export function checkTokenCssReferences(root: string): RuleResult {
   const variables = canonicalCssVariableNames(root);
   if (!variables || variables.size === 0) {
@@ -157,6 +221,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   }
   const findings: FindingInput[] = [];
   const runtimeProviderCache = new Map<string, ReadonlySet<string>>();
+  const familyProviderCache = new Map<string, ReadonlySet<string>>();
   let checked = 0;
 
   function walk(
@@ -196,10 +261,14 @@ export function checkTokenCssReferences(root: string): RuleResult {
       if (!entry.isFile() || !/\.(css|scss)$/.test(entry.name)) continue;
       if (sourcePath === 'packages/tokens/src/generated/tokens.css') continue;
       const source = fs.readFileSync(absolutePath, 'utf8');
-      const providerVariables = componentProviderVariables(
+      const providerVariables = new Set([
+        ...componentProviderVariables(root, sourcePath, runtimeProviderCache),
+        ...sameBasenameRuntimeProviderVariables(root, sourcePath),
+      ]);
+      const candidateProviderVariables = componentFamilyProviderCandidates(
         root,
         sourcePath,
-        runtimeProviderCache
+        familyProviderCache
       );
       checked += 1;
       findings.push(
@@ -207,7 +276,8 @@ export function checkTokenCssReferences(root: string): RuleResult {
           sourcePath,
           source,
           canonicalVariables,
-          providerVariables
+          providerVariables,
+          candidateProviderVariables
         )
       );
     }
@@ -222,7 +292,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS static var() references in apps/packages with component-root inheritance and runtime CSSProperties providers within the same React component boundary. Imported providers, application-level providers, and dynamic references still require integration.',
+      'Authored CSS/SCSS static var() references in apps/packages with exact same-module runtime providers, component-root inheritance/runtime providers, and visible same-family provider candidates. Imported/application-wide providers, proven cross-module ancestor ownership, and dynamic references still require integration.',
     checked,
     findings,
   };
