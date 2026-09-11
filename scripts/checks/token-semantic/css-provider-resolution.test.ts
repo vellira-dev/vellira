@@ -141,6 +141,72 @@ describe('CSS provider resolution boundaries', () => {
     ]);
   });
 
+  it('accepts a component provider only when its styled JSX ancestor renders the consumer', () => {
+    const { root, write } = fixture([
+      '--surface-canvas',
+      '--dropdown-primary-content-border',
+    ]);
+    write(
+      'packages/react/src/components/Dropdown/Content/DropdownContent.module.scss',
+      '.content { --dropdown-content-current-border: var(--dropdown-primary-content-border); }'
+    );
+    write(
+      'packages/react/src/components/Dropdown/Content/DropdownContent.tsx',
+      "import { DropdownItemRow } from '../Item';\nimport styles from './DropdownContent.module.scss';\nexport const DropdownContent = () => { const contentClassName = styles.content; return <ul className={contentClassName}><DropdownItemRow /></ul>; };\n"
+    );
+    write(
+      'packages/react/src/components/Dropdown/Item/index.ts',
+      "export { DropdownItemRow } from './DropdownItem';\n"
+    );
+    write(
+      'packages/react/src/components/Dropdown/Item/DropdownItem.tsx',
+      "import styles from './DropdownItem.module.scss';\nexport const DropdownItemRow = () => <li className={styles.item} />;\n"
+    );
+    write(
+      'packages/react/src/components/Dropdown/Item/DropdownItem.module.scss',
+      '.item { border-color: var(--dropdown-content-current-border); }'
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([]);
+  });
+
+  it('does not prove inheritance when the imported child renders outside the provider-class ancestor', () => {
+    const { root, write } = fixture([
+      '--surface-canvas',
+      '--dropdown-primary-content-border',
+    ]);
+    write(
+      'packages/react/src/components/Dropdown/Content/DropdownContent.module.scss',
+      '.content { --dropdown-content-current-border: var(--dropdown-primary-content-border); }'
+    );
+    write(
+      'packages/react/src/components/Dropdown/Content/DropdownContent.tsx',
+      "import { DropdownItemRow } from '../Item';\nimport styles from './DropdownContent.module.scss';\nexport const DropdownContent = () => <><ul className={styles.content} /><DropdownItemRow /></>;\n"
+    );
+    write(
+      'packages/react/src/components/Dropdown/Item/index.ts',
+      "export { DropdownItemRow } from './DropdownItem';\n"
+    );
+    write(
+      'packages/react/src/components/Dropdown/Item/DropdownItem.tsx',
+      "import styles from './DropdownItem.module.scss';\nexport const DropdownItemRow = () => <li className={styles.item} />;\n"
+    );
+    write(
+      'packages/react/src/components/Dropdown/Item/DropdownItem.module.scss',
+      '.item { border-color: var(--dropdown-content-current-border); }'
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([
+      expect.objectContaining({
+        code: 'unproven-provider-boundary',
+        severity: 'warning',
+        sourcePath:
+          'packages/react/src/components/Dropdown/Item/DropdownItem.module.scss',
+        tokenPath: '--dropdown-content-current-border',
+      }),
+    ]);
+  });
+
   it('downgrades an unproven same-family CSS provider to a warning', () => {
     const { root, write } = fixture([
       '--surface-canvas',
