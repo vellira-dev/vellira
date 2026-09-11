@@ -26,7 +26,9 @@ function fixture(ownerSource: string, withDependency = true) {
 
   write(
     'apps/website/package.json',
-    JSON.stringify({ dependencies: withDependency ? { shiki: '^4.4.2' } : {} })
+    JSON.stringify({
+      dependencies: withDependency ? { shiki: '^4.4.2' } : {},
+    })
   );
   write('apps/website/src/blog/ui/BlogCodeBlock.tsx', ownerSource);
 
@@ -64,12 +66,14 @@ describe('external CSS provider ownership', () => {
     }`;
 
     expect(
-      [...shikiProviderVariables(
-        root,
-        'apps/website/src/styles/globals.css',
-        source,
-        new Map()
-      )].sort()
+      [
+        ...shikiProviderVariables(
+          root,
+          'apps/website/src/styles/globals.css',
+          source,
+          new Map()
+        ),
+      ].sort()
     ).toEqual([
       '--shiki-dark',
       '--shiki-dark-bg',
