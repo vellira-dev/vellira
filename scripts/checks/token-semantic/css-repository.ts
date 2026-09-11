@@ -7,6 +7,7 @@ import { canonicalCssVariableNames } from '../../design-resources/authority';
 import type { FindingInput, RuleResult } from './contract';
 import { componentAncestorProviderVariables } from './css-component-provider';
 import { auditCssReferences, declaredCssVariables } from './css-references';
+import { createScssVariableExpressionResolver } from './css-sass-expression';
 
 const ignoredDirectories = new Set([
   '.git',
@@ -320,6 +321,10 @@ export function checkTokenCssReferences(root: string): RuleResult {
         sourcePath,
         familyProviderCache
       );
+      const resolveDynamicVariable = createScssVariableExpressionResolver(
+        sourcePath,
+        source
+      );
       checked += 1;
       findings.push(
         ...auditCssReferences(
@@ -327,7 +332,8 @@ export function checkTokenCssReferences(root: string): RuleResult {
           source,
           canonicalVariables,
           providerVariables,
-          candidateProviderVariables
+          candidateProviderVariables,
+          resolveDynamicVariable
         )
       );
     }
@@ -342,7 +348,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
   return {
     coverage: 'partial',
     scope:
-      'Authored CSS/SCSS static var() references in apps/packages with exact same-module runtime providers, component-root providers, statically proven JSX ancestor providers, proven website root-global providers, and visible same-family provider candidates. Other imported/application-wide providers and dynamic references still require integration.',
+      'Authored CSS/SCSS references in apps/packages with canonical/static providers, statically proven component and website ancestry, and bounded Sass list/@each/mixin expansion. Other imported providers, general Sass evaluation, and escaped identifiers remain incomplete.',
     checked,
     findings,
   };
