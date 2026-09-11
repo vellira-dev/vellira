@@ -79,19 +79,47 @@ function runtimeCustomPropertyAssignments(
   return variables;
 }
 
+function sourceImportsStylesheet(
+  root: string,
+  providerPath: string,
+  stylePath: string,
+  source: string
+): boolean {
+  const sourceFile = ts.createSourceFile(
+    providerPath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    providerPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  const providerDirectory = path.dirname(path.join(root, providerPath));
+  const absoluteStylePath = path.resolve(root, stylePath);
+
+  return sourceFile.statements.some((statement) => {
+    if (!ts.isImportDeclaration(statement)) return false;
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) return false;
+    const specifier = statement.moduleSpecifier.text;
+    if (!specifier.startsWith('.')) return false;
+    return path.resolve(providerDirectory, specifier) === absoluteStylePath;
+  });
+}
+
 function sameBasenameRuntimeProviderVariables(
   root: string,
   sourcePath: string
 ): ReadonlySet<string> {
-  const moduleMatch = sourcePath.match(/^(.*)\.module\.(?:css|scss)$/);
-  if (!moduleMatch?.[1]) return new Set();
+  const styleMatch = sourcePath.match(/^(.*)\.(?:css|scss)$/);
+  if (!styleMatch?.[1]) return new Set();
 
   const variables = new Set<string>();
   for (const extension of ['.ts', '.tsx']) {
-    const providerPath = `${moduleMatch[1]}${extension}`;
+    const providerPath = `${styleMatch[1]}${extension}`;
     const absolutePath = path.join(root, providerPath);
     if (!fs.existsSync(absolutePath)) continue;
     const source = fs.readFileSync(absolutePath, 'utf8');
+    if (!sourceImportsStylesheet(root, providerPath, sourcePath, source)) {
+      continue;
+    }
     for (const variable of runtimeCustomPropertyAssignments(
       providerPath,
       source,
