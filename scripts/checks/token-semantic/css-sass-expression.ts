@@ -173,7 +173,9 @@ function domainAt(
   const matching = scopes
     .filter(
       (scope) =>
-        scope.variable === variable && scope.start <= index && index <= scope.end
+        scope.variable === variable &&
+        scope.start <= index &&
+        index <= scope.end
     )
     .sort((left, right) => left.end - left.start - (right.end - right.start));
 
@@ -206,8 +208,7 @@ function containingMixin(
           definition.parameters.includes(variable)
       )
       .sort(
-        (left, right) =>
-          left.end - left.start - (right.end - right.start)
+        (left, right) => left.end - left.start - (right.end - right.start)
       )[0] ?? null
   );
 }
