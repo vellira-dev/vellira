@@ -187,10 +187,29 @@ try {
             });
           }
 
+          async function expectVisibleKeyboardFocus(target) {
+            await expect(target).toBeFocused();
+            const focus = await target.evaluate((element) => {
+              const style = getComputedStyle(element);
+              return {
+                visible: element.matches(':focus-visible'),
+                outline: style.outlineStyle,
+                width: style.outlineWidth,
+              };
+            });
+            assert.ok(
+              focus.visible &&
+                focus.outline !== 'none' &&
+                parseFloat(focus.width) > 0,
+              'keyboard navigation must expose a visible focus indicator'
+            );
+          }
+
           await control('Button').focus();
           await control('Button').press('Tab');
-          await expect(control('Input')).toBeFocused();
+          await expectVisibleKeyboardFocus(control('Input'));
           await control('Input').press('Enter');
+          await expect(control('Input')).toBeFocused();
           await checkSelection('Input');
           await expect(
             section.getByRole('textbox', {
@@ -198,23 +217,10 @@ try {
               exact: true,
             })
           ).toHaveValue('Preserved workspace');
-          const focus = await control('Input').evaluate((element) => {
-            const style = getComputedStyle(element);
-            return {
-              visible: element.matches(':focus-visible'),
-              outline: style.outlineStyle,
-              width: style.outlineWidth,
-            };
-          });
-          assert.ok(
-            focus.visible &&
-              focus.outline !== 'none' &&
-              parseFloat(focus.width) > 0,
-            'keyboard focus must remain visible'
-          );
           await control('Input').press('Tab');
-          await expect(control('Modal')).toBeFocused();
+          await expectVisibleKeyboardFocus(control('Modal'));
           await control('Modal').press('Space');
+          await expect(control('Modal')).toBeFocused();
           await checkSelection('Modal');
 
           // This changes the displayed package/example, not the runtime of the web preview.
