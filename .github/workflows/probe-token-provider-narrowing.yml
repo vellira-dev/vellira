@@ -1,0 +1,76 @@
+name: Probe Token Provider Narrowing
+
+on:
+  push:
+    branches:
+      - probe/token-provider-narrowing-985-2a08091
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.event.head_commit.message != 'probe: apply token provider narrowing'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply narrowing fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/checks/token-semantic/css-component-provider.ts')
+          source = path.read_text()
+          replacements = [
+              (
+                  "  if (!styleBinding) return new Set();\n\n  const providerStyleSource =",
+                  "  if (!styleBinding) return new Set();\n  const resolvedProviderSourcePath = providerSourcePath;\n  const resolvedStyleBinding = styleBinding;\n\n  const providerStyleSource =",
+              ),
+              (
+                  "jsxElementUsesStyleClass(node, styleBinding, className, parsed)",
+                  "jsxElementUsesStyleClass(\n              node,\n              resolvedStyleBinding,\n              className,\n              parsed\n            )",
+              ),
+              (
+                  "importedRenderedTargets(root, providerSourcePath, parsed, node).has(",
+                  "importedRenderedTargets(\n            root,\n            resolvedProviderSourcePath,\n            parsed,\n            node\n          ).has(",
+              ),
+              (
+                  "    return empty;\n  }\n\n  const prefix = `--${kebabCase(boundary.componentName)}-`;",
+                  "    return empty;\n  }\n  const resolvedConsumerSourcePath = consumerSourcePath;\n\n  const prefix = `--${kebabCase(boundary.componentName)}-`;",
+              ),
+              (
+                  "        consumerSourcePath\n      )) {",
+                  "        resolvedConsumerSourcePath\n      )) {",
+              ),
+          ]
+          for old, new in replacements:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one match, found {count}: {old!r}')
+              source = source.replace(old, new, 1)
+          path.write_text(source)
+          PY
+          pnpm exec prettier scripts/checks/token-semantic/css-component-provider.ts --write
+      - name: Validate tooling TypeScript
+        run: pnpm typecheck:tooling
+      - name: Validate provider regressions
+        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic/css-provider-resolution.test.ts scripts/checks/token-semantic/css-repository.test.ts
+      - name: Show and commit exact candidate
+        shell: bash
+        run: |
+          git diff --check
+          git diff -- scripts/checks/token-semantic/css-component-provider.ts
+          git config user.name 'Roman Bakurov'
+          git config user.email 'ronbakurov@gmail.com'
+          git add scripts/checks/token-semantic/css-component-provider.ts
+          git commit -m 'probe: apply token provider narrowing'
+          git push origin HEAD:probe/token-provider-narrowing-985-2a08091
