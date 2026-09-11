@@ -99,7 +99,7 @@ and reject mixed staging/production buckets and miss-bypassing asset routing.
 
 ## Deployment ordering and identity
 
-The supported entrypoint is `apps/website/scripts/cloudflare-deploy.mjs` (also
+The normal supported entrypoint is `apps/website/scripts/cloudflare-deploy.mjs` (also
 the website's `deploy:opennext` script). Deployment workflows retain their
 existing staging/production boundaries. Production remains a manually confirmed,
 main-only isolated candidate: this change attaches no public domain.
@@ -185,6 +185,121 @@ node apps/website/scripts/cloudflare-archive-backfill.mjs \
 This command verifies the supplied artifact's BUILD_ID and stores only immutable
 assets and an archive manifest. It never activates traffic. An unknown active
 identity is a blocker, not permission to skip predecessor retention.
+
+### 2026-09-11: pre-adoption exception for the isolated legacy Worker
+
+This is a narrowly accepted exception for **workers.dev only**, not a public
+domain cutover and not a relaxation of the normal archive contract. The original
+immutable graph for the following predecessor is unavailable: the GitHub run
+saved no asset artifact, and read-only Cloudflare version/content/API inspection
+returned no authoritative complete Static Assets path inventory. The truncated
+434-file/417-upload log is not completeness evidence. Do not rebuild, partially
+reconstruct, or manufacture a normal archive manifest for this predecessor.
+
+| Identity                | Fixed value                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| Account                 | Vellira, `73faefeb9b4fe1f444cb03cd97275f02`                                    |
+| Worker                  | `vellira-website` (ID `5df676cc95354b57aeb8588fe2676746`)                      |
+| Version                 | `a0314de6-3d91-4be7-9f1b-89664f762047`                                         |
+| BUILD_ID                | `j1Ga_52JNrUFbfTjXlofU`                                                        |
+| Original source         | `aae0f50b57cbef0df4e572ba7ded8993c9ba7e3a`                                     |
+| Original deployment run | [34261147540](https://github.com/vellira-dev/vellira/actions/runs/34261147540) |
+
+**Old workers.dev documents/tabs, router entries, HTTP cache and bfcache entries
+for `j1Ga_52JNrUFbfTjXlofU` are not guaranteed after adoption.** Its missing
+immutable graph cannot be retroactively protected. The normal complete graph
+retention guarantee begins with the newly archived candidate and continues for
+every subsequent normally archived deployment. This exception does not authorize
+an old-server retention mechanism or a change to RSC/freshness architecture.
+
+The separate, removable workflow `adopt-website-cloudflare-legacy.yml` and entry
+`cloudflare-adopt-isolated-legacy.mjs` are the **only** adoption path. Neither is
+a flag or mode of `cloudflare-deploy.mjs`; `requireArchivedDeployment` remains
+unchanged and cannot consume an adoption evidence record.
+
+#### Procedure after PR review and separate activation authorization
+
+1. Merge the reviewed adoption PR only through the normal review process. The
+   prior green source `e9b1f44293ea78a1eb21751d8b3d1935052a4243` is the ancestry
+   baseline, not authority to deploy a later commit. Select the exact post-merge
+   `main` SHA containing this tooling and wait for its successful push-to-main
+   CI, including both Build, Test & Validate and Cloudflare migration contracts.
+2. Separately authorize and provision `vellira-website-static-archive` with
+   Standard storage in the fixed Vellira account. It must exist, be readable and
+   writable by the workflow's credential, and be completely empty. Neither the
+   workflow nor script provisions storage. No lifecycle deletion policy.
+3. Freeze other CLI/dashboard/workflow publishers and domain/route changes for
+   this Worker during adoption. The dedicated workflow shares the normal
+   `deploy-worker-vellira-website` concurrency group with cancellation disabled;
+   it cannot serialize unrelated manual publishers or DNS administrators.
+4. The responsible operator must confirm the historical assertion that this
+   exact legacy Worker was **never attached to public vellira.dev**. This is an
+   explicit attestation recorded with actor/run/source identity, not a claim
+   inferred from today's empty route list. Current custom domains, all visible
+   account zones' routes, workers.dev enablement and indirect Worker references
+   are independently checked. Missing permissions or incomplete lists block.
+5. Only with explicit activation authorization, dispatch the dedicated workflow
+   on `main`, using these inputs (replace the placeholder with the reviewed full
+   post-merge SHA; never paste it literally):
+
+   ```sh
+   gh workflow run adopt-website-cloudflare-legacy.yml --repo vellira-dev/vellira --ref main \
+     -f expected_main_sha=REVIEWED_FULL_MAIN_SHA \
+     -f confirmation=ADOPT_ISOLATED_A0314DE6_ONCE \
+     -f never_public_attestation=I_CONFIRM_LEGACY_NEVER_PUBLIC
+   ```
+
+   The default choices do nothing. The workflow and script both reject a branch,
+   unreviewed/moved SHA, missing attestation, different account/Worker/version/
+   BUILD_ID, split traffic, public/custom-domain attachment, indirect consumer,
+   missing bucket or any pre-existing archive object. Early preflight occurs
+   before building and browser tests. The workflow retains **every normal
+   production build, local-runtime, browser-migration, metrics, navigation-soak
+   and static-byte gate**, replacing only the predecessor adoption entrypoints.
+
+6. The new exact-main candidate is built with SHA/run/attempt identity. Existing
+   `prepareDeployment` verifies transport, identity namespaces and runtime asset
+   closure. Adoption additionally compares the entire `.next/static` inventory
+   with `.open-next/assets/_next/static`, including every file's bytes and MIME.
+7. Before any traffic change, create the immutable single-use record
+   `adoptions/isolated-a0314de6-3d91-4be7-9f1b-89664f762047.json`. It contains the
+   fixed legacy provenance, unavailability reason, historical operator
+   attestation, current isolation/CI evidence, explicit old-tab exception and
+   new candidate identity. Its status is **authorized attempt, not activation
+   proof**. It also acts as an atomic claim against concurrent adoption attempts.
+   This is deliberately **not** `deployments/j1Ga_52JNrUFbfTjXlofU.json`.
+8. Upload the complete new static graph with the existing create-only SHA-256,
+   size, MIME and immutable-cache checks. Create and fully verify its normal
+   `deployments/<new BUILD_ID>.json`. Refuse foreign/missing archive keys. Only
+   then mint the temporary local seal and run Wrangler dry-run. Recheck the
+   local graph, archive, exact current main/green CI, predecessor and isolation
+   immediately before activation. No deletion of the old Worker is performed.
+9. Immediately after activation, verify new control-plane/runtime identity,
+   unchanged isolation, the full runtime header/asset-byte contract, the normal
+   archived deployment and the **standard** production archive preflight. Write
+   a distinct immutable completion record under `adoption-completions/` only
+   after these proofs pass. Later workflow metrics/navigation checks must also
+   pass before describing the adoption as successful. Retain workflow evidence.
+10. After the successful reviewed adoption, remove this workflow and its two
+    implementation modules/tests in a focused cleanup PR; keep the dated
+    exception and immutable R2 evidence. All subsequent deployments use the
+    unchanged normal production workflow and predecessor archive gate.
+
+**Failure/retry contract:** any failure before activation leaves traffic on the
+legacy Worker. Once the claim or any objects exist, automatic retry is refused,
+even if a prior attempt never activated. Do not erase evidence, empty the bucket,
+or reuse a generic bypass to retry; stop for a reviewed recovery plan. If traffic
+activated but postflight fails, report that state explicitly: there is no
+automatic rollback to the unarchived legacy version. Preserve the new archive
+and inspect read-only; the completion record is absent. A recorded completion
+of the archive handoff is not evidence that later browser/metrics steps passed.
+The old version identity check and consumed claim both prevent reuse, including
+after an out-of-band rollback. Cloudflare activation is not an atomic CAS with
+route/main changes, so the publisher/route freeze remains an operational gate.
+
+No public-domain cutover is included. Exact DNS record/proxy/TTL rollback capture
+and Vercel rollback identity remain separate requirements before attaching
+`vellira.dev`; missing DNS:Read permission never authorizes a DNS mutation.
 
 To check prerequisites without building or deploying, set `WEBSITE_URL` and
 `CLOUDFLARE_ACCOUNT_ID` (plus the CI API token when not using Wrangler OAuth):
