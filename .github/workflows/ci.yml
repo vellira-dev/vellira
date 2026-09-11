@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -11,6 +12,60 @@ permissions:
   contents: read
 
 jobs:
+  cloudflare-cache-migration:
+    name: Cloudflare cache and multi-deployment browser contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host --user 1001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Trust the checked-out repository in the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:next-rsc-patch
+      - name: Lint deployment and diagnostic scripts
+        run: >-
+          pnpm exec eslint apps/website/cloudflare-worker.mjs apps/website/cloudflare/*.mjs
+          apps/website/scripts/*.mjs apps/react-storybook/scripts/cloudflare-browser-diagnostics*.mjs
+          apps/react-storybook/scripts/cloudflare-navigation-soak.mjs
+      - run: pnpm test:cloudflare-cache
+      - name: Build actual OpenNext runtime
+        env:
+          VELLIRA_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          VELLIRA_BUILD_ID: ${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          # PR events expose a synthetic merge SHA. This job deliberately builds
+          # the checked-out PR HEAD, never a deployable PR merge artifact.
+          test "$(git rev-parse HEAD)" = "$VELLIRA_CHECKOUT_SHA"
+          export GITHUB_SHA="$VELLIRA_CHECKOUT_SHA"
+          pnpm exec turbo run build --filter='@vellira-ui/website^...'
+          pnpm --dir apps/website run sync:brand
+          pnpm --dir apps/website run build:opennext
+          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-local-runtime.mjs
+      - run: pnpm test:cloudflare-migration
+      - name: Retain exact-head migration evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cache-migration-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/asset-audit-preactivation.json
+            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
+            apps/react-storybook/test-results/cloudflare-migration/summary.json
+            apps/react-storybook/test-results/cloudflare-migration/*.log
+          retention-days: 14
+          include-hidden-files: true
   ci:
     name: Build, Test & Validate
     runs-on: ubuntu-latest
@@ -26,6 +81,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -136,6 +192,45 @@ jobs:
 
       - name: Build packages and apps
         run: pnpm ci:build
+
+      - name: CodeShowcase browser regression
+        timeout-minutes: 5
+        shell: bash
+        env:
+          VELLIRA_VISUAL_ENVIRONMENT: playwright-v1.61.1-noble
+        run: |
+          set -euo pipefail
+
+          pnpm --dir apps/website exec next start -p 3101 > /tmp/vellira-code-showcase-next.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          ready=false
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error http://127.0.0.1:3101/ > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [[ "$ready" != "true" ]]; then
+            cat /tmp/vellira-code-showcase-next.log >&2
+            exit 1
+          fi
+
+          WEBSITE_URL=http://127.0.0.1:3101 \
+            pnpm --filter @vellira-ui/react-storybook exec node \
+            scripts/code-showcase-website-smoke.mjs
+
+      - name: Upload CodeShowcase browser evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: code-showcase-browser-evidence
+          path: apps/react-storybook/test-results/code-showcase
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build docs
         run: pnpm docs:build

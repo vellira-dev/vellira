@@ -1,0 +1,4 @@
+# Current content-hashed assets stay on the Workers Assets fast path.
+# Old immutable URLs use the same policy in the Worker archive fallback.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable

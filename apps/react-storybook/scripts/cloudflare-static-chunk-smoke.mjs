@@ -12,6 +12,7 @@ const context = await browser.newContext();
 const page = await context.newPage();
 const criticalDiagnostics = [];
 const abortedChunkUrls = new Set();
+const abortedRouterRequests = new Map();
 
 function isSameOrigin(url) {
   return new URL(url).origin === origin;
@@ -23,6 +24,56 @@ function isNextStaticChunk(url) {
   }
 
   return new URL(url).pathname.startsWith('/_next/static/');
+}
+
+function isNextRouterDataRequest(request) {
+  if (!isSameOrigin(request.url()) || request.method() !== 'GET') {
+    return false;
+  }
+
+  const url = new URL(request.url());
+  const headers = request.headers();
+
+  return (
+    url.searchParams.has('_rsc') ||
+    headers.rsc === '1' ||
+    headers['next-router-prefetch'] === '1' ||
+    Boolean(headers['next-router-segment-prefetch'])
+  );
+}
+
+function describeRouterRequest(request) {
+  const headers = request.headers();
+
+  return [
+    `${request.method()} ${request.url()}`,
+    `resourceType=${request.resourceType()}`,
+    `rsc=${headers.rsc ?? ''}`,
+    `next-router-prefetch=${headers['next-router-prefetch'] ?? ''}`,
+    `next-router-segment-prefetch=${headers['next-router-segment-prefetch'] ?? ''}`,
+  ].join(' ');
+}
+
+function getRouterReplayHeaders(request) {
+  const source = request.headers();
+  const replayHeaders = {
+    'Cache-Control': 'no-cache',
+  };
+
+  for (const name of [
+    'accept',
+    'rsc',
+    'next-router-prefetch',
+    'next-router-segment-prefetch',
+    'next-router-state-tree',
+    'next-url',
+  ]) {
+    if (source[name]) {
+      replayHeaders[name] = source[name];
+    }
+  }
+
+  return replayHeaders;
 }
 
 function recordCritical(diagnostic) {
@@ -37,9 +88,36 @@ page.on('response', (response) => {
       `chunk response: ${response.status()} ${response.request().method()} ${response.url()}`
     );
   }
+
+  if (
+    isNextRouterDataRequest(response.request()) &&
+    response.status() >= 400
+  ) {
+    recordCritical(
+      `router data response: ${response.status()} ${describeRouterRequest(response.request())}`
+    );
+  }
 });
 
 page.on('requestfailed', (request) => {
+  if (isNextRouterDataRequest(request)) {
+    if (request.failure()?.errorText === 'net::ERR_ABORTED') {
+      const description = describeRouterRequest(request);
+      abortedRouterRequests.set(description, {
+        description,
+        url: request.url(),
+        headers: getRouterReplayHeaders(request),
+      });
+      return;
+    }
+
+    recordCritical(
+      `router data requestfailed: ${describeRouterRequest(request)} ` +
+        `${request.failure()?.errorText ?? ''}`
+    );
+    return;
+  }
+
   if (!isNextStaticChunk(request.url())) {
     return;
   }
@@ -123,9 +201,64 @@ async function goto(path) {
   await waitForRenderedBody(path, response);
 }
 
+async function verifyAbortedChunkUrls(stage) {
+  const urls = [...abortedChunkUrls];
+  abortedChunkUrls.clear();
+
+  for (const url of urls) {
+    const response = await context.request.get(url, {
+      failOnStatusCode: false,
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Aborted static chunk is missing during ${stage}: ${response.status()} GET ${url}`
+      );
+    }
+
+    console.log(`OK aborted navigation asset still exists: ${url}`);
+  }
+}
+
+async function verifyAbortedRouterRequests(stage) {
+  const requests = [...abortedRouterRequests.values()];
+  abortedRouterRequests.clear();
+
+  for (const request of requests) {
+    const response = await context.request.get(request.url, {
+      failOnStatusCode: false,
+      headers: request.headers,
+    });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Aborted router prefetch is not serviceable during ${stage}: ` +
+          `${response.status()} ${request.description}`
+      );
+    }
+
+    console.log(
+      `OK aborted router prefetch remains serviceable: ${response.status()} ${request.description}`
+    );
+  }
+}
+
+async function settleAndVerifyChunks(stage) {
+  await page.waitForTimeout(700);
+  await verifyAbortedChunkUrls(stage);
+  await verifyAbortedRouterRequests(stage);
+
+  if (criticalDiagnostics.length > 0) {
+    throw new Error(
+      `Cloudflare navigation/static failures detected during ${stage}:\n${criticalDiagnostics.join('\n')}`
+    );
+  }
+}
+
 async function collectRoutes(indexPath, prefix) {
   await goto(indexPath);
-  await page.waitForTimeout(500);
+  await settleAndVerifyChunks(`route discovery ${indexPath}`);
 
   const hrefs = await page
     .locator(`a[href^="${prefix}"]`)
@@ -138,37 +271,59 @@ async function collectRoutes(indexPath, prefix) {
     .sort();
 }
 
+async function verifyGlobalHeaderNavigation() {
+  await goto('/');
+  await settleAndVerifyChunks('home load and header prefetch');
+
+  const primaryNavigation = page.locator(
+    'nav[aria-label="Primary navigation"]'
+  );
+
+  const blogLink = primaryNavigation.locator('a[href="/blog"]');
+  await blogLink.waitFor({ state: 'visible', timeout: 15_000 });
+  await blogLink.click();
+  await page.waitForURL(`${baseUrl}/blog`, { timeout: 15_000 });
+  await waitForRenderedBody('/blog');
+  await settleAndVerifyChunks('primary navigation / -> /blog');
+
+  const componentsLink = page
+    .locator('nav[aria-label="Primary navigation"]')
+    .locator('a[href="/components"]');
+  await componentsLink.waitFor({ state: 'visible', timeout: 15_000 });
+  await componentsLink.click();
+  await page.waitForURL(`${baseUrl}/components`, { timeout: 15_000 });
+  await waitForRenderedBody('/components');
+  await settleAndVerifyChunks('primary navigation /blog -> /components');
+
+  const brandLink = page.locator('header a[href="/"]').first();
+  await brandLink.waitFor({ state: 'visible', timeout: 15_000 });
+  await brandLink.click();
+  await page.waitForURL(`${baseUrl}/`, { timeout: 15_000 });
+  await waitForRenderedBody('/');
+  await settleAndVerifyChunks('brand navigation /components -> /');
+
+  console.log('OK global header navigation and router/static integrity');
+}
+
 async function verifyClientRoutes(indexPath, routes) {
   for (const href of routes) {
     await goto(indexPath);
+    await settleAndVerifyChunks(`document load ${indexPath}`);
 
     const link = page.locator(`a[href="${href}"]`).first();
     await link.waitFor({ state: 'visible', timeout: 15_000 });
     await link.click();
     await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
     await waitForRenderedBody(href);
-    await page.waitForTimeout(300);
+    await settleAndVerifyChunks(`client navigation ${indexPath} -> ${href}`);
 
     console.log(`OK chunk navigation ${indexPath} -> ${href}`);
   }
 }
 
-async function verifyAbortedChunkUrls() {
-  for (const url of abortedChunkUrls) {
-    const response = await context.request.get(url, {
-      failOnStatusCode: false,
-      headers: { 'Cache-Control': 'no-cache' },
-    });
-
-    if (!response.ok()) {
-      recordCritical(`aborted chunk probe: ${response.status()} GET ${url}`);
-    } else {
-      console.log(`OK aborted navigation asset still exists: ${url}`);
-    }
-  }
-}
-
 try {
+  await verifyGlobalHeaderNavigation();
+
   const blogRoutes = await collectRoutes('/blog', '/blog/');
   const componentRoutes = await collectRoutes('/components', '/components/');
 
@@ -186,18 +341,20 @@ try {
 
   await verifyClientRoutes('/blog', blogRoutes);
   await verifyClientRoutes('/components', componentRoutes);
-  await verifyAbortedChunkUrls();
+  await verifyAbortedChunkUrls('final verification');
+  await verifyAbortedRouterRequests('final verification');
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
-      `Cloudflare static chunk failures detected:\n${criticalDiagnostics.join('\n')}`
+      `Cloudflare navigation/static failures detected:\n${criticalDiagnostics.join('\n')}`
     );
   }
 } catch (error) {
   try {
-    await verifyAbortedChunkUrls();
+    await verifyAbortedChunkUrls('failure cleanup');
+    await verifyAbortedRouterRequests('failure cleanup');
   } catch (probeError) {
-    recordCritical(`aborted chunk verification failed: ${probeError}`);
+    recordCritical(`aborted request verification failed: ${probeError}`);
   }
 
   console.error(`Cloudflare static chunk smoke failed at ${page.url()}`);
@@ -210,4 +367,6 @@ try {
 }
 
 await browser.close();
-console.log('OK Cloudflare static chunk integrity across discovered client routes');
+console.log(
+  'OK Cloudflare router prefetch and static chunk integrity across discovered client routes'
+);

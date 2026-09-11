@@ -209,7 +209,7 @@ describe('Blog V1 index experience', () => {
     ];
 
     const { calls } = installArticleMetricsFetch((call) => {
-      if (call.url.includes('/v1/blog/metrics?')) {
+      if (call.url.includes('/api/blog-metrics/metrics?')) {
         return jsonResponse({
           items: [createMetrics('one-runtime'), createMetrics('two-runtimes')],
         });
@@ -236,12 +236,16 @@ describe('Blog V1 index experience', () => {
     );
 
     const batchCalls = calls.filter((call) =>
-      call.url.includes('/v1/blog/metrics?')
+      call.url.includes('/api/blog-metrics/metrics?')
     );
 
     expect(batchCalls).toHaveLength(1);
     expect(batchCalls[0]?.url).toContain('slug=one-runtime');
     expect(batchCalls[0]?.url).toContain('slug=two-runtimes');
+    expect(batchCalls[0]?.init).toMatchObject({
+      credentials: 'include',
+      cache: 'no-store',
+    });
   });
 
   it('retries a failed batch metrics read once with the same slug set', async () => {
@@ -268,8 +272,12 @@ describe('Blog V1 index experience', () => {
       'two-runtimes': createMetrics('two-runtimes', { views: 9, likes: 2 }),
     });
     expect(calls).toHaveLength(2);
-    expect(calls[0]?.url).toContain('/v1/blog/metrics?');
+    expect(calls[0]?.url).toContain('/api/blog-metrics/metrics?');
     expect(calls[0]?.url).toBe(calls[1]?.url);
+    expect(calls[0]?.init).toMatchObject({
+      credentials: 'include',
+      cache: 'no-store',
+    });
   });
 });
 
@@ -305,7 +313,7 @@ describe('Blog V1 article experience', () => {
 
   it('loads article metrics and registers a view from the client experience', async () => {
     const { calls } = installArticleMetricsFetch((call) => {
-      if (call.url.endsWith('/v1/blog/metrics/two-runtimes')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/two-runtimes')) {
         return jsonResponse(createMetrics('two-runtimes'));
       }
 
@@ -428,7 +436,7 @@ describe('Blog V1 article experience', () => {
         });
       }
 
-      if (call.url.endsWith('/v1/blog/metrics/strict-runtime')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/strict-runtime')) {
         return jsonResponse(createMetrics('strict-runtime'));
       }
 
@@ -464,7 +472,7 @@ describe('Blog V1 article experience', () => {
 
   it('hydrates backend liked=true state', async () => {
     installArticleMetricsFetch((call) => {
-      if (call.url.endsWith('/v1/blog/metrics/two-runtimes')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/two-runtimes')) {
         return jsonResponse(createMetrics('two-runtimes'));
       }
 
@@ -490,7 +498,7 @@ describe('Blog V1 article experience', () => {
 
   it('uses PUT like success as the authoritative state', async () => {
     const { calls } = installArticleMetricsFetch((call) => {
-      if (call.url.endsWith('/v1/blog/metrics/two-runtimes')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/two-runtimes')) {
         return jsonResponse(createMetrics('two-runtimes'));
       }
 
@@ -536,7 +544,7 @@ describe('Blog V1 article experience', () => {
 
   it('uses DELETE unlike success as the authoritative state', async () => {
     const { calls } = installArticleMetricsFetch((call) => {
-      if (call.url.endsWith('/v1/blog/metrics/two-runtimes')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/two-runtimes')) {
         return jsonResponse(createMetrics('two-runtimes', { likes: 4 }));
       }
 
@@ -585,7 +593,7 @@ describe('Blog V1 article experience', () => {
   it('serializes repeated like interactions while a mutation is pending', async () => {
     let resolvePut: ((response: Response) => void) | undefined;
     const { calls } = installArticleMetricsFetch((call) => {
-      if (call.url.endsWith('/v1/blog/metrics/two-runtimes')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/two-runtimes')) {
         return jsonResponse(createMetrics('two-runtimes'));
       }
 
@@ -635,7 +643,7 @@ describe('Blog V1 article experience', () => {
 
   it('keeps the last known metrics when a like mutation fails', async () => {
     installArticleMetricsFetch((call) => {
-      if (call.url.endsWith('/v1/blog/metrics/two-runtimes')) {
+      if (call.url.endsWith('/api/blog-metrics/metrics/two-runtimes')) {
         return jsonResponse(createMetrics('two-runtimes'));
       }
 

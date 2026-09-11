@@ -1,10 +1,13 @@
 import createMDX from '@next/mdx';
 import type { NextConfig } from 'next';
+import { deploymentIdentity } from './cloudflare/build-identity.mjs';
 
 const withMDX = createMDX({});
+const deploymentBuildId = deploymentIdentity();
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  generateBuildId: async () => deploymentBuildId,
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   transpilePackages: [
     '@vellira-ui/react',
@@ -20,6 +23,14 @@ const nextConfig: NextConfig = {
     resolveAlias: {
       'react-native': 'react-native-web',
     },
+  },
+
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'react-native$': 'react-native-web',
+    };
+    return config;
   },
 };
 
