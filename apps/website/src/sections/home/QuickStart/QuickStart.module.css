@@ -252,7 +252,7 @@
   align-items: center;
   min-height: 40px;
   padding: 0 var(--space-3);
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   background: color-mix(in srgb, var(--surface-subtle) 86%, transparent);
@@ -395,7 +395,7 @@
 
 .controlsHeader span,
 .controlField > span {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
