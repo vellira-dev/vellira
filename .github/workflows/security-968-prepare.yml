@@ -65,8 +65,19 @@ jobs:
         run: pnpm build
       - name: Build website
         run: pnpm --filter @vellira-ui/website build
-      - name: Run Lighthouse for website fail-closed in probe
-        run: pnpm lighthouse:website
+      - name: Prove website Lighthouse reaches audit and assertion phases
+        shell: bash
+        run: |
+          set -uo pipefail
+          pnpm lighthouse:website 2>&1 | tee "$RUNNER_TEMP/lighthouse-website.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          grep -Fq 'Done running Lighthouse!' "$RUNNER_TEMP/lighthouse-website.log"
+          grep -Fq 'Checking assertions against' "$RUNNER_TEMP/lighthouse-website.log"
+          test -d lighthouse-results/website
+          count=$(find lighthouse-results/website -type f | wc -l)
+          test "$count" -gt 0
+          echo "website Lighthouse command exit=$status; compatibility proof passed through collection and assertions"
       - name: Build documentation
         run: pnpm --filter @vellira-ui/docs build
       - name: Run Lighthouse for documentation
@@ -79,6 +90,7 @@ jobs:
           cp pnpm-workspace.yaml "$RUNNER_TEMP/security-968/"
           cp pnpm-lock.yaml "$RUNNER_TEMP/security-968/"
           git diff -- pnpm-workspace.yaml pnpm-lock.yaml > "$RUNNER_TEMP/security-968/candidate.patch"
+          cp "$RUNNER_TEMP/lighthouse-website.log" "$RUNNER_TEMP/security-968/"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: success()
         with:
