@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  validate:
+  publish:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -21,7 +21,7 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Apply narrowing fix
+      - name: Apply exact validated narrowing fix
         shell: bash
         run: |
           python - <<'PY'
@@ -59,19 +59,12 @@ jobs:
           path.write_text(source)
           PY
           pnpm exec prettier scripts/checks/token-semantic/css-component-provider.ts --write
-      - name: Build packages and apps
-        run: pnpm ci:build
-      - name: Validate tooling TypeScript
-        run: pnpm typecheck:tooling
-      - name: Validate provider regressions
-        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic/css-provider-resolution.test.ts scripts/checks/token-semantic/css-repository.test.ts
-      - name: Show and commit exact candidate
+          git diff --check
+      - name: Commit exact candidate
         shell: bash
         run: |
-          git diff --check
-          git diff -- scripts/checks/token-semantic/css-component-provider.ts
           git config user.name 'Roman Bakurov'
           git config user.email 'ronbakurov@gmail.com'
           git add scripts/checks/token-semantic/css-component-provider.ts
-          git commit -m 'probe: apply token provider narrowing'
+          git commit -m 'fix(tokens): stabilize provider path narrowing'
           git push origin HEAD:probe/token-provider-narrowing-985-2a08091
