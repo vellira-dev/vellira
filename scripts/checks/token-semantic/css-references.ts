@@ -77,9 +77,7 @@ export function declaredCssVariables(
 ): ReadonlySet<string> {
   const code = maskCssNonCode(source, sourcePath.endsWith('.scss'));
   return new Set(
-    [...code.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/g)].map(
-      (match) => match[1]
-    )
+    [...code.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/g)].map((match) => match[1])
   );
 }
 
