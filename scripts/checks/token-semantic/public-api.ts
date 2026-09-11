@@ -46,6 +46,10 @@ function finding(
   };
 }
 
+export function escapeRegExpLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function auditPublicCompatibilityAlias(input: {
   alias: {
     path: string;
@@ -245,9 +249,8 @@ export function checkTokenPublicApi(root: string): RuleResult {
         )
       );
     }
-    const escapedRemoveIn = alias.removeIn.replace(/\./g, '\\.');
     const annotationPattern = new RegExp(
-      `@deprecated[\\s\\S]*Use [^\\n]*${alias.replacementExport}[^\\n]*directly[\\s\\S]*${escapedRemoveIn}[\\s\\S]*export const ${alias.exportName}\\b`
+      `@deprecated[\\s\\S]*Use [^\\n]*${escapeRegExpLiteral(alias.replacementExport)}[^\\n]*directly[\\s\\S]*${escapeRegExpLiteral(alias.removeIn)}[\\s\\S]*export const ${escapeRegExpLiteral(alias.exportName)}\\b`
     );
     if (!annotationPattern.test(indexSource)) {
       findings.push(
