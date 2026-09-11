@@ -1,4 +1,4 @@
-name: Verify isolated CodeShowcase candidate
+name: Verify post-852 Vellira UI baseline
 
 on:
   push:
@@ -10,17 +10,11 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    container:
-      image: mcr.microsoft.com/playwright:v1.61.1-noble
-      options: --ipc=host
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 1556ddbcdc5bb6902a0d4136432f886a66d557a7
+          ref: c83761dd4a83eff4d514bc72cacd34de185cdd62
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -28,111 +22,35 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Prepare bounded reveal and browser-evidence fix
+      - name: Capture exact post-852 baseline
         shell: bash
         run: |
           set -euo pipefail
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          test "$(git rev-parse HEAD)" = 1556ddbcdc5bb6902a0d4136432f886a66d557a7
+          test "$(git rev-parse HEAD)" = c83761dd4a83eff4d514bc72cacd34de185cdd62
+          mkdir -p .artifacts/vellira-ui-baseline
+          pnpm check:vellira-ui-usage:json > .artifacts/vellira-ui-baseline/report.json
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          const component = 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx';
-          let source = fs.readFileSync(component, 'utf8');
-          const declaration = 'export function CodeShowcase() {';
-          if (!source.includes(declaration)) throw new Error('Component anchor missing');
-          source = source.replace(declaration, `// Restore every reveal property when the reduced-motion preference hydrates.
-          // Removing variants alone can leave inherited server-rendered hidden styles.
-          const reducedMotionReveal = {
-            opacity: 1,
-            x: 0,
-            y: 0,
-            scale: 1,
-            rotateY: 0,
-            filter: 'blur(0px)',
-            transition: { duration: 0 },
-          };
-
-          ` + declaration);
-          const variants = /^( +)variants=\{shouldReduceMotion \? undefined : (workspace|panel|editor|preview)Variants\}$/gm;
-          let count = 0;
-          source = source.replace(variants, (line, indent) => {
-            count += 1;
-            return line + '\n' + indent + 'animate={shouldReduceMotion ? reducedMotionReveal : undefined}';
-          });
-          if (count !== 5) throw new Error('Unexpected reveal site count: ' + count);
-          fs.writeFileSync(component, source);
-
-          const file = 'apps/react-storybook/scripts/code-showcase-website-smoke.mjs';
-          source = fs.readFileSync(file, 'utf8');
-          const guard = `async function ensurePickerPainted(picker) {
-            await picker.evaluate((element) =>
-              element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' })
-            );
-            await expect(picker).toBeInViewport();
-            await expect.poll(() => picker.evaluate((element) => {
-              for (let node = element; node; node = node.parentElement) {
-                const style = getComputedStyle(node);
-                if (Number(style.opacity) < 1 || style.visibility !== 'visible' || style.display === 'none') return false;
-              }
-              const rect = element.getBoundingClientRect();
-              const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-              return hit !== null && (hit === element || element.contains(hit));
-            }), { message: 'Picker must be fully painted and unobscured', timeout: 15000 }).toBe(true);
+          const report = JSON.parse(fs.readFileSync('.artifacts/vellira-ui-baseline/report.json', 'utf8'));
+          const byRule = new Map();
+          const byPath = new Map();
+          for (const finding of report.findings) {
+            byRule.set(finding.ruleId, (byRule.get(finding.ruleId) ?? 0) + 1);
+            byPath.set(finding.path, (byPath.get(finding.path) ?? 0) + 1);
           }
-
-          `;
-          source = source.replace("try {\n  for (const colorScheme", guard + "try {\n  for (const reducedMotion of ['reduce', 'no-preference']) {\n  for (const colorScheme");
-          source = source.replace('const scenario = `${colorScheme}-${viewport.width}`;', 'const scenario = `${reducedMotion}-${colorScheme}-${viewport.width}`;');
-          source = source.replace("reducedMotion: 'reduce',", 'reducedMotion,');
-          source = source.replace('        await expect(picker).toBeVisible();', '        await expect(picker).toBeVisible();\n        await ensurePickerPainted(picker);');
-          const anchor = '          await picker.screenshot({ path: `${artifactDir}/${scenario}-${name.toLowerCase()}.png` });';
-          if (!source.includes(anchor)) throw new Error('Screenshot anchor missing');
-          source = source.replace(anchor, '          await ensurePickerPainted(picker);\n' + anchor);
-          source = source.replace('  }\n} finally {\n  await writeFile', '  }\n  }\n} finally {\n  await writeFile');
-          fs.writeFileSync(file, source);
+          console.log('SUMMARY', JSON.stringify(report.summary));
+          console.log('RULES');
+          for (const [rule, count] of [...byRule].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]))) console.log(`${count}\t${rule}`);
+          console.log('TOP_PATHS');
+          for (const [path, count] of [...byPath].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0])).slice(0,30)) console.log(`${count}\t${path}`);
+          console.log('FINDINGS');
+          for (const finding of report.findings) {
+            console.log(JSON.stringify({ruleId:finding.ruleId,path:finding.path,line:finding.line,column:finding.column,detected:finding.detected,canonicalAlternative:finding.canonicalAlternative,nextAction:finding.nextAction,message:finding.message}));
+          }
           NODE
-          pnpm exec prettier apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx apps/react-storybook/scripts/code-showcase-website-smoke.mjs --write
-          git diff --check
-          git diff --stat
-          mkdir -p .artifacts/validated-code-showcase
-          cp apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx .artifacts/validated-code-showcase/
-          cp apps/react-storybook/scripts/code-showcase-website-smoke.mjs .artifacts/validated-code-showcase/
-          git hash-object apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx apps/react-storybook/scripts/code-showcase-website-smoke.mjs
-      - name: Run targeted source and negative regressions
-        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/vellira-ui-usage/code-showcase.test.ts
-      - name: Build candidate website and dependencies
-        run: pnpm exec turbo run build --filter='@vellira-ui/website...'
-      - name: Run built website browser regression
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --dir apps/website exec next start -p 3101 > /tmp/code-showcase-next.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          ready=false
-          for attempt in $(seq 1 20); do
-            if curl --fail --silent http://127.0.0.1:3101/ > /dev/null; then
-              ready=true
-              break
-            fi
-            sleep 1
-          done
-          if [[ "$ready" != "true" ]]; then
-            cat /tmp/code-showcase-next.log >&2
-            exit 1
-          fi
-          WEBSITE_URL=http://127.0.0.1:3101 pnpm --filter @vellira-ui/react-storybook exec node scripts/code-showcase-website-smoke.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        if: always()
         with:
-          name: isolated-code-showcase-evidence
-          path: apps/react-storybook/test-results/code-showcase
-          if-no-files-found: ignore
-          retention-days: 7
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        if: always()
-        with:
-          name: validated-code-showcase-source
-          path: .artifacts/validated-code-showcase
+          name: post-852-vellira-ui-baseline
+          path: .artifacts/vellira-ui-baseline/report.json
           if-no-files-found: error
           retention-days: 7
