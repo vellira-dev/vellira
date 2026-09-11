@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   auditPublicCompatibilityAlias,
   checkTokenPublicApi,
+  escapeRegExpLiteral,
 } from './public-api';
 
 const root = process.cwd();
@@ -66,5 +67,13 @@ describe('public token API audit adapter', () => {
         expect.objectContaining({ code: 'css-alias-output-missing' }),
       ])
     );
+  });
+
+  it('escapes every regex metacharacter in public API policy literals', () => {
+    const literal = String.raw`theme.v3\legacy+name?(draft)[x]{2}|^$`;
+    const pattern = new RegExp(`^${escapeRegExpLiteral(literal)}$`);
+
+    expect(pattern.test(literal)).toBe(true);
+    expect(pattern.test('themeXv3\legacy+name?(draft)[x]{2}|^$')).toBe(false);
   });
 });
