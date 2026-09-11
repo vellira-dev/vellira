@@ -1,0 +1,39 @@
+name: PR 985 provider formatting probe
+
+on:
+  push:
+    branches: [probe/pr985-provider-format-20260911]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format exact candidate files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/provider-format
+          files=(
+            scripts/checks/token-semantic/css-references.ts
+            scripts/checks/token-semantic/css-repository.ts
+          )
+          pnpm exec prettier "${files[@]}" --write
+          pnpm exec prettier "${files[@]}" --check
+          tar -czf .artifacts/provider-format/formatted-files.tgz "${files[@]}"
+          git diff -- "${files[@]}" > .artifacts/provider-format/formatting.patch
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: provider-format-evidence
+          path: .artifacts/provider-format/
+          if-no-files-found: error
+          retention-days: 3
