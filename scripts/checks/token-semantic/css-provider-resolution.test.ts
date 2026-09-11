@@ -36,7 +36,7 @@ function fixture(cssVariables: readonly string[]) {
 }
 
 describe('CSS provider resolution boundaries', () => {
-  it('accepts literal runtime providers from the same CSS-module basename', () => {
+  it('accepts literal runtime providers from an imported same-basename CSS module', () => {
     const { root, write } = fixture(['--surface-canvas', '--action-primary']);
     write(
       'apps/website/src/SiteHeader/SiteHeader.module.css',
@@ -44,10 +44,44 @@ describe('CSS provider resolution boundaries', () => {
     );
     write(
       'apps/website/src/SiteHeader/SiteHeader.tsx',
-      "const style = { '--action-icon': 'url(icon.svg)', '--action-icon-size': '20px' };\n"
+      "import './SiteHeader.module.css';\nconst style = { '--action-icon': 'url(icon.svg)', '--action-icon-size': '20px' };\n"
     );
 
     expect(checkTokenCssReferences(root).findings).toEqual([]);
+  });
+
+  it('accepts literal runtime providers from imported plain CSS', () => {
+    const { root, write } = fixture(['--surface-canvas']);
+    write(
+      'apps/react-storybook/.storybook/manager.css',
+      '.icon { mask: var(--vellira-toolbar-icon); width: var(--vellira-toolbar-icon-size); }'
+    );
+    write(
+      'apps/react-storybook/.storybook/manager.ts',
+      "import './manager.css';\nconst style = { '--vellira-toolbar-icon': 'url(icon.svg)', '--vellira-toolbar-icon-size': '16px' };\n"
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([]);
+  });
+
+  it('does not accept same-basename runtime assignments without a stylesheet import', () => {
+    const { root, write } = fixture(['--surface-canvas']);
+    write(
+      'apps/react-storybook/.storybook/manager.css',
+      '.icon { mask: var(--vellira-toolbar-icon); }'
+    );
+    write(
+      'apps/react-storybook/.storybook/manager.ts',
+      "const style = { '--vellira-toolbar-icon': 'url(icon.svg)' };\n"
+    );
+
+    expect(checkTokenCssReferences(root).findings).toEqual([
+      expect.objectContaining({
+        code: 'unclassified-css-variable',
+        sourcePath: 'apps/react-storybook/.storybook/manager.css',
+        tokenPath: '--vellira-toolbar-icon',
+      }),
+    ]);
   });
 
   it('accepts a component-owned variable declared and consumed in the same stylesheet', () => {
