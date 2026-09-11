@@ -115,7 +115,7 @@ describe('blog search experience', () => {
     const getBatchMetricsRequests = () =>
       fetchMock.mock.calls
         .map(([input]) => input.toString())
-        .filter((url) => url.includes('/v1/blog/metrics?'));
+        .filter((url) => url.includes('/api/blog-metrics/metrics?'));
 
     await waitFor(() => expect(getBatchMetricsRequests()).toHaveLength(1));
 
@@ -126,7 +126,12 @@ describe('blog search experience', () => {
       throw new Error('Expected one blog metrics batch request');
     }
 
-    const batchMetricsUrl = new URL(batchMetricsRequest);
+    expect(batchMetricsRequest).not.toContain('api.vellira.dev');
+
+    const batchMetricsUrl = new URL(
+      batchMetricsRequest,
+      'https://vellira.test'
+    );
     expect(batchMetricsUrl.searchParams.getAll('slug')).toEqual(
       articles.map((article) => article.slug)
     );
