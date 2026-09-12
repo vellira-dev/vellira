@@ -57,6 +57,10 @@ A Vellira release is complete only when:
 
 The normal publisher performs a final all-six npm completeness gate. Individual
 publish command success, a Git tag, or a GitHub Release is not sufficient.
+Registry visibility is bounded by the explicit
+`VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS` deadline (six minutes by default).
+Progressive retries log elapsed and remaining time, truncate the final sleep to
+the deadline, and make one final registry attempt there.
 
 ## Incident record
 

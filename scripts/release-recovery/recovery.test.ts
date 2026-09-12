@@ -14,7 +14,11 @@ const {
   verifyRegistryEvidence,
 } = require('./recovery.cjs');
 const {
-  recovery: { publishPackages, verifyPackageCompleteness },
+  recovery: {
+    publishPackages,
+    verifyPackageCompleteness,
+    verifyPublishedPackage,
+  },
 } = require('../semantic-release-packages.cjs');
 
 const sha = '07670ecf1ad70222d02d98a06f474d5ab9f404bf';
@@ -47,6 +51,38 @@ function release(overrides = {}) {
     name: 'Vellira 2.104.1',
     body: 'notes',
     ...overrides,
+  };
+}
+
+function fakeVisibility(visibleAt: number | null) {
+  let clock = 0;
+  const sleep = vi.fn(async (delay: number) => {
+    clock += delay;
+  });
+  const view = vi.fn(async () =>
+    visibleAt !== null && clock >= visibleAt
+      ? {
+          error: null,
+          status: 0,
+          stdout: JSON.stringify({
+            integrity: 'sha512-dGVzdA==',
+            tarball: 'https://registry.example/package.tgz',
+            attestations: { url: 'https://registry.example/attestations' },
+          }),
+          stderr: '',
+        }
+      : {
+          error: null,
+          status: 1,
+          stdout: '',
+          stderr: 'npm ERR! code E404',
+        }
+  );
+  return {
+    now: () => clock,
+    sleep,
+    view,
+    elapsed: () => clock,
   };
 }
 
@@ -278,6 +314,96 @@ describe('release recovery decisions', () => {
     );
   });
 
+  it('accepts npm visibility after the observed 247-second delay without real sleeping', async () => {
+    const fake = fakeVisibility(247_000);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      verifyPublishedPackage(
+        { name: '@vellira-ui/icons', version: '2.104.1' },
+        { ...fake, timeoutMs: 360_000, baseDelayMs: 5_000 }
+      )
+    ).resolves.toMatchObject({ tarball: expect.any(String) });
+    expect(fake.elapsed()).toBe(275_000);
+    expect(fake.sleep).toHaveBeenCalled();
+    expect(warn).toHaveBeenLastCalledWith(
+      expect.stringContaining('135000ms remain')
+    );
+    warn.mockRestore();
+  });
+
+  it('performs a final attempt at the deadline and accepts visibility just before it', async () => {
+    const fake = fakeVisibility(359_999);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      verifyPublishedPackage(
+        { name: '@vellira-ui/icons', version: '2.104.1' },
+        { ...fake, timeoutMs: 360_000, baseDelayMs: 5_000 }
+      )
+    ).resolves.toBeDefined();
+    expect(fake.elapsed()).toBe(360_000);
+    expect(fake.view).toHaveBeenCalledTimes(13);
+    expect(fake.view.mock.calls.at(-1)?.[1]).toBe(1);
+    expect(fake.sleep.mock.calls.at(-1)?.[0]).toBe(30_000);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('30000ms remain')
+    );
+    warn.mockRestore();
+  });
+
+  it('fails at the bounded deadline when npm remains invisible', async () => {
+    const fake = fakeVisibility(null);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const stderr = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+
+    await expect(
+      verifyPublishedPackage(
+        { name: '@vellira-ui/icons', version: '2.104.1' },
+        { ...fake, timeoutMs: 360_000, baseDelayMs: 5_000 }
+      )
+    ).rejects.toThrow('after 360000ms (deadline 360000ms)');
+    expect(fake.elapsed()).toBe(360_000);
+    expect(fake.view).toHaveBeenCalledTimes(13);
+    expect(fake.sleep).toHaveBeenCalledTimes(12);
+    warn.mockRestore();
+    stderr.mockRestore();
+  });
+
+  it('never accepts visible metadata without mandatory provenance', async () => {
+    let clock = 0;
+    const sleep = vi.fn(async (delay: number) => {
+      clock += delay;
+    });
+    const view = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: JSON.stringify({
+        integrity: 'sha512-dGVzdA==',
+        tarball: 'https://registry.example/package.tgz',
+      }),
+      stderr: '',
+    }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      verifyPublishedPackage(
+        { name: '@vellira-ui/icons', version: '2.104.1' },
+        {
+          now: () => clock,
+          sleep,
+          view,
+          timeoutMs: 10,
+          baseDelayMs: 5,
+        }
+      )
+    ).rejects.toThrow('missing provenance attestations after 10ms');
+    expect(view).toHaveBeenCalledTimes(3);
+    warn.mockRestore();
+  });
+
   it('keeps the recovery scope outside Cloudflare deployment surfaces', () => {
     const changed = [
       '.github/workflows/release.yml',
@@ -304,5 +430,13 @@ describe('release recovery decisions', () => {
     const cli = readFileSync('scripts/release-recovery/cli.cjs', 'utf8');
     expect(cli).toContain("'--verify-tag'");
     expect(cli).not.toMatch(/git\s+(?:tag|push)|deleteRef|createRef/);
+
+    const publisher = readFileSync(
+      'scripts/semantic-release-packages.cjs',
+      'utf8'
+    );
+    expect(publisher).toContain('VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS');
+    expect(publisher).toContain("?? '360000'");
+    expect(publisher).not.toContain('VELLIRA_RELEASE_VERIFICATION_ATTEMPTS');
   });
 });
