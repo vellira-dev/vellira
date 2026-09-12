@@ -158,6 +158,7 @@ function shouldRetry(errorOrStatus) {
   return (
     errorOrStatus?.name === 'TypeError' ||
     errorOrStatus?.name === 'AbortError' ||
+    errorOrStatus?.name === 'TimeoutError' ||
     errorOrStatus?.code === 'ECONNRESET' ||
     errorOrStatus?.code === 'ETIMEDOUT'
   );
