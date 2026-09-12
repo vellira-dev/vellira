@@ -1,6 +1,6 @@
 import {
   componentTokenDependencyPolicyV1,
-  semanticDependencyRepairsV1,
+  type semanticDependencyRepairsV1,
 } from './component-token-dependencies.js';
 
 export type ComponentDependencyTheme = 'light' | 'dark' | 'highContrast';
