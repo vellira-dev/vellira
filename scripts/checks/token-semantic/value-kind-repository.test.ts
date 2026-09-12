@@ -1,62 +1,37 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
-  auditGeneratedTokenCssFreshness,
+  auditGeneratedTokenCssOutput,
+  auditTokenCssGenerationWiring,
   checkTokenValueKinds,
 } from './value-kind-repository';
 
-const tempRoots: string[] = [];
-
-function createTempRoot() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-value-kind-'));
-  tempRoots.push(root);
-  const generatedDir = path.join(
-    root,
-    'packages',
-    'tokens',
-    'src',
-    'generated'
-  );
-  fs.mkdirSync(generatedDir, { recursive: true });
-  return root;
-}
-
-afterEach(() => {
-  for (const root of tempRoots.splice(0)) {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
 /** Exercise real themes and controlSizes, never a fixture-only baseline. */
 describe('maintained value-kind inventory', () => {
-  it('checks all theme layers, shared control sizes, and generated CSS without findings', () => {
+  it('checks all theme layers, shared control sizes, emitted CSS, and package wiring without findings', () => {
     const result = checkTokenValueKinds();
     expect(result.checked).toBeGreaterThan(7000);
     expect(result.findings).toEqual([]);
     expect(result.coverage).toBe('complete');
   });
 
-  it('fails closed when committed generated CSS is stale', () => {
-    const root = createTempRoot();
-    fs.writeFileSync(
-      path.join(root, 'packages', 'tokens', 'src', 'generated', 'tokens.css'),
-      '/* stale generated CSS */\n'
-    );
-
-    const result = auditGeneratedTokenCssFreshness(root);
+  it('fails closed when emitted generated CSS diverges from canonical output maps', () => {
+    const result = auditGeneratedTokenCssOutput('/* stale CSS */\n');
     expect(result.checked).toBe(1);
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]).toMatchObject({
       ruleId: 'tokens.value-kind',
-      code: 'generated-css-out-of-date',
+      code: 'generated-css-output-drift',
       severity: 'error',
-      sourcePath: 'packages/tokens/src/generated/tokens.css',
+      sourcePath: 'packages/tokens/scripts/token-css-output.ts',
       platform: 'web',
     });
+  });
+
+  it('keeps the real package build wired to canonical CSS generation', () => {
+    const result = auditTokenCssGenerationWiring(process.cwd());
+    expect(result.checked).toBe(5);
+    expect(result.findings).toEqual([]);
   });
 
   // cli.test.ts proves registration using its existing full repository report.
