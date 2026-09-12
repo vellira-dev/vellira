@@ -19,6 +19,132 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Apply canonical shadow role derivation support
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/checks/token-ownership/checker.ts')
+          source = path.read_text()
+          marker = 'function canonicalShadowFactoryBinding('
+          if marker not in source:
+              import_anchor = "import { componentMetadata } from '../../../packages/metadata/src/components';\n"
+              import_replacement = import_anchor + "import { createSemanticShadowTokens } from '../../../packages/tokens/src/effects/shadow-system';\n"
+              if source.count(import_anchor) != 1:
+                  raise SystemExit('shadow import anchor mismatch')
+              source = source.replace(import_anchor, import_replacement, 1)
+
+              helper_anchor = 'function readSemanticRolePaths(filePath: string, namespace: string): string[] {'
+              helper_replacement = r'''function canonicalShadowFactoryBinding(ast: ts.SourceFile): string | null {
+            for (const statement of ast.statements) {
+              if (
+                !ts.isImportDeclaration(statement) ||
+                !ts.isStringLiteral(statement.moduleSpecifier) ||
+                statement.moduleSpecifier.text !== '../../effects/shadow-system.js'
+              ) {
+                continue;
+              }
+
+              const bindings = statement.importClause?.namedBindings;
+              if (!bindings || !ts.isNamedImports(bindings)) continue;
+
+              for (const element of bindings.elements) {
+                if (
+                  (element.propertyName ?? element.name).text ===
+                  'createSemanticShadowTokens'
+                ) {
+                  return element.name.text;
+                }
+              }
+            }
+
+            return null;
+          }
+
+          function canonicalDerivedSemanticRolePaths(params: {
+            ast: ts.SourceFile;
+            expression: ts.Expression;
+            namespace: string;
+            theme: (typeof THEMES)[number];
+          }): string[] | null {
+            if (params.namespace !== 'shadow') return null;
+
+            const binding = canonicalShadowFactoryBinding(params.ast);
+            const expectedTheme =
+              params.theme === 'highContrast' ? 'high-contrast' : params.theme;
+
+            if (
+              !binding ||
+              !ts.isCallExpression(params.expression) ||
+              !ts.isIdentifier(params.expression.expression) ||
+              params.expression.expression.text !== binding ||
+              params.expression.arguments.length !== 1 ||
+              !ts.isStringLiteral(params.expression.arguments[0]!) ||
+              params.expression.arguments[0]!.text !== expectedTheme
+            ) {
+              throw new Error(
+                `Semantic shadow source must call canonical createSemanticShadowTokens(${JSON.stringify(expectedTheme)}).`
+              );
+            }
+
+            return Object.keys(createSemanticShadowTokens(expectedTheme))
+              .map((role) => `shadow.${role}`)
+              .sort();
+          }
+
+          function readSemanticRolePaths(
+            filePath: string,
+            namespace: string,
+            theme: (typeof THEMES)[number]
+          ): string[] {'''
+              if source.count(helper_anchor) != 1:
+                  raise SystemExit('role reader signature anchor mismatch')
+              source = source.replace(helper_anchor, helper_replacement, 1)
+
+              old_object_guard = r'''  const root = unwrapExpression(initializer);
+            if (!ts.isObjectLiteralExpression(root)) {
+              throw new Error(
+                `Semantic namespace source must use a static object literal: ${filePath}`
+              );
+            }
+
+            const roles: string[] = [];'''
+              new_object_guard = r'''  const root = unwrapExpression(initializer);
+            if (!ts.isObjectLiteralExpression(root)) {
+              const derivedRoles = canonicalDerivedSemanticRolePaths({
+                ast,
+                expression: root,
+                namespace,
+                theme,
+              });
+              if (derivedRoles) return derivedRoles;
+
+              throw new Error(
+                `Semantic namespace source must use a static object literal or a canonical derived semantic authority: ${filePath}`
+              );
+            }
+
+            const roles: string[] = [];'''
+              if source.count(old_object_guard) != 1:
+                  raise SystemExit('role reader object guard anchor mismatch')
+              source = source.replace(old_object_guard, new_object_guard, 1)
+
+              old_call = r'''      const namespaceRoles = readSemanticRolePaths(
+                path.join(params.root, sourcePath),
+                namespace
+              );'''
+              new_call = r'''      const namespaceRoles = readSemanticRolePaths(
+                path.join(params.root, sourcePath),
+                namespace,
+                theme
+              );'''
+              if source.count(old_call) != 1:
+                  raise SystemExit('role reader call anchor mismatch')
+              source = source.replace(old_call, new_call, 1)
+
+              path.write_text(source)
+          PY
       - name: Format exact candidate
         run: >-
           pnpm exec prettier --write
@@ -53,5 +179,5 @@ jobs:
             scripts/checks/token-ownership/checker.ts \
             scripts/checks/token-ownership/role-lifecycle.test.ts \
             scripts/generators/component/token-ownership-contract.test.ts
-          git commit -m 'style(tokens): format ownership lifecycle coverage'
+          git commit -m 'test(tokens): validate ownership lifecycle coverage'
           git push origin HEAD:probe/token-ownership-lifecycle-890-11404013
