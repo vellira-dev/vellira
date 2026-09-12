@@ -1,220 +1,186 @@
 # Cloudflare website migration
 
-This document is the operational runbook for moving `vellira.dev` from Vercel to Cloudflare Workers.
+This document is the operational runbook for the Vellira website on Cloudflare Workers and records the completed Vercel → Cloudflare cutover contract.
 
-The [deployment/cache contract](../../docs/architecture/cloudflare-deployment-cache-contract.md)
-defines the existing architecture. The [PR #943 review record](../../docs/architecture/cloudflare-pr943-review.md)
-pins the successful `dbcaea97…` baseline and distinguishes it from later exact-head validation.
-Real-Safari gaps and reproduction are in the [Safari checklist](../../docs/architecture/cloudflare-safari-validation.md).
-These documents do not authorize production activation or domain cutover.
+The [deployment/cache contract](../../docs/architecture/cloudflare-deployment-cache-contract.md) defines the cache, identity and immutable-asset architecture. The [PR #943 review record](../../docs/architecture/cloudflare-pr943-review.md) preserves the earlier migration baseline, and the [Safari checklist](../../docs/architecture/cloudflare-safari-validation.md) owns real-Safari gaps and reproduction.
 
-## Adapter and worker topology
+## Current production state
 
-The active Cloudflare adapter is **OpenNext** (`@opennextjs/cloudflare`). Vinext was used only during the initial compatibility experiment and is not part of the active build or deploy path.
+The public cutover is complete. Cloudflare is the active website production path, while the existing Vercel deployment is retained only as the approved emergency rollback target until the rollback window is explicitly closed.
 
-Two Workers are intentionally separated:
+The active adapter is **OpenNext** (`@opennextjs/cloudflare`). Vinext was used only during the initial compatibility experiment and is not part of the active build or deploy path.
+
+Workers and hostnames are intentionally separated:
 
 - Staging: `vellira-website-staging` → `https://vellira-website-staging.vellira.workers.dev`
-- Production: `vellira-website` → initially available only through its `workers.dev` hostname
+- Production Worker diagnostic origin: `vellira-website` → `https://vellira-website.vellira.workers.dev`
+- Public canonical production origin: `https://vellira.dev`
+- Public alias: `https://www.vellira.dev` → permanent `308` redirect to the canonical apex, preserving path and query
 
-Do not attach `vellira.dev` to the staging Worker. Automatic staging pushes use `feat/website-cloudflare-staging`; manual workflow dispatch can select another reviewed ref, including PR #943. Sharing that Worker with production would allow a staging deployment to change the public site.
+Never attach either public hostname to the staging Worker.
 
-The production Wrangler configuration intentionally contains no custom-domain route before cutover. Adding the domain is a separate, explicit production operation.
+The production Wrangler configuration is the source of truth for both custom domains. The production Worker owns the `www` redirect and emits the same deployment identity headers on that response as on the apex runtime.
 
-## Current staging contract
+## Proven production evidence
 
-A Cloudflare staging deploy is not considered healthy merely because `next build` or `wrangler deploy` succeeds. The permanent staging workflow must also pass its HTTP and Chromium smoke tests.
+PR #1010 made the live custom-domain checks part of the permanent production postflight rather than relying only on the Workers.dev diagnostic origin.
 
-It must also pass early R2/predecessor preflight, installed/shipped Next patch and
-build identity checks, complete asset closure and archive verification, local
-OpenNext runtime, the Chromium/Firefox/WebKit migration matrix, live HTML/RSC
-freshness and exact asset byte/MIME/cache assertions, and the full navigation soak.
-All evidence must refer to the same final Git SHA; a green deploy step with skipped
-metrics or soak is not a green staging validation.
+The first fully qualifying normal production deployment after that change is:
 
-The current contract covers:
+- workflow: `Deploy Website Cloudflare Production`
+- run: `34696914280`
+- source revision: `dd472fd4cc922d736d01ea78d026a0d0425a14cd`
+- result: success
 
-- `/`
-- `/components` and component-to-component navigation on desktop
-- component navigation at a representative 670×900 mobile/tablet viewport
-- `/blog` and at least three article transitions
-- article → `Continue reading` → another article
-- MDX syntax highlighting
-- `/blog/rss.xml`
-- `/sitemap.xml`
-- `/robots.txt`
-- aggregate counters through the same-origin proxy, with no direct browser metrics calls to `api.vellira.dev`
-- article views, actor-specific like state, like/unlike mutation and restoration, liked-state continuity across reloads and repeated same-day view/like no-ops
-- graceful article behavior when the metrics backend is unavailable
-- absence of `/_vercel/*` requests on the Cloudflare runtime
-- browser `pageerror` and same-origin/metrics HTTP 5xx detection
+That run passed the R2 predecessor/archive gate, OpenNext build and runtime checks, same-origin multi-deployment migration tests, production activation, Workers.dev identity/freshness checks, live `vellira.dev` runtime stabilization, live `www → 308` identity/redirect contract, browser metrics/navigation smoke on the public apex, the long navigation/static-asset soak, static chunk integrity and forensic evidence retention.
 
-OpenNext must use the Workers Static Assets incremental cache with cache interception so prerendered SSG pages are served from the build-time cache instead of being rendered again inside the Worker.
+This run is qualifying production deployment **#1** for the proving window required by #1005. Do not graduate to approval-gated automatic production deployment until the full 2–3 consecutive normal-deployment requirement in #1005 is satisfied.
 
-## Pre-cutover gate
+## Staging contract
 
-Do not switch the public hostname until all of the following are true:
+A Cloudflare staging deploy is not healthy merely because `next build` or Worker activation succeeds. The permanent staging workflow must pass the complete exact-head contract.
 
-1. The latest staging deployment is green on a clean dependency graph with OpenNext as the only Cloudflare adapter.
-2. The browser smoke suite is green, including blog metrics/CORS and mobile navigation.
-3. No intermittent Worker 5xx/limit outcome is reproducible.
-4. The exact final commit has **two consecutive complete green staging validations**, with distinct SHA/run/attempt build identities, the second verifying the first as its archived predecessor, and no reproducible Worker 5xx/limit regression. Changes after either validation reset this requirement.
-5. The production Worker `vellira-website` has been built from the intended `main` revision and verified on its `workers.dev` hostname before receiving the public domain.
-6. The current Vercel production deployment remains intact and its DNS state is recorded for rollback.
-7. The previous Cloudflare production Worker version ID, when one exists, is recorded before any replacement deploy.
+It includes:
 
-## Supported deployment entry and staging procedure
+- early R2/predecessor preflight;
+- installed/shipped Next patch and build identity checks;
+- complete asset closure and archive verification;
+- local OpenNext runtime;
+- Chromium/Firefox/WebKit migration coverage;
+- live HTML/RSC freshness and exact asset byte/MIME/cache assertions;
+- `/`, `/components`, component navigation, `/blog` and multiple article transitions;
+- MDX syntax highlighting;
+- `/blog/rss.xml`, `/sitemap.xml`, `/robots.txt`;
+- same-origin aggregate and actor blog metrics;
+- like/unlike mutation, actor-state continuity and repeated same-day no-op behavior;
+- graceful article behavior if the metrics backend is unavailable;
+- absence of Cloudflare-runtime `/_vercel/*` requests;
+- browser `pageerror`, same-origin 5xx and metrics failure detection;
+- full navigation/static-asset soak and static-chunk integrity.
 
-Use the repository workflow. It installs frozen dependencies, checks remote R2
-and the live predecessor before building, builds with
-`VELLIRA_BUILD_ID=<full SHA>-<run ID>-<run attempt>`, and runs all preactivation tests.
-Do not fabricate GitHub identity variables for a local production deployment.
+All evidence must belong to the same exact Git SHA. A green deploy step with skipped browser, metrics or soak validation is not a green staging validation.
 
-From the repository root, after confirming the intended PR HEAD:
+OpenNext must continue to use Workers Static Assets incremental cache with cache interception so prerendered SSG pages use the build-time cache instead of being regenerated inside the Worker.
+
+## Supported deployment entry
+
+Use the repository workflows. They install frozen dependencies, validate remote R2 and the live predecessor before activation, build with:
+
+```text
+VELLIRA_BUILD_ID=<full SHA>-<run ID>-<run attempt>
+```
+
+and run the required preactivation and postactivation checks.
+
+The guarded deployment entry is:
 
 ```sh
-gh pr view 943 --repo vellira-dev/vellira --json headRefOid,isDraft
-gh workflow run deploy-website-cloudflare-staging.yml \
-  --repo vellira-dev/vellira --ref fix/cloudflare-blog-metrics-contract
+node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
 ```
 
-Record the run ID and verify its `headSha` equals the intended final commit.
-Wait for the entire workflow to succeed, including metrics, soak and static-chunk
-smoke, before dispatching the second run on the unchanged ref. Confirm no other
-deployment intervened and the second run's `archive-evidence.json.previousBuildId`
-equals the first run's build ID. Preserve both forensic artifacts before expiry.
-The target-Worker concurrency group serializes workflow runs, not manual CLI or
-dashboard actions; do not use those competing paths during validation.
+The config argument is relative to `apps/website`. The website `deploy:opennext` package script is an alias for this guarded entry, not permission to bypass the workflow.
 
-The workflow's activation command is:
+Inside the guarded entry, the expected order is: parse/validate the target; populate OpenNext route-cache assets; verify installed/shipped patch, identities, cache namespaces, headers and runtime graph; identify the live predecessor and require its complete archive; create-only archive/read-back the current immutable assets; write deployment evidence and build seal; Wrangler dry-run; activation. No unguarded OpenNext mutation follows the archive gate.
 
-```sh
-node apps/website/scripts/cloudflare-deploy.mjs wrangler.jsonc
-```
+Do **not** use upstream `opennextjs-cloudflare deploy`, direct `wrangler deploy`, a reused generated seal, or manual dashboard deployment as a validation-equivalent production path. Missing archive access, a missing predecessor manifest, collision or unavailable original artifact is a blocker.
 
-The config argument is relative to `apps/website`, regardless of the shell cwd.
-The website `deploy:opennext` package script is an alias for this same guarded
-entry, not the upstream OpenNext deploy command. The entry is **not a complete
-replacement for the workflow**: it expects the build and preceding tests.
+## Production postflight contract
 
-Inside this entry, in order: remove any old build seal; parse/validate the target;
-populate OpenNext route-cache assets locally; verify installed/shipped patch,
-identities, cache namespaces, headers and complete runtime graph; identify the
-live predecessor and require its complete archive; create-only archive/read-back
-all current immutable assets and record the deployment manifest; write evidence
-and the new seal; run Wrangler dry-run; run Wrangler activation. No OpenNext
-mutation follows the archive gate. Postactivation checks belong to the workflow.
+The production workflow deliberately uses two origins for different purposes:
 
-Do **not** invoke upstream `opennextjs-cloudflare deploy`, direct `wrangler deploy`,
-or reuse a generated seal to bypass this contract. A seal is a build-time guard,
-not an account permission boundary. Missing archive access, a missing predecessor
-manifest, collision or unavailable original artifact is a blocker: never skip
-`requireArchivedDeployment`, replace historical bytes with a rebuild, or rewrite
-R2 metadata merely to align Content-Type strings. See the archive-only backfill
-procedure in the deployment/cache contract.
+- `vellira-website.vellira.workers.dev` remains the internal diagnostic/archive/runtime-contract origin;
+- `vellira.dev` is the user-facing origin for browser metrics/navigation smoke, navigation soak and static-chunk integrity.
 
-## Production candidate deployment (separate approval required)
+After activation, `cloudflare-runtime-contract.mjs` also receives `PRODUCTION_PUBLIC_URL` and `PRODUCTION_WWW_URL` and must prove:
 
-Build and deploy the production candidate with `apps/website/wrangler.production.jsonc` so it cannot overwrite the staging Worker.
+- the apex converges to the expected current `VELLIRA_BUILD_ID` and a stable Worker version;
+- `www.vellira.dev/<path>?<query>` returns exactly `308`;
+- the redirect points to `https://vellira.dev/<path>?<query>` without losing path/query;
+- the redirect executes on the expected current build and exposes Worker-version identity;
+- the redirect has no response body.
 
-Only the existing `Deploy Website Cloudflare Production Candidate` workflow is
-supported: it requires `main` and explicit `DEPLOY_CANDIDATE` confirmation. Its
-activation step calls `node apps/website/scripts/cloudflare-deploy.mjs
-wrangler.production.jsonc`, after the same build, archive and browser gates.
-This review does not run that workflow. A missing production predecessor/archive
-requires explicit provenance-backed onboarding before any activation.
+The browser postflight on the apex must continue to verify:
 
-Before cutover, this production config must not contain a `routes` entry for `vellira.dev`.
+- key public routes and client navigation on desktop/mobile;
+- MDX highlighting and Continue reading transitions;
+- article aggregate views and actor-specific liked state through the same-origin proxy;
+- view registration and reversible like mutation;
+- actor continuity across reloads and same-day view/like idempotency;
+- article/share usability when metrics are unavailable without fake zero state;
+- no direct browser metrics calls to `api.vellira.dev`;
+- no `/_vercel/*` runtime request;
+- no unexpected same-origin 5xx, page errors or failed same-origin requests;
+- long-lived client navigation/static-asset compatibility across the stale-time window;
+- exact static-chunk integrity.
 
-Verify the candidate through its `workers.dev` hostname with the same important public routes. Metrics/CORS must be validated again after the custom domain is attached because the browser Origin changes to `https://vellira.dev`.
+## Cloudflare Web Analytics
 
-## Cutover sequence
+Cloudflare Web Analytics is the public traffic/content/performance layer for the final `vellira.dev` production site. Because the hostname is proxied through Cloudflare, use **Automatic Setup** in the Cloudflare dashboard by default. Do not add a manual analytics beacon to the application unless Automatic Setup is shown to be incompatible with the production response path.
 
-1. Confirm the exact `main` revision intended for production and that the matching staging validation is green.
-2. Deploy that revision to the separate `vellira-website` Worker without a custom-domain route and smoke-test the candidate.
-3. Record the current Vercel DNS records/targets and keep the Vercel project deployed.
-4. In Cloudflare Workers, attach the **apex `vellira.dev`** hostname to `vellira-website` as a Custom Domain. Resolve any conflicting existing DNS record only at this step. Do not attach the domain to `vellira-website-staging`.
-5. A future cutover change must update the production Wrangler source of truth
-   **and** explicitly review the currently workers.dev-only target validation,
-   origin checks and workflow safety gates. The current guarded entry rejects
-   public-domain routes; adding the following fragment alone is not a supported
-   deploy procedure or permission to weaken those guards:
+Dashboard setup/verification:
 
-```json
-"routes": [
-  {
-    "pattern": "vellira.dev",
-    "custom_domain": true
-  }
-]
-```
+1. Open Cloudflare dashboard → **Analytics & Logs → Web Analytics**.
+2. Add/select the proxied `vellira.dev` hostname.
+3. Confirm **Automatic Setup** is enabled in **Manage site**.
+4. Leave the default all-pages rule unless a deliberate analytics-scope decision requires exclusions.
+5. After real traffic has accumulated, verify visits/page views and page-level data are appearing.
+6. Verify the dashboard exposes the intended Vellira signals: popular pages, referrers/traffic sources, countries, device classes, browsers/OS and Core Web Vitals.
+7. Verify Core Web Vitals include LCP, INP and CLS where browser support allows them.
+8. Confirm client-side/soft navigations are represented; Cloudflare Web Analytics supports SPA-style navigations automatically.
 
-6. Re-run the post-cutover validation below before considering the migration complete.
-7. Keep the Vercel deployment available during the rollback window. Remove Vercel-only runtime dependencies/configuration only after that window has ended.
+Do not treat an empty immediately-after-enablement dashboard as failure; Web Analytics data can take time and requires actual visits.
 
-`www.vellira.dev` is not part of this runbook unless it is explicitly configured and validated separately. The canonical website hostname remains `vellira.dev`.
+Automatic injection is intentionally not a fragile CI requirement. Browser extensions/privacy tooling, regional configuration and Cloudflare injection behavior can affect whether the beacon is visible to a particular request. The durable requirement is that Automatic Setup is configured in the dashboard and that production data is observed there after traffic accumulates.
 
-## Post-cutover validation
+If Automatic Setup is configured but no data arrives, check Cloudflare's documented injection blockers before changing application code. In particular, a `Cache-Control: public, no-transform` response prevents Cloudflare from modifying HTML to inject the beacon. The current Vellira HTML cache contract should not be weakened merely to force analytics injection.
 
-Immediately after attaching `vellira.dev`, verify:
+### Analytics ownership
 
-- `/`, `/components`, multiple `/components/[slug]`, `/blog`, and multiple `/blog/[slug]`
-- desktop and mobile/tablet client navigation
-- `Continue reading`
-- MDX highlighting
-- `/blog/rss.xml`, `/sitemap.xml`, `/robots.txt`
-- canonical metadata and Open Graph URLs resolve to `https://vellira.dev`
-- article view registration
-- aggregate view counts
-- actor-specific liked state
-- like and unlike mutation
-- Share remains usable if metrics are unavailable
-- no CORS error from `https://api.vellira.dev`
-- no `/_vercel/*` request is emitted by the Cloudflare site
-- no Worker 5xx/limit outcome appears in observability
-- important redirects still behave as expected
+Keep these three systems separate:
 
-Then enable Cloudflare Web Analytics for the proxied `vellira.dev` hostname using Cloudflare's automatic setup. Do not add extra application JavaScript solely to imitate Vercel Analytics.
+- **Cloudflare Web Analytics** → public traffic, content discovery and real-user performance;
+- **Cloudflare Worker Analytics / observability** → infrastructure health, request volume, errors, status and latency;
+- **Vellira blog metrics** → product-owned article views, likes and actor-specific liked state.
 
-Review Core Web Vitals after traffic has accumulated; do not treat an empty immediately-after-cutover dataset as validation.
+Cloudflare Web Analytics complements Vellira blog metrics; it does not replace them. Do not add user-level identity tracking, cookies, local storage or PII collection merely to reproduce Vercel Analytics behavior.
+
+## Backend CORS and application metrics
+
+Production CORS must remain explicit and minimal. The required website origins during the current rollback/migration window are the public apex, public `www` alias and the isolated staging Worker origin. Do not replace the allowlist with `*`.
+
+The permanent production browser smoke is the regression gate for final-origin metrics/CORS behavior. A deployment is not qualifying if likes/views only work on Workers.dev while failing on `vellira.dev`.
 
 ## Rollback
 
-There are two distinct rollback paths.
+There are two distinct rollback classes.
 
 ### Cloudflare code regression
 
-If a separately authorized future rollback is needed, select only an earlier
-validated deployment retaining the request/response cache policy, HTML freshness
-and append-only asset fallback. A pre-contract Worker is not a safe rollback.
-Retain newer asset graphs too. The present guarded build/deploy entry does not
-implement a version-rollback command; do not present a dashboard/direct CLI
-rollback as a validation-equivalent path. Coordinate it separately and preserve
-identity, predecessor/archive and target-serialization evidence.
+Use only an earlier validated Cloudflare deployment that retains the current request/response cache policy, HTML freshness and append-only asset fallback. Retain newer asset graphs. A pre-contract Worker is not a safe rollback merely because it once served successfully.
 
-After rollback, repeat the critical HTTP/browser smoke checks.
+The guarded deployment entry does not make a dashboard/direct CLI rollback validation-equivalent. Coordinate any emergency version rollback separately and preserve identity, predecessor/archive and target-serialization evidence. After rollback, repeat the critical HTTP/browser checks.
 
 ### Cloudflare/domain migration regression
 
-If the problem is with the first Cloudflare production version, Custom Domain, DNS, TLS, or the Workers platform path itself:
+While the Vercel rollback window remains open:
 
-1. Detach/disable the `vellira.dev` Custom Domain from `vellira-website` as appropriate.
-2. Restore the exact pre-cutover DNS configuration recorded for Vercel.
-3. Verify that the retained Vercel deployment is again serving `vellira.dev`.
-4. Re-run the critical public-route and blog metrics checks.
+1. detach/disable the `vellira.dev`/`www.vellira.dev` Cloudflare Custom Domains as appropriate;
+2. restore the recorded pre-cutover Vercel DNS configuration;
+3. verify the retained Vercel deployment again serves the public hostname;
+4. repeat critical route and blog-metrics checks.
 
-Do not delete the Vercel project or its known-good deployment until the rollback window has completed successfully.
+Do not delete the Vercel project or known-good deployment until the rollback window is explicitly closed.
 
-## Analytics and Vercel cleanup
+## Vercel cleanup
 
-While Vercel remains the rollback target, `@vercel/analytics` may remain installed but must render only when `process.env.VERCEL === '1'`. Cloudflare browser smoke fails if a `/_vercel/*` request appears.
+While Vercel remains the approved rollback target, `@vercel/analytics` may remain installed but must render only when `process.env.VERCEL === '1'`. Cloudflare browser smoke remains responsible for failing on any Cloudflare-runtime `/_vercel/*` request.
 
-After the Cloudflare production rollback window:
+After the rollback window is explicitly closed:
 
-- verify Cloudflare Web Analytics is collecting the intended public signals;
-- verify metrics/CORS on the final `vellira.dev` origin one more time;
-- remove Vercel-specific dependencies, environment assumptions and deployment configuration that are no longer required;
-- close the migration/analytics follow-up issues only after those production checks pass.
+- complete #903's remaining Vercel-specific runtime/config cleanup;
+- execute #1001 to decommission Vercel hosting and audit account-level dependencies;
+- preserve unrelated services such as Turbo Remote Cache if they are still intentionally used;
+- remove only references whose Vercel purpose is actually obsolete.
 
 ## References
 
@@ -222,3 +188,5 @@ After the Cloudflare production rollback window:
 - Cloudflare Workers Custom Domains: https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
 - Cloudflare Workers rollbacks: https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/
 - Cloudflare Web Analytics setup: https://developers.cloudflare.com/web-analytics/get-started/
+- Cloudflare Web Analytics for SPAs: https://developers.cloudflare.com/web-analytics/get-started/web-analytics-spa/
+- Cloudflare Core Web Vitals: https://developers.cloudflare.com/web-analytics/data-metrics/core-web-vitals/
