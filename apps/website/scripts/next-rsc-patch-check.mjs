@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const website = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const root = process.cwd();
 const require = createRequire(path.join(website, 'package.json'));
 export const NEXT_PATCH_VERSION = '16.3.3';
 const transport = 'client/components/router-reducer/fetch-server-response.js';
@@ -156,6 +155,7 @@ export function verifyShippedTransport(root = website) {
 }
 
 function runFormatProbe() {
+  const root = process.cwd();
   const formatted = spawnSync(
     'pnpm',
     ['exec', 'prettier', ...formatProbeTargets, '--write'],
@@ -165,13 +165,11 @@ function runFormatProbe() {
   process.stderr.write(formatted.stderr ?? '');
   if (formatted.status !== 0) process.exit(formatted.status ?? 2);
 
-  const diff = spawnSync(
-    'git',
-    ['diff', '--no-ext-diff', '--', ...formatProbeTargets],
-    { cwd: root, encoding: 'utf8' }
-  );
-  process.stdout.write(diff.stdout ?? '');
-  process.stderr.write(diff.stderr ?? '');
+  for (const target of formatProbeTargets) {
+    console.log(`<<<PRETTIER:${target}>>>`);
+    process.stdout.write(fs.readFileSync(path.join(root, target), 'utf8'));
+    console.log(`<<<END_PRETTIER:${target}>>>`);
+  }
   process.exit(1);
 }
 
