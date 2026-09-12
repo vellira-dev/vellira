@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Analytics } from '@vercel/analytics/next';
 import { JsonLd } from '@/components/seo/JsonLd';
 
 import '@vellira-ui/assets/styles';
@@ -67,14 +66,11 @@ interface RootLayoutProps {
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
-  const isVercelRuntime = process.env.VERCEL === '1';
-
   return (
     <html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
       <body>
         <JsonLd />
         <WebsiteProviders>{children}</WebsiteProviders>
-        {isVercelRuntime ? <Analytics /> : null}
       </body>
     </html>
   );
