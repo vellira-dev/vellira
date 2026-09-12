@@ -172,9 +172,6 @@ jobs:
   typecheck:
     name: Typecheck & API Contracts
     runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       options: --ipc=host
@@ -204,9 +201,6 @@ jobs:
   tooling:
     name: Tooling & IndexNow Tests
     runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       options: --ipc=host
@@ -243,9 +237,6 @@ jobs:
   ci:
     name: Build, Test & Validate
     runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       options: --ipc=host
