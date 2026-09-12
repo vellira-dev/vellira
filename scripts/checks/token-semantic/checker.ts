@@ -15,6 +15,7 @@ import { checkTokenSemanticDependencies } from './semantic-dependency';
 import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
 import { checkComponentShadowConsumers } from './shadow-component-consumption';
 import { checkTokenShadowAuthority } from './shadow-authority';
+import { checkTokenStateVocabularyCompletion } from './state-vocabulary-composition';
 import { checkTokenStateVocabulary } from './state-vocabulary';
 import { checkTokenValueKinds } from './value-kind-repository';
 import { checkTokenVisualPreservation } from './visual-preservation';
@@ -121,11 +122,24 @@ export function checkTokenSemantics(root: string) {
     };
   }
 
+  function stateVocabularyRule(): RuleResult {
+    const authority = checkTokenStateVocabulary(root);
+    const completion = checkTokenStateVocabularyCompletion(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #882 Interaction State Vocabulary V1: canonical state names/meanings, pressed-versus-active separation, maintained semantic/component/factory/generator regressions, machine-readable selected compound-state precedence across every canonical state, exact Web/React Native platform mappings, optional native hover, and cross-platform Radio renderer evidence for hover/press/selection/disabled/focus semantics. Resolved values remain protected separately by tokens.visual-preservation (#880).',
+      checked: authority.checked + completion.checked,
+      findings: [...authority.findings, ...completion.findings],
+    };
+  }
+
   const adapters: RuleAdapter[] = [
     { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
     {
       ruleId: 'tokens.state-vocabulary',
-      run: () => checkTokenStateVocabulary(root),
+      run: stateVocabularyRule,
     },
     {
       ruleId: 'tokens.semantic-vocabulary',

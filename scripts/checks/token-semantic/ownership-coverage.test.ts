@@ -14,6 +14,9 @@ describe('token semantic ownership coverage', () => {
     const valueKind = report.coverage.find(
       ({ ruleId }) => ruleId === 'tokens.value-kind'
     );
+    const stateVocabulary = report.coverage.find(
+      ({ ruleId }) => ruleId === 'tokens.state-vocabulary'
+    );
     const shadowAuthority = report.coverage.find(
       ({ ruleId }) => ruleId === 'tokens.shadow-authority'
     );
@@ -27,14 +30,16 @@ describe('token semantic ownership coverage', () => {
     expect(namespaceLifecycle?.checked).toBeGreaterThan(13);
     expect(valueKind).toMatchObject({ coverage: 'complete' });
     expect(valueKind?.checked).toBeGreaterThan(7000);
+    expect(stateVocabulary).toMatchObject({ coverage: 'complete' });
+    expect(stateVocabulary?.checked).toBeGreaterThan(200);
     expect(shadowAuthority).toMatchObject({ coverage: 'complete' });
     expect(shadowAuthority?.checked).toBeGreaterThan(50);
     expect(publicApi).toMatchObject({ coverage: 'complete' });
     expect(publicApi?.checked).toBeGreaterThan(50);
     expect(report.summary).toMatchObject({
       requiredRules: 12,
-      completeRules: 9,
-      incompleteRules: 3,
+      completeRules: 10,
+      incompleteRules: 2,
       runtimeErrors: 0,
       errors: 0,
       warnings: 0,
