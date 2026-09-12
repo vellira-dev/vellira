@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { assertComponentTokenLifecycleCanMaterialize } from '../../generators/component/token-lifecycle-contract';
 import { checkTokenOwnership } from '../token-ownership/checker';
 import type { TokenOwnershipReport } from '../token-ownership/checker';
 import { runTokenSemanticAudit } from './contract';
@@ -49,14 +50,45 @@ export function checkTokenSemantics(root: string) {
         suggestedAction:
           'Repair the canonical ownership authority or its consumers.',
       }));
+
+    if (!semantic) {
+      for (const componentName of ownership.metadataTokenFamilies) {
+        try {
+          assertComponentTokenLifecycleCanMaterialize(componentName, root);
+        } catch (error) {
+          findings.push({
+            ruleId,
+            code: 'component-readiness-lifecycle-drift',
+            severity: 'error',
+            sourcePath:
+              'scripts/generators/component/token-lifecycle-contract.ts',
+            tokenPath: `components.${componentName}`,
+            line: null,
+            column: null,
+            layer: 'component',
+            theme: null,
+            platform: null,
+            evidence: error instanceof Error ? error.message : String(error),
+            expected:
+              'Every metadata-required component-token family must pass the same Generator V2 lifecycle materialization guard used by production preflight.',
+            migrationStatus: 'untracked',
+            suggestedAction:
+              'Repair canonical component metadata/lifecycle ownership before Generator V2 or component production may materialize the family.',
+          });
+        }
+      }
+    }
+
     return {
-      coverage: 'partial',
+      coverage: 'complete',
       scope: semantic
-        ? 'Existing #886 namespace lifecycle checker; role-level lifecycle coverage is not yet connected.'
-        : 'Existing #886 family ownership checker; required-token metadata and generated readiness integration remain unproven.',
+        ? 'Canonical #886 semantic lifecycle/public/source/barrel parity, deterministic real consumer evidence, role-level source inventory, cross-theme role-shape parity, canonical Semantic Vocabulary V1 classification, and canonical derived shadow authority.'
+        : 'Canonical #886 component lifecycle/public/theme-barrel parity, reverse metadata-required ownership parity, canonical owner identity, and the Generator V2 lifecycle materialization guard used by component-production preflight.',
       checked: semantic
-        ? ownership.semanticNamespaces.length
-        : ownership.componentFamilies.length,
+        ? ownership.semanticNamespaces.length +
+          ownership.semanticRolePaths.length
+        : ownership.componentFamilies.length +
+          ownership.metadataTokenFamilies.length,
       findings,
     };
   }
