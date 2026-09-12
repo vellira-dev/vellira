@@ -31,7 +31,9 @@ export const componentTokenDependencyPolicyV1 = {
 } as const;
 
 export type ComponentPrimitiveColorUsage =
-  'none' | 'intent-palette-construction' | 'component-owned-presentation';
+  | 'none'
+  | 'intent-palette-construction'
+  | 'component-owned-presentation';
 
 export const allowedComponentFactoryDependencyEdgesV1 = [
   {
@@ -171,24 +173,32 @@ export const semanticDependencyRepairsV1 = [
   {
     component: 'formField',
     paths: ['requiredMark.fg', 'labelInfo.border'],
+    target: 'factory',
+    assertion: 'form-field-presentation',
     repair:
       'Move component-specific presentation paint out of unrelated status/text semantic roles while preserving the resolved theme values.',
   },
   {
     component: 'input',
     paths: ['clearButton.hoverFg', 'clearButton.hoverBg'],
+    target: 'theme',
+    assertion: 'clear-button-danger',
     repair:
       'Use canonical danger icon semantics when value-equivalent; otherwise use explicit component-owned presentation paint to preserve the existing resolved value without depending on validation status.',
   },
   {
     component: 'input',
     paths: ['error.ring'],
+    target: 'theme',
+    assertion: 'input-error-ring',
     repair:
       'Use status.error.ring rather than a coincidentally equal status.error.fg value.',
   },
   {
     component: 'select',
     paths: ['clearButton.hoverFg', 'clearButton.hoverBg'],
+    target: 'theme',
+    assertion: 'clear-button-danger',
     repair:
       'Use canonical danger icon semantics when value-equivalent; otherwise use explicit component-owned presentation paint to preserve the existing resolved value without depending on validation status.',
   },

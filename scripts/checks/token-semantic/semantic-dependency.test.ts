@@ -8,9 +8,9 @@ import {
 const root = process.cwd();
 
 describe('semantic dependency audit adapter', () => {
-  it('checks the maintained #888 dependency baseline without findings', () => {
+  it('checks the complete maintained #888 dependency baseline without findings', () => {
     const result = checkTokenSemanticDependencies(root);
-    expect(result.coverage).toBe('partial');
+    expect(result.coverage).toBe('complete');
     expect(result.checked).toBeGreaterThan(0);
     expect(result.findings).toEqual([]);
   });

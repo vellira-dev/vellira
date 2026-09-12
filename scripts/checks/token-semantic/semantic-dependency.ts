@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  auditGeneratedThemeTokenDependencySource,
+  auditSemanticDependencyRepairSource,
+} from '../../../packages/tokens/src/component-token-dependency-audit';
+import {
   allowedComponentFactoryDependencyEdgesV1,
   componentTokenDependencyAuditV1,
   componentTokenDependencyPolicyV1,
@@ -9,6 +13,10 @@ import {
   type ComponentPrimitiveColorUsage,
 } from '../../../packages/tokens/src/component-token-dependencies';
 import { maintainedComponentFactories } from '../../../packages/tokens/src/token-architecture';
+import {
+  componentTokenDependencyGeneratorRule,
+  generatedThemeTokenDependencyAudit,
+} from '../../generators/component/token-dependency-contract';
 import type { FindingInput, RuleResult } from './contract';
 
 const themes = ['light', 'dark', 'highContrast'] as const;
@@ -223,14 +231,8 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
     }
   }
 
-  const knownComponents = new Set(
-    componentTokenDependencyAuditV1.map(({ component }) => ({
-      component: String(component),
-      factory: factoryNameForComponent(String(component)),
-    }))
-  );
   const componentNames = new Set(
-    [...knownComponents].map(({ component }) => component)
+    componentTokenDependencyAuditV1.map(({ component }) => String(component))
   );
   for (const edge of allowedComponentFactoryDependencyEdgesV1) {
     checked += 1;
@@ -282,8 +284,7 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
 
   for (const repair of semanticDependencyRepairsV1) {
     checked += 1;
-    const repairPaths: readonly string[] = repair.paths;
-    if (repairPaths.length === 0 || !repair.repair.trim()) {
+    if (repair.paths.length === 0 || !repair.repair.trim()) {
       findings.push(
         finding(
           'invalid-dependency-repair-evidence',
@@ -293,12 +294,96 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
         )
       );
     }
+
+    const entry = componentTokenDependencyAuditV1.find(
+      ({ component }) => component === repair.component
+    );
+    if (!entry) {
+      findings.push(
+        finding(
+          'repair-component-missing-dependency-audit',
+          'packages/tokens/src/component-token-dependencies.ts',
+          `${repair.component} has repair evidence but no dependency-audit entry.`,
+          'Every semantic repair must belong to a maintained audited component.'
+        )
+      );
+      continue;
+    }
+
+    if (repair.target === 'factory') {
+      checked += 1;
+      const sourcePath = `packages/tokens/src/factories/components/${entry.factory}.ts`;
+      const source = fs.readFileSync(path.join(root, sourcePath), 'utf8');
+      for (const issue of auditSemanticDependencyRepairSource({
+        repair,
+        source,
+        theme: null,
+      })) {
+        findings.push(
+          finding(
+            issue.code,
+            sourcePath,
+            issue.evidence,
+            issue.expected
+          )
+        );
+      }
+      continue;
+    }
+
+    for (const theme of themes) {
+      checked += 1;
+      const sourcePath = `packages/tokens/src/${theme}/components/${entry.file}`;
+      const source = fs.readFileSync(path.join(root, sourcePath), 'utf8');
+      for (const issue of auditSemanticDependencyRepairSource({
+        repair,
+        source,
+        theme,
+      })) {
+        findings.push(
+          finding(
+            issue.code,
+            sourcePath,
+            issue.evidence,
+            issue.expected
+          )
+        );
+      }
+    }
+  }
+
+  checked += 2;
+  if (
+    componentTokenDependencyGeneratorRule !==
+    componentTokenDependencyPolicyV1.generatorRule
+  ) {
+    findings.push(
+      finding(
+        'generator-dependency-rule-drift',
+        'scripts/generators/component/token-dependency-contract.ts',
+        'Generator V2 no longer exposes the canonical #888 generator rule.',
+        'Generator V2 must consume componentTokenDependencyPolicyV1.generatorRule directly.'
+      )
+    );
+  }
+  if (
+    generatedThemeTokenDependencyAudit !==
+    auditGeneratedThemeTokenDependencySource
+  ) {
+    findings.push(
+      finding(
+        'generator-dependency-audit-drift',
+        'scripts/generators/component/token-dependency-contract.ts',
+        'Generator V2 no longer uses the canonical shared generated-theme dependency audit.',
+        'Generator V2 and #890 must consume the same generated-theme dependency audit function.'
+      )
+    );
   }
 
   return {
-    coverage: 'partial',
+    coverage: 'complete',
     scope:
-      'Canonical #888 default policy, maintained audit inventory, explicit primitive-color classification, registered component dependency edges, deprecated action bypasses, and all 15 component theme sources. Repair-specific semantic source assertions and Generator V2 consumption remain separately tested and still need shared-adapter extraction before this rule can become complete.',
+      'Canonical #888 default policy, exact maintained audit inventory, primitive-color classification, registered component dependency edges, deprecated action protection, all maintained component theme sources, machine-checked accepted repair evidence, and Generator V2 consumption of the same shared generated-theme dependency audit.',
     checked,
     findings,
   };
