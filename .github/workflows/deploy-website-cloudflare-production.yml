@@ -22,6 +22,8 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
+  PRODUCTION_PUBLIC_URL: https://vellira.dev
+  PRODUCTION_WWW_URL: https://www.vellira.dev
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
@@ -174,14 +176,14 @@ jobs:
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-website-smoke.mjs
         env:
-          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Soak test production client navigation static assets
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-navigation-soak.mjs
         env:
-          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production static chunk integrity
         if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
@@ -189,7 +191,7 @@ jobs:
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
         env:
-          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Retain asset and browser forensic evidence
         if: always()
