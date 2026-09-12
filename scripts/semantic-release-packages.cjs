@@ -21,7 +21,7 @@ const publishRetries = Number.parseInt(
   10
 );
 const verificationAttempts = Number.parseInt(
-  process.env.VELLIRA_RELEASE_VERIFICATION_ATTEMPTS ?? '8',
+  process.env.VELLIRA_RELEASE_VERIFICATION_ATTEMPTS ?? '12',
   10
 );
 
@@ -370,7 +370,7 @@ async function verifyPublishedPackage(packageInfo) {
             `${packageInfo.name}@${packageInfo.version}.`
         );
 
-        return;
+        return dist;
       }
 
       if (attempt === verificationAttempts) {
@@ -545,7 +545,7 @@ async function publishPackage(packageInfo) {
   throw new Error(`Unexpected publish loop exit for ${packageInfo.name}.`);
 }
 
-async function publishPackages(packageInfos) {
+async function publishPackages(packageInfos, publish = publishPackage) {
   const queue = [...packageInfos];
   const summaries = [];
   const workers = Array.from(
@@ -553,7 +553,19 @@ async function publishPackages(packageInfos) {
     async () => {
       while (queue.length > 0) {
         const packageInfo = queue.shift();
-        summaries.push(await publishPackage(packageInfo));
+        try {
+          summaries.push(await publish(packageInfo));
+        } catch (error) {
+          summaries.push({
+            packageName: packageInfo.name,
+            version: packageInfo.version,
+            status: 'failed',
+            provenance: 'not verified',
+            attempts: 0,
+            duration: 'unknown',
+            error,
+          });
+        }
       }
     }
   );
@@ -569,6 +581,34 @@ async function publishPackages(packageInfos) {
         (packageInfo) => packageInfo.name === right.packageName
       )
   );
+}
+
+async function verifyPackageCompleteness(
+  packageInfos,
+  verify = verifyPublishedPackage
+) {
+  const expectedNames = [...publicPackages].sort();
+  const actualNames = packageInfos.map(({ name }) => name).sort();
+
+  if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+    throw new Error(
+      'The npm completeness gate must receive exactly the six public packages.'
+    );
+  }
+
+  const versions = new Set(packageInfos.map(({ version }) => version));
+
+  if (versions.size !== 1 || versions.has(undefined)) {
+    throw new Error(
+      'The npm completeness gate must verify one exact version for all public packages.'
+    );
+  }
+
+  const verified = await Promise.all(packageInfos.map(verify));
+  console.log(
+    `[release] Completeness gate verified all ${packageInfos.length} public packages at ${packageInfos[0].version}.`
+  );
+  return verified;
 }
 
 function printPublishSummary(summaries) {
@@ -626,13 +666,22 @@ exports.publish = async () => {
   const summaries = await publishPackages(packageInfos);
   printPublishSummary(summaries);
 
-  const failures = summaries.filter((summary) => summary.error);
-
-  if (failures.length > 0) {
-    throw new Error(
-      `Failed to publish ${failures.length} package(s): ${failures
-        .map((summary) => summary.packageName)
-        .join(', ')}`
-    );
-  }
+  // A publish command can succeed minutes before npm's read path exposes the
+  // immutable version. Release success is the complete registry state, not an
+  // individual command result or an earlier per-package visibility timeout.
+  await verifyPackageCompleteness(packageInfos);
 };
+
+// The manual post-tag recovery path reuses the normal publisher rather than
+// maintaining a second npm/OIDC implementation. Keep this deliberately small:
+// recovery decides which packages are missing before calling publishPackage.
+exports.recovery = Object.freeze({
+  assertTrustedPublishingEnvironment,
+  createPackageInfo,
+  hasProvenanceAttestations,
+  publicPackages: Object.freeze([...publicPackages]),
+  publishPackage,
+  publishPackages,
+  verifyPackageCompleteness,
+  verifyPublishedPackage,
+});
