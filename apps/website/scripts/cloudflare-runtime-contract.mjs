@@ -9,12 +9,21 @@ import {
 import { sha256 } from './cloudflare-static-asset-archive.mjs';
 import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
 import { rscProbe } from './cloudflare-rsc-probe.mjs';
+import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
 
 const base = process.env.WEBSITE_URL;
 assert.ok(base, 'WEBSITE_URL is required');
+const publicBase = process.env.PRODUCTION_PUBLIC_URL?.trim();
+const publicWww = process.env.PRODUCTION_WWW_URL?.trim();
+assert.equal(
+  Boolean(publicBase),
+  Boolean(publicWww),
+  'PRODUCTION_PUBLIC_URL and PRODUCTION_WWW_URL must be provided together'
+);
 const buildId = deploymentIdentity({ ...process.env, VELLIRA_DEPLOYABLE: '1' });
 const root = path.resolve(import.meta.dirname, '..');
 const evidence = [];
+let publicRuntime = null;
 let passed = false;
 async function request(pathname, options = {}) {
   const response = await fetch(new URL(pathname, base), {
@@ -96,6 +105,55 @@ try {
     );
     assertRuntimeAsset(asset, result);
   }
+
+  // The standard contract stays usable for isolated workers.dev recovery. Normal
+  // production provides these two variables and additionally proves the actual
+  // public hostnames after activation.
+  if (publicBase && publicWww) {
+    assert.equal(new URL(publicBase).origin, 'https://vellira.dev');
+    assert.equal(new URL(publicWww).origin, 'https://www.vellira.dev');
+    publicRuntime = await waitForRuntimeStability({
+      base: publicBase,
+      expectedBuildId: buildId,
+    });
+
+    const redirectPath =
+      '/blog/two-runtimes?source=cloudflare-postflight&n=1';
+    const redirectUrl = new URL(redirectPath, publicWww);
+    const response = await fetch(redirectUrl, {
+      cache: 'no-store',
+      redirect: 'manual',
+      headers: { 'Cache-Control': 'no-cache' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const bytes = Buffer.from(await response.arrayBuffer());
+    evidence.push({
+      pathname: redirectUrl.toString(),
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+      sha256: sha256(bytes),
+    });
+    assert.equal(response.status, 308, `www redirect HTTP ${response.status}`);
+    assert.equal(
+      response.headers.get('location'),
+      new URL(redirectPath, publicBase).toString(),
+      'www redirect did not preserve path/query'
+    );
+    assert.equal(
+      response.headers.get('x-vellira-build-id'),
+      buildId,
+      'www redirect did not execute on the active production build'
+    );
+    assert.ok(
+      response.headers.get('x-vellira-worker-version'),
+      'www redirect is missing Worker version identity'
+    );
+    assert.equal(bytes.length, 0, 'www redirect must not return a response body');
+    console.log(
+      `Live production domains passed: apex=${publicBase}; www=308 -> ${publicBase}`
+    );
+  }
+
   passed = true;
   console.log(
     `Runtime deployment contract passed: ${buildId}; ${archive.assets.length} exact assets`
@@ -103,6 +161,6 @@ try {
 } finally {
   await fs.writeFile(
     path.join(root, '.open-next/runtime-contract.json'),
-    JSON.stringify({ buildId, passed, evidence }, null, 2)
+    JSON.stringify({ buildId, passed, publicRuntime, evidence }, null, 2)
   );
 }
