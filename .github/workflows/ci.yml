@@ -193,12 +193,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build typecheck package-export prerequisites
+        run: pnpm exec turbo run build --filter=@vellira-ui/icons
+
       - name: Typecheck and API contracts
         run: pnpm ci:typecheck
 
   tooling:
     name: Tooling & IndexNow Tests
     runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       options: --ipc=host
@@ -218,6 +224,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build tooling dist-fallback prerequisites
+        run: >-
+          pnpm exec turbo run build
+          --filter=@vellira-ui/react
+          --filter=@vellira-ui/icons
 
       - name: Tooling tests
         run: pnpm test:tooling
