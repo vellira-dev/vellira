@@ -59,8 +59,9 @@ function fakeVisibility(visibleAt: number | null) {
   const sleep = vi.fn(async (delay: number) => {
     clock += delay;
   });
-  const view = vi.fn(async () =>
-    visibleAt !== null && clock >= visibleAt
+  const view = vi.fn(async (...args: [unknown, number]) => {
+    void args;
+    return visibleAt !== null && clock >= visibleAt
       ? {
           error: null,
           status: 0,
@@ -76,8 +77,8 @@ function fakeVisibility(visibleAt: number | null) {
           status: 1,
           stdout: '',
           stderr: 'npm ERR! code E404',
-        }
-  );
+        };
+  });
   return {
     now: () => clock,
     sleep,
