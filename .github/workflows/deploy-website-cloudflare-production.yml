@@ -48,6 +48,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Derive protocol-defined R2 S3 secret
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          r2_secret_access_key="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | sha256sum | awk '{print $1}')"
+          [[ "$r2_secret_access_key" =~ ^[0-9a-f]{64}$ ]]
+          echo "::add-mask::$r2_secret_access_key"
+          printf 'CLOUDFLARE_R2_SECRET_ACCESS_KEY=%s\n' "$r2_secret_access_key" >> "$GITHUB_ENV"
+
       - name: Verify R2 access and active predecessor archive before building
         run: node apps/website/scripts/cloudflare-archive-preflight.mjs wrangler.production.jsonc
         env:
