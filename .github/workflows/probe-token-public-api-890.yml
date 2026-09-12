@@ -1,0 +1,194 @@
+name: Probe Token Public API 890
+
+on:
+  push:
+    branches:
+      - probe/token-semantic-vocabulary-890-581cd1af
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Share tokens public API authority with repository gate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('scripts/check-public-api.mjs')
+          source = path.read_text()
+
+          package_entry = "  'packages/tokens/package.json': ['.', './css'],\n"
+          if package_entry in source:
+              source = source.replace(package_entry, '', 1)
+
+          symbol_pattern = re.compile(
+              r"  'packages/tokens/src/index\.ts': \[\n.*?\n  \],\n  'packages/types/src/index\.ts': \[",
+              re.S,
+          )
+          matches = list(symbol_pattern.finditer(source))
+          if len(matches) == 1:
+              source = symbol_pattern.sub("  'packages/types/src/index.ts': [", source, count=1)
+          elif len(matches) != 0:
+              raise SystemExit(f'unexpected tokens symbol contract matches: {len(matches)}')
+
+          insertion = '''const tokenPublicApiPolicyPath = path.join(
+            root,
+            'packages/tokens/src/public-api-policy.ts'
+          );
+          packageExportContracts['packages/tokens/package.json'] =
+            readPublicStringArrayContract(
+              tokenPublicApiPolicyPath,
+              'tokenPublicPackageSubpathsV1'
+            );
+          publicSymbolContracts['packages/tokens/src/index.ts'] =
+            readPublicStringArrayContract(
+              tokenPublicApiPolicyPath,
+              'tokenPublicSymbolsV1'
+            );
+
+          '''
+          loop_anchor = 'for (const [packagePath, expectedExports] of Object.entries(\n'
+          if insertion not in source:
+              if source.count(loop_anchor) != 1:
+                  raise SystemExit('public API loop anchor mismatch')
+              source = source.replace(loop_anchor, insertion + loop_anchor, 1)
+
+          helper = r'''
+
+          function readPublicStringArrayContract(filePath, variableName) {
+            const sourceFile = ts.createSourceFile(
+              filePath,
+              readFileSync(filePath, 'utf8'),
+              ts.ScriptTarget.Latest,
+              true
+            );
+
+            for (const statement of sourceFile.statements) {
+              if (!ts.isVariableStatement(statement)) continue;
+
+              for (const declaration of statement.declarationList.declarations) {
+                if (
+                  !ts.isIdentifier(declaration.name) ||
+                  declaration.name.text !== variableName ||
+                  !declaration.initializer
+                ) {
+                  continue;
+                }
+
+                let initializer = declaration.initializer;
+                while (
+                  ts.isAsExpression(initializer) ||
+                  ts.isSatisfiesExpression(initializer) ||
+                  ts.isTypeAssertionExpression(initializer)
+                ) {
+                  initializer = initializer.expression;
+                }
+
+                if (!ts.isArrayLiteralExpression(initializer)) {
+                  throw new Error(
+                    `${variableName} must be a static string array in ${filePath}`
+                  );
+                }
+
+                return initializer.elements.map((element) => {
+                  if (
+                    !ts.isStringLiteral(element) &&
+                    !ts.isNoSubstitutionTemplateLiteral(element)
+                  ) {
+                    throw new Error(
+                      `${variableName} must contain only string literals in ${filePath}`
+                    );
+                  }
+                  return element.text;
+                });
+              }
+            }
+
+            throw new Error(`${variableName} is missing from ${filePath}`);
+          }
+          '''
+          helper_marker = 'function readPublicStringArrayContract(filePath, variableName)'
+          if helper_marker not in source:
+              source += helper
+
+          path.write_text(source)
+          PY
+
+      - name: Format exact candidate
+        run: >-
+          pnpm exec prettier --write
+          packages/tokens/src/public-api-policy.ts
+          scripts/checks/token-semantic/public-api.ts
+          scripts/checks/token-semantic/public-api.test.ts
+          scripts/checks/token-semantic/ownership-coverage.test.ts
+          scripts/check-public-api.mjs
+
+      - name: Validate focused public API contracts
+        run: >-
+          pnpm exec vitest run --config vitest.tooling.config.ts
+          scripts/checks/token-semantic/public-api.test.ts
+          scripts/checks/token-semantic/ownership-coverage.test.ts
+          packages/tokens/src/public-api-v1.test.ts
+
+      - name: Validate repository public API gate
+        run: pnpm check:public-api
+
+      - name: Validate semantic audit
+        shell: bash
+        run: |
+          pnpm check:tokens-semantic:json > token-semantic-report.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('token-semantic-report.json', 'utf8'));
+          const rule = report.coverage.find((entry) => entry.ruleId === 'tokens.public-api');
+          if (rule?.coverage !== 'complete') {
+            throw new Error(`tokens.public-api coverage is ${rule?.coverage ?? 'missing'}`);
+          }
+          if (
+            report.summary.completeRules !== 4 ||
+            report.summary.incompleteRules !== 8 ||
+            report.summary.errors !== 0 ||
+            report.summary.warnings !== 0 ||
+            report.summary.runtimeErrors !== 0
+          ) {
+            throw new Error(`unexpected semantic audit summary: ${JSON.stringify(report.summary)}`);
+          }
+          NODE
+
+      - name: Build repository
+        run: pnpm ci:build
+
+      - name: Validate tooling TypeScript
+        run: pnpm typecheck:tooling
+
+      - name: Publish exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name 'Roman Bakurov'
+          git config user.email 'ronbakurov@gmail.com'
+          git add \
+            packages/tokens/src/public-api-policy.ts \
+            scripts/checks/token-semantic/public-api.ts \
+            scripts/checks/token-semantic/public-api.test.ts \
+            scripts/checks/token-semantic/ownership-coverage.test.ts \
+            scripts/check-public-api.mjs
+          git commit -m 'feat(tokens): complete public API audit coverage'
+          git push origin HEAD:probe/token-semantic-vocabulary-890-581cd1af
