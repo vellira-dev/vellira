@@ -3,6 +3,9 @@ export const RSC_CACHE_CONTROL =
   'private, no-cache, no-store, max-age=0, must-revalidate';
 export const HTML_CACHE_CONTROL = 'no-cache, max-age=0, must-revalidate';
 export const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+export const CANONICAL_HOST = 'vellira.dev';
+export const WWW_HOST = `www.${CANONICAL_HOST}`;
+export const CANONICAL_REDIRECT_CACHE_CONTROL = 'public, max-age=300';
 
 export function isRscRequest(request) {
   return (
@@ -10,6 +13,21 @@ export function isRscRequest(request) {
     request.headers.has('next-router-prefetch') ||
     request.headers.has('next-router-segment-prefetch')
   );
+}
+
+export function canonicalHostRedirect(request) {
+  const location = new URL(request.url);
+  if (location.hostname !== WWW_HOST) return null;
+  location.protocol = 'https:';
+  location.hostname = CANONICAL_HOST;
+  location.port = '';
+  return new Response(null, {
+    status: 308,
+    headers: {
+      Location: location.toString(),
+      'Cache-Control': CANONICAL_REDIRECT_CACHE_CONTROL,
+    },
+  });
 }
 
 // Next's encoded [slug] paths and the archive inventory share decoded keys.
@@ -119,8 +137,9 @@ export function createWebsiteWorker(
     async fetch(request, env, ctx) {
       const url = new URL(request.url);
       const requestId = crypto.randomUUID();
-      let response;
+      let response = canonicalHostRedirect(request);
       if (
+        !response &&
         url.pathname === '/__vellira_runtime' &&
         ['GET', 'HEAD'].includes(request.method)
       ) {
@@ -140,6 +159,7 @@ export function createWebsiteWorker(
           }
         );
       } else if (
+        !response &&
         url.pathname.startsWith('/_next/static/') &&
         ['GET', 'HEAD'].includes(request.method)
       ) {
@@ -153,7 +173,7 @@ export function createWebsiteWorker(
               headers: { 'Cache-Control': 'no-store' },
             });
         }
-      } else {
+      } else if (!response) {
         response = applyCachePolicy(
           request,
           await handler.fetch(request, env, ctx)

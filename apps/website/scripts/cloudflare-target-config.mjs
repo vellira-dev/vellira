@@ -6,15 +6,64 @@ const archives = {
   'vellira-website': 'vellira-website-static-archive',
 };
 
+const productionCustomDomains = [
+  { pattern: 'vellira.dev', custom_domain: true },
+  { pattern: 'www.vellira.dev', custom_domain: true },
+];
+
+function normalizedRoutes(config) {
+  const routes = config.routes ?? (config.route ? [config.route] : []);
+  assert.ok(Array.isArray(routes), 'Deployment routes must be an array');
+  return routes;
+}
+
+function validateRoutes(config) {
+  const routes = normalizedRoutes(config);
+  if (config.name === 'vellira-website-staging') {
+    assert.equal(
+      routes.length,
+      0,
+      'Staging must remain isolated from public custom domains'
+    );
+    return;
+  }
+
+  assert.equal(
+    routes.length,
+    productionCustomDomains.length,
+    'Production must own exactly the canonical public custom domains'
+  );
+  const actual = routes
+    .map((route) => {
+      assert.equal(
+        typeof route,
+        'object',
+        'Production routes must use custom-domain objects'
+      );
+      assert.equal(
+        route.custom_domain,
+        true,
+        `Production route ${route.pattern ?? '<missing>'} must be a custom domain`
+      );
+      return { pattern: route.pattern, custom_domain: route.custom_domain };
+    })
+    .sort((a, b) => a.pattern.localeCompare(b.pattern));
+  const expected = [...productionCustomDomains].sort((a, b) =>
+    a.pattern.localeCompare(b.pattern)
+  );
+  assert.deepEqual(
+    actual,
+    expected,
+    'Production custom domains must be exactly vellira.dev and www.vellira.dev'
+  );
+}
+
 export function validateDeploymentTarget(config) {
   assert.ok(
     Object.hasOwn(archives, config.name),
     'Unrecognized deployment target'
   );
-  assert.ok(
-    !config.routes?.length && !config.route,
-    'Public domain cutover is outside this deployment contract'
-  );
+  validateRoutes(config);
   const bindings = config.r2_buckets?.filter(
     (binding) => binding.binding === 'STATIC_ASSET_ARCHIVE'
   );
