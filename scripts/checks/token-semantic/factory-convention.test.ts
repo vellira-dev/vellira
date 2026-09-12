@@ -65,7 +65,7 @@ describe('factory convention audit adapter', () => {
     }
   });
 
-  it('detects a root-level full-component factory bypass as an unclassified responsibility', () => {
+  it('detects a root-level full-component factory bypass with the stable finding code', () => {
     const fixture = copyFactoryAuditTree();
     try {
       fs.writeFileSync(
@@ -79,7 +79,7 @@ describe('factory convention audit adapter', () => {
       expect(result.findings).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            code: 'unexpected-factory-responsibility-entry',
+            code: 'root-factory-bypass',
             sourcePath: 'packages/tokens/src/factories/createProbeTokens.ts',
           }),
         ])
@@ -89,15 +89,15 @@ describe('factory convention audit adapter', () => {
     }
   });
 
-  it('fails closed on an unclassified palette helper', () => {
+  it('fails closed on a palette helper outside the canonical #887 inventory', () => {
     const fixture = copyFactoryAuditTree();
     try {
       fs.writeFileSync(
         path.join(
           fixture,
-          'packages/tokens/src/factories/palettes/createProbePalette.ts'
+          'packages/tokens/src/factories/palettes/createProbeIntentPalette.ts'
         ),
-        'export const createProbePalette = () => ({});\n'
+        'export const createProbeIntentPalette = () => ({});\n'
       );
       const result = checkTokenFactoryConventions(fixture);
       expect(result.findings).toEqual(
@@ -105,7 +105,7 @@ describe('factory convention audit adapter', () => {
           expect.objectContaining({
             code: 'invalid-palette-helper-classification',
             sourcePath:
-              'packages/tokens/src/factories/palettes/createProbePalette.ts',
+              'packages/tokens/src/factories/palettes/createProbeIntentPalette.ts',
           }),
         ])
       );

@@ -1,19 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { componentTokenFactoryConventionV1 } from '../../../packages/tokens/src/component-token-factory-conventions';
 import { maintainedComponentFactories } from '../../../packages/tokens/src/token-architecture';
 import type { FindingInput, RuleResult } from './contract';
 
 const themes = ['light', 'dark', 'highContrast'] as const;
 const factoryNamePattern = /^create[A-Z][A-Za-z0-9]*Tokens$/;
-const paletteHelperPattern = /^create([A-Z][A-Za-z0-9]*)IntentPalette\.ts$/;
-const expectedFactoryRootEntries = new Map([
-  ['components', 'directory'],
-  ['index.ts', 'file'],
-  ['palettes', 'directory'],
-  ['shared', 'directory'],
-] as const);
-const expectedSharedHelpers = new Set(['componentFocusRing.ts']);
 
 function finding(
   code: string,
@@ -36,7 +29,7 @@ function finding(
     expected,
     migrationStatus: 'not-applicable',
     suggestedAction:
-      'Restore the canonical component, palette, or shared factory responsibility and route theme construction through the canonical full-component factory.',
+      'Restore the canonical #887 factory responsibility inventory and route theme construction through the canonical full-component factory.',
   };
 }
 
@@ -46,10 +39,6 @@ function typescriptFiles(directory: string) {
     .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right, 'en'));
-}
-
-function lowerFirst(value: string) {
-  return `${value[0]!.toLowerCase()}${value.slice(1)}`;
 }
 
 export function checkTokenFactoryConventions(root: string): RuleResult {
@@ -125,8 +114,14 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
       entry.isDirectory() ? 'directory' : 'file',
     ])
   );
+  const expectedRootEntries = new Map(
+    componentTokenFactoryConventionV1.rootEntries.map(({ name, kind }) => [
+      name,
+      kind,
+    ])
+  );
 
-  for (const [name, expectedKind] of expectedFactoryRootEntries) {
+  for (const [name, expectedKind] of expectedRootEntries) {
     const actualKind = actualRootEntries.get(name);
     if (actualKind !== expectedKind) {
       findings.push(
@@ -143,88 +138,118 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
   }
 
   for (const [name, actualKind] of actualRootEntries) {
-    if (!expectedFactoryRootEntries.has(name)) {
+    if (expectedRootEntries.has(name)) continue;
+
+    const sourcePath = `packages/tokens/src/factories/${name}`;
+    if (
+      actualKind === 'file' &&
+      /^create[A-Z][A-Za-z0-9]*Tokens\.ts$/.test(name)
+    ) {
       findings.push(
         finding(
-          'unexpected-factory-responsibility-entry',
-          `packages/tokens/src/factories/${name}`,
-          `${name} is an unclassified ${actualKind} at the factory root.`,
-          'Factory-root responsibilities are limited to components, palettes, shared, and index.ts.'
+          'root-factory-bypass',
+          sourcePath,
+          `${name} bypasses the canonical components responsibility directory.`,
+          'Full-component factories belong under factories/components.'
+        )
+      );
+      continue;
+    }
+
+    findings.push(
+      finding(
+        'unexpected-factory-responsibility-entry',
+        sourcePath,
+        `${name} is an unclassified ${actualKind} at the factory root.`,
+        'Factory-root responsibilities must match componentTokenFactoryConventionV1.'
+      )
+    );
+  }
+
+  const paletteFiles = typescriptFiles(palettesRoot);
+  checked += paletteFiles.length;
+  const expectedPaletteFiles = new Set(
+    componentTokenFactoryConventionV1.paletteFamilies.map(({ helper }) => helper)
+  );
+
+  for (const paletteFile of paletteFiles) {
+    if (!expectedPaletteFiles.has(paletteFile as never)) {
+      findings.push(
+        finding(
+          'invalid-palette-helper-classification',
+          `packages/tokens/src/factories/palettes/${paletteFile}`,
+          `${paletteFile} is not registered in the canonical #887 palette inventory.`,
+          'Palette helpers must be explicitly registered in componentTokenFactoryConventionV1.'
         )
       );
     }
   }
 
-  const paletteFiles = typescriptFiles(palettesRoot);
-  checked += paletteFiles.length;
-  for (const paletteFile of paletteFiles) {
-    const sourcePath = `packages/tokens/src/factories/palettes/${paletteFile}`;
-    const match = paletteHelperPattern.exec(paletteFile);
-    if (!match) {
+  for (const family of componentTokenFactoryConventionV1.paletteFamilies) {
+    checked += 1;
+    const sourcePath = `packages/tokens/src/factories/palettes/${family.helper}`;
+    if (!paletteFiles.includes(family.helper)) {
       findings.push(
         finding(
-          'invalid-palette-helper-classification',
+          'missing-palette-helper',
           sourcePath,
-          `${paletteFile} does not use the canonical intent-palette helper convention.`,
-          'Palette helpers must be narrow create<Component>IntentPalette modules under factories/palettes.'
+          `${family.helper} is registered in #887 but missing from factories/palettes.`,
+          sourcePath
         )
       );
-      continue;
     }
 
-    const componentName = match[1]!;
-    const factoryName = `create${componentName}Tokens`;
-    if (!maintainedComponentFactories.some(({ name }) => name === factoryName)) {
+    if (!maintainedComponentFactories.some(({ name }) => name === family.factory)) {
       findings.push(
         finding(
           'palette-helper-without-canonical-factory',
           sourcePath,
-          `${paletteFile} has no matching maintained ${factoryName}.`,
+          `${family.helper} points at non-maintained ${family.factory}.`,
           'Every component-owned intent palette must feed a canonical maintained full-component factory.'
         )
       );
-      continue;
     }
 
-    const componentFile = `${lowerFirst(componentName)}.ts`;
     for (const theme of themes) {
       checked += 1;
-      const themeSourcePath = `packages/tokens/src/${theme}/components/${componentFile}`;
+      const themeSourcePath = `packages/tokens/src/${theme}/components/${family.themeFile}`;
       const absoluteThemeSource = path.join(root, themeSourcePath);
       if (!fs.existsSync(absoluteThemeSource)) {
         findings.push(
           finding(
             'missing-theme-factory-consumer',
             themeSourcePath,
-            `${theme}/${componentFile} is missing for palette-backed ${componentName}.`,
-            'Every maintained palette-backed component must have a theme source routed through its canonical full-component factory.'
+            `${theme}/${family.themeFile} is missing for palette-backed ${family.component}.`,
+            'Every registered palette-backed component must have a theme source routed through its canonical full-component factory.'
           )
         );
         continue;
       }
 
       const source = fs.readFileSync(absoluteThemeSource, 'utf8');
-      const canonicalImport = `../../factories/components/${factoryName}.js`;
-      if (!source.includes(canonicalImport) || !source.includes(`${factoryName}(`)) {
+      const canonicalImport = `../../factories/components/${family.factory}.js`;
+      if (!source.includes(canonicalImport) || !source.includes(`${family.factory}(`)) {
         findings.push(
           finding(
             'theme-construction-bypasses-canonical-factory',
             themeSourcePath,
-            `${theme}/${componentFile} does not import and invoke ${factoryName} through the canonical components directory.`,
-            `Import ${canonicalImport} and construct the component through ${factoryName}.`
+            `${theme}/${family.themeFile} does not import and invoke ${family.factory} through the canonical components directory.`,
+            `Import ${canonicalImport} and construct the component through ${family.factory}.`
           )
         );
       }
 
       if (
-        source.includes(`../../factories/${factoryName}.js`) ||
-        source.includes(`../../factories/create${componentName}Palette.js`)
+        source.includes(`../../factories/${family.factory}.js`) ||
+        source.includes(
+          `../../factories/create${family.componentName}Palette.js`
+        )
       ) {
         findings.push(
           finding(
             'legacy-theme-factory-bypass',
             themeSourcePath,
-            `${theme}/${componentFile} still references a legacy root-level factory or palette path.`,
+            `${theme}/${family.themeFile} still references a legacy root-level factory or palette path.`,
             'Theme construction must use factories/components for full-component factories; palette helpers remain factory internals.'
           )
         );
@@ -234,14 +259,17 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
 
   const sharedFiles = typescriptFiles(sharedRoot);
   checked += sharedFiles.length;
+  const expectedSharedHelpers = new Set<string>(
+    componentTokenFactoryConventionV1.sharedHelpers
+  );
   for (const sharedFile of sharedFiles) {
     if (!expectedSharedHelpers.has(sharedFile)) {
       findings.push(
         finding(
           'unexpected-shared-factory-helper',
           `packages/tokens/src/factories/shared/${sharedFile}`,
-          `${sharedFile} is not a canonical cross-component shared helper.`,
-          'Cross-component shared helpers must be explicitly classified.'
+          `${sharedFile} is not registered as a canonical cross-component shared helper.`,
+          'Cross-component shared helpers must be explicitly registered in componentTokenFactoryConventionV1.'
         )
       );
     }
@@ -252,7 +280,7 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
         finding(
           'missing-shared-factory-helper',
           `packages/tokens/src/factories/shared/${expectedSharedHelper}`,
-          `${expectedSharedHelper} is missing from the canonical shared responsibility directory.`,
+          `${expectedSharedHelper} is registered in #887 but missing from the canonical shared responsibility directory.`,
           `${expectedSharedHelper} must remain the explicit shared helper authority.`
         )
       );
@@ -262,7 +290,7 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
   return {
     coverage: 'complete',
     scope:
-      'Canonical #887 full-component naming/registration/source parity, exact factory responsibility root, palette-helper classification, explicit shared-helper responsibility, and palette-backed theme construction through canonical full-component factories across Light, Dark, and High Contrast.',
+      'Canonical #887 full-component naming/registration/source parity plus the shared componentTokenFactoryConventionV1 authority for exact factory-root responsibilities, palette helpers, shared helpers, and palette-backed theme construction across Light, Dark, and High Contrast.',
     checked,
     findings,
   };
