@@ -16,7 +16,9 @@ import {
 } from '../../../packages/tokens/src/platform-output/component-token-intents';
 import type { FindingInput, RuleResult } from './contract';
 
-const generatorTemplateRoots = ['scripts/generators/component/templates'] as const;
+const generatorTemplateRoots = [
+  'scripts/generators/component/templates',
+] as const;
 
 const rendererKeyPattern =
   /(?:^|[\s{,])(?:['"]?)(web|native|reactNative|nativeMaxHeight|native[A-Z][\w$]*|reactNative[A-Z][\w$]*)(?:['"]?)\s*:/gm;
@@ -170,10 +172,7 @@ function auditAdaptedOutputs(
   const sources = createComponentPlatformOutputSources({ name: themeName });
   const outputs = [
     ['web', adaptComponentTokensForWeb(components, sources)],
-    [
-      'react-native',
-      adaptComponentTokensForReactNative(components, sources),
-    ],
+    ['react-native', adaptComponentTokensForReactNative(components, sources)],
   ] as const;
   const findings: FindingInput[] = [];
 
@@ -197,9 +196,7 @@ function auditAdaptedOutputs(
   return { checked: outputs.length, findings };
 }
 
-export function checkTokenPlatformBoundary(
-  root = process.cwd()
-): RuleResult {
+export function checkTokenPlatformBoundary(root = process.cwd()): RuleResult {
   const themes = [
     ['light', 'light', lightTheme],
     ['dark', 'dark', darkTheme],
