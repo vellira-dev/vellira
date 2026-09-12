@@ -10,6 +10,7 @@ import { checkTokenCssReferences } from './css-repository';
 import { checkTokenFactoryConventions } from './factory-convention';
 import { checkTokenPlatformBoundary } from './platform-boundary';
 import { checkTokenPublicApi } from './public-api';
+import { checkTokenPackagePublicSurface } from './public-api-package-surface';
 import { checkTokenSemanticDependencies } from './semantic-dependency';
 import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
 import { checkComponentShadowConsumers } from './shadow-component-consumption';
@@ -107,6 +108,19 @@ export function checkTokenSemantics(root: string) {
     };
   }
 
+  function publicApiRule(): RuleResult {
+    const authority = checkTokenPublicApi(root);
+    const packageSurface = checkTokenPackagePublicSurface(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #889 public API/deprecation authority: explicit theme identities, generated CSS selectors/runtime-path compatibility, bounded legacy exports and CSS aliases, exact package main/types/export-subpath inventory, and automatic semver removal-boundary enforcement.',
+      checked: authority.checked + packageSurface.checked,
+      findings: [...authority.findings, ...packageSurface.findings],
+    };
+  }
+
   const adapters: RuleAdapter[] = [
     { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
     {
@@ -124,7 +138,7 @@ export function checkTokenSemantics(root: string) {
     { ruleId: 'tokens.platform-boundary', run: checkTokenPlatformBoundary },
     {
       ruleId: 'tokens.public-api',
-      run: () => checkTokenPublicApi(root),
+      run: publicApiRule,
     },
     {
       ruleId: 'tokens.semantic-dependency',
