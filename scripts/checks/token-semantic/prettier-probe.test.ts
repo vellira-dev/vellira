@@ -1,7 +1,8 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
 import { format } from 'prettier';
+import { describe, expect, it } from 'vitest';
 
 const files = [
   'packages/tokens/src/component-token-dependencies.ts',
@@ -22,14 +23,16 @@ const options = {
   endOfLine: 'lf',
 } as const;
 
+const outputRoot = 'apps/react-storybook/test-results/prettier-probe';
+
 describe('Prettier probe', () => {
-  it('emits canonical formatting for the four style-only failures', async () => {
+  it('writes canonical formatting into the existing Playwright artifact path', async () => {
     for (const file of files) {
       const source = fs.readFileSync(file, 'utf8');
       const formatted = await format(source, options);
-      console.log(
-        `PRETTIER_PROBE:${file}:${Buffer.from(formatted).toString('base64')}`
-      );
+      const output = path.join(outputRoot, file);
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.writeFileSync(output, formatted);
     }
 
     expect.fail('Intentional one-run formatter probe.');
