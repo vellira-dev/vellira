@@ -266,6 +266,130 @@ jobs:
       - name: IndexNow tests
         run: node --test scripts/submit-indexnow.test.mjs
 
+  unit-coverage:
+    name: Unit & Coverage Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node with PR-scoped dependency cache
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Setup Node without dependency cache
+        if: github.event_name != 'pull_request'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Coverage
+        run: pnpm test:coverage
+
+  generator-blog:
+    name: Component Page & Blog Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node with PR-scoped dependency cache
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Setup Node without dependency cache
+        if: github.event_name != 'pull_request'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Component page contract
+        run: pnpm test:component-pages
+
+      - name: Component page generator
+        run: pnpm test:component-page-generator
+
+      - name: Blog tests
+        run: pnpm test:blog
+
+  storybook-browser:
+    name: Storybook & Browser Tests
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node with PR-scoped dependency cache
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Setup Node without dependency cache
+        if: github.event_name != 'pull_request'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Storybook tests
+        run: pnpm test:storybook
+
+      - name: Browser tests
+        run: pnpm test:e2e:web
+
+      - name: Visual regression
+        run: pnpm test:e2e:web:visual
+        env:
+          VELLIRA_VISUAL_ENVIRONMENT: playwright-v1.61.1-noble
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-artifacts-browser-tests
+          path: |
+            apps/react-storybook/test-results
+            apps/react-storybook/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
   ci:
     name: Build, Test & Validate
     runs-on: ubuntu-latest
@@ -342,9 +466,6 @@ jobs:
       - name: Build docs
         run: pnpm docs:build
 
-      - name: Tests and coverage
-        run: pnpm ci:test
-
       - name: Blog discovery browser regression
         shell: bash
         run: |
@@ -371,22 +492,6 @@ jobs:
           WEBSITE_URL=http://127.0.0.1:3100 \
             pnpm --filter @vellira-ui/react-storybook exec node \
             scripts/blog-discovery-website-smoke.mjs
-
-      - name: Visual regression
-        run: pnpm test:e2e:web:visual
-        env:
-          VELLIRA_VISUAL_ENVIRONMENT: playwright-v1.61.1-noble
-
-      - name: Upload Playwright artifacts
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: playwright-artifacts
-          path: |
-            apps/react-storybook/test-results
-            apps/react-storybook/playwright-report
-          if-no-files-found: ignore
-          retention-days: 7
 
       - name: Smoke packages
         run: pnpm ci:smoke
