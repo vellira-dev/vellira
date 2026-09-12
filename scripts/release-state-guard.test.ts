@@ -3,9 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const { assertReleaseStateSynchronized } = require(
-  './release-state-guard.cjs'
-);
+const { assertReleaseStateSynchronized } = require('./release-state-guard.cjs');
 
 describe('release state guard', () => {
   it('accepts a manifest synchronized with the latest reachable release tag', () => {
