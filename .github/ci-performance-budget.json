@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "workflow": {
+    "name": "CI",
+    "file": "ci.yml",
+    "requiredJobs": [
+      "Quality & Component Quality",
+      "Cloudflare cache and multi-deployment browser contracts",
+      "Typecheck & API Contracts",
+      "Tooling & IndexNow Tests",
+      "Unit & Coverage Tests",
+      "Component Page & Blog Tests",
+      "Storybook & Browser Tests",
+      "Build, Test & Validate"
+    ],
+    "allowedNonCriticalJobs": []
+  },
+  "budgets": {
+    "normal": {
+      "targetSeconds": 360,
+      "toleranceSeconds": 75,
+      "expectedExecutionPath": "full"
+    },
+    "package-local": {
+      "targetSeconds": 300,
+      "toleranceSeconds": 60,
+      "expectedExecutionPath": "affected"
+    },
+    "docs-only": {
+      "targetSeconds": 240,
+      "toleranceSeconds": 60,
+      "expectedExecutionPath": "affected"
+    },
+    "shared": {
+      "targetSeconds": 360,
+      "toleranceSeconds": 75,
+      "expectedExecutionPath": "full"
+    }
+  },
+  "enforcement": {
+    "historyWindow": 5,
+    "requiredExceedancesForFailure": 3,
+    "pollIntervalSeconds": 10,
+    "pollTimeoutSeconds": 900
+  },
+  "classification": {
+    "sharedPrefixes": [
+      "packages/tokens/",
+      "packages/types/",
+      "packages/core/",
+      "packages/metadata/"
+    ],
+    "docsPrefixes": [
+      "docs/"
+    ],
+    "docsBasenames": [
+      "README.md",
+      "CONTRIBUTING.md",
+      "CODE_OF_CONDUCT.md",
+      "SECURITY.md"
+    ],
+    "docsExtensions": [
+      ".md",
+      ".mdx"
+    ]
+  },
+  "externalWorkflowsExcludedFromCriticalPath": [
+    "Chromatic Publish",
+    "Lighthouse CI",
+    "PR Title",
+    "Deploy Docs Worker",
+    "Dependabot Auto Merge"
+  ],
+  "baseline": {
+    "source": "#822/#1032 final full-path baseline",
+    "commit": "578a60e020ae10ca7e80185efd662da5c1480820",
+    "workflowRunId": 34714577111,
+    "observedAt": "2026-09-12T19:41:36Z",
+    "feedbackSeconds": 399,
+    "longestRequiredJobSeconds": 349,
+    "longestRequiredJob": "Cloudflare cache and multi-deployment browser contracts",
+    "buildTestValidateSeconds": 250
+  }
+}
