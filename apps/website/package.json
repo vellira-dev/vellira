@@ -25,7 +25,6 @@
     "@vellira-ui/react": "workspace:*",
     "@vellira-ui/react-native": "workspace:*",
     "@vellira-ui/tokens": "workspace:*",
-    "@vercel/analytics": "^2.0.1",
     "lottie-web": "^5.13.0",
     "motion": "^12.42.2",
     "next": "16.3.3",
@@ -43,9 +42,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "0.28.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
-    "esbuild": "0.28.1",
     "miniflare": "5.20260903.0-alpha",
     "typescript": "^5",
     "wrangler": "^4.129.0"

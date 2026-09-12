@@ -6,7 +6,7 @@ The [deployment/cache contract](../../docs/architecture/cloudflare-deployment-ca
 
 ## Current production state
 
-The public cutover is complete. Cloudflare is the active website production path, while the existing Vercel deployment is retained only as the approved emergency rollback target until the rollback window is explicitly closed.
+The public cutover is complete and the rollback window is closed. Cloudflare is the only supported website production hosting path. The former Vercel website project and its domain/deployment bindings were removed on 2026-09-12 after the Cloudflare custom-domain, runtime, archive, metrics, navigation and static-asset postflight had been proven in production.
 
 The active adapter is **OpenNext** (`@opennextjs/cloudflare`). Vinext was used only during the initial compatibility experiment and is not part of the active build or deploy path.
 
@@ -142,17 +142,17 @@ Keep these three systems separate:
 - **Cloudflare Worker Analytics / observability** → infrastructure health, request volume, errors, status and latency;
 - **Vellira blog metrics** → product-owned article views, likes and actor-specific liked state.
 
-Cloudflare Web Analytics complements Vellira blog metrics; it does not replace them. Do not add user-level identity tracking, cookies, local storage or PII collection merely to reproduce Vercel Analytics behavior.
+Cloudflare Web Analytics complements Vellira blog metrics; it does not replace them. Do not add user-level identity tracking, cookies, local storage or PII collection merely to reproduce the retired Vercel Analytics behavior.
 
 ## Backend CORS and application metrics
 
-Production CORS must remain explicit and minimal. The required website origins during the current rollback/migration window are the public apex, public `www` alias and the isolated staging Worker origin. Do not replace the allowlist with `*`.
+Production CORS must remain explicit and minimal. The required website origins are the public apex, public `www` alias and the isolated staging Worker origin. Do not replace the allowlist with `*`.
 
 The permanent production browser smoke is the regression gate for final-origin metrics/CORS behavior. A deployment is not qualifying if likes/views only work on Workers.dev while failing on `vellira.dev`.
 
 ## Rollback
 
-There are two distinct rollback classes.
+The supported website rollback path is Cloudflare-only.
 
 ### Cloudflare code regression
 
@@ -160,27 +160,25 @@ Use only an earlier validated Cloudflare deployment that retains the current req
 
 The guarded deployment entry does not make a dashboard/direct CLI rollback validation-equivalent. Coordinate any emergency version rollback separately and preserve identity, predecessor/archive and target-serialization evidence. After rollback, repeat the critical HTTP/browser checks.
 
-### Cloudflare/domain migration regression
+### Hosting/platform incident
 
-While the Vercel rollback window remains open:
+Vercel is no longer retained as a website fallback and must not be treated as an emergency deployment target. A platform-level recovery must use the documented Cloudflare deployment/archive evidence and an explicitly reviewed recovery action rather than silently recreating the retired Vercel production path.
 
-1. detach/disable the `vellira.dev`/`www.vellira.dev` Cloudflare Custom Domains as appropriate;
-2. restore the recorded pre-cutover Vercel DNS configuration;
-3. verify the retained Vercel deployment again serves the public hostname;
-4. repeat critical route and blog-metrics checks.
+## Vercel decommission status
 
-Do not delete the Vercel project or known-good deployment until the rollback window is explicitly closed.
+The Vercel rollback window is closed. The `vellira-website` Vercel project, its Git deployment integration and its website domain/deployment bindings were removed on 2026-09-12.
 
-## Vercel cleanup
+Repository cleanup after decommission must maintain these contracts:
 
-While Vercel remains the approved rollback target, `@vercel/analytics` may remain installed but must render only when `process.env.VERCEL === '1'`. Cloudflare browser smoke remains responsible for failing on any Cloudflare-runtime `/_vercel/*` request.
+- no Vercel Analytics runtime integration or `process.env.VERCEL` website behavior;
+- no Vercel website deployment workflow or configuration;
+- no Vercel-hosted website fallback claim in active runbooks;
+- Cloudflare remains the only supported public website hosting/deployment path;
+- negative regression guards such as asserting that Cloudflare emits no `/_vercel/*` requests may remain because they protect the Cloudflare runtime rather than depend on Vercel;
+- historical migration records may mention Vercel when clearly identified as historical evidence;
+- unrelated tooling must be audited independently rather than removed by string match. Vercel Turbo Remote Cache was already retired from CI before this hosting decommission.
 
-After the rollback window is explicitly closed:
-
-- complete #903's remaining Vercel-specific runtime/config cleanup;
-- execute #1001 to decommission Vercel hosting and audit account-level dependencies;
-- preserve unrelated services such as Turbo Remote Cache if they are still intentionally used;
-- remove only references whose Vercel purpose is actually obsolete.
+Issue #903 owns the remaining Vercel-specific runtime/config cleanup and #1001 owns final hosting/account-level closure.
 
 ## References
 
