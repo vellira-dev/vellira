@@ -16,6 +16,7 @@ import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
 import { checkComponentShadowConsumers } from './shadow-component-consumption';
 import { checkTokenShadowAuthority } from './shadow-authority';
 import { checkTokenStateVocabulary } from './state-vocabulary';
+import { checkTokenValueKindOutputs } from './value-kind-output';
 import { checkTokenValueKinds } from './value-kind-repository';
 import { checkTokenVisualPreservation } from './visual-preservation';
 
@@ -95,6 +96,19 @@ export function checkTokenSemantics(root: string) {
     };
   }
 
+  function valueKindRule(): RuleResult {
+    const inventory = checkTokenValueKinds();
+    const outputs = checkTokenValueKindOutputs(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #881 value-kind/unit contract: every maintained canonical scalar/intent leaf is classified and validated through the shared serializer; actual Web collectors are exact with generated variable registries; committed tokens.css is byte-identical to canonical generated output; and Generator V2 delegates numeric component roles to the same fail-closed authority. #880 separately proves resolved-value preservation.',
+      checked: inventory.checked + outputs.checked,
+      findings: [...inventory.findings, ...outputs.findings],
+    };
+  }
+
   function shadowAuthorityRule(): RuleResult {
     const authority = checkTokenShadowAuthority(root);
     const consumers = checkComponentShadowConsumers();
@@ -122,7 +136,7 @@ export function checkTokenSemantics(root: string) {
   }
 
   const adapters: RuleAdapter[] = [
-    { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
+    { ruleId: 'tokens.value-kind', run: valueKindRule },
     {
       ruleId: 'tokens.state-vocabulary',
       run: () => checkTokenStateVocabulary(root),

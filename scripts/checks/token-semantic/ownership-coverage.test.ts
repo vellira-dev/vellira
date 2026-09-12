@@ -5,6 +5,9 @@ import { checkTokenSemantics } from './checker';
 describe('token semantic ownership coverage', () => {
   it('reports maintained complete-rule coverage without findings', () => {
     const report = checkTokenSemantics(process.cwd());
+    const valueKind = report.coverage.find(
+      ({ ruleId }) => ruleId === 'tokens.value-kind'
+    );
     const componentOwnership = report.coverage.find(
       ({ ruleId }) => ruleId === 'tokens.component-ownership'
     );
@@ -18,6 +21,8 @@ describe('token semantic ownership coverage', () => {
       ({ ruleId }) => ruleId === 'tokens.public-api'
     );
 
+    expect(valueKind).toMatchObject({ coverage: 'complete' });
+    expect(valueKind?.checked).toBeGreaterThan(7000);
     expect(componentOwnership).toMatchObject({ coverage: 'complete' });
     expect(componentOwnership?.checked).toBeGreaterThan(15);
     expect(namespaceLifecycle).toMatchObject({ coverage: 'complete' });
@@ -28,8 +33,8 @@ describe('token semantic ownership coverage', () => {
     expect(publicApi?.checked).toBeGreaterThan(50);
     expect(report.summary).toMatchObject({
       requiredRules: 12,
-      completeRules: 8,
-      incompleteRules: 4,
+      completeRules: 9,
+      incompleteRules: 3,
       runtimeErrors: 0,
       errors: 0,
       warnings: 0,

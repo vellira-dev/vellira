@@ -1,0 +1,58 @@
+name: Probe Token Semantic Value Kind
+
+on:
+  push:
+    branches:
+      - probe/token-semantic-prettier-985-51b3d7c
+
+permissions:
+  contents: read
+
+jobs:
+  value-kind-probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format candidate files
+        run: |
+          pnpm exec prettier \
+            scripts/checks/token-semantic/value-kind-output.ts \
+            scripts/checks/token-semantic/value-kind-output.test.ts \
+            scripts/checks/token-semantic/checker.ts \
+            scripts/checks/token-semantic/cli.test.ts \
+            scripts/checks/token-semantic/ownership-coverage.test.ts \
+            --write
+      - name: Show exact formatting diff
+        run: |
+          git diff -- \
+            scripts/checks/token-semantic/value-kind-output.ts \
+            scripts/checks/token-semantic/value-kind-output.test.ts \
+            scripts/checks/token-semantic/checker.ts \
+            scripts/checks/token-semantic/cli.test.ts \
+            scripts/checks/token-semantic/ownership-coverage.test.ts
+      - name: Run value-kind and aggregate tests
+        run: |
+          pnpm exec vitest run --config vitest.tooling.config.ts \
+            scripts/checks/token-semantic/value-kind-output.test.ts \
+            scripts/checks/token-semantic/value-kind.test.ts \
+            scripts/checks/token-semantic/value-kind-repository.test.ts \
+            scripts/checks/token-semantic/ownership-coverage.test.ts
+      - name: Upload formatted candidate
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: token-value-kind-formatted-${{ github.sha }}
+          path: |
+            scripts/checks/token-semantic/value-kind-output.ts
+            scripts/checks/token-semantic/value-kind-output.test.ts
+            scripts/checks/token-semantic/checker.ts
+            scripts/checks/token-semantic/cli.test.ts
+            scripts/checks/token-semantic/ownership-coverage.test.ts
+          if-no-files-found: error
+          retention-days: 1

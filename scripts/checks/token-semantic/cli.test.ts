@@ -38,7 +38,7 @@ describe('token semantic CLI', () => {
       const valueKinds = report.coverage.find(
         (rule) => rule.ruleId === 'tokens.value-kind'
       );
-      expect(valueKinds?.coverage).toBe('partial');
+      expect(valueKinds?.coverage).toBe('complete');
       expect(valueKinds?.checked).toBeGreaterThan(0);
       expect(
         report.findings.filter(
