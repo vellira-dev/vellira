@@ -137,3 +137,26 @@ test('R2 S3 bucket retries transient transport failures with bounded attempts', 
   assert.equal(await (await bucket.get('deployments/a.json')).text(), 'ok');
   assert.equal(attempts, 3);
 });
+
+test('R2 S3 bucket retries request timeouts with bounded attempts', async () => {
+  let attempts = 0;
+  const bucket = createR2S3Bucket({
+    accountId,
+    bucketName: 'archive-bucket',
+    accessKeyId,
+    secretAccessKey,
+    maxAttempts: 2,
+    now: () => fixedDate,
+    sleepImpl: async () => {},
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts === 1)
+        throw new DOMException('The operation timed out', 'TimeoutError');
+      return new Response('ok', {
+        headers: { 'content-length': '2', 'content-type': 'text/plain' },
+      });
+    },
+  });
+  assert.equal(await (await bucket.get('deployments/a.json')).text(), 'ok');
+  assert.equal(attempts, 2);
+});
