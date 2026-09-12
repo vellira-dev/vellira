@@ -103,7 +103,7 @@
     "docker:install": "docker compose run --rm install",
     "docker:shell": "docker compose run --rm workspace bash",
     "docker:e2e": "docker compose --profile test run --rm -e PLAYWRIGHT_SCRIPT=test:e2e:all playwright",
-    "docker:e2e:visual": "docker compose --profile test run --rm -e PLAYWRIGHT_SCRIPT=test:e2e:visual -e PLAYWRIGHT_ARGS=--update-snapshots playwright",
+    "docker:e2e:visual": "docker compose --profile test run --rm -e PLAYWRIGHT_SCRIPT=test:e2e:visual playwright",
     "docker:e2e:update": "docker compose --profile test run --rm -e PLAYWRIGHT_SCRIPT=test:e2e:visual -e PLAYWRIGHT_ARGS=--update-snapshots playwright",
     "indexnow": "node scripts/submit-indexnow.mjs",
     "component-expansion:json": "tsx scripts/metadata/component-expansion-report.ts",
