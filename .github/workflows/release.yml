@@ -119,21 +119,21 @@ jobs:
           echo "branch=chore/sync-release-$version" >> "$GITHUB_OUTPUT"
           echo "Release-managed files changed for version $version."
 
-      - name: Verify release sync token
+      - name: Create release sync GitHub App token
         if: steps.version-sync.outputs.changed == 'true'
-        env:
-          RELEASE_SYNC_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
-        run: |
-          if [ -z "$RELEASE_SYNC_TOKEN" ]; then
-            echo "RELEASE_SYNC_TOKEN secret is required to create the version sync PR as a maintainer."
-            exit 1
-          fi
+        id: release-sync-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Close superseded version sync PRs
         if: steps.version-sync.outputs.changed == 'true'
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
+          GH_TOKEN: ${{ steps.release-sync-token.outputs.token }}
           CURRENT_VERSION: ${{ steps.version-sync.outputs.version }}
           CURRENT_BRANCH: ${{ steps.version-sync.outputs.branch }}
         run: |
@@ -169,7 +169,7 @@ jobs:
         id: version-sync-pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
-          token: ${{ secrets.RELEASE_SYNC_TOKEN }}
+          token: ${{ steps.release-sync-token.outputs.token }}
           add-paths: |
             package.json
             pnpm-lock.yaml
@@ -194,7 +194,7 @@ jobs:
       - name: Enable auto-merge for version sync PR
         if: steps.version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
+          GH_TOKEN: ${{ steps.release-sync-token.outputs.token }}
         run: |
           gh pr merge ${{ steps.version-sync-pr.outputs.pull-request-number }} \
             --auto \
@@ -293,22 +293,22 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Verify release sync token
+      - name: Create recovery release sync GitHub App token
         if: steps.recovery-version-sync.outputs.changed == 'true'
-        env:
-          RELEASE_SYNC_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
-        run: |
-          if [ -z "$RELEASE_SYNC_TOKEN" ]; then
-            echo "RELEASE_SYNC_TOKEN is required to create the reviewable version-sync PR."
-            exit 1
-          fi
+        id: recovery-release-sync-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create version sync PR
         if: steps.recovery-version-sync.outputs.changed == 'true'
         id: version-sync-pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
-          token: ${{ secrets.RELEASE_SYNC_TOKEN }}
+          token: ${{ steps.recovery-release-sync-token.outputs.token }}
           add-paths: |
             package.json
             pnpm-lock.yaml
