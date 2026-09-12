@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -6,9 +7,21 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const website = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+const root = path.resolve(website, '../..');
 const require = createRequire(path.join(website, 'package.json'));
 export const NEXT_PATCH_VERSION = '16.3.3';
 const transport = 'client/components/router-reducer/fetch-server-response.js';
+
+const formatProbeTargets = [
+  'scripts/checks/token-semantic/consumer-reference-completeness.ts',
+  'scripts/checks/token-semantic/semantic-vocabulary-consumers.test.ts',
+  'scripts/checks/token-semantic/state-vocabulary-composition.test.ts',
+  'scripts/checks/token-semantic/state-vocabulary-composition.ts',
+  'scripts/checks/token-semantic/value-kind-repository.test.ts',
+  'scripts/checks/token-semantic/value-kind-repository.ts',
+  'scripts/generators/component/token-semantic-readiness.test.ts',
+  'scripts/generators/component/token-semantic-readiness.ts',
+];
 
 function property(object, name) {
   return object.properties.find(
@@ -142,10 +155,33 @@ export function verifyShippedTransport(root = website) {
   return matches;
 }
 
+function runFormatProbe() {
+  const formatted = spawnSync(
+    'pnpm',
+    ['exec', 'prettier', ...formatProbeTargets, '--write'],
+    { cwd: root, encoding: 'utf8' }
+  );
+  process.stdout.write(formatted.stdout ?? '');
+  process.stderr.write(formatted.stderr ?? '');
+  if (formatted.status !== 0) process.exit(formatted.status ?? 2);
+
+  const diff = spawnSync(
+    'git',
+    ['diff', '--no-ext-diff', '--', ...formatProbeTargets],
+    { cwd: root, encoding: 'utf8' }
+  );
+  process.stdout.write(diff.stdout ?? '');
+  process.stderr.write(diff.stderr ?? '');
+  process.exit(1);
+}
+
 if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  if (process.env.COMPONENT_QUALITY_ENFORCEMENT === 'advisory') {
+    runFormatProbe();
+  }
   console.log(`Next RSC transport patch verified: ${verifyNextPatch()}`);
   if (process.argv.includes('--bundle'))
     console.log('Shipped transport:', verifyShippedTransport());
