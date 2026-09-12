@@ -229,6 +229,7 @@ jobs:
         run: >-
           pnpm exec turbo run build
           --filter=@vellira-ui/react
+          --filter=@vellira-ui/react-native
           --filter=@vellira-ui/icons
 
       - name: Tooling tests
