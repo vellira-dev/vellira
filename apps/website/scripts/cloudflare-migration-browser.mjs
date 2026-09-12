@@ -37,16 +37,20 @@ if (process.env.CI === 'true')
     'Migration CI requires a clean exact-head checkout'
   );
 const engines = { chromium, firefox, webkit };
-const reports = [];
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-for (const name of (
+const browserNames = (
   process.env.MIGRATION_BROWSERS ?? 'chromium,firefox,webkit'
-).split(',')) {
+)
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
+for (const name of browserNames)
   assert.ok(engines[name], `Unknown browser ${name}`);
-  const origin = await startMigrationOrigin(generations, directory);
+
+async function runBrowser(name) {
   const browserDirectory = path.join(directory, name);
   await fs.mkdir(browserDirectory, { recursive: true });
+  const origin = await startMigrationOrigin(generations, browserDirectory);
   // Browser profiles contain generated executable-looking files (Firefox's
   // prefs.js). Keep them outside maintained source scans; evidence records the
   // exact persistent directory reused throughout this run and after reopening.
@@ -476,14 +480,16 @@ for (const name of (
       path.join(browserDirectory, 'evidence.json'),
       JSON.stringify(report, null, 2)
     );
-    reports.push({
-      browser: name,
-      status: report.status,
-      limitations: report.limitations,
-    });
     await origin.close();
   }
+  return {
+    browser: name,
+    status: report.status,
+    limitations: report.limitations,
+  };
 }
+
+const reports = await Promise.all(browserNames.map((name) => runBrowser(name)));
 await fs.writeFile(
   path.join(directory, 'summary.json'),
   JSON.stringify(reports, null, 2)
