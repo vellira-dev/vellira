@@ -11,67 +11,17 @@ on:
 permissions:
   contents: read
 
+cache-mode: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  cloudflare-cache-migration:
-    name: Cloudflare cache and multi-deployment browser contracts
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    container:
-      image: mcr.microsoft.com/playwright:v1.61.1-noble
-      options: --ipc=host --user 1001
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Trust the checked-out repository in the container
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22.22.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check:next-rsc-patch
-      - name: Lint deployment and diagnostic scripts
-        run: >-
-          pnpm exec eslint apps/website/cloudflare-worker.mjs apps/website/cloudflare/*.mjs
-          apps/website/scripts/*.mjs apps/react-storybook/scripts/cloudflare-browser-diagnostics*.mjs
-          apps/react-storybook/scripts/cloudflare-navigation-soak.mjs
-      - run: pnpm test:cloudflare-cache
-      - name: Build actual OpenNext runtime
-        env:
-          VELLIRA_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          VELLIRA_BUILD_ID: ${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-        run: |
-          # PR events expose a synthetic merge SHA. This job deliberately builds
-          # the checked-out PR HEAD, never a deployable PR merge artifact.
-          test "$(git rev-parse HEAD)" = "$VELLIRA_CHECKOUT_SHA"
-          export GITHUB_SHA="$VELLIRA_CHECKOUT_SHA"
-          pnpm exec turbo run build --filter='@vellira-ui/website^...'
-          pnpm --dir apps/website run sync:brand
-          pnpm --dir apps/website run build:opennext
-          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
-          node apps/website/scripts/cloudflare-local-runtime.mjs
-      - run: pnpm test:cloudflare-migration
-      - name: Retain exact-head migration evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: cache-migration-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            apps/website/.open-next/local-runtime-contract.json
-            apps/website/.open-next/asset-audit-preactivation.json
-            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
-            apps/react-storybook/test-results/cloudflare-migration/summary.json
-            apps/react-storybook/test-results/cloudflare-migration/*.log
-          retention-days: 14
-          include-hidden-files: true
-  ci:
-    name: Build, Test & Validate
+  quality:
+    name: Quality & Component Quality
     runs-on: ubuntu-latest
     env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
       COMPONENT_QUALITY_ENFORCEMENT: advisory
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -190,6 +140,149 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  cloudflare-cache-migration:
+    name: Cloudflare cache and multi-deployment browser contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host --user 1001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Trust the checked-out repository in the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:next-rsc-patch
+      - name: Lint deployment and diagnostic scripts
+        run: >-
+          pnpm exec eslint apps/website/cloudflare-worker.mjs apps/website/cloudflare/*.mjs
+          apps/website/scripts/*.mjs apps/react-storybook/scripts/cloudflare-browser-diagnostics*.mjs
+          apps/react-storybook/scripts/cloudflare-navigation-soak.mjs
+      - run: pnpm test:cloudflare-cache
+      - name: Build actual OpenNext runtime
+        env:
+          VELLIRA_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          VELLIRA_BUILD_ID: ${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          # PR events expose a synthetic merge SHA. This job deliberately builds
+          # the checked-out PR HEAD, never a deployable PR merge artifact.
+          test "$(git rev-parse HEAD)" = "$VELLIRA_CHECKOUT_SHA"
+          export GITHUB_SHA="$VELLIRA_CHECKOUT_SHA"
+          pnpm exec turbo run build --filter='@vellira-ui/website^...'
+          pnpm --dir apps/website run sync:brand
+          pnpm --dir apps/website run build:opennext
+          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-local-runtime.mjs
+      - run: pnpm test:cloudflare-migration
+      - name: Retain exact-head migration evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cache-migration-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/asset-audit-preactivation.json
+            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
+            apps/react-storybook/test-results/cloudflare-migration/summary.json
+            apps/react-storybook/test-results/cloudflare-migration/*.log
+          retention-days: 14
+          include-hidden-files: true
+
+  typecheck:
+    name: Typecheck & API Contracts
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build typecheck package-export prerequisites
+        run: pnpm exec turbo run build --filter=@vellira-ui/icons
+
+      - name: Typecheck and API contracts
+        run: pnpm ci:typecheck
+
+  tooling:
+    name: Tooling & IndexNow Tests
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tooling dist-fallback prerequisites
+        run: >-
+          pnpm exec turbo run build
+          --filter=@vellira-ui/react
+          --filter=@vellira-ui/react-native
+          --filter=@vellira-ui/icons
+
+      - name: Tooling tests
+        run: pnpm test:tooling
+
+      - name: IndexNow tests
+        run: node --test scripts/submit-indexnow.test.mjs
+
+  ci:
+    name: Build, Test & Validate
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Build packages and apps
         run: pnpm ci:build
 
@@ -234,15 +327,6 @@ jobs:
 
       - name: Build docs
         run: pnpm docs:build
-
-      - name: Typecheck
-        run: pnpm ci:typecheck
-
-      - name: Tooling tests
-        run: pnpm test:tooling
-
-      - name: IndexNow tests
-        run: node --test scripts/submit-indexnow.test.mjs
 
       - name: Tests and coverage
         run: pnpm ci:test
