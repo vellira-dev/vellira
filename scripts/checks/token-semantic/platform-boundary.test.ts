@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   auditComponentPlatformBoundary,
+  auditPlatformBoundarySource,
   checkTokenPlatformBoundary,
 } from './platform-boundary';
 
@@ -10,11 +11,11 @@ function audit(components: unknown) {
 }
 
 describe('platform boundary audit adapter', () => {
-  it('checks all maintained themes through the shared authority', () => {
+  it('checks canonical, platform-output, and Generator V2 surfaces completely', () => {
     const report = checkTokenPlatformBoundary();
     expect(report.checked).toBeGreaterThan(0);
     expect(report.findings).toEqual([]);
-    expect(report.coverage).toBe('partial');
+    expect(report.coverage).toBe('complete');
   });
 
   it('accepts renderer-neutral geometry and atomic intents', () => {
@@ -62,6 +63,32 @@ describe('platform boundary audit adapter', () => {
   it('detects renderer-specific shadows inside arrays', () => {
     const report = audit({ probe: [{ shadow: '0 0 8px black' }] });
     expect(report.findings[0].tokenPath).toBe('components.probe.0.shadow');
+  });
+
+  it('guards Generator V2 source against renderer-specific canonical keys', () => {
+    const findings = auditPlatformBoundarySource(
+      'scripts/generators/component/templates/probe.ts',
+      `const token = { web: 'x', nativeMaxHeight: 400 };`
+    );
+
+    expect(findings).toHaveLength(2);
+    expect(findings.map((finding) => finding.code)).toEqual([
+      'generator-renderer-key',
+      'generator-renderer-key',
+    ]);
+    expect(findings.map((finding) => finding.sourcePath)).toEqual([
+      'scripts/generators/component/templates/probe.ts',
+      'scripts/generators/component/templates/probe.ts',
+    ]);
+  });
+
+  it('does not treat renderer-neutral intent names as renderer keys', () => {
+    expect(
+      auditPlatformBoundarySource(
+        'scripts/generators/component/templates/probe.ts',
+        `const token = { maxHeight: { kind: 'viewport-height', ratio: 0.9 } };`
+      )
+    ).toEqual([]);
   });
 
   it('rejects empty inventories instead of claiming a clean scan', () => {
