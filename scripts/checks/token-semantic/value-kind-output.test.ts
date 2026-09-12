@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  auditGeneratedCssBytes,
+  auditGeneratedCssOutput,
   auditGeneratorValueKindIntegration,
   auditRegistryParity,
   checkTokenValueKindOutputs,
@@ -34,15 +34,24 @@ describe('token value-kind output audit', () => {
     ]);
   });
 
-  it('rejects stale committed generated CSS', () => {
-    expect(
-      auditGeneratedCssBytes({
-        generated: ':root {\n  --scale: 0.98;\n}\n',
-        committed: ':root {\n  --scale: 0.98px;\n}\n',
-      })
-    ).toEqual([
-      expect.objectContaining({ code: 'generated-css-stale' }),
+  it('rejects CSS blocks that serialize a unitless value with px', () => {
+    const output = new Map([
+      [
+        'components.probe.scale',
+        { variable: '--components-probe-scale', value: '0.98' },
+      ],
     ]);
+
+    expect(
+      auditGeneratedCssOutput({
+        generated: ':root {\n  --components-probe-scale: 0.98px;\n}\n',
+        blocks: [{ selector: ':root', output }],
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'generated-css-output-drift' }),
+      ])
+    );
   });
 
   it('rejects Generator V2 source that stops delegating numeric roles', () => {
