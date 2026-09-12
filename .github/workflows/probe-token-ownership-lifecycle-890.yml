@@ -164,6 +164,8 @@ jobs:
           scripts/checks/token-ownership/checker.ts
           scripts/checks/token-ownership/role-lifecycle.test.ts
           scripts/generators/component/token-ownership-contract.test.ts
+          scripts/checks/token-semantic/checker.ts
+          scripts/checks/token-semantic/ownership-coverage.test.ts
       - name: Validate ownership and generator regressions
         run: >-
           pnpm exec vitest run --config vitest.tooling.config.ts
@@ -171,6 +173,7 @@ jobs:
           scripts/checks/token-ownership/role-lifecycle.test.ts
           scripts/generators/component/token-ownership-contract.test.ts
           scripts/checks/token-semantic/semantic-vocabulary.test.ts
+          scripts/checks/token-semantic/ownership-coverage.test.ts
       - name: Validate semantic audit
         run: pnpm check:tokens-semantic:json > token-semantic-report.json
       - name: Build repository
@@ -192,6 +195,8 @@ jobs:
             scripts/token-lifecycle/component-ownership.ts \
             scripts/checks/token-ownership/checker.ts \
             scripts/checks/token-ownership/role-lifecycle.test.ts \
-            scripts/generators/component/token-ownership-contract.test.ts
-          git commit -m 'test(tokens): validate ownership lifecycle coverage'
+            scripts/generators/component/token-ownership-contract.test.ts \
+            scripts/checks/token-semantic/checker.ts \
+            scripts/checks/token-semantic/ownership-coverage.test.ts
+          git commit -m 'style(tokens): format complete ownership coverage'
           git push origin HEAD:probe/token-ownership-lifecycle-890-11404013
