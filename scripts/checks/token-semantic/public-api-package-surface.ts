@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { componentTokenWebCompatibilityAliases } from '../../../packages/tokens/src/platform-output/component-token-web-compatibility';
+import {
+  componentTokenWebCompatibilityAliases,
+} from '../../../packages/tokens/src/platform-output/component-token-web-compatibility';
 import {
   legacyPublicExportAliasesV1,
   tokenPackagePublicSurfaceV1,
@@ -186,7 +188,9 @@ export function checkTokenPackagePublicSurface(root: string): {
     fs.readFileSync(path.join(root, 'packages/tokens/package.json'), 'utf8')
   ) as PackageJsonPublicSurface;
   const findings = auditTokenPackagePublicSurface(packageJson);
-  const expectedSubpathCount = Object.keys(tokenPackagePublicSurfaceV1.exports).length;
+  const expectedSubpathCount = Object.keys(
+    tokenPackagePublicSurfaceV1.exports
+  ).length;
   let checked = 2 + expectedSubpathCount;
 
   if (typeof packageJson.version !== 'string') {

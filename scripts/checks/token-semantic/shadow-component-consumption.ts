@@ -1,7 +1,9 @@
 import { darkTheme } from '../../../packages/tokens/src/dark/theme';
 import { highContrastTheme } from '../../../packages/tokens/src/highContrast/theme';
 import { lightTheme } from '../../../packages/tokens/src/light/theme';
-import { isComponentPlatformIntent } from '../../../packages/tokens/src/platform-output/component-token-intents';
+import {
+  isComponentPlatformIntent,
+} from '../../../packages/tokens/src/platform-output/component-token-intents';
 import type { FindingInput } from './contract';
 
 const requiredShadowConsumers = [
@@ -50,7 +52,11 @@ function finding(
 function readPath(value: unknown, segments: readonly string[]): unknown {
   let current = value;
   for (const segment of segments) {
-    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
+    if (
+      typeof current !== 'object' ||
+      current === null ||
+      Array.isArray(current)
+    ) {
       return undefined;
     }
     current = (current as Record<string, unknown>)[segment];
