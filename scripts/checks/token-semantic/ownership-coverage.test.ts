@@ -26,6 +26,9 @@ describe('token semantic ownership coverage', () => {
     const publicApi = report.coverage.find(
       ({ ruleId }) => ruleId === 'tokens.public-api'
     );
+    const consumerReference = report.coverage.find(
+      ({ ruleId }) => ruleId === 'tokens.consumer-reference'
+    );
 
     expect(componentOwnership).toMatchObject({ coverage: 'complete' });
     expect(componentOwnership?.checked).toBeGreaterThan(15);
@@ -41,15 +44,17 @@ describe('token semantic ownership coverage', () => {
     expect(shadowAuthority?.checked).toBeGreaterThan(50);
     expect(publicApi).toMatchObject({ coverage: 'complete' });
     expect(publicApi?.checked).toBeGreaterThan(50);
+    expect(consumerReference).toMatchObject({ coverage: 'complete' });
+    expect(consumerReference?.checked).toBeGreaterThan(80);
     expect(report.summary).toMatchObject({
       requiredRules: 12,
-      completeRules: 11,
-      incompleteRules: 1,
+      completeRules: 12,
+      incompleteRules: 0,
       runtimeErrors: 0,
       errors: 0,
       warnings: 0,
     });
-    expect(report.status).toBe('incomplete');
+    expect(report.status).toBe('pass');
     expect(report.findings).toEqual([]);
   }, 30_000);
 });

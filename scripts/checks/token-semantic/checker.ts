@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { assertComponentTokenLifecycleCanMaterialize } from '../../generators/component/token-lifecycle-contract';
 import { checkTokenOwnership } from '../token-ownership/checker';
 import type { TokenOwnershipReport } from '../token-ownership/checker';
+import { checkTokenCssReferencesComplete } from './consumer-reference-completeness';
 import { runTokenSemanticAudit } from './contract';
 import type { FindingInput, RuleAdapter, RuleResult } from './contract';
-import { checkTokenCssReferences } from './css-repository';
 import { checkTokenFactoryConventions } from './factory-convention';
 import { checkTokenPlatformBoundary } from './platform-boundary';
 import { checkTokenPublicApi } from './public-api';
@@ -184,7 +184,7 @@ export function checkTokenSemantics(root: string) {
     { ruleId: 'tokens.namespace-lifecycle', run: () => ownershipRule(true) },
     {
       ruleId: 'tokens.consumer-reference',
-      run: () => checkTokenCssReferences(root),
+      run: () => checkTokenCssReferencesComplete(root),
     },
   ];
   return runTokenSemanticAudit(adapters);
