@@ -42,10 +42,11 @@ test('R2 S3 signer binds method, encoded bucket/key, body and metadata', () => {
   );
 });
 
-test('R2 credentials derive S3 keys from the verified Cloudflare API token', async () => {
+test('R2 credentials combine verified Cloudflare token ID with pre-derived protocol secret', async () => {
   const token = 'test-cloudflare-api-token';
   let authorization;
   const credentials = await resolveR2S3Credentials(token, {
+    secretAccessKey,
     fetchImpl: async (_url, options) => {
       authorization = options.headers.Authorization;
       return new Response(
@@ -59,9 +60,18 @@ test('R2 credentials derive S3 keys from the verified Cloudflare API token', asy
   });
   assert.equal(authorization, `Bearer ${token}`);
   assert.equal(credentials.accessKeyId, accessKeyId);
-  assert.equal(
-    credentials.secretAccessKey,
-    'c7562ddc404e7d4b48ea0f613f113d2a692a6215d7623e133b100267239995cd'
+  assert.equal(credentials.secretAccessKey, secretAccessKey);
+});
+
+test('R2 credentials fail closed without the protocol-derived secret', async () => {
+  await assert.rejects(
+    resolveR2S3Credentials('test-cloudflare-api-token', {
+      secretAccessKey: '',
+      fetchImpl: async () => {
+        throw new Error('verification request must not run');
+      },
+    }),
+    /CLOUDFLARE_R2_SECRET_ACCESS_KEY/
   );
 });
 
