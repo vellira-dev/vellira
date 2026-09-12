@@ -23,19 +23,15 @@ function createRequiredConsumerFixture() {
 }
 
 describe('component shadow consumption audit', () => {
-  it(
-    'proves all maintained #885 component consumers use canonical shadow intents',
-    () => {
-      const result = checkComponentShadowConsumers();
-      expect(result.checked).toBeGreaterThan(15);
-      expect(result.findings).toEqual([]);
-    }
-  );
+  it('proves all maintained #885 component consumers use canonical shadow intents', () => {
+    const result = checkComponentShadowConsumers();
+    expect(result.checked).toBeGreaterThan(15);
+    expect(result.findings).toEqual([]);
+  });
 
   it('rejects an authored component shadow value', () => {
     const components = createRequiredConsumerFixture();
-    components.tooltip.content.shadow =
-      '0 1px 2px rgba(0, 0, 0, 0.2)' as never;
+    components.tooltip.content.shadow = '0 1px 2px rgba(0, 0, 0, 0.2)' as never;
 
     const result = auditComponentShadowConsumers(
       components,

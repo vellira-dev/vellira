@@ -1,9 +1,7 @@
 import { darkTheme } from '../../../packages/tokens/src/dark/theme';
 import { highContrastTheme } from '../../../packages/tokens/src/highContrast/theme';
 import { lightTheme } from '../../../packages/tokens/src/light/theme';
-import {
-  isComponentPlatformIntent,
-} from '../../../packages/tokens/src/platform-output/component-token-intents';
+import { isComponentPlatformIntent } from '../../../packages/tokens/src/platform-output/component-token-intents';
 import type { FindingInput } from './contract';
 
 const requiredShadowConsumers = [

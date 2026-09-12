@@ -1,9 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  componentTokenWebCompatibilityAliases,
-} from '../../../packages/tokens/src/platform-output/component-token-web-compatibility';
+import { componentTokenWebCompatibilityAliases } from '../../../packages/tokens/src/platform-output/component-token-web-compatibility';
 import {
   legacyPublicExportAliasesV1,
   tokenPackagePublicSurfaceV1,
@@ -63,7 +61,9 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value) ?? 'undefined';
 }
 
-function parseVersion(version: string): readonly [number, number, number] | null {
+function parseVersion(
+  version: string
+): readonly [number, number, number] | null {
   const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(version);
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])] as const;
