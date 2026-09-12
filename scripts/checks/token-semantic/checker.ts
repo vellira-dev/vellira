@@ -12,6 +12,7 @@ import { checkTokenPlatformBoundary } from './platform-boundary';
 import { checkTokenPublicApi } from './public-api';
 import { checkTokenSemanticDependencies } from './semantic-dependency';
 import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
+import { checkComponentShadowConsumers } from './shadow-component-consumption';
 import { checkTokenShadowAuthority } from './shadow-authority';
 import { checkTokenStateVocabulary } from './state-vocabulary';
 import { checkTokenValueKinds } from './value-kind-repository';
@@ -92,6 +93,20 @@ export function checkTokenSemantics(root: string) {
       findings,
     };
   }
+
+  function shadowAuthorityRule(): RuleResult {
+    const authority = checkTokenShadowAuthority(root);
+    const consumers = checkComponentShadowConsumers();
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #885 unified shadow authority: canonical structured effects, Web semantic/focus derivation, React Native approximation resolution, required Tooltip/Popover/Modal/Dropdown/Select canonical shadow intents, repository-wide component shadow-key/renderer-field inspection, and known compatibility/output bypasses. Renderer-neutral adaptation and resolved value preservation remain separately enforced by complete tokens.platform-boundary (#884) and tokens.visual-preservation (#880), matching #885 acceptance without duplicating those rules.',
+      checked: authority.checked + consumers.checked,
+      findings: [...authority.findings, ...consumers.findings],
+    };
+  }
+
   const adapters: RuleAdapter[] = [
     { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
     {
@@ -117,7 +132,7 @@ export function checkTokenSemantics(root: string) {
     },
     {
       ruleId: 'tokens.shadow-authority',
-      run: () => checkTokenShadowAuthority(root),
+      run: shadowAuthorityRule,
     },
     {
       ruleId: 'tokens.visual-preservation',
