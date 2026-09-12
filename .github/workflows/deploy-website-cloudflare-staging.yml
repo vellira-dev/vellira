@@ -1,9 +1,9 @@
 name: Deploy Website Cloudflare Staging
 
 on:
-  push:
-    branches:
-      - feat/website-cloudflare-staging
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
@@ -18,10 +18,12 @@ on:
       - 'patches/**'
       - 'turbo.json'
       - '.github/workflows/deploy-website-cloudflare-staging.yml'
+      - '.github/workflows/deploy-website-cloudflare-production.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: deploy-worker-vellira-website-staging
@@ -30,16 +32,41 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
-  VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  VELLIRA_BUILD_ID: ${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   deploy:
-    name: Build, deploy, and verify website staging
+    name: Build, deploy, and verify exact PR head on website staging
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Mark exact PR head staging validation pending
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --method POST
+          "repos/$GITHUB_REPOSITORY/statuses/$PR_HEAD_SHA"
+          -f state=pending
+          -f context=cloudflare/staging
+          -f description='Exact PR head staging validation is running'
+          -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Checkout exact candidate revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.PR_HEAD_SHA }}
+
+      - name: Verify exact PR head checkout
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$PR_HEAD_SHA"
+          echo "Validated exact PR HEAD: $actual"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -196,6 +223,48 @@ jobs:
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
 
+      - name: Record exact-head staging evidence
+        if: success()
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs/promises';
+
+          const build = JSON.parse(
+            await fs.readFile('apps/website/.open-next/vellira-build.json', 'utf8')
+          );
+          const runtimeResponse = await fetch(
+            new URL('/__vellira_runtime', process.env.STAGING_URL),
+            { cache: 'no-store' }
+          );
+          assert.equal(runtimeResponse.status, 200);
+          const runtime = await runtimeResponse.json();
+          assert.equal(runtime.buildId, build.buildId);
+          assert.ok(runtime.workerVersion);
+
+          const evidence = {
+            schemaVersion: 1,
+            prNumber: Number(process.env.PR_NUMBER || 0),
+            prHeadSha: process.env.PR_HEAD_SHA,
+            buildId: build.buildId,
+            workerVersion: runtime.workerVersion,
+            stagingUrl: process.env.STAGING_URL,
+            runId: Number(process.env.GITHUB_RUN_ID),
+            runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            repository: process.env.GITHUB_REPOSITORY,
+          };
+
+          await fs.writeFile(
+            'apps/website/.open-next/staging-evidence.json',
+            `${JSON.stringify(evidence, null, 2)}\n`
+          );
+          console.log(JSON.stringify(evidence));
+          NODE
+
       - name: Retain asset and browser forensic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -213,8 +282,32 @@ jobs:
             apps/website/.open-next/vellira-build.json
             apps/website/.open-next/runtime-contract.json
             apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/staging-evidence.json
             apps/website/.open-next/cache/
             apps/website/.next/*manifest.json
             apps/website/.next/BUILD_ID
             apps/website/.next/server/**/*manifest*
             apps/website/.next/static/chunks/webpack-*.js
+
+      - name: Publish exact PR head staging status
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$JOB_STATUS" == 'success' ]]; then
+            state=success
+            description='Exact PR head passed Cloudflare staging validation'
+          else
+            state=failure
+            description='Exact PR head failed Cloudflare staging validation'
+          fi
+
+          gh api --method POST \
+            "repos/$GITHUB_REPOSITORY/statuses/$PR_HEAD_SHA" \
+            -f state="$state" \
+            -f context=cloudflare/staging \
+            -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
