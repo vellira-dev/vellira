@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.104.6",
+  "version": "2.104.7",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
