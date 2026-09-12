@@ -11,6 +11,13 @@ const DEFAULT_MAX_ATTEMPTS = 4;
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const hmac = (key, value) => createHmac('sha256', key).update(value).digest();
 
+function deriveR2SecretAccessKey(apiToken) {
+  // Cloudflare R2 defines the S3 Secret Access Key as SHA-256(API token value).
+  // This is protocol-defined credential derivation, not password storage.
+  // codeql[js/insufficient-password-hash]
+  return createHash('sha256').update(apiToken.trim()).digest('hex');
+}
+
 function encodePathPart(value) {
   return encodeURIComponent(value).replace(/[!'()*]/g, (character) =>
     `%${character.charCodeAt(0).toString(16).toUpperCase()}`
@@ -141,7 +148,7 @@ export async function resolveR2S3Credentials(
   );
   return {
     accessKeyId,
-    secretAccessKey: sha256(apiToken.trim()),
+    secretAccessKey: deriveR2SecretAccessKey(apiToken),
   };
 }
 
