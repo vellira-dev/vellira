@@ -24,6 +24,7 @@ import {
   reserveTokenLifecycleFixture,
 } from '../../token-lifecycle/fixtures/lifecycle';
 import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
+import { auditComponentTokenOwnershipParity } from '../../token-lifecycle/component-ownership';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -54,24 +55,19 @@ function fixture(componentName = 'FutureExample') {
 
 describe('Generator V2 token ownership authority', () => {
   it('keeps every current metadata-backed token family aligned with componentMetadata', () => {
-    const tokenMetadata = componentMetadata.filter(
-      (metadata) => metadata.requirements?.componentTokens !== false
-    );
-    const metadataNames = tokenMetadata.map((metadata) => metadata.name).sort();
-    const currentMetadataOwners = Object.entries(componentTokenLifecycle)
-      .filter(
-        ([, lifecycle]) => lifecycle.status === 'current' && lifecycle.public
-      )
-      .map(([name]) => name)
-      .sort();
+    const parity = auditComponentTokenOwnershipParity({
+      metadata: componentMetadata,
+      lifecycle: componentTokenLifecycle,
+    });
 
-    expect(currentMetadataOwners).toEqual(metadataNames);
+    expect(parity.findings).toEqual([]);
+    expect(parity.currentTokenFamilies).toEqual(parity.metadataTokenFamilies);
 
-    for (const metadata of tokenMetadata) {
-      expect(getComponentTokenLifecycle(metadata.name)).toMatchObject({
+    for (const componentName of parity.metadataTokenFamilies) {
+      expect(getComponentTokenLifecycle(componentName)).toMatchObject({
         status: 'current',
         public: true,
-        owner: metadata.name,
+        owner: componentName,
       });
     }
   });
