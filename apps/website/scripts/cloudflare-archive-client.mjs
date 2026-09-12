@@ -14,8 +14,9 @@ const hmac = (key, value) => createHmac('sha256', key).update(value).digest();
 function deriveR2SecretAccessKey(apiToken) {
   // Cloudflare R2 defines the S3 Secret Access Key as SHA-256(API token value).
   // This is protocol-defined credential derivation, not password storage.
-  // codeql[js/insufficient-password-hash]
-  return createHash('sha256').update(apiToken.trim()).digest('hex');
+  return createHash('sha256')
+    .update(apiToken.trim()) // codeql[js/insufficient-password-hash]
+    .digest('hex');
 }
 
 function encodePathPart(value) {
