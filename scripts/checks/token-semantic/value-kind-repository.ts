@@ -53,9 +53,7 @@ function finding(
   };
 }
 
-function renderVariables(
-  output: ReadonlyMap<string, CssOutputEntry>
-): string {
+function renderVariables(output: ReadonlyMap<string, CssOutputEntry>): string {
   let css = '';
   for (const { variable, value } of output.values()) {
     css += `  ${variable}: ${value};\n`;

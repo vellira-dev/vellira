@@ -76,6 +76,10 @@ export function auditSelectedCompoundStateGrammar(): {
   const sourcePath = 'packages/tokens/src/interaction-state-contract.ts';
   const grammar = selectedCompoundStateGrammarV1;
   const grammarStates = Object.keys(grammar);
+  const persistentActiveDomains: readonly {
+    readonly pattern: string;
+    readonly meaning: string;
+  }[] = legitimatePersistentActiveStateDomainsV1;
 
   checked += 1;
   if (!sameStrings(grammarStates, canonicalInteractionStates)) {
@@ -141,7 +145,7 @@ export function auditSelectedCompoundStateGrammar(): {
   }
 
   checked += 1;
-  if (legitimatePersistentActiveStateDomainsV1.length === 0) {
+  if (persistentActiveDomains.length === 0) {
     findings.push(
       finding(
         'compound-active-domain-authority-missing',
@@ -196,7 +200,8 @@ export function auditPlatformInteractionStateContract(): {
       expected: 'Web hover must map to the pointer :hover state.',
     },
     {
-      ok: web.pressed.support === 'required' && web.pressed.signal === ':active',
+      ok:
+        web.pressed.support === 'required' && web.pressed.signal === ':active',
       code: 'web-pressed-mapping-drift',
       platform: 'web',
       evidence: JSON.stringify(web.pressed),

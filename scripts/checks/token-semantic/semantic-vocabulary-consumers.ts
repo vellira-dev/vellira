@@ -9,17 +9,19 @@ import { darkTheme } from '../../../packages/tokens/src/dark/theme';
 import { highContrastTheme } from '../../../packages/tokens/src/highContrast/theme';
 import { lightTheme } from '../../../packages/tokens/src/light/theme';
 import { tokenMigrationManifestV1 } from '../../../packages/tokens/src/preservation/token-migrations';
+import type {
+  TokenMigrationEntry,
+  TokenPlatformRepresentationMigration,
+  TokenRemovalMigration,
+  TokenRenameMigration,
+} from '../../../packages/tokens/src/preservation/token-migrations';
 import type { FindingInput } from './contract';
 
-type DeprecatedSemanticMigration = Extract<
-  (typeof tokenMigrationManifestV1)[number],
-  { kind: 'rename' | 'remove' }
->;
+type DeprecatedSemanticMigration = TokenRenameMigration | TokenRemovalMigration;
 
-type WebSemanticIdentityMigration = Extract<
-  (typeof tokenMigrationManifestV1)[number],
-  { kind: 'representation-change'; layer: 'platform-output' }
-> & { to: string };
+type WebSemanticIdentityMigration = TokenPlatformRepresentationMigration & {
+  to: string;
+};
 
 const sourceRoots = ['apps', 'packages'] as const;
 const sourceExtensions = new Set(['.ts', '.tsx', '.css', '.scss']);
@@ -65,9 +67,8 @@ export function semanticPathToCssVariable(tokenPath: string): string {
 }
 
 function getSemanticMigrations() {
-  const issueMigrations = tokenMigrationManifestV1.filter(
-    (migration) => migration.issue === '#883'
-  );
+  const issueMigrations: readonly TokenMigrationEntry[] =
+    tokenMigrationManifestV1.filter((migration) => migration.issue === '#883');
   const deprecated = issueMigrations.filter(
     (migration): migration is DeprecatedSemanticMigration =>
       migration.kind === 'rename' || migration.kind === 'remove'
@@ -130,7 +131,8 @@ export function auditDeprecatedSemanticConsumerSource(
   deprecatedPaths?: readonly string[]
 ): FindingInput[] {
   const paths =
-    deprecatedPaths ?? getSemanticMigrations().deprecated.map(({ from }) => from);
+    deprecatedPaths ??
+    getSemanticMigrations().deprecated.map(({ from }) => from);
   const findings: FindingInput[] = [];
 
   for (const tokenPath of paths) {
@@ -167,7 +169,7 @@ export function auditSemanticWebMigrationIdentity(): {
   ] as const;
 
   const canonicalRenames = deprecated.filter(
-    (migration): migration is Extract<DeprecatedSemanticMigration, { kind: 'rename' }> =>
+    (migration): migration is TokenRenameMigration =>
       migration.kind === 'rename'
   );
 

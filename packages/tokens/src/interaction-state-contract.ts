@@ -121,7 +121,8 @@ export const interactionStatePlatformContractV1 = {
     hover: {
       support: 'optional',
       signal: 'pointer-hover-when-capable',
-      meaning: 'Optional pointer hover on targets that expose hover capability.',
+      meaning:
+        'Optional pointer hover on targets that expose hover capability.',
     },
     pressed: {
       support: 'required',

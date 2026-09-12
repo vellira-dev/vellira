@@ -53,6 +53,9 @@ export function componentProductionRequiresTokenSemanticGate(
 export function componentProductionFinalValidationCommands(
   input: ComponentProductionInputV1
 ): readonly ComponentProductionFinalCommand[] {
+  const toolingCommand = componentProductionRequiresTokenSemanticGate(input)
+    ? 'test:tooling:readiness'
+    : 'test:tooling';
   const commands: ComponentProductionFinalCommand[] = [
     {
       id: 'public-api',
@@ -63,19 +66,10 @@ export function componentProductionFinalValidationCommands(
     {
       id: 'tooling-contracts',
       stage: 'tooling',
-      command: ['pnpm', 'test:tooling'],
-      timeoutMs: 300_000,
+      command: ['pnpm', toolingCommand],
+      timeoutMs: 420_000,
     },
   ];
-
-  if (componentProductionRequiresTokenSemanticGate(input)) {
-    commands.push({
-      id: 'token-semantic-architecture',
-      stage: 'tooling',
-      command: ['pnpm', 'check:tokens-semantic:strict'],
-      timeoutMs: 120_000,
-    });
-  }
 
   if (input.platform === 'web' || input.platform === 'both') {
     commands.push({
@@ -264,12 +258,14 @@ function runStage(params: {
     }
 
     if (execution.exitCode !== 0) {
+      const ruleId = semanticRuleIdForFailure(command, execution);
       findings.push({
         id: `${params.stageId}:${command.id}`,
         stage: params.stageId,
         severity: 'blocking',
         message: validationFailureMessage(command, execution),
         ...(command.platform ? { platform: command.platform } : {}),
+        ...(ruleId ? { ruleId } : {}),
       });
     }
   }
@@ -314,6 +310,18 @@ function skippedStage(
     findings: [],
     artifacts: [],
   };
+}
+
+function semanticRuleIdForFailure(
+  command: ComponentProductionFinalCommand,
+  execution: ComponentProductionFinalCommandExecution
+): string | undefined {
+  if (command.id !== 'tooling-contracts') return undefined;
+
+  const output = [execution.stdout, execution.stderr].join('\n');
+  return output.includes('Token semantic audit:')
+    ? 'tokens.semantic-architecture'
+    : undefined;
 }
 
 function validationFailureMessage(

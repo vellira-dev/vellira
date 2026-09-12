@@ -19,18 +19,21 @@ describe('maintained value-kind inventory', () => {
     30_000
   );
 
-  it('fails closed when emitted generated CSS diverges from canonical output maps', () => {
-    const result = auditGeneratedTokenCssOutput('/* stale CSS */\n');
-    expect(result.checked).toBe(1);
-    expect(result.findings).toHaveLength(1);
-    expect(result.findings[0]).toMatchObject({
-      ruleId: 'tokens.value-kind',
-      code: 'generated-css-output-drift',
-      severity: 'error',
-      sourcePath: 'packages/tokens/scripts/token-css-output.ts',
-      platform: 'web',
-    });
-  });
+  it(
+    'fails closed when emitted generated CSS diverges from canonical output maps',
+    () => {
+      const result = auditGeneratedTokenCssOutput('/* stale CSS */\n');
+      expect(result.checked).toBe(1);
+      expect(result.findings).toHaveLength(1);
+      expect(result.findings[0]).toMatchObject({
+        ruleId: 'tokens.value-kind',
+        code: 'generated-css-output-drift',
+        severity: 'error',
+        sourcePath: 'packages/tokens/scripts/token-css-output.ts',
+        platform: 'web',
+      });
+    }
+  );
 
   it('keeps the real package build wired to canonical CSS generation', () => {
     const result = auditTokenCssGenerationWiring(process.cwd());

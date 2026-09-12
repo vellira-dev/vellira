@@ -37,5 +37,7 @@ export function enforceCompleteConsumerReferenceCoverage(
 }
 
 export function checkTokenCssReferencesComplete(root: string): RuleResult {
-  return enforceCompleteConsumerReferenceCoverage(checkTokenCssReferences(root));
+  return enforceCompleteConsumerReferenceCoverage(
+    checkTokenCssReferences(root)
+  );
 }
