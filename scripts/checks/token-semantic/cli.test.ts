@@ -52,7 +52,7 @@ describe('token semantic CLI', () => {
       const boundary = report.coverage.find(
         (rule) => rule.ruleId === 'tokens.platform-boundary'
       );
-      expect(boundary?.coverage).toBe('partial');
+      expect(boundary?.coverage).toBe('complete');
       expect(boundary?.checked).toBeGreaterThan(0);
       const preservation = report.coverage.find(
         (rule) => rule.ruleId === 'tokens.visual-preservation'
