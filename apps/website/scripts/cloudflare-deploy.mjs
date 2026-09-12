@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { withRemoteArchive } from './cloudflare-archive-client.mjs';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
+import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
 import {
   archiveAssets,
   assetInventory,
@@ -82,4 +83,11 @@ run(
 run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
   ...process.env,
   OPEN_NEXT_DEPLOY: 'true',
+});
+// Cloudflare activation can propagate briefly across edges. Do not start strict
+// postflight checks until several uncached runtime executions agree on both the
+// unique build identity and one Worker version.
+await waitForRuntimeStability({
+  base,
+  expectedBuildId: identity.buildId,
 });
