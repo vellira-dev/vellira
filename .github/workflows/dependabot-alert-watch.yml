@@ -41,23 +41,32 @@ jobs:
               '
           )"
 
+          jq -e 'type == "array"' <<< "$alerts" > /dev/null
           count="$(jq 'length' <<< "$alerts")"
 
-          existing="$(
+          find_tracker() {
+            local state="$1"
             gh issue list \
               --repo "$GH_REPO" \
-              --state open \
+              --state "$state" \
               --search "\"${ISSUE_TITLE}\" in:title" \
+              --limit 100 \
               --json number,title \
               --jq ".[] | select(.title == \"${ISSUE_TITLE}\") | .number" \
               | head -n 1
-          )"
+          }
+
+          existing_open="$(find_tracker open)"
+          existing_closed=""
+          if [ -z "$existing_open" ]; then
+            existing_closed="$(find_tracker closed)"
+          fi
 
           if [ "$count" -eq 0 ]; then
             echo "No unresolved High/Critical Dependabot alerts."
 
-            if [ -n "$existing" ]; then
-              gh issue close "$existing" \
+            if [ -n "$existing_open" ]; then
+              gh issue close "$existing_open" \
                 --repo "$GH_REPO" \
                 --comment "All High/Critical Dependabot alerts have been resolved automatically."
             fi
@@ -84,10 +93,20 @@ jobs:
             echo "_Last checked: $(date -u '+%Y-%m-%d %H:%M UTC')_"
           } > /tmp/dependabot-alerts.md
 
-          if [ -n "$existing" ]; then
-            echo "Updating issue #${existing}."
+          if [ -n "$existing_open" ]; then
+            echo "Updating open issue #${existing_open}."
 
-            gh issue edit "$existing" \
+            gh issue edit "$existing_open" \
+              --repo "$GH_REPO" \
+              --body-file /tmp/dependabot-alerts.md
+          elif [ -n "$existing_closed" ]; then
+            echo "Reopening and updating closed issue #${existing_closed}."
+
+            gh issue reopen "$existing_closed" \
+              --repo "$GH_REPO" \
+              --comment "High/Critical Dependabot alerts remain unresolved; reopening this launch security gate automatically."
+
+            gh issue edit "$existing_closed" \
               --repo "$GH_REPO" \
               --body-file /tmp/dependabot-alerts.md
           else
