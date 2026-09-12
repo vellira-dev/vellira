@@ -12,6 +12,7 @@ import { checkTokenPlatformBoundary } from './platform-boundary';
 import { checkTokenPublicApi } from './public-api';
 import { checkTokenPackagePublicSurface } from './public-api-package-surface';
 import { checkTokenSemanticDependencies } from './semantic-dependency';
+import { checkTokenSemanticVocabularyCompletion } from './semantic-vocabulary-consumers';
 import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
 import { checkComponentShadowConsumers } from './shadow-component-consumption';
 import { checkTokenShadowAuthority } from './shadow-authority';
@@ -135,6 +136,19 @@ export function checkTokenSemantics(root: string) {
     };
   }
 
+  function semanticVocabularyRule(): RuleResult {
+    const authority = checkTokenSemanticVocabulary();
+    const completion = checkTokenSemanticVocabularyCompletion(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #883 Semantic Vocabulary V1: namespace purposes/roles, canonical role paths across all maintained themes, deterministic rename/removal migrations, production-consumer exclusion of deprecated semantic identities, and exact generated Web CSS baseline-to-final migration identity. Semantic component dependency correctness remains separately enforced by complete tokens.semantic-dependency (#888), while resolved-value preservation remains owned by complete tokens.visual-preservation (#880).',
+      checked: authority.checked + completion.checked,
+      findings: [...authority.findings, ...completion.findings],
+    };
+  }
+
   const adapters: RuleAdapter[] = [
     { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
     {
@@ -143,7 +157,7 @@ export function checkTokenSemantics(root: string) {
     },
     {
       ruleId: 'tokens.semantic-vocabulary',
-      run: checkTokenSemanticVocabulary,
+      run: semanticVocabularyRule,
     },
     {
       ruleId: 'tokens.factory-convention',
