@@ -11,14 +11,6 @@ const DEFAULT_MAX_ATTEMPTS = 4;
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const hmac = (key, value) => createHmac('sha256', key).update(value).digest();
 
-function deriveR2SecretAccessKey(apiToken) {
-  // Cloudflare R2 defines the S3 Secret Access Key as SHA-256(API token value).
-  // This is protocol-defined credential derivation, not password storage.
-  return createHash('sha256')
-    .update(apiToken.trim()) // codeql[js/insufficient-password-hash]
-    .digest('hex');
-}
-
 function encodePathPart(value) {
   return encodeURIComponent(value).replace(/[!'()*]/g, (character) =>
     `%${character.charCodeAt(0).toString(16).toUpperCase()}`
@@ -123,11 +115,21 @@ export function signR2S3Request({
 
 export async function resolveR2S3Credentials(
   apiToken,
-  { fetchImpl = fetch, signal } = {}
+  {
+    fetchImpl = fetch,
+    signal,
+    secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  } = {}
 ) {
-  assert.ok(apiToken?.trim(), 'CLOUDFLARE_API_TOKEN is required');
+  const token = apiToken?.trim();
+  assert.ok(token, 'CLOUDFLARE_API_TOKEN is required');
+  assert.match(
+    secretAccessKey ?? '',
+    /^[a-f0-9]{64}$/,
+    'CLOUDFLARE_R2_SECRET_ACCESS_KEY must be the protocol-defined SHA-256 of CLOUDFLARE_API_TOKEN'
+  );
   const response = await fetchImpl(TOKEN_VERIFY_URL, {
-    headers: { Authorization: `Bearer ${apiToken}` },
+    headers: { Authorization: `Bearer ${token}` },
     signal,
   });
   if (!response.ok) {
@@ -147,10 +149,7 @@ export async function resolveR2S3Credentials(
     'disabled',
     'Cloudflare token is disabled'
   );
-  return {
-    accessKeyId,
-    secretAccessKey: deriveR2SecretAccessKey(apiToken),
-  };
+  return { accessKeyId, secretAccessKey };
 }
 
 function shouldRetry(errorOrStatus) {
@@ -308,6 +307,8 @@ export async function withRemoteArchive(config, operation, options = {}) {
     (await resolveR2S3Credentials(apiToken, {
       fetchImpl,
       signal: AbortSignal.timeout(15_000),
+      secretAccessKey:
+        options.secretAccessKey ?? process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
     }));
   const bucket = createR2S3Bucket({
     accountId,
