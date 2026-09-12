@@ -44,6 +44,12 @@ export type ComponentProductionFinalValidationResult = {
   stages: readonly ComponentProductionStageResult[];
 };
 
+export function componentProductionRequiresTokenSemanticGate(
+  input: ComponentProductionInputV1
+): boolean {
+  return input.componentTokens !== false || (input.tokens?.length ?? 0) > 0;
+}
+
 export function componentProductionFinalValidationCommands(
   input: ComponentProductionInputV1
 ): readonly ComponentProductionFinalCommand[] {
@@ -61,6 +67,15 @@ export function componentProductionFinalValidationCommands(
       timeoutMs: 300_000,
     },
   ];
+
+  if (componentProductionRequiresTokenSemanticGate(input)) {
+    commands.push({
+      id: 'token-semantic-architecture',
+      stage: 'tooling',
+      command: ['pnpm', 'check:tokens-semantic:strict'],
+      timeoutMs: 120_000,
+    });
+  }
 
   if (input.platform === 'web' || input.platform === 'both') {
     commands.push({

@@ -1,5 +1,9 @@
 import { parseComponentGeneratorArgs } from './cli';
 import { runComponentGenerator } from './run';
+import {
+  assertComponentGeneratorTokenSemanticReadiness,
+  componentGeneratorCheckRequiresTokenSemanticGate,
+} from './token-semantic-readiness';
 
 let options;
 
@@ -17,6 +21,15 @@ try {
   });
 
   if (result.check) {
+    if (
+      componentGeneratorCheckRequiresTokenSemanticGate({
+        componentTokens: result.plan.componentTokens,
+        requestedTokens: options.tokens,
+      })
+    ) {
+      await assertComponentGeneratorTokenSemanticReadiness(process.cwd());
+    }
+
     console.log(
       `Component generator check passed for ${result.plan.componentName}.`
     );

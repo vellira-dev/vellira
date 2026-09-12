@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ComponentProductionInputV1 } from './contracts';
 import {
   componentProductionFinalValidationCommands,
+  componentProductionRequiresTokenSemanticGate,
   runComponentProductionFinalValidation,
   type ComponentProductionFinalCommandExecution,
 } from './final-validation';
@@ -20,7 +21,8 @@ const WEB_INPUT: ComponentProductionInputV1 = {
 };
 
 describe('componentProductionFinalValidationCommands', () => {
-  it('selects canonical Web final gates', () => {
+  it('selects canonical Web final gates including token semantic architecture', () => {
+    expect(componentProductionRequiresTokenSemanticGate(WEB_INPUT)).toBe(true);
     expect(
       componentProductionFinalValidationCommands(WEB_INPUT).map(
         (command) => command.id
@@ -28,6 +30,7 @@ describe('componentProductionFinalValidationCommands', () => {
     ).toEqual([
       'public-api',
       'tooling-contracts',
+      'token-semantic-architecture',
       'canonical-web-visual',
       'web-smoke',
     ]);
@@ -39,7 +42,12 @@ describe('componentProductionFinalValidationCommands', () => {
         ...WEB_INPUT,
         platform: 'native',
       }).map((command) => command.id)
-    ).toEqual(['public-api', 'tooling-contracts', 'native-smoke']);
+    ).toEqual([
+      'public-api',
+      'tooling-contracts',
+      'token-semantic-architecture',
+      'native-smoke',
+    ]);
   });
 
   it('runs one canonical visual gate and both smoke paths for cross-platform candidates', () => {
@@ -51,10 +59,45 @@ describe('componentProductionFinalValidationCommands', () => {
     ).toEqual([
       'public-api',
       'tooling-contracts',
+      'token-semantic-architecture',
       'canonical-web-visual',
       'web-smoke',
       'native-smoke',
     ]);
+  });
+
+  it('does not add the semantic gate when a candidate owns no token contract or token resource', () => {
+    const input: ComponentProductionInputV1 = {
+      ...WEB_INPUT,
+      componentTokens: false,
+    };
+
+    expect(componentProductionRequiresTokenSemanticGate(input)).toBe(false);
+    expect(
+      componentProductionFinalValidationCommands(input).map(
+        (command) => command.id
+      )
+    ).toEqual([
+      'public-api',
+      'tooling-contracts',
+      'canonical-web-visual',
+      'web-smoke',
+    ]);
+  });
+
+  it('adds the semantic gate for an explicit token dependency even without component tokens', () => {
+    const input: ComponentProductionInputV1 = {
+      ...WEB_INPUT,
+      componentTokens: false,
+      tokens: ['semantic.surface.canvas'],
+    };
+
+    expect(componentProductionRequiresTokenSemanticGate(input)).toBe(true);
+    expect(
+      componentProductionFinalValidationCommands(input).map(
+        (command) => command.id
+      )
+    ).toContain('token-semantic-architecture');
   });
 });
 
@@ -116,6 +159,34 @@ describe('runComponentProductionFinalValidation', () => {
     expect(result.stages[0]?.findings[0]?.message).toContain(
       'Public API drift detected.'
     );
+  });
+
+  it('blocks readiness when token semantic architecture fails for a token-bearing candidate', () => {
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/vellira-production',
+      input: WEB_INPUT,
+      runner: (command) =>
+        command.id === 'token-semantic-architecture'
+          ? {
+              exitCode: 1,
+              stdout: 'Token semantic audit: FAIL',
+              stderr: '',
+              timedOut: false,
+            }
+          : success(),
+    });
+
+    expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
+      ['public-api', 'passed'],
+      ['tooling', 'blocked'],
+      ['visual', 'skipped'],
+      ['smoke', 'skipped'],
+    ]);
+    expect(result.stages[1]?.findings[0]).toMatchObject({
+      id: 'tooling:token-semantic-architecture',
+      stage: 'tooling',
+      severity: 'blocking',
+    });
   });
 
   it('blocks smoke after a canonical Web visual failure', () => {
