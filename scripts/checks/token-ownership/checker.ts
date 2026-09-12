@@ -4,20 +4,35 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import { componentMetadata } from '../../../packages/metadata/src/components';
+import {
+  canonicalSemanticRolePaths,
+  semanticVocabularyV1,
+} from '../../../packages/tokens/src/token-architecture';
 import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
+import { auditComponentTokenOwnershipParity } from '../../token-lifecycle/component-ownership';
 
 export type TokenOwnershipFindingCode =
   | 'theme-component-family-drift'
   | 'theme-semantic-namespace-drift'
+  | 'theme-semantic-role-drift'
   | 'unclassified-component-family'
   | 'missing-public-component-family'
   | 'unclassified-semantic-namespace'
   | 'missing-public-semantic-namespace'
+  | 'missing-current-component-token-family'
   | 'missing-component-metadata-owner'
   | 'invalid-current-component-owner'
+  | 'invalid-current-component-public-state'
+  | 'current-component-metadata-token-opt-out'
   | 'missing-semantic-consumer-evidence'
   | 'invalid-semantic-consumer-evidence'
-  | 'invalid-current-component-public-state';
+  | 'missing-public-semantic-source'
+  | 'unclassified-semantic-source-namespace'
+  | 'nonpublic-semantic-namespace-materialized'
+  | 'reserved-semantic-namespace-materialized'
+  | 'invalid-current-semantic-lifecycle'
+  | 'invalid-deprecated-semantic-authority'
+  | 'unclassified-semantic-role';
 
 export type TokenOwnershipFinding = {
   code: TokenOwnershipFindingCode;
@@ -28,7 +43,9 @@ export type TokenOwnershipFinding = {
 export type TokenOwnershipReport = {
   schemaVersion: 1;
   componentFamilies: string[];
+  metadataTokenFamilies: string[];
   semanticNamespaces: string[];
+  semanticRolePaths: string[];
   findings: TokenOwnershipFinding[];
 };
 
@@ -189,6 +206,277 @@ function pushInventoryFindings(params: {
   }
 }
 
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  let current = expression;
+
+  while (
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isParenthesizedExpression(current)
+  ) {
+    current = current.expression;
+  }
+
+  return current;
+}
+
+function objectPropertyName(property: ts.PropertyName): string | null {
+  if (ts.isIdentifier(property) || ts.isStringLiteral(property)) {
+    return property.text;
+  }
+  return null;
+}
+
+function readSemanticRolePaths(filePath: string, namespace: string): string[] {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const ast = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const declarations = ast.statements
+    .filter(ts.isVariableStatement)
+    .flatMap((statement) => [...statement.declarationList.declarations])
+    .filter(
+      (declaration) =>
+        ts.isIdentifier(declaration.name) && declaration.name.text === namespace
+    );
+  const initializer = declarations[0]?.initializer;
+
+  if (declarations.length !== 1 || !initializer) {
+    throw new Error(
+      `Semantic namespace source must declare exactly one ${namespace}: ${filePath}`
+    );
+  }
+
+  const root = unwrapExpression(initializer);
+  if (!ts.isObjectLiteralExpression(root)) {
+    throw new Error(
+      `Semantic namespace source must use a static object literal: ${filePath}`
+    );
+  }
+
+  const roles: string[] = [];
+
+  function visitObject(object: ts.ObjectLiteralExpression, segments: string[]) {
+    for (const property of object.properties) {
+      if (!ts.isPropertyAssignment(property)) {
+        throw new Error(
+          `Semantic namespace source must use named property assignments: ${filePath}`
+        );
+      }
+
+      const name = objectPropertyName(property.name);
+      if (!name) {
+        throw new Error(
+          `Semantic namespace source has an unsupported property name: ${filePath}`
+        );
+      }
+
+      const nextSegments = [...segments, name];
+      const value = unwrapExpression(property.initializer);
+
+      if (ts.isObjectLiteralExpression(value)) {
+        visitObject(value, nextSegments);
+      } else {
+        roles.push(`${namespace}.${nextSegments.join('.')}`);
+      }
+    }
+  }
+
+  visitObject(root, []);
+  return roles.sort();
+}
+
+function semanticSourceNamespaces(root: string, theme: string): string[] {
+  const directory = path.join(
+    root,
+    'packages',
+    'tokens',
+    'src',
+    theme,
+    'semantic'
+  );
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter(
+      (entry) => entry.isFile() && entry.name.endsWith('.ts') && entry.name !== 'index.ts'
+    )
+    .map((entry) => entry.name.slice(0, -'.ts'.length))
+    .sort();
+}
+
+function semanticRoleIsClassified(
+  namespace: string,
+  relativeRole: string,
+  lifecycleStatus: 'current' | 'reserved' | 'deprecated'
+): boolean {
+  const exactRoles = canonicalSemanticRolePaths
+    .filter((rolePath) => rolePath.startsWith(`${namespace}.`))
+    .map((rolePath) => rolePath.slice(namespace.length + 1));
+
+  if (exactRoles.length > 0) {
+    return exactRoles.includes(
+      relativeRole as (typeof canonicalSemanticRolePaths)[number]
+    );
+  }
+
+  if (!Object.hasOwn(semanticVocabularyV1, namespace)) {
+    return lifecycleStatus === 'deprecated';
+  }
+
+  const descriptor = semanticVocabularyV1[
+    namespace as keyof typeof semanticVocabularyV1
+  ] as {
+    readonly roles: readonly string[];
+    readonly intents?: readonly string[];
+    readonly states?: readonly string[];
+  };
+  let rolePath = relativeRole;
+
+  if (descriptor.intents) {
+    const [intent, ...segments] = rolePath.split('.');
+    if (!intent || !descriptor.intents.includes(intent)) return false;
+    rolePath = segments.join('.');
+  }
+
+  const matchingRole = [...descriptor.roles]
+    .sort((left, right) => right.length - left.length)
+    .find(
+      (role) => rolePath === role || rolePath.startsWith(`${role}.`)
+    );
+
+  if (!matchingRole) return false;
+
+  if (descriptor.states) {
+    const remainder = rolePath.slice(matchingRole.length).replace(/^\./, '');
+    const [state] = remainder.split('.');
+    if (state && !descriptor.states.includes(state)) return false;
+  }
+
+  return true;
+}
+
+function auditSemanticRoleLifecycle(params: {
+  root: string;
+  lifecycle: ReturnType<typeof readTokenLifecycleAuthority>['semantics'];
+  findings: TokenOwnershipFinding[];
+}): Map<string, string[]> {
+  const rolesByTheme = new Map<string, string[]>();
+
+  for (const [namespace, lifecycle] of Object.entries(params.lifecycle)) {
+    if (
+      lifecycle.status === 'current' &&
+      (!lifecycle.public || lifecycle.authority === 'compatibility')
+    ) {
+      params.findings.push({
+        code: 'invalid-current-semantic-lifecycle',
+        message: `Current semantic namespace "${namespace}" must be public and owned by a non-compatibility authority.`,
+        path: 'packages/metadata/src/tokenLifecycle.ts',
+      });
+    }
+
+    if (
+      lifecycle.status === 'deprecated' &&
+      lifecycle.authority !== 'compatibility'
+    ) {
+      params.findings.push({
+        code: 'invalid-deprecated-semantic-authority',
+        message: `Deprecated semantic namespace "${namespace}" must be classified as compatibility authority.`,
+        path: 'packages/metadata/src/tokenLifecycle.ts',
+      });
+    }
+  }
+
+  for (const theme of THEMES) {
+    const actualNamespaces = semanticSourceNamespaces(params.root, theme);
+    const actualNamespaceSet = new Set(actualNamespaces);
+    const rolePaths: string[] = [];
+
+    for (const [namespace, lifecycle] of Object.entries(params.lifecycle)) {
+      if (lifecycle.public && !actualNamespaceSet.has(namespace)) {
+        params.findings.push({
+          code: 'missing-public-semantic-source',
+          message: `Public semantic namespace "${namespace}" has no source object in ${theme}.`,
+          path: `packages/tokens/src/${theme}/semantic/${namespace}.ts`,
+        });
+      }
+    }
+
+    for (const namespace of actualNamespaces) {
+      const lifecycle = params.lifecycle[namespace];
+      const sourcePath = `packages/tokens/src/${theme}/semantic/${namespace}.ts`;
+
+      if (!lifecycle) {
+        params.findings.push({
+          code: 'unclassified-semantic-source-namespace',
+          message: `Semantic source namespace "${namespace}" has no lifecycle authority.`,
+          path: sourcePath,
+        });
+        continue;
+      }
+
+      if (!lifecycle.public) {
+        params.findings.push({
+          code: 'nonpublic-semantic-namespace-materialized',
+          message: `Non-public semantic namespace "${namespace}" is still materialized in ${theme}.`,
+          path: sourcePath,
+        });
+      }
+
+      if (lifecycle.status === 'reserved') {
+        params.findings.push({
+          code: 'reserved-semantic-namespace-materialized',
+          message: `Reserved semantic namespace "${namespace}" must not be materialized before promotion.`,
+          path: sourcePath,
+        });
+      }
+
+      const namespaceRoles = readSemanticRolePaths(
+        path.join(params.root, sourcePath),
+        namespace
+      );
+      rolePaths.push(...namespaceRoles);
+
+      for (const rolePath of namespaceRoles) {
+        const relativeRole = rolePath.slice(namespace.length + 1);
+        if (
+          !semanticRoleIsClassified(
+            namespace,
+            relativeRole,
+            lifecycle.status
+          )
+        ) {
+          params.findings.push({
+            code: 'unclassified-semantic-role',
+            message: `Semantic role "${rolePath}" is not classified by canonical role vocabulary for lifecycle namespace "${namespace}".`,
+            path: sourcePath,
+          });
+        }
+      }
+    }
+
+    rolesByTheme.set(theme, rolePaths.sort());
+  }
+
+  const lightRoles = rolesByTheme.get('light') ?? [];
+  for (const theme of THEMES.slice(1)) {
+    const themeRoles = rolesByTheme.get(theme) ?? [];
+    if (!sameValues(lightRoles, themeRoles)) {
+      params.findings.push({
+        code: 'theme-semantic-role-drift',
+        message: `${theme} semantic role paths differ from light.`,
+        path: `packages/tokens/src/${theme}/semantic`,
+      });
+    }
+  }
+
+  return rolesByTheme;
+}
+
 export function checkTokenOwnership(root: string): TokenOwnershipReport {
   const {
     components: componentTokenLifecycle,
@@ -276,35 +564,16 @@ export function checkTokenOwnership(root: string): TokenOwnershipReport {
     });
   }
 
-  const metadataNames = new Set(componentMetadata.map((entry) => entry.name));
-
-  for (const [family, lifecycle] of Object.entries(componentTokenLifecycle)) {
-    if (lifecycle.status !== 'current') continue;
-
-    if (!lifecycle.public) {
-      findings.push({
-        code: 'invalid-current-component-public-state',
-        message: `Current component-token family "${family}" must be public.`,
-        path: 'packages/metadata/src/tokenLifecycle.ts',
-      });
-    }
-
-    if (lifecycle.owner !== family) {
-      findings.push({
-        code: 'invalid-current-component-owner',
-        message: `Current component-token family "${family}" must be owned by canonical component metadata of the same name, not "${lifecycle.owner}".`,
-        path: 'packages/metadata/src/tokenLifecycle.ts',
-      });
-      continue;
-    }
-
-    if (!metadataNames.has(lifecycle.owner)) {
-      findings.push({
-        code: 'missing-component-metadata-owner',
-        message: `Current component-token family "${family}" references missing component metadata owner "${lifecycle.owner}".`,
-        path: 'packages/metadata/src/tokenLifecycle.ts',
-      });
-    }
+  const ownershipParity = auditComponentTokenOwnershipParity({
+    metadata: componentMetadata,
+    lifecycle: componentTokenLifecycle,
+  });
+  for (const finding of ownershipParity.findings) {
+    findings.push({
+      code: finding.code,
+      message: finding.message,
+      path: 'packages/metadata/src/tokenLifecycle.ts',
+    });
   }
 
   for (const [namespace, lifecycle] of Object.entries(semanticTokenLifecycle)) {
@@ -329,10 +598,18 @@ export function checkTokenOwnership(root: string): TokenOwnershipReport {
     }
   }
 
+  const semanticRolesByTheme = auditSemanticRoleLifecycle({
+    root,
+    lifecycle: semanticTokenLifecycle,
+    findings,
+  });
+
   return {
     schemaVersion: 1,
     componentFamilies,
+    metadataTokenFamilies: ownershipParity.metadataTokenFamilies,
     semanticNamespaces,
+    semanticRolePaths: semanticRolesByTheme.get('light') ?? [],
     findings,
   };
 }
