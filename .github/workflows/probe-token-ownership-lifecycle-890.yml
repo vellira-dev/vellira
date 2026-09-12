@@ -130,18 +130,14 @@ jobs:
                   raise SystemExit('role reader object guard anchor mismatch')
               source = source.replace(old_object_guard, new_object_guard, 1)
 
-              old_call = r'''      const namespaceRoles = readSemanticRolePaths(
-                path.join(params.root, sourcePath),
-                namespace
-              );'''
-              new_call = r'''      const namespaceRoles = readSemanticRolePaths(
-                path.join(params.root, sourcePath),
-                namespace,
-                theme
-              );'''
-              if source.count(old_call) != 1:
-                  raise SystemExit('role reader call anchor mismatch')
-              source = source.replace(old_call, new_call, 1)
+              call_tail = "        namespace\n      );"
+              if source.count(call_tail) != 1:
+                  raise SystemExit(f'role reader call tail mismatch: {source.count(call_tail)}')
+              source = source.replace(
+                  call_tail,
+                  "        namespace,\n        theme\n      );",
+                  1,
+              )
 
               path.write_text(source)
           PY
