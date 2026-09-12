@@ -1,16 +1,16 @@
-name: Deploy Website Cloudflare Production Candidate
+name: Deploy Website Cloudflare Production
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'Select DEPLOY_CANDIDATE to deploy the isolated production Worker. This does not attach vellira.dev.'
+        description: 'Select DEPLOY_PRODUCTION to deploy the public production Worker.'
         required: true
         type: choice
         default: DO_NOT_DEPLOY
         options:
           - DO_NOT_DEPLOY
-          - DEPLOY_CANDIDATE
+          - DEPLOY_PRODUCTION
 
 permissions:
   contents: read
@@ -26,8 +26,8 @@ env:
 
 jobs:
   deploy:
-    name: Build and deploy isolated production candidate
-    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY_CANDIDATE'
+    name: Build, deploy, and verify production website
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY_PRODUCTION'
     runs-on: ubuntu-latest
 
     steps:
@@ -59,20 +59,11 @@ jobs:
       - name: Sync website brand
         run: pnpm --dir apps/website run sync:brand
 
-      - name: Build production Worker candidate
+      - name: Build production Worker
         run: pnpm --dir apps/website exec opennextjs-cloudflare build --config=wrangler.production.jsonc
 
       - name: Verify OpenNext CSS asset closure
         run: node apps/website/scripts/cloudflare-build-asset-closure.mjs
-
-      - name: Verify production config has no public custom domain
-        shell: bash
-        run: |
-          set -euo pipefail
-          if grep --fixed-strings --quiet 'vellira.dev' apps/website/wrangler.production.jsonc; then
-            echo 'Production candidate config unexpectedly contains vellira.dev before cutover.' >&2
-            exit 1
-          fi
 
       - name: Test runtime asset auditing
         run: node --test apps/website/scripts/cloudflare-build-runtime-audit.test.mjs
@@ -94,7 +85,7 @@ jobs:
       - name: Prove same-origin multi-deployment browser migration before activation
         run: pnpm test:cloudflare-migration
 
-      - name: Deploy isolated production Worker candidate
+      - name: Deploy production website to Cloudflare Workers
         id: worker-deploy
         run: >-
           node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
@@ -108,7 +99,7 @@ jobs:
           node apps/website/scripts/cloudflare-build-runtime-audit.mjs
           apps/website apps/website/.open-next/asset-audit-after-deploy.json
 
-      - name: Smoke test production Worker candidate
+      - name: Smoke test production routes
         shell: bash
         run: |
           set -euo pipefail
