@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.103.6",
+  "version": "2.104.2",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -28,7 +28,7 @@
     "validate": "pnpm ci:quality && pnpm ci:build && pnpm docs:build && pnpm ci:typecheck && pnpm test && pnpm test:coverage && pnpm docker:e2e && pnpm ci:smoke",
     "ci:quality": "pnpm check:next-rsc-patch && pnpm format:check && pnpm lint && pnpm check:source-hygiene && pnpm check:ts-project-coverage && pnpm check:package-boundaries && pnpm check:playwright-version && pnpm component-pages:check && pnpm component-pages:audit && pnpm check:component --all && pnpm blog:check",
     "check:next-rsc-patch": "node apps/website/scripts/next-rsc-patch-check.mjs",
-    "test:cloudflare-cache": "node --test apps/website/scripts/cloudflare-cache-contract.test.mjs apps/website/scripts/cloudflare-legacy-adoption.test.mjs",
+    "test:cloudflare-cache": "node --test apps/website/scripts/cloudflare-cache-contract.test.mjs apps/website/scripts/cloudflare-cutover-contract.test.mjs apps/website/scripts/cloudflare-legacy-adoption.test.mjs",
     "test:cloudflare-migration": "node apps/website/scripts/cloudflare-migration-browser.mjs",
     "ci:build": "turbo run build",
     "ci:typecheck": "pnpm typecheck && pnpm typecheck:tooling && pnpm docs:api:check && pnpm check:public-api",
