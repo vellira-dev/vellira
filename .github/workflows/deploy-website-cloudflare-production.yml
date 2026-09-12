@@ -22,6 +22,8 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
+  PRODUCTION_PUBLIC_URL: https://vellira.dev
+  PRODUCTION_WWW_URL: https://www.vellira.dev
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
@@ -161,6 +163,47 @@ jobs:
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
 
+      - name: Verify live production custom domains and runtime identity
+        shell: bash
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
+        run: |
+          set -euo pipefail
+          node apps/website/scripts/cloudflare-runtime-stabilization.mjs
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+
+          const apex = process.env.PRODUCTION_PUBLIC_URL;
+          const www = process.env.PRODUCTION_WWW_URL;
+          const buildId = process.env.VELLIRA_BUILD_ID;
+          assert.ok(apex && www && buildId);
+
+          const path = '/blog/two-runtimes?source=cloudflare-postflight&n=1';
+          const response = await fetch(`${www}${path}`, {
+            cache: 'no-store',
+            redirect: 'manual',
+            headers: { 'Cache-Control': 'no-cache' },
+            signal: AbortSignal.timeout(10_000),
+          });
+
+          assert.equal(response.status, 308, `www redirect HTTP ${response.status}`);
+          assert.equal(
+            response.headers.get('location'),
+            `${apex}${path}`,
+            'www redirect did not preserve path/query'
+          );
+          assert.equal(
+            response.headers.get('x-vellira-build-id'),
+            buildId,
+            'www redirect did not execute on the active production build'
+          );
+          assert.ok(
+            response.headers.get('x-vellira-worker-version'),
+            'www redirect is missing Worker version identity'
+          );
+          console.log(`OK live production domains: apex=${apex}, www=308 -> ${apex}`);
+          EOF
+
       - name: Install Chromium for browser smoke
         run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
 
@@ -174,14 +217,14 @@ jobs:
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-website-smoke.mjs
         env:
-          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Soak test production client navigation static assets
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-navigation-soak.mjs
         env:
-          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production static chunk integrity
         if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
@@ -189,7 +232,7 @@ jobs:
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
         env:
-          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Retain asset and browser forensic evidence
         if: always()
