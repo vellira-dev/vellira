@@ -2,8 +2,7 @@ name: Deploy Website Cloudflare Staging
 
 on:
   push:
-    branches:
-      - feat/website-cloudflare-staging
+    branches: [main]
     paths:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
@@ -18,6 +17,7 @@ on:
       - 'patches/**'
       - 'turbo.json'
       - '.github/workflows/deploy-website-cloudflare-staging.yml'
+      - '.github/workflows/deploy-website-cloudflare-production.yml'
   workflow_dispatch:
 
 permissions:
@@ -30,16 +30,28 @@ concurrency:
 env:
   NODE_VERSION: 22.22.0
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
+  CANDIDATE_SHA: ${{ github.sha }}
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   deploy:
-    name: Build, deploy, and verify website staging
+    name: Build, deploy, and verify merged main on website staging
     runs-on: ubuntu-latest
+    timeout-minutes: 35
 
     steps:
-      - name: Checkout repository
+      - name: Checkout exact main candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+
+      - name: Verify exact candidate checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$CANDIDATE_SHA"
+          echo "Validated exact staging candidate: $actual"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -52,6 +64,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Derive protocol-defined R2 S3 secret
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          r2_secret_access_key="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | sha256sum | awk '{print $1}')"
+          [[ "$r2_secret_access_key" =~ ^[0-9a-f]{64}$ ]]
+          echo "::add-mask::$r2_secret_access_key"
+          printf 'CLOUDFLARE_R2_SECRET_ACCESS_KEY=%s\n' "$r2_secret_access_key" >> "$GITHUB_ENV"
 
       - name: Verify R2 access and active predecessor archive before building
         run: node apps/website/scripts/cloudflare-archive-preflight.mjs wrangler.jsonc
@@ -94,6 +118,7 @@ jobs:
 
       - name: Deploy website staging to Cloudflare Workers
         id: worker-deploy
+        timeout-minutes: 10
         run: node apps/website/scripts/cloudflare-deploy.mjs wrangler.jsonc
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
@@ -196,6 +221,47 @@ jobs:
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
 
+      - name: Record staging evidence
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs/promises';
+
+          const build = JSON.parse(
+            await fs.readFile('apps/website/.open-next/vellira-build.json', 'utf8')
+          );
+          const runtimeResponse = await fetch(
+            new URL('/__vellira_runtime', process.env.STAGING_URL),
+            { cache: 'no-store' }
+          );
+          assert.equal(runtimeResponse.status, 200);
+          const runtime = await runtimeResponse.json();
+          assert.equal(runtime.buildId, build.buildId);
+          assert.ok(runtime.workerVersion);
+
+          const evidence = {
+            schemaVersion: 1,
+            sourceSha: process.env.CANDIDATE_SHA,
+            sourceRef: process.env.GITHUB_REF,
+            eventName: process.env.GITHUB_EVENT_NAME,
+            buildId: build.buildId,
+            workerVersion: runtime.workerVersion,
+            stagingUrl: process.env.STAGING_URL,
+            runId: Number(process.env.GITHUB_RUN_ID),
+            runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            repository: process.env.GITHUB_REPOSITORY,
+          };
+
+          await fs.writeFile(
+            'apps/website/.open-next/staging-evidence.json',
+            `${JSON.stringify(evidence, null, 2)}\n`
+          );
+          console.log(JSON.stringify(evidence));
+          NODE
+
       - name: Retain asset and browser forensic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -213,6 +279,7 @@ jobs:
             apps/website/.open-next/vellira-build.json
             apps/website/.open-next/runtime-contract.json
             apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/staging-evidence.json
             apps/website/.open-next/cache/
             apps/website/.next/*manifest.json
             apps/website/.next/BUILD_ID

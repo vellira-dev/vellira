@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
+import './cloudflare-archive-client.test.mjs';
 import {
   CANONICAL_REDIRECT_CACHE_CONTROL,
   canonicalHostRedirect,
