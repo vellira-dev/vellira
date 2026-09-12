@@ -18,8 +18,8 @@ describe('token semantic ownership coverage', () => {
     expect(namespaceLifecycle?.checked).toBeGreaterThan(13);
     expect(report.summary).toMatchObject({
       requiredRules: 12,
-      completeRules: 3,
-      incompleteRules: 9,
+      completeRules: 5,
+      incompleteRules: 7,
       runtimeErrors: 0,
       errors: 0,
       warnings: 0,
