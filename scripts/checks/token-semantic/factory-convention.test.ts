@@ -17,9 +17,13 @@ function copyFactoryAuditTree() {
   const targetRoot = path.join(fixture, 'packages/tokens/src');
 
   fs.mkdirSync(targetRoot, { recursive: true });
-  fs.cpSync(path.join(sourceRoot, 'factories'), path.join(targetRoot, 'factories'), {
-    recursive: true,
-  });
+  fs.cpSync(
+    path.join(sourceRoot, 'factories'),
+    path.join(targetRoot, 'factories'),
+    {
+      recursive: true,
+    }
+  );
   for (const theme of themes) {
     fs.mkdirSync(path.join(targetRoot, theme), { recursive: true });
     fs.cpSync(

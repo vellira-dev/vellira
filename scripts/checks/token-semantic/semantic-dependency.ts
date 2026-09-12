@@ -284,7 +284,8 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
 
   for (const repair of semanticDependencyRepairsV1) {
     checked += 1;
-    if (repair.paths.length === 0 || !repair.repair.trim()) {
+    const repairPaths = repair.paths as readonly string[];
+    if (repairPaths.length === 0 || !repair.repair.trim()) {
       findings.push(
         finding(
           'invalid-dependency-repair-evidence',
@@ -320,12 +321,7 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
         theme: null,
       })) {
         findings.push(
-          finding(
-            issue.code,
-            sourcePath,
-            issue.evidence,
-            issue.expected
-          )
+          finding(issue.code, sourcePath, issue.evidence, issue.expected)
         );
       }
       continue;
@@ -341,12 +337,7 @@ export function checkTokenSemanticDependencies(root: string): RuleResult {
         theme,
       })) {
         findings.push(
-          finding(
-            issue.code,
-            sourcePath,
-            issue.evidence,
-            issue.expected
-          )
+          finding(issue.code, sourcePath, issue.evidence, issue.expected)
         );
       }
     }

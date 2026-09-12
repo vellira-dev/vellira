@@ -55,7 +55,10 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
     const expectedSource = `packages/tokens/src/factories/components/${factory.name}.ts`;
     expectedSources.add(expectedSource);
 
-    if (!factoryNamePattern.test(factory.name) || factory.name.includes('Palette')) {
+    if (
+      !factoryNamePattern.test(factory.name) ||
+      factory.name.includes('Palette')
+    ) {
       findings.push(
         finding(
           'invalid-canonical-factory-name',
@@ -114,7 +117,7 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
       entry.isDirectory() ? 'directory' : 'file',
     ])
   );
-  const expectedRootEntries = new Map(
+  const expectedRootEntries = new Map<string, 'file' | 'directory'>(
     componentTokenFactoryConventionV1.rootEntries.map(({ name, kind }) => [
       name,
       kind,
@@ -169,7 +172,9 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
   const paletteFiles = typescriptFiles(palettesRoot);
   checked += paletteFiles.length;
   const expectedPaletteFiles = new Set(
-    componentTokenFactoryConventionV1.paletteFamilies.map(({ helper }) => helper)
+    componentTokenFactoryConventionV1.paletteFamilies.map(
+      ({ helper }) => helper
+    )
   );
 
   for (const paletteFile of paletteFiles) {
@@ -199,7 +204,9 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
       );
     }
 
-    if (!maintainedComponentFactories.some(({ name }) => name === family.factory)) {
+    if (
+      !maintainedComponentFactories.some(({ name }) => name === family.factory)
+    ) {
       findings.push(
         finding(
           'palette-helper-without-canonical-factory',
@@ -228,7 +235,10 @@ export function checkTokenFactoryConventions(root: string): RuleResult {
 
       const source = fs.readFileSync(absoluteThemeSource, 'utf8');
       const canonicalImport = `../../factories/components/${family.factory}.js`;
-      if (!source.includes(canonicalImport) || !source.includes(`${family.factory}(`)) {
+      if (
+        !source.includes(canonicalImport) ||
+        !source.includes(`${family.factory}(`)
+      ) {
         findings.push(
           finding(
             'theme-construction-bypasses-canonical-factory',

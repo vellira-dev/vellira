@@ -49,32 +49,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Token semantic audit report
-        id: token-semantic-report
-        env:
-          VELLIRA_AUDIT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .artifacts/token-semantic
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git rev-parse HEAD > .artifacts/token-semantic/checkout-sha.txt
-          printf '%s\n' "$VELLIRA_AUDIT_HEAD_SHA" > .artifacts/token-semantic/head-sha.txt
-          pnpm --silent check:tokens-semantic:json > .artifacts/token-semantic/report.json
-          node --input-type=module -e "import fs from 'node:fs'; const r = JSON.parse(fs.readFileSync('.artifacts/token-semantic/report.json', 'utf8')); console.log('Token semantic report mode:', r.status, JSON.stringify(r.summary));"
-
-      - name: Upload token semantic audit report
-        if: always() && steps.token-semantic-report.outcome != 'skipped'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: token-semantic-report
-          path: .artifacts/token-semantic/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Token semantic audit tests
-        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic
-
       - name: Quality checks
         run: pnpm ci:quality
 

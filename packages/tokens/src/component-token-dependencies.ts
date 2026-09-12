@@ -31,9 +31,7 @@ export const componentTokenDependencyPolicyV1 = {
 } as const;
 
 export type ComponentPrimitiveColorUsage =
-  | 'none'
-  | 'intent-palette-construction'
-  | 'component-owned-presentation';
+  'none' | 'intent-palette-construction' | 'component-owned-presentation';
 
 export const allowedComponentFactoryDependencyEdgesV1 = [
   {
