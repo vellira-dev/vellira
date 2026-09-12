@@ -19,6 +19,7 @@ minimumReleaseAgeExclude:
 nodeLinker: hoisted
 
 overrides:
+  '@puppeteer/browsers': 3.0.6
   'brace-expansion@<2.0.0': 1.1.18
   'minimatch@10>brace-expansion': 5.0.9
 
