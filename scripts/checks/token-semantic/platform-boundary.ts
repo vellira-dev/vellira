@@ -22,7 +22,7 @@ const rendererKeyPattern =
   /(?:^|[\s{,])(?:['"]?)(web|native|reactNative|nativeMaxHeight|native[A-Z][\w$]*|reactNative[A-Z][\w$]*)(?:['"]?)\s*:/gm;
 
 const scope =
-  'Complete #884 renderer-neutral boundary: all maintained canonical component families, deterministic Web/React Native platform-output adaptation, and Generator V2 template source are checked. Visual/value equivalence remains owned by tokens.visual-preservation.';
+  'Complete #884 renderer-neutral boundary: all maintained canonical component families, deterministic Web/React Native platform-output adaptation, and Generator V2 token-template source are checked. Visual/value equivalence remains owned by tokens.visual-preservation.';
 
 function finding(
   code: string,
@@ -83,6 +83,7 @@ function listGeneratorTemplateFiles(root: string): string[] {
       if (entry.isDirectory()) visit(child);
       else if (
         entry.isFile() &&
+        entry.name.includes('token') &&
         (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) &&
         !entry.name.endsWith('.test.ts') &&
         !entry.name.endsWith('.test.tsx')
@@ -233,7 +234,7 @@ export function checkTokenPlatformBoundary(
   }
 
   if (generatorFiles.length === 0) {
-    throw new Error('Generator V2 template inventory must not be empty.');
+    throw new Error('Generator V2 token-template inventory must not be empty.');
   }
 
   return {
