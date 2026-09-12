@@ -17,7 +17,8 @@ exit code 2 even in report mode. JSON goes to stdout without a human preamble.
 
 ## One authority per responsibility
 
-The current adapters consume the existing #886 ownership/lifecycle checker and
+The adapters consume the existing #886 ownership/lifecycle checker, the canonical
+#887 factory architecture, the #888 dependency policy, and
 `canonicalCssVariableNames` from the design-resource authority. Compatibility
 names are accepted only when present in that generated registry; the audit has
 no parallel token allowlist. The canonical serializer also rejects string-backed
@@ -25,9 +26,11 @@ unitless values, including dimensional strings such as a scale of `0.98px`.
 
 The report includes the eleven #890 rule families plus the consumer-reference
 rule required by the #909 header regression. An absent adapter is `not-run`,
-not a successful check. Family ownership, namespace lifecycle, CSS consumer
-references, value kinds, and platform boundary report `partial`. Value preservation
-runs the complete existing #880 oracle; the remaining adapters stay `not-run`.
+not a successful check. On the current continuation, component ownership,
+namespace lifecycle, factory conventions, semantic dependencies, and value
+preservation are `complete`; value kinds, state vocabulary, semantic vocabulary,
+platform boundary, shadow authority, public API, and consumer references remain
+`partial`. No partial rule is treated as a successful strict gate.
 
 ## Connected platform and preservation authorities
 
@@ -73,6 +76,24 @@ integration. Running the scalar authority is useful evidence, not permission to
 mark those unproven requirements complete. The repository fixture exercises all
 maintained themes and shared control sizes alongside positive/negative fixtures.
 
+## Connected factory and dependency authorities
+
+The factory-convention adapter consumes `maintainedComponentFactories` and checks
+the full #887 responsibility boundary: canonical `create<Component>Tokens`
+modules live under `factories/components`, narrow intent-palette helpers live
+under `factories/palettes`, explicitly shared helpers live under
+`factories/shared`, and palette-backed theme construction routes through the
+canonical full-component factory in Light, Dark, and High Contrast. Unclassified
+root responsibilities and legacy root-level factory paths fail closed.
+
+The semantic-dependency adapter consumes the #888 policy, audit inventory,
+registered cross-component edges, primitive-color classifications, and repair
+evidence. Accepted repairs carry machine-readable targets/assertions and are
+checked against their real factory/theme sources. Generator V2 and #890 consume
+the same shared generated-theme dependency audit, so generator enforcement cannot
+silently drift into a parallel rule. These checks do not change authored token
+values or relax the preservation oracle.
+
 ## Consumer scan boundary
 
 Static CSS/SCSS `var()` references are scanned under both `apps` and `packages`.
@@ -101,11 +122,10 @@ these limitations from becoming a false strict pass.
 
 ## Remaining rollout
 
-Connect the other #880-#889 canonical contracts; finish each partial adapter;
-validate the maintained baseline without broad suppressions; add the shared
-Generator V2 and production-readiness integration; then switch the normal CI
-entrypoint to strict mode. Existing ownership and removed-variable regressions
-remain in place during the rollout.
+Finish the seven partial adapters; validate the maintained baseline without broad
+suppressions; complete the applicable Generator V2 and production-readiness
+integration; then switch the normal CI entrypoint to strict mode. Existing
+ownership and removed-variable regressions remain in place during the rollout.
 
 CI stores the report with checkout/head identity. Passing report-mode execution
 means only that an audit ran successfully, not that #890 is done. The PR stays
