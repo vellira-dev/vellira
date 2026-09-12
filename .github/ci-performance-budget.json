@@ -50,19 +50,14 @@
       "packages/core/",
       "packages/metadata/"
     ],
-    "docsPrefixes": [
-      "docs/"
-    ],
+    "docsPrefixes": ["docs/"],
     "docsBasenames": [
       "README.md",
       "CONTRIBUTING.md",
       "CODE_OF_CONDUCT.md",
       "SECURITY.md"
     ],
-    "docsExtensions": [
-      ".md",
-      ".mdx"
-    ]
+    "docsExtensions": [".md", ".mdx"]
   },
   "externalWorkflowsExcludedFromCriticalPath": [
     "Chromatic Publish",
