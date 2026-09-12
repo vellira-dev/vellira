@@ -85,8 +85,10 @@ export function checkTokenSemantics(root: string) {
         ? 'Canonical #886 semantic lifecycle/public/source/barrel parity, deterministic real consumer evidence, role-level source inventory, cross-theme role-shape parity, canonical Semantic Vocabulary V1 classification, and canonical derived shadow authority.'
         : 'Canonical #886 component lifecycle/public/theme-barrel parity, reverse metadata-required ownership parity, canonical owner identity, and the Generator V2 lifecycle materialization guard used by component-production preflight.',
       checked: semantic
-        ? ownership.semanticNamespaces.length + ownership.semanticRolePaths.length
-        : ownership.componentFamilies.length + ownership.metadataTokenFamilies.length,
+        ? ownership.semanticNamespaces.length +
+          ownership.semanticRolePaths.length
+        : ownership.componentFamilies.length +
+          ownership.metadataTokenFamilies.length,
       findings,
     };
   }
