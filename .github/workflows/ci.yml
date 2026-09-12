@@ -169,6 +169,77 @@ jobs:
           retention-days: 14
           include-hidden-files: true
 
+  typecheck:
+    name: Typecheck & API Contracts
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build typecheck package-export prerequisites
+        run: pnpm exec turbo run build --filter=@vellira-ui/icons
+
+      - name: Typecheck and API contracts
+        run: pnpm ci:typecheck
+
+  tooling:
+    name: Tooling & IndexNow Tests
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tooling dist-fallback prerequisites
+        run: >-
+          pnpm exec turbo run build
+          --filter=@vellira-ui/react
+          --filter=@vellira-ui/react-native
+          --filter=@vellira-ui/icons
+
+      - name: Tooling tests
+        run: pnpm test:tooling
+
+      - name: IndexNow tests
+        run: node --test scripts/submit-indexnow.test.mjs
+
   ci:
     name: Build, Test & Validate
     runs-on: ubuntu-latest
@@ -239,15 +310,6 @@ jobs:
 
       - name: Build docs
         run: pnpm docs:build
-
-      - name: Typecheck
-        run: pnpm ci:typecheck
-
-      - name: Tooling tests
-        run: pnpm test:tooling
-
-      - name: IndexNow tests
-        run: node --test scripts/submit-indexnow.test.mjs
 
       - name: Tests and coverage
         run: pnpm ci:test
