@@ -4,6 +4,7 @@ import path from 'node:path';
 import ts from 'typescript';
 
 import { componentMetadata } from '../../../packages/metadata/src/components';
+import { createSemanticShadowTokens } from '../../../packages/tokens/src/effects/shadow-system';
 import {
   canonicalSemanticRolePaths,
   semanticVocabularyV1,
@@ -227,7 +228,68 @@ function objectPropertyName(property: ts.PropertyName): string | null {
   return null;
 }
 
-function readSemanticRolePaths(filePath: string, namespace: string): string[] {
+function canonicalShadowFactoryBinding(ast: ts.SourceFile): string | null {
+  for (const statement of ast.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== '../../effects/shadow-system.js'
+    ) {
+      continue;
+    }
+
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+
+    for (const element of bindings.elements) {
+      if (
+        (element.propertyName ?? element.name).text ===
+        'createSemanticShadowTokens'
+      ) {
+        return element.name.text;
+      }
+    }
+  }
+
+  return null;
+}
+
+function canonicalDerivedSemanticRolePaths(params: {
+  ast: ts.SourceFile;
+  expression: ts.Expression;
+  namespace: string;
+  theme: (typeof THEMES)[number];
+}): string[] | null {
+  if (params.namespace !== 'shadow') return null;
+
+  const binding = canonicalShadowFactoryBinding(params.ast);
+  const expectedTheme =
+    params.theme === 'highContrast' ? 'high-contrast' : params.theme;
+
+  if (
+    !binding ||
+    !ts.isCallExpression(params.expression) ||
+    !ts.isIdentifier(params.expression.expression) ||
+    params.expression.expression.text !== binding ||
+    params.expression.arguments.length !== 1 ||
+    !ts.isStringLiteral(params.expression.arguments[0]!) ||
+    params.expression.arguments[0]!.text !== expectedTheme
+  ) {
+    throw new Error(
+      `Semantic shadow source must call canonical createSemanticShadowTokens(${JSON.stringify(expectedTheme)}).`
+    );
+  }
+
+  return Object.keys(createSemanticShadowTokens(expectedTheme))
+    .map((role) => `shadow.${role}`)
+    .sort();
+}
+
+function readSemanticRolePaths(
+  filePath: string,
+  namespace: string,
+  theme: (typeof THEMES)[number]
+): string[] {
   const source = fs.readFileSync(filePath, 'utf8');
   const ast = ts.createSourceFile(
     filePath,
@@ -253,8 +315,16 @@ function readSemanticRolePaths(filePath: string, namespace: string): string[] {
 
   const root = unwrapExpression(initializer);
   if (!ts.isObjectLiteralExpression(root)) {
+    const derivedRoles = canonicalDerivedSemanticRolePaths({
+      ast,
+      expression: root,
+      namespace,
+      theme,
+    });
+    if (derivedRoles) return derivedRoles;
+
     throw new Error(
-      `Semantic namespace source must use a static object literal: ${filePath}`
+      `Semantic namespace source must use a static object literal or a canonical derived semantic authority: ${filePath}`
     );
   }
 
@@ -303,7 +373,10 @@ function semanticSourceNamespaces(root: string, theme: string): string[] {
   return fs
     .readdirSync(directory, { withFileTypes: true })
     .filter(
-      (entry) => entry.isFile() && entry.name.endsWith('.ts') && entry.name !== 'index.ts'
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith('.ts') &&
+        entry.name !== 'index.ts'
     )
     .map((entry) => entry.name.slice(0, -'.ts'.length))
     .sort();
@@ -345,9 +418,7 @@ function semanticRoleIsClassified(
 
   const matchingRole = [...descriptor.roles]
     .sort((left, right) => right.length - left.length)
-    .find(
-      (role) => rolePath === role || rolePath.startsWith(`${role}.`)
-    );
+    .find((role) => rolePath === role || rolePath.startsWith(`${role}.`));
 
   if (!matchingRole) return false;
 
@@ -437,18 +508,15 @@ function auditSemanticRoleLifecycle(params: {
 
       const namespaceRoles = readSemanticRolePaths(
         path.join(params.root, sourcePath),
-        namespace
+        namespace,
+        theme
       );
       rolePaths.push(...namespaceRoles);
 
       for (const rolePath of namespaceRoles) {
         const relativeRole = rolePath.slice(namespace.length + 1);
         if (
-          !semanticRoleIsClassified(
-            namespace,
-            relativeRole,
-            lifecycle.status
-          )
+          !semanticRoleIsClassified(namespace, relativeRole, lifecycle.status)
         ) {
           params.findings.push({
             code: 'unclassified-semantic-role',
