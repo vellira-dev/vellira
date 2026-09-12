@@ -456,8 +456,8 @@ export const semanticVocabularyV1 = {
   },
   menu: {
     purpose:
-      'Menu-item roles where active/current is a legitimate domain state.',
-    roles: ['item', 'item.danger'],
+      'Menu container chrome plus item roles where active/current is a legitimate domain state.',
+    roles: ['background', 'border', 'item', 'item.danger'],
   },
   overlay: {
     purpose:

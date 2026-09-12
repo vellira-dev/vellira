@@ -177,7 +177,7 @@
   border-radius: var(--radius-full);
   box-shadow: 0 0 0 6px
     color-mix(in srgb, var(--color-primary-500) 10%, transparent);
-  animation: quickstart-flow 4200ms var(--ease-out, ease-out) 900ms both;
+  animation: quickstart-flow 4200ms ease-out 900ms both;
   content: '';
   pointer-events: none;
 }
@@ -252,7 +252,7 @@
   align-items: center;
   min-height: 40px;
   padding: 0 var(--space-3);
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   background: color-mix(in srgb, var(--surface-subtle) 86%, transparent);
@@ -395,7 +395,7 @@
 
 .controlsHeader span,
 .controlField > span {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
@@ -616,7 +616,8 @@
 
   .previewStage {
     min-height: 460px;
-    padding: var(--space-7) calc(var(--space-4) + var(--space-1));
+    padding: calc(var(--space-6) + var(--space-1))
+      calc(var(--space-4) + var(--space-1));
   }
 
   .previewCard {

@@ -21,7 +21,6 @@ nodeLinker: hoisted
 overrides:
   '@puppeteer/browsers': 3.0.6
   'brace-expansion@<2.0.0': 1.1.18
-  colord: 2.9.4
   'minimatch@10>brace-expansion': 5.0.9
 
   'esbuild@<=0.24.2': 0.28.1
@@ -32,21 +31,6 @@ overrides:
 
   'js-yaml@<4': 3.15.2
   'js-yaml@>=4 <5': 4.3.2
-
-  metro: 0.84.5
-  metro-babel-transformer: 0.84.5
-  metro-cache: 0.84.5
-  metro-cache-key: 0.84.5
-  metro-config: 0.84.5
-  metro-core: 0.84.5
-  metro-file-map: 0.84.5
-  metro-minify-terser: 0.84.5
-  metro-resolver: 0.84.5
-  metro-runtime: 0.84.5
-  metro-source-map: 0.84.5
-  metro-symbolicate: 0.84.5
-  metro-transform-plugins: 0.84.5
-  metro-transform-worker: 0.84.5
 
   'nanoid@<3.3.18': 3.3.18
   postcss: 8.5.23

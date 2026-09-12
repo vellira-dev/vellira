@@ -10,10 +10,18 @@ pnpm create:component-page <Name> [--force] [--check]
 pnpm create:component-page --help
 pnpm component-pages:generate
 pnpm component-pages:audit
+pnpm component-pages:audit --component Button
 pnpm component-pages:check
 pnpm test:component-page-generator
 pnpm test:component-pages
 ```
+
+The no-argument audit remains the complete catalog check used by normal CI.
+`--component <Name>` scopes expensive source/model and generated-file checks to
+one canonical name from the discovered inventory. Shared registry relationships
+are still validated globally. Unknown names, malformed flags, and empty
+inventories fail rather than producing a partial or zero-component success.
+A focused pass is not evidence that the complete catalog has passed.
 
 ## Pipeline
 

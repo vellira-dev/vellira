@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { selectComponentPageAuditComponents } from './audit-options';
 import { getGeneratedComponentPageComponents } from './component-page-components';
 import { resolvePageInput } from './model/resolve-page-input';
 import {
@@ -15,32 +16,10 @@ type AuditFailure = {
 };
 
 const root = process.cwd();
-const componentFlagIndex = process.argv.indexOf('--component');
-const requestedComponentName =
-  componentFlagIndex === -1 ? undefined : process.argv[componentFlagIndex + 1];
-
-if (componentFlagIndex !== -1 && !requestedComponentName) {
-  console.error('Usage: component-pages:audit [--component ComponentName]');
-  process.exit(1);
-}
-
-const allGeneratedComponentPageComponents =
-  getGeneratedComponentPageComponents(root);
-
-if (
-  requestedComponentName &&
-  !allGeneratedComponentPageComponents.includes(requestedComponentName)
-) {
-  console.error('Component page audit failed:');
-  console.error(
-    `  - ${requestedComponentName}: component is not a generated component page`
-  );
-  process.exit(1);
-}
-
-const generatedComponentPageComponents = requestedComponentName
-  ? [requestedComponentName]
-  : allGeneratedComponentPageComponents;
+const generatedComponentPageComponents = selectComponentPageAuditComponents(
+  process.argv.slice(2),
+  getGeneratedComponentPageComponents(root)
+);
 const catalogRoot = path.join(
   root,
   'apps',

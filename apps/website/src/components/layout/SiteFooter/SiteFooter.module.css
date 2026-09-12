@@ -122,7 +122,7 @@
 .linkGroup h2,
 .statusEyebrow {
   margin: 0 0 var(--space-2);
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
@@ -283,7 +283,7 @@
   width: 100%;
   margin-top: var(--space-12);
   padding-top: var(--space-6);
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   border-top: 1px solid var(--border-muted);
   gap: var(--space-3);

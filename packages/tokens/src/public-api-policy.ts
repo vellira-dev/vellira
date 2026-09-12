@@ -16,6 +16,26 @@ export const tokenPublicApiDeprecationPolicyV1 = {
   },
 } as const;
 
+export const tokenPackagePublicSurfaceV1 = {
+  main: './dist/index.js',
+  types: './dist/index.d.ts',
+  exports: {
+    '.': {
+      'react-native': {
+        types: './dist/index.d.ts',
+        default: './dist/index.js',
+      },
+      'vellira-source': './src/index.ts',
+      types: './dist/index.d.ts',
+      import: './dist/index.js',
+    },
+    './css': {
+      types: './css.d.ts',
+      default: './dist/css/tokens.css',
+    },
+  },
+} as const;
+
 export const publicThemeContractsV1 = [
   { exportName: 'lightTheme', themeName: 'light' },
   { exportName: 'darkTheme', themeName: 'dark' },

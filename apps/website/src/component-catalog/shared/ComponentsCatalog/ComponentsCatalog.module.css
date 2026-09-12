@@ -147,7 +147,7 @@
 }
 
 .filter:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--focus-ring-color);
   outline-offset: 2px;
 }
 
@@ -252,7 +252,7 @@
 }
 
 .card:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--focus-ring-color);
   outline-offset: 3px;
 }
 
@@ -443,7 +443,7 @@
 }
 
 .dropdownItemDanger {
-  color: var(--text-danger);
+  color: var(--status-error-fg);
 }
 
 .dropdownSeparator {
