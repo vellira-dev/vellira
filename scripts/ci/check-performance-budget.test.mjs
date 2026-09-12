@@ -6,6 +6,7 @@ import {
   classifyFiles,
   evaluateBudget,
   selectBudget,
+  selectDistinctHistoricalSamples,
 } from './check-performance-budget.mjs';
 
 const classification = {
@@ -120,6 +121,25 @@ test('runner variance inside the documented tolerance is non-blocking', () => {
   });
   assert.equal(result.status, 'within-tolerance');
   assert.equal(result.blocking, false);
+});
+
+test('history excludes current PR reruns and deduplicates other PRs', () => {
+  const samples = selectDistinctHistoricalSamples(
+    [
+      { workflowRunId: 10, pullRequestNumber: 1036, feedbackSeconds: 620 },
+      { workflowRunId: 9, pullRequestNumber: 1034, feedbackSeconds: 456 },
+      { workflowRunId: 8, pullRequestNumber: 1034, feedbackSeconds: 450 },
+      { workflowRunId: 7, pullRequestNumber: null, feedbackSeconds: 410 },
+      { workflowRunId: 6, pullRequestNumber: 1033, feedbackSeconds: 399 },
+    ],
+    1036,
+    4
+  );
+
+  assert.deepEqual(
+    samples.map((sample) => sample.workflowRunId),
+    [9, 7, 6]
+  );
 });
 
 test('job analysis measures feedback wall clock and rejects inventory drift', () => {

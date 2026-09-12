@@ -165,6 +165,33 @@ export function evaluateBudget({
   };
 }
 
+export function selectDistinctHistoricalSamples(
+  samples,
+  currentPullRequestNumber,
+  limit = Number.POSITIVE_INFINITY
+) {
+  const selected = [];
+  const seenPullRequests = new Set();
+
+  for (const sample of samples) {
+    const pullRequestNumber = sample.pullRequestNumber;
+    if (pullRequestNumber !== null && pullRequestNumber !== undefined) {
+      if (
+        pullRequestNumber === currentPullRequestNumber ||
+        seenPullRequests.has(pullRequestNumber)
+      ) {
+        continue;
+      }
+      seenPullRequests.add(pullRequestNumber);
+    }
+
+    selected.push(sample);
+    if (selected.length >= limit) break;
+  }
+
+  return selected;
+}
+
 async function githubJson(endpoint, token) {
   const response = await fetch(`${API_ROOT}${endpoint}`, {
     headers: {
@@ -236,6 +263,7 @@ function runPullRequestNumber(run) {
 async function historicalSamples({
   repository,
   currentRun,
+  currentPullRequestNumber,
   currentExecutionPath,
   currentBudget,
   workflowFile,
@@ -252,10 +280,9 @@ async function historicalSamples({
     )}/runs?event=pull_request&status=completed&per_page=20`,
     token
   );
-  const samples = [];
+  const candidates = [];
 
   for (const run of response.workflow_runs) {
-    if (samples.length >= enforcement.historyWindow - 1) break;
     if (run.id === currentRun.id || run.conclusion !== 'success') continue;
 
     const jobs = await fetchRunJobs(repository, run.id, token);
@@ -287,7 +314,7 @@ async function historicalSamples({
       continue;
     }
 
-    samples.push({
+    candidates.push({
       workflowRunId: run.id,
       headSha: run.head_sha,
       pullRequestNumber: prNumber,
@@ -295,6 +322,12 @@ async function historicalSamples({
       feedbackSeconds: analysis.feedbackSeconds,
     });
   }
+
+  const samples = selectDistinctHistoricalSamples(
+    candidates,
+    currentPullRequestNumber,
+    enforcement.historyWindow - 1
+  );
 
   if (
     samples.length < enforcement.historyWindow - 1 &&
@@ -455,6 +488,7 @@ async function main() {
     history = await historicalSamples({
       repository,
       currentRun: ciRun,
+      currentPullRequestNumber: pullRequest.number,
       currentExecutionPath: timing.executionPath,
       currentBudget: budget.effective,
       workflowFile: config.workflow.file,
