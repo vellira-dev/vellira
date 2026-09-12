@@ -12,6 +12,7 @@
     "test:e2e": "playwright test --config=playwright.config.ts --grep-invert @visual",
     "test:e2e:visual": "node scripts/assert-canonical-visual-environment.mjs && playwright test --config=playwright.config.ts --grep @visual",
     "test:e2e:all": "node scripts/assert-canonical-visual-environment.mjs && playwright test --config=playwright.config.ts",
+    "pretest": "pnpm --filter @vellira-ui/tokens build",
     "test": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
