@@ -16,6 +16,47 @@ export const tokenPublicApiDeprecationPolicyV1 = {
   },
 } as const;
 
+export const tokenPublicPackageSubpathsV1 = ['.', './css'] as const;
+
+export const tokenPublicSymbolsV1 = [
+  'BaseCssVariableName',
+  'BaseTokenPath',
+  'ColorTokenPath',
+  'ComponentTokenPath',
+  'ControlSize',
+  'CssVariableName',
+  'DarkTheme',
+  'FontWeight',
+  'HighContrastTheme',
+  'LightTheme',
+  'SemanticTokenPath',
+  'ThemeCssVariableName',
+  'ThemeName',
+  'TokenPath',
+  'VelliraBaseTokens',
+  'VelliraColors',
+  'VelliraComponentTokens',
+  'VelliraSemanticTokens',
+  'VelliraTheme',
+  'WidenTokenValues',
+  'baseCssVariableNames',
+  'baseTokenPaths',
+  'colorTokenPaths',
+  'componentTokenPaths',
+  'controlSizes',
+  'cssVariableNames',
+  'darkTheme',
+  'fontWeights',
+  'highContrastTheme',
+  'lightTheme',
+  'overlay',
+  'semanticTokenPaths',
+  'theme',
+  'themeCssVariableNames',
+  'themeNames',
+  'tokenPaths',
+] as const;
+
 export const publicThemeContractsV1 = [
   { exportName: 'lightTheme', themeName: 'light' },
   { exportName: 'darkTheme', themeName: 'dark' },
