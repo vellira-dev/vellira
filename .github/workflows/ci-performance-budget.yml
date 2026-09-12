@@ -1,0 +1,60 @@
+name: CI Performance Budget
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-performance-budget-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  budget:
+    name: CI Performance Budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+
+      - name: Validate budget policy
+        run: node --test scripts/ci/check-performance-budget.test.mjs
+
+      - name: Evaluate exact-head CI performance budget
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/check-performance-budget.mjs
+
+      - name: Publish timing summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f .artifacts/ci-performance/summary.md ]]; then
+            cat .artifacts/ci-performance/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '# CI Performance Budget' >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo 'Timing summary was not generated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload timing evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ci-performance-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/ci-performance
+          if-no-files-found: warn
+          retention-days: 30
