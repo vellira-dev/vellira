@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const fixtureRoots: string[] = [];
 
@@ -128,10 +128,34 @@ function generatedButtonFiles(fixture: string) {
   ].map((fileName) => path.join(root, fileName));
 }
 
+function fixtureStateFiles(fixture: string) {
+  return [
+    ...generatedButtonFiles(fixture),
+    path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    ),
+    path.join(
+      fixture,
+      'apps/website/src/component-catalog/registry/componentPages.ts'
+    ),
+    path.join(
+      fixture,
+      'apps/website/src/component-catalog/registry/components.ts'
+    ),
+  ];
+}
+
 function snapshotFiles(filePaths: readonly string[]) {
   return new Map(
     filePaths.map((filePath) => [filePath, fs.readFileSync(filePath, 'utf8')])
   );
+}
+
+function restoreFiles(snapshot: Map<string, string>) {
+  for (const [filePath, content] of snapshot) {
+    fs.writeFileSync(filePath, content);
+  }
 }
 
 function expectFilesUnchanged(snapshot: Map<string, string>) {
@@ -150,15 +174,26 @@ function createCanonicalFixtureRepo() {
   return fixture;
 }
 
-afterEach(() => {
-  for (const fixture of fixtureRoots.splice(0)) {
-    fs.rmSync(fixture, { recursive: true, force: true });
+let fixture: string;
+let canonicalState: Map<string, string>;
+
+beforeAll(() => {
+  fixture = createCanonicalFixtureRepo();
+  canonicalState = snapshotFiles(fixtureStateFiles(fixture));
+}, 60_000);
+
+beforeEach(() => {
+  restoreFiles(canonicalState);
+});
+
+afterAll(() => {
+  for (const fixtureRoot of fixtureRoots.splice(0)) {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-describe('component page CLI check modes', () => {
+describe.sequential('component page CLI check modes', () => {
   it('keeps human-readable check compatible with registry validation', () => {
-    const fixture = createCanonicalFixtureRepo();
     const before = snapshotFiles(generatedButtonFiles(fixture));
 
     const result = runGenerator(fixture, ['Button', '--force', '--check']);
@@ -175,7 +210,6 @@ describe('component page CLI check modes', () => {
   }, 60_000);
 
   it('emits structured JSON check output with valid registry paths', () => {
-    const fixture = createCanonicalFixtureRepo();
     const before = snapshotFiles(generatedButtonFiles(fixture));
 
     const result = runGenerator(fixture, [
@@ -197,7 +231,6 @@ describe('component page CLI check modes', () => {
   }, 60_000);
 
   it('reports stale generated files in JSON check mode without mutating them', () => {
-    const fixture = createCanonicalFixtureRepo();
     const apiFile = generatedButtonApiPath(fixture);
     const staleContent = `${fs.readFileSync(apiFile, 'utf8')}\n// stale fixture drift\n`;
     fs.writeFileSync(apiFile, staleContent);
@@ -226,7 +259,6 @@ describe('component page CLI check modes', () => {
   }, 60_000);
 
   it('fails --check when effective related metadata is non-canonical', () => {
-    const fixture = createCanonicalFixtureRepo();
     const metadataFile = path.join(
       fixture,
       'apps/website/src/component-catalog/components/Button/metadata.ts'
@@ -250,7 +282,6 @@ describe('component page CLI check modes', () => {
   }, 60_000);
 
   it('fails audit through shared related metadata validation', () => {
-    const fixture = createCanonicalFixtureRepo();
     const registryFile = path.join(
       fixture,
       'apps/website/src/component-catalog/registry/componentPages.ts'
