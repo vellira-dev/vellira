@@ -3,6 +3,20 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Existing partial release version without the v prefix
+        required: true
+        type: string
+      expected_tag_sha:
+        description: Exact immutable commit already referenced by the release tag
+        required: true
+        type: string
+      confirmation:
+        description: Type RECOVER_EXISTING_RELEASE
+        required: true
+        type: string
 
 permissions: read-all
 
@@ -12,6 +26,7 @@ concurrency:
 
 jobs:
   release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -68,7 +83,11 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm exec semantic-release
+        run: |
+          if ! pnpm exec semantic-release; then
+            echo "::error::semantic-release failed after it may have created immutable external state. Do not delete or move the tag. Use this workflow's manual release-recovery path after forensic review."
+            exit 1
+          fi
 
       - name: Detect version sync changes
         id: version-sync
@@ -181,3 +200,132 @@ jobs:
             --auto \
             --squash \
             --delete-branch
+
+  recover-existing-release:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ inputs.release_version }}
+      EXPECTED_TAG_SHA: ${{ inputs.expected_tag_sha }}
+      RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+
+    steps:
+      - name: Check out recovery controls from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Fail-closed recovery preflight
+        id: recovery
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-recovery/cli.cjs preflight
+
+      - name: Check out exact tagged package source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          path: tagged-source
+          ref: ${{ inputs.expected_tag_sha }}
+
+      - name: Install exact tagged dependencies
+        if: steps.recovery.outputs.missing_count != '0'
+        working-directory: tagged-source
+        run: pnpm install --frozen-lockfile
+
+      - name: Build exact tagged packages
+        if: steps.recovery.outputs.missing_count != '0'
+        working-directory: tagged-source
+        run: pnpm build
+
+      - name: Prepare exact tagged package manifests
+        if: steps.recovery.outputs.missing_count != '0'
+        working-directory: tagged-source
+        run: |
+          node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
+          pnpm install --lockfile-only
+
+      - name: Reconcile and verify all npm packages
+        working-directory: tagged-source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ../scripts/release-recovery/cli.cjs packages
+
+      - name: Create or verify GitHub Release on existing tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-recovery/cli.cjs github-release
+
+      - name: Restore canonical version synchronization
+        run: |
+          node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
+          pnpm install --lockfile-only
+
+      - name: Detect and verify version-sync changes
+        id: recovery-version-sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(git diff --name-only -- . ':!package.json' ':!pnpm-lock.yaml' ':!packages/*/package.json')"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected recovery changes:"
+            echo "$unexpected"
+            exit 1
+          fi
+          git diff --check -- package.json pnpm-lock.yaml packages/*/package.json
+          if git diff --quiet -- package.json pnpm-lock.yaml packages/*/package.json; then
+            node -e "if (require('./package.json').version !== process.env.RELEASE_VERSION) process.exit(1)"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify release sync token
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        env:
+          RELEASE_SYNC_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_SYNC_TOKEN" ]; then
+            echo "RELEASE_SYNC_TOKEN is required to create the reviewable version-sync PR."
+            exit 1
+          fi
+
+      - name: Create version sync PR
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        id: version-sync-pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ secrets.RELEASE_SYNC_TOKEN }}
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            packages/*/package.json
+          branch: chore/sync-release-${{ inputs.release_version }}
+          commit-message: 'chore(release): sync package versions'
+          delete-branch: true
+          title: 'chore(release): sync package versions'
+          body: |
+            Sync package manifests and lockfile with recovered version ${{ inputs.release_version }} after all external release state was verified.
+
+      - name: Verify version sync PR creation
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        env:
+          VERSION_SYNC_PR: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+        run: |
+          if [ -z "$VERSION_SYNC_PR" ]; then
+            echo "Recovery completed externally, but no version-sync PR was created or found."
+            exit 1
+          fi
