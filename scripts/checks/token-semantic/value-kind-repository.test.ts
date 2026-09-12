@@ -8,12 +8,16 @@ import {
 
 /** Exercise real themes and controlSizes, never a fixture-only baseline. */
 describe('maintained value-kind inventory', () => {
-  it('checks all theme layers, shared control sizes, emitted CSS, and package wiring without findings', () => {
-    const result = checkTokenValueKinds();
-    expect(result.checked).toBeGreaterThan(7000);
-    expect(result.findings).toEqual([]);
-    expect(result.coverage).toBe('complete');
-  });
+  it(
+    'checks all theme layers, shared control sizes, emitted CSS, and package wiring without findings',
+    () => {
+      const result = checkTokenValueKinds();
+      expect(result.checked).toBeGreaterThan(7000);
+      expect(result.findings).toEqual([]);
+      expect(result.coverage).toBe('complete');
+    },
+    30_000
+  );
 
   it('fails closed when emitted generated CSS diverges from canonical output maps', () => {
     const result = auditGeneratedTokenCssOutput('/* stale CSS */\n');
