@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   auditPublicCompatibilityAlias,
+  auditTokenPublicApiReleaseBoundary,
+  auditTokenPublicPackageSurface,
   checkTokenPublicApi,
   escapeRegExpLiteral,
 } from './public-api';
@@ -11,8 +13,8 @@ const root = process.cwd();
 describe('public token API audit adapter', () => {
   it('checks the maintained #889 public API baseline without findings', () => {
     const result = checkTokenPublicApi(root);
-    expect(result.coverage).toBe('partial');
-    expect(result.checked).toBeGreaterThan(0);
+    expect(result.coverage).toBe('complete');
+    expect(result.checked).toBeGreaterThan(90);
     expect(result.findings).toEqual([]);
   });
 
@@ -65,6 +67,67 @@ describe('public token API audit adapter', () => {
           code: 'css-alias-replacement-path-missing',
         }),
         expect.objectContaining({ code: 'css-alias-output-missing' }),
+      ])
+    );
+  });
+
+  it('fails closed when package subpaths or root public symbols drift', () => {
+    expect(
+      auditTokenPublicPackageSurface({
+        packageName: '@vellira-ui/tokens',
+        actualSubpaths: ['.', './css', './legacy'],
+        actualSymbols: ['lightTheme'],
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'token-package-subpath-surface-drift' }),
+        expect.objectContaining({ code: 'token-package-symbol-surface-drift' }),
+      ])
+    );
+  });
+
+  it('forces bounded aliases out at their recorded 3.0.0 boundary', () => {
+    const findings = auditTokenPublicApiReleaseBoundary({
+      currentVersion: '3.0.0',
+      removalRelease: '3.0.0',
+      exportAliases: [{ exportName: 'theme', removeIn: '3.0.0' }],
+      cssAliases: [
+        { variable: '--popover-content-shadow-web', removeIn: '3.0.0' },
+      ],
+    });
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'expired-public-export-alias' }),
+        expect.objectContaining({ code: 'expired-css-compatibility-alias' }),
+      ])
+    );
+  });
+
+  it('keeps 2.x compatibility aliases valid before the major boundary', () => {
+    expect(
+      auditTokenPublicApiReleaseBoundary({
+        currentVersion: '2.104.2',
+        removalRelease: '3.0.0',
+        exportAliases: [{ exportName: 'theme', removeIn: '3.0.0' }],
+        cssAliases: [
+          { variable: '--popover-content-shadow-web', removeIn: '3.0.0' },
+        ],
+      })
+    ).toEqual([]);
+  });
+
+  it('rejects malformed package versions instead of guessing the release boundary', () => {
+    expect(
+      auditTokenPublicApiReleaseBoundary({
+        currentVersion: 'next',
+        removalRelease: '3.0.0',
+        exportAliases: [],
+        cssAliases: [],
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'invalid-token-package-version' }),
       ])
     );
   });
