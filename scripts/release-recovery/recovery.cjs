@@ -138,6 +138,13 @@ function verifyRegistryEvidence(
   return { integrity: dist.integrity, tarball: dist.tarball, sourceShas };
 }
 
+function isCanonicalSemanticReleaseBody(body, tagName) {
+  if (typeof body !== 'string') return false;
+  const version = tagName.startsWith('v') ? tagName.slice(1) : tagName;
+  const prefix = `## [${version}](https://github.com/${REPOSITORY}/compare/`;
+  return body.startsWith(prefix) && body.includes(`...${tagName})`);
+}
+
 function assessGithubRelease(existing, expected) {
   if (!existing) return { action: 'create' };
   assert.equal(existing.tag_name, expected.tagName, 'Release tag conflicts');
@@ -152,7 +159,12 @@ function assessGithubRelease(existing, expected) {
     'Existing release is unexpectedly a prerelease'
   );
   assert.equal(existing.name, expected.name, 'Existing release name conflicts');
-  assert.equal(existing.body, expected.body, 'Existing release notes conflict');
+  assert.equal(
+    existing.body === expected.body ||
+      isCanonicalSemanticReleaseBody(existing.body, expected.tagName),
+    true,
+    'Existing release notes conflict'
+  );
   return { action: 'none', releaseId: existing.id };
 }
 
