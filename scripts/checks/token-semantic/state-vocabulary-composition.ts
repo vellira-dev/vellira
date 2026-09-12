@@ -55,7 +55,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function readPath(value: unknown, tokenPath: string): unknown {
   let current = value;
-  for (const segment of tokenPath.split('.').slice(1)) {
+  for (const segment of tokenPath.split('.')) {
     const record = asRecord(current);
     if (!record || !(segment in record)) return undefined;
     current = record[segment];
