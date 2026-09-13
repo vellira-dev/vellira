@@ -18,6 +18,8 @@ export type VelliraUiUsageSeverity = 'info' | 'warning' | 'error';
 export type VelliraUiUsageExceptionCategory =
   'framework-infrastructure' | 'generated-vendor' | 'architectural-exception';
 
+export type VelliraUiUsageMode = 'audit' | 'blocking';
+
 export interface VelliraUiUsageFinding {
   ruleId: VelliraUiUsageRuleId;
   path: string;
@@ -54,7 +56,7 @@ export interface VelliraUiUsageSummary {
 
 export interface VelliraUiUsageReport {
   schemaVersion: '1';
-  mode: 'audit';
+  mode: VelliraUiUsageMode;
   findings: VelliraUiUsageFinding[];
   exceptions: AppliedVelliraUiUsageException[];
   summary: VelliraUiUsageSummary;
