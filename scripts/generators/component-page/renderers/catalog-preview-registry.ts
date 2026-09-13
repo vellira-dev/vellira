@@ -147,32 +147,6 @@ export async function synchronizeGeneratedCatalogPreview(params: {
   );
 }
 
-function collectMatches(source: string, pattern: RegExp) {
-  return [...source.matchAll(pattern)]
-    .map((match) => match[1])
-    .filter((value): value is string => Boolean(value));
-}
-
-function collectGeneratedPreviewSlugs(source: string) {
-  return [
-    ...source.matchAll(
-      /^\s{2}(?:([A-Za-z_$][\w$]*)|'([^']+)'|"([^"]+)"):\s+[A-Za-z_$][\w$]*CatalogPreview,/gm
-    ),
-  ]
-    .map((match) => match[1] ?? match[2] ?? match[3])
-    .filter((value): value is string => Boolean(value));
-}
-
-function countBySlug(slugs: readonly string[]) {
-  const counts = new Map<string, number>();
-
-  for (const slug of slugs) {
-    counts.set(slug, (counts.get(slug) ?? 0) + 1);
-  }
-
-  return counts;
-}
-
 export function renderGeneratedCatalogPreviewRegistry(params: {
   componentsRoot: string;
 }) {
