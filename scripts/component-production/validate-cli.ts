@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { parseCandidateSnapshot } from './candidate-snapshot';
+
 import {
   COMPONENT_PRODUCTION_SCHEMA_VERSION,
   type ComponentProductionValidationResultV1,
@@ -10,6 +12,7 @@ import { runComponentProductionValidation } from './run';
 
 type ComponentProductionValidationCliOptions = {
   specFile: string;
+  candidateSnapshotFile?: string;
 };
 
 type ComponentProductionValidationRunner = (
@@ -56,9 +59,24 @@ export async function runComponentProductionValidationCli(
       );
     }
 
+    let candidateSnapshot;
+    if (options.candidateSnapshotFile !== undefined) {
+      try {
+        candidateSnapshot = parseCandidateSnapshot(
+          JSON.parse(
+            readFile(path.resolve(root, options.candidateSnapshotFile))
+          )
+        );
+      } catch (error) {
+        throw new Error(
+          `Unable to read candidate snapshot "${options.candidateSnapshotFile}": ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
     const result = await runValidation({
       root,
       input: rawInput,
+      ...(candidateSnapshot === undefined ? {} : { candidateSnapshot }),
     });
 
     write(JSON.stringify(result, null, 2));
@@ -95,9 +113,21 @@ function parseArgs(
   args: readonly string[]
 ): ComponentProductionValidationCliOptions {
   let specFile: string | undefined;
+  let candidateSnapshotFile: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+
+    if (arg === '--candidate-snapshot') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--'))
+        throw new Error('Expected a file path after --candidate-snapshot.');
+      if (candidateSnapshotFile !== undefined)
+        throw new Error('Provide --candidate-snapshot exactly once.');
+      candidateSnapshotFile = value;
+      index += 1;
+      continue;
+    }
 
     if (arg === '--spec') {
       const value = args[index + 1];
@@ -126,6 +156,7 @@ function parseArgs(
 
   return {
     specFile,
+    ...(candidateSnapshotFile === undefined ? {} : { candidateSnapshotFile }),
   };
 }
 

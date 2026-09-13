@@ -19,6 +19,60 @@ const SPEC: ComponentProductionInputV1 = {
 };
 
 describe('runComponentProductionValidationCli', () => {
+  it.each([
+    ['--spec', 'safe.json', '--candidate-snapshot'],
+    ['--spec', 'safe.json', '--candidate-snapshot', '--force'],
+    [
+      '--spec',
+      'safe.json',
+      '--candidate-snapshot',
+      'a.json',
+      '--candidate-snapshot',
+      'b.json',
+    ],
+  ])('rejects missing or duplicate snapshot options: %s', async (...args) => {
+    let called = false;
+    const code = await runComponentProductionValidationCli(args, {
+      runValidation: async () => {
+        called = true;
+        return validationResult('ready');
+      },
+      writeError: () => undefined,
+    });
+    expect(code).toBe(2);
+    expect(called).toBe(false);
+  });
+
+  it.each([
+    '{malformed',
+    '{"schemaVersion":"2","baseRevision":"invalid","entries":[]}',
+  ])(
+    'rejects malformed snapshot before invoking validation',
+    async (contents) => {
+      let called = false;
+      const errors: string[] = [];
+      const code = await runComponentProductionValidationCli(
+        [
+          '--spec',
+          'safe.json',
+          '--candidate-snapshot',
+          'snapshot with spaces.json',
+        ],
+        {
+          readFile: (file) =>
+            file.endsWith('safe.json') ? JSON.stringify(SPEC) : contents,
+          runValidation: async () => {
+            called = true;
+            return validationResult('ready');
+          },
+          writeError: (value) => errors.push(value),
+        }
+      );
+      expect(code).toBe(2);
+      expect(called).toBe(false);
+      expect(errors.join('')).toContain('snapshot with spaces.json');
+    }
+  );
   it('runs validation-only from an explicit JSON specification', async () => {
     const output: string[] = [];
     let observedInput: unknown;
