@@ -47,12 +47,12 @@ describe('HeroPreview canonical token controls', () => {
   it('uses public bare Buttons without standard Button geometry', () => {
     for (const control of tokenControls()) {
       expect(control.openingElement.tagName.getText(sourceFile)).toBe('Button');
-      expect(attribute(control, 'appearance')?.initializer?.getText(sourceFile)).toBe(
-        "'bare'"
-      );
-      expect(attribute(control, 'type')?.initializer?.getText(sourceFile)).toBe(
-        "'button'"
-      );
+      expect(
+        attribute(control, 'appearance')?.initializer?.getText(sourceFile)
+      ).toBe("'bare'");
+      expect(
+        attribute(control, 'type')?.initializer?.getText(sourceFile)
+      ).toBe("'button'");
 
       for (const name of ['size', 'shape', 'fullWidth']) {
         expect(attribute(control, name)).toBeUndefined();
@@ -63,7 +63,9 @@ describe('HeroPreview canonical token controls', () => {
   it('has no remaining Vellira UI usage findings or exceptions', () => {
     const report = runVelliraUiUsageCheck();
     expect(report.findings.filter(({ path }) => path === filePath)).toEqual([]);
-    expect(report.exceptions.filter(({ path }) => path === filePath)).toEqual([]);
+    expect(
+      report.exceptions.filter(({ path }) => path === filePath)
+    ).toEqual([]);
   });
 
   it('detects reverting the token controls to authored native buttons', () => {
