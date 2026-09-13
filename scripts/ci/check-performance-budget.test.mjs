@@ -12,6 +12,7 @@ import {
   classifyFiles as classifyAffectedFiles,
   packageNameForFiles,
   planAffectedExecution,
+  resolveWorkspaceImpact,
 } from './affected-execution.mjs';
 
 const classification = {
@@ -93,13 +94,17 @@ test('affected execution classifier stays aligned with the performance budget cl
   }
 });
 
-test('affected execution maps only narrow proven shapes to the affected path', () => {
+test('affected execution narrows docs immediately but package-local only after graph resolution', () => {
   assert.deepEqual(
     planAffectedExecution(['docs/ci.md'], classification),
     {
       shape: 'docs-only',
       executionPath: 'affected',
       packageName: null,
+      graphStatus: 'not-applicable',
+      graphReason: '',
+      affectedWorkspaces: [],
+      affectedWorkspacePaths: [],
       changedFiles: ['docs/ci.md'],
     }
   );
@@ -108,8 +113,30 @@ test('affected execution maps only narrow proven shapes to the affected path', (
     planAffectedExecution(['packages/react/src/Button.tsx'], classification),
     {
       shape: 'package-local',
+      executionPath: 'full',
+      packageName: 'react',
+      graphStatus: 'fallback',
+      graphReason: 'workspace graph was not resolved',
+      affectedWorkspaces: [],
+      affectedWorkspacePaths: [],
+      changedFiles: ['packages/react/src/Button.tsx'],
+    }
+  );
+
+  assert.deepEqual(
+    planAffectedExecution(['packages/react/src/Button.tsx'], classification, {
+      resolved: true,
+      workspaceNames: ['@vellira-ui/react', '@vellira-ui/website'],
+      workspacePaths: ['packages/react', 'apps/website'],
+    }),
+    {
+      shape: 'package-local',
       executionPath: 'affected',
       packageName: 'react',
+      graphStatus: 'resolved',
+      graphReason: '',
+      affectedWorkspaces: ['@vellira-ui/react', '@vellira-ui/website'],
+      affectedWorkspacePaths: ['packages/react', 'apps/website'],
       changedFiles: ['packages/react/src/Button.tsx'],
     }
   );
@@ -121,6 +148,47 @@ test('affected execution maps only narrow proven shapes to the affected path', (
   assert.equal(
     planAffectedExecution(['.github/workflows/ci.yml'], classification).executionPath,
     'full'
+  );
+});
+
+test('workspace impact follows transitive internal dependents and excludes unrelated workspaces', () => {
+  const workspaces = [
+    { name: '@vellira-ui/react', path: 'packages/react', dependencies: [] },
+    {
+      name: '@vellira-ui/react-storybook',
+      path: 'apps/react-storybook',
+      dependencies: ['@vellira-ui/react'],
+    },
+    {
+      name: '@vellira-ui/website',
+      path: 'apps/website',
+      dependencies: ['@vellira-ui/react-storybook'],
+    },
+    {
+      name: 'native-playground',
+      path: 'apps/native-playground',
+      dependencies: [],
+    },
+  ];
+
+  assert.deepEqual(resolveWorkspaceImpact(workspaces, 'react'), {
+    workspaceNames: [
+      '@vellira-ui/react-storybook',
+      '@vellira-ui/website',
+      '@vellira-ui/react',
+    ],
+    workspacePaths: ['apps/react-storybook', 'apps/website', 'packages/react'],
+  });
+});
+
+test('workspace impact fails closed when the changed package is absent from the graph', () => {
+  assert.throws(
+    () =>
+      resolveWorkspaceImpact(
+        [{ name: '@vellira-ui/icons', path: 'packages/icons', dependencies: [] }],
+        'react'
+      ),
+    /Workspace graph does not contain packages\/react/
   );
 });
 
