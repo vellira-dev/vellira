@@ -75,8 +75,10 @@ describe('ComponentCodeBlock canonical copy control', () => {
 
   it('detects reverting the copy control to an authored native button', () => {
     const control = copyControl();
-    const tags = [control.openingElement.tagName, control.closingElement.tagName]
-      .sort((left, right) => right.pos - left.pos);
+    const tags = [
+      control.openingElement.tagName,
+      control.closingElement.tagName,
+    ].sort((left, right) => right.pos - left.pos);
     const regressed = tags.reduce(
       (text, node) =>
         `${text.slice(0, node.getStart(sourceFile))}button${text.slice(node.end)}`,
