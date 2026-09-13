@@ -13,6 +13,36 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  impact:
+    name: PR Impact
+    runs-on: ubuntu-latest
+    outputs:
+      shape: ${{ steps.classify.outputs.shape }}
+      execution-path: ${{ steps.classify.outputs.execution_path }}
+      package-name: ${{ steps.classify.outputs.package_name }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+
+      - name: Classify exact PR impact
+        id: classify
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          changed_files="$RUNNER_TEMP/vellira-ci-changed-files.txt"
+          git diff --name-only "$BASE_SHA...$HEAD_SHA" > "$changed_files"
+          node scripts/ci/affected-execution.mjs --files-file "$changed_files"
+
   quality:
     name: Quality & Component Quality
     runs-on: ubuntu-latest
@@ -111,6 +141,8 @@ jobs:
 
   cloudflare-cache-migration:
     name: Cloudflare cache and multi-deployment browser contracts
+    needs: impact
+    if: needs.impact.outputs.shape != 'docs-only'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -168,6 +200,8 @@ jobs:
 
   typecheck:
     name: Typecheck & API Contracts
+    needs: impact
+    if: needs.impact.outputs.shape != 'docs-only'
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -197,6 +231,8 @@ jobs:
 
   tooling:
     name: Tooling & IndexNow Tests
+    needs: impact
+    if: needs.impact.outputs.shape != 'docs-only'
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -233,6 +269,8 @@ jobs:
 
   unit-coverage:
     name: Unit & Coverage Tests
+    needs: impact
+    if: needs.impact.outputs.shape != 'docs-only'
     runs-on: ubuntu-latest
 
     steps:
@@ -267,6 +305,8 @@ jobs:
 
   generator-blog:
     name: Component Page & Blog Tests
+    needs: impact
+    if: needs.impact.outputs.shape != 'docs-only'
     runs-on: ubuntu-latest
 
     steps:
@@ -304,6 +344,8 @@ jobs:
 
   storybook-browser:
     name: Storybook & Browser Tests
+    needs: impact
+    if: needs.impact.outputs.shape != 'docs-only'
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -357,6 +399,7 @@ jobs:
 
   ci:
     name: Build, Test & Validate
+    needs: impact
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -379,9 +422,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages and apps
+        if: needs.impact.outputs.shape != 'docs-only'
         run: pnpm ci:build
 
       - name: CodeShowcase browser regression
+        if: needs.impact.outputs.shape != 'docs-only'
         timeout-minutes: 5
         shell: bash
         env:
@@ -412,7 +457,7 @@ jobs:
             scripts/code-showcase-website-smoke.mjs
 
       - name: Upload CodeShowcase browser evidence
-        if: always()
+        if: ${{ always() && needs.impact.outputs.shape != 'docs-only' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: code-showcase-browser-evidence
@@ -424,6 +469,7 @@ jobs:
         run: pnpm docs:build
 
       - name: Blog discovery browser regression
+        if: needs.impact.outputs.shape != 'docs-only'
         shell: bash
         run: |
           set -euo pipefail
@@ -451,4 +497,5 @@ jobs:
             scripts/blog-discovery-website-smoke.mjs
 
       - name: Smoke packages
+        if: needs.impact.outputs.shape != 'docs-only'
         run: pnpm ci:smoke

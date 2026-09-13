@@ -4,7 +4,8 @@ import { createHash, createHmac } from 'node:crypto';
 const REGION = 'auto';
 const SERVICE = 's3';
 const TERMINATOR = 'aws4_request';
-const TOKEN_VERIFY_URL = 'https://api.cloudflare.com/client/v4/user/tokens/verify';
+const USER_TOKEN_VERIFY_URL =
+  'https://api.cloudflare.com/client/v4/user/tokens/verify';
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_ATTEMPTS = 4;
 
@@ -113,9 +114,20 @@ export function signR2S3Request({
   return { url, headers: requestHeaders, body: bytes };
 }
 
+function resolveTokenVerifyUrl(token, accountId) {
+  if (!token.startsWith('cfat_')) return USER_TOKEN_VERIFY_URL;
+  assert.match(
+    accountId ?? '',
+    /^[a-f0-9]{32}$/,
+    'Cloudflare account-owned API tokens require CLOUDFLARE_ACCOUNT_ID'
+  );
+  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/tokens/verify`;
+}
+
 export async function resolveR2S3Credentials(
   apiToken,
   {
+    accountId,
     fetchImpl = fetch,
     signal,
     secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
@@ -128,7 +140,8 @@ export async function resolveR2S3Credentials(
     /^[a-f0-9]{64}$/,
     'CLOUDFLARE_R2_SECRET_ACCESS_KEY must be the protocol-defined SHA-256 of CLOUDFLARE_API_TOKEN'
   );
-  const response = await fetchImpl(TOKEN_VERIFY_URL, {
+  const verifyUrl = resolveTokenVerifyUrl(token, accountId);
+  const response = await fetchImpl(verifyUrl, {
     headers: { Authorization: `Bearer ${token}` },
     signal,
   });
@@ -138,16 +151,21 @@ export async function resolveR2S3Credentials(
     );
   }
   const payload = await response.json();
+  assert.equal(
+    payload?.success,
+    true,
+    'Cloudflare token verification did not succeed'
+  );
   const accessKeyId = payload?.result?.id;
   assert.match(
     accessKeyId ?? '',
     /^[a-f0-9]{32}$/,
     'Cloudflare token verification did not return a token ID'
   );
-  assert.notEqual(
+  assert.equal(
     payload?.result?.status,
-    'disabled',
-    'Cloudflare token is disabled'
+    'active',
+    'Cloudflare token is not active'
   );
   return { accessKeyId, secretAccessKey };
 }
@@ -305,6 +323,7 @@ export async function withRemoteArchive(config, operation, options = {}) {
   const credentials =
     options.credentials ??
     (await resolveR2S3Credentials(apiToken, {
+      accountId,
       fetchImpl,
       signal: AbortSignal.timeout(15_000),
       secretAccessKey:

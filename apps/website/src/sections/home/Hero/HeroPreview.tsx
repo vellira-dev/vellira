@@ -184,7 +184,8 @@ export function HeroPreview() {
         </Tabs>
 
         <div className={styles.tokenStrip} aria-label='Theme token preview'>
-          <button
+          <Button
+            appearance='bare'
             type='button'
             className={styles.tokenButton}
             data-active={activeToken === 'primary'}
@@ -195,8 +196,9 @@ export function HeroPreview() {
           >
             <i className={styles.tokenSwatchPrimary} aria-hidden='true' />
             Primary
-          </button>
-          <button
+          </Button>
+          <Button
+            appearance='bare'
             type='button'
             className={styles.tokenButton}
             data-active={activeToken === 'surface'}
@@ -207,8 +209,9 @@ export function HeroPreview() {
           >
             <i className={styles.tokenSwatchSurface} aria-hidden='true' />
             Surface
-          </button>
-          <button
+          </Button>
+          <Button
+            appearance='bare'
             type='button'
             className={styles.tokenButton}
             data-active={activeToken === 'border'}
@@ -219,7 +222,7 @@ export function HeroPreview() {
           >
             <i className={styles.tokenSwatchBorder} aria-hidden='true' />
             Border
-          </button>
+          </Button>
         </div>
       </div>
     </div>
