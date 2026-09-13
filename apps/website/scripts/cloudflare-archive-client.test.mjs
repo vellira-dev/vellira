@@ -42,12 +42,15 @@ test('R2 S3 signer binds method, encoded bucket/key, body and metadata', () => {
   );
 });
 
-test('R2 credentials combine verified Cloudflare token ID with pre-derived protocol secret', async () => {
+test('R2 credentials keep legacy user tokens on the user verification endpoint', async () => {
   const token = 'test-cloudflare-api-token';
   let authorization;
+  let verifyUrl;
   const credentials = await resolveR2S3Credentials(token, {
+    accountId,
     secretAccessKey,
-    fetchImpl: async (_url, options) => {
+    fetchImpl: async (url, options) => {
+      verifyUrl = String(url);
       authorization = options.headers.Authorization;
       return new Response(
         JSON.stringify({
@@ -58,14 +61,74 @@ test('R2 credentials combine verified Cloudflare token ID with pre-derived proto
       );
     },
   });
+  assert.equal(
+    verifyUrl,
+    'https://api.cloudflare.com/client/v4/user/tokens/verify'
+  );
   assert.equal(authorization, `Bearer ${token}`);
   assert.equal(credentials.accessKeyId, accessKeyId);
   assert.equal(credentials.secretAccessKey, secretAccessKey);
 });
 
+test('R2 credentials verify account-owned tokens against the scoped account endpoint', async () => {
+  const token = 'cfat_test-account-token';
+  let verifyUrl;
+  const credentials = await resolveR2S3Credentials(token, {
+    accountId,
+    secretAccessKey,
+    fetchImpl: async (url) => {
+      verifyUrl = String(url);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          result: { id: accessKeyId, status: 'active' },
+        }),
+        { headers: { 'content-type': 'application/json' } }
+      );
+    },
+  });
+  assert.equal(
+    verifyUrl,
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/tokens/verify`
+  );
+  assert.equal(credentials.accessKeyId, accessKeyId);
+  assert.equal(credentials.secretAccessKey, secretAccessKey);
+});
+
+test('R2 account-owned credentials fail closed without an account ID', async () => {
+  await assert.rejects(
+    resolveR2S3Credentials('cfat_test-account-token', {
+      secretAccessKey,
+      fetchImpl: async () => {
+        throw new Error('verification request must not run');
+      },
+    }),
+    /require CLOUDFLARE_ACCOUNT_ID/
+  );
+});
+
+test('R2 credentials reject a verified token that is not active', async () => {
+  await assert.rejects(
+    resolveR2S3Credentials('cfat_test-account-token', {
+      accountId,
+      secretAccessKey,
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            result: { id: accessKeyId, status: 'expired' },
+          }),
+          { headers: { 'content-type': 'application/json' } }
+        ),
+    }),
+    /Cloudflare token is not active/
+  );
+});
+
 test('R2 credentials fail closed without the protocol-derived secret', async () => {
   await assert.rejects(
     resolveR2S3Credentials('test-cloudflare-api-token', {
+      accountId,
       secretAccessKey: '',
       fetchImpl: async () => {
         throw new Error('verification request must not run');
