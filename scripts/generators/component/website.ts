@@ -9,12 +9,19 @@ import {
   readCanonicalComponentCapabilities,
   type ComponentPresentationScenario,
 } from '../component-presentation';
+import {
+  existsInPackage,
+  extractPlatformProps,
+} from '../component-page/extractors/source';
 import { getCatalogPaths } from '../component-page/helpers/paths';
 
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
 
 export type WebsiteComponentProfile =
-  'primitive' | 'form-control' | 'compound' | 'overlay';
+  | 'primitive'
+  | 'form-control'
+  | 'compound'
+  | 'overlay';
 
 export type ComponentWebsiteGenerationResult = {
   createdFiles: string[];
@@ -29,51 +36,44 @@ export function resolveWebsiteComponentProfile(
   return profile === 'base' ? 'primitive' : profile;
 }
 
-function readComponentTypeSources(params: {
+function readComponentApiPropNames(params: {
   root: string;
   componentName: string;
 }) {
-  const sharedFile = `${params.componentName[0].toLowerCase()}${params.componentName.slice(1)}.ts`;
-  const candidates = [
-    path.join(params.root, 'packages/types/src', sharedFile),
-    ...['react', 'react-native'].flatMap((packageName) =>
-      ['primitives', 'components', 'patterns'].map((layer) =>
-        path.join(
-          params.root,
-          'packages',
-          packageName,
-          'src',
-          layer,
-          params.componentName,
-          'types.ts'
-        )
-      )
-    ),
-  ];
+  const propNames = new Set<string>();
 
-  return candidates
-    .filter((filePath) => fs.existsSync(filePath))
-    .map((filePath) => fs.readFileSync(filePath, 'utf8'))
-    .join('\n');
-}
+  for (const platform of ['react', 'react-native'] as const) {
+    if (
+      !existsInPackage({
+        root: params.root,
+        packageName: platform,
+        componentName: params.componentName,
+      })
+    ) {
+      continue;
+    }
 
-function sourceHasProp(source: string, propName: string) {
-  return new RegExp(`\\b${propName}\\??\\s*:`).test(source);
+    for (const prop of extractPlatformProps({
+      root: params.root,
+      componentName: params.componentName,
+      platform,
+    })) {
+      propNames.add(prop.name);
+    }
+  }
+
+  return propNames;
 }
 
 function getScenarioProps(params: {
   scenario: ComponentPresentationScenario;
   profile: ComponentProfileArg;
-  source: string;
-}) {
-  const { scenario, profile, source } = params;
+  propNames: ReadonlySet<string>;
+}): string[] | null {
+  const { scenario, profile, propNames } = params;
   const props: string[] = [];
-  const hasType = sourceHasProp(source, 'type');
-  const booleanControl = sourceHasProp(source, 'checked');
-
-  if (profile === 'compound' && hasType && scenario !== 'multiple') {
-    props.push("type='single'");
-  }
+  const hasType = propNames.has('type');
+  const booleanControl = propNames.has('checked');
 
   switch (scenario) {
     case 'basic':
@@ -83,35 +83,40 @@ function getScenarioProps(params: {
       if (hasType) {
         props.push("type='multiple'");
       }
-      if (sourceHasProp(source, 'defaultValue')) {
+      if (propNames.has('defaultValue')) {
         props.push("defaultValue={['item-1', 'item-2']}");
       }
-      break;
+      return props.length > 0 ? props : null;
     case 'controlled':
       if (booleanControl) {
         props.push('checked');
-      } else if (sourceHasProp(source, 'value')) {
+      } else if (propNames.has('value')) {
         props.push(
           profile === 'compound' ? "value='item-1'" : "value='Example value'"
         );
+      } else {
+        return null;
       }
       break;
     case 'uncontrolled':
-      if (booleanControl && sourceHasProp(source, 'defaultChecked')) {
+      if (booleanControl && propNames.has('defaultChecked')) {
         props.push('defaultChecked');
-      } else if (sourceHasProp(source, 'defaultValue')) {
+      } else if (propNames.has('defaultValue')) {
         props.push(
           profile === 'compound'
             ? "defaultValue='item-1'"
             : "defaultValue='Example value'"
         );
+      } else {
+        return null;
       }
       break;
     case 'collapsible':
-      if (sourceHasProp(source, 'collapsible')) {
-        props.push('collapsible');
+      if (!propNames.has('collapsible')) {
+        return null;
       }
-      if (sourceHasProp(source, 'defaultValue')) {
+      props.push('collapsible');
+      if (propNames.has('defaultValue')) {
         props.push("defaultValue='item-1'");
       }
       break;
@@ -119,9 +124,10 @@ function getScenarioProps(params: {
     case 'required':
     case 'invalid':
     case 'loading':
-      if (sourceHasProp(source, scenario)) {
-        props.push(scenario);
+      if (!propNames.has(scenario)) {
+        return null;
       }
+      props.push(scenario);
       break;
   }
 
@@ -138,26 +144,30 @@ function renderGeneratedPresentationMetadata(params: {
   profile: ComponentProfileArg;
   capabilities: readonly import('@vellira-ui/metadata').ComponentCapability[];
 }) {
-  const source = readComponentTypeSources(params);
+  const propNames = readComponentApiPropNames(params);
   const scenarios = deriveComponentPresentationScenarios({
     profile: params.profile,
     capabilities: params.capabilities,
   });
   const examples = scenarios
-    .map((scenario) => {
+    .flatMap((scenario) => {
       const props = getScenarioProps({
         scenario,
         profile: params.profile,
-        source,
+        propNames,
       });
 
-      return `    {
+      if (props === null) {
+        return [];
+      }
+
+      return [`    {
       title: ${toTsString(getComponentPresentationScenarioTitle(scenario))},
       description: ${toTsString(
         getComponentPresentationScenarioDescription(scenario)
       )},
       props: [${props.map(toTsString).join(', ')}],
-    },`;
+    },`];
     })
     .join('\n');
 
