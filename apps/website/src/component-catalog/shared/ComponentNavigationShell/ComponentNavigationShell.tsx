@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { ComponentSidebar } from '../ComponentSidebar';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
 import { ArrowLeft } from '@vellira-ui/icons';
+import { Button } from '@vellira-ui/react';
 
 import styles from './ComponentNavigationShell.module.css';
 
@@ -56,7 +57,8 @@ export function ComponentNavigationShell({
 
       {!desktopOnly && open && (
         <div className={[styles.mobileLayer, styles.mobileLayerOpen].join(' ')}>
-          <button
+          <Button
+            appearance='bare'
             type='button'
             className={styles.backdrop}
             aria-label='Close component navigation'
@@ -83,14 +85,15 @@ export function ComponentNavigationShell({
               aria-label='Component navigation'
             >
               <div className={styles.mainNavigation}>
-                <button
+                <Button
+                  appearance='bare'
                   type='button'
                   className={styles.mainNavigationButton}
                   onClick={switchToMainNavigation}
                 >
                   <ArrowLeft size={16} aria-hidden='true' />
                   <span>Main navigation</span>
-                </button>
+                </Button>
               </div>
 
               <div className={styles.mobilePanelContent}>

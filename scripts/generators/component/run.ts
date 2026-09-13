@@ -15,7 +15,11 @@ import {
   checkComponentWebsiteContract,
   getPlannedComponentWebsiteArtifacts,
 } from './website-contract';
-import { checkPublicApiContractSynchronization } from './public-api-contract';
+import {
+  checkPublicApiContractSynchronization,
+  getPublicSymbolContractFile,
+  synchronizePublicSymbolContracts,
+} from './public-api-contract';
 import { checkComponentTokenContract } from './component-token-contract';
 import {
   checkSharedTypesContract,
@@ -108,6 +112,7 @@ function getPlannedUpdatedFiles(
       target.packageBarrelFile,
       target.publicApiTestFile,
     ]),
+    getPublicSymbolContractFile(plan.root),
     plan.metadataBarrelFile,
     plan.docsContractRegistryFile,
     ...getComponentApiDocsTargets(plan).map((target) => target.apiFile),
@@ -153,10 +158,7 @@ export async function runComponentGenerator(params: {
 
   if (params.options.check) {
     const driftedFiles = [
-      ...checkPublicApiContractSynchronization({
-        componentName: plan.componentName,
-        targets: plan.targets,
-      }),
+      ...checkPublicApiContractSynchronization(plan),
       ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
       ...checkComponentTokenContract(plan),
@@ -208,6 +210,11 @@ export async function runComponentGenerator(params: {
 
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
+
+  synchronizePublicSymbolContracts({
+    plan,
+    updatedFiles: result.updatedFiles,
+  });
 
   synchronizeMetadataExportContract({
     metadataBarrelFile: plan.metadataBarrelFile,
