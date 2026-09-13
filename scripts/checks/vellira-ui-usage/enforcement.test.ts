@@ -88,7 +88,7 @@ describe('Vellira UI usage blocking enforcement', () => {
     expect(fs.existsSync(proofPath)).toBe(false);
     fs.writeFileSync(
       proofPath,
-      'export const VelliraUiUsageNegativeProof = () => <button>Proof</button>;\n'
+      'export const VelliraUiUsageNegativeProof = () => <button>Proof</button>;\n',
     );
 
     try {
@@ -103,7 +103,7 @@ describe('Vellira UI usage blocking enforcement', () => {
         {
           cwd: process.cwd(),
           encoding: 'utf8',
-        }
+        },
       );
 
       expect(result.error).toBeUndefined();
@@ -122,7 +122,7 @@ describe('Vellira UI usage blocking enforcement', () => {
           detected: 'button',
           severity: 'error',
           blocking: true,
-        })
+        }),
       );
     } finally {
       fs.rmSync(proofPath, { force: true });
