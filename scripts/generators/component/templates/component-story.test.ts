@@ -82,4 +82,90 @@ describe('component story templates', () => {
       'children: (\n      <NativeText>Example content</NativeText>\n    )'
     );
   });
+
+  it('renders form-control capability scenarios without placeholder copy', () => {
+    const source = renderStoryTemplate({
+      componentName: 'SwitchProbe',
+      layer: 'primitives',
+      isNative: false,
+      profile: 'form-control',
+      control: 'boolean',
+      capabilities: [
+        'controlled',
+        'uncontrolled',
+        'disabled',
+        'required',
+        'invalid',
+      ],
+    });
+
+    expect(source).toContain('export const Controlled: Story');
+    expect(source).toContain('export const Uncontrolled: Story');
+    expect(source).toContain('export const Disabled: Story');
+    expect(source).toContain('export const Required: Story');
+    expect(source).toContain('export const Invalid: Story');
+    expect(source).not.toContain('Describe when to use');
+    expect(source).not.toContain('Replace this section');
+  });
+
+  it('renders rich compound scenarios from reusable capabilities', () => {
+    const source = renderStoryTemplate({
+      componentName: 'DisclosureProbe',
+      layer: 'components',
+      isNative: false,
+      profile: 'compound',
+      control: 'value',
+      capabilities: [
+        'compound-api',
+        'multiple',
+        'controlled',
+        'uncontrolled',
+        'collapsible',
+        'disabled',
+      ],
+      parts: ['Root', 'Item', 'Trigger', 'Content'],
+    });
+
+    expect(source).toContain('export const Multiple: Story');
+    expect(source).toContain("type: 'multiple'");
+    expect(source).toContain('export const Controlled: Story');
+    expect(source).toContain('export const Uncontrolled: Story');
+    expect(source).toContain('export const Collapsible: Story');
+    expect(source).toContain('export const Disabled: Story');
+    expect(source).toContain('export const RichContent: Story');
+    expect(source).toContain('production-style example');
+  });
+
+  it('keeps Native compound scenario names comparable with Web', () => {
+    const params = {
+      componentName: 'DisclosureProbe',
+      layer: 'components',
+      profile: 'compound' as const,
+      control: 'value' as const,
+      capabilities: [
+        'compound-api',
+        'multiple',
+        'controlled',
+        'uncontrolled',
+        'collapsible',
+        'disabled',
+      ] as const,
+      parts: ['Root', 'Item', 'Trigger', 'Content'] as const,
+    };
+    const web = renderStoryTemplate({ ...params, isNative: false });
+    const native = renderStoryTemplate({ ...params, isNative: true });
+
+    for (const story of [
+      'Default',
+      'Multiple',
+      'Controlled',
+      'Uncontrolled',
+      'Collapsible',
+      'Disabled',
+      'RichContent',
+    ]) {
+      expect(web).toContain(`export const ${story}: Story`);
+      expect(native).toContain(`export const ${story}: Story`);
+    }
+  });
 });

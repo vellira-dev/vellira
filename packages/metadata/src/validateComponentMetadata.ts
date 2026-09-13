@@ -1,5 +1,5 @@
 import {
-  type ComponentCapability,
+  componentCapabilities,
   type ComponentCategory,
   type ComponentLayer,
   type ComponentMetadata,
@@ -44,20 +44,6 @@ const componentStatuses: readonly ComponentStatus[] = [
   'experimental',
   'stable',
   'deprecated',
-];
-
-const componentCapabilities: readonly ComponentCapability[] = [
-  'controlled',
-  'uncontrolled',
-  'disabled',
-  'required',
-  'invalid',
-  'loading',
-  'keyboard',
-  'focus-management',
-  'compound-api',
-  'portal',
-  'responsive',
 ];
 
 const COMPONENT_PROFILES = [
