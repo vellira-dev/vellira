@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { checkPublicApiContractSynchronization } from './public-api-contract';
 import { createComponentGenerationPlan } from './plan';
 import { writeComponentGenerationPlan } from './write';
 
@@ -14,14 +15,14 @@ function createFixtureRoot() {
 
   for (const packageName of ['react', 'react-native']) {
     const sourceRoot = path.join(root, 'packages', packageName, 'src');
-    const layerRoot = path.join(sourceRoot, 'primitives');
 
-    fs.mkdirSync(layerRoot, { recursive: true });
+    for (const layerName of ['components', 'primitives']) {
+      fs.mkdirSync(path.join(sourceRoot, layerName), { recursive: true });
+      fs.writeFileSync(path.join(sourceRoot, layerName, 'index.ts'), '');
+    }
 
     fs.writeFileSync(path.join(sourceRoot, 'index.ts'), '');
-    fs.writeFileSync(path.join(layerRoot, 'index.ts'), '');
     fs.writeFileSync(path.join(root, 'packages', packageName, 'API.md'), '');
-
     fs.writeFileSync(
       path.join(sourceRoot, 'public-api.test.ts'),
       `import * as api from './index';
@@ -93,6 +94,21 @@ function createPlan(
   });
 }
 
+function createCompoundPlan(root: string) {
+  return createComponentGenerationPlan({
+    root,
+    options: {
+      componentName: 'Accordion',
+      platform: 'both',
+      layer: 'components',
+      category: 'navigation',
+      profile: 'compound',
+      parts: ['Root', 'Item', 'Trigger', 'Content'],
+      force: true,
+    },
+  });
+}
+
 function readContract(root: string, packageName: 'react' | 'react-native') {
   return fs.readFileSync(
     path.join(root, 'packages', packageName, 'src', 'public-api.test.ts'),
@@ -114,6 +130,9 @@ describe('component generator public API contract synchronization', () => {
       expect(contract.indexOf("'Avatar'")).toBeLessThan(
         contract.indexOf("'Button'")
       );
+      expect(contract).toContain('export const publicApiSymbols = [');
+      expect(contract).toContain("  'Avatar',");
+      expect(contract).toContain("  'AvatarProps',");
     }
   });
 
@@ -123,7 +142,11 @@ describe('component generator public API contract synchronization', () => {
     await writeComponentGenerationPlan(createPlan(root, 'web'));
 
     expect(readContract(root, 'react')).toContain("      'Avatar',");
+    expect(readContract(root, 'react')).toContain("  'AvatarProps',");
     expect(readContract(root, 'react-native')).not.toContain("      'Avatar',");
+    expect(readContract(root, 'react-native')).not.toContain(
+      "  'AvatarProps',"
+    );
   });
 
   it('updates only the React Native contract for native generation', async () => {
@@ -132,7 +155,31 @@ describe('component generator public API contract synchronization', () => {
     await writeComponentGenerationPlan(createPlan(root, 'native'));
 
     expect(readContract(root, 'react')).not.toContain("      'Avatar',");
+    expect(readContract(root, 'react')).not.toContain("  'AvatarProps',");
     expect(readContract(root, 'react-native')).toContain("      'Avatar',");
+    expect(readContract(root, 'react-native')).toContain("  'AvatarProps',");
+  });
+
+  it('includes compound public prop exports in the canonical symbol contract', async () => {
+    const root = createFixtureRoot();
+
+    await writeComponentGenerationPlan(createCompoundPlan(root));
+
+    for (const packageName of ['react', 'react-native'] as const) {
+      const contract = readContract(root, packageName);
+
+      for (const symbol of [
+        'Accordion',
+        'AccordionContentProps',
+        'AccordionItemProps',
+        'AccordionProps',
+        'AccordionTriggerProps',
+      ]) {
+        expect(contract).toContain(`  '${symbol}',`);
+      }
+
+      expect(contract).not.toContain("  'AccordionRootProps',");
+    }
   });
 
   it('is idempotent across repeated generation', async () => {
@@ -143,9 +190,11 @@ describe('component generator public API contract synchronization', () => {
     await writeComponentGenerationPlan(plan);
 
     for (const packageName of ['react', 'react-native'] as const) {
-      expect(
-        readContract(root, packageName).match(/ {6}'Avatar',/g)
-      ).toHaveLength(1);
+      const contract = readContract(root, packageName);
+
+      expect(contract.match(/ {6}'Avatar',/g)).toHaveLength(1);
+      expect(contract.match(/^ {2}'Avatar',/gm)).toHaveLength(1);
+      expect(contract.match(/^ {2}'AvatarProps',/gm)).toHaveLength(1);
     }
   });
 
@@ -157,10 +206,34 @@ describe('component generator public API contract synchronization', () => {
     await writeComponentGenerationPlan(plan);
 
     for (const packageName of ['react', 'react-native'] as const) {
-      expect(
-        readContract(root, packageName).match(/ {6}'Avatar',/g)
-      ).toHaveLength(1);
+      const contract = readContract(root, packageName);
+
+      expect(contract.match(/ {6}'Avatar',/g)).toHaveLength(1);
+      expect(contract.match(/^ {2}'Avatar',/gm)).toHaveLength(1);
+      expect(contract.match(/^ {2}'AvatarProps',/gm)).toHaveLength(1);
     }
+  });
+
+  it('reports public symbol drift through check without mutation', async () => {
+    const root = createFixtureRoot();
+    const plan = createPlan(root, 'web');
+
+    await writeComponentGenerationPlan(plan);
+
+    const contractFile = plan.targets[0].publicApiTestFile;
+    const driftedContent = fs
+      .readFileSync(contractFile, 'utf8')
+      .replace("  'AvatarProps',\n", '');
+
+    fs.writeFileSync(contractFile, driftedContent);
+
+    expect(
+      checkPublicApiContractSynchronization({
+        componentName: plan.componentName,
+        targets: plan.targets,
+      })
+    ).toEqual([contractFile]);
+    expect(fs.readFileSync(contractFile, 'utf8')).toBe(driftedContent);
   });
 
   it('reports public API contracts as updated artifacts', async () => {
