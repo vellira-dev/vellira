@@ -209,7 +209,7 @@
 }
 
 .columnHeader span {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -320,7 +320,7 @@
 .itemTop span {
   flex: 0 0 auto;
   padding: 5px 8px;
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: 9px;
   font-weight: 700;
   white-space: nowrap;
@@ -604,7 +604,7 @@
 .milestoneDate {
   display: block;
   margin-top: 6px;
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: 10px;
   font-weight: 700;
 }

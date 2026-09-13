@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ComponentProductionInputV1 } from './contracts';
 import {
   componentProductionFinalValidationCommands,
+  componentProductionRequiresTokenSemanticGate,
   runComponentProductionFinalValidation,
   type ComponentProductionFinalCommandExecution,
 } from './final-validation';
@@ -20,17 +21,18 @@ const WEB_INPUT: ComponentProductionInputV1 = {
 };
 
 describe('componentProductionFinalValidationCommands', () => {
-  it('selects canonical Web final gates', () => {
-    expect(
-      componentProductionFinalValidationCommands(WEB_INPUT).map(
-        (command) => command.id
-      )
-    ).toEqual([
+  it('selects canonical Web final gates including token semantic readiness', () => {
+    expect(componentProductionRequiresTokenSemanticGate(WEB_INPUT)).toBe(true);
+    const commands = componentProductionFinalValidationCommands(WEB_INPUT);
+    const tooling = commands.find(({ id }) => id === 'tooling-contracts');
+
+    expect(commands.map((command) => command.id)).toEqual([
       'public-api',
       'tooling-contracts',
       'canonical-web-visual',
       'web-smoke',
     ]);
+    expect(tooling?.command).toEqual(['pnpm', 'test:tooling:readiness']);
   });
 
   it('does not run Web visual validation for native-only candidates', () => {
@@ -55,6 +57,37 @@ describe('componentProductionFinalValidationCommands', () => {
       'web-smoke',
       'native-smoke',
     ]);
+  });
+
+  it('does not add the semantic gate when a candidate owns no token contract or token resource', () => {
+    const input: ComponentProductionInputV1 = {
+      ...WEB_INPUT,
+      componentTokens: false,
+    };
+    const commands = componentProductionFinalValidationCommands(input);
+    const tooling = commands.find(({ id }) => id === 'tooling-contracts');
+
+    expect(componentProductionRequiresTokenSemanticGate(input)).toBe(false);
+    expect(commands.map((command) => command.id)).toEqual([
+      'public-api',
+      'tooling-contracts',
+      'canonical-web-visual',
+      'web-smoke',
+    ]);
+    expect(tooling?.command).toEqual(['pnpm', 'test:tooling']);
+  });
+
+  it('uses semantic-aware tooling for an explicit token dependency', () => {
+    const input: ComponentProductionInputV1 = {
+      ...WEB_INPUT,
+      componentTokens: false,
+      tokens: ['semantic.surface.canvas'],
+    };
+    const commands = componentProductionFinalValidationCommands(input);
+    const tooling = commands.find(({ id }) => id === 'tooling-contracts');
+
+    expect(componentProductionRequiresTokenSemanticGate(input)).toBe(true);
+    expect(tooling?.command).toEqual(['pnpm', 'test:tooling:readiness']);
   });
 });
 
@@ -115,6 +148,38 @@ describe('runComponentProductionFinalValidation', () => {
     ]);
     expect(result.stages[0]?.findings[0]?.message).toContain(
       'Public API drift detected.'
+    );
+  });
+
+  it('blocks readiness when semantic-aware tooling fails', () => {
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/vellira-production',
+      input: WEB_INPUT,
+      runner: (command) =>
+        command.id === 'tooling-contracts'
+          ? {
+              exitCode: 1,
+              stdout: 'Token semantic audit: FAIL',
+              stderr: '',
+              timedOut: false,
+            }
+          : success(),
+    });
+
+    expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
+      ['public-api', 'passed'],
+      ['tooling', 'blocked'],
+      ['visual', 'skipped'],
+      ['smoke', 'skipped'],
+    ]);
+    expect(result.stages[1]?.findings[0]).toMatchObject({
+      id: 'tooling:tooling-contracts',
+      stage: 'tooling',
+      severity: 'blocking',
+      ruleId: 'tokens.semantic-architecture',
+    });
+    expect(result.stages[1]?.findings[0]?.message).toContain(
+      'Token semantic audit: FAIL'
     );
   });
 

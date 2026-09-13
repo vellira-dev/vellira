@@ -1,0 +1,66 @@
+name: Token Semantic Architecture Audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: token-semantic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  report:
+    name: Token Semantic Audit (report mode)
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Report mode stays isolated while #890 coverage is incomplete. Once the
+      # clean 12/12 baseline is established, the blocking gate moves into the
+      # authoritative normal ci:quality/readiness path required by #890.
+      - name: Token semantic audit report
+        id: token-semantic-report
+        env:
+          VELLIRA_AUDIT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/token-semantic
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git rev-parse HEAD > .artifacts/token-semantic/checkout-sha.txt
+          printf '%s\n' "$VELLIRA_AUDIT_HEAD_SHA" > .artifacts/token-semantic/head-sha.txt
+          pnpm --silent check:tokens-semantic:json > .artifacts/token-semantic/report.json
+          node --input-type=module -e "import fs from 'node:fs'; const r = JSON.parse(fs.readFileSync('.artifacts/token-semantic/report.json', 'utf8')); console.log('Token semantic report mode:', r.status, JSON.stringify(r.summary));"
+
+      - name: Upload token semantic audit report
+        if: always() && steps.token-semantic-report.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: token-semantic-report-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .artifacts/token-semantic/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Token semantic audit tests
+        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic

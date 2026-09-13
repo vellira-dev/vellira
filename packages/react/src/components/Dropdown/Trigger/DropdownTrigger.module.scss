@@ -145,7 +145,7 @@ $dropdown-colors: primary, neutral, success, warning, danger;
 
     &:hover:not(.disabled) {
       .iconLeft {
-        transform: rotate(var(--dropdown-rotate-angle, 90deg));
+        transform: rotate(90deg);
       }
     }
   }

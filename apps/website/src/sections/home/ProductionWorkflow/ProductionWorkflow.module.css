@@ -277,7 +277,7 @@
 }
 
 .stepIndex {
-  color: var(--text-tertiary);
+  color: inherit;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -287,7 +287,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
@@ -440,7 +440,7 @@
 }
 
 .releaseStats span {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   text-transform: uppercase;
 }
@@ -572,7 +572,7 @@
 }
 
 .publishTargets > span {
-  color: var(--text-tertiary);
+  color: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;

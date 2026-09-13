@@ -3,57 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { darkTheme } from './dark/theme.js';
 import { highContrastTheme } from './highContrast/theme.js';
 import { lightTheme } from './light/theme.js';
-import { isComponentPlatformIntent } from './platform-output/component-token-intents.js';
-
-type Finding = {
-  path: string;
-  reason: string;
-};
-
-const rendererKeys = new Set([
-  'web',
-  'native',
-  'reactNative',
-  'nativeMaxHeight',
-]);
-
-function scanCanonicalComponentTokens(
-  value: unknown,
-  path: string,
-  findings: Finding[]
-): void {
-  if (isComponentPlatformIntent(value)) return;
-
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) =>
-      scanCanonicalComponentTokens(entry, `${path}.${index}`, findings)
-    );
-    return;
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    if (path.endsWith('.shadow') && typeof value === 'string') {
-      findings.push({
-        path,
-        reason: 'canonical shadow contains renderer-specific CSS syntax',
-      });
-    }
-    return;
-  }
-
-  for (const [key, child] of Object.entries(value)) {
-    const childPath = path ? `${path}.${key}` : key;
-
-    if (rendererKeys.has(key)) {
-      findings.push({
-        path: childPath,
-        reason: `renderer-specific canonical key "${key}"`,
-      });
-    }
-
-    scanCanonicalComponentTokens(child, childPath, findings);
-  }
-}
+import {
+  type ComponentTokenBoundaryFinding,
+  scanCanonicalComponentTokens,
+} from './platform-output/component-token-boundary.js';
 
 const themes = [
   ['light', lightTheme],
@@ -65,7 +18,7 @@ describe('renderer-neutral canonical component token boundary', () => {
   it.each(themes)(
     'has no platform leakage in %s components',
     (_name, theme) => {
-      const findings: Finding[] = [];
+      const findings: ComponentTokenBoundaryFinding[] = [];
 
       scanCanonicalComponentTokens(theme.components, 'components', findings);
 
@@ -74,7 +27,7 @@ describe('renderer-neutral canonical component token boundary', () => {
   );
 
   it('does not let renderer keys hide inside intent-shaped objects', () => {
-    const findings: Finding[] = [];
+    const findings: ComponentTokenBoundaryFinding[] = [];
 
     scanCanonicalComponentTokens(
       {

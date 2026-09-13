@@ -35,7 +35,7 @@
 }
 
 .textInput::placeholder {
-  color: var(--text-tertiary);
+  color: inherit;
 }
 
 .textInput:hover {

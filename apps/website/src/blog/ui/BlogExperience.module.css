@@ -463,7 +463,7 @@
 @media (width <= 420px) {
   .hero {
     padding-top: var(--space-8);
-    padding-bottom: var(--space-7);
+    padding-bottom: calc(var(--space-6) + var(--space-1));
   }
 
   .hero h1 {

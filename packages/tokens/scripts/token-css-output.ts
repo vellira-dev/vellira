@@ -42,17 +42,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isNumericString(value: string): boolean {
-  return /^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(value.trim());
-}
-
 function validateStringValue(tokenPath: string, value: string): void {
   const kind = requireTokenValueKind(tokenPath, value);
 
-  if (
-    ['unitless-number', 'opacity', 'scale', 'z-index'].includes(kind) &&
-    isNumericString(value)
-  ) {
+  if (['unitless-number', 'opacity', 'scale', 'z-index'].includes(kind)) {
     throw new Error(
       `${tokenPath} is a numeric ${kind} token stored as a string. Use a number so renderer adapters can serialize it correctly.`
     );

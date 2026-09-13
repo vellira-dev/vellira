@@ -1,0 +1,191 @@
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+import { assertComponentTokenLifecycleCanMaterialize } from '../../generators/component/token-lifecycle-contract';
+import { checkTokenOwnership } from '../token-ownership/checker';
+import type { TokenOwnershipReport } from '../token-ownership/checker';
+import { checkTokenCssReferencesComplete } from './consumer-reference-completeness';
+import { runTokenSemanticAudit } from './contract';
+import type { FindingInput, RuleAdapter, RuleResult } from './contract';
+import { checkTokenFactoryConventions } from './factory-convention';
+import { checkTokenPlatformBoundary } from './platform-boundary';
+import { checkTokenPublicApi } from './public-api';
+import { checkTokenPackagePublicSurface } from './public-api-package-surface';
+import { checkTokenSemanticDependencies } from './semantic-dependency';
+import { checkTokenSemanticVocabularyCompletion } from './semantic-vocabulary-consumers';
+import { checkTokenSemanticVocabulary } from './semantic-vocabulary';
+import { checkComponentShadowConsumers } from './shadow-component-consumption';
+import { checkTokenShadowAuthority } from './shadow-authority';
+import { checkTokenStateVocabularyCompletion } from './state-vocabulary-composition';
+import { checkTokenStateVocabulary } from './state-vocabulary';
+import { checkTokenValueKinds } from './value-kind-repository';
+import { checkTokenVisualPreservation } from './visual-preservation';
+
+export function checkTokenSemantics(root: string) {
+  const authorityRoot = fileURLToPath(new URL('../../../', import.meta.url));
+  if (fs.realpathSync(root) !== fs.realpathSync(authorityRoot)) {
+    throw new Error(
+      'Run the audit from the checkout that owns its authorities.'
+    );
+  }
+  let ownership: TokenOwnershipReport | undefined;
+  function ownershipRule(semantic: boolean): RuleResult {
+    ownership ??= checkTokenOwnership(root);
+    const ruleId = semantic
+      ? 'tokens.namespace-lifecycle'
+      : 'tokens.component-ownership';
+    const findings: FindingInput[] = ownership.findings
+      .filter((finding) => finding.code.includes('semantic') === semantic)
+      .map((finding) => ({
+        ruleId,
+        code: finding.code,
+        severity: 'error',
+        sourcePath: finding.path,
+        tokenPath: null,
+        line: null,
+        column: null,
+        layer: semantic ? 'semantic' : 'component',
+        theme: null,
+        platform: null,
+        evidence: finding.message,
+        expected:
+          'Canonical metadata/lifecycle and deterministic consumer evidence.',
+        migrationStatus: 'untracked',
+        suggestedAction:
+          'Repair the canonical ownership authority or its consumers.',
+      }));
+
+    if (!semantic) {
+      for (const componentName of ownership.metadataTokenFamilies) {
+        try {
+          assertComponentTokenLifecycleCanMaterialize(componentName, root);
+        } catch (error) {
+          findings.push({
+            ruleId,
+            code: 'component-readiness-lifecycle-drift',
+            severity: 'error',
+            sourcePath:
+              'scripts/generators/component/token-lifecycle-contract.ts',
+            tokenPath: `components.${componentName}`,
+            line: null,
+            column: null,
+            layer: 'component',
+            theme: null,
+            platform: null,
+            evidence: error instanceof Error ? error.message : String(error),
+            expected:
+              'Every metadata-required component-token family must pass the same Generator V2 lifecycle materialization guard used by production preflight.',
+            migrationStatus: 'untracked',
+            suggestedAction:
+              'Repair canonical component metadata/lifecycle ownership before Generator V2 or component production may materialize the family.',
+          });
+        }
+      }
+    }
+
+    return {
+      coverage: 'complete',
+      scope: semantic
+        ? 'Canonical #886 semantic lifecycle/public/source/barrel parity, deterministic real consumer evidence, role-level source inventory, cross-theme role-shape parity, canonical Semantic Vocabulary V1 classification, and canonical derived shadow authority.'
+        : 'Canonical #886 component lifecycle/public/theme-barrel parity, reverse metadata-required ownership parity, canonical owner identity, and the Generator V2 lifecycle materialization guard used by component-production preflight.',
+      checked: semantic
+        ? ownership.semanticNamespaces.length +
+          ownership.semanticRolePaths.length
+        : ownership.componentFamilies.length +
+          ownership.metadataTokenFamilies.length,
+      findings,
+    };
+  }
+
+  function shadowAuthorityRule(): RuleResult {
+    const authority = checkTokenShadowAuthority(root);
+    const consumers = checkComponentShadowConsumers();
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #885 unified shadow authority: canonical structured effects, Web semantic/focus derivation, React Native approximation resolution, required Tooltip/Popover/Modal/Dropdown/Select canonical shadow intents, repository-wide component shadow-key/renderer-field inspection, and known compatibility/output bypasses. Renderer-neutral adaptation and resolved value preservation remain separately enforced by complete tokens.platform-boundary (#884) and tokens.visual-preservation (#880), matching #885 acceptance without duplicating those rules.',
+      checked: authority.checked + consumers.checked,
+      findings: [...authority.findings, ...consumers.findings],
+    };
+  }
+
+  function publicApiRule(): RuleResult {
+    const authority = checkTokenPublicApi(root);
+    const packageSurface = checkTokenPackagePublicSurface(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #889 public API/deprecation authority: explicit theme identities, generated CSS selectors/runtime-path compatibility, bounded legacy exports and CSS aliases, exact package main/types/export-subpath inventory, and automatic semver removal-boundary enforcement.',
+      checked: authority.checked + packageSurface.checked,
+      findings: [...authority.findings, ...packageSurface.findings],
+    };
+  }
+
+  function stateVocabularyRule(): RuleResult {
+    const authority = checkTokenStateVocabulary(root);
+    const completion = checkTokenStateVocabularyCompletion(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #882 Interaction State Vocabulary V1: canonical state names/meanings, pressed-versus-active separation, maintained semantic/component/factory/generator regressions, machine-readable selected compound-state precedence across every canonical state, exact Web/React Native platform mappings, optional native hover, and cross-platform Radio renderer evidence for hover/press/selection/disabled/focus semantics. Resolved values remain protected separately by tokens.visual-preservation (#880).',
+      checked: authority.checked + completion.checked,
+      findings: [...authority.findings, ...completion.findings],
+    };
+  }
+
+  function semanticVocabularyRule(): RuleResult {
+    const authority = checkTokenSemanticVocabulary();
+    const completion = checkTokenSemanticVocabularyCompletion(root);
+
+    return {
+      coverage: 'complete',
+      scope:
+        'Complete #883 Semantic Vocabulary V1: namespace purposes/roles, canonical role paths across all maintained themes, deterministic rename/removal migrations, production-consumer exclusion of deprecated semantic identities, and exact generated Web CSS baseline-to-final migration identity. Semantic component dependency correctness remains separately enforced by complete tokens.semantic-dependency (#888), while resolved-value preservation remains owned by complete tokens.visual-preservation (#880).',
+      checked: authority.checked + completion.checked,
+      findings: [...authority.findings, ...completion.findings],
+    };
+  }
+
+  const adapters: RuleAdapter[] = [
+    { ruleId: 'tokens.value-kind', run: checkTokenValueKinds },
+    {
+      ruleId: 'tokens.state-vocabulary',
+      run: stateVocabularyRule,
+    },
+    {
+      ruleId: 'tokens.semantic-vocabulary',
+      run: semanticVocabularyRule,
+    },
+    {
+      ruleId: 'tokens.factory-convention',
+      run: () => checkTokenFactoryConventions(root),
+    },
+    { ruleId: 'tokens.platform-boundary', run: checkTokenPlatformBoundary },
+    {
+      ruleId: 'tokens.public-api',
+      run: publicApiRule,
+    },
+    {
+      ruleId: 'tokens.semantic-dependency',
+      run: () => checkTokenSemanticDependencies(root),
+    },
+    {
+      ruleId: 'tokens.shadow-authority',
+      run: shadowAuthorityRule,
+    },
+    {
+      ruleId: 'tokens.visual-preservation',
+      run: () => checkTokenVisualPreservation(root),
+    },
+    { ruleId: 'tokens.component-ownership', run: () => ownershipRule(false) },
+    { ruleId: 'tokens.namespace-lifecycle', run: () => ownershipRule(true) },
+    {
+      ruleId: 'tokens.consumer-reference',
+      run: () => checkTokenCssReferencesComplete(root),
+    },
+  ];
+  return runTokenSemanticAudit(adapters);
+}
