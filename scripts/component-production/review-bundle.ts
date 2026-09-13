@@ -39,6 +39,7 @@ export type ComponentReviewBundleReport = {
   schemaVersion: typeof COMPONENT_REVIEW_BUNDLE_SCHEMA_VERSION;
   componentName: string;
   revision: string | null;
+  workingTreeClean: boolean;
   status: 'ready' | 'blocked';
   readyForHumanReview: boolean;
   surfaces: readonly ComponentReviewBundleSurface[];
@@ -70,6 +71,7 @@ type SurfaceSpec = {
 
 export type ComponentReviewBundleDependencies = {
   resolveRevision?: (root: string) => string | null;
+  isWorkingTreeClean?: (root: string) => boolean;
 };
 
 export function runComponentReviewBundle(params: {
@@ -81,6 +83,9 @@ export function runComponentReviewBundle(params: {
   const root = path.resolve(params.root);
   const revision =
     params.dependencies?.resolveRevision?.(root) ?? resolveExactRevision(root);
+  const workingTreeClean =
+    params.dependencies?.isWorkingTreeClean?.(root) ??
+    resolveWorkingTreeClean(root);
   const specs = buildSurfaceSpecs(params.input);
   const surfaces = specs.map((spec) => evaluateSurface(root, spec, revision));
   const blockingFindings: ComponentProductionFinding[] = [];
@@ -92,6 +97,17 @@ export function runComponentReviewBundle(params: {
       severity: 'blocking',
       message:
         'Component review bundle could not resolve the exact candidate Git revision.',
+      ruleId: 'review-bundle.exact-revision',
+    });
+  }
+
+  if (!workingTreeClean) {
+    blockingFindings.push({
+      id: 'completeness:review-bundle:working-tree',
+      stage: 'completeness',
+      severity: 'blocking',
+      message:
+        'Component review bundle working tree contains changes that are not represented by the reported Git revision.',
       ruleId: 'review-bundle.exact-revision',
     });
   }
@@ -119,6 +135,7 @@ export function runComponentReviewBundle(params: {
     schemaVersion: COMPONENT_REVIEW_BUNDLE_SCHEMA_VERSION,
     componentName: params.input.componentName,
     revision,
+    workingTreeClean,
     status: ready ? 'ready' : 'blocked',
     readyForHumanReview: ready,
     surfaces,
@@ -181,7 +198,6 @@ function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
         `${websiteDir}/${componentName}Playground.tsx`,
         `${websiteDir}/${componentName}Accessibility.tsx`,
         `${websiteDir}/${lowerName}Api.ts`,
-        `${websiteDir}/metadata.ts`,
         ...(input.platform === 'web' || input.platform === 'both'
           ? [`${websiteDir}/${componentName}Demo.tsx`]
           : []),
@@ -491,6 +507,20 @@ function resolveExactRevision(root: string): string | null {
   const revision = result.status === 0 ? result.stdout.trim() : '';
 
   return /^[0-9a-f]{40}$/i.test(revision) ? revision : null;
+}
+
+function resolveWorkingTreeClean(root: string): boolean {
+  const result = spawnSync(
+    'git',
+    ['status', '--porcelain=v1', '--untracked-files=all'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      shell: false,
+    }
+  );
+
+  return result.status === 0 && result.stdout.trim().length === 0;
 }
 
 function slugifyComponentName(componentName: string) {
