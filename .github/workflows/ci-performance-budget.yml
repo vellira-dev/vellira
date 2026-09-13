@@ -31,7 +31,10 @@ jobs:
           node-version: 22.22.0
 
       - name: Validate budget policy
-        run: node --test scripts/ci/check-performance-budget.test.mjs
+        run: >-
+          node --test
+          scripts/ci/check-performance-budget.test.mjs
+          scripts/ci/cloudflare-parallel-contract.test.mjs
 
       - name: Evaluate exact-head CI performance budget
         env:
