@@ -24,6 +24,8 @@ export type ComponentCapability =
   | 'keyboard'
   | 'focus-management'
   | 'compound-api'
+  | 'multiple'
+  | 'collapsible'
   | 'portal'
   | 'responsive';
 

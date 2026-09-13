@@ -17,25 +17,15 @@ export function SwitchExamples({ platform }: SwitchExamplesProps) {
   const reactExamples = [
     {
       title: 'Basic',
-      description: 'Basic form control usage.',
+      description: 'Basic component usage.',
       preview: <ReactSwitch />,
       code: `import { Switch } from '@vellira-ui/react';
 
 <Switch/>`,
     },
     {
-      title: 'Disabled',
-      description: 'Disabled state.',
-      preview: <ReactSwitch disabled />,
-      code: `import { Switch } from '@vellira-ui/react';
-
-<Switch
-  disabled
-/>`,
-    },
-    {
-      title: 'Selected',
-      description: 'Selected state.',
+      title: 'Controlled',
+      description: 'State controlled by the parent application.',
       preview: <ReactSwitch checked />,
       code: `import { Switch } from '@vellira-ui/react';
 
@@ -44,8 +34,28 @@ export function SwitchExamples({ platform }: SwitchExamplesProps) {
 />`,
     },
     {
+      title: 'Uncontrolled',
+      description: 'State initialized and then managed by the component.',
+      preview: <ReactSwitch defaultChecked />,
+      code: `import { Switch } from '@vellira-ui/react';
+
+<Switch
+  defaultChecked
+/>`,
+    },
+    {
+      title: 'Disabled',
+      description: 'Disabled state with interaction unavailable.',
+      preview: <ReactSwitch disabled />,
+      code: `import { Switch } from '@vellira-ui/react';
+
+<Switch
+  disabled
+/>`,
+    },
+    {
       title: 'Required',
-      description: 'Required form control.',
+      description: 'Required state for form participation.',
       preview: <ReactSwitch required />,
       code: `import { Switch } from '@vellira-ui/react';
 
@@ -53,30 +63,30 @@ export function SwitchExamples({ platform }: SwitchExamplesProps) {
   required
 />`,
     },
+    {
+      title: 'Invalid',
+      description: 'Invalid state with validation semantics.',
+      preview: <ReactSwitch invalid />,
+      code: `import { Switch } from '@vellira-ui/react';
+
+<Switch
+  invalid
+/>`,
+    },
   ] as const;
 
   const nativeExamples = [
     {
       title: 'Basic',
-      description: 'Basic form control usage.',
+      description: 'Basic component usage.',
       preview: <NativeSwitch />,
       code: `import { Switch } from '@vellira-ui/react-native';
 
 <Switch/>`,
     },
     {
-      title: 'Disabled',
-      description: 'Disabled state.',
-      preview: <NativeSwitch disabled />,
-      code: `import { Switch } from '@vellira-ui/react-native';
-
-<Switch
-  disabled
-/>`,
-    },
-    {
-      title: 'Selected',
-      description: 'Selected state.',
+      title: 'Controlled',
+      description: 'State controlled by the parent application.',
       preview: <NativeSwitch checked />,
       code: `import { Switch } from '@vellira-ui/react-native';
 
@@ -85,13 +95,43 @@ export function SwitchExamples({ platform }: SwitchExamplesProps) {
 />`,
     },
     {
+      title: 'Uncontrolled',
+      description: 'State initialized and then managed by the component.',
+      preview: <NativeSwitch defaultChecked />,
+      code: `import { Switch } from '@vellira-ui/react-native';
+
+<Switch
+  defaultChecked
+/>`,
+    },
+    {
+      title: 'Disabled',
+      description: 'Disabled state with interaction unavailable.',
+      preview: <NativeSwitch disabled />,
+      code: `import { Switch } from '@vellira-ui/react-native';
+
+<Switch
+  disabled
+/>`,
+    },
+    {
       title: 'Required',
-      description: 'Required form control.',
+      description: 'Required state for form participation.',
       preview: <NativeSwitch required />,
       code: `import { Switch } from '@vellira-ui/react-native';
 
 <Switch
   required
+/>`,
+    },
+    {
+      title: 'Invalid',
+      description: 'Invalid state with validation semantics.',
+      preview: <NativeSwitch invalid />,
+      code: `import { Switch } from '@vellira-ui/react-native';
+
+<Switch
+  invalid
 />`,
     },
   ] as const;
