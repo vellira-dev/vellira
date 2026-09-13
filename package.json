@@ -110,7 +110,7 @@
     "component-expansion:json": "tsx scripts/metadata/component-expansion-report.ts",
     "component-production:json": "node --import tsx scripts/component-production/cli.ts",
     "component-production:validate:json": "node --import tsx scripts/component-production/validate-cli.ts",
-    "check:component-quality:contract": "tsx scripts/checks/component-quality/completion-contract-cli.ts"
+    "check:component-quality:contract": "node --import tsx scripts/checks/component-quality/completion-contract-cli.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
