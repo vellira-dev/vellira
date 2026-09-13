@@ -1,6 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+
+import { Button, Input } from '@vellira-ui/react';
 
 import styles from './PlaygroundControls.module.css';
 
@@ -25,7 +27,8 @@ export function PlaygroundControlGroup<T extends string>({
 
       <div className={styles.segmented}>
         {options.map((option) => (
-          <button
+          <Button
+            appearance='bare'
             key={option}
             type='button'
             className={styles.control}
@@ -34,7 +37,7 @@ export function PlaygroundControlGroup<T extends string>({
             onClick={() => onChange(option)}
           >
             {option}
-          </button>
+          </Button>
         ))}
       </div>
     </div>
@@ -53,7 +56,8 @@ export function PlaygroundToggle({
   onChange,
 }: PlaygroundToggleProps) {
   return (
-    <button
+    <Button
+      appearance='bare'
       type='button'
       className={styles.control}
       data-active={checked || undefined}
@@ -61,7 +65,7 @@ export function PlaygroundToggle({
       onClick={() => onChange(!checked)}
     >
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -78,18 +82,25 @@ export function PlaygroundTextInput({
   placeholder,
   onChange,
 }: PlaygroundTextInputProps) {
-  return (
-    <label className={styles.controlGroup}>
-      <span className={styles.controlLabel}>{label}</span>
+  const id = useId();
 
-      <input
+  return (
+    <div className={styles.controlGroup}>
+      <label htmlFor={id} className={styles.controlLabel}>
+        {label}
+      </label>
+
+      <Input
+        id={id}
+        variant='bare'
+        wrapperClassName={styles.textField}
         className={styles.textInput}
         type='text'
         value={value}
         placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
+        onValueChange={onChange}
       />
-    </label>
+    </div>
   );
 }
 
@@ -110,20 +121,27 @@ export function PlaygroundNumberInput({
   step,
   onChange,
 }: PlaygroundNumberInputProps) {
-  return (
-    <label className={styles.controlGroup}>
-      <span className={styles.controlLabel}>{label}</span>
+  const id = useId();
 
-      <input
+  return (
+    <div className={styles.controlGroup}>
+      <label htmlFor={id} className={styles.controlLabel}>
+        {label}
+      </label>
+
+      <Input
+        id={id}
+        variant='bare'
+        wrapperClassName={styles.textField}
         className={styles.textInput}
         type='number'
         value={value}
         min={min}
         max={max}
         step={step}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onValueChange={(nextValue) => onChange(Number(nextValue))}
       />
-    </label>
+    </div>
   );
 }
 

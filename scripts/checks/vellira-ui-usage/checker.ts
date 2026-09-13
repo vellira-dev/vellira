@@ -9,6 +9,7 @@ import {
   canonicalIconExports,
 } from '../../design-resources/authority';
 import { velliraUiUsageExceptions } from './exceptions';
+import { isMigrationTransportProbe } from './migration-transport-probes';
 import type {
   AppliedVelliraUiUsageException,
   VelliraUiUsageException,
@@ -487,6 +488,10 @@ function findingForIntrinsicElement(
   node: ts.JsxOpeningElement | ts.JsxSelfClosingElement,
   tagName: string
 ): VelliraUiUsageFinding | null {
+  if (isMigrationTransportProbe(filePath, node)) {
+    return null;
+  }
+
   const directAlternative =
     DIRECT_PRIMITIVE_ALTERNATIVES[
       tagName as keyof typeof DIRECT_PRIMITIVE_ALTERNATIVES

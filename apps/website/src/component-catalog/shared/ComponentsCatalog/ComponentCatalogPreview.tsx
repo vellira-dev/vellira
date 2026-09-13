@@ -244,14 +244,15 @@ function ModalPreview() {
               <span>Manage your preferences.</span>
             </div>
 
-            <button
+            <Button
+              appearance='bare'
               type='button'
               className={styles.modalClose}
               tabIndex={-1}
               aria-hidden='true'
             >
               ×
-            </button>
+            </Button>
           </div>
 
           <div className={styles.modalBody}>

@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Search, Close } from '@vellira-ui/icons';
+import { Button, Input } from '@vellira-ui/react';
 
 import { webComponents } from '@/component-catalog';
 
@@ -191,7 +192,8 @@ export function HeaderSearch() {
       className={styles.root}
       data-mobile-open={mobileOpen ? '' : undefined}
     >
-      <button
+      <Button
+        appearance='bare'
         type='button'
         className={styles.mobileTrigger}
         aria-label='Open search'
@@ -199,14 +201,17 @@ export function HeaderSearch() {
         onClick={openMobileSearch}
       >
         <Search aria-hidden='true' />
-      </button>
+      </Button>
 
       <div ref={fieldRef} className={styles.field}>
         <Search aria-hidden='true' className={styles.icon} />
 
-        <input
+        <Input
+          variant='bare'
+          startIcon={false}
           ref={inputRef}
           type='search'
+          autoComplete='on'
           role='combobox'
           className={styles.input}
           placeholder='Search...'
@@ -218,8 +223,8 @@ export function HeaderSearch() {
             activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
           }
           value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
+          onValueChange={(value) => {
+            setQuery(value);
             setActiveIndex(-1);
             setOpen(true);
           }}
@@ -232,18 +237,20 @@ export function HeaderSearch() {
         />
 
         {mobileOpen && (
-          <button
+          <Button
+            appearance='bare'
             type='button'
             className={styles.mobileClose}
             aria-label='Close search'
             onClick={closeMobileSearch}
           >
             <Close aria-hidden='true' />
-          </button>
+          </Button>
         )}
 
         {query && (
-          <button
+          <Button
+            appearance='bare'
             type='button'
             className={styles.clear}
             aria-label='Clear search'
@@ -253,7 +260,7 @@ export function HeaderSearch() {
             }}
           >
             <Close aria-hidden='true' />
-          </button>
+          </Button>
         )}
       </div>
 

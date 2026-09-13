@@ -38,7 +38,7 @@
 }
 
 .icon,
-.input {
+.root .field .input {
   position: relative;
   z-index: 1;
 }
@@ -56,7 +56,7 @@
   color: var(--text-brand);
 }
 
-.input {
+.root .field .input {
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -67,7 +67,7 @@
   outline: 0;
 }
 
-.input::placeholder {
+.root .field .input::placeholder {
   color: color-mix(in srgb, var(--text-secondary) 60%, transparent);
 }
 
