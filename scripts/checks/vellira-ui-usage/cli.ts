@@ -1,5 +1,5 @@
-import { toBlockingVelliraUiUsageReport } from './enforcement';
 import { runVelliraUiUsageCheck } from './checker';
+import { toBlockingVelliraUiUsageReport } from './enforcement';
 
 const report = toBlockingVelliraUiUsageReport(runVelliraUiUsageCheck());
 const json = process.argv.includes('--json');
