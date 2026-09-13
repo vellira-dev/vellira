@@ -1,0 +1,727 @@
+import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
+import { runComponentGenerator } from '../generators/component/run';
+import {
+  createComponentProductionGeneratorOptions,
+  type ComponentProductionInputV1,
+  type ComponentProductionStageId,
+  type ComponentProductionStageResult,
+} from './contracts';
+import { runComponentProductionGeneration } from './generation';
+import { runComponentReviewBundle } from './review-bundle';
+import {
+  runComponentProductionValidation,
+  type ComponentProductionRunDependencies,
+} from './run';
+import { runComponentProductionStructuredValidation } from './structured-validation';
+
+const FIXTURE_TIMEOUT_MS = 240_000;
+const repositoryRoot = process.cwd();
+const temporaryWorktrees: Array<{ parent: string; root: string }> = [];
+
+const fixtures = [
+  {
+    id: 'base-web',
+    roles: ['base'],
+    input: {
+      schemaVersion: '1',
+      componentName: 'E2EBaseProbe',
+      platform: 'web',
+      layer: 'primitives',
+      category: 'data-display',
+      profile: 'base',
+      capabilities: [],
+      componentTokens: false,
+      parts: [],
+    },
+  },
+  {
+    id: 'boolean-form-control',
+    roles: ['form-control', 'cross-platform'],
+    input: {
+      schemaVersion: '1',
+      componentName: 'E2EBooleanProbe',
+      platform: 'both',
+      layer: 'primitives',
+      category: 'form',
+      profile: 'form-control',
+      control: 'boolean',
+      capabilities: ['controlled', 'uncontrolled', 'disabled', 'required'],
+      componentTokens: 'boolean-control',
+      parts: [],
+    },
+  },
+  {
+    id: 'compound-divergent',
+    roles: ['compound', 'cross-platform', 'intentional-divergence'],
+    input: {
+      schemaVersion: '1',
+      componentName: 'E2ECompoundProbe',
+      platform: 'both',
+      layer: 'components',
+      category: 'navigation',
+      profile: 'compound',
+      capabilities: [
+        'compound-api',
+        'controlled',
+        'uncontrolled',
+        'disabled',
+        'keyboard',
+      ],
+      componentTokens: 'disclosure',
+      parts: ['Root', 'Item', 'Trigger', 'Content'],
+    },
+  },
+  {
+    id: 'overlay-web',
+    roles: ['overlay'],
+    input: {
+      schemaVersion: '1',
+      componentName: 'E2EOverlayProbe',
+      platform: 'web',
+      layer: 'components',
+      category: 'overlay',
+      profile: 'overlay',
+      capabilities: [
+        'controlled',
+        'uncontrolled',
+        'keyboard',
+        'focus-management',
+        'portal',
+      ],
+      componentTokens: 'standard',
+      parts: ['Root', 'Trigger', 'Content'],
+    },
+  },
+  {
+    id: 'base-cross-platform',
+    roles: ['base', 'cross-platform'],
+    input: {
+      schemaVersion: '1',
+      componentName: 'E2ECrossPlatformProbe',
+      platform: 'both',
+      layer: 'primitives',
+      category: 'utility',
+      profile: 'base',
+      capabilities: ['disabled'],
+      componentTokens: 'standard',
+      parts: [],
+    },
+  },
+] as const satisfies readonly {
+  id: string;
+  roles: readonly string[];
+  input: ComponentProductionInputV1;
+}[];
+
+const invalidFixture: ComponentProductionInputV1 = {
+  schemaVersion: '1',
+  componentName: 'E2EInvalidResourceProbe',
+  platform: 'web',
+  layer: 'primitives',
+  category: 'utility',
+  profile: 'base',
+  capabilities: [],
+  icons: [
+    {
+      name: 'DefinitelyMissingFixtureIcon',
+      purpose: 'prove fail-closed resource validation',
+    },
+  ],
+  componentTokens: false,
+  parts: [],
+};
+
+afterEach(() => {
+  for (const worktree of temporaryWorktrees.splice(0)) {
+    spawnSync('git', ['worktree', 'remove', '--force', worktree.root], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      shell: false,
+    });
+    fs.rmSync(worktree.parent, { recursive: true, force: true });
+  }
+
+  spawnSync('git', ['worktree', 'prune'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    shell: false,
+  });
+});
+
+describe.sequential('component production end-to-end fixtures', () => {
+  it(
+    'locks the generated lifecycle across representative component families',
+    async () => {
+      const root = createIsolatedWorktree();
+      const generatedArtifacts = new Map<string, readonly string[]>();
+
+      for (const fixture of fixtures) {
+        if (fixture.input.componentTokens !== false) {
+          reserveTokenLifecycleFixture(root, fixture.input.componentName);
+        }
+
+        const generation = await runComponentProductionGeneration({
+          root,
+          input: fixture.input,
+        });
+
+        expect(generation.preflight, fixture.id).toMatchObject({
+          status: 'passed',
+        });
+        expect(generation.generation, fixture.id).toMatchObject({
+          status: 'passed',
+        });
+        expect(generation.generatedArtifacts.length, fixture.id).toBeGreaterThan(
+          0
+        );
+
+        generatedArtifacts.set(
+          fixture.input.componentName,
+          generation.generatedArtifacts
+        );
+
+        expectCanonicalGeneratedSurfaces(root, fixture.input);
+        completeManualCoverage(root, fixture.input);
+      }
+
+      expectCompoundPlatformDivergence(root);
+
+      const invalidGeneration = await runComponentProductionGeneration({
+        root,
+        input: invalidFixture,
+      });
+
+      expect(invalidGeneration.preflight.status).toBe('blocked');
+      expect(invalidGeneration.generation.status).toBe('skipped');
+      expect(invalidGeneration.generatedArtifacts).toEqual([]);
+      expect(
+        fs.existsSync(
+          path.join(
+            root,
+            'packages/react/src/primitives',
+            invalidFixture.componentName
+          )
+        )
+      ).toBe(false);
+
+      const beforeRegeneration = fingerprintWorkingTree(root);
+
+      for (const fixture of fixtures) {
+        const options = createComponentProductionGeneratorOptions(fixture.input);
+
+        await runComponentGenerator({
+          root,
+          options: {
+            ...options,
+            force: true,
+          },
+        });
+      }
+
+      expect(fingerprintWorkingTree(root)).toEqual(beforeRegeneration);
+
+      for (const fixture of fixtures) {
+        await expect(
+          runComponentGenerator({
+            root,
+            options: {
+              ...createComponentProductionGeneratorOptions(fixture.input),
+              check: true,
+            },
+          })
+        ).resolves.toMatchObject({ check: true });
+      }
+
+      commitFixtureCandidate(root);
+
+      for (const fixture of fixtures) {
+        const structured = await runComponentProductionStructuredValidation({
+          root,
+          input: fixture.input,
+        });
+
+        expect(structured.stages[0], `${fixture.id}: completeness`).toMatchObject(
+          {
+            id: 'completeness',
+            status: 'passed',
+          }
+        );
+        expect(structured.stages[1], `${fixture.id}: quality`).toMatchObject({
+          id: 'quality',
+          status: 'passed',
+        });
+        expect(structured.completeness, fixture.id).not.toBeNull();
+        expect(structured.quality, fixture.id).not.toBeNull();
+
+        const machineReadable = await runMachineReadableValidation({
+          root,
+          input: fixture.input,
+          structured,
+        });
+
+        expect(machineReadable, fixture.id).toMatchObject({
+          schemaVersion: '1',
+          status: 'ready',
+          readyForReview: true,
+          reviewBundle: {
+            schemaVersion: '1',
+            status: 'ready',
+            readyForHumanReview: true,
+            workingTreeClean: true,
+          },
+        });
+        expect(machineReadable.blockingFindings, fixture.id).toEqual([]);
+
+        const artifacts = generatedArtifacts.get(fixture.input.componentName);
+        expect(artifacts, fixture.id).toBeDefined();
+      }
+    },
+    FIXTURE_TIMEOUT_MS
+  );
+
+  it(
+    'fails compound completeness until generic instance-isolation evidence exists',
+    async () => {
+      const root = createIsolatedWorktree();
+      const fixture = fixtures.find((item) =>
+        item.roles.includes('intentional-divergence')
+      );
+
+      expect(fixture).toBeDefined();
+
+      if (!fixture) {
+        return;
+      }
+
+      reserveTokenLifecycleFixture(root, fixture.input.componentName);
+
+      const generation = await runComponentProductionGeneration({
+        root,
+        input: fixture.input,
+      });
+
+      expect(generation.generation.status).toBe('passed');
+
+      const webContract = readCoverageContract(
+        root,
+        fixture.input,
+        'react'
+      );
+      const nativeContract = readCoverageContract(
+        root,
+        fixture.input,
+        'react-native'
+      );
+
+      expect(webContract.componentSpecific.requirements).toContain(
+        'instance-isolation'
+      );
+      expect(nativeContract.componentSpecific.requirements).not.toContain(
+        'instance-isolation'
+      );
+      expect(nativeContract.componentSpecific.requirements).not.toContain(
+        'keyboard'
+      );
+
+      const beforeEvidence = await runComponentProductionStructuredValidation({
+        root,
+        input: fixture.input,
+        checkPlanContract: async () => [],
+      });
+
+      expect(beforeEvidence.stages[0].status).toBe('blocked');
+      expect(
+        beforeEvidence.stages[0].findings.some((finding) =>
+          finding.message.includes('instance-isolation')
+        )
+      ).toBe(true);
+
+      completeManualCoverage(root, fixture.input);
+
+      const manualTest = path.join(
+        componentDirectory(root, fixture.input, 'react'),
+        `${fixture.input.componentName}.manual.test.tsx`
+      );
+      expect(fs.readFileSync(manualTest, 'utf8')).toContain(
+        '// Coverage contract:'
+      );
+      expect(fs.readFileSync(manualTest, 'utf8')).toContain(
+        'instance-isolation'
+      );
+    },
+    FIXTURE_TIMEOUT_MS
+  );
+});
+
+async function runMachineReadableValidation(params: {
+  root: string;
+  input: ComponentProductionInputV1;
+  structured: Awaited<ReturnType<typeof runComponentProductionStructuredValidation>>;
+}) {
+  const dependencies: Pick<
+    ComponentProductionRunDependencies,
+    | 'runCommandValidation'
+    | 'runStructuredValidation'
+    | 'runFinalValidation'
+    | 'runReviewBundle'
+  > = {
+    runCommandValidation: () => ({ stages: commandStages() }),
+    runStructuredValidation: async () => params.structured,
+    runFinalValidation: () => ({ stages: finalStages() }),
+    runReviewBundle: runComponentReviewBundle,
+  };
+
+  return runComponentProductionValidation({
+    root: params.root,
+    input: params.input,
+    dependencies,
+  });
+}
+
+function createIsolatedWorktree() {
+  const parent = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-component-production-e2e-')
+  );
+  const root = path.join(parent, 'repo');
+  const add = spawnSync('git', ['worktree', 'add', '--detach', root, 'HEAD'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    shell: false,
+  });
+
+  if (add.status !== 0) {
+    fs.rmSync(parent, { recursive: true, force: true });
+    throw new Error(
+      `Unable to create component production fixture worktree: ${add.stderr}`
+    );
+  }
+
+  temporaryWorktrees.push({ parent, root });
+  linkInstalledDependencies(root);
+
+  return root;
+}
+
+function linkInstalledDependencies(root: string) {
+  linkDirectory(
+    path.join(repositoryRoot, 'node_modules'),
+    path.join(root, 'node_modules')
+  );
+
+  for (const collection of ['apps', 'packages']) {
+    const sourceCollection = path.join(repositoryRoot, collection);
+
+    if (!fs.existsSync(sourceCollection)) {
+      continue;
+    }
+
+    for (const entry of fs.readdirSync(sourceCollection, {
+      withFileTypes: true,
+    })) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      linkDirectory(
+        path.join(sourceCollection, entry.name, 'node_modules'),
+        path.join(root, collection, entry.name, 'node_modules')
+      );
+    }
+  }
+}
+
+function linkDirectory(source: string, target: string) {
+  if (!fs.existsSync(source) || fs.existsSync(target)) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.symlinkSync(
+    source,
+    target,
+    process.platform === 'win32' ? 'junction' : 'dir'
+  );
+}
+
+function expectCanonicalGeneratedSurfaces(
+  root: string,
+  input: ComponentProductionInputV1
+) {
+  const slug = slugify(input.componentName);
+  const lowerName = `${input.componentName[0].toLowerCase()}${input.componentName.slice(1)}`;
+  const websiteDir = path.join(
+    root,
+    'apps/website/src/component-catalog/components',
+    input.componentName
+  );
+
+  expectFile(root, `packages/metadata/src/components/${input.componentName}.metadata.ts`);
+
+  for (const platform of selectedPlatforms(input)) {
+    const relativeDir = `packages/${platform.packageName}/src/${input.layer}/${input.componentName}`;
+
+    for (const fileName of [
+      `${input.componentName}.tsx`,
+      'types.ts',
+      'index.ts',
+      `${input.componentName}.test.tsx`,
+      `${input.componentName}.test-contract.json`,
+      `${input.componentName}.stories.tsx`,
+    ]) {
+      expectFile(root, `${relativeDir}/${fileName}`);
+    }
+
+    expectFile(
+      root,
+      `apps/docs/src/${platform.docsDirectory}/${slug}.md`
+    );
+  }
+
+  for (const fileName of [
+    'index.ts',
+    `${input.componentName}Examples.tsx`,
+    `${input.componentName}Playground.tsx`,
+    `${input.componentName}Accessibility.tsx`,
+    `${lowerName}Api.ts`,
+  ]) {
+    expect(fs.existsSync(path.join(websiteDir, fileName)), fileName).toBe(true);
+  }
+
+  if (input.platform === 'web' || input.platform === 'both') {
+    expect(fs.existsSync(path.join(websiteDir, `${input.componentName}Demo.tsx`))).toBe(
+      true
+    );
+  }
+
+  if (input.platform === 'native' || input.platform === 'both') {
+    expect(
+      fs.existsSync(path.join(websiteDir, `Native${input.componentName}Demo.tsx`))
+    ).toBe(true);
+  }
+
+  if (input.componentTokens !== false) {
+    expectFile(
+      root,
+      `packages/tokens/src/factories/components/create${input.componentName}Tokens.ts`
+    );
+  }
+}
+
+function completeManualCoverage(
+  root: string,
+  input: ComponentProductionInputV1
+) {
+  for (const platform of selectedPlatforms(input)) {
+    const contract = readCoverageContract(root, input, platform.platform);
+    const requirements = contract.componentSpecific.requirements ?? [];
+
+    if (requirements.length === 0) {
+      continue;
+    }
+
+    const componentDir = componentDirectory(root, input, platform.platform);
+    const manualTest = path.join(
+      componentDir,
+      `${input.componentName}.manual.test.tsx`
+    );
+    const marker = `// Coverage contract: ${requirements.join(', ')}`;
+
+    fs.writeFileSync(
+      manualTest,
+      `${marker}\nimport { describe, expect, it } from 'vitest';\n\ndescribe('${input.componentName} semantic fixture coverage', () => {\n  it('records deterministic manual coverage evidence', () => {\n    expect(true).toBe(true);\n  });\n});\n`
+    );
+  }
+}
+
+function expectCompoundPlatformDivergence(root: string) {
+  const fixture = fixtures.find((item) =>
+    item.roles.includes('intentional-divergence')
+  );
+
+  expect(fixture).toBeDefined();
+
+  if (!fixture) {
+    return;
+  }
+
+  const web = readCoverageContract(root, fixture.input, 'react');
+  const native = readCoverageContract(root, fixture.input, 'react-native');
+
+  expect(web.componentSpecific.requirements).toContain('instance-isolation');
+  expect(web.componentSpecific.requirements).toContain('keyboard');
+  expect(native.componentSpecific.requirements).not.toContain(
+    'instance-isolation'
+  );
+  expect(native.componentSpecific.requirements).not.toContain('keyboard');
+  expect(web).not.toEqual(native);
+}
+
+function readCoverageContract(
+  root: string,
+  input: ComponentProductionInputV1,
+  platform: 'react' | 'react-native'
+): {
+  baseline: { requirements: string[] };
+  componentSpecific: { required: boolean; requirements: string[] };
+} {
+  const file = path.join(
+    componentDirectory(root, input, platform),
+    `${input.componentName}.test-contract.json`
+  );
+
+  return JSON.parse(fs.readFileSync(file, 'utf8')) as {
+    baseline: { requirements: string[] };
+    componentSpecific: { required: boolean; requirements: string[] };
+  };
+}
+
+function componentDirectory(
+  root: string,
+  input: ComponentProductionInputV1,
+  platform: 'react' | 'react-native'
+) {
+  return path.join(
+    root,
+    'packages',
+    platform === 'react' ? 'react' : 'react-native',
+    'src',
+    input.layer,
+    input.componentName
+  );
+}
+
+function selectedPlatforms(input: ComponentProductionInputV1) {
+  const platforms: Array<{
+    platform: 'react' | 'react-native';
+    packageName: 'react' | 'react-native';
+    docsDirectory: 'react' | 'react-native';
+  }> = [];
+
+  if (input.platform === 'web' || input.platform === 'both') {
+    platforms.push({
+      platform: 'react',
+      packageName: 'react',
+      docsDirectory: 'react',
+    });
+  }
+
+  if (input.platform === 'native' || input.platform === 'both') {
+    platforms.push({
+      platform: 'react-native',
+      packageName: 'react-native',
+      docsDirectory: 'react-native',
+    });
+  }
+
+  return platforms;
+}
+
+function commitFixtureCandidate(root: string) {
+  runGit(root, ['add', '-A']);
+  runGit(root, [
+    '-c',
+    'user.name=Vellira Fixture',
+    '-c',
+    'user.email=fixture@vellira.invalid',
+    'commit',
+    '-m',
+    'test: materialize component production e2e candidate',
+  ]);
+
+  expect(runGit(root, ['status', '--porcelain=v1', '--untracked-files=all'])).toBe(
+    ''
+  );
+}
+
+function fingerprintWorkingTree(root: string) {
+  const status = runGit(root, [
+    'status',
+    '--porcelain=v1',
+    '-z',
+    '--untracked-files=all',
+  ]);
+
+  return status
+    .split('\u0000')
+    .filter(Boolean)
+    .map((record) => {
+      const filePath = record.slice(3);
+      const absolutePath = path.join(root, filePath);
+      const hash = fs.existsSync(absolutePath)
+        ? crypto
+            .createHash('sha256')
+            .update(fs.readFileSync(absolutePath))
+            .digest('hex')
+        : '<missing>';
+
+      return `${record.slice(0, 2)} ${filePath} ${hash}`;
+    })
+    .sort();
+}
+
+function runGit(root: string, args: readonly string[]) {
+  const result = spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    shell: false,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Git command failed: git ${args.join(' ')}\n${result.stderr ?? ''}`
+    );
+  }
+
+  return result.stdout ?? '';
+}
+
+function expectFile(root: string, relativePath: string) {
+  expect(fs.existsSync(path.join(root, relativePath)), relativePath).toBe(true);
+}
+
+function slugify(componentName: string) {
+  return componentName
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+}
+
+function passedStage(
+  id: ComponentProductionStageId
+): ComponentProductionStageResult {
+  return {
+    id,
+    status: 'passed',
+    summary: `${id} passed in the repository-level E2E fixture boundary.`,
+    findings: [],
+    artifacts: [],
+  };
+}
+
+function commandStages(): ComponentProductionStageResult[] {
+  return [
+    'format',
+    'lint',
+    'tests',
+    'typecheck',
+    'build',
+    'storybook',
+    'docs',
+    'website',
+  ].map((id) => passedStage(id as ComponentProductionStageId));
+}
+
+function finalStages(): ComponentProductionStageResult[] {
+  return ['public-api', 'tooling', 'visual', 'smoke'].map((id) =>
+    passedStage(id as ComponentProductionStageId)
+  );
+}
