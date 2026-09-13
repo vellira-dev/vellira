@@ -40,18 +40,18 @@ afterEach(() => {
 });
 
 describe('component token contract', () => {
-  it('materializes factory and all theme targets for compound components', () => {
+  it('materializes factory and all theme targets for compound components', async () => {
     const plan = createPlan();
     const result = {
       createdFiles: [] as string[],
       updatedFiles: [] as string[],
     };
 
-    expect(checkComponentTokenContract(plan).length).toBeGreaterThan(0);
+    expect((await checkComponentTokenContract(plan)).length).toBeGreaterThan(0);
 
     ensureComponentTokenContract({ plan, result });
 
-    expect(checkComponentTokenContract(plan)).toEqual([]);
+    expect(await checkComponentTokenContract(plan)).toEqual([]);
     expect(fs.existsSync(plan.tokenFactoryFile)).toBe(true);
     expect(result.createdFiles).toContain(plan.tokenFactoryFile);
 
@@ -61,7 +61,7 @@ describe('component token contract', () => {
     }
   });
 
-  it('preserves semantic token files on repeated reconciliation', () => {
+  it('preserves semantic token files on repeated reconciliation', async () => {
     const plan = createPlan();
     const result = {
       createdFiles: [] as string[],
@@ -82,12 +82,12 @@ describe('component token contract', () => {
     expect(fs.readFileSync(plan.tokenFactoryFile, 'utf8')).toBe(
       '// custom semantic token contract\n'
     );
-    expect(checkComponentTokenContract(plan)).toEqual([
+    expect(await checkComponentTokenContract(plan)).toEqual([
       path.relative(plan.root, plan.tokenFactoryFile),
     ]);
   });
 
-  it('recognizes the production Accordion disclosure contract as canonical', () => {
+  it('recognizes the production Accordion disclosure contract as canonical', async () => {
     const plan = createComponentGenerationPlan({
       root: process.cwd(),
       options: {
@@ -109,10 +109,10 @@ describe('component token contract', () => {
       },
     });
 
-    expect(checkComponentTokenContract(plan)).toEqual([]);
+    expect(await checkComponentTokenContract(plan)).toEqual([]);
   });
 
-  it('treats explicit tokenless intent as auditable N/A', () => {
+  it('treats explicit tokenless intent as auditable N/A', async () => {
     const plan = createComponentGenerationPlan({
       root: fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-tokenless-')),
       options: {
@@ -136,7 +136,7 @@ describe('component token contract', () => {
     ensureComponentTokenContract({ plan, result });
 
     expect(result).toEqual({ createdFiles: [], updatedFiles: [] });
-    expect(checkComponentTokenContract(plan)).toEqual([]);
+    expect(await checkComponentTokenContract(plan)).toEqual([]);
     expect(fs.existsSync(plan.tokenFactoryFile)).toBe(false);
   });
 });
