@@ -6,6 +6,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateComponentWebsitePage } from './website';
+import { getEffectiveWebsitePresentationScenarios } from './website-presentation';
 
 vi.mock('node:child_process', () => ({
   spawnSync: vi.fn(),
@@ -168,6 +169,22 @@ describe('generated website presentation metadata', () => {
     expect(source).toContain("title: 'Rich content'");
     expect(source).not.toContain("title: 'Disabled'");
     expect(source).not.toContain("props: ['disabled']");
+  });
+
+  it('treats absent package source roots as unsupported website props', () => {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'vellira-website-missing-packages-')
+    );
+    tempRoots.push(root);
+
+    expect(
+      getEffectiveWebsitePresentationScenarios({
+        root,
+        componentName: 'SyntheticProbe',
+        profile: 'base',
+        capabilities: ['disabled'],
+      })
+    ).toEqual([{ scenario: 'basic', props: [] }]);
   });
 
   it('does not replace existing curated website metadata', () => {
