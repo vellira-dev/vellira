@@ -79,7 +79,9 @@ function getScenarioProps(params: {
       }
       return props.length > 0 ? props : null;
     case 'controlled':
-      if (booleanControl) {
+      if (profile === 'overlay' && propNames.has('open')) {
+        props.push('open');
+      } else if (booleanControl) {
         props.push('checked');
       } else if (propNames.has('value')) {
         props.push(
@@ -90,7 +92,9 @@ function getScenarioProps(params: {
       }
       break;
     case 'uncontrolled':
-      if (booleanControl && propNames.has('defaultChecked')) {
+      if (profile === 'overlay' && propNames.has('defaultOpen')) {
+        props.push('defaultOpen');
+      } else if (booleanControl && propNames.has('defaultChecked')) {
         props.push('defaultChecked');
       } else if (propNames.has('defaultValue')) {
         props.push(
