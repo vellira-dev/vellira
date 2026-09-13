@@ -53,7 +53,10 @@ function collectBindingNames(name: ts.BindingName): string[] {
 }
 
 function collectExplicitPublicSymbols(publicApiTestFile: string) {
-  const packageRootFile = path.join(path.dirname(publicApiTestFile), 'index.ts');
+  const packageRootFile = path.join(
+    path.dirname(publicApiTestFile),
+    'index.ts'
+  );
 
   if (!fs.existsSync(packageRootFile)) {
     throw new Error(`Missing public API package root: ${packageRootFile}`);
@@ -166,7 +169,9 @@ function readPublicSymbolContract(
       });
 
       if (new Set(entries).size !== entries.length) {
-        throw new Error(`Duplicate publicApiSymbols entry in ${publicApiTestFile}`);
+        throw new Error(
+          `Duplicate publicApiSymbols entry in ${publicApiTestFile}`
+        );
       }
 
       return {
@@ -196,7 +201,11 @@ function synchronizePublicSymbolContract(params: {
   const rendered = renderPublicSymbolContract(entries);
 
   if (contract) {
-    return content.slice(0, contract.start) + rendered + content.slice(contract.end);
+    return (
+      content.slice(0, contract.start) +
+      rendered +
+      content.slice(contract.end)
+    );
   }
 
   const sourceFile = ts.createSourceFile(
