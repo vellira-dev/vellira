@@ -1,0 +1,120 @@
+name: Run Corrected Component Expansion Hardening
+
+on:
+  push:
+    branches:
+      - fix/component-expansion-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  apply-test-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply corrected source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 3710b11d496ffcb08288c5ad96d618289e03f702:.github/workflows/component-expansion-hardening-probe.yml > /tmp/original.yml
+          git show 5f8cce97ad1a8adabc44c9b0b22f5d17f7ee6512:.github/workflows/component-expansion-hardening-probe.yml > /tmp/corrected.yml
+          python <<'PY'
+          from pathlib import Path
+
+          def extract(source_path: str, start_marker: str, end_marker: str, output_path: str) -> None:
+              source = Path(source_path).read_text()
+              start = source.index(start_marker) + len(start_marker)
+              end = source.index(end_marker, start)
+              body = source[start:end]
+              lines = []
+              for line in body.splitlines():
+                  if line.startswith('          '):
+                      line = line[10:]
+                  lines.append(line)
+              Path(output_path).write_text('\n'.join(lines) + '\n')
+
+          extract(
+              '/tmp/original.yml',
+              "          python <<'PY'\n",
+              "\n          PY\n\n      - name: Format changed files",
+              '/tmp/apply-hardening.py',
+          )
+          extract(
+              '/tmp/corrected.yml',
+              "          python <<'CORRECT'\n",
+              "\n          CORRECT\n\n      - name: Format changed files",
+              '/tmp/correct-hardening.py',
+          )
+
+          path = Path('/tmp/correct-hardening.py')
+          source = path.read_text()
+          source = source.replace(
+              "start_marker = '    const contractBody = content.slice(contractStart, contractEnd);'",
+              "start_marker = '  const contractBody = content.slice(contractStart, contractEnd);'",
+          )
+          source = source.replace(
+              "end_marker = '    fs.writeFileSync(contractFile, nextContent);'",
+              "end_marker = '  fs.writeFileSync(contractFile, nextContent);'",
+          )
+          path.write_text(source)
+          PY
+          python /tmp/apply-hardening.py
+          python /tmp/correct-hardening.py
+
+      - name: Format changed files
+        run: |
+          pnpm exec prettier --write \
+            packages/metadata/src/components/index.ts \
+            scripts/generators/component/write.ts \
+            scripts/generators/component/write.test.ts \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentCatalogPreview.tsx \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/generatedCatalogPreviews.tsx \
+            scripts/generators/component-page/create-component-page.ts \
+            scripts/generators/component-page/renderers/registry.ts \
+            scripts/generators/component-page/renderers/registry.test.ts \
+            scripts/generators/component-page/catalog-preview-contract.test.ts
+
+      - name: Focused validation
+        run: |
+          pnpm exec vitest run --config vitest.tooling.config.ts \
+            scripts/generators/component/write.test.ts \
+            scripts/generators/component-page/renderers/registry.test.ts \
+            scripts/generators/component-page/catalog-preview-contract.test.ts
+          pnpm check:public-api
+          pnpm typecheck:tooling
+          git diff --check
+
+      - name: Commit validated source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            packages/metadata/src/components/index.ts \
+            scripts/generators/component/write.ts \
+            scripts/generators/component/write.test.ts \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentCatalogPreview.tsx \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/generatedCatalogPreviews.tsx \
+            scripts/generators/component-page/create-component-page.ts \
+            scripts/generators/component-page/renderers/registry.ts \
+            scripts/generators/component-page/renderers/registry.test.ts \
+            scripts/generators/component-page/catalog-preview-contract.test.ts
+          git diff --cached --check
+          git commit -m 'fix(generator): harden component expansion contracts'
+          git push origin HEAD:fix/component-expansion-hardening
