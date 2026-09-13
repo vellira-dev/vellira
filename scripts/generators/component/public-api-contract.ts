@@ -72,9 +72,7 @@ function renderSynchronizedPublicSymbolContract(params: {
   const match = blockPattern.exec(content);
 
   if (!match) {
-    throw new Error(
-      `Unable to locate public symbol contract for ${entryPath}`
-    );
+    throw new Error(`Unable to locate public symbol contract for ${entryPath}`);
   }
 
   const existingSymbols = [...match[2].matchAll(/ {4}'([^']+)',/g)].map(
