@@ -8,7 +8,7 @@ on:
     types: [requested, in_progress]
 
 permissions:
-  actions: read
+  actions: write
   contents: read
 
 concurrency:
