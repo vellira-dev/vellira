@@ -3,19 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  deriveComponentPresentationScenarios,
   getComponentPresentationScenarioDescription,
   getComponentPresentationScenarioTitle,
   readCanonicalComponentCapabilities,
-  type ComponentPresentationScenario,
 } from '../component-presentation';
-import {
-  existsInPackage,
-  extractPlatformProps,
-} from '../component-page/extractors/source';
 import { getCatalogPaths } from '../component-page/helpers/paths';
 
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
+import { getEffectiveWebsitePresentationScenarios } from './website-presentation';
 
 export type WebsiteComponentProfile =
   'primitive' | 'form-control' | 'compound' | 'overlay';
@@ -33,104 +28,6 @@ export function resolveWebsiteComponentProfile(
   return profile === 'base' ? 'primitive' : profile;
 }
 
-function readComponentApiPropNames(params: {
-  root: string;
-  componentName: string;
-}) {
-  const propNames = new Set<string>();
-
-  for (const platform of ['react', 'react-native'] as const) {
-    if (
-      !existsInPackage({
-        root: params.root,
-        packageName: platform,
-        componentName: params.componentName,
-      })
-    ) {
-      continue;
-    }
-
-    for (const prop of extractPlatformProps({
-      root: params.root,
-      componentName: params.componentName,
-      platform,
-    })) {
-      propNames.add(prop.name);
-    }
-  }
-
-  return propNames;
-}
-
-function getScenarioProps(params: {
-  scenario: ComponentPresentationScenario;
-  profile: ComponentProfileArg;
-  propNames: ReadonlySet<string>;
-}): string[] | null {
-  const { scenario, profile, propNames } = params;
-  const props: string[] = [];
-  const hasType = propNames.has('type');
-  const booleanControl = propNames.has('checked');
-
-  switch (scenario) {
-    case 'basic':
-    case 'rich-content':
-      break;
-    case 'multiple':
-      if (hasType) {
-        props.push("type='multiple'");
-      }
-      if (propNames.has('defaultValue')) {
-        props.push("defaultValue={['item-1', 'item-2']}");
-      }
-      return props.length > 0 ? props : null;
-    case 'controlled':
-      if (booleanControl) {
-        props.push('checked');
-      } else if (propNames.has('value')) {
-        props.push(
-          profile === 'compound' ? "value='item-1'" : "value='Example value'"
-        );
-      } else {
-        return null;
-      }
-      break;
-    case 'uncontrolled':
-      if (booleanControl && propNames.has('defaultChecked')) {
-        props.push('defaultChecked');
-      } else if (propNames.has('defaultValue')) {
-        props.push(
-          profile === 'compound'
-            ? "defaultValue='item-1'"
-            : "defaultValue='Example value'"
-        );
-      } else {
-        return null;
-      }
-      break;
-    case 'collapsible':
-      if (!propNames.has('collapsible')) {
-        return null;
-      }
-      props.push('collapsible');
-      if (propNames.has('defaultValue')) {
-        props.push("defaultValue='item-1'");
-      }
-      break;
-    case 'disabled':
-    case 'required':
-    case 'invalid':
-    case 'loading':
-      if (!propNames.has(scenario)) {
-        return null;
-      }
-      props.push(scenario);
-      break;
-  }
-
-  return props;
-}
-
 function toTsString(value: string) {
   return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 }
@@ -141,33 +38,16 @@ function renderGeneratedPresentationMetadata(params: {
   profile: ComponentProfileArg;
   capabilities: readonly import('@vellira-ui/metadata').ComponentCapability[];
 }) {
-  const propNames = readComponentApiPropNames(params);
-  const scenarios = deriveComponentPresentationScenarios({
-    profile: params.profile,
-    capabilities: params.capabilities,
-  });
-  const examples = scenarios
-    .flatMap((scenario) => {
-      const props = getScenarioProps({
-        scenario,
-        profile: params.profile,
-        propNames,
-      });
-
-      if (props === null) {
-        return [];
-      }
-
-      return [
-        `    {
+  const examples = getEffectiveWebsitePresentationScenarios(params)
+    .map(
+      ({ scenario, props }) => `    {
       title: ${toTsString(getComponentPresentationScenarioTitle(scenario))},
       description: ${toTsString(
         getComponentPresentationScenarioDescription(scenario)
       )},
       props: [${props.map(toTsString).join(', ')}],
-    },`,
-      ];
-    })
+    },`
+    )
     .join('\n');
 
   return `import { defineComponentPageMetadata } from '../../metadata';
