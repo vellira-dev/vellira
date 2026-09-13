@@ -14,6 +14,7 @@ import { tabsMetadata } from './Tabs.metadata';
 import { tooltipMetadata } from './Tooltip.metadata';
 
 export {
+  accordionMetadata,
   buttonMetadata,
   checkboxMetadata,
   dropdownMetadata,
@@ -24,6 +25,7 @@ export {
   radioGroupMetadata,
   radioMetadata,
   selectMetadata,
+  switchMetadata,
   tabsMetadata,
   tooltipMetadata,
 };
