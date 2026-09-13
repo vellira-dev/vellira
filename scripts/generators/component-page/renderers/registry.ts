@@ -353,6 +353,75 @@ export async function updateCatalogRegistry(params: {
   console.log(`✅ Updated: ${path.relative(root, componentsRegistryFile)}`);
 }
 
+export async function updateCatalogPreviewFallback(params: {
+  root: string;
+  check: boolean;
+  checkFailures: string[];
+  catalogPreviewFile: string;
+  catalogPreviewFallbackFile: string;
+  model: GeneratedPageModel;
+}) {
+  const {
+    root,
+    check,
+    checkFailures,
+    catalogPreviewFile,
+    catalogPreviewFallbackFile,
+    model,
+  } = params;
+  const curatedSource = fs.readFileSync(catalogPreviewFile, 'utf8');
+  const source = fs.readFileSync(catalogPreviewFallbackFile, 'utf8');
+  const curatedCase = `case '${model.slug}':`;
+  const marker = '// component-catalog-preview-entries';
+  const entryMarker = `// component-catalog-preview:${model.slug}`;
+  const hasCuratedPreview = curatedSource.includes(curatedCase);
+  const hasGeneratedPreview = source.includes(entryMarker);
+
+  if (hasCuratedPreview) {
+    if (hasGeneratedPreview) {
+      throw new Error(
+        `Duplicate component catalog preview ownership for ${model.slug}. Remove the generated fallback when adding a curated preview.`
+      );
+    }
+    console.log(`⏭ Skipped generated catalog preview: curated ${model.slug}`);
+    return;
+  }
+
+  if (!model.platforms.includes('react')) {
+    throw new Error(
+      `Component ${model.componentName} requires a curated Web catalog preview because it has no React demo.`
+    );
+  }
+
+  if (hasGeneratedPreview) {
+    console.log(`⏭ Skipped generated catalog preview: ${model.slug}`);
+    return;
+  }
+
+  if (!source.includes(marker)) {
+    throw new Error(
+      `Catalog preview marker not found in ${catalogPreviewFallbackFile}`
+    );
+  }
+
+  const entry = `${entryMarker}\n  ${JSON.stringify(model.slug)}: React.lazy(() =>\n    import('../../components/${model.componentName}').then(\n      ({ ${model.componentName}Demo }) => ({ default: ${model.componentName}Demo })\n    )\n  ),`;
+  const nextSource = source.replace(marker, `${marker}\n${entry}`);
+  const formattedNextSource = await formatGeneratedContent(
+    catalogPreviewFallbackFile,
+    nextSource
+  );
+
+  if (check) {
+    if (formattedNextSource !== source) {
+      checkFailures.push(path.relative(root, catalogPreviewFallbackFile));
+    }
+    return;
+  }
+
+  fs.writeFileSync(catalogPreviewFallbackFile, formattedNextSource);
+  console.log(`✅ Updated: ${path.relative(root, catalogPreviewFallbackFile)}`);
+}
+
 export async function updateComponentRegistry(params: {
   root: string;
   force: boolean;
@@ -361,6 +430,8 @@ export async function updateComponentRegistry(params: {
   componentCatalogDir: string;
   componentPagesFile: string;
   componentsRegistryFile: string;
+  catalogPreviewFile: string;
+  catalogPreviewFallbackFile: string;
   catalogCategory: CatalogCategory;
   model: GeneratedPageModel;
 }) {
@@ -372,6 +443,8 @@ export async function updateComponentRegistry(params: {
     componentCatalogDir,
     componentPagesFile,
     componentsRegistryFile,
+    catalogPreviewFile,
+    catalogPreviewFallbackFile,
     catalogCategory,
     model,
   } = params;
@@ -447,5 +520,14 @@ ${registryImportNames.map((name) => `  ${name},`).join('\n')}
     componentsRegistryFile,
     model,
     catalogCategory,
+  });
+
+  await updateCatalogPreviewFallback({
+    root,
+    check,
+    checkFailures,
+    catalogPreviewFile,
+    catalogPreviewFallbackFile,
+    model,
   });
 }

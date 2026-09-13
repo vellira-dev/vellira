@@ -56,8 +56,28 @@ expect(Object.keys(api).sort()).toEqual([
   fs.mkdirSync(metadataDir, { recursive: true });
   fs.writeFileSync(
     path.join(metadataDir, 'index.ts'),
-    `export const componentMetadata = [
+    `export {
+  buttonMetadata,
+};
+
+export const componentMetadata = [
 ] as const;
+`
+  );
+
+  const scriptsDir = path.join(root, 'scripts');
+
+  fs.mkdirSync(scriptsDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(scriptsDir, 'check-public-api.mjs'),
+    `const publicSymbolContracts = {
+  'packages/react-native/src/index.ts': [
+    'Button',
+  ],
+  'packages/react/src/index.ts': [
+    'Button',
+  ],
+};
 `
   );
 
@@ -194,7 +214,22 @@ describe('component generator writer', () => {
       )
     ).toHaveLength(1);
 
-    expect(metadataBarrel.match(/ {2}avatarMetadata,/g)).toHaveLength(1);
+    expect(metadataBarrel.match(/ {2}avatarMetadata,/g)).toHaveLength(2);
+    expect(metadataBarrel).toMatch(/export \{[\s\S]*avatarMetadata,[\s\S]*\};/);
+
+    const strictPublicApi = fs.readFileSync(
+      path.join(root, 'scripts/check-public-api.mjs'),
+      'utf8'
+    );
+
+    expect(strictPublicApi.match(/ {4}'Avatar',/g)).toHaveLength(2);
+    expect(strictPublicApi.match(/ {4}'AvatarProps',/g)).toHaveLength(2);
+    expect(strictPublicApi).toContain(
+      "'packages/react/src/index.ts': [\n    'Avatar',\n    'AvatarProps',\n    'Button',"
+    );
+    expect(strictPublicApi).toContain(
+      "'packages/react-native/src/index.ts': [\n    'Avatar',\n    'AvatarProps',\n    'Button',"
+    );
   });
 
   it('overwrites component files without duplicating barrel exports', async () => {
@@ -339,7 +374,11 @@ describe('component generator writer', () => {
     expect(
       barrel.match(/import \{ avatarMetadata \} from '\.\/Avatar\.metadata';/g)
     ).toHaveLength(1);
-    expect(barrel.match(/ {2}avatarMetadata,/g)).toHaveLength(1);
+    expect(barrel.match(/ {2}avatarMetadata,/g)).toHaveLength(2);
+    expect(barrel).toMatch(/export \{[\s\S]*avatarMetadata,[\s\S]*\};/);
+    expect(barrel).toMatch(
+      /export const componentMetadata = \[[\s\S]*avatarMetadata,[\s\S]*\] as const;/
+    );
   });
 
   it('generates capabilities from the selected profile', async () => {
@@ -678,7 +717,11 @@ describe('component generator writer', () => {
     expect(
       barrel.match(/import \{ dialogMetadata \} from '\.\/Dialog\.metadata';/g)
     ).toHaveLength(1);
-    expect(barrel.match(/ {2}dialogMetadata,/g)).toHaveLength(1);
+    expect(barrel.match(/ {2}dialogMetadata,/g)).toHaveLength(2);
+    expect(barrel).toMatch(/export \{[\s\S]*dialogMetadata,[\s\S]*\};/);
+    expect(barrel).toMatch(
+      /export const componentMetadata = \[[\s\S]*dialogMetadata,[\s\S]*\] as const;/
+    );
   });
 
   it('writes Prettier-clean owned artifacts and docs registry', async () => {

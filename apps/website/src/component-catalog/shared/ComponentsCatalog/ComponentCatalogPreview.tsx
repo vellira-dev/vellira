@@ -1,5 +1,7 @@
 'use client';
 
+import { Suspense } from 'react';
+
 import {
   Accordion,
   Button,
@@ -15,6 +17,7 @@ import {
 import { ChevronDown, Edit, Settings, Trash, Info } from '@vellira-ui/icons';
 
 import styles from './ComponentsCatalog.module.css';
+import { generatedCatalogPreviews } from './generatedCatalogPreviews';
 
 interface ComponentCatalogPreviewProps {
   slug: string;
@@ -67,8 +70,26 @@ export function ComponentCatalogPreview({
       return <TooltipPreview />;
 
     default:
-      return null;
+      return <GeneratedCatalogPreview slug={slug} />;
   }
+}
+
+function GeneratedCatalogPreview({ slug }: { slug: string }) {
+  const Preview = generatedCatalogPreviews[slug];
+
+  if (!Preview) {
+    throw new Error(`Missing component catalog preview for "${slug}".`);
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <span className={styles.previewHelper}>Loading preview...</span>
+      }
+    >
+      <Preview />
+    </Suspense>
+  );
 }
 
 function AccordionPreview() {

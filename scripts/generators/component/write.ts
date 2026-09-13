@@ -308,6 +308,76 @@ function synchronizePublicApiContract(params: {
   }
 }
 
+function synchronizeStrictPublicApiContract(params: {
+  plan: ComponentGenerationPlan;
+  target: ComponentGenerationTarget;
+  updatedFiles: string[];
+}) {
+  const { plan, target, updatedFiles } = params;
+  const contractFile = path.join(plan.root, 'scripts', 'check-public-api.mjs');
+
+  if (!fs.existsSync(contractFile)) {
+    throw new Error(`Missing strict public API contract: ${contractFile}`);
+  }
+
+  const sourcePath = path
+    .relative(plan.root, target.packageBarrelFile)
+    .split(path.sep)
+    .join('/');
+  const marker = `  '${sourcePath}': [`;
+  const content = fs.readFileSync(contractFile, 'utf8');
+  const contractStart = content.indexOf(marker);
+
+  if (contractStart === -1) {
+    throw new Error(`Missing strict public API entry for ${sourcePath}`);
+  }
+
+  const contractEnd = content.indexOf('\n  ],', contractStart);
+  if (contractEnd === -1) {
+    throw new Error(`Invalid strict public API entry for ${sourcePath}`);
+  }
+
+  const contractBody = content.slice(
+    contractStart + marker.length,
+    contractEnd
+  );
+  const existingSymbols = [...contractBody.matchAll(/^\s+'([^']+)',$/gm)].map(
+    (match) => match[1]
+  );
+
+  if (existingSymbols.length === 0) {
+    throw new Error(
+      `Strict public API entry for ${sourcePath} has no symbols.`
+    );
+  }
+
+  const requiredSymbols = [
+    plan.componentName,
+    ...getGeneratedPublicPropTypeNames(plan),
+  ];
+  const nextSymbols = [
+    ...new Set([...existingSymbols, ...requiredSymbols]),
+  ].sort();
+
+  if (
+    nextSymbols.length === existingSymbols.length &&
+    nextSymbols.every((symbol, index) => symbol === existingSymbols[index])
+  ) {
+    return;
+  }
+
+  const nextContract = `${marker}\n${nextSymbols
+    .map((symbol) => `    '${symbol}',`)
+    .join('\n')}`;
+  const nextContent =
+    content.slice(0, contractStart) + nextContract + content.slice(contractEnd);
+
+  fs.writeFileSync(contractFile, nextContent);
+  if (!updatedFiles.includes(contractFile)) {
+    updatedFiles.push(contractFile);
+  }
+}
+
 function registerPackageRootExports(params: {
   plan: ComponentGenerationPlan;
   target: ComponentGenerationTarget;
@@ -333,6 +403,12 @@ function registerPackageRootExports(params: {
   synchronizePublicApiContract({
     componentName: plan.componentName,
     publicApiTestFile: target.publicApiTestFile,
+    updatedFiles: result.updatedFiles,
+  });
+
+  synchronizeStrictPublicApiContract({
+    plan,
+    target,
     updatedFiles: result.updatedFiles,
   });
 }
@@ -533,6 +609,46 @@ function writeTarget(params: {
   registerPackageRootExports({ plan, target, result });
 }
 
+function synchronizeMetadataNamedExport(
+  content: string,
+  metadataName: string
+): string {
+  const exportMatch = content.match(/export \{\n([\s\S]*?)\n\};/);
+
+  if (!exportMatch || exportMatch.index === undefined) {
+    const registryMarker = 'export const componentMetadata = [';
+
+    if (!content.includes(registryMarker)) {
+      throw new Error('Missing component metadata export/registry authority.');
+    }
+
+    return content.replace(
+      registryMarker,
+      `export {\n  ${metadataName},\n};\n\n${registryMarker}`
+    );
+  }
+
+  const names = exportMatch[1]
+    .split('\n')
+    .map((line) => line.trim().replace(/,$/, ''))
+    .filter(Boolean);
+
+  if (names.some((name) => !/^[A-Za-z_$][\w$]*$/.test(name))) {
+    throw new Error('Metadata named-export block is not in canonical form.');
+  }
+
+  const nextNames = [...new Set([...names, metadataName])].sort();
+  const nextBlock = `export {\n${nextNames
+    .map((name) => `  ${name},`)
+    .join('\n')}\n};`;
+
+  return (
+    content.slice(0, exportMatch.index) +
+    nextBlock +
+    content.slice(exportMatch.index + exportMatch[0].length)
+  );
+}
+
 function registerMetadata(params: {
   metadataBarrelFile: string;
   componentName: string;
@@ -548,6 +664,8 @@ function registerMetadata(params: {
   if (!content.includes(importLine)) {
     content = insertSortedNamedImport(content, importLine);
   }
+
+  content = synchronizeMetadataNamedExport(content, metadataName);
 
   const registryMarker = 'export const componentMetadata = [';
   const registryStart = content.indexOf(registryMarker);

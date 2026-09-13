@@ -5,7 +5,10 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import type { GeneratedPageModel } from '../model/types';
-import { updateCatalogRegistry } from './registry';
+import {
+  updateCatalogPreviewFallback,
+  updateCatalogRegistry,
+} from './registry';
 
 const model: GeneratedPageModel = {
   componentName: 'Switch',
@@ -149,4 +152,101 @@ export const webComponents = [
     expect(content).toContain("category: 'navigation'");
     expect(content).not.toContain("category: 'general'");
   });
+});
+
+describe('component catalog preview registration', async () => {
+  it('adds one generated React demo fallback when no curated preview exists', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-preview-'));
+    const catalogPreviewFile = path.join(root, 'ComponentCatalogPreview.tsx');
+    const catalogPreviewFallbackFile = path.join(
+      root,
+      'generatedCatalogPreviews.tsx'
+    );
+
+    fs.writeFileSync(
+      catalogPreviewFile,
+      `switch (slug) {\n  case 'button':\n    return null;\n}\n`
+    );
+    fs.writeFileSync(
+      catalogPreviewFallbackFile,
+      `import { lazy } from 'react';\n\nexport const generatedCatalogPreviews = {\n  // component-catalog-preview-entries\n};\n`
+    );
+
+    for (let iteration = 0; iteration < 2; iteration += 1) {
+      await updateCatalogPreviewFallback({
+        root,
+        check: false,
+        checkFailures: [],
+        catalogPreviewFile,
+        catalogPreviewFallbackFile,
+        model,
+      });
+    }
+
+    const content = fs.readFileSync(catalogPreviewFallbackFile, 'utf8');
+
+    expect(
+      content.match(/\/\/ component-catalog-preview:switch/g)
+    ).toHaveLength(1);
+    expect(content).toContain("import('../../components/Switch')");
+    expect(content).toContain('SwitchDemo');
+  });
+
+  it('keeps an explicit curated preview authoritative', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-preview-'));
+    const catalogPreviewFile = path.join(root, 'ComponentCatalogPreview.tsx');
+    const catalogPreviewFallbackFile = path.join(
+      root,
+      'generatedCatalogPreviews.tsx'
+    );
+    const fallbackSource = `import { lazy } from 'react';\n\nexport const generatedCatalogPreviews = {\n  // component-catalog-preview-entries\n};\n`;
+
+    fs.writeFileSync(
+      catalogPreviewFile,
+      `switch (slug) {\n  case 'switch':\n    return null;\n}\n`
+    );
+    fs.writeFileSync(catalogPreviewFallbackFile, fallbackSource);
+
+    await updateCatalogPreviewFallback({
+      root,
+      check: false,
+      checkFailures: [],
+      catalogPreviewFile,
+      catalogPreviewFallbackFile,
+      model,
+    });
+
+    expect(fs.readFileSync(catalogPreviewFallbackFile, 'utf8')).toBe(
+      fallbackSource
+    );
+  });
+});
+
+it('rejects duplicate curated and generated catalog preview ownership', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-preview-'));
+  const catalogPreviewFile = path.join(root, 'ComponentCatalogPreview.tsx');
+  const catalogPreviewFallbackFile = path.join(
+    root,
+    'generatedCatalogPreviews.tsx'
+  );
+
+  fs.writeFileSync(
+    catalogPreviewFile,
+    `switch (slug) {\n  case 'switch':\n    return null;\n}\n`
+  );
+  fs.writeFileSync(
+    catalogPreviewFallbackFile,
+    `import { lazy } from 'react';\n\nexport const generatedCatalogPreviews = {\n  // component-catalog-preview-entries\n  // component-catalog-preview:switch\n  switch: lazy(() => import('../../components/Switch')),\n};\n`
+  );
+
+  await expect(
+    updateCatalogPreviewFallback({
+      root,
+      check: true,
+      checkFailures: [],
+      catalogPreviewFile,
+      catalogPreviewFallbackFile,
+      model,
+    })
+  ).rejects.toThrow('Duplicate component catalog preview ownership');
 });

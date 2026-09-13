@@ -144,6 +144,19 @@ const {
   slug,
 } = getCatalogPaths({ root, componentName });
 
+const catalogPreviewFile = path.join(
+  catalogRoot,
+  'shared',
+  'ComponentsCatalog',
+  'ComponentCatalogPreview.tsx'
+);
+const catalogPreviewFallbackFile = path.join(
+  catalogRoot,
+  'shared',
+  'ComponentsCatalog',
+  'generatedCatalogPreviews.tsx'
+);
+
 const velliraApiSourceRoots = getVelliraApiSourceRoots(root);
 
 const fileWriter = createFileWriter({ root, force, check });
@@ -375,7 +388,11 @@ const componentIndexContent = renderComponentIndex({
 
 await writeIfMissing(componentIndexFile, componentIndexContent);
 
-const registryFiles = [catalogRegistryFile, componentsRegistryFile];
+const registryFiles = [
+  catalogRegistryFile,
+  componentsRegistryFile,
+  catalogPreviewFallbackFile,
+];
 
 const registrySourcesBefore = check
   ? null
@@ -394,6 +411,8 @@ await await updateComponentRegistry({
   componentCatalogDir,
   componentPagesFile: catalogRegistryFile,
   componentsRegistryFile,
+  catalogPreviewFile,
+  catalogPreviewFallbackFile,
   catalogCategory,
   model: generatedPageModel,
 });
