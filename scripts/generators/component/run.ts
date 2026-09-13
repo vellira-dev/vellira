@@ -1,6 +1,11 @@
 import path from 'node:path';
 
 import { getComponentApiDocsTargets, getComponentDocsTargets } from './docs';
+import {
+  checkMetadataExportContract,
+  normalizeMetadataRegistryForMutation,
+  synchronizeMetadataExportContract,
+} from './metadata-export-contract';
 import { createComponentGenerationPlan } from './plan';
 import { checkGeneratedPlanContract } from './plan-contract';
 import { validateComponentGenerationPlan } from './preflight';
@@ -152,6 +157,7 @@ export async function runComponentGenerator(params: {
         componentName: plan.componentName,
         targets: plan.targets,
       }),
+      ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
       ...checkComponentTokenContract(plan),
       ...checkSharedTypesContract(plan),
@@ -198,8 +204,15 @@ export async function runComponentGenerator(params: {
     };
   }
 
+  normalizeMetadataRegistryForMutation(plan.metadataBarrelFile);
+
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
+
+  synchronizeMetadataExportContract({
+    metadataBarrelFile: plan.metadataBarrelFile,
+    updatedFiles: result.updatedFiles,
+  });
 
   const tokenTypesResult =
     plan.componentTokens === false
