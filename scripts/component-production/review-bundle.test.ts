@@ -58,13 +58,17 @@ describe('component review bundle', () => {
       root,
       input: WEB_INPUT,
       completenessStage: passedCompletenessStage(),
-      dependencies: { resolveRevision: () => revision },
+      dependencies: {
+        resolveRevision: () => revision,
+        isWorkingTreeClean: () => true,
+      },
     });
 
     expect(result.report).toMatchObject({
       schemaVersion: '1',
       componentName: 'Avatar',
       revision,
+      workingTreeClean: true,
       status: 'ready',
       readyForHumanReview: true,
       blockingFindings: [],
@@ -80,6 +84,33 @@ describe('component review bundle', () => {
     });
   });
 
+  it('accepts canonical metadata-free website generation', () => {
+    const root = createCompleteWebFixture();
+    const websiteMetadata = path.join(
+      root,
+      'apps/website/src/component-catalog/components/Avatar/metadata.ts'
+    );
+
+    expect(fs.existsSync(websiteMetadata)).toBe(false);
+
+    const result = runComponentReviewBundle({
+      root,
+      input: WEB_INPUT,
+      completenessStage: passedCompletenessStage(),
+      dependencies: {
+        resolveRevision: () => revision,
+        isWorkingTreeClean: () => true,
+      },
+    });
+
+    expect(result.report.status).toBe('ready');
+    expect(
+      result.report.surfaces.find(
+        (surface) => surface.id === 'website-component-page'
+      )
+    ).toMatchObject({ status: 'ready' });
+  });
+
   it('blocks readiness when a required candidate review surface is missing', () => {
     const root = createCompleteWebFixture();
     fs.rmSync(path.join(root, 'apps/docs/src/react/avatar.md'));
@@ -88,7 +119,10 @@ describe('component review bundle', () => {
       root,
       input: WEB_INPUT,
       completenessStage: passedCompletenessStage(),
-      dependencies: { resolveRevision: () => revision },
+      dependencies: {
+        resolveRevision: () => revision,
+        isWorkingTreeClean: () => true,
+      },
     });
 
     expect(result.report.status).toBe('blocked');
@@ -108,7 +142,10 @@ describe('component review bundle', () => {
       root,
       input: WEB_INPUT,
       completenessStage: passedCompletenessStage(),
-      dependencies: { resolveRevision: () => null },
+      dependencies: {
+        resolveRevision: () => null,
+        isWorkingTreeClean: () => true,
+      },
     });
 
     expect(result.report.revision).toBeNull();
@@ -120,12 +157,40 @@ describe('component review bundle', () => {
     );
   });
 
+  it('blocks readiness when the working tree does not match the reported revision', () => {
+    const root = createCompleteWebFixture();
+    const result = runComponentReviewBundle({
+      root,
+      input: WEB_INPUT,
+      completenessStage: passedCompletenessStage(),
+      dependencies: {
+        resolveRevision: () => revision,
+        isWorkingTreeClean: () => false,
+      },
+    });
+
+    expect(result.report.revision).toBe(revision);
+    expect(result.report.workingTreeClean).toBe(false);
+    expect(result.report.status).toBe('blocked');
+    expect(result.report.readyForHumanReview).toBe(false);
+    expect(result.completenessStage.status).toBe('blocked');
+    expect(result.report.blockingFindings).toContainEqual(
+      expect.objectContaining({
+        id: 'completeness:review-bundle:working-tree',
+        ruleId: 'review-bundle.exact-revision',
+      })
+    );
+  });
+
   it('keeps Accordion as the real cross-platform review-bundle regression fixture', () => {
     const result = runComponentReviewBundle({
       root: process.cwd(),
       input: ACCORDION_INPUT,
       completenessStage: passedCompletenessStage(),
-      dependencies: { resolveRevision: () => revision },
+      dependencies: {
+        resolveRevision: () => revision,
+        isWorkingTreeClean: () => true,
+      },
     });
 
     expect(result.report.status).toBe('ready');
@@ -168,8 +233,6 @@ function createCompleteWebFixture() {
     'apps/website/src/component-catalog/components/Avatar/AvatarAccessibility.tsx':
       'accessibility',
     'apps/website/src/component-catalog/components/Avatar/avatarApi.ts': 'api',
-    'apps/website/src/component-catalog/components/Avatar/metadata.ts':
-      'metadata',
     'apps/website/src/component-catalog/components/Avatar/AvatarDemo.tsx':
       'demo',
     'apps/website/src/component-catalog/components/Avatar/AvatarCatalogPreview.tsx':
