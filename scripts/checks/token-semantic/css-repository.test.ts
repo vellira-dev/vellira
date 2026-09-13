@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { checkTokenCssReferences } from './css-repository';
 
@@ -67,6 +67,48 @@ describe('maintained token CSS reference scan', () => {
       });
     }
   );
+
+  it('ignores a child directory removed after its parent is enumerated', () => {
+    const { root, write } = fixture();
+    const parent = path.join(root, 'packages/react/src/components');
+    const transient = path.join(parent, '__GeneratedContractSwitch');
+    write(
+      'packages/react/src/components/__GeneratedContractSwitch/Generated.module.scss',
+      '.generated { color: var(--surface-canvas); }'
+    );
+
+    const originalReaddirSync = fs.readdirSync;
+    const readdirSpy = vi.spyOn(fs, 'readdirSync');
+    let removed = false;
+    readdirSpy.mockImplementation(
+      ((directory: Parameters<typeof fs.readdirSync>[0]) => {
+        const entries = originalReaddirSync(directory, { withFileTypes: true });
+        if (
+          !removed &&
+          path.resolve(String(directory)) === path.resolve(parent)
+        ) {
+          removed = true;
+          fs.rmSync(transient, { recursive: true, force: true });
+        }
+        return entries;
+      }) as typeof fs.readdirSync
+    );
+
+    try {
+      const report = checkTokenCssReferences(root);
+      expect(removed).toBe(true);
+      expect(report.checked).toBe(1);
+      expect(report.findings).toEqual([]);
+    } finally {
+      readdirSpy.mockRestore();
+    }
+  });
+
+  it('still fails closed when a maintained root is missing', () => {
+    const { root } = fixture();
+    fs.rmSync(path.join(root, 'apps'), { recursive: true, force: true });
+    expect(() => checkTokenCssReferences(root)).toThrow(/ENOENT/);
+  });
 
   it('resolves component-root custom properties only for nested styles of the same React component', () => {
     const { root, write } = fixture();
