@@ -14,7 +14,7 @@ import {
   Share,
   X,
 } from '@vellira-ui/icons';
-import { Portal, Tooltip } from '@vellira-ui/react';
+import { Button, Portal, Tooltip } from '@vellira-ui/react';
 
 import {
   fetchBlogArticleLike,
@@ -248,7 +248,8 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
         <div className={styles.articleActionRow}>
           <Tooltip placement='top'>
             <Tooltip.Trigger asChild>
-              <button
+              <Button
+                appearance='bare'
                 type='button'
                 className={`${styles.articleActionButton} ${styles.articleMetricButton} ${
                   liked ? styles.articleActionButtonActive : ''
@@ -275,7 +276,7 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
                 <span className={styles.visuallyHidden}>
                   {liked ? 'Liked' : 'Like'}
                 </span>
-              </button>
+              </Button>
             </Tooltip.Trigger>
             <Portal>
               <Tooltip.Content withArrow>
@@ -305,7 +306,8 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
 
           <Tooltip placement='top'>
             <Tooltip.Trigger asChild>
-              <button
+              <Button
+                appearance='bare'
                 type='button'
                 className={`${styles.articleActionButton} ${styles.articleIconButton}`}
                 aria-label='Share'
@@ -314,7 +316,7 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
                 <span className={styles.iconSlot}>
                   <Share size={ICON_SIZES.share} aria-hidden='true' />
                 </span>
-              </button>
+              </Button>
             </Tooltip.Trigger>
             <Portal>
               <Tooltip.Content withArrow>Share</Tooltip.Content>
@@ -346,7 +348,8 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
 
             <Tooltip placement='top'>
               <Tooltip.Trigger asChild>
-                <button
+                <Button
+                  appearance='bare'
                   type='button'
                   className={styles.articleIconButton}
                   aria-label={copied ? 'Copied' : 'Copy link'}
@@ -361,7 +364,7 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
                       <Copy size={ICON_SIZES.copy} aria-hidden='true' />
                     </span>
                   )}
-                </button>
+                </Button>
               </Tooltip.Trigger>
               <Portal>
                 <Tooltip.Content withArrow>
