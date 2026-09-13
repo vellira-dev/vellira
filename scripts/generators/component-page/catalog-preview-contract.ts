@@ -16,8 +16,8 @@ function collectMatches(source: string, pattern: RegExp) {
 }
 
 function collectGeneratedPreviewSlugs(source: string) {
-  return [...
-    source.matchAll(
+  return [
+    ...source.matchAll(
       /^\s{2}(?:([A-Za-z_$][\w$]*)|'([^']+)'|"([^"]+)"):\s+[A-Za-z_$][\w$]*CatalogPreview,/gm
     ),
   ]

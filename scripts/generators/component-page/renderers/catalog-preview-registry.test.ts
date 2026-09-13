@@ -156,9 +156,7 @@ describe('generated catalog preview registry', () => {
       componentsRegistryFile,
     });
 
-    expect(checkFailures).toEqual([
-      path.relative(root, generatedRegistryFile),
-    ]);
+    expect(checkFailures).toEqual([path.relative(root, generatedRegistryFile)]);
     expect(fs.readFileSync(generatedRegistryFile, 'utf8')).toBe(before);
   });
 });

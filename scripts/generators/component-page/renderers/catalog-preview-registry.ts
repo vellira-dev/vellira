@@ -19,7 +19,9 @@ function getCatalogEntrySource(source: string, slug: string) {
   const entryStart = source.lastIndexOf('\n  {', slugIndex);
 
   if (entryStart < 0) {
-    throw new Error(`Could not determine component catalog entry start for ${slug}`);
+    throw new Error(
+      `Could not determine component catalog entry start for ${slug}`
+    );
   }
 
   let depth = 0;
@@ -41,7 +43,9 @@ function getCatalogEntrySource(source: string, slug: string) {
     }
   }
 
-  throw new Error(`Could not determine component catalog entry end for ${slug}`);
+  throw new Error(
+    `Could not determine component catalog entry end for ${slug}`
+  );
 }
 
 export function requiresGeneratedCatalogPreview(params: {
@@ -151,5 +155,7 @@ export async function synchronizeGeneratedCatalogPreviewRegistry(params: {
   }
 
   fs.writeFileSync(registryFile, expectedSource);
-  console.log(`♻️ Updated catalog preview registry: ${path.relative(params.root, registryFile)}`);
+  console.log(
+    `♻️ Updated catalog preview registry: ${path.relative(params.root, registryFile)}`
+  );
 }
