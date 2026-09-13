@@ -19,10 +19,8 @@ export function enforceCompleteConsumerReferenceCoverage(
       ? {
           ...finding,
           severity: 'error',
-          expected:
-            `${finding.expected} Complete consumer-reference coverage requires every maintained reference/provider boundary to be statically proven.`,
-          suggestedAction:
-            `${finding.suggestedAction} Unsupported or ambiguous CSS/Sass/provider syntax must be made statically provable before merging.`,
+          expected: `${finding.expected} Complete consumer-reference coverage requires every maintained reference/provider boundary to be statically proven.`,
+          suggestedAction: `${finding.suggestedAction} Unsupported or ambiguous CSS/Sass/provider syntax must be made statically provable before merging.`,
         }
       : finding
   );

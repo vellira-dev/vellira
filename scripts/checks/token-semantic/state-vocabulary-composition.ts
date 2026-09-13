@@ -278,7 +278,8 @@ const rendererWitnesses: readonly RendererWitness[] = [
       {
         code: 'web-hover-renderer-witness-missing',
         pattern: /:hover/,
-        expected: 'Web Radio must expose pointer hover independently from press.',
+        expected:
+          'Web Radio must expose pointer hover independently from press.',
       },
       {
         code: 'web-pressed-renderer-witness-missing',

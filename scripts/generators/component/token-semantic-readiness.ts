@@ -15,8 +15,7 @@ export function componentGeneratorCheckRequiresTokenSemanticGate(
   input: ComponentGeneratorTokenSemanticGateInput
 ): boolean {
   return (
-    input.componentTokens !== false ||
-    (input.requestedTokens?.length ?? 0) > 0
+    input.componentTokens !== false || (input.requestedTokens?.length ?? 0) > 0
   );
 }
 

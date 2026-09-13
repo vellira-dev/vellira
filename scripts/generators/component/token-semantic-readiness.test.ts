@@ -27,27 +27,24 @@ function report(status: TokenSemanticReport['status']): TokenSemanticReport {
 }
 
 describe('component generator token semantic readiness', () => {
-  it(
-    'requires the shared semantic gate for component tokens or explicit token resources',
-    () => {
-      expect(
-        componentGeneratorCheckRequiresTokenSemanticGate({
-          componentTokens: 'standard',
-        })
-      ).toBe(true);
-      expect(
-        componentGeneratorCheckRequiresTokenSemanticGate({
-          componentTokens: false,
-          requestedTokens: ['semantic.surface.canvas'],
-        })
-      ).toBe(true);
-      expect(
-        componentGeneratorCheckRequiresTokenSemanticGate({
-          componentTokens: false,
-        })
-      ).toBe(false);
-    }
-  );
+  it('requires the shared semantic gate for component tokens or explicit token resources', () => {
+    expect(
+      componentGeneratorCheckRequiresTokenSemanticGate({
+        componentTokens: 'standard',
+      })
+    ).toBe(true);
+    expect(
+      componentGeneratorCheckRequiresTokenSemanticGate({
+        componentTokens: false,
+        requestedTokens: ['semantic.surface.canvas'],
+      })
+    ).toBe(true);
+    expect(
+      componentGeneratorCheckRequiresTokenSemanticGate({
+        componentTokens: false,
+      })
+    ).toBe(false);
+  });
 
   it('accepts only a shared token semantic pass', async () => {
     await expect(
@@ -68,23 +65,20 @@ describe('component generator token semantic readiness', () => {
     }
   );
 
-  it(
-    'keeps the real Generator V2 --check CLI wired to the shared authority',
-    () => {
-      const source = fs.readFileSync(
-        path.join(
-          process.cwd(),
-          'scripts/generators/component/create-component.ts'
-        ),
-        'utf8'
-      );
+  it('keeps the real Generator V2 --check CLI wired to the shared authority', () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        'scripts/generators/component/create-component.ts'
+      ),
+      'utf8'
+    );
 
-      expect(source).toContain(
-        'componentGeneratorCheckRequiresTokenSemanticGate({'
-      );
-      expect(source).toContain(
-        'await assertComponentGeneratorTokenSemanticReadiness(process.cwd());'
-      );
-    }
-  );
+    expect(source).toContain(
+      'componentGeneratorCheckRequiresTokenSemanticGate({'
+    );
+    expect(source).toContain(
+      'await assertComponentGeneratorTokenSemanticReadiness(process.cwd());'
+    );
+  });
 });

@@ -97,9 +97,10 @@ ${renderVariables(collectBaseCssOutput())}}
   return css;
 }
 
-export function auditGeneratedTokenCssOutput(
-  generated = generateTokenCss()
-): { checked: number; findings: FindingInput[] } {
+export function auditGeneratedTokenCssOutput(generated = generateTokenCss()): {
+  checked: number;
+  findings: FindingInput[];
+} {
   const expected = createExpectedGeneratedTokenCss();
   if (generated === expected) return { checked: 1, findings: [] };
 
@@ -185,12 +186,7 @@ export function auditTokenCssGenerationWiring(root: string): {
   for (const check of checks) {
     if (!check.ok) {
       findings.push(
-        finding(
-          check.code,
-          check.sourcePath,
-          check.evidence,
-          check.expected
-        )
+        finding(check.code, check.sourcePath, check.evidence, check.expected)
       );
     }
   }
