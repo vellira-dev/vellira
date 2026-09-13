@@ -3,6 +3,7 @@ import { toBlockingVelliraUiUsageReport } from './enforcement';
 
 const report = toBlockingVelliraUiUsageReport(runVelliraUiUsageCheck());
 const json = process.argv.includes('--json');
+const reportOnly = process.argv.includes('--report-only');
 
 if (json) {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
@@ -10,7 +11,8 @@ if (json) {
   printHumanReport();
 }
 
-process.exitCode = report.summary.blockingFindings > 0 ? 1 : 0;
+process.exitCode =
+  !reportOnly && report.summary.blockingFindings > 0 ? 1 : 0;
 
 function printHumanReport() {
   console.log(
