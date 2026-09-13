@@ -129,10 +129,6 @@ export function checkComponentWebsiteContract(
   }
 
   if (result.status === 1 && payload.status === 'stale') {
-    if (result.stderr?.trim()) {
-      process.stderr.write(result.stderr);
-    }
-
     return [
       ...new Set([
         ...payload.staleFiles.map((filePath) => path.join(plan.root, filePath)),
