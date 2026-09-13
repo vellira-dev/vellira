@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import * as childProcess from 'node:child_process';
+
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ComponentCompletenessResult } from '../checks/component-completeness/types';
 import type { ComponentQualityRunResult } from '../checks/component-quality/types';
@@ -6,9 +8,15 @@ import type { ComponentQualityRunResult } from '../checks/component-quality/type
 import type { ComponentProductionInputV1 } from './contracts';
 import {
   runComponentProductionStructuredValidation,
+  runComponentProductionStructuredValidationWorker,
   type ComponentProductionStructuredValidationWorkerExecution,
 } from './structured-validation';
 import type { ComponentProductionValidationWorkerResult } from './structured-validation-protocol';
+
+vi.mock('node:child_process', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:child_process')>()),
+  spawnSync: vi.fn(),
+}));
 
 const INPUT: ComponentProductionInputV1 = {
   schemaVersion: '1',
@@ -23,6 +31,52 @@ const INPUT: ComponentProductionInputV1 = {
 };
 
 const PASSING_PLAN_CONTRACT = async () => [] as string[];
+
+describe('structured validation worker launcher', () => {
+  it('uses the current Node import hook and preserves the child process contract', () => {
+    const spawn = vi.mocked(childProcess.spawnSync).mockReturnValue({
+      pid: 123,
+      output: [null, '{"status":"ok"}', 'worker diagnostic'],
+      stdout: '{"status":"ok"}',
+      stderr: 'worker diagnostic',
+      status: 0,
+      signal: null,
+    });
+
+    try {
+      const result = runComponentProductionStructuredValidationWorker({
+        root: '/tmp/controlled candidate',
+        componentName: 'LauncherFixture',
+        platform: 'all',
+      });
+
+      expect(spawn).toHaveBeenCalledExactlyOnceWith(
+        process.execPath,
+        [
+          '--import',
+          'tsx',
+          'scripts/component-production/structured-validation-worker.ts',
+          'LauncherFixture',
+          'all',
+        ],
+        {
+          cwd: '/tmp/controlled candidate',
+          encoding: 'utf8',
+          timeout: 120_000,
+          shell: false,
+        }
+      );
+      expect(result).toEqual({
+        exitCode: 0,
+        stdout: '{"status":"ok"}',
+        stderr: 'worker diagnostic',
+        timedOut: false,
+      });
+    } finally {
+      spawn.mockReset();
+    }
+  });
+});
 
 describe('runComponentProductionStructuredValidation', () => {
   it('runs validation against a fresh canonical candidate context', async () => {
