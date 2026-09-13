@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -114,5 +115,28 @@ test('invalid main identity fails closed', () => {
       currentMainSha: 'main',
       runs: [],
     })
+  );
+});
+
+test('supersession workflow is write-capable, automatic and independently self-cancelling', async () => {
+  const workflow = await fs.readFile(
+    '.github/workflows/supersede-stale-production-promotions.yml',
+    'utf8'
+  );
+
+  assert.match(workflow, /push:\n {4}branches: \[main\]/);
+  assert.match(
+    workflow,
+    /workflows: \['Deploy Website Cloudflare Production'\]/
+  );
+  assert.match(workflow, /types: \[requested, in_progress\]/);
+  assert.match(workflow, /actions: write/);
+  assert.match(
+    workflow,
+    /group: supersede-stale-production-promotions\n {2}cancel-in-progress: true/
+  );
+  assert.match(
+    workflow,
+    /node apps\/website\/scripts\/cloudflare-production-promotion-supersede\.mjs/
   );
 });
