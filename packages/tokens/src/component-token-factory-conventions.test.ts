@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { componentTokenFactoryConventionV1 } from './component-token-factory-conventions.js';
 import { maintainedComponentFactories } from './token-architecture.js';
 
 const srcDir = dirname(fileURLToPath(import.meta.url));
@@ -12,14 +13,6 @@ const componentsDir = join(factoriesDir, 'components');
 const palettesDir = join(factoriesDir, 'palettes');
 const sharedDir = join(factoriesDir, 'shared');
 const themes = ['light', 'dark', 'highContrast'] as const;
-const migratedFamilies = [
-  'button',
-  'checkbox',
-  'dropdown',
-  'input',
-  'radio',
-  'select',
-] as const;
 
 const expectedCanonicalFactories = [
   'createAccordionTokens',
@@ -60,7 +53,7 @@ describe('component token factory conventions', () => {
     ).toEqual(expectedCanonicalFactories.map((name) => `${name}.ts`).sort());
   });
 
-  it('keeps factory responsibilities in exact fail-closed directories', () => {
+  it('keeps factory responsibilities in the canonical shared inventory', () => {
     const rootEntries = readdirSync(factoriesDir, { withFileTypes: true })
       .map((entry) => ({
         name: entry.name,
@@ -68,51 +61,46 @@ describe('component token factory conventions', () => {
       }))
       .sort((left, right) => left.name.localeCompare(right.name));
 
-    expect(rootEntries).toEqual([
-      { name: 'components', kind: 'directory' },
-      { name: 'index.ts', kind: 'file' },
-      { name: 'palettes', kind: 'directory' },
-      { name: 'shared', kind: 'directory' },
-    ]);
+    expect(rootEntries).toEqual(
+      [...componentTokenFactoryConventionV1.rootEntries].sort((left, right) =>
+        left.name.localeCompare(right.name)
+      )
+    );
 
     expect(
       readdirSync(palettesDir)
         .filter((name) => name.endsWith('.ts'))
         .sort()
-    ).toEqual([
-      'createButtonIntentPalette.ts',
-      'createCheckboxIntentPalette.ts',
-      'createDropdownIntentPalette.ts',
-      'createInputIntentPalette.ts',
-      'createRadioIntentPalette.ts',
-      'createSelectIntentPalette.ts',
-    ]);
+    ).toEqual(
+      componentTokenFactoryConventionV1.paletteFamilies
+        .map(({ helper }) => helper)
+        .sort()
+    );
 
     expect(
       readdirSync(sharedDir)
         .filter((name) => name.endsWith('.ts'))
         .sort()
-    ).toEqual(['componentFocusRing.ts']);
+    ).toEqual([...componentTokenFactoryConventionV1.sharedHelpers].sort());
   });
 
-  it('routes maintained theme construction through canonical factory modules', () => {
+  it('routes palette-backed theme construction through canonical factory modules', () => {
     for (const theme of themes) {
-      for (const family of migratedFamilies) {
+      for (const family of componentTokenFactoryConventionV1.paletteFamilies) {
         const componentSource = readFileSync(
-          join(srcDir, theme, 'components', `${family}.ts`),
+          join(srcDir, theme, 'components', family.themeFile),
           'utf8'
         );
-        const componentName = `${family[0]!.toUpperCase()}${family.slice(1)}`;
 
         expect(componentSource).toContain(
-          `../../factories/components/create${componentName}Tokens.js`
+          `../../factories/components/${family.factory}.js`
         );
-        expect(componentSource).toContain(`create${componentName}Tokens(`);
+        expect(componentSource).toContain(`${family.factory}(`);
         expect(componentSource).not.toContain(
-          `../../factories/create${componentName}Tokens.js`
+          `../../factories/${family.factory}.js`
         );
         expect(componentSource).not.toContain(
-          `../../factories/create${componentName}Palette.js`
+          `../../factories/create${family.componentName}Palette.js`
         );
       }
     }
