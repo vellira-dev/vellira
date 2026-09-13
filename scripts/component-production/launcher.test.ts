@@ -27,6 +27,11 @@ const launchers = [
   ],
   [
     'package.json',
+    'check:component-quality:contract',
+    'node --import tsx scripts/checks/component-quality/completion-contract-cli.ts',
+  ],
+  [
+    'package.json',
     'create:component-page',
     'node --import tsx scripts/generators/component-page/create-component-page.ts',
   ],
@@ -202,6 +207,36 @@ describe('controlled production launcher execution', () => {
       expect(fs.readdirSync(temporaryRoot).sort()).toEqual(
         [path.basename(spec), 'probe.mts', 'reject-listen.cjs'].sort()
       );
+    },
+    timeout + 5_000
+  );
+
+  it.each([
+    [
+      ['LauncherProbe', '--platform', 'invalid'],
+      'Expected --platform to be one of: web, native, all.',
+    ],
+    [
+      ['LauncherProbe', '--unknown option with spaces'],
+      'Unknown option "--unknown option with spaces".',
+    ],
+  ])(
+    'quality contract reaches CLI argument validation without a listener: %j',
+    (args, diagnostic) => {
+      // Argument errors occur before contract construction or component work.
+      const result = spawnSync(
+        'pnpm',
+        ['--silent', 'check:component-quality:contract', ...args],
+        { cwd: root, env, encoding: 'utf8', timeout }
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      expect(result.status).toBe(2);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toBe(
+        `Component Quality completion contract error: ${diagnostic}\n`
+      );
+      expect(result.stderr).not.toContain('LAUNCHER_LISTEN_FORBIDDEN');
     },
     timeout + 5_000
   );
