@@ -5,6 +5,8 @@
     "file": "ci.yml",
     "requiredJobs": [
       "Quality & Component Quality",
+      "Cloudflare runtime contracts",
+      "Cloudflare multi-deployment browser migration",
       "Cloudflare cache and multi-deployment browser contracts",
       "Typecheck & API Contracts",
       "Tooling & IndexNow Tests",
