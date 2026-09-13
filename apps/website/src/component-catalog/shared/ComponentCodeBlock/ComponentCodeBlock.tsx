@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { Button } from '@vellira-ui/react';
+
 import { highlighter } from './highlighter';
 
 import styles from './ComponentCodeBlock.module.css';
@@ -60,9 +62,14 @@ export function ComponentCodeBlock({
       <div className={styles.toolbar}>
         <span className={styles.language}>{language}</span>
 
-        <button type='button' className={styles.copy} onClick={copyCode}>
+        <Button
+          appearance='bare'
+          type='button'
+          className={styles.copy}
+          onClick={copyCode}
+        >
           {copied ? 'Copied' : 'Copy'}
-        </button>
+        </Button>
       </div>
 
       <div className={styles.code} dangerouslySetInnerHTML={{ __html: html }} />
