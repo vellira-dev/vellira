@@ -60,7 +60,6 @@
     "test:e2e:web:visual": "pnpm --filter @vellira-ui/react-storybook test:e2e:visual",
     "test:e2e:web:visual:docker": "pnpm docker:e2e:visual",
     "test:e2e:docker": "pnpm docker:e2e",
-    "test:e2e:update": "pnpm docker:e2e -- --update-snapshots",
     "test:coverage": "pnpm test:coverage:web && pnpm test:coverage:native",
     "test:coverage:web": "pnpm --filter @vellira-ui/react test:coverage",
     "test:coverage:native": "pnpm --filter @vellira-ui/react-native test:coverage",
