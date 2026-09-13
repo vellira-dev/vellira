@@ -8,6 +8,11 @@ import {
   selectBudget,
   selectDistinctHistoricalSamples,
 } from './check-performance-budget.mjs';
+import {
+  classifyFiles as classifyAffectedFiles,
+  packageNameForFiles,
+  planAffectedExecution,
+} from './affected-execution.mjs';
 
 const classification = {
   sharedPrefixes: ['packages/tokens/', 'packages/types/', 'packages/core/'],
@@ -73,6 +78,64 @@ test('cross-boundary changes fall back to normal', () => {
   );
 });
 
+test('affected execution classifier stays aligned with the performance budget classifier', () => {
+  const cases = [
+    ['README.md', 'docs/ci.md', 'packages/react/README.md'],
+    ['packages/react/src/Button.tsx', 'packages/react/src/Button.test.tsx'],
+    ['packages/tokens/src/light.ts'],
+    ['packages/react/src/Button.tsx', 'apps/website/src/app/page.tsx'],
+    ['.github/workflows/ci.yml'],
+    [],
+  ];
+
+  for (const files of cases) {
+    assert.equal(classifyAffectedFiles(files, classification), classifyFiles(files, classification));
+  }
+});
+
+test('affected execution maps only narrow proven shapes to the affected path', () => {
+  assert.deepEqual(
+    planAffectedExecution(['docs/ci.md'], classification),
+    {
+      shape: 'docs-only',
+      executionPath: 'affected',
+      packageName: null,
+      changedFiles: ['docs/ci.md'],
+    }
+  );
+
+  assert.deepEqual(
+    planAffectedExecution(['packages/react/src/Button.tsx'], classification),
+    {
+      shape: 'package-local',
+      executionPath: 'affected',
+      packageName: 'react',
+      changedFiles: ['packages/react/src/Button.tsx'],
+    }
+  );
+
+  assert.equal(
+    planAffectedExecution(['packages/tokens/src/light.ts'], classification).executionPath,
+    'full'
+  );
+  assert.equal(
+    planAffectedExecution(['.github/workflows/ci.yml'], classification).executionPath,
+    'full'
+  );
+});
+
+test('package-local identification rejects cross-package and non-package changes', () => {
+  assert.equal(
+    packageNameForFiles(['packages/react/src/Button.tsx', 'packages/react/src/Input.tsx']),
+    'react'
+  );
+  assert.equal(
+    packageNameForFiles(['packages/react/src/Button.tsx', 'packages/icons/src/index.ts']),
+    null
+  );
+  assert.equal(packageNameForFiles(['apps/website/src/app/page.tsx']), null);
+});
+
 test('narrow shape using full CI selects the conservative normal budget', () => {
   const selected = selectBudget('docs-only', 'full', budgets);
   assert.equal(selected.fallbackToFull, true);
@@ -84,7 +147,7 @@ test('unexpected narrowing of a full-path shape is detected', () => {
   assert.equal(selected.unexpectedNarrowing, true);
 });
 
-test('one slow execution above the tolerance ceiling does not block', () => {
+test('one slow critical path above the tolerance ceiling does not block', () => {
   const result = evaluateBudget({
     currentSeconds: 470,
     targetSeconds: 360,
@@ -97,7 +160,7 @@ test('one slow execution above the tolerance ceiling does not block', () => {
   assert.equal(result.blocking, false);
 });
 
-test('sustained execution regressions above the tolerance ceiling block', () => {
+test('sustained critical-path regressions above the tolerance ceiling block', () => {
   const result = evaluateBudget({
     currentSeconds: 470,
     targetSeconds: 360,
@@ -110,7 +173,7 @@ test('sustained execution regressions above the tolerance ceiling block', () => 
   assert.equal(result.blocking, true);
 });
 
-test('execution variance inside the documented tolerance is non-blocking', () => {
+test('critical-path variance inside the documented tolerance is non-blocking', () => {
   const result = evaluateBudget({
     currentSeconds: 399,
     targetSeconds: 360,
@@ -126,11 +189,11 @@ test('execution variance inside the documented tolerance is non-blocking', () =>
 test('history excludes current PR reruns and deduplicates other PRs', () => {
   const samples = selectDistinctHistoricalSamples(
     [
-      { workflowRunId: 10, pullRequestNumber: 1036, executionFeedbackSeconds: 500 },
-      { workflowRunId: 9, pullRequestNumber: 1034, executionFeedbackSeconds: 410 },
-      { workflowRunId: 8, pullRequestNumber: 1034, executionFeedbackSeconds: 405 },
-      { workflowRunId: 7, pullRequestNumber: null, executionFeedbackSeconds: 390 },
-      { workflowRunId: 6, pullRequestNumber: 1033, executionFeedbackSeconds: 380 },
+      { workflowRunId: 10, pullRequestNumber: 1036, criticalPathSeconds: 500 },
+      { workflowRunId: 9, pullRequestNumber: 1034, criticalPathSeconds: 410 },
+      { workflowRunId: 8, pullRequestNumber: 1034, criticalPathSeconds: 405 },
+      { workflowRunId: 7, pullRequestNumber: null, criticalPathSeconds: 390 },
+      { workflowRunId: 6, pullRequestNumber: 1033, criticalPathSeconds: 380 },
     ],
     1036,
     4
@@ -142,7 +205,7 @@ test('history excludes current PR reruns and deduplicates other PRs', () => {
   );
 });
 
-test('job analysis separates hosted-runner queue from budgeted execution wall clock and rejects inventory drift', () => {
+test('job analysis separates runner scheduling from the parallel critical path and rejects inventory drift', () => {
   const run = { created_at: '2026-09-12T19:34:57Z' };
   const jobs = [
     {
@@ -171,11 +234,13 @@ test('job analysis separates hosted-runner queue from budgeted execution wall cl
   assert.equal(analysis.feedbackSeconds, 399);
   assert.equal(analysis.executionFeedbackSeconds, 386);
   assert.equal(analysis.queueDelaySeconds, 13);
+  assert.equal(analysis.schedulerSkewSeconds, 30);
+  assert.equal(analysis.criticalPathSeconds, 356);
   assert.equal(analysis.longestRequiredJob.name, 'B');
   assert.deepEqual(analysis.unknownJobs, ['Unregistered']);
 });
 
-test('hosted-runner queue alone cannot create a blocking execution regression', () => {
+test('hosted-runner queue and scheduler skew alone cannot create a blocking critical-path regression', () => {
   const run = { created_at: '2026-09-13T10:00:00Z' };
   const jobs = [
     {
@@ -187,8 +252,8 @@ test('hosted-runner queue alone cannot create a blocking execution regression', 
     {
       name: 'B',
       conclusion: 'success',
-      started_at: '2026-09-13T10:03:30Z',
-      completed_at: '2026-09-13T10:09:00Z',
+      started_at: '2026-09-13T10:08:00Z',
+      completed_at: '2026-09-13T10:13:30Z',
     },
   ];
   const analysis = analyzeJobs(run, jobs, {
@@ -196,12 +261,14 @@ test('hosted-runner queue alone cannot create a blocking execution regression', 
     allowedNonCriticalJobs: [],
   });
 
-  assert.equal(analysis.feedbackSeconds, 540);
-  assert.equal(analysis.executionFeedbackSeconds, 360);
+  assert.equal(analysis.feedbackSeconds, 810);
+  assert.equal(analysis.executionFeedbackSeconds, 630);
   assert.equal(analysis.queueDelaySeconds, 180);
+  assert.equal(analysis.schedulerSkewSeconds, 300);
+  assert.equal(analysis.criticalPathSeconds, 330);
 
   const result = evaluateBudget({
-    currentSeconds: analysis.executionFeedbackSeconds,
+    currentSeconds: analysis.criticalPathSeconds,
     targetSeconds: 360,
     toleranceSeconds: 75,
     historicalSeconds: [470, 465, 460, 455],

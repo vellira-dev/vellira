@@ -13,7 +13,7 @@
       "Storybook & Browser Tests",
       "Build, Test & Validate"
     ],
-    "allowedNonCriticalJobs": []
+    "allowedNonCriticalJobs": ["PR Impact"]
   },
   "budgets": {
     "normal": {
