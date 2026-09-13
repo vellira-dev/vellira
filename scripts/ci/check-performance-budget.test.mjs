@@ -8,6 +8,11 @@ import {
   selectBudget,
   selectDistinctHistoricalSamples,
 } from './check-performance-budget.mjs';
+import {
+  classifyFiles as classifyAffectedFiles,
+  packageNameForFiles,
+  planAffectedExecution,
+} from './affected-execution.mjs';
 
 const classification = {
   sharedPrefixes: ['packages/tokens/', 'packages/types/', 'packages/core/'],
@@ -71,6 +76,64 @@ test('cross-boundary changes fall back to normal', () => {
     ),
     'normal'
   );
+});
+
+test('affected execution classifier stays aligned with the performance budget classifier', () => {
+  const cases = [
+    ['README.md', 'docs/ci.md', 'packages/react/README.md'],
+    ['packages/react/src/Button.tsx', 'packages/react/src/Button.test.tsx'],
+    ['packages/tokens/src/light.ts'],
+    ['packages/react/src/Button.tsx', 'apps/website/src/app/page.tsx'],
+    ['.github/workflows/ci.yml'],
+    [],
+  ];
+
+  for (const files of cases) {
+    assert.equal(classifyAffectedFiles(files, classification), classifyFiles(files, classification));
+  }
+});
+
+test('affected execution maps only narrow proven shapes to the affected path', () => {
+  assert.deepEqual(
+    planAffectedExecution(['docs/ci.md'], classification),
+    {
+      shape: 'docs-only',
+      executionPath: 'affected',
+      packageName: null,
+      changedFiles: ['docs/ci.md'],
+    }
+  );
+
+  assert.deepEqual(
+    planAffectedExecution(['packages/react/src/Button.tsx'], classification),
+    {
+      shape: 'package-local',
+      executionPath: 'affected',
+      packageName: 'react',
+      changedFiles: ['packages/react/src/Button.tsx'],
+    }
+  );
+
+  assert.equal(
+    planAffectedExecution(['packages/tokens/src/light.ts'], classification).executionPath,
+    'full'
+  );
+  assert.equal(
+    planAffectedExecution(['.github/workflows/ci.yml'], classification).executionPath,
+    'full'
+  );
+});
+
+test('package-local identification rejects cross-package and non-package changes', () => {
+  assert.equal(
+    packageNameForFiles(['packages/react/src/Button.tsx', 'packages/react/src/Input.tsx']),
+    'react'
+  );
+  assert.equal(
+    packageNameForFiles(['packages/react/src/Button.tsx', 'packages/icons/src/index.ts']),
+    null
+  );
+  assert.equal(packageNameForFiles(['apps/website/src/app/page.tsx']), null);
 });
 
 test('narrow shape using full CI selects the conservative normal budget', () => {
