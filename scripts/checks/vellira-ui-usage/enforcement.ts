@@ -1,6 +1,8 @@
 import type { VelliraUiUsageReport } from './types';
 
-export function toBlockingVelliraUiUsageReport(report: VelliraUiUsageReport) {
+export function toBlockingVelliraUiUsageReport(
+  report: VelliraUiUsageReport
+): VelliraUiUsageReport {
   const findings = report.findings.map((finding) => ({
     ...finding,
     severity: 'error' as const,
@@ -9,7 +11,7 @@ export function toBlockingVelliraUiUsageReport(report: VelliraUiUsageReport) {
 
   return {
     ...report,
-    mode: 'blocking' as const,
+    mode: 'blocking',
     findings,
     summary: {
       ...report.summary,
