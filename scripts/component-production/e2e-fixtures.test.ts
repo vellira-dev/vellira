@@ -20,9 +20,7 @@ import {
   runComponentProductionValidation,
   type ComponentProductionRunDependencies,
 } from './run';
-import {
-  runComponentProductionStructuredValidation,
-} from './structured-validation';
+import { runComponentProductionStructuredValidation } from './structured-validation';
 
 const FIXTURE_TIMEOUT_MS = 240_000;
 const repositoryRoot = process.cwd();
@@ -509,9 +507,7 @@ function expectCanonicalGeneratedSurfaces(
     `${input.componentName}Accessibility.tsx`,
     `${lowerName}Api.ts`,
   ]) {
-    expect(fs.existsSync(path.join(websiteDir, fileName)), fileName).toBe(
-      true
-    );
+    expect(fs.existsSync(path.join(websiteDir, fileName)), fileName).toBe(true);
   }
 
   if (input.platform === 'web' || input.platform === 'both') {
@@ -522,7 +518,9 @@ function expectCanonicalGeneratedSurfaces(
 
   if (input.platform === 'native' || input.platform === 'both') {
     expect(
-      fs.existsSync(path.join(websiteDir, `Native${input.componentName}Demo.tsx`))
+      fs.existsSync(
+        path.join(websiteDir, `Native${input.componentName}Demo.tsx`)
+      )
     ).toBe(true);
   }
 
@@ -690,15 +688,11 @@ function fingerprintWorkingTree(root: string) {
 }
 
 function runGit(root: string, args: readonly string[]) {
-  const result = spawnSync(
-    'git',
-    ['-c', `safe.directory=${root}`, ...args],
-    {
-      cwd: root,
-      encoding: 'utf8',
-      shell: false,
-    }
-  );
+  const result = spawnSync('git', ['-c', `safe.directory=${root}`, ...args], {
+    cwd: root,
+    encoding: 'utf8',
+    shell: false,
+  });
 
   if (result.status !== 0) {
     throw new Error(
