@@ -8,6 +8,7 @@ import {
 } from '../component-presentation';
 import { getComponentDocsTargets, resolvePlanCapabilities } from './docs';
 import type { ComponentGenerationPlan } from './plan';
+import { getEffectiveWebsitePresentationScenarios } from './website-presentation';
 
 const storyAliases: Record<ComponentPresentationScenario, readonly string[]> = {
   basic: ['Basic', 'Default'],
@@ -83,10 +84,17 @@ export function checkComponentPresentationContract(
   plan: ComponentGenerationPlan
 ): string[] {
   const driftedFiles: string[] = [];
-  const scenarios = deriveComponentPresentationScenarios({
+  const capabilities = resolvePlanCapabilities(plan);
+  const storyScenarios = deriveComponentPresentationScenarios({
     profile: plan.profile,
-    capabilities: resolvePlanCapabilities(plan),
+    capabilities,
   });
+  const websiteScenarios = getEffectiveWebsitePresentationScenarios({
+    root: plan.root,
+    componentName: plan.componentName,
+    profile: plan.profile,
+    capabilities,
+  }).map(({ scenario }) => scenario);
 
   for (const target of plan.targets) {
     const storyFile = path.join(
@@ -102,7 +110,7 @@ export function checkComponentPresentationContract(
 
     if (
       containsPlaceholderCopy(source) ||
-      scenarios.some((scenario) => !storyHasScenario(source, scenario))
+      storyScenarios.some((scenario) => !storyHasScenario(source, scenario))
     ) {
       driftedFiles.push(storyFile);
     }
@@ -124,7 +132,7 @@ export function checkComponentPresentationContract(
     const requiredPlatformEvidence = plan.targets.length;
 
     if (
-      scenarios.some(
+      websiteScenarios.some(
         (scenario) =>
           countWebsiteScenarioEvidence(source, scenario) <
           requiredPlatformEvidence
