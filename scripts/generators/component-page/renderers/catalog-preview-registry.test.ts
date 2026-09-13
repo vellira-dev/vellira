@@ -4,10 +4,13 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { GeneratedPageModel } from '../model/types';
+import { generatedFileHeader } from '../helpers/paths';
+import type { GeneratedPageModel, Platform } from '../model/types';
 import {
+  renderGeneratedCatalogPreview,
   renderGeneratedCatalogPreviewRegistry,
   requiresGeneratedCatalogPreview,
+  synchronizeGeneratedCatalogPreview,
   synchronizeGeneratedCatalogPreviewRegistry,
 } from './catalog-preview-registry';
 
@@ -21,10 +24,15 @@ function createRoot() {
   return root;
 }
 
-function createModel(componentName: string, slug: string) {
+function createModel(
+  componentName: string,
+  slug: string,
+  platforms: readonly Platform[] = ['react']
+) {
   return {
     componentName,
     slug,
+    platforms,
   } as GeneratedPageModel;
 }
 
@@ -101,6 +109,111 @@ describe('generated catalog preview registry', () => {
         model: createModel('Button', 'button'),
       })
     ).toBe(false);
+  });
+
+  it('renders a React demo-backed fallback preview', () => {
+    const source = renderGeneratedCatalogPreview({
+      model: createModel('Avatar', 'avatar'),
+      generatedFileHeader,
+    });
+
+    expect(source).toContain("import { AvatarDemo } from './AvatarDemo';");
+    expect(source).toContain('return <AvatarDemo />;');
+  });
+
+  it('renders a native demo-backed fallback when React is unavailable', () => {
+    const source = renderGeneratedCatalogPreview({
+      model: createModel('NativeOnly', 'native-only', ['react-native']),
+      generatedFileHeader,
+    });
+
+    expect(source).toContain(
+      "import { NativeNativeOnlyDemo } from './NativeNativeOnlyDemo';"
+    );
+    expect(source).toContain('return <NativeNativeOnlyDemo />;');
+  });
+
+  it('materializes a missing generator-owned preview before registration', async () => {
+    const root = createRoot();
+    const componentCatalogDir = path.join(root, 'components', 'Avatar');
+    const componentsRegistryFile = writeCatalog(root, '');
+    const checkFailures: string[] = [];
+    const previewFile = path.join(
+      componentCatalogDir,
+      'AvatarCatalogPreview.tsx'
+    );
+
+    fs.mkdirSync(componentCatalogDir, { recursive: true });
+
+    await synchronizeGeneratedCatalogPreview({
+      root,
+      check: false,
+      checkFailures,
+      componentCatalogDir,
+      componentsRegistryFile,
+      model: createModel('Avatar', 'avatar'),
+      generatedFileHeader,
+    });
+
+    expect(checkFailures).toEqual([]);
+    expect(fs.readFileSync(previewFile, 'utf8')).toContain(
+      "import { AvatarDemo } from './AvatarDemo';"
+    );
+  });
+
+  it('preserves a curated preview instead of taking ownership', async () => {
+    const root = createRoot();
+    const componentCatalogDir = path.join(root, 'components', 'Accordion');
+    const componentsRegistryFile = writeCatalog(
+      root,
+      generatedEntry('Accordion', 'accordion')
+    );
+    const previewFile = path.join(
+      componentCatalogDir,
+      'AccordionCatalogPreview.tsx'
+    );
+    const curated = "export function AccordionCatalogPreview() { return 'curated'; }\n";
+
+    fs.mkdirSync(componentCatalogDir, { recursive: true });
+    fs.writeFileSync(previewFile, curated);
+
+    await synchronizeGeneratedCatalogPreview({
+      root,
+      check: false,
+      checkFailures: [],
+      componentCatalogDir,
+      componentsRegistryFile,
+      model: createModel('Accordion', 'accordion'),
+      generatedFileHeader,
+    });
+
+    expect(fs.readFileSync(previewFile, 'utf8')).toBe(curated);
+  });
+
+  it('reports a missing fallback preview in check mode without mutation', async () => {
+    const root = createRoot();
+    const componentCatalogDir = path.join(root, 'components', 'Avatar');
+    const componentsRegistryFile = writeCatalog(root, '');
+    const checkFailures: string[] = [];
+    const previewFile = path.join(
+      componentCatalogDir,
+      'AvatarCatalogPreview.tsx'
+    );
+
+    fs.mkdirSync(componentCatalogDir, { recursive: true });
+
+    await synchronizeGeneratedCatalogPreview({
+      root,
+      check: true,
+      checkFailures,
+      componentCatalogDir,
+      componentsRegistryFile,
+      model: createModel('Avatar', 'avatar'),
+      generatedFileHeader,
+    });
+
+    expect(checkFailures).toEqual([path.relative(root, previewFile)]);
+    expect(fs.existsSync(previewFile)).toBe(false);
   });
 
   it('renders component-local previews in deterministic slug order', () => {
