@@ -18,10 +18,7 @@ import { getCatalogPaths } from '../component-page/helpers/paths';
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
 
 export type WebsiteComponentProfile =
-  | 'primitive'
-  | 'form-control'
-  | 'compound'
-  | 'overlay';
+  'primitive' | 'form-control' | 'compound' | 'overlay';
 
 export type ComponentWebsiteGenerationResult = {
   createdFiles: string[];
@@ -161,13 +158,15 @@ function renderGeneratedPresentationMetadata(params: {
         return [];
       }
 
-      return [`    {
+      return [
+        `    {
       title: ${toTsString(getComponentPresentationScenarioTitle(scenario))},
       description: ${toTsString(
         getComponentPresentationScenarioDescription(scenario)
       )},
       props: [${props.map(toTsString).join(', ')}],
-    },`];
+    },`,
+      ];
     })
     .join('\n');
 
