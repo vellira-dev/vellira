@@ -37,6 +37,7 @@
     opacity: 0;
     transition: opacity var(--portal-navigation-duration)
       var(--portal-navigation-easing);
+    cursor: default;
   }
 
   .mobilePanel {
