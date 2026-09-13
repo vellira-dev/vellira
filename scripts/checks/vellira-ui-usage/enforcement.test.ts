@@ -56,7 +56,9 @@ describe('Vellira UI usage blocking enforcement', () => {
     expect(auditReport).toMatchObject({
       mode: 'audit',
       summary: { blockingFindings: 0 },
-      findings: [expect.objectContaining({ severity: 'warning', blocking: false })],
+      findings: [
+        expect.objectContaining({ severity: 'warning', blocking: false }),
+      ],
     });
   });
 
