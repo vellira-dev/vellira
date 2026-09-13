@@ -1,6 +1,11 @@
 import path from 'node:path';
 
+import { formatGeneratedFiles } from '../format-generated-files';
 import { getComponentApiDocsTargets, getComponentDocsTargets } from './docs';
+import {
+  checkMetadataExportContract,
+  synchronizeMetadataExportContract,
+} from './metadata-export-contract';
 import { createComponentGenerationPlan } from './plan';
 import { checkGeneratedPlanContract } from './plan-contract';
 import { validateComponentGenerationPlan } from './preflight';
@@ -152,6 +157,7 @@ export async function runComponentGenerator(params: {
         componentName: plan.componentName,
         targets: plan.targets,
       }),
+      ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
       ...checkComponentTokenContract(plan),
       ...checkSharedTypesContract(plan),
@@ -200,6 +206,14 @@ export async function runComponentGenerator(params: {
 
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
+  const metadataExportsUpdated = synchronizeMetadataExportContract({
+    metadataBarrelFile: plan.metadataBarrelFile,
+    updatedFiles: result.updatedFiles,
+  });
+
+  if (metadataExportsUpdated) {
+    await formatGeneratedFiles([plan.metadataBarrelFile]);
+  }
 
   const tokenTypesResult =
     plan.componentTokens === false
