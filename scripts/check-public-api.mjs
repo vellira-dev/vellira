@@ -23,125 +23,6 @@ const packageExportContracts = {
   'packages/react/package.json': ['.', './styles'],
 };
 
-const iconSymbolContract = [
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowLeftRight',
-  'ArrowRight',
-  'ArrowTopButton',
-  'ArrowUp',
-  'At',
-  'Bag',
-  'Bell',
-  'BellOff',
-  'Book',
-  'Bookmark',
-  'Calendar',
-  'Camera',
-  'Cart',
-  'Chat',
-  'Check',
-  'ChevronDown',
-  'ChevronLeft',
-  'ChevronRight',
-  'ChevronUp',
-  'Clock',
-  'Close',
-  'Collapse',
-  'Contrast',
-  'Copy',
-  'CreditCard',
-  'Doc',
-  'Docs',
-  'DocsVellira',
-  'Dollar',
-  'Download',
-  'Edit',
-  'Error',
-  'Euro',
-  'Exit',
-  'Expand',
-  'Eye',
-  'EyeOff',
-  'Facebook',
-  'FastForward',
-  'File',
-  'Filter',
-  'Folder',
-  'FolderOpen',
-  'GitHub',
-  'Gift',
-  'Grid',
-  'Headphones',
-  'Heart',
-  'HeartFilled',
-  'Help',
-  'Home',
-  'Image',
-  'Inbox',
-  'Info',
-  'Laptop',
-  'Link',
-  'LinkedIn',
-  'List',
-  'Loader',
-  'Lock',
-  'LockOpen',
-  'Mail',
-  'Menu',
-  'Message',
-  'Microphone',
-  'MicrophoneOff',
-  'Minus',
-  'Monitor',
-  'Moon',
-  'MoreHorizontal',
-  'MoreVertical',
-  'Pause',
-  'Phone',
-  'Pin',
-  'Play',
-  'Plus',
-  'Package',
-  'Percent',
-  'Printer',
-  'QrCode',
-  'Receipt',
-  'Reddit',
-  'Refresh',
-  'Rewind',
-  'Save',
-  'Search',
-  'Send',
-  'Settings',
-  'Share',
-  'SkipBack',
-  'SkipForward',
-  'Smartphone',
-  'Star',
-  'Stop',
-  'Storybook',
-  'Success',
-  'Sun',
-  'System',
-  'Tag',
-  'Tablet',
-  'Trash',
-  'Truck',
-  'Upload',
-  'User',
-  'Users',
-  'Video',
-  'Volume',
-  'VolumeHigh',
-  'VolumeLow',
-  'VolumeOff',
-  'Warning',
-  'Wallet',
-  'Website',
-  'X',
-];
-
 const publicSymbolContracts = {
   'packages/core/src/index.ts': [
     'AriaIsolationOptions',
@@ -190,8 +71,242 @@ const publicSymbolContracts = {
     'RunOverlayCloseAutoFocusOptions',
     'runOverlayCloseAutoFocus',
   ],
-  'packages/icons/src/native.ts': iconSymbolContract,
-  'packages/icons/src/web.ts': iconSymbolContract,
+  'packages/icons/src/native.ts': [
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowLeftRight',
+    'ArrowRight',
+    'ArrowTopButton',
+    'ArrowUp',
+    'At',
+    'Bag',
+    'Bell',
+    'BellOff',
+    'Book',
+    'Bookmark',
+    'Calendar',
+    'Camera',
+    'Cart',
+    'Chat',
+    'Check',
+    'ChevronDown',
+    'ChevronLeft',
+    'ChevronRight',
+    'ChevronUp',
+    'Clock',
+    'Close',
+    'Collapse',
+    'Contrast',
+    'Copy',
+    'CreditCard',
+    'Doc',
+    'Docs',
+    'DocsVellira',
+    'Dollar',
+    'Download',
+    'Edit',
+    'Error',
+    'Euro',
+    'Exit',
+    'Expand',
+    'Eye',
+    'EyeOff',
+    'Facebook',
+    'FastForward',
+    'File',
+    'Filter',
+    'Folder',
+    'FolderOpen',
+    'GitHub',
+    'Gift',
+    'Grid',
+    'Headphones',
+    'Heart',
+    'HeartFilled',
+    'Help',
+    'Home',
+    'Image',
+    'Inbox',
+    'Info',
+    'Laptop',
+    'Link',
+    'LinkedIn',
+    'List',
+    'Loader',
+    'Lock',
+    'LockOpen',
+    'Mail',
+    'Menu',
+    'Message',
+    'Microphone',
+    'MicrophoneOff',
+    'Minus',
+    'Monitor',
+    'Moon',
+    'MoreHorizontal',
+    'MoreVertical',
+    'Pause',
+    'Phone',
+    'Pin',
+    'Play',
+    'Plus',
+    'Package',
+    'Percent',
+    'Printer',
+    'QrCode',
+    'Receipt',
+    'Reddit',
+    'Refresh',
+    'Rewind',
+    'Save',
+    'Search',
+    'Send',
+    'Settings',
+    'Share',
+    'SkipBack',
+    'SkipForward',
+    'Smartphone',
+    'Star',
+    'Stop',
+    'Storybook',
+    'Success',
+    'Sun',
+    'System',
+    'Tag',
+    'Tablet',
+    'Trash',
+    'Truck',
+    'Upload',
+    'User',
+    'Users',
+    'Video',
+    'Volume',
+    'VolumeHigh',
+    'VolumeLow',
+    'VolumeOff',
+    'Warning',
+    'Wallet',
+    'Website',
+    'X',
+  ],
+  'packages/icons/src/web.ts': [
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowLeftRight',
+    'ArrowRight',
+    'ArrowTopButton',
+    'ArrowUp',
+    'At',
+    'Bag',
+    'Bell',
+    'BellOff',
+    'Book',
+    'Bookmark',
+    'Calendar',
+    'Camera',
+    'Cart',
+    'Chat',
+    'Check',
+    'ChevronDown',
+    'ChevronLeft',
+    'ChevronRight',
+    'ChevronUp',
+    'Clock',
+    'Close',
+    'Collapse',
+    'Contrast',
+    'Copy',
+    'CreditCard',
+    'Doc',
+    'Docs',
+    'DocsVellira',
+    'Dollar',
+    'Download',
+    'Edit',
+    'Error',
+    'Euro',
+    'Exit',
+    'Expand',
+    'Eye',
+    'EyeOff',
+    'Facebook',
+    'FastForward',
+    'File',
+    'Filter',
+    'Folder',
+    'FolderOpen',
+    'GitHub',
+    'Gift',
+    'Grid',
+    'Headphones',
+    'Heart',
+    'HeartFilled',
+    'Help',
+    'Home',
+    'Image',
+    'Inbox',
+    'Info',
+    'Laptop',
+    'Link',
+    'LinkedIn',
+    'List',
+    'Loader',
+    'Lock',
+    'LockOpen',
+    'Mail',
+    'Menu',
+    'Message',
+    'Microphone',
+    'MicrophoneOff',
+    'Minus',
+    'Monitor',
+    'Moon',
+    'MoreHorizontal',
+    'MoreVertical',
+    'Pause',
+    'Phone',
+    'Pin',
+    'Play',
+    'Plus',
+    'Package',
+    'Percent',
+    'Printer',
+    'QrCode',
+    'Receipt',
+    'Reddit',
+    'Refresh',
+    'Rewind',
+    'Save',
+    'Search',
+    'Send',
+    'Settings',
+    'Share',
+    'SkipBack',
+    'SkipForward',
+    'Smartphone',
+    'Star',
+    'Stop',
+    'Storybook',
+    'Success',
+    'Sun',
+    'System',
+    'Tag',
+    'Tablet',
+    'Trash',
+    'Truck',
+    'Upload',
+    'User',
+    'Users',
+    'Video',
+    'Volume',
+    'VolumeHigh',
+    'VolumeLow',
+    'VolumeOff',
+    'Warning',
+    'Wallet',
+    'Website',
+    'X',
+  ],
   'packages/icons/src/lottie.ts': [
     'AnimatedIconData',
     'AnimatedIconManifest',
@@ -327,14 +442,11 @@ const publicSymbolContracts = {
   ],
 };
 
-const explicitPublicRootContracts = {
+const generatedPackagePublicSymbolContracts = {
   'packages/react/src/index.ts': 'packages/react/src/public-api.test.ts',
   'packages/react-native/src/index.ts':
     'packages/react-native/src/public-api.test.ts',
 };
-
-const runtimeExportExpectationPattern =
-  /expect\(Object\.keys\(api\)\.sort\(\)\)\.toEqual\(\[\n([\s\S]*?)\n {4}\]\);/;
 
 for (const [packagePath, expectedExports] of Object.entries(
   packageExportContracts
@@ -368,103 +480,110 @@ for (const [entryPath, expectedSymbols] of Object.entries(
   }
 }
 
-for (const [entryPath, publicApiTestPath] of Object.entries(
-  explicitPublicRootContracts
+for (const [entryPath, contractPath] of Object.entries(
+  generatedPackagePublicSymbolContracts
 )) {
-  assertExplicitPublicRoot({
-    entryPath: path.join(root, entryPath),
-    publicApiTestPath: path.join(root, publicApiTestPath),
-  });
+  const absoluteEntryPath = path.join(root, entryPath);
+  assertExplicitPublicRoot(absoluteEntryPath);
+
+  const actualSymbols = collectPublicSymbols(absoluteEntryPath);
+  const expectedSymbols = readPublicSymbolContract(path.join(root, contractPath));
+
+  if (JSON.stringify(actualSymbols) !== JSON.stringify(expectedSymbols)) {
+    throw new Error(
+      `${entryPath} public symbols mismatch. Expected ${expectedSymbols.join(
+        ', '
+      )}, got ${actualSymbols.join(', ')}`
+    );
+  }
 }
 
 console.log('Public package exports and symbols check passed');
 
-function assertExplicitPublicRoot({ entryPath, publicApiTestPath }) {
+function assertExplicitPublicRoot(entryPath) {
   const sourceFile = ts.createSourceFile(
     entryPath,
     readFileSync(entryPath, 'utf8'),
     ts.ScriptTarget.Latest,
     true
   );
-  const runtimeSymbols = new Set();
 
   for (const statement of sourceFile.statements) {
-    if (ts.isExportDeclaration(statement)) {
-      if (statement.moduleSpecifier && !statement.exportClause) {
-        throw new Error(
-          `${path.relative(root, entryPath)} must use explicit named public exports instead of export *.`
-        );
-      }
-
-      if (
-        statement.exportClause &&
-        ts.isNamedExports(statement.exportClause) &&
-        !statement.isTypeOnly
-      ) {
-        for (const element of statement.exportClause.elements) {
-          if (!element.isTypeOnly) {
-            runtimeSymbols.add(element.name.text);
-          }
-        }
-      }
-
-      continue;
-    }
-
-    if (!hasExportModifier(statement)) {
-      continue;
-    }
-
     if (
-      (ts.isFunctionDeclaration(statement) ||
-        ts.isClassDeclaration(statement) ||
-        ts.isEnumDeclaration(statement)) &&
-      statement.name
+      ts.isExportDeclaration(statement) &&
+      statement.moduleSpecifier &&
+      !statement.exportClause
     ) {
-      runtimeSymbols.add(statement.name.text);
-      continue;
+      throw new Error(
+        `${path.relative(root, entryPath)} must use explicit named public exports instead of export *.`
+      );
     }
-
-    if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        for (const name of collectBindingNames(declaration.name)) {
-          runtimeSymbols.add(name);
-        }
-      }
-    }
-  }
-
-  const expectedRuntimeSymbols = readRuntimeExportExpectation(publicApiTestPath);
-  const actualRuntimeSymbols = [...runtimeSymbols].sort();
-
-  if (
-    JSON.stringify(actualRuntimeSymbols) !==
-    JSON.stringify(expectedRuntimeSymbols)
-  ) {
-    throw new Error(
-      `${path.relative(root, entryPath)} runtime symbols mismatch. Expected ${expectedRuntimeSymbols.join(
-        ', '
-      )}, got ${actualRuntimeSymbols.join(', ')}`
-    );
   }
 }
 
-function readRuntimeExportExpectation(publicApiTestPath) {
-  const content = readFileSync(publicApiTestPath, 'utf8');
-  const match = runtimeExportExpectationPattern.exec(content);
+function readPublicSymbolContract(contractPath) {
+  const sourceFile = ts.createSourceFile(
+    contractPath,
+    readFileSync(contractPath, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true
+  );
 
-  if (!match) {
-    throw new Error(
-      `Unable to locate runtime export expectation in ${path.relative(
-        root,
-        publicApiTestPath
-      )}`
-    );
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement) || !hasExportModifier(statement)) {
+      continue;
+    }
+
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        !ts.isIdentifier(declaration.name) ||
+        declaration.name.text !== 'publicApiSymbols' ||
+        !declaration.initializer
+      ) {
+        continue;
+      }
+
+      let initializer = declaration.initializer;
+
+      while (
+        ts.isAsExpression(initializer) ||
+        ts.isSatisfiesExpression(initializer)
+      ) {
+        initializer = initializer.expression;
+      }
+
+      if (!ts.isArrayLiteralExpression(initializer)) {
+        throw new Error(
+          `${path.relative(root, contractPath)} publicApiSymbols must be an array literal.`
+        );
+      }
+
+      const symbols = initializer.elements.map((element) => {
+        if (!ts.isStringLiteral(element)) {
+          throw new Error(
+            `${path.relative(root, contractPath)} publicApiSymbols must contain only string literals.`
+          );
+        }
+
+        return element.text;
+      });
+
+      if (new Set(symbols).size !== symbols.length) {
+        throw new Error(
+          `${path.relative(root, contractPath)} publicApiSymbols contains duplicates.`
+        );
+      }
+
+      return [...symbols].sort();
+    }
   }
 
-  return [...match[1].matchAll(/'([^']+)',/g)]
-    .map((entry) => entry[1])
-    .sort();
+  throw new Error(
+    `Missing exported publicApiSymbols contract in ${path.relative(
+      root,
+      contractPath
+    )}`
+  );
 }
 
 function collectPublicSymbols(entryPath, seen = new Set()) {
