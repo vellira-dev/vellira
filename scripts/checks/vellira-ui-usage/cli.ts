@@ -11,8 +11,7 @@ if (json) {
   printHumanReport();
 }
 
-process.exitCode =
-  !reportOnly && report.summary.blockingFindings > 0 ? 1 : 0;
+process.exitCode = !reportOnly && report.summary.blockingFindings > 0 ? 1 : 0;
 
 function printHumanReport() {
   console.log(
