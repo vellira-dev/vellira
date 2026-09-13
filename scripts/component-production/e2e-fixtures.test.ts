@@ -481,7 +481,6 @@ function expectCanonicalGeneratedSurfaces(
   input: ComponentProductionInputV1
 ) {
   const slug = slugify(input.componentName);
-  const lowerName = `${input.componentName[0]?.toLowerCase() ?? ''}${input.componentName.slice(1)}`;
   const websiteDir = path.join(
     root,
     'apps/website/src/component-catalog/components',
@@ -515,7 +514,7 @@ function expectCanonicalGeneratedSurfaces(
     `${input.componentName}Examples.tsx`,
     `${input.componentName}Playground.tsx`,
     `${input.componentName}Accessibility.tsx`,
-    `${lowerName}Api.ts`,
+    `${slug}Api.ts`,
   ]) {
     expect(fs.existsSync(path.join(websiteDir, fileName)), fileName).toBe(true);
   }
