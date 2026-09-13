@@ -41,25 +41,7 @@ export function createFileWriter(params: {
           : null;
 
         if (currentContent !== formattedContent) {
-          const relativePath = path.relative(root, filePath);
-
-          if (
-            path.basename(filePath) === 'FixtureCompoundProbeExamples.tsx'
-          ) {
-            process.stderr.write(
-              [
-                'VELLIRA_COMPOUND_EXAMPLES_CURRENT_START',
-                currentContent ?? '<missing>',
-                'VELLIRA_COMPOUND_EXAMPLES_CURRENT_END',
-                'VELLIRA_COMPOUND_EXAMPLES_EXPECTED_START',
-                formattedContent,
-                'VELLIRA_COMPOUND_EXAMPLES_EXPECTED_END',
-                '',
-              ].join('\n')
-            );
-          }
-
-          checkFailures.push(relativePath);
+          checkFailures.push(path.relative(root, filePath));
         }
 
         return;
