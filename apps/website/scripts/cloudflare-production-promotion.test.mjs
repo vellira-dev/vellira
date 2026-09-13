@@ -74,6 +74,6 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
 test('manual dispatch is an explicit break-glass recovery path', () => {
   assert.match(productionWorkflow, /candidate_sha:/);
   assert.match(productionWorkflow, /EMERGENCY_DEPLOY_PRODUCTION/);
-  assert.doesNotMatch(productionWorkflow, /DEPLOY_PRODUCTION\n/);
+  assert.doesNotMatch(productionWorkflow, /^\s+- DEPLOY_PRODUCTION$/m);
   assert.match(productionWorkflow, /source=emergency-recovery/);
 });
