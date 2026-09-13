@@ -22,6 +22,71 @@ Validate an existing semantically completed candidate without regenerating it:
 pnpm component-production:validate:json --spec path/to/component.json
 ```
 
+### Exact pre-delivery candidate identity
+
+Ordinary validation still requires a clean Git working tree for review readiness.
+An intentionally dirty pre-delivery candidate can instead supply explicit,
+validation-only evidence (never part of `ComponentProductionInputV1`):
+
+```bash
+pnpm component-production:validate:json --spec path/to/component.json \
+  --candidate-snapshot /external/state/candidate-snapshot.json
+```
+
+Keep the snapshot/spec outside the candidate, or they themselves count as dirty
+paths. The optional snapshot argument is accepted exactly once. Invalid JSON or
+schema emits the CLI error envelope and exits 2 before validation. A valid schema
+that does not match the checkout blocks canonical completeness and exits 1 when
+the earlier validation stages otherwise pass.
+
+Candidate Snapshot V1 has exactly `schemaVersion: '1'`, a lowercase 40-hex
+`baseRevision`, and `entries`. Each entry is either:
+
+- `{ path, state: 'added' | 'modified', mode, sha256 }`;
+- `{ path, state: 'deleted' }`, with no digest or mode.
+
+Paths are unique normalized repository-relative POSIX paths, excluding traversal,
+`.git` segments (case-insensitive), backslashes, colons and control characters.
+Modes are Git `100644`, `100755`, or `120000`; SHA-256 is lowercase 64-hex.
+Regular files bind exact bytes; symlinks bind the link target bytes, not the
+referenced file. Directories, submodules, devices and symlink ancestors are not
+accepted. Added/modified/deleted states describe the final filesystem relative
+to the base commit, not the index. Mode-only changes use `modified`. Renames are
+deletion plus addition. Staged/unstaged paths both count; index-only changes with
+base-equivalent final files are rejected. Ignored files remain outside the Git
+dirty set, as with ordinary clean-tree checks.
+Assume-unchanged/skip-worktree index flags fail closed rather than hiding changes;
+Git environment overrides cannot substitute another repository or index.
+
+`parseCandidateSnapshot` rejects unknown fields and sorts entries by JavaScript
+code-unit path order. `candidateSnapshotFingerprint` computes SHA-256 over UTF-8
+`JSON.stringify` of the canonical object, with keys in this order:
+`schemaVersion`, `baseRevision`, `entries`; entry keys are `path`, `state`, then
+`mode`, `sha256` for materialized entries. No whitespace/newline is appended.
+Caller-provided fingerprints are not accepted.
+
+The read-only verifier requires exact HEAD, exact NUL-delimited Git dirty-set
+equality (rename detection disabled), and every declared final state/mode/digest.
+It never stages files. Validation verifies before its checks and again at review;
+surface inspection is followed by another verification. Any detected drift blocks.
+Callers must exclusively own the checkout: repeated checks are not an atomic
+filesystem lock. A later edit or repair requires new snapshot evidence and fresh
+canonical validation; this API does not grant write or delivery authority.
+
+`reviewBundle.revision` continues to mean Git HEAD/base, not dirty candidate
+identity. `candidateIdentity` is either `{ kind: 'revision', revision }` or
+`{ kind: 'working-tree-snapshot', baseRevision, fingerprint, changedPaths }`.
+Unverifiable identity is `null`. Every surface's evidence carries that identity;
+the legacy evidence `revision` is present only for clean revision identities.
+`workingTreeClean` remains false for verified dirty candidates. A supplied
+snapshot is checked even on a clean tree; a contradictory manifest never becomes
+acceptable merely because the tree is clean.
+
+Missing/invalid identity and review surfaces still produce blocking completeness
+findings. Canonical stages remain the only status/lifecycle/exit-code authority.
+Earlier command, structured, or final validation failures return `reviewBundle:
+null`. No generation, repair, or delivery semantics are changed.
+
 Both commands emit machine-readable JSON. Validation is the only production path
 that may produce `readyForReview: true`.
 
@@ -165,6 +230,10 @@ Production evidence uses one ordered stage sequence:
 11. `website`
 12. `completeness`
 13. `quality`
+14. `public-api`
+15. `tooling`
+16. `visual`
+17. `smoke`
 
 Every production result contains every stage exactly once. A blocked or failed
 result must contain blocking evidence. Skipped required validation cannot be
