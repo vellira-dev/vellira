@@ -10,6 +10,10 @@ import {
 } from '../helpers/format';
 import type { GeneratedPageModel } from '../model/types';
 import type { CatalogCategory } from '../profiles/profiles';
+import {
+  requiresGeneratedCatalogPreview,
+  synchronizeGeneratedCatalogPreviewRegistry,
+} from './catalog-preview-registry';
 
 export function insertAfterMarker(params: {
   root: string;
@@ -375,6 +379,36 @@ export async function updateComponentRegistry(params: {
     catalogCategory,
     model,
   } = params;
+
+  const catalogPreviewFile = path.join(
+    componentCatalogDir,
+    `${model.componentName}CatalogPreview.tsx`
+  );
+  const generatedCatalogPreviewRequired = requiresGeneratedCatalogPreview({
+    componentsRegistryFile,
+    model,
+  });
+
+  if (generatedCatalogPreviewRequired && !fs.existsSync(catalogPreviewFile)) {
+    const relativePreviewFile = path.relative(root, catalogPreviewFile);
+
+    if (check) {
+      checkFailures.push(relativePreviewFile);
+    } else {
+      console.error(
+        `Catalog signature preview is required before registering ${model.componentName}: ${relativePreviewFile}`
+      );
+      process.exit(1);
+    }
+  }
+
+  await synchronizeGeneratedCatalogPreviewRegistry({
+    root,
+    check,
+    checkFailures,
+    componentCatalogDir,
+    componentsRegistryFile,
+  });
 
   const requiredDemoFiles = [
     model.platforms.includes('react')
