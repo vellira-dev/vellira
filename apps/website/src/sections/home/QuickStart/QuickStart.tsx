@@ -176,7 +176,8 @@ export function QuickStart() {
                       <div className={styles.editorHeader}>
                         <span>{step.file}</span>
 
-                        <button
+                        <Button
+                          appearance='bare'
                           type='button'
                           className={styles.copyButton}
                           onClick={() => void copyCode(step.index, step.code)}
@@ -188,7 +189,7 @@ export function QuickStart() {
                             <Copy size={14} aria-hidden='true' />
                           )}
                           {isCopied ? 'Copied' : 'Copy'}
-                        </button>
+                        </Button>
                       </div>
 
                       <pre>
@@ -257,15 +258,16 @@ export function QuickStart() {
                         aria-label='Button appearance'
                       >
                         {appearances.map((option) => (
-                          <button
+                          <Button
                             key={option.value}
+                            appearance='bare'
                             type='button'
                             className={styles.segmentedButton}
                             aria-pressed={appearance === option.value}
                             onClick={() => setAppearance(option.value)}
                           >
                             {option.label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -278,15 +280,16 @@ export function QuickStart() {
                         aria-label='Button size'
                       >
                         {sizes.map((option) => (
-                          <button
+                          <Button
                             key={option.value}
+                            appearance='bare'
                             type='button'
                             className={styles.segmentedButton}
                             aria-pressed={size === option.value}
                             onClick={() => setSize(option.value)}
                           >
                             {option.label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
