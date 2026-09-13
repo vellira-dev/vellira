@@ -320,7 +320,8 @@ export function SiteHeader({
                 .join(' ')}
               inert={!resolvedMobileMenuOpen}
             >
-              <button
+              <Button
+                appearance='bare'
                 type='button'
                 className={styles.mobileNavigationBackdrop}
                 aria-label='Close navigation'

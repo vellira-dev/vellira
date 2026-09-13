@@ -16,7 +16,11 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.textInput {
+.textField {
+  min-width: 0;
+}
+
+.controlGroup .textField input.textInput {
   width: 100%;
   min-width: 0;
   min-height: 40px;
@@ -34,11 +38,12 @@
     box-shadow 140ms ease;
 }
 
-.textInput::placeholder {
+.controlGroup .textField input.textInput::placeholder {
   color: inherit;
 }
 
-.textInput:hover {
+.controlGroup .textField input.textInput:hover {
+  background: var(--surface-default);
   border-color: color-mix(
     in srgb,
     var(--text-secondary) 24%,
@@ -46,12 +51,13 @@
   );
 }
 
-.textInput:focus {
+.controlGroup .textField input.textInput:focus {
+  background: var(--surface-default);
   border-color: var(--focus-ring-color);
   outline: none;
 }
 
-.textInput:focus-visible {
+.controlGroup .textField input.textInput:focus-visible {
   box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
 }
 

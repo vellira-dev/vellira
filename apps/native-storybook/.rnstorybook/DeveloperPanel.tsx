@@ -1,6 +1,12 @@
-import { Pressable, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import type { NativeThemeName } from '@vellira-ui/react-native';
+import {
+  Button,
+  nativeThemes,
+  type NativeThemeName,
+} from '@vellira-ui/react-native';
+
+const diagnosticTheme = nativeThemes.highContrast;
 
 type DeveloperPanelProps = {
   themeName: NativeThemeName;
@@ -28,22 +34,50 @@ export const DeveloperPanel = ({
         gap: 8,
         padding: 12,
         borderRadius: 12,
-        backgroundColor: 'rgba(0,0,0,0.75)',
       }}
     >
-      <Text style={{ color: '#fff', fontWeight: '600' }}>Developer</Text>
+      {/* Diagnostic chrome stays monochrome while the story theme changes.
+          A separate background preserves its original 75% opacity. */}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            pointerEvents: 'none',
+            borderRadius: 12,
+            backgroundColor: diagnosticTheme.semantic.surface.canvas,
+            opacity: 0.75,
+          },
+        ]}
+      />
+      <Text
+        style={{
+          color: diagnosticTheme.semantic.text.primary,
+          fontWeight: '600',
+        }}
+      >
+        Developer
+      </Text>
 
-      <Pressable
+      <Button
+        color='neutral'
         onPress={onChangeTheme}
         style={{
+          minHeight: 0,
+          borderWidth: 0,
           paddingHorizontal: 12,
           paddingVertical: 8,
           borderRadius: 8,
-          backgroundColor: '#fff',
+          backgroundColor: diagnosticTheme.semantic.surface.inverse,
+        }}
+        textStyle={{
+          color: diagnosticTheme.semantic.text.inverse,
+          fontFamily: undefined,
+          fontSize: 14,
+          lineHeight: undefined,
         }}
       >
-        <Text style={{ color: '#000' }}>🎨 {getThemeLabel(themeName)}</Text>
-      </Pressable>
+        🎨 {getThemeLabel(themeName)}
+      </Button>
     </View>
   );
 };
