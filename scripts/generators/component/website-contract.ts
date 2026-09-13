@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { getCatalogPaths } from '../component-page/helpers/paths';
 
 import type { ComponentGenerationPlan } from './plan';
+import { checkComponentPresentationContract } from './presentation-contract';
 
 export type PlannedComponentWebsiteArtifacts = {
   createdFiles: string[];
@@ -36,8 +38,10 @@ export function getPlannedComponentWebsiteArtifacts(
   const hasNative = plan.targets.some(
     (target) => target.packageName === 'react-native'
   );
+  const metadataFile = path.join(componentCatalogDir, 'metadata.ts');
 
   const createdFiles = [
+    ...(!fs.existsSync(metadataFile) ? [metadataFile] : []),
     path.join(componentCatalogDir, `${plan.componentName}Usage.tsx`),
     path.join(componentCatalogDir, `${plan.componentName}Examples.tsx`),
     path.join(componentCatalogDir, `${plan.componentName}Accessibility.tsx`),
@@ -119,12 +123,19 @@ export function checkComponentWebsiteContract(
     );
   }
 
+  const presentationDrift = checkComponentPresentationContract(plan);
+
   if (result.status === 0 && payload.status === 'up-to-date') {
-    return [];
+    return presentationDrift;
   }
 
   if (result.status === 1 && payload.status === 'stale') {
-    return payload.staleFiles.map((filePath) => path.join(plan.root, filePath));
+    return [
+      ...new Set([
+        ...payload.staleFiles.map((filePath) => path.join(plan.root, filePath)),
+        ...presentationDrift,
+      ]),
+    ].sort();
   }
 
   const output = [result.stdout, result.stderr]

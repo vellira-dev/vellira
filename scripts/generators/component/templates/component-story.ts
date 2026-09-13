@@ -1,6 +1,10 @@
 import type { ComponentCapability } from '@vellira-ui/metadata';
 
 import {
+  deriveComponentPresentationScenarios,
+  getComponentPresentationScenarioTitle,
+} from '../../component-presentation';
+import {
   assertGeneratedNativeTextHostSafety,
   NATIVE_TEXT_IMPORT,
   renderGeneratedNativeText,
@@ -17,30 +21,36 @@ export type StoryTemplateParams = {
   parts?: readonly string[];
 };
 
-function hasCapability(
-  capabilities: readonly ComponentCapability[],
-  capability: ComponentCapability
-) {
-  return capabilities.includes(capability);
-}
+function renderCompoundChildren(params: {
+  componentName: string;
+  parts: readonly string[];
+  isNative: boolean;
+  count?: number;
+  rich?: boolean;
+}) {
+  const { componentName, parts, isNative, count = 1, rich = false } = params;
 
-function renderCompoundChildren(
-  componentName: string,
-  parts: readonly string[],
-  isNative: boolean
-) {
   if (!parts.includes('Item') || !parts.includes('Trigger')) {
     return undefined;
   }
 
-  const triggerText = isNative
-    ? renderGeneratedNativeText('Example section', 'view-like')
-    : 'Example section';
-  const contentText = isNative
-    ? renderGeneratedNativeText('Example content', 'view-like')
-    : 'Example content';
+  const items = Array.from({ length: count }, (_, index) => {
+    const itemNumber = index + 1;
+    const triggerLabel =
+      count > 1 ? `Example section ${itemNumber}` : 'Example section';
+    const contentLabel = rich
+      ? 'A longer production-style example with supporting details and useful content.'
+      : count > 1
+        ? `Example content ${itemNumber}`
+        : 'Example content';
+    const triggerText = isNative
+      ? renderGeneratedNativeText(triggerLabel, 'view-like')
+      : triggerLabel;
+    const contentText = isNative
+      ? renderGeneratedNativeText(contentLabel, 'view-like')
+      : contentLabel;
 
-  const source = `<${componentName}.Item value='item-1'>
+    return `<${componentName}.Item value='item-${itemNumber}'>
   <${componentName}.Trigger>${triggerText}</${componentName}.Trigger>
   ${
     parts.includes('Content')
@@ -48,6 +58,9 @@ function renderCompoundChildren(
       : contentText
   }
 </${componentName}.Item>`;
+  });
+
+  const source = items.join('\n');
 
   if (isNative) {
     assertGeneratedNativeTextHostSafety({
@@ -67,18 +80,50 @@ function renderCompoundStories(params: {
   isNative: boolean;
 }) {
   const { componentName, capabilities, parts, isNative } = params;
-  const children = renderCompoundChildren(componentName, parts, isNative);
+  const scenarios = new Set(
+    deriveComponentPresentationScenarios({
+      profile: 'compound',
+      capabilities,
+    })
+  );
+  const children = renderCompoundChildren({
+    componentName,
+    parts,
+    isNative,
+  });
 
   if (!children) {
     return '';
   }
 
   const stories: string[] = [];
+  const singleTypeArg = scenarios.has('multiple')
+    ? "    type: 'single',\n"
+    : '';
 
-  if (hasCapability(capabilities, 'controlled')) {
+  if (scenarios.has('multiple')) {
+    const multipleChildren = renderCompoundChildren({
+      componentName,
+      parts,
+      isNative,
+      count: 2,
+    });
+
+    stories.push(`export const Multiple: Story = {
+  args: {
+    type: 'multiple',
+    defaultValue: ['item-1', 'item-2'],
+    children: (
+      ${multipleChildren}
+    ),
+  },
+};`);
+  }
+
+  if (scenarios.has('controlled')) {
     stories.push(`export const Controlled: Story = {
   args: {
-    value: 'item-1',
+${singleTypeArg}    value: 'item-1',
     onValueChange: () => undefined,
     children: (
       ${children}
@@ -87,9 +132,21 @@ function renderCompoundStories(params: {
 };`);
   }
 
-  if (hasCapability(capabilities, 'uncontrolled')) {
+  if (scenarios.has('uncontrolled')) {
     stories.push(`export const Uncontrolled: Story = {
   args: {
+${singleTypeArg}    defaultValue: 'item-1',
+    children: (
+      ${children}
+    ),
+  },
+};`);
+  }
+
+  if (scenarios.has('collapsible')) {
+    stories.push(`export const Collapsible: Story = {
+  args: {
+${singleTypeArg}    collapsible: true,
     defaultValue: 'item-1',
     children: (
       ${children}
@@ -98,13 +155,138 @@ function renderCompoundStories(params: {
 };`);
   }
 
-  if (hasCapability(capabilities, 'disabled')) {
+  if (scenarios.has('disabled')) {
     stories.push(`export const Disabled: Story = {
   args: {
-    disabled: true,
+${singleTypeArg}    disabled: true,
     children: (
       ${children}
     ),
+  },
+};`);
+  }
+
+  if (scenarios.has('rich-content')) {
+    const richChildren = renderCompoundChildren({
+      componentName,
+      parts,
+      isNative,
+      rich: true,
+    });
+
+    stories.push(`export const RichContent: Story = {
+  args: {
+${singleTypeArg}    children: (
+      ${richChildren}
+    ),
+  },
+};`);
+  }
+
+  return stories.length > 0 ? `\n${stories.join('\n\n')}\n` : '';
+}
+
+function renderFormControlStories(params: {
+  control: FormControlKindArg;
+  capabilities: readonly ComponentCapability[];
+}) {
+  const scenarios = new Set(
+    deriveComponentPresentationScenarios({
+      profile: 'form-control',
+      capabilities: params.capabilities,
+    })
+  );
+  const stories: string[] = [];
+  const booleanControl = params.control === 'boolean';
+
+  if (booleanControl) {
+    stories.push(`export const Checked: Story = {
+  args: {
+    checked: true,
+  },
+};`);
+  }
+
+  if (scenarios.has('controlled')) {
+    stories.push(
+      booleanControl
+        ? `export const Controlled: Story = {
+  args: {
+    checked: true,
+    onCheckedChange: () => undefined,
+  },
+};`
+        : `export const Controlled: Story = {
+  args: {
+    value: 'Controlled value',
+    onValueChange: () => undefined,
+  },
+};`
+    );
+  }
+
+  if (scenarios.has('uncontrolled')) {
+    stories.push(
+      booleanControl
+        ? `export const Uncontrolled: Story = {
+  args: {
+    defaultChecked: true,
+  },
+};`
+        : `export const Uncontrolled: Story = {
+  args: {
+    defaultValue: 'Default value',
+  },
+};`
+    );
+  }
+
+  for (const [scenario, prop] of [
+    ['disabled', 'disabled'],
+    ['required', 'required'],
+    ['invalid', 'invalid'],
+    ['loading', 'loading'],
+  ] as const) {
+    if (!scenarios.has(scenario)) {
+      continue;
+    }
+
+    stories.push(`export const ${getComponentPresentationScenarioTitle(
+      scenario
+    )}: Story = {
+  args: {
+    ${prop}: true,
+  },
+};`);
+  }
+
+  return stories.length > 0 ? `\n${stories.join('\n\n')}\n` : '';
+}
+
+function renderBaseStories(capabilities: readonly ComponentCapability[]) {
+  const scenarios = new Set(
+    deriveComponentPresentationScenarios({
+      profile: 'base',
+      capabilities,
+    })
+  );
+  const stories: string[] = [];
+
+  for (const [scenario, prop] of [
+    ['disabled', 'disabled'],
+    ['required', 'required'],
+    ['invalid', 'invalid'],
+    ['loading', 'loading'],
+  ] as const) {
+    if (!scenarios.has(scenario)) {
+      continue;
+    }
+
+    stories.push(`export const ${getComponentPresentationScenarioTitle(
+      scenario
+    )}: Story = {
+  args: {
+    ${prop}: true,
   },
 };`);
   }
@@ -122,29 +304,34 @@ export function renderStoryTemplate({
   parts = [],
 }: StoryTemplateParams) {
   const storybookPackage = isNative
-    ? '@storybook/react'
+    ? '@storybook/react-native'
     : '@storybook/react-vite';
-
   const title = `${layer[0].toUpperCase() + layer.slice(1)}/${componentName}`;
-
+  const scenarios = deriveComponentPresentationScenarios({
+    profile,
+    capabilities,
+  });
+  const scenarioLabels = scenarios
+    .slice(1)
+    .map((scenario) => `- ${getComponentPresentationScenarioTitle(scenario)}`);
   const description = [
     `### ${componentName} Component`,
     '',
-    `Describe when to use ${componentName} and what problem it solves.`,
+    `Use ${componentName} as a Vellira ${profile.replaceAll('-', ' ')} component with the states declared by its canonical component capabilities.`,
     '',
-    '**Features**',
-    '- Add the main supported states',
-    '- Document important behavior',
-    '- Mention platform-specific details when needed',
+    '**Generated coverage**',
+    ...(scenarioLabels.length > 0 ? scenarioLabels : ['- Basic usage']),
     '',
-    '### Usage',
-    '',
-    'Replace this section with a real example before publishing the component.',
+    'The examples below are deterministic generator output and can be extended with component-specific stories when deeper behavior needs dedicated evidence.',
   ].join('\n');
 
   const compoundChildren =
     profile === 'compound'
-      ? renderCompoundChildren(componentName, parts, isNative)
+      ? renderCompoundChildren({
+          componentName,
+          parts,
+          isNative,
+        })
       : undefined;
   const defaultTextChild = isNative
     ? `(\n      ${renderGeneratedNativeText(
@@ -152,12 +339,13 @@ export function renderStoryTemplate({
         'view-like'
       )}\n    )`
     : "'Example content'";
+  const hasMultiple = scenarios.includes('multiple');
 
   const defaultArgs =
     profile === 'compound'
       ? compoundChildren
         ? `{
-    children: (
+${hasMultiple ? "    type: 'single',\n" : ''}    children: (
       ${compoundChildren}
     ),
   }`
@@ -185,66 +373,8 @@ export function renderStoryTemplate({
           isNative,
         })
       : profile === 'form-control'
-        ? control === 'boolean'
-          ? `
-export const Checked: Story = {
-  args: {
-    checked: true,
-  },
-};
-
-export const Controlled: Story = {
-  args: {
-    checked: true,
-    onCheckedChange: () => undefined,
-  },
-};
-
-export const Disabled: Story = {
-  args: {
-    disabled: true,
-  },
-};
-
-export const Required: Story = {
-  args: {
-    required: true,
-  },
-};
-
-export const Invalid: Story = {
-  args: {
-    invalid: true,
-  },
-};
-`
-          : `
-export const Controlled: Story = {
-  args: {
-    value: 'Controlled value',
-    onValueChange: () => undefined,
-  },
-};
-
-export const Disabled: Story = {
-  args: {
-    disabled: true,
-  },
-};
-
-export const Required: Story = {
-  args: {
-    required: true,
-  },
-};
-
-export const Invalid: Story = {
-  args: {
-    invalid: true,
-  },
-};
-`
-        : '';
+        ? renderFormControlStories({ control, capabilities })
+        : renderBaseStories(capabilities);
 
   const nativeTextImport =
     isNative && profile !== 'form-control' ? `${NATIVE_TEXT_IMPORT}\n` : '';

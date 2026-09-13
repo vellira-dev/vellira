@@ -310,9 +310,12 @@ describe('component production contract regression matrix', () => {
 
     await writeCanonicalPlanArtifacts(result);
     const canonical = fs.readFileSync(result.docsContractFile, 'utf8');
+    const summary =
+      'Use ContractProbe in React utility interfaces when you need the canonical Vellira behavior and styling for this component.';
+    expect(canonical).toContain(summary);
     fs.writeFileSync(
       result.docsContractFile,
-      canonical.replace('TODO: Summarize', 'Drifted summary:')
+      canonical.replace(summary, 'Drifted ContractProbe summary')
     );
 
     expect(await checkGeneratedPlanContract(result)).toContain(

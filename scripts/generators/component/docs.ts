@@ -82,6 +82,31 @@ export function resolvePlanCapabilities(plan: ComponentGenerationPlan) {
   return [...new Set([...profile.capabilities, ...plan.capabilities])];
 }
 
+function getGeneratedDocsDescription(
+  plan: ComponentGenerationPlan,
+  platform: ComponentPlatform
+) {
+  const platformLabel = platform === 'react' ? 'React' : 'React Native';
+  const capabilityLabels = resolvePlanCapabilities(plan).map((capability) =>
+    capability.replaceAll('-', ' ')
+  );
+  const coverage =
+    capabilityLabels.length > 0
+      ? ` Coverage includes ${capabilityLabels.join(', ')}.`
+      : '';
+
+  return `${plan.componentName} is a Vellira ${plan.profile.replaceAll('-', ' ')} component for ${platformLabel}.${coverage}`;
+}
+
+function getGeneratedDocsSummary(
+  plan: ComponentGenerationPlan,
+  platform: ComponentPlatform
+) {
+  const platformLabel = platform === 'react' ? 'React' : 'React Native';
+
+  return `Use ${plan.componentName} in ${platformLabel} ${plan.category.replaceAll('-', ' ')} interfaces when you need the canonical Vellira behavior and styling for this component.`;
+}
+
 export function createComponentDocsContractFromPlan(
   plan: ComponentGenerationPlan
 ): ComponentDocsContract {
@@ -98,14 +123,8 @@ export function createComponentDocsContractFromPlan(
               platform === 'react'
                 ? `${plan.componentName} - React`
                 : `${plan.componentName} - React Native`,
-            description:
-              platform === 'react'
-                ? `TODO: Write React documentation for ${plan.componentName}.`
-                : `TODO: Write React Native documentation for ${plan.componentName}.`,
-            summary:
-              platform === 'react'
-                ? `TODO: Summarize when to use ${plan.componentName} in React.`
-                : `TODO: Summarize when to use ${plan.componentName} in React Native.`,
+            description: getGeneratedDocsDescription(plan, platform),
+            summary: getGeneratedDocsSummary(plan, platform),
             storybook: {
               story: 'Default',
               title: storybookTitle(plan),
@@ -379,10 +398,10 @@ function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
     }
 
     const hasComponentHeading = content
-      .split(/\\r?\\n/)
+      .split(/\r?\n/)
       .some((line) => line.trim() === `## ${plan.componentName}`);
     const hasHeading = (heading: string) =>
-      content.split(/\\r?\\n/).some((line) => line.trim() === heading);
+      content.split(/\r?\n/).some((line) => line.trim() === heading);
 
     const placeholderContent = [
       hasComponentHeading ? '' : `## ${plan.componentName}`,
