@@ -25,6 +25,16 @@ pnpm component-production:validate:json --spec path/to/component.json
 Both commands emit machine-readable JSON. Validation is the only production path
 that may produce `readyForReview: true`.
 
+Controlled production entrypoints and their production-reachable TypeScript
+launchers use `node --import tsx`. This supported import hook avoids the tsx
+CLI's mandatory IPC listening server, which restricted execution environments
+may reject before application code starts. The structured-validation worker
+uses the same hook with the current Node executable.
+
+The canonical external package commands above remain unchanged. This bounded
+launcher policy does not widen sandbox permissions or ban the tsx CLI throughout
+the repository; ordinary development tooling may continue using it.
+
 ## Schema V1
 
 A production specification declares component intent explicitly rather than

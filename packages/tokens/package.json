@@ -54,11 +54,11 @@
   "scripts": {
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; fs.rmSync('dist', { recursive: true, force: true })\"",
     "clean:build": "node --input-type=module -e \"import fs from 'node:fs'; if (fs.existsSync('dist')) for (const entry of fs.readdirSync('dist')) { if (entry !== 'css') fs.rmSync('dist/' + entry, { recursive: true, force: true }); }\"",
-    "generate:types": "tsx scripts/generate-token-types.ts",
-    "generate:types:check": "tsx scripts/generate-token-types.ts --check",
+    "generate:types": "node --import tsx scripts/generate-token-types.ts",
+    "generate:types:check": "node --import tsx scripts/generate-token-types.ts --check",
     "preservation:baseline": "tsx scripts/token-preservation-cli.ts --write",
-    "preservation:check": "tsx scripts/token-preservation-cli.ts --check",
-    "build:tokens": "pnpm run generate:types && tsx scripts/generate-css.ts",
+    "preservation:check": "node --import tsx scripts/token-preservation-cli.ts --check",
+    "build:tokens": "pnpm run generate:types && node --import tsx scripts/generate-css.ts",
     "build": "pnpm run clean:build && pnpm run build:tokens && tsc -p tsconfig.build.json",
     "typecheck": "pnpm run generate:types:check && pnpm run preservation:check && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json --noEmit",
     "test": "pnpm run generate:types:check && pnpm run preservation:check && vitest run"

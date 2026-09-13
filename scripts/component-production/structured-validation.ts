@@ -216,9 +216,9 @@ export function runComponentProductionStructuredValidationWorker(params: {
   platform: 'web' | 'native' | 'all';
 }): ComponentProductionStructuredValidationWorkerExecution {
   const result = spawnSync(
-    'pnpm',
+    process.execPath,
     [
-      'exec',
+      '--import',
       'tsx',
       'scripts/component-production/structured-validation-worker.ts',
       params.componentName,
