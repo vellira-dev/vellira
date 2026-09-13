@@ -6,7 +6,7 @@ on:
     types: [synchronize]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: token-format-probe-${{ github.event.pull_request.number || github.ref }}
@@ -28,30 +28,25 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Format failing semantic tooling files
-        run: >-
-          pnpm exec prettier --write
-          scripts/checks/token-semantic/consumer-reference-completeness.ts
-          scripts/checks/token-semantic/semantic-vocabulary-consumers.test.ts
-          scripts/checks/token-semantic/state-vocabulary-composition.test.ts
-          scripts/checks/token-semantic/state-vocabulary-composition.ts
-          scripts/checks/token-semantic/value-kind-repository.test.ts
-          scripts/checks/token-semantic/value-kind-repository.ts
-          scripts/generators/component/token-semantic-readiness.test.ts
-          scripts/generators/component/token-semantic-readiness.ts
-
-      - name: Upload formatted files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: token-format-probe-${{ github.event.pull_request.head.sha || github.sha }}
-          path: |
-            scripts/checks/token-semantic/consumer-reference-completeness.ts
-            scripts/checks/token-semantic/semantic-vocabulary-consumers.test.ts
-            scripts/checks/token-semantic/state-vocabulary-composition.test.ts
-            scripts/checks/token-semantic/state-vocabulary-composition.ts
-            scripts/checks/token-semantic/value-kind-repository.test.ts
-            scripts/checks/token-semantic/value-kind-repository.ts
-            scripts/generators/component/token-semantic-readiness.test.ts
+      - name: Apply canonical formatting and remove probe
+        shell: bash
+        env:
+          VELLIRA_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write \
+            scripts/checks/token-semantic/consumer-reference-completeness.ts \
+            scripts/checks/token-semantic/semantic-vocabulary-consumers.test.ts \
+            scripts/checks/token-semantic/state-vocabulary-composition.test.ts \
+            scripts/checks/token-semantic/state-vocabulary-composition.ts \
+            scripts/checks/token-semantic/value-kind-repository.test.ts \
+            scripts/checks/token-semantic/value-kind-repository.ts \
+            scripts/generators/component/token-semantic-readiness.test.ts \
             scripts/generators/component/token-semantic-readiness.ts
-          if-no-files-found: error
-          retention-days: 1
+          git rm .github/workflows/token-format-probe.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/checks/token-semantic scripts/generators/component/token-semantic-readiness.ts scripts/generators/component/token-semantic-readiness.test.ts
+          git diff --cached --check
+          git commit -m 'style(tokens): format semantic enforcement tooling'
+          git push origin HEAD:"$VELLIRA_HEAD_REF"
