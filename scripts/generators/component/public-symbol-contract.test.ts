@@ -138,7 +138,9 @@ describe('generated public symbol contract synchronization', () => {
       'AvatarTriggerProps',
       'AvatarContentProps',
     ]) {
-      expect(content.match(new RegExp(`    '${symbol}',`, 'g'))).toHaveLength(2);
+      expect(
+        content.match(new RegExp(`    '${symbol}',`, 'g'))
+      ).toHaveLength(2);
     }
 
     expect(content).not.toContain("'AvatarRootProps'");

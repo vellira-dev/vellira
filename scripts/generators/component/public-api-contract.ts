@@ -84,7 +84,9 @@ function renderSynchronizedPublicSymbolContract(params: {
     plan.componentName,
     ...getGeneratedPublicPropTypeNames(plan),
   ];
-  const nextSymbols = [...new Set([...existingSymbols, ...generatedSymbols])].sort();
+  const nextSymbols = [
+    ...new Set([...existingSymbols, ...generatedSymbols]),
+  ].sort();
   const nextBlock = `${match[1]}${nextSymbols
     .map((symbol) => `    '${symbol}',`)
     .join('\n')}${match[3]}`;
