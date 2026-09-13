@@ -64,14 +64,14 @@ export type {
   SelectItemProps,
   SelectLabelProps,
   SelectLoadingProps,
-  SelectOption,
-  SelectProps,
-  SelectRenderOptionContext,
-  SelectRenderValueContext,
   SelectSearchProps,
   SelectSeparatorProps,
   SelectTriggerSlotProps,
   SelectValueProps,
+  SelectOption,
+  SelectProps,
+  SelectRenderOptionContext,
+  SelectRenderValueContext,
 } from './components/Select';
 export { Select } from './components/Select';
 export type {
@@ -110,4 +110,9 @@ export type { RadioProps } from './primitives/Radio';
 export { Radio } from './primitives/Radio';
 export type { SwitchProps } from './primitives/Switch';
 export { Switch } from './primitives/Switch';
-export * from './theme';
+export type {
+  ThemeContextValue,
+  ThemeName,
+  ThemeProviderProps,
+} from './theme';
+export { ThemeProvider, useTheme } from './theme';
