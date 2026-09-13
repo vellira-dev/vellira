@@ -34,29 +34,44 @@ jobs:
           python <<'PY'
           from pathlib import Path
 
+          def extract(source: str, start_marker: str, end_marker: str, output: str) -> None:
+              start = source.index(start_marker) + len(start_marker)
+              end = source.index(end_marker, start)
+              body = source[start:end]
+              Path(output).write_text(
+                  '\n'.join(
+                      line[10:] if line.startswith('          ') else line
+                      for line in body.splitlines()
+                  ) + '\n'
+              )
+
           original = Path('/tmp/original.yml').read_text()
-          start_marker = "          python <<'PY'\n"
-          end_marker = "\n          PY\n\n      - name: Format changed files"
-          start = original.index(start_marker) + len(start_marker)
-          end = original.index(end_marker, start)
-          body = original[start:end]
-          Path('/tmp/apply-hardening.py').write_text(
-              '\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines()) + '\n'
+          extract(
+              original,
+              "          python <<'PY'\n",
+              "\n          PY\n\n      - name: Format changed files",
+              '/tmp/apply-hardening.py',
           )
 
           final = Path('/tmp/final.yml').read_text()
           section = "      - name: Apply final structural contracts\n"
           section_start = final.index(section)
-          py_start = final.index("          python <<'PY'\n", section_start) + len("          python <<'PY'\n")
+          py_start_marker = "          python <<'PY'\n"
+          py_start = final.index(py_start_marker, section_start) + len(py_start_marker)
           py_end = final.index("\n          PY\n\n      - name: Final format", py_start)
           body = final[py_start:py_end]
           Path('/tmp/final-hardening.py').write_text(
-              '\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines()) + '\n'
+              '\n'.join(
+                  line[10:] if line.startswith('          ') else line
+                  for line in body.splitlines()
+              ) + '\n'
           )
           PY
 
       - name: Apply and format hardening
+        shell: bash
         run: |
+          set -euo pipefail
           python /tmp/apply-hardening.py
           pnpm exec prettier --write \
             packages/metadata/src/components/index.ts \
@@ -70,6 +85,31 @@ jobs:
             scripts/generators/component-page/renderers/registry.test.ts \
             scripts/generators/component-page/catalog-preview-contract.test.ts
           python /tmp/final-hardening.py
+          python <<'PY'
+          from pathlib import Path
+
+          generated_path = Path(
+              'apps/website/src/component-catalog/shared/ComponentsCatalog/generatedCatalogPreviews.tsx'
+          )
+          generated = generated_path.read_text()
+          generated = generated.replace(
+              "import { lazy, type ComponentType, type LazyExoticComponent } from 'react';",
+              "import * as React from 'react';",
+          )
+          generated = generated.replace(
+              'LazyExoticComponent<ComponentType>',
+              'React.LazyExoticComponent<React.ComponentType>',
+          )
+          generated_path.write_text(generated)
+
+          registry_path = Path('scripts/generators/component-page/renderers/registry.ts')
+          registry = registry_path.read_text()
+          registry = registry.replace(
+              '${JSON.stringify(model.slug)}: lazy(() =>',
+              '${JSON.stringify(model.slug)}: React.lazy(() =>',
+          )
+          registry_path.write_text(registry)
+          PY
           pnpm exec prettier --write \
             packages/metadata/src/components/index.ts \
             scripts/generators/component/write.ts \
@@ -97,8 +137,18 @@ jobs:
           --filter=@vellira-ui/react-native
           --filter=@vellira-ui/icons
 
-      - name: Typecheck and diff proof
+      - name: Lint, typecheck and diff proof
         run: |
+          pnpm exec eslint \
+            packages/metadata/src/components/index.ts \
+            scripts/generators/component/write.ts \
+            scripts/generators/component/write.test.ts \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentCatalogPreview.tsx \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/generatedCatalogPreviews.tsx \
+            scripts/generators/component-page/create-component-page.ts \
+            scripts/generators/component-page/renderers/registry.ts \
+            scripts/generators/component-page/renderers/registry.test.ts \
+            scripts/generators/component-page/catalog-preview-contract.test.ts
           pnpm typecheck:tooling
           git diff --check
 
