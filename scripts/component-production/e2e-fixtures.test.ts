@@ -38,7 +38,7 @@ const fixtures: readonly Fixture[] = [
     roles: ['base'],
     input: {
       schemaVersion: '1',
-      componentName: 'E2EBaseProbe',
+      componentName: 'FixtureBaseProbe',
       platform: 'web',
       layer: 'primitives',
       category: 'data-display',
@@ -53,7 +53,7 @@ const fixtures: readonly Fixture[] = [
     roles: ['form-control', 'cross-platform'],
     input: {
       schemaVersion: '1',
-      componentName: 'E2EBooleanProbe',
+      componentName: 'FixtureBooleanProbe',
       platform: 'both',
       layer: 'primitives',
       category: 'form',
@@ -69,7 +69,7 @@ const fixtures: readonly Fixture[] = [
     roles: ['compound', 'cross-platform', 'intentional-divergence'],
     input: {
       schemaVersion: '1',
-      componentName: 'E2ECompoundProbe',
+      componentName: 'FixtureCompoundProbe',
       platform: 'both',
       layer: 'components',
       category: 'navigation',
@@ -90,7 +90,7 @@ const fixtures: readonly Fixture[] = [
     roles: ['overlay'],
     input: {
       schemaVersion: '1',
-      componentName: 'E2EOverlayProbe',
+      componentName: 'FixtureOverlayProbe',
       platform: 'web',
       layer: 'components',
       category: 'overlay',
@@ -111,7 +111,7 @@ const fixtures: readonly Fixture[] = [
     roles: ['base', 'cross-platform'],
     input: {
       schemaVersion: '1',
-      componentName: 'E2ECrossPlatformProbe',
+      componentName: 'FixtureCrossPlatformProbe',
       platform: 'both',
       layer: 'primitives',
       category: 'utility',
@@ -125,7 +125,7 @@ const fixtures: readonly Fixture[] = [
 
 const invalidFixture: ComponentProductionInputV1 = {
   schemaVersion: '1',
-  componentName: 'E2EInvalidResourceProbe',
+  componentName: 'FixtureInvalidResourceProbe',
   platform: 'web',
   layer: 'primitives',
   category: 'utility',
@@ -245,7 +245,12 @@ describe.sequential('component production end-to-end fixtures', () => {
         input: fixture.input,
       });
 
-      expect(generation.generation.status).toBe('passed');
+      expect(
+        generation.generation.status,
+        generation.generation.findings
+          .map((finding) => finding.message)
+          .join('\n')
+      ).toBe('passed');
 
       const webContract = readCoverageContract(root, fixture.input, 'react');
       const nativeContract = readCoverageContract(
@@ -301,7 +306,12 @@ async function generateFixture(root: string, fixture: Fixture) {
   });
 
   expect(generation.preflight, fixture.id).toMatchObject({ status: 'passed' });
-  expect(generation.generation, fixture.id).toMatchObject({ status: 'passed' });
+  expect(
+    generation.generation,
+    `${fixture.id}: ${generation.generation.findings
+      .map((finding) => finding.message)
+      .join('\n')}`
+  ).toMatchObject({ status: 'passed' });
   expect(generation.generatedArtifacts.length, fixture.id).toBeGreaterThan(0);
 }
 
