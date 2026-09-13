@@ -171,6 +171,52 @@ describe('generated website presentation metadata', () => {
     expect(source).not.toContain("props: ['disabled']");
   });
 
+  it('maps overlay state capabilities to root open props', () => {
+    const root = createRoot();
+    const metadataDir = path.join(root, 'packages/metadata/src/components');
+    const componentDir = path.join(
+      root,
+      'packages/react/src/components/DialogProbe'
+    );
+
+    fs.mkdirSync(metadataDir, { recursive: true });
+    fs.mkdirSync(componentDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(metadataDir, 'DialogProbe.metadata.ts'),
+      `export const metadata = {
+  capabilities: ['controlled', 'uncontrolled', 'keyboard', 'focus-management', 'portal'],
+};
+`
+    );
+    fs.writeFileSync(
+      path.join(componentDir, 'types.ts'),
+      `export interface DialogProbeProps {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+`
+    );
+
+    generateComponentWebsitePage({
+      root,
+      componentName: 'DialogProbe',
+      profile: 'overlay',
+      category: 'overlay',
+    });
+
+    const metadataFile = path.join(
+      root,
+      'apps/website/src/component-catalog/components/DialogProbe/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    expect(source).toContain("title: 'Controlled'");
+    expect(source).toContain("props: ['open']");
+    expect(source).toContain("title: 'Uncontrolled'");
+    expect(source).toContain("props: ['defaultOpen']");
+  });
+
   it('treats absent package source roots as unsupported website props', () => {
     const root = fs.mkdtempSync(
       path.join(os.tmpdir(), 'vellira-website-missing-packages-')
