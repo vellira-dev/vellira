@@ -321,7 +321,10 @@
   border: 1px solid
     color-mix(in srgb, var(--color-primary-500) 12%, var(--border-muted));
   border-radius: var(--radius-xl);
-  box-shadow: 0 12px 28px rgb(0 0 0 / 4%);
+
+  /* Preserve this composition’s shadow geometry with canonical shadow pigment. */
+  box-shadow: 0 12px 28px
+    color-mix(in srgb, var(--color-mono-950) 4%, transparent);
   gap: calc(var(--space-3) + var(--space-1) / 2);
   transition:
     border-color 200ms ease,
@@ -335,7 +338,8 @@
     var(--color-primary-500) 30%,
     var(--border-muted)
   );
-  box-shadow: 0 18px 38px rgb(0 0 0 / 7%);
+  box-shadow: 0 18px 38px
+    color-mix(in srgb, var(--color-mono-950) 7%, transparent);
   transform: translateY(-2px);
 }
 

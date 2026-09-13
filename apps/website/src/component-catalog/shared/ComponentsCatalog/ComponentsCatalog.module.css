@@ -28,6 +28,11 @@
   min-width: 0;
 }
 
+.searchLabel {
+  display: flex;
+  flex: none;
+}
+
 .searchIcon {
   flex: none;
   width: 18px;
@@ -48,7 +53,7 @@
   transform: scale(1.05);
 }
 
-.searchInput {
+.root .search .searchInput {
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -60,7 +65,7 @@
   outline: 0;
 }
 
-.searchInput::placeholder {
+.root .search .searchInput::placeholder {
   color: var(--text-muted);
 }
 
@@ -244,10 +249,13 @@
 
 .card:hover {
   background: var(--surface-panel);
+
+  /* Page-owned layered elevation keeps its geometry; the pigment comes
+     from the same canonical palette as Vellira's shadow effects. */
   box-shadow:
-    0 2px 4px rgb(20 16 45 / 4%),
-    0 10px 24px rgb(20 16 45 / 8%),
-    0 20px 40px rgb(20 16 45 / 5%);
+    0 2px 4px color-mix(in srgb, var(--color-vellira-950) 4%, transparent),
+    0 10px 24px color-mix(in srgb, var(--color-vellira-950) 8%, transparent),
+    0 20px 40px color-mix(in srgb, var(--color-vellira-950) 5%, transparent);
   transform: translateY(-4px);
 }
 

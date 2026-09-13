@@ -74,6 +74,21 @@ jobs:
       - name: Quality checks
         run: pnpm ci:quality
 
+      - name: Record advisory Vellira UI usage baseline
+        if: always()
+        run: |
+          mkdir -p .artifacts/vellira-ui-usage
+          pnpm check:vellira-ui-usage:json > .artifacts/vellira-ui-usage/report.json
+
+      - name: Upload exact-head Vellira UI usage baseline
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: vellira-ui-usage-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .artifacts/vellira-ui-usage/report.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Validate Blog publication state
         if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         env:
@@ -539,12 +554,18 @@ jobs:
             pnpm --filter @vellira-ui/react-storybook exec node \
             scripts/code-showcase-website-smoke.mjs
 
+          WEBSITE_URL=http://127.0.0.1:3101 \
+            pnpm --filter @vellira-ui/react-storybook exec node \
+            scripts/vellira-ui-usage-website-smoke.mjs
+
       - name: Upload CodeShowcase browser evidence
         if: ${{ always() && needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-storybook')) }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: code-showcase-browser-evidence
-          path: apps/react-storybook/test-results/code-showcase
+          path: |
+            apps/react-storybook/test-results/code-showcase
+            apps/react-storybook/test-results/vellira-ui-usage
           if-no-files-found: ignore
           retention-days: 7
 

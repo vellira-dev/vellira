@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import Link from 'next/link';
+
+import { Button, Input } from '@vellira-ui/react';
 
 import { Container } from '@/components/layout/Container';
 
@@ -16,6 +18,7 @@ import styles from './ComponentsCatalog.module.css';
 type PlatformFilter = 'all' | 'react' | 'react-native';
 
 export function ComponentsCatalog() {
+  const searchId = useId();
   const [query, setQuery] = useState('');
   const [platform, setPlatform] = useState<PlatformFilter>('all');
 
@@ -78,36 +81,44 @@ export function ComponentsCatalog() {
       <Container size='wide'>
         <div className={styles.toolbar}>
           <div className={styles.toolbarInner}>
-            <label className={styles.search}>
-              <Search aria-hidden='true' className={styles.searchIcon} />
+            <div className={styles.search}>
+              <label htmlFor={searchId} className={styles.searchLabel}>
+                <Search aria-hidden='true' className={styles.searchIcon} />
+              </label>
 
-              <input
+              <Input
+                id={searchId}
+                variant='bare'
+                startIcon={false}
                 type='search'
+                autoComplete='on'
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onValueChange={setQuery}
                 placeholder='Search components...'
                 aria-label='Search components'
                 className={styles.searchInput}
               />
 
               {query && (
-                <button
+                <Button
+                  appearance='bare'
                   type='button'
                   className={styles.clearSearch}
                   aria-label='Clear search'
                   onClick={() => setQuery('')}
                 >
                   ×
-                </button>
+                </Button>
               )}
-            </label>
+            </div>
 
             <div className={styles.filters} aria-label='Filter by platform'>
               {platformFilters.map(({ value, label, icon: Icon }) => {
                 const active = platform === value;
 
                 return (
-                  <button
+                  <Button
+                    appearance='bare'
                     key={value}
                     type='button'
                     className={[
@@ -121,7 +132,7 @@ export function ComponentsCatalog() {
                   >
                     <Icon aria-hidden='true' className={styles.filterIcon} />
                     <span>{label}</span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>

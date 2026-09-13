@@ -17,7 +17,7 @@ textarea {
   width: 28px;
   height: 28px;
   padding: 0;
-  color: #4b5563;
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
@@ -25,12 +25,12 @@ textarea {
 }
 
 .velliraToolbarLink:hover {
-  color: #111827;
-  background: #f3f4f6;
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .velliraToolbarLink:focus-visible {
-  outline: 2px solid #7c3aed;
+  outline: 2px solid var(--focus-ring-color);
   outline-offset: 2px;
 }
 
