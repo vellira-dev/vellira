@@ -71,11 +71,7 @@ function getScenarioProps(params: {
   const hasType = sourceHasProp(source, 'type');
   const booleanControl = sourceHasProp(source, 'checked');
 
-  if (
-    profile === 'compound' &&
-    hasType &&
-    scenario !== 'multiple'
-  ) {
+  if (profile === 'compound' && hasType && scenario !== 'multiple') {
     props.push("type='single'");
   }
 

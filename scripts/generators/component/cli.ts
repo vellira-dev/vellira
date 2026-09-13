@@ -1,11 +1,12 @@
-import {
-  componentCapabilities,
-  type ComponentAssetRequirement,
-  type ComponentCapability,
-  type ComponentDependencies,
-  type ComponentIconRequirement,
-  type ComponentTokenContract,
+import type {
+  ComponentAssetRequirement,
+  ComponentCapability,
+  ComponentDependencies,
+  ComponentIconRequirement,
+  ComponentTokenContract,
 } from '@vellira-ui/metadata';
+
+import { componentCapabilities } from '../../../packages/metadata/src/component';
 
 export type ComponentPlatformArg = 'web' | 'native' | 'both';
 

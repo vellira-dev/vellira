@@ -28,13 +28,7 @@ function renderCompoundChildren(params: {
   count?: number;
   rich?: boolean;
 }) {
-  const {
-    componentName,
-    parts,
-    isNative,
-    count = 1,
-    rich = false,
-  } = params;
+  const { componentName, parts, isNative, count = 1, rich = false } = params;
 
   if (!parts.includes('Item') || !parts.includes('Trigger')) {
     return undefined;
@@ -103,7 +97,9 @@ function renderCompoundStories(params: {
   }
 
   const stories: string[] = [];
-  const singleTypeArg = scenarios.has('multiple') ? "    type: 'single',\n" : '';
+  const singleTypeArg = scenarios.has('multiple')
+    ? "    type: 'single',\n"
+    : '';
 
   if (scenarios.has('multiple')) {
     const multipleChildren = renderCompoundChildren({

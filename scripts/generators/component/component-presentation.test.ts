@@ -79,10 +79,7 @@ describe('component presentation scenarios', () => {
     );
     tempRoots.push(root);
 
-    const metadataDir = path.join(
-      root,
-      'packages/metadata/src/components'
-    );
+    const metadataDir = path.join(root, 'packages/metadata/src/components');
     fs.mkdirSync(metadataDir, { recursive: true });
     fs.writeFileSync(
       path.join(metadataDir, 'Accordion.metadata.ts'),

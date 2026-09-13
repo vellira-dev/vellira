@@ -87,7 +87,10 @@ export const RichContent = {};
   );
 
   fs.mkdirSync(path.dirname(plan.docsContractFile), { recursive: true });
-  fs.writeFileSync(plan.docsContractFile, 'Production documentation contract.\n');
+  fs.writeFileSync(
+    plan.docsContractFile,
+    'Production documentation contract.\n'
+  );
 
   return { plan, examplesFile };
 }
@@ -107,10 +110,9 @@ describe('component presentation contract', () => {
     );
     fs.writeFileSync(
       nativeStory,
-      fs.readFileSync(nativeStory, 'utf8').replace(
-        'export const Controlled = {};\n',
-        ''
-      )
+      fs
+        .readFileSync(nativeStory, 'utf8')
+        .replace('export const Controlled = {};\n', '')
     );
 
     expect(checkComponentPresentationContract(plan)).toEqual([nativeStory]);

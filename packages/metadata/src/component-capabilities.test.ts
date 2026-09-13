@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  componentCapabilities,
-  validateComponentMetadata,
-} from './index';
+import { componentCapabilities, validateComponentMetadata } from './index';
 
 describe('component capability authority', () => {
   it('keeps runtime validation aligned with the exported capability vocabulary', () => {
