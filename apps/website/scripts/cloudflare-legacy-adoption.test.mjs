@@ -458,7 +458,13 @@ test('dedicated workflow keeps every normal build/browser gate and target serial
   assert.match(adoption.jobs.deploy.if, /I_CONFIRM_LEGACY_NEVER_PUBLIC/);
   const steps = adoption.jobs.deploy.steps;
   const runs = steps.map((step) => step.run).filter(Boolean);
+  const promotionOnlyNormalSteps = new Set([
+    'Verify exact production candidate checkout',
+    'Verify immutable production candidate before mutation',
+    'Record production promotion provenance',
+  ]);
   for (const step of normal.jobs.deploy.steps.filter((step) => step.run)) {
+    if (promotionOnlyNormalSteps.has(step.name)) continue;
     if (/cloudflare-(archive-preflight|deploy)\.mjs/.test(step.run)) continue;
     assert.ok(runs.includes(step.run), `Missing normal gate: ${step.name}`);
   }

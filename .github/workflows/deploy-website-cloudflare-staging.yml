@@ -262,6 +262,15 @@ jobs:
           console.log(JSON.stringify(evidence));
           NODE
 
+      - name: Publish production promotion evidence
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cloudflare-staging-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: apps/website/.open-next/staging-evidence.json
+
       - name: Retain asset and browser forensic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
