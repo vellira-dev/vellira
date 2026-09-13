@@ -81,49 +81,30 @@ describe('Vellira UI usage blocking enforcement', () => {
   });
 
   it('fails the real CLI when an ephemeral raw control is injected', () => {
-    const relativeProofPath =
-      'apps/website/src/__vellira_ui_usage_negative_proof__.tsx';
+    const relativeProofPath = 'apps/website/src/proof.tsx';
     const proofPath = path.join(process.cwd(), relativeProofPath);
+    const source = 'export const Proof = () => <button>Proof</button>;\n';
+    const cli = 'scripts/checks/vellira-ui-usage/cli.ts';
+    const args = ['--import', 'tsx', cli, '--json'];
 
     expect(fs.existsSync(proofPath)).toBe(false);
-    fs.writeFileSync(
-      proofPath,
-      'export const VelliraUiUsageNegativeProof = () => <button>Proof</button>;\n',
-    );
+    fs.writeFileSync(proofPath, source);
 
     try {
-      const result = spawnSync(
-        process.execPath,
-        [
-          '--import',
-          'tsx',
-          'scripts/checks/vellira-ui-usage/cli.ts',
-          '--json',
-        ],
-        {
-          cwd: process.cwd(),
-          encoding: 'utf8',
-        },
-      );
+      const result = spawnSync(process.execPath, args, { encoding: 'utf8' });
 
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(1);
 
       const output = JSON.parse(result.stdout) as VelliraUiUsageReport;
-      expect(output).toMatchObject({
-        mode: 'blocking',
-        summary: {
-          blockingFindings: 1,
-        },
-      });
-      expect(output.findings).toContainEqual(
-        expect.objectContaining({
-          path: relativeProofPath,
-          detected: 'button',
-          severity: 'error',
-          blocking: true,
-        }),
-      );
+      const [finding] = output.findings;
+
+      expect(output.mode).toBe('blocking');
+      expect(output.summary.blockingFindings).toBe(1);
+      expect(finding?.path).toBe(relativeProofPath);
+      expect(finding?.detected).toBe('button');
+      expect(finding?.severity).toBe('error');
+      expect(finding?.blocking).toBe(true);
     } finally {
       fs.rmSync(proofPath, { force: true });
     }
