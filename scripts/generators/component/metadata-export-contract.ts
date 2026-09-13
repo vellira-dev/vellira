@@ -2,12 +2,13 @@ import fs from 'node:fs';
 
 const REGISTRY_MARKER = 'export const componentMetadata = [';
 const REGISTRY_END_MARKER = '] as const;';
+const METADATA_NAME_PATTERN = /^[A-Za-z_$][\w$]*Metadata$/;
 const METADATA_IMPORT_PATTERN =
   /^import \{ ([A-Za-z_$][\w$]*Metadata) \} from ['"]\.\/[^'"]+\.metadata['"];$/gm;
 const NAMED_EXPORT_BLOCK_PATTERN =
   /export\s*\{([\s\S]*?)\};\s*(?=export const componentMetadata = \[)/;
 
-function readCanonicalRegistryNames(content: string): string[] {
+function getCanonicalRegistryBounds(content: string) {
   const registryStart = content.indexOf(REGISTRY_MARKER);
 
   if (registryStart === -1) {
@@ -20,17 +21,28 @@ function readCanonicalRegistryNames(content: string): string[] {
     throw new Error('Invalid canonical componentMetadata registry.');
   }
 
+  return { registryStart, registryEnd };
+}
+
+function readCanonicalRegistryNames(content: string): string[] {
+  const { registryStart, registryEnd } = getCanonicalRegistryBounds(content);
   const names = content
     .slice(registryStart + REGISTRY_MARKER.length, registryEnd)
-    .split('\n')
-    .map((line) => line.match(/^\s*([A-Za-z_$][\w$]*Metadata),\s*$/)?.[1])
-    .filter((name): name is string => Boolean(name));
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+
+  for (const name of names) {
+    if (!METADATA_NAME_PATTERN.test(name)) {
+      throw new Error(`Invalid componentMetadata registry entry: ${name}`);
+    }
+  }
 
   if (new Set(names).size !== names.length) {
     throw new Error('Duplicate componentMetadata registry entry.');
   }
 
-  return [...names].sort();
+  return names;
 }
 
 function readImportedMetadataNames(content: string): Set<string> {
@@ -72,15 +84,51 @@ function arraysEqual(left: string[], right: string[]) {
   );
 }
 
+function renderCanonicalRegistryBlock(names: string[]) {
+  const entries = names.map((name) => `  ${name},`).join('\n');
+
+  return `${REGISTRY_MARKER}\n${entries}${entries ? '\n' : ''}${REGISTRY_END_MARKER}`;
+}
+
 function renderNamedExportBlock(names: string[]) {
+  if (names.length === 0) {
+    return '';
+  }
+
+  if (names.length === 1) {
+    return `export { ${names[0]} };\n\n`;
+  }
+
   return `export {\n${names.map((name) => `  ${name},`).join('\n')}\n};\n\n`;
+}
+
+export function normalizeMetadataRegistryForMutation(
+  metadataBarrelFile: string
+): boolean {
+  const content = fs.readFileSync(metadataBarrelFile, 'utf8');
+  const registryNames = readCanonicalRegistryNames(content);
+
+  assertRegistryImports(content, registryNames);
+
+  const { registryStart, registryEnd } = getCanonicalRegistryBounds(content);
+  const nextContent =
+    content.slice(0, registryStart) +
+    renderCanonicalRegistryBlock(registryNames) +
+    content.slice(registryEnd + REGISTRY_END_MARKER.length);
+
+  if (content === nextContent) {
+    return false;
+  }
+
+  fs.writeFileSync(metadataBarrelFile, nextContent);
+  return true;
 }
 
 export function checkMetadataExportContract(
   metadataBarrelFile: string
 ): string[] {
   const content = fs.readFileSync(metadataBarrelFile, 'utf8');
-  const registryNames = readCanonicalRegistryNames(content);
+  const registryNames = [...readCanonicalRegistryNames(content)].sort();
 
   assertRegistryImports(content, registryNames);
 
@@ -95,7 +143,7 @@ export function synchronizeMetadataExportContract(params: {
 }): boolean {
   const { metadataBarrelFile, updatedFiles } = params;
   const content = fs.readFileSync(metadataBarrelFile, 'utf8');
-  const registryNames = readCanonicalRegistryNames(content);
+  const registryNames = [...readCanonicalRegistryNames(content)].sort();
 
   assertRegistryImports(content, registryNames);
 
