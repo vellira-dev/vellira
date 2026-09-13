@@ -25,56 +25,370 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Apply corrected source patch
+      - name: Apply original bounded hardening patch
         shell: bash
         run: |
           set -euo pipefail
           git show 3710b11d496ffcb08288c5ad96d618289e03f702:.github/workflows/component-expansion-hardening-probe.yml > /tmp/original.yml
-          git show 5f8cce97ad1a8adabc44c9b0b22f5d17f7ee6512:.github/workflows/component-expansion-hardening-probe.yml > /tmp/corrected.yml
           python <<'PY'
           from pathlib import Path
-
-          def extract(source_path: str, start_marker: str, end_marker: str, output_path: str) -> None:
-              source = Path(source_path).read_text()
-              start = source.index(start_marker) + len(start_marker)
-              end = source.index(end_marker, start)
-              body = source[start:end]
-              lines = []
-              for line in body.splitlines():
-                  if line.startswith('          '):
-                      line = line[10:]
-                  lines.append(line)
-              Path(output_path).write_text('\n'.join(lines) + '\n')
-
-          extract(
-              '/tmp/original.yml',
-              "          python <<'PY'\n",
-              "\n          PY\n\n      - name: Format changed files",
-              '/tmp/apply-hardening.py',
-          )
-          extract(
-              '/tmp/corrected.yml',
-              "          python <<'CORRECT'\n",
-              "\n          CORRECT\n\n      - name: Format changed files",
-              '/tmp/correct-hardening.py',
-          )
-
-          path = Path('/tmp/correct-hardening.py')
-          source = path.read_text()
-          source = source.replace(
-              "start_marker = '    const contractBody = content.slice(contractStart, contractEnd);'",
-              "start_marker = '  const contractBody = content.slice(contractStart, contractEnd);'",
-          )
-          source = source.replace(
-              "end_marker = '    fs.writeFileSync(contractFile, nextContent);'",
-              "end_marker = '  fs.writeFileSync(contractFile, nextContent);'",
-          )
-          path.write_text(source)
+          source = Path('/tmp/original.yml').read_text()
+          start_marker = "          python <<'PY'\n"
+          end_marker = "\n          PY\n\n      - name: Format changed files"
+          start = source.index(start_marker) + len(start_marker)
+          end = source.index(end_marker, start)
+          body = source[start:end]
+          lines = []
+          for line in body.splitlines():
+              if line.startswith('          '):
+                  line = line[10:]
+              lines.append(line)
+          Path('/tmp/apply-hardening.py').write_text('\n'.join(lines) + '\n')
           PY
           python /tmp/apply-hardening.py
-          python /tmp/correct-hardening.py
 
-      - name: Format changed files
+      - name: Normalize original patch
+        run: |
+          pnpm exec prettier --write \
+            packages/metadata/src/components/index.ts \
+            scripts/generators/component/write.ts \
+            scripts/generators/component/write.test.ts \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentCatalogPreview.tsx \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css \
+            apps/website/src/component-catalog/shared/ComponentsCatalog/generatedCatalogPreviews.tsx \
+            scripts/generators/component-page/create-component-page.ts \
+            scripts/generators/component-page/renderers/registry.ts \
+            scripts/generators/component-page/renderers/registry.test.ts \
+            scripts/generators/component-page/catalog-preview-contract.test.ts
+
+      - name: Apply structural corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          def read(path: str) -> str:
+              return Path(path).read_text()
+
+          def write(path: str, content: str) -> None:
+              Path(path).write_text(content)
+
+          def replace_once(content: str, old: str, new: str, label: str) -> str:
+              count = content.count(old)
+              if count != 1:
+                  raise RuntimeError(f'{label}: expected one match, found {count}')
+              return content.replace(old, new, 1)
+
+          def replace_between(content: str, start: str, end: str, replacement: str, label: str) -> str:
+              start_index = content.find(start)
+              if start_index < 0:
+                  raise RuntimeError(f'{label}: start marker missing')
+              end_index = content.find(end, start_index)
+              if end_index < 0:
+                  raise RuntimeError(f'{label}: end marker missing')
+              return content[:start_index] + replacement + content[end_index:]
+
+          # #758: registered component metadata is imported once, named-exported
+          # once and present in the canonical registry once.
+          test_path = 'scripts/generators/component/write.test.ts'
+          tests = read(test_path)
+          tests = replace_once(
+              tests,
+              "    expect(barrel.match(/ {2}avatarMetadata,/g)).toHaveLength(1);",
+              """    expect(barrel.match(/ {2}avatarMetadata,/g)).toHaveLength(2);
+              expect(barrel).toMatch(/export \\{[\\s\\S]*avatarMetadata,[\\s\\S]*\\};/);
+              expect(barrel).toMatch(
+                /export const componentMetadata = \\[[\\s\\S]*avatarMetadata,[\\s\\S]*\\] as const;/
+              );""",
+              'avatar metadata surfaces',
+          )
+          tests = replace_once(
+              tests,
+              "    expect(barrel.match(/ {2}dialogMetadata,/g)).toHaveLength(1);",
+              """    expect(barrel.match(/ {2}dialogMetadata,/g)).toHaveLength(2);
+              expect(barrel).toMatch(/export \\{[\\s\\S]*dialogMetadata,[\\s\\S]*\\};/);
+              expect(barrel).toMatch(
+                /export const componentMetadata = \\[[\\s\\S]*dialogMetadata,[\\s\\S]*\\] as const;/
+              );""",
+              'dialog metadata surfaces',
+          )
+          strict_anchor = "    expect(strictPublicApi.match(/    'AvatarProps',/g)).toHaveLength(2);"
+          tests = replace_once(
+              tests,
+              strict_anchor,
+              strict_anchor
+              + """
+              expect(strictPublicApi).toContain(
+                "'packages/react/src/index.ts': [\\n    'Avatar',\\n    'AvatarProps',\\n    'Button',"
+              );
+              expect(strictPublicApi).toContain(
+                "'packages/react-native/src/index.ts': [\\n    'Avatar',\\n    'AvatarProps',\\n    'Button',"
+              );""",
+              'strict api ordering proof',
+          )
+          write(test_path, tests)
+
+          # #780: replace the whole helper so the independent full-symbol
+          # checker remains strict but Generator V2 owns its synchronization.
+          writer_path = 'scripts/generators/component/write.ts'
+          writer = read(writer_path)
+          strict_helper = r'''function synchronizeStrictPublicApiContract(params: {
+            plan: ComponentGenerationPlan;
+            target: ComponentGenerationTarget;
+            updatedFiles: string[];
+          }) {
+            const { plan, target, updatedFiles } = params;
+            const contractFile = path.join(plan.root, 'scripts', 'check-public-api.mjs');
+
+            if (!fs.existsSync(contractFile)) {
+              throw new Error(`Missing strict public API contract: ${contractFile}`);
+            }
+
+            const sourcePath = path
+              .relative(plan.root, target.packageBarrelFile)
+              .split(path.sep)
+              .join('/');
+            const marker = `  '${sourcePath}': [`;
+            const content = fs.readFileSync(contractFile, 'utf8');
+            const contractStart = content.indexOf(marker);
+
+            if (contractStart === -1) {
+              throw new Error(`Missing strict public API entry for ${sourcePath}`);
+            }
+
+            const contractEnd = content.indexOf('\n  ],', contractStart);
+
+            if (contractEnd === -1) {
+              throw new Error(`Invalid strict public API entry for ${sourcePath}`);
+            }
+
+            const contractBody = content.slice(
+              contractStart + marker.length,
+              contractEnd
+            );
+            const existingSymbols = [
+              ...contractBody.matchAll(/^\s+'([^']+)',$/gm),
+            ].map((match) => match[1]);
+
+            if (existingSymbols.length === 0) {
+              throw new Error(`Strict public API entry for ${sourcePath} has no symbols.`);
+            }
+
+            const requiredSymbols = [
+              plan.componentName,
+              ...getGeneratedPublicPropTypeNames(plan),
+            ];
+            const nextSymbols = [
+              ...new Set([...existingSymbols, ...requiredSymbols]),
+            ].sort();
+
+            if (
+              nextSymbols.length === existingSymbols.length &&
+              nextSymbols.every((symbol, index) => symbol === existingSymbols[index])
+            ) {
+              return;
+            }
+
+            const nextContract = `${marker}\n${nextSymbols
+              .map((symbol) => `    '${symbol}',`)
+              .join('\n')}`;
+            const nextContent =
+              content.slice(0, contractStart) +
+              nextContract +
+              content.slice(contractEnd);
+
+            fs.writeFileSync(contractFile, nextContent);
+
+            if (!updatedFiles.includes(contractFile)) {
+              updatedFiles.push(contractFile);
+            }
+          }
+
+          '''
+          writer = replace_between(
+              writer,
+              'function synchronizeStrictPublicApiContract(params: {',
+              'function registerPackageRootExports(params: {',
+              strict_helper,
+              'strict public API helper',
+          )
+          write(writer_path, writer)
+
+          # #772: generated preview fallback gets a stable identity marker.
+          # Curated and generated ownership are mutually exclusive.
+          registry_path = 'scripts/generators/component-page/renderers/registry.ts'
+          registry = read(registry_path)
+          preview_helper = r'''export async function updateCatalogPreviewFallback(params: {
+            root: string;
+            check: boolean;
+            checkFailures: string[];
+            catalogPreviewFile: string;
+            catalogPreviewFallbackFile: string;
+            model: GeneratedPageModel;
+          }) {
+            const {
+              root,
+              check,
+              checkFailures,
+              catalogPreviewFile,
+              catalogPreviewFallbackFile,
+              model,
+            } = params;
+            const curatedSource = fs.readFileSync(catalogPreviewFile, 'utf8');
+            const source = fs.readFileSync(catalogPreviewFallbackFile, 'utf8');
+            const curatedCase = `case '${model.slug}':`;
+            const marker = '// component-catalog-preview-entries';
+            const entryMarker = `// component-catalog-preview:${model.slug}`;
+            const hasCuratedPreview = curatedSource.includes(curatedCase);
+            const hasGeneratedPreview = source.includes(entryMarker);
+
+            if (hasCuratedPreview) {
+              if (hasGeneratedPreview) {
+                throw new Error(
+                  `Duplicate component catalog preview ownership for ${model.slug}. Remove the generated fallback when adding a curated preview.`
+                );
+              }
+
+              console.log(`⏭ Skipped generated catalog preview: curated ${model.slug}`);
+              return;
+            }
+
+            if (!model.platforms.includes('react')) {
+              throw new Error(
+                `Component ${model.componentName} requires a curated Web catalog preview because it has no React demo.`
+              );
+            }
+
+            if (hasGeneratedPreview) {
+              console.log(`⏭ Skipped generated catalog preview: ${model.slug}`);
+              return;
+            }
+
+            if (!source.includes(marker)) {
+              throw new Error(
+                `Catalog preview marker not found in ${catalogPreviewFallbackFile}`
+              );
+            }
+
+            const entry = `${entryMarker}\n  ${JSON.stringify(model.slug)}: lazy(() =>\n    import('../../components/${model.componentName}').then(\n      ({ ${model.componentName}Demo }) => ({ default: ${model.componentName}Demo })\n    )\n  ),`;
+            const nextSource = source.replace(marker, `${marker}\n${entry}`);
+            const formattedNextSource = await formatGeneratedContent(
+              catalogPreviewFallbackFile,
+              nextSource
+            );
+
+            if (check) {
+              if (formattedNextSource !== source) {
+                checkFailures.push(path.relative(root, catalogPreviewFallbackFile));
+              }
+              return;
+            }
+
+            fs.writeFileSync(catalogPreviewFallbackFile, formattedNextSource);
+            console.log(`✅ Updated: ${path.relative(root, catalogPreviewFallbackFile)}`);
+          }
+
+          '''
+          registry = replace_between(
+              registry,
+              'export async function updateCatalogPreviewFallback(params: {',
+              'export async function updateComponentRegistry(params: {',
+              preview_helper,
+              'catalog preview helper',
+          )
+          write(registry_path, registry)
+
+          registry_test_path = 'scripts/generators/component-page/renderers/registry.test.ts'
+          registry_test = read(registry_test_path)
+          registry_test = replace_once(
+              registry_test,
+              "      expect(content.match(/'switch': lazy\\(/g)).toHaveLength(1);",
+              "      expect(content.match(/\\/\\/ component-catalog-preview:switch/g)).toHaveLength(1);",
+              'preview idempotency assertion',
+          )
+          registry_test += r'''
+
+          it('rejects duplicate curated and generated catalog preview ownership', async () => {
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-preview-'));
+            const catalogPreviewFile = path.join(root, 'ComponentCatalogPreview.tsx');
+            const catalogPreviewFallbackFile = path.join(root, 'generatedCatalogPreviews.tsx');
+
+            fs.writeFileSync(catalogPreviewFile, `switch (slug) {\n  case 'switch':\n    return null;\n}\n`);
+            fs.writeFileSync(
+              catalogPreviewFallbackFile,
+              `import { lazy } from 'react';\n\nexport const generatedCatalogPreviews = {\n  // component-catalog-preview-entries\n  // component-catalog-preview:switch\n  switch: lazy(() => import('../../components/Switch')),\n};\n`
+            );
+
+            await expect(
+              updateCatalogPreviewFallback({
+                root,
+                check: true,
+                checkFailures: [],
+                catalogPreviewFile,
+                catalogPreviewFallbackFile,
+                model,
+              })
+            ).rejects.toThrow('Duplicate component catalog preview ownership');
+          });
+          '''
+          write(registry_test_path, registry_test)
+
+          contract_path = 'scripts/generators/component-page/catalog-preview-contract.test.ts'
+          contract = read(contract_path)
+          contract = replace_once(
+              contract,
+              "        const hasGeneratedPreview = generated.includes(`'${slug}': lazy(`);",
+              "        const hasGeneratedPreview = generated.includes(\n          `// component-catalog-preview:${slug}`\n        );",
+              'catalog preview identity',
+          )
+          contract = replace_once(
+              contract,
+              "        expect(\n          hasCuratedPreview || hasGeneratedPreview,\n          `${slug} is missing a component catalog preview`\n        ).toBe(true);",
+              "        expect(\n          Number(hasCuratedPreview) + Number(hasGeneratedPreview),\n          `${slug} must have exactly one component catalog preview owner`\n        ).toBe(1);",
+              'single preview owner contract',
+          )
+          write(contract_path, contract)
+
+          # Reuse existing catalog preview geometry; generated demos must not
+          # introduce a second hardcoded size authority.
+          preview_path = 'apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentCatalogPreview.tsx'
+          preview = read(preview_path)
+          start = preview.find('function GeneratedCatalogPreview(')
+          end = preview.find('function AccordionPreview()', start)
+          if start < 0 or end < 0:
+              raise RuntimeError('generated preview component boundary missing')
+          generated_component = r'''function GeneratedCatalogPreview({ slug }: { slug: string }) {
+            const Preview = generatedCatalogPreviews[slug];
+
+            if (!Preview) {
+              throw new Error(`Missing component catalog preview for "${slug}".`);
+            }
+
+            return (
+              <Suspense fallback={<span className={styles.previewHelper}>Loading preview...</span>}>
+                <Preview />
+              </Suspense>
+            );
+          }
+
+          '''
+          preview = preview[:start] + generated_component + preview[end:]
+          write(preview_path, preview)
+
+          css_path = 'apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.module.css'
+          css = read(css_path)
+          css = re.sub(
+              r'\n\.generatedPreview \{\n[\s\S]*?\n\}\n?$',
+              '\n',
+              css,
+              count=1,
+          )
+          write(css_path, css)
+          PY
+
+      - name: Final formatting
         run: |
           pnpm exec prettier --write \
             packages/metadata/src/components/index.ts \
