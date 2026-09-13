@@ -56,11 +56,11 @@ test('normal production eligibility comes only from a successful push-to-main st
 test('production mutation is approval-gated and pinned to the eligible SHA', () => {
   assert.match(
     productionWorkflow,
-    /group: deploy-worker-vellira-website\n  cancel-in-progress: false/
+    /group: deploy-worker-vellira-website\n {2}cancel-in-progress: false/
   );
 
   const deploy = jobBlock(productionWorkflow, 'deploy');
-  assert.match(deploy, /environment:\n      name: production/);
+  assert.match(deploy, /environment:\n {6}name: production/);
   assert.match(
     deploy,
     /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/
