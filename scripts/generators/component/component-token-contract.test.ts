@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { formatGeneratedFiles } from '../format-generated-files';
 import {
   checkComponentTokenContract,
   ensureComponentTokenContract,
@@ -50,6 +51,7 @@ describe('component token contract', () => {
     expect((await checkComponentTokenContract(plan)).length).toBeGreaterThan(0);
 
     ensureComponentTokenContract({ plan, result });
+    await formatGeneratedFiles(result.createdFiles);
 
     expect(await checkComponentTokenContract(plan)).toEqual([]);
     expect(fs.existsSync(plan.tokenFactoryFile)).toBe(true);
@@ -69,6 +71,7 @@ describe('component token contract', () => {
     };
 
     ensureComponentTokenContract({ plan, result });
+    await formatGeneratedFiles(result.createdFiles);
     fs.writeFileSync(
       plan.tokenFactoryFile,
       '// custom semantic token contract\n'
