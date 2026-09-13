@@ -25,6 +25,10 @@ import {
   type ComponentProductionGenerationResult,
 } from './generation';
 import {
+  runComponentReviewBundle,
+  type ComponentReviewBundleReport,
+} from './review-bundle';
+import {
   runComponentProductionStructuredValidation,
   type ComponentProductionStructuredValidationResult,
 } from './structured-validation';
@@ -54,7 +58,13 @@ export type ComponentProductionValidationResult = {
   stages: readonly ComponentProductionStageResult[];
   completeness: readonly ComponentCompletenessResult[] | null;
   quality: ComponentQualityRunResult | null;
+  reviewBundle: ComponentReviewBundleReport | null;
 };
+
+export type ComponentProductionValidationResultWithReviewBundle =
+  ComponentProductionValidationResultV1 & {
+    reviewBundle: ComponentReviewBundleReport | null;
+  };
 
 export type ComponentProductionRunDependencies = {
   runGeneration?: (params: {
@@ -73,6 +83,7 @@ export type ComponentProductionRunDependencies = {
     root: string;
     input: ComponentProductionInputV1;
   }) => ComponentProductionFinalValidationResult;
+  runReviewBundle?: typeof runComponentReviewBundle;
 };
 
 export async function runComponentProduction(params: {
@@ -147,9 +158,12 @@ export async function runComponentProductionValidation(params: {
   input: unknown;
   dependencies?: Pick<
     ComponentProductionRunDependencies,
-    'runCommandValidation' | 'runStructuredValidation' | 'runFinalValidation'
+    | 'runCommandValidation'
+    | 'runStructuredValidation'
+    | 'runFinalValidation'
+    | 'runReviewBundle'
   >;
-}): Promise<ComponentProductionValidationResultV1> {
+}): Promise<ComponentProductionValidationResultWithReviewBundle> {
   const input = parseComponentProductionInput(params.input);
 
   const validation = await validateComponentProductionCandidate({
@@ -185,6 +199,7 @@ export async function runComponentProductionValidation(params: {
     validationSummary,
     completeness: validation.completeness,
     quality: validation.quality,
+    reviewBundle: validation.reviewBundle,
   };
 }
 
@@ -193,7 +208,10 @@ export async function validateComponentProductionCandidate(params: {
   input: ComponentProductionInputV1;
   dependencies?: Pick<
     ComponentProductionRunDependencies,
-    'runCommandValidation' | 'runStructuredValidation' | 'runFinalValidation'
+    | 'runCommandValidation'
+    | 'runStructuredValidation'
+    | 'runFinalValidation'
+    | 'runReviewBundle'
   >;
 }): Promise<ComponentProductionValidationResult> {
   const runCommandValidation =
@@ -207,6 +225,10 @@ export async function validateComponentProductionCandidate(params: {
   const runFinalValidation =
     params.dependencies?.runFinalValidation ??
     runComponentProductionFinalValidation;
+
+  const runReviewBundle =
+    params.dependencies?.runReviewBundle ??
+    (params.dependencies === undefined ? runComponentReviewBundle : null);
 
   const commandValidation = runCommandValidation({
     root: params.root,
@@ -229,6 +251,7 @@ export async function validateComponentProductionCandidate(params: {
       ],
       completeness: null,
       quality: null,
+      reviewBundle: null,
     };
   }
 
@@ -252,6 +275,7 @@ export async function validateComponentProductionCandidate(params: {
       ],
       completeness: structuredValidation.completeness,
       quality: structuredValidation.quality,
+      reviewBundle: null,
     };
   }
 
@@ -259,15 +283,39 @@ export async function validateComponentProductionCandidate(params: {
     root: params.root,
     input: params.input,
   });
+  const blockingFinalStage = finalValidation.stages.find(
+    (stage) => stage.status !== 'passed'
+  );
+
+  if (blockingFinalStage || !runReviewBundle) {
+    return {
+      stages: [
+        ...commandValidation.stages,
+        ...structuredValidation.stages,
+        ...finalValidation.stages,
+      ],
+      completeness: structuredValidation.completeness,
+      quality: structuredValidation.quality,
+      reviewBundle: null,
+    };
+  }
+
+  const reviewBundle = runReviewBundle({
+    root: params.root,
+    input: params.input,
+    completenessStage: structuredValidation.stages[0],
+  });
 
   return {
     stages: [
       ...commandValidation.stages,
-      ...structuredValidation.stages,
+      reviewBundle.completenessStage,
+      structuredValidation.stages[1],
       ...finalValidation.stages,
     ],
     completeness: structuredValidation.completeness,
     quality: structuredValidation.quality,
+    reviewBundle: reviewBundle.report,
   };
 }
 
