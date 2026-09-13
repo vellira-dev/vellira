@@ -72,6 +72,8 @@
     "workflowRunId": 34714577111,
     "observedAt": "2026-09-12T19:41:36Z",
     "feedbackSeconds": 399,
+    "executionFeedbackSeconds": 384,
+    "queueDelaySeconds": 15,
     "longestRequiredJobSeconds": 349,
     "longestRequiredJob": "Cloudflare cache and multi-deployment browser contracts",
     "buildTestValidateSeconds": 250
