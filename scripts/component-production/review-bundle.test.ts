@@ -168,8 +168,10 @@ function createCompleteWebFixture() {
     'apps/website/src/component-catalog/components/Avatar/AvatarAccessibility.tsx':
       'accessibility',
     'apps/website/src/component-catalog/components/Avatar/avatarApi.ts': 'api',
-    'apps/website/src/component-catalog/components/Avatar/metadata.ts': 'metadata',
-    'apps/website/src/component-catalog/components/Avatar/AvatarDemo.tsx': 'demo',
+    'apps/website/src/component-catalog/components/Avatar/metadata.ts':
+      'metadata',
+    'apps/website/src/component-catalog/components/Avatar/AvatarDemo.tsx':
+      'demo',
     'apps/website/src/component-catalog/components/Avatar/AvatarCatalogPreview.tsx':
       'preview',
     'apps/website/src/component-catalog/registry/components.ts':

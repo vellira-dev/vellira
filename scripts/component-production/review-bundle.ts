@@ -13,9 +13,7 @@ import type {
 export const COMPONENT_REVIEW_BUNDLE_SCHEMA_VERSION = '1' as const;
 
 export type ComponentReviewBundleSurfaceStatus =
-  | 'ready'
-  | 'missing'
-  | 'not-applicable';
+  'ready' | 'missing' | 'not-applicable';
 
 export type ComponentReviewBundleEvidence = {
   kind: 'local-preview' | 'validation';
@@ -141,10 +139,7 @@ export function runComponentReviewBundle(params: {
       status: 'blocked',
       summary:
         'Canonical component completeness passed, but the complete review bundle is not ready for human review.',
-      findings: [
-        ...params.completenessStage.findings,
-        ...blockingFindings,
-      ],
+      findings: [...params.completenessStage.findings, ...blockingFindings],
     },
   };
 }
@@ -178,7 +173,8 @@ function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
     },
     {
       id: 'website-component-page',
-      label: 'Website component page, playground, examples, API and accessibility',
+      label:
+        'Website component page, playground, examples, API and accessibility',
       requiredPaths: [
         `${websiteDir}/index.ts`,
         `${websiteDir}/${componentName}Examples.tsx`,
@@ -312,9 +308,7 @@ function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
         id: `docs-${platform.packageName}`,
         label: `${platform.label} VitePress documentation`,
         platform: platform.platform,
-        requiredPaths: [
-          `apps/docs/src/${platform.docsDirectory}/${slug}.md`,
-        ],
+        requiredPaths: [`apps/docs/src/${platform.docsDirectory}/${slug}.md`],
         evidence: [
           localEvidence(
             ['pnpm', 'docs:dev'],
@@ -404,8 +398,12 @@ function evaluateSurface(
   }
 
   const artifacts = [
-    ...requiredPaths.filter((filePath) => fs.existsSync(path.join(root, filePath))),
-    ...anyOfPaths.filter((filePath) => fs.existsSync(path.join(root, filePath))),
+    ...requiredPaths.filter((filePath) =>
+      fs.existsSync(path.join(root, filePath))
+    ),
+    ...anyOfPaths.filter((filePath) =>
+      fs.existsSync(path.join(root, filePath))
+    ),
     ...anyOfContentRequirements
       .map((requirement) => requirement.path)
       .filter((filePath) => fs.existsSync(path.join(root, filePath))),
