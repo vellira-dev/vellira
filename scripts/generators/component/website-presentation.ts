@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import type { ComponentCapability } from '@vellira-ui/metadata';
 
 import {
@@ -23,7 +26,15 @@ function readComponentApiPropNames(params: {
   const propNames = new Set<string>();
 
   for (const platform of ['react', 'react-native'] as const) {
+    const packageSourceRoot = path.join(
+      params.root,
+      'packages',
+      platform,
+      'src'
+    );
+
     if (
+      !fs.existsSync(packageSourceRoot) ||
       !existsInPackage({
         root: params.root,
         packageName: platform,
