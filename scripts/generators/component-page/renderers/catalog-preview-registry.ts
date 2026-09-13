@@ -68,6 +68,111 @@ export function requiresGeneratedCatalogPreview(params: {
   );
 }
 
+export function renderGeneratedCatalogPreview(params: {
+  model: GeneratedPageModel;
+  generatedFileHeader: string;
+}) {
+  const { model, generatedFileHeader } = params;
+  const demoName = model.platforms.includes('react')
+    ? `${model.componentName}Demo`
+    : `Native${model.componentName}Demo`;
+
+  return `${generatedFileHeader}'use client';
+
+import { ${demoName} } from './${demoName}';
+
+export function ${model.componentName}CatalogPreview() {
+  return <${demoName} />;
+}
+`;
+}
+
+export async function synchronizeGeneratedCatalogPreview(params: {
+  root: string;
+  check: boolean;
+  checkFailures: string[];
+  componentCatalogDir: string;
+  componentsRegistryFile: string;
+  model: GeneratedPageModel;
+  generatedFileHeader: string;
+}) {
+  if (
+    !requiresGeneratedCatalogPreview({
+      componentsRegistryFile: params.componentsRegistryFile,
+      model: params.model,
+    })
+  ) {
+    return;
+  }
+
+  const previewFile = path.join(
+    params.componentCatalogDir,
+    `${params.model.componentName}CatalogPreview.tsx`
+  );
+  const currentSource = fs.existsSync(previewFile)
+    ? fs.readFileSync(previewFile, 'utf8')
+    : null;
+
+  if (
+    currentSource !== null &&
+    !currentSource.startsWith(params.generatedFileHeader)
+  ) {
+    return;
+  }
+
+  const expectedSource = await formatGeneratedContent(
+    previewFile,
+    renderGeneratedCatalogPreview({
+      model: params.model,
+      generatedFileHeader: params.generatedFileHeader,
+    })
+  );
+
+  if (currentSource === expectedSource) {
+    return;
+  }
+
+  if (params.check) {
+    params.checkFailures.push(path.relative(params.root, previewFile));
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(previewFile), { recursive: true });
+  fs.writeFileSync(previewFile, expectedSource);
+  console.log(
+    `${currentSource === null ? '✅ Created' : '♻️ Updated'}: ${path.relative(
+      params.root,
+      previewFile
+    )}`
+  );
+}
+
+function collectMatches(source: string, pattern: RegExp) {
+  return [...source.matchAll(pattern)]
+    .map((match) => match[1])
+    .filter((value): value is string => Boolean(value));
+}
+
+function collectGeneratedPreviewSlugs(source: string) {
+  return [
+    ...source.matchAll(
+      /^\s{2}(?:([A-Za-z_$][\w$]*)|'([^']+)'|"([^"]+)"):\s+[A-Za-z_$][\w$]*CatalogPreview,/gm
+    ),
+  ]
+    .map((match) => match[1] ?? match[2] ?? match[3])
+    .filter((value): value is string => Boolean(value));
+}
+
+function countBySlug(slugs: readonly string[]) {
+  const counts = new Map<string, number>();
+
+  for (const slug of slugs) {
+    counts.set(slug, (counts.get(slug) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 export function renderGeneratedCatalogPreviewRegistry(params: {
   componentsRoot: string;
 }) {
