@@ -36,6 +36,36 @@ function createRoot() {
     path.join(os.tmpdir(), 'vellira-website-presentation-')
   );
   tempRoots.push(root);
+
+  fs.writeFileSync(
+    path.join(root, 'tsconfig.base.json'),
+    JSON.stringify({
+      compilerOptions: {
+        target: 'ES2022',
+        module: 'NodeNext',
+        moduleResolution: 'NodeNext',
+        strict: true,
+        jsx: 'react-jsx',
+      },
+    })
+  );
+
+  for (const packageName of ['react', 'react-native']) {
+    const sourceRoot = path.join(root, 'packages', packageName, 'src');
+    fs.mkdirSync(sourceRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'packages', packageName, 'tsconfig.json'),
+      JSON.stringify({
+        extends: '../../tsconfig.base.json',
+        compilerOptions: {
+          rootDir: 'src',
+          noEmit: true,
+        },
+        include: ['src/**/*.ts', 'src/**/*.tsx'],
+      })
+    );
+  }
+
   return root;
 }
 
@@ -86,6 +116,58 @@ describe('generated website presentation metadata', () => {
     expect(source).toContain("title: 'Uncontrolled'");
     expect(source).toContain("props: ['defaultChecked']");
     expect(source).toContain("title: 'Invalid'");
+  });
+
+  it('does not promote part-only capabilities to root-level examples', () => {
+    const root = createRoot();
+    const metadataDir = path.join(root, 'packages/metadata/src/components');
+    const componentDir = path.join(
+      root,
+      'packages/react/src/components/CompoundProbe'
+    );
+    const itemDir = path.join(componentDir, 'Item');
+
+    fs.mkdirSync(metadataDir, { recursive: true });
+    fs.mkdirSync(itemDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(metadataDir, 'CompoundProbe.metadata.ts'),
+      `export const metadata = {
+  capabilities: ['compound-api', 'disabled'],
+};
+`
+    );
+    fs.writeFileSync(
+      path.join(componentDir, 'types.ts'),
+      `export interface CompoundProbeProps {
+  value?: string;
+}
+`
+    );
+    fs.writeFileSync(
+      path.join(itemDir, 'types.ts'),
+      `export interface CompoundProbeItemProps {
+  disabled?: boolean;
+}
+`
+    );
+
+    generateComponentWebsitePage({
+      root,
+      componentName: 'CompoundProbe',
+      profile: 'compound',
+      category: 'navigation',
+    });
+
+    const metadataFile = path.join(
+      root,
+      'apps/website/src/component-catalog/components/CompoundProbe/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    expect(source).toContain("title: 'Basic'");
+    expect(source).toContain("title: 'Rich content'");
+    expect(source).not.toContain("title: 'Disabled'");
+    expect(source).not.toContain("props: ['disabled']");
   });
 
   it('does not replace existing curated website metadata', () => {
