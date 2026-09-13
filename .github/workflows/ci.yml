@@ -227,10 +227,24 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build typecheck package-export prerequisites
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm exec turbo run build --filter=@vellira-ui/icons
 
       - name: Typecheck and API contracts
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm ci:typecheck
+
+      - name: Typecheck affected workspaces
+        if: needs.impact.outputs.execution_path == 'affected'
+        env:
+          VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
+        run: node scripts/ci/run-affected-workspaces.mjs typecheck
+
+      - name: Validate affected public API contracts
+        if: needs.impact.outputs.execution_path == 'affected'
+        run: |
+          pnpm docs:api:check
+          pnpm check:public-api
 
   tooling:
     name: Tooling & IndexNow Tests
@@ -301,10 +315,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Unit tests
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:unit
 
       - name: Coverage
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:coverage
+
+      - name: Test and cover affected workspaces
+        if: needs.impact.outputs.execution_path == 'affected'
+        env:
+          VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
+        run: node scripts/ci/run-affected-workspaces.mjs test test:coverage
 
   generator-blog:
     name: Component Page & Blog Tests
@@ -427,8 +449,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages and apps
-        if: needs.impact.outputs.shape != 'docs-only'
+        if: ${{ needs.impact.outputs.shape != 'docs-only' && needs.impact.outputs.execution_path != 'affected' }}
         run: pnpm ci:build
+
+      - name: Build affected workspaces
+        if: needs.impact.outputs.execution_path == 'affected'
+        env:
+          VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
+        run: node scripts/ci/run-affected-workspaces.mjs build
 
       - name: CodeShowcase browser regression
         if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-storybook')) }}
