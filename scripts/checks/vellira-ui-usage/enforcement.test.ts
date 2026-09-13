@@ -1,3 +1,7 @@
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { toBlockingVelliraUiUsageReport } from './enforcement';
@@ -74,5 +78,54 @@ describe('Vellira UI usage blocking enforcement', () => {
         exceptionsApplied: 0,
       },
     });
+  });
+
+  it('fails the real CLI when an ephemeral raw control is injected', () => {
+    const relativeProofPath =
+      'apps/website/src/__vellira_ui_usage_negative_proof__.tsx';
+    const proofPath = path.join(process.cwd(), relativeProofPath);
+
+    expect(fs.existsSync(proofPath)).toBe(false);
+    fs.writeFileSync(
+      proofPath,
+      'export const VelliraUiUsageNegativeProof = () => <button>Proof</button>;\n'
+    );
+
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [
+          '--import',
+          'tsx',
+          'scripts/checks/vellira-ui-usage/cli.ts',
+          '--json',
+        ],
+        {
+          cwd: process.cwd(),
+          encoding: 'utf8',
+        }
+      );
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+
+      const output = JSON.parse(result.stdout) as VelliraUiUsageReport;
+      expect(output).toMatchObject({
+        mode: 'blocking',
+        summary: {
+          blockingFindings: 1,
+        },
+      });
+      expect(output.findings).toContainEqual(
+        expect.objectContaining({
+          path: relativeProofPath,
+          detected: 'button',
+          severity: 'error',
+          blocking: true,
+        })
+      );
+    } finally {
+      fs.rmSync(proofPath, { force: true });
+    }
   });
 });
