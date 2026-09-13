@@ -1,0 +1,86 @@
+name: One-time Vellira UI usage blocking proof
+
+on:
+  push:
+    branches:
+      - ci/850-blocking-negative-proof
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove clean candidate exits zero
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:vellira-ui-usage:json > clean.json
+          jq -e '
+            .mode == "blocking" and
+            .summary.findings == 0 and
+            .summary.blockingFindings == 0 and
+            (.findings | length) == 0 and
+            (.exceptions | length) == 0
+          ' clean.json
+
+      - name: Inject one forbidden first-party control
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p apps/website/src/__ci__
+          cat > apps/website/src/__ci__/vellira-ui-usage-negative.tsx <<'EOF'
+          export function ForbiddenControl() {
+            return <button type='button'>Forbidden</button>;
+          }
+          EOF
+
+      - name: Prove regression fails closed with blocking JSON
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          pnpm check:vellira-ui-usage:json > blocked.json
+          status=$?
+          set -e
+
+          test "$status" -eq 1
+          jq -e '
+            .mode == "blocking" and
+            .summary.findings == 1 and
+            .summary.blockingFindings == 1 and
+            (.exceptions | length) == 0 and
+            (.findings | length) == 1 and
+            .findings[0].path == "apps/website/src/__ci__/vellira-ui-usage-negative.tsx" and
+            .findings[0].ruleId == "vellira-ui.existing-component-bypass" and
+            .findings[0].canonicalAlternative == "Button" and
+            .findings[0].severity == "error" and
+            .findings[0].blocking == true
+          ' blocked.json
+
+      - name: Upload proof reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: vellira-ui-usage-blocking-proof
+          path: |
+            clean.json
+            blocked.json
+          if-no-files-found: error
+          retention-days: 7
