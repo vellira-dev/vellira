@@ -24,6 +24,24 @@ const ignoredDirectories = new Set([
   'vendor',
 ]);
 
+function isMissingPathError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'ENOENT'
+  );
+}
+
+function readDirectoryEntries(directory: string, allowMissing: boolean) {
+  try {
+    return fs.readdirSync(directory, { withFileTypes: true });
+  } catch (error) {
+    if (allowMissing && isMissingPathError(error)) return [];
+    throw error;
+  }
+}
+
 function kebabCase(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
@@ -199,11 +217,11 @@ function componentProviderVariables(
     const discovered = new Set<string>();
     const componentRoot = path.join(root, boundary.rootPath);
 
-    function walkRuntimeSources(directory: string) {
-      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    function walkRuntimeSources(directory: string, allowMissing = false) {
+      for (const entry of readDirectoryEntries(directory, allowMissing)) {
         const absolutePath = path.join(directory, entry.name);
         if (entry.isDirectory()) {
-          walkRuntimeSources(absolutePath);
+          walkRuntimeSources(absolutePath, true);
           continue;
         }
         if (
@@ -229,7 +247,7 @@ function componentProviderVariables(
       }
     }
 
-    walkRuntimeSources(componentRoot);
+    walkRuntimeSources(componentRoot, true);
     runtimeVariables = discovered;
     runtimeCache.set(boundary.rootPath, runtimeVariables);
   }
@@ -253,11 +271,11 @@ function componentFamilyProviderCandidates(
   const variables = new Set<string>();
   const componentRoot = path.join(root, boundary.rootPath);
 
-  function walkStyles(directory: string) {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+  function walkStyles(directory: string, allowMissing = false) {
+    for (const entry of readDirectoryEntries(directory, allowMissing)) {
       const absolutePath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        walkStyles(absolutePath);
+        walkStyles(absolutePath, true);
         continue;
       }
       if (!entry.isFile() || !/\.(?:css|scss)$/.test(entry.name)) continue;
@@ -275,7 +293,7 @@ function componentFamilyProviderCandidates(
     }
   }
 
-  walkStyles(componentRoot);
+  walkStyles(componentRoot, true);
   cache.set(boundary.rootPath, variables);
   return variables;
 }
@@ -297,9 +315,10 @@ export function checkTokenCssReferences(root: string): RuleResult {
 
   function walk(
     directory: string,
-    canonicalVariables: ReadonlySet<string>
+    canonicalVariables: ReadonlySet<string>,
+    allowMissing = false
   ): void {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    for (const entry of readDirectoryEntries(directory, allowMissing)) {
       if (ignoredDirectories.has(entry.name)) continue;
       const absolutePath = path.join(directory, entry.name);
       const sourcePath = path
@@ -326,7 +345,7 @@ export function checkTokenCssReferences(root: string): RuleResult {
         continue;
       }
       if (entry.isDirectory()) {
-        walk(absolutePath, canonicalVariables);
+        walk(absolutePath, canonicalVariables, true);
         continue;
       }
       if (!entry.isFile() || !/\.(css|scss)$/.test(entry.name)) continue;
