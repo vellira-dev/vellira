@@ -1,3 +1,4 @@
+// CI proof fixture for #1069 package-local affected execution; do not merge.
 export type { AccordionProps } from './components/Accordion';
 export type { AccordionItemProps } from './components/Accordion';
 export type { AccordionTriggerProps } from './components/Accordion';
