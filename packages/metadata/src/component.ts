@@ -14,20 +14,23 @@ export type ComponentCategory =
   | 'layout'
   | 'utility';
 
-export type ComponentCapability =
-  | 'controlled'
-  | 'uncontrolled'
-  | 'disabled'
-  | 'required'
-  | 'invalid'
-  | 'loading'
-  | 'keyboard'
-  | 'focus-management'
-  | 'compound-api'
-  | 'multiple'
-  | 'collapsible'
-  | 'portal'
-  | 'responsive';
+export const componentCapabilities = [
+  'controlled',
+  'uncontrolled',
+  'disabled',
+  'required',
+  'invalid',
+  'loading',
+  'keyboard',
+  'focus-management',
+  'compound-api',
+  'multiple',
+  'collapsible',
+  'portal',
+  'responsive',
+] as const;
+
+export type ComponentCapability = (typeof componentCapabilities)[number];
 
 export type ComponentProfile = 'base' | 'form-control' | 'compound' | 'overlay';
 

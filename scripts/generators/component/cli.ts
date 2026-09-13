@@ -1,9 +1,10 @@
-import type {
-  ComponentAssetRequirement,
-  ComponentCapability,
-  ComponentDependencies,
-  ComponentIconRequirement,
-  ComponentTokenContract,
+import {
+  componentCapabilities,
+  type ComponentAssetRequirement,
+  type ComponentCapability,
+  type ComponentDependencies,
+  type ComponentIconRequirement,
+  type ComponentTokenContract,
 } from '@vellira-ui/metadata';
 
 export type ComponentPlatformArg = 'web' | 'native' | 'both';
@@ -61,22 +62,6 @@ const categories: readonly ComponentCategoryArg[] = [
   'data-display',
   'layout',
   'utility',
-];
-
-const capabilities: readonly ComponentCapability[] = [
-  'controlled',
-  'uncontrolled',
-  'disabled',
-  'required',
-  'invalid',
-  'loading',
-  'keyboard',
-  'focus-management',
-  'compound-api',
-  'multiple',
-  'collapsible',
-  'portal',
-  'responsive',
 ];
 
 const componentNamePattern = /^[A-Z][A-Za-z0-9]*$/;
@@ -222,12 +207,12 @@ export function parseComponentGeneratorArgs(
 
       const invalid = parsed.filter(
         (capability) =>
-          !capabilities.includes(capability as ComponentCapability)
+          !componentCapabilities.includes(capability as ComponentCapability)
       );
 
       if (invalid.length > 0) {
         throw new Error(
-          `Invalid component capabilities: ${invalid.join(', ')}. Expected: ${capabilities.join(', ')}.`
+          `Invalid component capabilities: ${invalid.join(', ')}. Expected: ${componentCapabilities.join(', ')}.`
         );
       }
 
