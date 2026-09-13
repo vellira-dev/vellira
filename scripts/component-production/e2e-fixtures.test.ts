@@ -6,8 +6,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
 import { runComponentGenerator } from '../generators/component/run';
+import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
 import {
   createComponentProductionGeneratorOptions,
   type ComponentProductionInputV1,
@@ -26,7 +26,13 @@ const FIXTURE_TIMEOUT_MS = 240_000;
 const repositoryRoot = process.cwd();
 const temporaryWorktrees: Array<{ parent: string; root: string }> = [];
 
-const fixtures = [
+type Fixture = {
+  id: string;
+  roles: readonly string[];
+  input: ComponentProductionInputV1;
+};
+
+const fixtures: readonly Fixture[] = [
   {
     id: 'base-web',
     roles: ['base'],
@@ -115,11 +121,7 @@ const fixtures = [
       parts: [],
     },
   },
-] as const satisfies readonly {
-  id: string;
-  roles: readonly string[];
-  input: ComponentProductionInputV1;
-}[];
+];
 
 const invalidFixture: ComponentProductionInputV1 = {
   schemaVersion: '1',
@@ -161,85 +163,16 @@ describe.sequential('component production end-to-end fixtures', () => {
     'locks the generated lifecycle across representative component families',
     async () => {
       const root = createIsolatedWorktree();
-      const generatedArtifacts = new Map<string, readonly string[]>();
 
       for (const fixture of fixtures) {
-        if (fixture.input.componentTokens !== false) {
-          reserveTokenLifecycleFixture(root, fixture.input.componentName);
-        }
-
-        const generation = await runComponentProductionGeneration({
-          root,
-          input: fixture.input,
-        });
-
-        expect(generation.preflight, fixture.id).toMatchObject({
-          status: 'passed',
-        });
-        expect(generation.generation, fixture.id).toMatchObject({
-          status: 'passed',
-        });
-        expect(generation.generatedArtifacts.length, fixture.id).toBeGreaterThan(
-          0
-        );
-
-        generatedArtifacts.set(
-          fixture.input.componentName,
-          generation.generatedArtifacts
-        );
-
+        await generateFixture(root, fixture);
         expectCanonicalGeneratedSurfaces(root, fixture.input);
         completeManualCoverage(root, fixture.input);
       }
 
       expectCompoundPlatformDivergence(root);
-
-      const invalidGeneration = await runComponentProductionGeneration({
-        root,
-        input: invalidFixture,
-      });
-
-      expect(invalidGeneration.preflight.status).toBe('blocked');
-      expect(invalidGeneration.generation.status).toBe('skipped');
-      expect(invalidGeneration.generatedArtifacts).toEqual([]);
-      expect(
-        fs.existsSync(
-          path.join(
-            root,
-            'packages/react/src/primitives',
-            invalidFixture.componentName
-          )
-        )
-      ).toBe(false);
-
-      const beforeRegeneration = fingerprintWorkingTree(root);
-
-      for (const fixture of fixtures) {
-        const options = createComponentProductionGeneratorOptions(fixture.input);
-
-        await runComponentGenerator({
-          root,
-          options: {
-            ...options,
-            force: true,
-          },
-        });
-      }
-
-      expect(fingerprintWorkingTree(root)).toEqual(beforeRegeneration);
-
-      for (const fixture of fixtures) {
-        await expect(
-          runComponentGenerator({
-            root,
-            options: {
-              ...createComponentProductionGeneratorOptions(fixture.input),
-              check: true,
-            },
-          })
-        ).resolves.toMatchObject({ check: true });
-      }
-
+      await expectInvalidFixtureToFailClosed(root);
+      await expectDeterministicRegeneration(root);
       commitFixtureCandidate(root);
 
       for (const fixture of fixtures) {
@@ -261,13 +194,13 @@ describe.sequential('component production end-to-end fixtures', () => {
         expect(structured.completeness, fixture.id).not.toBeNull();
         expect(structured.quality, fixture.id).not.toBeNull();
 
-        const machineReadable = await runMachineReadableValidation({
+        const result = await runMachineReadableValidation({
           root,
           input: fixture.input,
           structured,
         });
 
-        expect(machineReadable, fixture.id).toMatchObject({
+        expect(result, fixture.id).toMatchObject({
           schemaVersion: '1',
           status: 'ready',
           readyForReview: true,
@@ -278,31 +211,19 @@ describe.sequential('component production end-to-end fixtures', () => {
             workingTreeClean: true,
           },
         });
-        expect(machineReadable.blockingFindings, fixture.id).toEqual([]);
-
-        const artifacts = generatedArtifacts.get(fixture.input.componentName);
-        expect(artifacts, fixture.id).toBeDefined();
+        expect(result.blockingFindings, fixture.id).toEqual([]);
       }
     },
     FIXTURE_TIMEOUT_MS
   );
 
   it(
-    'fails compound completeness until generic instance-isolation evidence exists',
+    'blocks compound completeness until instance-isolation evidence exists',
     async () => {
       const root = createIsolatedWorktree();
-      const fixture = fixtures.find((item) =>
-        item.roles.includes('intentional-divergence')
-      );
+      const fixture = divergentCompoundFixture();
 
-      expect(fixture).toBeDefined();
-
-      if (!fixture) {
-        return;
-      }
-
-      reserveTokenLifecycleFixture(root, fixture.input.componentName);
-
+      await prepareTokenLifecycle(root, fixture.input);
       const generation = await runComponentProductionGeneration({
         root,
         input: fixture.input,
@@ -310,11 +231,7 @@ describe.sequential('component production end-to-end fixtures', () => {
 
       expect(generation.generation.status).toBe('passed');
 
-      const webContract = readCoverageContract(
-        root,
-        fixture.input,
-        'react'
-      );
+      const webContract = readCoverageContract(root, fixture.input, 'react');
       const nativeContract = readCoverageContract(
         root,
         fixture.input,
@@ -350,21 +267,91 @@ describe.sequential('component production end-to-end fixtures', () => {
         componentDirectory(root, fixture.input, 'react'),
         `${fixture.input.componentName}.manual.test.tsx`
       );
-      expect(fs.readFileSync(manualTest, 'utf8')).toContain(
-        '// Coverage contract:'
-      );
-      expect(fs.readFileSync(manualTest, 'utf8')).toContain(
-        'instance-isolation'
-      );
+      const manualSource = fs.readFileSync(manualTest, 'utf8');
+
+      expect(manualSource).toContain('// Coverage contract:');
+      expect(manualSource).toContain('instance-isolation');
     },
     FIXTURE_TIMEOUT_MS
   );
 });
 
+async function generateFixture(root: string, fixture: Fixture) {
+  await prepareTokenLifecycle(root, fixture.input);
+
+  const generation = await runComponentProductionGeneration({
+    root,
+    input: fixture.input,
+  });
+
+  expect(generation.preflight, fixture.id).toMatchObject({ status: 'passed' });
+  expect(generation.generation, fixture.id).toMatchObject({ status: 'passed' });
+  expect(generation.generatedArtifacts.length, fixture.id).toBeGreaterThan(0);
+}
+
+async function prepareTokenLifecycle(
+  root: string,
+  input: ComponentProductionInputV1
+) {
+  if (input.componentTokens !== false) {
+    reserveTokenLifecycleFixture(root, input.componentName);
+  }
+}
+
+async function expectInvalidFixtureToFailClosed(root: string) {
+  const generation = await runComponentProductionGeneration({
+    root,
+    input: invalidFixture,
+  });
+
+  expect(generation.preflight.status).toBe('blocked');
+  expect(generation.generation.status).toBe('skipped');
+  expect(generation.generatedArtifacts).toEqual([]);
+  expect(
+    fs.existsSync(
+      path.join(
+        root,
+        'packages/react/src/primitives',
+        invalidFixture.componentName
+      )
+    )
+  ).toBe(false);
+}
+
+async function expectDeterministicRegeneration(root: string) {
+  const before = fingerprintWorkingTree(root);
+
+  for (const fixture of fixtures) {
+    await runComponentGenerator({
+      root,
+      options: {
+        ...createComponentProductionGeneratorOptions(fixture.input),
+        force: true,
+      },
+    });
+  }
+
+  expect(fingerprintWorkingTree(root)).toEqual(before);
+
+  for (const fixture of fixtures) {
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          ...createComponentProductionGeneratorOptions(fixture.input),
+          check: true,
+        },
+      })
+    ).resolves.toMatchObject({ check: true });
+  }
+}
+
 async function runMachineReadableValidation(params: {
   root: string;
   input: ComponentProductionInputV1;
-  structured: Awaited<ReturnType<typeof runComponentProductionStructuredValidation>>;
+  structured: Awaited<
+    ReturnType<typeof runComponentProductionStructuredValidation>
+  >;
 }) {
   const dependencies: Pick<
     ComponentProductionRunDependencies,
@@ -391,16 +378,20 @@ function createIsolatedWorktree() {
     path.join(os.tmpdir(), 'vellira-component-production-e2e-')
   );
   const root = path.join(parent, 'repo');
-  const add = spawnSync('git', ['worktree', 'add', '--detach', root, 'HEAD'], {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-    shell: false,
-  });
+  const result = spawnSync(
+    'git',
+    ['worktree', 'add', '--detach', root, 'HEAD'],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      shell: false,
+    }
+  );
 
-  if (add.status !== 0) {
+  if (result.status !== 0) {
     fs.rmSync(parent, { recursive: true, force: true });
     throw new Error(
-      `Unable to create component production fixture worktree: ${add.stderr}`
+      `Unable to create component production fixture worktree: ${result.stderr}`
     );
   }
 
@@ -456,17 +447,20 @@ function expectCanonicalGeneratedSurfaces(
   input: ComponentProductionInputV1
 ) {
   const slug = slugify(input.componentName);
-  const lowerName = `${input.componentName[0].toLowerCase()}${input.componentName.slice(1)}`;
+  const lowerName = `${input.componentName[0]?.toLowerCase() ?? ''}${input.componentName.slice(1)}`;
   const websiteDir = path.join(
     root,
     'apps/website/src/component-catalog/components',
     input.componentName
   );
 
-  expectFile(root, `packages/metadata/src/components/${input.componentName}.metadata.ts`);
+  expectFile(
+    root,
+    `packages/metadata/src/components/${input.componentName}.metadata.ts`
+  );
 
   for (const platform of selectedPlatforms(input)) {
-    const relativeDir = `packages/${platform.packageName}/src/${input.layer}/${input.componentName}`;
+    const componentDir = `packages/${platform.packageName}/src/${input.layer}/${input.componentName}`;
 
     for (const fileName of [
       `${input.componentName}.tsx`,
@@ -476,13 +470,10 @@ function expectCanonicalGeneratedSurfaces(
       `${input.componentName}.test-contract.json`,
       `${input.componentName}.stories.tsx`,
     ]) {
-      expectFile(root, `${relativeDir}/${fileName}`);
+      expectFile(root, `${componentDir}/${fileName}`);
     }
 
-    expectFile(
-      root,
-      `apps/docs/src/${platform.docsDirectory}/${slug}.md`
-    );
+    expectFile(root, `apps/docs/src/${platform.docsDirectory}/${slug}.md`);
   }
 
   for (const fileName of [
@@ -496,9 +487,9 @@ function expectCanonicalGeneratedSurfaces(
   }
 
   if (input.platform === 'web' || input.platform === 'both') {
-    expect(fs.existsSync(path.join(websiteDir, `${input.componentName}Demo.tsx`))).toBe(
-      true
-    );
+    expect(
+      fs.existsSync(path.join(websiteDir, `${input.componentName}Demo.tsx`))
+    ).toBe(true);
   }
 
   if (input.platform === 'native' || input.platform === 'both') {
@@ -527,9 +518,8 @@ function completeManualCoverage(
       continue;
     }
 
-    const componentDir = componentDirectory(root, input, platform.platform);
     const manualTest = path.join(
-      componentDir,
+      componentDirectory(root, input, platform.platform),
       `${input.componentName}.manual.test.tsx`
     );
     const marker = `// Coverage contract: ${requirements.join(', ')}`;
@@ -542,16 +532,7 @@ function completeManualCoverage(
 }
 
 function expectCompoundPlatformDivergence(root: string) {
-  const fixture = fixtures.find((item) =>
-    item.roles.includes('intentional-divergence')
-  );
-
-  expect(fixture).toBeDefined();
-
-  if (!fixture) {
-    return;
-  }
-
+  const fixture = divergentCompoundFixture();
   const web = readCoverageContract(root, fixture.input, 'react');
   const native = readCoverageContract(root, fixture.input, 'react-native');
 
@@ -564,6 +545,18 @@ function expectCompoundPlatformDivergence(root: string) {
   expect(web).not.toEqual(native);
 }
 
+function divergentCompoundFixture() {
+  const fixture = fixtures.find((item) =>
+    item.roles.includes('intentional-divergence')
+  );
+
+  if (!fixture) {
+    throw new Error('Compound divergence fixture is missing.');
+  }
+
+  return fixture;
+}
+
 function readCoverageContract(
   root: string,
   input: ComponentProductionInputV1,
@@ -572,12 +565,15 @@ function readCoverageContract(
   baseline: { requirements: string[] };
   componentSpecific: { required: boolean; requirements: string[] };
 } {
-  const file = path.join(
-    componentDirectory(root, input, platform),
-    `${input.componentName}.test-contract.json`
-  );
-
-  return JSON.parse(fs.readFileSync(file, 'utf8')) as {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(
+        componentDirectory(root, input, platform),
+        `${input.componentName}.test-contract.json`
+      ),
+      'utf8'
+    )
+  ) as {
     baseline: { requirements: string[] };
     componentSpecific: { required: boolean; requirements: string[] };
   };
@@ -642,14 +638,12 @@ function commitFixtureCandidate(root: string) {
 }
 
 function fingerprintWorkingTree(root: string) {
-  const status = runGit(root, [
+  return runGit(root, [
     'status',
     '--porcelain=v1',
     '-z',
     '--untracked-files=all',
-  ]);
-
-  return status
+  ])
     .split('\u0000')
     .filter(Boolean)
     .map((record) => {
