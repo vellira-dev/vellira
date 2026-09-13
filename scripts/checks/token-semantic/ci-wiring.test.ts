@@ -13,7 +13,9 @@ describe('token semantic blocking CI wiring', () => {
     const strict = packageJson.scripts?.['check:tokens-semantic:strict'];
     const quality = packageJson.scripts?.['ci:quality'];
 
-    expect(strict).toBe('tsx scripts/checks/token-semantic/cli.ts');
+    expect(strict).toBe(
+      'node --import tsx scripts/checks/token-semantic/cli.ts'
+    );
     expect(typeof quality).toBe('string');
     expect(quality).toContain('pnpm check:tokens-semantic:strict');
     expect(
