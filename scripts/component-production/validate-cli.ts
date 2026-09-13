@@ -2,17 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { COMPONENT_PRODUCTION_SCHEMA_VERSION } from './contracts';
+import {
+  COMPONENT_PRODUCTION_SCHEMA_VERSION,
+  type ComponentProductionValidationResultV1,
+} from './contracts';
 import { runComponentProductionValidation } from './run';
 
 type ComponentProductionValidationCliOptions = {
   specFile: string;
 };
 
+type ComponentProductionValidationRunner = (
+  params: Parameters<typeof runComponentProductionValidation>[0]
+) => Promise<ComponentProductionValidationResultV1>;
+
 export type ComponentProductionValidationCliDependencies = {
   root?: string;
   readFile?: (filePath: string) => string;
-  runValidation?: typeof runComponentProductionValidation;
+  runValidation?: ComponentProductionValidationRunner;
   write?: (message: string) => void;
   writeError?: (message: string) => void;
 };
