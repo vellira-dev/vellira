@@ -66,6 +66,7 @@ export function analyzeJobs(run, jobs, workflowContract) {
   const startedMs = timedJobs.map((job) => Date.parse(job.started_at));
   const completedMs = timedJobs.map((job) => Date.parse(job.completed_at));
   const firstStartedMs = startedMs.length > 0 ? Math.min(...startedMs) : Number.NaN;
+  const lastStartedMs = startedMs.length > 0 ? Math.max(...startedMs) : Number.NaN;
   const lastCompletedMs =
     completedMs.length > 0 ? Math.max(...completedMs) : Number.NaN;
 
@@ -81,6 +82,10 @@ export function analyzeJobs(run, jobs, workflowContract) {
     Number.isFinite(runCreatedMs) && Number.isFinite(firstStartedMs)
       ? Math.max(0, Math.ceil((firstStartedMs - runCreatedMs) / 1000))
       : null;
+  const schedulerSkewSeconds =
+    Number.isFinite(firstStartedMs) && Number.isFinite(lastStartedMs)
+      ? Math.max(0, Math.ceil((lastStartedMs - firstStartedMs) / 1000))
+      : null;
 
   const jobTimings = timedJobs
     .map((job) => ({
@@ -93,6 +98,8 @@ export function analyzeJobs(run, jobs, workflowContract) {
       ),
     }))
     .sort((a, b) => b.durationSeconds - a.durationSeconds);
+  const longestRequiredJob = jobTimings[0] ?? null;
+  const criticalPathSeconds = longestRequiredJob?.durationSeconds ?? null;
 
   return {
     missingJobs,
@@ -101,7 +108,9 @@ export function analyzeJobs(run, jobs, workflowContract) {
     feedbackSeconds,
     executionFeedbackSeconds,
     queueDelaySeconds,
-    longestRequiredJob: jobTimings[0] ?? null,
+    schedulerSkewSeconds,
+    criticalPathSeconds,
+    longestRequiredJob,
     jobs: workflowContract.requiredJobs.map((name) => {
       const job = byName.get(name);
       if (!job) return { name, conclusion: 'missing' };
@@ -307,6 +316,7 @@ async function historicalSamples({
       analysis.unknownJobs.length > 0 ||
       analysis.feedbackSeconds === null ||
       analysis.executionFeedbackSeconds === null ||
+      analysis.criticalPathSeconds === null ||
       analysis.executionPath !== currentExecutionPath
     ) {
       continue;
@@ -338,6 +348,8 @@ async function historicalSamples({
       feedbackSeconds: analysis.feedbackSeconds,
       executionFeedbackSeconds: analysis.executionFeedbackSeconds,
       queueDelaySeconds: analysis.queueDelaySeconds,
+      schedulerSkewSeconds: analysis.schedulerSkewSeconds,
+      criticalPathSeconds: analysis.criticalPathSeconds,
     });
   }
 
@@ -349,7 +361,7 @@ async function historicalSamples({
 
   if (
     samples.length < enforcement.historyWindow - 1 &&
-    baseline?.executionFeedbackSeconds &&
+    baseline?.longestRequiredJobSeconds &&
     baseline.workflowRunId !== currentRun.id &&
     currentExecutionPath === 'full' &&
     currentBudget.targetSeconds === budgets.normal.targetSeconds
@@ -366,6 +378,8 @@ async function historicalSamples({
         feedbackSeconds: baseline.feedbackSeconds,
         executionFeedbackSeconds: baseline.executionFeedbackSeconds,
         queueDelaySeconds: baseline.queueDelaySeconds ?? null,
+        schedulerSkewSeconds: null,
+        criticalPathSeconds: baseline.longestRequiredJobSeconds,
         source: 'canonical-baseline',
       });
     }
@@ -384,9 +398,9 @@ function formatSeconds(seconds) {
 function makeSummary(evidence) {
   const resultLabel = {
     pass: 'PASS',
-    'within-tolerance': 'PASS — execution tolerance',
-    anomaly: 'WARN — single slow execution anomaly',
-    fail: 'FAIL — sustained execution regression',
+    'within-tolerance': 'PASS — critical-path tolerance',
+    anomaly: 'WARN — single slow critical-path anomaly',
+    fail: 'FAIL — sustained critical-path regression',
     'not-evaluated': 'NOT EVALUATED — CI correctness failure',
     'contract-error': 'FAIL — timing contract drift',
   }[evidence.result.status];
@@ -402,9 +416,11 @@ function makeSummary(evidence) {
     `| Execution path | ${evidence.executionPath} |`,
     `| Total feedback wall clock | ${formatSeconds(evidence.timings.feedbackSeconds)} |`,
     `| Hosted-runner initial queue | ${formatSeconds(evidence.timings.queueDelaySeconds)} |`,
-    `| Budgeted execution wall clock | ${formatSeconds(evidence.timings.executionFeedbackSeconds)} |`,
+    `| Hosted-runner scheduler skew | ${formatSeconds(evidence.timings.schedulerSkewSeconds)} |`,
+    `| Parallel execution span (telemetry) | ${formatSeconds(evidence.timings.executionFeedbackSeconds)} |`,
+    `| Budgeted critical path | ${formatSeconds(evidence.timings.criticalPathSeconds)} |`,
     `| Target | ${formatSeconds(evidence.budget.effective.targetSeconds)} |`,
-    `| Execution tolerance ceiling | ${formatSeconds(evidence.budget.effective.targetSeconds + evidence.budget.effective.toleranceSeconds)} |`,
+    `| Critical-path tolerance ceiling | ${formatSeconds(evidence.budget.effective.targetSeconds + evidence.budget.effective.toleranceSeconds)} |`,
     `| Longest required job | ${evidence.timings.longestRequiredJob?.name ?? 'n/a'} (${formatSeconds(evidence.timings.longestRequiredJob?.durationSeconds ?? null)}) |`,
     '',
   ];
@@ -429,7 +445,7 @@ function makeSummary(evidence) {
     lines.push('', '## Recent comparable samples', '');
     for (const sample of evidence.history.samples) {
       lines.push(
-        `- run ${sample.workflowRunId}: execution ${formatSeconds(sample.executionFeedbackSeconds)}, total ${formatSeconds(sample.feedbackSeconds)}, initial queue ${formatSeconds(sample.queueDelaySeconds)} (${sample.shape})`
+        `- run ${sample.workflowRunId}: critical path ${formatSeconds(sample.criticalPathSeconds)}, total ${formatSeconds(sample.feedbackSeconds)}, initial queue ${formatSeconds(sample.queueDelaySeconds)}, scheduler skew ${formatSeconds(sample.schedulerSkewSeconds)} (${sample.shape})`
       );
     }
   }
@@ -502,12 +518,13 @@ async function main() {
     };
   } else if (
     timing.feedbackSeconds === null ||
-    timing.executionFeedbackSeconds === null
+    timing.executionFeedbackSeconds === null ||
+    timing.criticalPathSeconds === null
   ) {
     result = {
       status: 'contract-error',
       blocking: true,
-      message: 'Required job timestamps were incomplete; deterministic feedback and execution latency could not be calculated.',
+      message: 'Required job timestamps were incomplete; deterministic feedback and critical-path latency could not be calculated.',
     };
   } else {
     history = await historicalSamples({
@@ -525,23 +542,21 @@ async function main() {
       token,
     });
     const evaluation = evaluateBudget({
-      currentSeconds: timing.executionFeedbackSeconds,
+      currentSeconds: timing.criticalPathSeconds,
       targetSeconds: budget.effective.targetSeconds,
       toleranceSeconds: budget.effective.toleranceSeconds,
-      historicalSeconds: history.map(
-        (sample) => sample.executionFeedbackSeconds
-      ),
+      historicalSeconds: history.map((sample) => sample.criticalPathSeconds),
       historyWindow: config.enforcement.historyWindow,
       requiredExceedancesForFailure:
         config.enforcement.requiredExceedancesForFailure,
     });
     const messages = {
-      pass: 'Required-check execution latency is within the maintained target.',
+      pass: 'Required-check critical-path duration is within the maintained target.',
       'within-tolerance':
-        'The execution window exceeded the target but remains inside the documented tolerance. Hosted-runner queue remains visible separately and is not treated as a code regression.',
+        'The longest required lane exceeded the target but remains inside the documented tolerance. Hosted-runner queue and scheduling skew remain visible separately and are not treated as code regressions.',
       anomaly:
-        'The execution window exceeded the tolerance ceiling, but recent comparable execution history does not show a sustained regression yet.',
-      fail: 'The execution tolerance ceiling has been exceeded repeatedly in the configured history window. Optimize the CI critical path or explicitly revise the budget contract.',
+        'The longest required lane exceeded the tolerance ceiling, but recent comparable critical-path history does not show a sustained regression yet.',
+      fail: 'The critical-path tolerance ceiling has been exceeded repeatedly in the configured history window. Optimize the CI critical path or explicitly revise the budget contract.',
     };
     result = { ...evaluation, message: messages[evaluation.status] };
   }
@@ -570,6 +585,8 @@ async function main() {
       feedbackSeconds: timing.feedbackSeconds,
       executionFeedbackSeconds: timing.executionFeedbackSeconds,
       queueDelaySeconds: timing.queueDelaySeconds,
+      schedulerSkewSeconds: timing.schedulerSkewSeconds,
+      criticalPathSeconds: timing.criticalPathSeconds,
       longestRequiredJob: timing.longestRequiredJob,
       jobs: timing.jobs,
     },
