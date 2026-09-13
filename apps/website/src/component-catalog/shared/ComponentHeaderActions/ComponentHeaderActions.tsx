@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 
+import { Button } from '@vellira-ui/react';
+
 import type { ComponentCatalogEntry, ComponentPlatform } from '../../types';
 
 import styles from './ComponentHeaderActions.module.css';
@@ -31,7 +33,8 @@ export function ComponentHeaderActions({
           const isActive = item === platform;
 
           return (
-            <button
+            <Button
+              appearance='bare'
               key={item}
               type='button'
               className={[
@@ -44,7 +47,7 @@ export function ComponentHeaderActions({
               onClick={() => onPlatformChange(item)}
             >
               {platformLabels[item]}
-            </button>
+            </Button>
           );
         })}
       </div>
