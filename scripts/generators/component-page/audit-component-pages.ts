@@ -1,3 +1,5 @@
+import './audit-catalog-previews';
+
 import fs from 'node:fs';
 import path from 'node:path';
 

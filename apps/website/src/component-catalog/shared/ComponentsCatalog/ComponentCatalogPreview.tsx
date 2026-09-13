@@ -1,18 +1,20 @@
 'use client';
 
+import type { ComponentType } from 'react';
+
 import {
-  Accordion,
   Button,
   Checkbox,
   Input,
   Radio,
   RadioGroup,
   Select,
-  Switch,
   Tabs,
 } from '@vellira-ui/react';
 
 import { ChevronDown, Edit, Settings, Trash, Info } from '@vellira-ui/icons';
+
+import { generatedCatalogPreviews } from '../../registry/generatedCatalogPreviews';
 
 import styles from './ComponentsCatalog.module.css';
 
@@ -23,10 +25,15 @@ interface ComponentCatalogPreviewProps {
 export function ComponentCatalogPreview({
   slug,
 }: ComponentCatalogPreviewProps) {
-  switch (slug) {
-    case 'accordion':
-      return <AccordionPreview />;
+  const GeneratedPreview = (
+    generatedCatalogPreviews as Record<string, ComponentType>
+  )[slug];
 
+  if (GeneratedPreview) {
+    return <GeneratedPreview />;
+  }
+
+  switch (slug) {
     case 'button':
       return <ButtonPreview />;
 
@@ -48,9 +55,6 @@ export function ComponentCatalogPreview({
     case 'form-field':
       return <FormFieldPreview />;
 
-    case 'switch':
-      return <SwitchPreview />;
-
     case 'tabs':
       return <TabsPreview />;
 
@@ -67,26 +71,8 @@ export function ComponentCatalogPreview({
       return <TooltipPreview />;
 
     default:
-      return null;
+      throw new Error(`Missing catalog signature preview for "${slug}".`);
   }
-}
-
-function AccordionPreview() {
-  return (
-    <div className={styles.previewAccordion}>
-      <Accordion defaultValue='billing'>
-        <Accordion.Item value='billing'>
-          <Accordion.Trigger>Billing</Accordion.Trigger>
-          <Accordion.Content>Invoices and payment method.</Accordion.Content>
-        </Accordion.Item>
-
-        <Accordion.Item value='security'>
-          <Accordion.Trigger>Security</Accordion.Trigger>
-          <Accordion.Content>Passkeys and recovery options.</Accordion.Content>
-        </Accordion.Item>
-      </Accordion>
-    </div>
-  );
 }
 
 function ButtonPreview() {
@@ -178,15 +164,6 @@ function FormFieldPreview() {
       <span className={styles.previewHelper}>
         Used for account notifications.
       </span>
-    </div>
-  );
-}
-
-function SwitchPreview() {
-  return (
-    <div className={styles.previewColumn}>
-      <Switch defaultChecked accessibilityLabel='Email notifications' />
-      <Switch accessibilityLabel='Product updates' />
     </div>
   );
 }
