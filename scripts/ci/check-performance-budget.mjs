@@ -59,14 +59,27 @@ export function analyzeJobs(run, jobs, workflowContract) {
       ? 'full'
       : 'affected';
 
-  const startMs = Date.parse(run.created_at);
+  const runCreatedMs = Date.parse(run.created_at);
   const timedJobs = requiredJobs.filter(
     (job) => job.started_at && job.completed_at && job.conclusion !== 'skipped'
   );
+  const startedMs = timedJobs.map((job) => Date.parse(job.started_at));
   const completedMs = timedJobs.map((job) => Date.parse(job.completed_at));
+  const firstStartedMs = startedMs.length > 0 ? Math.min(...startedMs) : Number.NaN;
+  const lastCompletedMs =
+    completedMs.length > 0 ? Math.max(...completedMs) : Number.NaN;
+
   const feedbackSeconds =
-    Number.isFinite(startMs) && completedMs.length > 0
-      ? Math.ceil((Math.max(...completedMs) - startMs) / 1000)
+    Number.isFinite(runCreatedMs) && Number.isFinite(lastCompletedMs)
+      ? Math.ceil((lastCompletedMs - runCreatedMs) / 1000)
+      : null;
+  const executionFeedbackSeconds =
+    Number.isFinite(firstStartedMs) && Number.isFinite(lastCompletedMs)
+      ? Math.ceil((lastCompletedMs - firstStartedMs) / 1000)
+      : null;
+  const queueDelaySeconds =
+    Number.isFinite(runCreatedMs) && Number.isFinite(firstStartedMs)
+      ? Math.max(0, Math.ceil((firstStartedMs - runCreatedMs) / 1000))
       : null;
 
   const jobTimings = timedJobs
@@ -86,6 +99,8 @@ export function analyzeJobs(run, jobs, workflowContract) {
     unknownJobs,
     executionPath,
     feedbackSeconds,
+    executionFeedbackSeconds,
+    queueDelaySeconds,
     longestRequiredJob: jobTimings[0] ?? null,
     jobs: workflowContract.requiredJobs.map((name) => {
       const job = byName.get(name);
@@ -291,6 +306,7 @@ async function historicalSamples({
       analysis.missingJobs.length > 0 ||
       analysis.unknownJobs.length > 0 ||
       analysis.feedbackSeconds === null ||
+      analysis.executionFeedbackSeconds === null ||
       analysis.executionPath !== currentExecutionPath
     ) {
       continue;
@@ -320,6 +336,8 @@ async function historicalSamples({
       pullRequestNumber: prNumber,
       shape,
       feedbackSeconds: analysis.feedbackSeconds,
+      executionFeedbackSeconds: analysis.executionFeedbackSeconds,
+      queueDelaySeconds: analysis.queueDelaySeconds,
     });
   }
 
@@ -331,7 +349,7 @@ async function historicalSamples({
 
   if (
     samples.length < enforcement.historyWindow - 1 &&
-    baseline?.feedbackSeconds &&
+    baseline?.executionFeedbackSeconds &&
     baseline.workflowRunId !== currentRun.id &&
     currentExecutionPath === 'full' &&
     currentBudget.targetSeconds === budgets.normal.targetSeconds
@@ -346,6 +364,8 @@ async function historicalSamples({
         pullRequestNumber: null,
         shape: 'normal',
         feedbackSeconds: baseline.feedbackSeconds,
+        executionFeedbackSeconds: baseline.executionFeedbackSeconds,
+        queueDelaySeconds: baseline.queueDelaySeconds ?? null,
         source: 'canonical-baseline',
       });
     }
@@ -364,9 +384,9 @@ function formatSeconds(seconds) {
 function makeSummary(evidence) {
   const resultLabel = {
     pass: 'PASS',
-    'within-tolerance': 'PASS — runner tolerance',
-    anomaly: 'WARN — single slow-run anomaly',
-    fail: 'FAIL — sustained regression',
+    'within-tolerance': 'PASS — execution tolerance',
+    anomaly: 'WARN — single slow execution anomaly',
+    fail: 'FAIL — sustained execution regression',
     'not-evaluated': 'NOT EVALUATED — CI correctness failure',
     'contract-error': 'FAIL — timing contract drift',
   }[evidence.result.status];
@@ -380,9 +400,11 @@ function makeSummary(evidence) {
     '| --- | --- |',
     `| PR shape | ${evidence.pullRequest.shape} |`,
     `| Execution path | ${evidence.executionPath} |`,
-    `| Feedback wall clock | ${formatSeconds(evidence.timings.feedbackSeconds)} |`,
+    `| Total feedback wall clock | ${formatSeconds(evidence.timings.feedbackSeconds)} |`,
+    `| Hosted-runner initial queue | ${formatSeconds(evidence.timings.queueDelaySeconds)} |`,
+    `| Budgeted execution wall clock | ${formatSeconds(evidence.timings.executionFeedbackSeconds)} |`,
     `| Target | ${formatSeconds(evidence.budget.effective.targetSeconds)} |`,
-    `| Hosted-runner tolerance ceiling | ${formatSeconds(evidence.budget.effective.targetSeconds + evidence.budget.effective.toleranceSeconds)} |`,
+    `| Execution tolerance ceiling | ${formatSeconds(evidence.budget.effective.targetSeconds + evidence.budget.effective.toleranceSeconds)} |`,
     `| Longest required job | ${evidence.timings.longestRequiredJob?.name ?? 'n/a'} (${formatSeconds(evidence.timings.longestRequiredJob?.durationSeconds ?? null)}) |`,
     '',
   ];
@@ -407,7 +429,7 @@ function makeSummary(evidence) {
     lines.push('', '## Recent comparable samples', '');
     for (const sample of evidence.history.samples) {
       lines.push(
-        `- run ${sample.workflowRunId}: ${formatSeconds(sample.feedbackSeconds)} (${sample.shape})`
+        `- run ${sample.workflowRunId}: execution ${formatSeconds(sample.executionFeedbackSeconds)}, total ${formatSeconds(sample.feedbackSeconds)}, initial queue ${formatSeconds(sample.queueDelaySeconds)} (${sample.shape})`
       );
     }
   }
@@ -478,11 +500,14 @@ async function main() {
       blocking: false,
       message: `CI concluded ${ciRun.conclusion}; timing is preserved but incomplete correctness runs do not change the performance baseline.`,
     };
-  } else if (timing.feedbackSeconds === null) {
+  } else if (
+    timing.feedbackSeconds === null ||
+    timing.executionFeedbackSeconds === null
+  ) {
     result = {
       status: 'contract-error',
       blocking: true,
-      message: 'Required job timestamps were incomplete; deterministic feedback latency could not be calculated.',
+      message: 'Required job timestamps were incomplete; deterministic feedback and execution latency could not be calculated.',
     };
   } else {
     history = await historicalSamples({
@@ -500,21 +525,23 @@ async function main() {
       token,
     });
     const evaluation = evaluateBudget({
-      currentSeconds: timing.feedbackSeconds,
+      currentSeconds: timing.executionFeedbackSeconds,
       targetSeconds: budget.effective.targetSeconds,
       toleranceSeconds: budget.effective.toleranceSeconds,
-      historicalSeconds: history.map((sample) => sample.feedbackSeconds),
+      historicalSeconds: history.map(
+        (sample) => sample.executionFeedbackSeconds
+      ),
       historyWindow: config.enforcement.historyWindow,
       requiredExceedancesForFailure:
         config.enforcement.requiredExceedancesForFailure,
     });
     const messages = {
-      pass: 'Required-check feedback latency is within the maintained target.',
+      pass: 'Required-check execution latency is within the maintained target.',
       'within-tolerance':
-        'The run exceeded the target but remains inside the documented GitHub-hosted-runner tolerance.',
+        'The execution window exceeded the target but remains inside the documented tolerance. Hosted-runner queue remains visible separately and is not treated as a code regression.',
       anomaly:
-        'The run exceeded the tolerance ceiling, but the recent comparable history does not show a sustained regression yet.',
-      fail: 'The tolerance ceiling has been exceeded repeatedly in the configured history window. Optimize the critical path or explicitly revise the budget contract.',
+        'The execution window exceeded the tolerance ceiling, but recent comparable execution history does not show a sustained regression yet.',
+      fail: 'The execution tolerance ceiling has been exceeded repeatedly in the configured history window. Optimize the CI critical path or explicitly revise the budget contract.',
     };
     result = { ...evaluation, message: messages[evaluation.status] };
   }
@@ -541,6 +568,8 @@ async function main() {
     budget,
     timings: {
       feedbackSeconds: timing.feedbackSeconds,
+      executionFeedbackSeconds: timing.executionFeedbackSeconds,
+      queueDelaySeconds: timing.queueDelaySeconds,
       longestRequiredJob: timing.longestRequiredJob,
       jobs: timing.jobs,
     },
