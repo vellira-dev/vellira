@@ -80,18 +80,21 @@ describe('maintained token CSS reference scan', () => {
     const originalReaddirSync = fs.readdirSync;
     const readdirSpy = vi.spyOn(fs, 'readdirSync');
     let removed = false;
+    const readdirImplementation = (
+      directory: Parameters<typeof fs.readdirSync>[0]
+    ) => {
+      const entries = originalReaddirSync(directory, { withFileTypes: true });
+      if (
+        !removed &&
+        path.resolve(String(directory)) === path.resolve(parent)
+      ) {
+        removed = true;
+        fs.rmSync(transient, { recursive: true, force: true });
+      }
+      return entries;
+    };
     readdirSpy.mockImplementation(
-      ((directory: Parameters<typeof fs.readdirSync>[0]) => {
-        const entries = originalReaddirSync(directory, { withFileTypes: true });
-        if (
-          !removed &&
-          path.resolve(String(directory)) === path.resolve(parent)
-        ) {
-          removed = true;
-          fs.rmSync(transient, { recursive: true, force: true });
-        }
-        return entries;
-      }) as typeof fs.readdirSync
+      readdirImplementation as unknown as typeof fs.readdirSync
     );
 
     try {
