@@ -72,6 +72,13 @@ describe('remaining first-party visual resources', () => {
       ['.proDirections > article', ['0 12px 28px']],
       ['.proDirections > article:hover', ['0 18px 38px']],
     ]);
+    const expectedOpacity = new Map([
+      ['.card:hover', ['4%', '8%', '5%']],
+      ['.commandCapsule', ['8%', '4%']],
+      ['.commandCapsule:hover', ['10%', '8%', '4%']],
+      ['.proDirections > article', ['4%']],
+      ['.proDirections > article:hover', ['7%']],
+    ]);
     for (const file of cssFiles.slice(1)) {
       postcss.parse(readFileSync(file, 'utf8')).walkRules((rule) => {
         const geometry = expected.get(rule.selector);
@@ -82,6 +89,9 @@ describe('remaining first-party visual resources', () => {
         expect(shadow?.type).toBe('decl');
         if (shadow?.type !== 'decl') throw new Error('Missing shadow');
         expect(shadow.value.match(/\b0 \d+px \d+px\b/g)).toEqual(geometry);
+        expect(shadow.value.match(/\b\d+%/g)).toEqual(
+          expectedOpacity.get(rule.selector)
+        );
         expect(shadow.value).not.toMatch(/var\(--(?:text|surface)-/);
         expected.delete(rule.selector);
       });

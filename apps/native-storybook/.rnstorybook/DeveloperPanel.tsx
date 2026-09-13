@@ -64,6 +64,7 @@ export const DeveloperPanel = ({
         style={{
           minHeight: 0,
           borderWidth: 0,
+          transform: [],
           paddingHorizontal: 12,
           paddingVertical: 8,
           borderRadius: 8,
