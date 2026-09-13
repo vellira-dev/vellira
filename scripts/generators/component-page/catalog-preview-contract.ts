@@ -10,7 +10,9 @@ export type CatalogPreviewFinding = {
 };
 
 function collectMatches(source: string, pattern: RegExp) {
-  return [...source.matchAll(pattern)].map((match) => match[1]);
+  return [...source.matchAll(pattern)]
+    .map((match) => match[1])
+    .filter((value): value is string => Boolean(value));
 }
 
 function collectGeneratedPreviewSlugs(source: string) {
@@ -18,7 +20,9 @@ function collectGeneratedPreviewSlugs(source: string) {
     source.matchAll(
       /^\s{2}(?:([A-Za-z_$][\w$]*)|'([^']+)'|"([^"]+)"):\s+[A-Za-z_$][\w$]*CatalogPreview,/gm
     ),
-  ].map((match) => match[1] ?? match[2] ?? match[3]);
+  ]
+    .map((match) => match[1] ?? match[2] ?? match[3])
+    .filter((value): value is string => Boolean(value));
 }
 
 function countBySlug(slugs: readonly string[]) {
