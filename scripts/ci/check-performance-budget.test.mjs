@@ -14,6 +14,10 @@ import {
   planAffectedExecution,
   resolveWorkspaceImpact,
 } from './affected-execution.mjs';
+import {
+  buildTurboArgs,
+  parseAffectedWorkspaces,
+} from './run-affected-workspaces.mjs';
 
 const classification = {
   sharedPrefixes: ['packages/tokens/', 'packages/types/', 'packages/core/'],
@@ -189,6 +193,31 @@ test('workspace impact fails closed when the changed package is absent from the 
         'react'
       ),
     /Workspace graph does not contain packages\/react/
+  );
+});
+
+test('affected workspace runner builds shell-free Turbo arguments', () => {
+  const workspaces = parseAffectedWorkspaces(
+    JSON.stringify(['@vellira-ui/react', '@vellira-ui/website', '@vellira-ui/react'])
+  );
+  assert.deepEqual(workspaces, ['@vellira-ui/react', '@vellira-ui/website']);
+  assert.deepEqual(buildTurboArgs(['build', 'typecheck'], workspaces), [
+    'exec',
+    'turbo',
+    'run',
+    'build',
+    'typecheck',
+    '--filter=@vellira-ui/react',
+    '--filter=@vellira-ui/website',
+  ]);
+});
+
+test('affected workspace runner rejects malformed inputs', () => {
+  assert.throws(() => parseAffectedWorkspaces('not-json'), /must be valid JSON/);
+  assert.throws(() => parseAffectedWorkspaces('[]'), /non-empty array/);
+  assert.throws(
+    () => buildTurboArgs(['build;rm'], ['@vellira-ui/react']),
+    /invalid Turbo task/
   );
 });
 
