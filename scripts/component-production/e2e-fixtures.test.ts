@@ -20,7 +20,9 @@ import {
   runComponentProductionValidation,
   type ComponentProductionRunDependencies,
 } from './run';
-import { runComponentProductionStructuredValidation } from './structured-validation';
+import {
+  runComponentProductionStructuredValidation,
+} from './structured-validation';
 
 const FIXTURE_TIMEOUT_MS = 240_000;
 const repositoryRoot = process.cwd();
@@ -143,19 +145,34 @@ const invalidFixture: ComponentProductionInputV1 = {
 
 afterEach(() => {
   for (const worktree of temporaryWorktrees.splice(0)) {
-    spawnSync('git', ['worktree', 'remove', '--force', worktree.root], {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      shell: false,
-    });
+    spawnSync(
+      'git',
+      [
+        '-c',
+        `safe.directory=${repositoryRoot}`,
+        'worktree',
+        'remove',
+        '--force',
+        worktree.root,
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        shell: false,
+      }
+    );
     fs.rmSync(worktree.parent, { recursive: true, force: true });
   }
 
-  spawnSync('git', ['worktree', 'prune'], {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-    shell: false,
-  });
+  spawnSync(
+    'git',
+    ['-c', `safe.directory=${repositoryRoot}`, 'worktree', 'prune'],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      shell: false,
+    }
+  );
 });
 
 describe.sequential('component production end-to-end fixtures', () => {
@@ -181,12 +198,13 @@ describe.sequential('component production end-to-end fixtures', () => {
           input: fixture.input,
         });
 
-        expect(structured.stages[0], `${fixture.id}: completeness`).toMatchObject(
-          {
-            id: 'completeness',
-            status: 'passed',
-          }
-        );
+        expect(
+          structured.stages[0],
+          `${fixture.id}: completeness`
+        ).toMatchObject({
+          id: 'completeness',
+          status: 'passed',
+        });
         expect(structured.stages[1], `${fixture.id}: quality`).toMatchObject({
           id: 'quality',
           status: 'passed',
@@ -380,7 +398,15 @@ function createIsolatedWorktree() {
   const root = path.join(parent, 'repo');
   const result = spawnSync(
     'git',
-    ['worktree', 'add', '--detach', root, 'HEAD'],
+    [
+      '-c',
+      `safe.directory=${repositoryRoot}`,
+      'worktree',
+      'add',
+      '--detach',
+      root,
+      'HEAD',
+    ],
     {
       cwd: repositoryRoot,
       encoding: 'utf8',
@@ -483,7 +509,9 @@ function expectCanonicalGeneratedSurfaces(
     `${input.componentName}Accessibility.tsx`,
     `${lowerName}Api.ts`,
   ]) {
-    expect(fs.existsSync(path.join(websiteDir, fileName)), fileName).toBe(true);
+    expect(fs.existsSync(path.join(websiteDir, fileName)), fileName).toBe(
+      true
+    );
   }
 
   if (input.platform === 'web' || input.platform === 'both') {
@@ -632,9 +660,9 @@ function commitFixtureCandidate(root: string) {
     'test: materialize component production e2e candidate',
   ]);
 
-  expect(runGit(root, ['status', '--porcelain=v1', '--untracked-files=all'])).toBe(
-    ''
-  );
+  expect(
+    runGit(root, ['status', '--porcelain=v1', '--untracked-files=all'])
+  ).toBe('');
 }
 
 function fingerprintWorkingTree(root: string) {
@@ -662,11 +690,15 @@ function fingerprintWorkingTree(root: string) {
 }
 
 function runGit(root: string, args: readonly string[]) {
-  const result = spawnSync('git', args, {
-    cwd: root,
-    encoding: 'utf8',
-    shell: false,
-  });
+  const result = spawnSync(
+    'git',
+    ['-c', `safe.directory=${root}`, ...args],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      shell: false,
+    }
+  );
 
   if (result.status !== 0) {
     throw new Error(
