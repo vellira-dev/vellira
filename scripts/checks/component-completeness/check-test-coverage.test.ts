@@ -235,7 +235,47 @@ describe('test coverage contract completeness validation', () => {
     );
   });
 
-  it('passes when required manual overlay coverage is explicitly marked', () => {
+  it('rejects a generated manual scaffold that has a marker but no test case', () => {
+    const root = createRoot();
+    const contractFile = path.join(root, 'Dialog.test-contract.json');
+    const testFile = path.join(root, 'Dialog.test.tsx');
+    const manualTestFile = path.join(root, 'Dialog.manual.test.tsx');
+    const contract = createComponentTestCoverageContract({
+      componentName: 'Dialog',
+      profile: 'overlay',
+      control: 'value',
+      capabilities: overlayMetadata.capabilities ?? [],
+      parts: ['Root', 'Trigger', 'Content'],
+      isNative: false,
+    });
+
+    fs.writeFileSync(
+      contractFile,
+      renderComponentTestCoverageContract(contract)
+    );
+    fs.writeFileSync(
+      testFile,
+      `// Baseline contract: ${contract.baseline.requirements.join(', ')}\n`
+    );
+    fs.writeFileSync(
+      manualTestFile,
+      '// Coverage contract: focus-management, portal\n' +
+        "describe('manual behavior coverage', () => {});\n"
+    );
+
+    const result = checkTestCoverageContract({
+      contractFile,
+      testFile,
+      metadata: overlayMetadata,
+      platform: 'react',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.details).toContain('no executable test evidence');
+    expect(result.details).toContain(manualTestFile);
+  });
+
+  it('passes when required manual overlay coverage is explicitly tested', () => {
     const root = createRoot();
     const contractFile = path.join(root, 'Dialog.test-contract.json');
     const testFile = path.join(root, 'Dialog.test.tsx');
@@ -259,7 +299,8 @@ describe('test coverage contract completeness validation', () => {
     );
     fs.writeFileSync(
       manualTestFile,
-      '// Coverage contract: focus-management, portal\n'
+      '// Coverage contract: focus-management, portal\n' +
+        "it('covers the declared manual behavior', () => {});\n"
     );
 
     expect(
