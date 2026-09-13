@@ -19,7 +19,10 @@ jobs:
     outputs:
       shape: ${{ steps.classify.outputs.shape }}
       execution-path: ${{ steps.classify.outputs.execution_path }}
+      execution_path: ${{ steps.classify.outputs.execution_path }}
       package-name: ${{ steps.classify.outputs.package_name }}
+      graph_status: ${{ steps.classify.outputs.graph_status }}
+      affected_workspaces: ${{ steps.classify.outputs.affected_workspaces }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -142,7 +145,7 @@ jobs:
   cloudflare-cache-migration:
     name: Cloudflare cache and multi-deployment browser contracts
     needs: impact
-    if: needs.impact.outputs.shape != 'docs-only'
+    if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/website')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -224,15 +227,29 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build typecheck package-export prerequisites
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm exec turbo run build --filter=@vellira-ui/icons
 
       - name: Typecheck and API contracts
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm ci:typecheck
+
+      - name: Typecheck affected workspaces
+        if: needs.impact.outputs.execution_path == 'affected'
+        env:
+          VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
+        run: node scripts/ci/run-affected-workspaces.mjs typecheck
+
+      - name: Validate affected public API contracts
+        if: needs.impact.outputs.execution_path == 'affected'
+        run: |
+          pnpm docs:api:check
+          pnpm check:public-api
 
   tooling:
     name: Tooling & IndexNow Tests
     needs: impact
-    if: needs.impact.outputs.shape != 'docs-only'
+    if: ${{ needs.impact.outputs.shape != 'docs-only' && needs.impact.outputs.execution_path != 'affected' }}
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -298,15 +315,23 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Unit tests
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:unit
 
       - name: Coverage
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:coverage
+
+      - name: Test and cover affected workspaces
+        if: needs.impact.outputs.execution_path == 'affected'
+        env:
+          VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
+        run: node scripts/ci/run-affected-workspaces.mjs test test:coverage
 
   generator-blog:
     name: Component Page & Blog Tests
     needs: impact
-    if: needs.impact.outputs.shape != 'docs-only'
+    if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/website')) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -334,9 +359,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Component page contract
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:component-pages
 
       - name: Component page generator
+        if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:component-page-generator
 
       - name: Blog tests
@@ -345,7 +372,7 @@ jobs:
   storybook-browser:
     name: Storybook & Browser Tests
     needs: impact
-    if: needs.impact.outputs.shape != 'docs-only'
+    if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-storybook')) }}
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -422,11 +449,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages and apps
-        if: needs.impact.outputs.shape != 'docs-only'
+        if: ${{ needs.impact.outputs.shape != 'docs-only' && needs.impact.outputs.execution_path != 'affected' }}
         run: pnpm ci:build
 
+      - name: Build affected workspaces
+        if: needs.impact.outputs.execution_path == 'affected'
+        env:
+          VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
+        run: node scripts/ci/run-affected-workspaces.mjs build
+
       - name: CodeShowcase browser regression
-        if: needs.impact.outputs.shape != 'docs-only'
+        if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-storybook')) }}
         timeout-minutes: 5
         shell: bash
         env:
@@ -457,7 +490,7 @@ jobs:
             scripts/code-showcase-website-smoke.mjs
 
       - name: Upload CodeShowcase browser evidence
-        if: ${{ always() && needs.impact.outputs.shape != 'docs-only' }}
+        if: ${{ always() && needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-storybook')) }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: code-showcase-browser-evidence
@@ -466,10 +499,11 @@ jobs:
           retention-days: 7
 
       - name: Build docs
+        if: ${{ needs.impact.outputs.shape == 'docs-only' || needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/docs') }}
         run: pnpm docs:build
 
       - name: Blog discovery browser regression
-        if: needs.impact.outputs.shape != 'docs-only'
+        if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/website')) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -497,5 +531,13 @@ jobs:
             scripts/blog-discovery-website-smoke.mjs
 
       - name: Smoke packages
-        if: needs.impact.outputs.shape != 'docs-only'
+        if: ${{ needs.impact.outputs.execution_path != 'affected' && needs.impact.outputs.shape != 'docs-only' }}
         run: pnpm ci:smoke
+
+      - name: Smoke affected web package
+        if: ${{ needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react') }}
+        run: pnpm smoke:web
+
+      - name: Smoke affected native package
+        if: ${{ needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-native') }}
+        run: pnpm smoke:native
