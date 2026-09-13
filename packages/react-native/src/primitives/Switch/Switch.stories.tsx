@@ -9,20 +9,19 @@ const meta: Meta<typeof Switch> = {
   parameters: {
     docs: {
       description: {
-        // language=Markdown
         component: `
 ### Switch Component
 
-Describe when to use Switch and what problem it solves.
+Use Switch as a Vellira form control component with the states declared by its canonical component capabilities.
 
-**Features**
-- Add the main supported states
-- Document important behavior
-- Mention platform-specific details when needed
+**Generated coverage**
+- Controlled
+- Uncontrolled
+- Disabled
+- Required
+- Invalid
 
-### Usage
-
-Replace this section with a real example before publishing the component.
+The examples below are deterministic generator output and can be extended with component-specific stories when deeper behavior needs dedicated evidence.
 `,
       },
     },
@@ -49,6 +48,12 @@ export const Controlled: Story = {
   args: {
     checked: true,
     onCheckedChange: () => undefined,
+  },
+};
+
+export const Uncontrolled: Story = {
+  args: {
+    defaultChecked: true,
   },
 };
 

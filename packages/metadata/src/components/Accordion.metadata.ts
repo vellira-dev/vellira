@@ -9,8 +9,10 @@ export const accordionMetadata = defineComponentMetadata({
   status: 'experimental',
   capabilities: [
     'compound-api',
+    'multiple',
     'controlled',
     'uncontrolled',
+    'collapsible',
     'disabled',
     'keyboard',
   ],
