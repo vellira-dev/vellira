@@ -1,18 +1,29 @@
 name: Deploy Website Cloudflare Production
 
+run-name: ${{ github.event_name == 'workflow_run' && format('Promote staging {0}', github.event.workflow_run.head_sha) || format('Emergency production recovery {0}', inputs.candidate_sha) }}
+
 on:
+  workflow_run:
+    workflows: ['Deploy Website Cloudflare Staging']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
+      candidate_sha:
+        description: 'Break-glass only: exact 40-character commit SHA to deploy.'
+        required: true
+        type: string
       confirmation:
-        description: 'Select DEPLOY_PRODUCTION to deploy the public production Worker.'
+        description: 'Break-glass only: select EMERGENCY_DEPLOY_PRODUCTION to continue.'
         required: true
         type: choice
         default: DO_NOT_DEPLOY
         options:
           - DO_NOT_DEPLOY
-          - DEPLOY_PRODUCTION
+          - EMERGENCY_DEPLOY_PRODUCTION
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -21,20 +32,131 @@ concurrency:
 
 env:
   NODE_VERSION: 22.22.0
+  STAGING_URL: https://vellira-website-staging.vellira.workers.dev
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
   PRODUCTION_PUBLIC_URL: https://vellira.dev
   PRODUCTION_WWW_URL: https://www.vellira.dev
-  VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
-  deploy:
-    name: Build, deploy, and verify production website
-    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY_PRODUCTION'
+  candidate:
+    name: Qualify immutable production candidate
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.confirmation == 'EMERGENCY_DEPLOY_PRODUCTION')
     runs-on: ubuntu-latest
+    outputs:
+      candidate_sha: ${{ steps.publish.outputs.candidate_sha }}
+      source: ${{ steps.publish.outputs.source }}
+      staging_run_id: ${{ steps.publish.outputs.staging_run_id }}
+      staging_run_attempt: ${{ steps.publish.outputs.staging_run_attempt }}
+    env:
+      CANDIDATE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.candidate_sha }}
 
     steps:
-      - name: Checkout repository
+      - name: Validate candidate selection
+        shell: bash
+        env:
+          RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            test "$RECOVERY_CONFIRMATION" = "EMERGENCY_DEPLOY_PRODUCTION"
+            echo "Validated explicit break-glass recovery request for $CANDIDATE_SHA"
+          else
+            echo "Validating staged production candidate $CANDIDATE_SHA"
+          fi
+
+      - name: Checkout exact eligible candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+
+      - name: Verify exact candidate checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$CANDIDATE_SHA"
+          echo "Validated exact production candidate checkout: $actual"
+
+      - name: Download staging promotion evidence
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: cloudflare-staging-evidence-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: .promotion-evidence
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Validate staging promotion evidence
+        if: github.event_name == 'workflow_run'
+        run: >-
+          node apps/website/scripts/cloudflare-staging-evidence.mjs
+          .promotion-evidence/staging-evidence.json
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_RUN_ID: ${{ github.event.workflow_run.id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          EXPECTED_SOURCE_REF: refs/heads/main
+          EXPECTED_EVENT_NAME: push
+          EXPECTED_STAGING_URL: ${{ env.STAGING_URL }}
+
+      - name: Publish immutable candidate identity
+        id: publish
+        shell: bash
+        env:
+          STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+          STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          echo "candidate_sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            echo "source=staging" >> "$GITHUB_OUTPUT"
+            echo "staging_run_id=$STAGING_RUN_ID" >> "$GITHUB_OUTPUT"
+            echo "staging_run_attempt=$STAGING_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          else
+            echo "source=emergency-recovery" >> "$GITHUB_OUTPUT"
+            echo "staging_run_id=" >> "$GITHUB_OUTPUT"
+            echo "staging_run_attempt=" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Approve, deploy, and verify production candidate
+    needs: candidate
+    if: needs.candidate.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://vellira.dev
+    env:
+      CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+      CANDIDATE_SOURCE: ${{ needs.candidate.outputs.source }}
+      STAGING_RUN_ID: ${{ needs.candidate.outputs.staging_run_id }}
+      STAGING_RUN_ATTEMPT: ${{ needs.candidate.outputs.staging_run_attempt }}
+      VELLIRA_BUILD_ID: ${{ needs.candidate.outputs.candidate_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout exact production candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+
+      - name: Verify exact production candidate checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$CANDIDATE_SHA"
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "Approved immutable production candidate: $actual ($CANDIDATE_SOURCE)"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -98,6 +220,45 @@ jobs:
 
       - name: Prove same-origin multi-deployment browser migration before activation
         run: pnpm test:cloudflare-migration
+
+      - name: Verify immutable production candidate before mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$CANDIDATE_SHA"
+          test "$VELLIRA_BUILD_ID" = "$CANDIDATE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "Production mutation remains pinned to $CANDIDATE_SHA"
+
+      - name: Record production promotion provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+
+          const source = process.env.CANDIDATE_SOURCE;
+          const evidence = {
+            schemaVersion: 1,
+            candidateSha: process.env.CANDIDATE_SHA,
+            source,
+            stagingRunId:
+              source === 'staging' ? Number(process.env.STAGING_RUN_ID) : null,
+            stagingRunAttempt:
+              source === 'staging' ? Number(process.env.STAGING_RUN_ATTEMPT) : null,
+            productionRunId: Number(process.env.GITHUB_RUN_ID),
+            productionRunAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            repository: process.env.GITHUB_REPOSITORY,
+            environment: 'production',
+          };
+
+          await fs.mkdir('apps/website/.open-next', { recursive: true });
+          await fs.writeFile(
+            'apps/website/.open-next/production-promotion.json',
+            `${JSON.stringify(evidence, null, 2)}\n`
+          );
+          console.log(JSON.stringify(evidence));
+          NODE
 
       - name: Deploy production website to Cloudflare Workers
         id: worker-deploy
@@ -222,6 +383,7 @@ jobs:
             apps/website/.open-next/vellira-build.json
             apps/website/.open-next/runtime-contract.json
             apps/website/.open-next/local-runtime-contract.json
+            apps/website/.open-next/production-promotion.json
             apps/website/.open-next/cache/
             apps/website/.next/*manifest.json
             apps/website/.next/BUILD_ID
