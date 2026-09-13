@@ -84,7 +84,7 @@ test('unexpected narrowing of a full-path shape is detected', () => {
   assert.equal(selected.unexpectedNarrowing, true);
 });
 
-test('one slow runner above the tolerance ceiling does not block', () => {
+test('one slow execution above the tolerance ceiling does not block', () => {
   const result = evaluateBudget({
     currentSeconds: 470,
     targetSeconds: 360,
@@ -97,7 +97,7 @@ test('one slow runner above the tolerance ceiling does not block', () => {
   assert.equal(result.blocking, false);
 });
 
-test('sustained regressions above the tolerance ceiling block', () => {
+test('sustained execution regressions above the tolerance ceiling block', () => {
   const result = evaluateBudget({
     currentSeconds: 470,
     targetSeconds: 360,
@@ -110,7 +110,7 @@ test('sustained regressions above the tolerance ceiling block', () => {
   assert.equal(result.blocking, true);
 });
 
-test('runner variance inside the documented tolerance is non-blocking', () => {
+test('execution variance inside the documented tolerance is non-blocking', () => {
   const result = evaluateBudget({
     currentSeconds: 399,
     targetSeconds: 360,
@@ -126,11 +126,11 @@ test('runner variance inside the documented tolerance is non-blocking', () => {
 test('history excludes current PR reruns and deduplicates other PRs', () => {
   const samples = selectDistinctHistoricalSamples(
     [
-      { workflowRunId: 10, pullRequestNumber: 1036, feedbackSeconds: 620 },
-      { workflowRunId: 9, pullRequestNumber: 1034, feedbackSeconds: 456 },
-      { workflowRunId: 8, pullRequestNumber: 1034, feedbackSeconds: 450 },
-      { workflowRunId: 7, pullRequestNumber: null, feedbackSeconds: 410 },
-      { workflowRunId: 6, pullRequestNumber: 1033, feedbackSeconds: 399 },
+      { workflowRunId: 10, pullRequestNumber: 1036, executionFeedbackSeconds: 500 },
+      { workflowRunId: 9, pullRequestNumber: 1034, executionFeedbackSeconds: 410 },
+      { workflowRunId: 8, pullRequestNumber: 1034, executionFeedbackSeconds: 405 },
+      { workflowRunId: 7, pullRequestNumber: null, executionFeedbackSeconds: 390 },
+      { workflowRunId: 6, pullRequestNumber: 1033, executionFeedbackSeconds: 380 },
     ],
     1036,
     4
@@ -142,7 +142,7 @@ test('history excludes current PR reruns and deduplicates other PRs', () => {
   );
 });
 
-test('job analysis measures feedback wall clock and rejects inventory drift', () => {
+test('job analysis separates hosted-runner queue from budgeted execution wall clock and rejects inventory drift', () => {
   const run = { created_at: '2026-09-12T19:34:57Z' };
   const jobs = [
     {
@@ -169,6 +169,45 @@ test('job analysis measures feedback wall clock and rejects inventory drift', ()
     allowedNonCriticalJobs: [],
   });
   assert.equal(analysis.feedbackSeconds, 399);
+  assert.equal(analysis.executionFeedbackSeconds, 386);
+  assert.equal(analysis.queueDelaySeconds, 13);
   assert.equal(analysis.longestRequiredJob.name, 'B');
   assert.deepEqual(analysis.unknownJobs, ['Unregistered']);
+});
+
+test('hosted-runner queue alone cannot create a blocking execution regression', () => {
+  const run = { created_at: '2026-09-13T10:00:00Z' };
+  const jobs = [
+    {
+      name: 'A',
+      conclusion: 'success',
+      started_at: '2026-09-13T10:03:00Z',
+      completed_at: '2026-09-13T10:08:00Z',
+    },
+    {
+      name: 'B',
+      conclusion: 'success',
+      started_at: '2026-09-13T10:03:30Z',
+      completed_at: '2026-09-13T10:09:00Z',
+    },
+  ];
+  const analysis = analyzeJobs(run, jobs, {
+    requiredJobs: ['A', 'B'],
+    allowedNonCriticalJobs: [],
+  });
+
+  assert.equal(analysis.feedbackSeconds, 540);
+  assert.equal(analysis.executionFeedbackSeconds, 360);
+  assert.equal(analysis.queueDelaySeconds, 180);
+
+  const result = evaluateBudget({
+    currentSeconds: analysis.executionFeedbackSeconds,
+    targetSeconds: 360,
+    toleranceSeconds: 75,
+    historicalSeconds: [470, 465, 460, 455],
+    historyWindow: 5,
+    requiredExceedancesForFailure: 3,
+  });
+  assert.equal(result.status, 'pass');
+  assert.equal(result.blocking, false);
 });
