@@ -13,7 +13,11 @@ it('prints canonical Prettier output for review-bundle files', async () => {
 
   for (const file of files) {
     const source = fs.readFileSync(file, 'utf8');
-    const formatted = await prettier.format(source, { filepath: file });
+    const config = (await prettier.resolveConfig(file)) ?? {};
+    const formatted = await prettier.format(source, {
+      ...config,
+      filepath: file,
+    });
 
     if (formatted === source) {
       continue;
