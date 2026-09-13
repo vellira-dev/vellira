@@ -172,7 +172,8 @@ describe('generated catalog preview registry', () => {
       componentCatalogDir,
       'AccordionCatalogPreview.tsx'
     );
-    const curated = "export function AccordionCatalogPreview() { return 'curated'; }\n";
+    const curated =
+      "export function AccordionCatalogPreview() { return 'curated'; }\n";
 
     fs.mkdirSync(componentCatalogDir, { recursive: true });
     fs.writeFileSync(previewFile, curated);
