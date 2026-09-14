@@ -29,6 +29,7 @@ import {
 import {
   resolveComponentProductionEligibility,
   COMPONENT_TOKEN_REGISTRY,
+  readComponentProductionGit,
 } from './production-eligibility';
 import { runProductionEligibilityCli } from './eligibility-cli';
 
@@ -64,6 +65,32 @@ describe('canonical component-token production eligibility', () => {
     );
   });
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('scopes read-only Git trust to the exact resolved repository root', () => {
+    const unresolvedRoot = path.join(root, 'nested', '..');
+    const resolvedRoot = path.resolve(unresolvedRoot);
+    const calls: unknown[][] = [];
+    const revision = readComponentProductionGit(
+      unresolvedRoot,
+      ['rev-parse', 'HEAD'],
+      (file, args, options) => {
+        calls.push([file, args, options]);
+        return 'a'.repeat(40);
+      }
+    );
+
+    expect(revision).toBe('a'.repeat(40));
+    expect(calls).toEqual([
+      [
+        'git',
+        ['-c', `safe.directory=${resolvedRoot}`, 'rev-parse', 'HEAD'],
+        { cwd: resolvedRoot, encoding: 'utf8', shell: false },
+      ],
+    ]);
+    expect(calls.flat(Infinity)).not.toContain('safe.directory=*');
+    expect(calls.flat(Infinity)).not.toContain('--global');
+    expect(calls.flat(Infinity)).not.toContain('config');
+  });
 
   it('requires explicit intent on every catalog target and preserves canonical contracts', () => {
     expect(
