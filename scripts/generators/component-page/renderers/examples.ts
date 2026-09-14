@@ -139,6 +139,7 @@ function isBarePropFragment(fragment: string) {
 
 export function renderExamples(params: {
   componentName: string;
+  platforms: readonly Platform[];
   componentConfig: ComponentPageMetadata;
   generatedExamples: readonly GeneratedExample[];
   generatedFileHeader: string;
@@ -148,6 +149,7 @@ export function renderExamples(params: {
 }) {
   const {
     componentName,
+    platforms,
     componentConfig,
     generatedExamples,
     generatedFileHeader,
@@ -369,6 +371,10 @@ export function renderExamples(params: {
   }
 
   function getExamplesForPlatform(platform: Platform) {
+    if (!platforms.includes(platform)) {
+      return [];
+    }
+
     return generatedExamples.filter(
       (example) => !example.platforms || example.platforms.includes(platform)
     );
@@ -412,13 +418,32 @@ export function renderExamples(params: {
 
   const exampleImports = Array.from(
     new Set(
-      generatedExamples.flatMap((example) => [
-        ...(example.imports ?? []),
-        ...(example.reactImports ?? []),
-        ...(example.nativeImports ?? []),
-        ...(componentConfig.react?.imports ?? []),
-        ...(componentConfig.native?.imports ?? []),
-      ])
+      generatedExamples.flatMap((example) => {
+        const examplePlatforms = platforms.filter(
+          (platform) =>
+            !example.platforms || example.platforms.includes(platform)
+        );
+
+        if (examplePlatforms.length === 0) {
+          return [];
+        }
+
+        return [
+          ...(example.imports ?? []),
+          ...(examplePlatforms.includes('react')
+            ? (example.reactImports ?? [])
+            : []),
+          ...(examplePlatforms.includes('react-native')
+            ? (example.nativeImports ?? [])
+            : []),
+          ...(examplePlatforms.includes('react')
+            ? (componentConfig.react?.imports ?? [])
+            : []),
+          ...(examplePlatforms.includes('react-native')
+            ? (componentConfig.native?.imports ?? [])
+            : []),
+        ];
+      })
     )
   );
 
@@ -458,10 +483,22 @@ export function renderExamples(params: {
     )
     .join('\n');
 
+  const componentImports = [
+    ...(platforms.includes('react')
+      ? [
+          `import { ${componentName} as React${componentName} } from '@vellira-ui/react';`,
+        ]
+      : []),
+    ...(platforms.includes('react-native')
+      ? [
+          `import { ${componentName} as Native${componentName} } from '@vellira-ui/react-native';`,
+        ]
+      : []),
+  ];
+
   return `${generatedFileHeader}'use client';
 
-import { ${componentName} as React${componentName} } from '@vellira-ui/react';
-import { ${componentName} as Native${componentName} } from '@vellira-ui/react-native';
+${componentImports.join('\n')}
 ${exampleImports.join('\n')}
 
 import { ComponentExamples } from '../../shared/ComponentExamples';

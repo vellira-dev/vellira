@@ -209,6 +209,7 @@ const generatedExamples = buildExamples({
 
 const examplesContent = renderExamples({
   componentName,
+  platforms,
   componentConfig,
   generatedExamples,
   generatedFileHeader,
