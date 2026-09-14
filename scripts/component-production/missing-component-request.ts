@@ -14,10 +14,16 @@ import {
 } from '@vellira-ui/metadata';
 
 import type { VelliraUiUsageFinding } from '../checks/vellira-ui-usage/types';
+
 import {
-  COMPONENT_PRODUCTION_SCHEMA_VERSION,
-  type ComponentProductionInputV1,
-} from './contracts';
+  productionSeedForTarget,
+  type ComponentProductionSeedV1,
+} from './production-seed';
+import {
+  resolveComponentProductionEligibility,
+  type ComponentProductionEligibilityV1,
+} from './production-eligibility';
+export type { ComponentProductionSeedV1 } from './production-seed';
 
 export const MISSING_COMPONENT_REQUEST_SCHEMA_VERSION = '1' as const;
 
@@ -49,16 +55,6 @@ export type MissingComponentRequestV1 = {
   requiredCapabilities: readonly ComponentCapability[];
 };
 
-export type ComponentProductionSeedV1 = Pick<
-  ComponentProductionInputV1,
-  | 'schemaVersion'
-  | 'componentName'
-  | 'platform'
-  | 'layer'
-  | 'category'
-  | 'profile'
->;
-
 export type MissingComponentResolutionKind =
   | 'reuse-existing'
   | 'enhance-existing'
@@ -69,7 +65,9 @@ export type MissingComponentResolutionNextAction =
   | 'none'
   | 'reuse-existing'
   | 'link-or-create-component-enhancement-issue'
-  | 'link-or-create-component-issue';
+  | 'link-or-create-component-issue'
+  | 'link-or-create-component-token-reservation-issue'
+  | 'resolve-invalid-component-token-lifecycle';
 
 export type MissingComponentIssueRequestV1 = {
   requestId: string;
@@ -91,11 +89,13 @@ export type MissingComponentResolutionV1 = {
   requestId?: string;
   issueRequest?: MissingComponentIssueRequestV1;
   productionSeed?: ComponentProductionSeedV1;
+  productionEligibility?: ComponentProductionEligibilityV1;
 };
 
 export type MissingComponentAuthorities = {
   components: readonly ComponentMetadata[];
   targets: readonly ComponentExpansionTarget[];
+  root?: string;
 };
 
 export type MissingComponentRequestCliDependencies = {
@@ -234,12 +234,20 @@ export function resolveMissingComponentRequest(
   }
 
   const requestId = componentGapRequestId(requestedComponent);
+  const productionSeed = target ? productionSeedForTarget(target) : undefined;
+  const productionEligibility = productionSeed
+    ? resolveComponentProductionEligibility(productionSeed, authorities.root)
+    : undefined;
   return {
     ...baseResolution({
       request,
       kind: 'missing-component',
       blocked: true,
-      nextAction: 'link-or-create-component-issue',
+      nextAction: productionEligibility?.hardInvalid
+        ? 'resolve-invalid-component-token-lifecycle'
+        : productionEligibility && !productionEligibility.eligible
+          ? 'link-or-create-component-token-reservation-issue'
+          : 'link-or-create-component-issue',
     }),
     requestId,
     issueRequest: {
@@ -248,7 +256,7 @@ export function resolveMissingComponentRequest(
       componentName: target?.name ?? requestedComponent,
       title: `feat(components): add ${target?.name ?? requestedComponent}`,
     },
-    ...(target ? { productionSeed: productionSeedForTarget(target) } : {}),
+    ...(productionSeed ? { productionSeed, productionEligibility } : {}),
   };
 }
 
@@ -378,40 +386,6 @@ function canonicalCandidates(
       [...candidateNames].some((name) => sameName(name, component.name))
     )
     .sort((left, right) => left.name.localeCompare(right.name));
-}
-
-function productionSeedForTarget(
-  target: ComponentExpansionTarget
-): ComponentProductionSeedV1 {
-  return {
-    schemaVersion: COMPONENT_PRODUCTION_SCHEMA_VERSION,
-    componentName: target.name,
-    platform: productionPlatform(target.platforms),
-    layer: target.layer,
-    category: target.category,
-    profile: target.profile,
-  };
-}
-
-function productionPlatform(
-  platforms: readonly ComponentPlatform[]
-): ComponentProductionInputV1['platform'] {
-  const hasWeb = platforms.includes('react');
-  const hasNative = platforms.includes('react-native');
-
-  if (hasWeb && hasNative) {
-    return 'both';
-  }
-  if (hasWeb) {
-    return 'web';
-  }
-  if (hasNative) {
-    return 'native';
-  }
-
-  throw new Error(
-    'Component expansion target must declare at least one platform.'
-  );
 }
 
 function componentGapRequestId(componentName: string): string {

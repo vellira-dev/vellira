@@ -331,3 +331,38 @@ Changes to this boundary should cover at least these contract shapes:
 
 Repository-wide tooling, build, quality, and the normal final-head CI remain the
 final authority before this contract is considered ready for review.
+
+# Token lifecycle eligibility before production
+
+Expansion targets explicitly declare `componentTokens` using the production
+contract (`false`, `standard`, `boolean-control`, or `disclosure`). Textarea,
+Avatar and Badge use the existing standard production contract; Accordion uses
+its canonical metadata's disclosure contract. Seeds preserve intent without an
+implicit default.
+
+Before starting production, callers run the read-only public contract:
+
+```sh
+node --import tsx scripts/component-production/eligibility-cli.ts --seed /external/seed.json
+```
+
+The result contains `eligibility` (exact HEAD, seed, canonical registry source
+SHA-256, observed entry, decision and evidence fingerprint) and `reservation`.
+Exit codes are 0 eligible, 1 reservation required, 2 hard-invalid/error. The
+fingerprint is SHA-256 of compact UTF-8 JSON in emitted evidence-key order,
+excluding the fingerprint itself. No generation, reservation or Git mutation is
+performed. Consumers must verify revision/seed/source binding before execution;
+this is not a transferable permission for another checkout or revision.
+
+Absent token families produce a `component-token-reservation` request for the
+canonical registry, not a missing design-token value. Feed the returned request
+to canonical-gap `--spec` through the existing explicitly authorized routing
+boundary. Repeated planning and legacy `unregistered-component-token-family`
+production findings share one family-owned request ID. Such work items do not
+carry the production-ready label. Hard-invalid/deprecated ownership cannot be
+resolved by automatic reservation.
+
+`reserved` permits future materialization but does not require current token
+exports. Premature reserved exports still fail ownership inventory checks.
+Generator V2 remains the final fail-closed defense and alone promotes valid
+reserved families to current. Eligibility and issue creation never do so.

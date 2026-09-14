@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
+import { componentTokenReservationRequest } from './token-reservation';
+import {
+  parseComponentProductionSeed,
+  type ComponentProductionSeedV1,
+} from '../component-production/production-seed';
 
 import {
   COMPONENT_PRODUCTION_STAGE_IDS,
@@ -28,7 +33,20 @@ export function canonicalGapRequestsFromComponentProductionReport(
     requestFromProductionFinding(
       finding,
       componentName,
-      options.launchCritical ?? false
+      options.launchCritical ?? false,
+      parseComponentProductionSeed(
+        Object.fromEntries(
+          [
+            'schemaVersion',
+            'componentName',
+            'platform',
+            'layer',
+            'category',
+            'profile',
+            'componentTokens',
+          ].map((key) => [key, report.input[key as keyof typeof report.input]])
+        )
+      )
     )
   );
   const byId = new Map<string, CanonicalGapRequestV1>();
@@ -139,9 +157,28 @@ function isStageId(
 function requestFromProductionFinding(
   value: ComponentProductionFinding,
   componentName: string,
-  launchCritical: boolean
+  launchCritical: boolean,
+  seed: ComponentProductionSeedV1
 ): CanonicalGapRequestV1[] {
   const message = value.message;
+  if (message.startsWith('unregistered-component-token-family:')) {
+    const fields = quotedFields(message);
+    if (
+      fields.get('component') !== componentName ||
+      seed.componentTokens === false
+    ) {
+      throw new CanonicalGapError(
+        'Invalid unregistered-component-token-family identity.'
+      );
+    }
+    return [
+      componentTokenReservationRequest(
+        seed,
+        `component-production:${componentName}`,
+        launchCritical
+      ),
+    ];
+  }
 
   if (message.startsWith('missing-icon-resource:')) {
     const fields = quotedFields(message);
