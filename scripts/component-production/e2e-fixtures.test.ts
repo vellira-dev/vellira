@@ -407,6 +407,8 @@ function runSemanticFixtureTests(root: string) {
       .filter(
         (fixture) =>
           fixture.input.profile === 'compound' ||
+          (fixture.input.profile === 'base' &&
+            fixture.input.capabilities.includes('disabled')) ||
           (platform === 'react' && fixture.input.profile === 'overlay')
       )
       .map(
@@ -431,18 +433,47 @@ function runSemanticFixtureTests(root: string) {
 }
 
 async function completeContentGroup(root: string, fixture: Fixture) {
+  const disabled = fixture.input.capabilities.includes('disabled');
+  const name = fixture.input.componentName;
+  if (disabled) {
+    const sharedFile = path.join(
+      root,
+      'packages/types/src',
+      `${name[0].toLowerCase()}${name.slice(1)}.ts`
+    );
+    const source = fs.readFileSync(sharedFile, 'utf8');
+    const placeholder = `export type Base${name}Props = unknown;`;
+    expect(source).toContain(placeholder);
+    fs.writeFileSync(
+      sharedFile,
+      await formatGeneratedContent(
+        sharedFile,
+        source.replace(
+          placeholder,
+          `export type Base${name}Props = { disabled?: boolean };`
+        )
+      )
+    );
+  }
   for (const platform of selectedPlatforms(fixture.input)) {
     const file = path.join(
       componentDirectory(root, fixture.input, platform.platform),
       `${fixture.input.componentName}.tsx`
     );
-    const source = fs.readFileSync(file, 'utf8');
+    let source = fs.readFileSync(file, 'utf8');
+    if (disabled)
+      source = source.replace('children,', 'children, disabled = false,');
     const element = platform.platform === 'react' ? '<div ' : '<View ';
     expect(source.split(element)).toHaveLength(2);
-    const semantics =
+    let semantics =
       platform.platform === 'react'
         ? `role='group' aria-label=${JSON.stringify(fixture.contentGroupLabel)}`
         : `accessible={true} accessibilityLabel=${JSON.stringify(fixture.contentGroupLabel)}`;
+    if (disabled)
+      semantics +=
+        platform.platform === 'react'
+          ? ' aria-disabled={disabled} inert={disabled}'
+          : " accessibilityState={{ disabled }} pointerEvents={disabled ? 'none' : 'auto'}";
     fs.writeFileSync(
       file,
       await formatGeneratedContent(
@@ -450,6 +481,30 @@ async function completeContentGroup(root: string, fixture: Fixture) {
         source.replace(element, `${element}${semantics} `)
       )
     );
+    if (disabled) {
+      const testFile = path.join(
+        componentDirectory(root, fixture.input, platform.platform),
+        `${name}.manual.test.tsx`
+      );
+      const marker = fs.existsSync(testFile)
+        ? fs.readFileSync(testFile, 'utf8').split('\n')[0]
+        : '// Coverage contract: disabled';
+      fs.writeFileSync(
+        testFile,
+        await formatGeneratedContent(
+          testFile,
+          `${marker}
+import { render } from '@test-utils/render';
+import { expect, it } from 'vitest';
+import { ${name} } from './${name}';
+it('exposes disabled content-group semantics', () => {
+  const { container, unmount } = render(<${name} disabled>Disabled content</${name}>);
+  expect(container.firstElementChild?.getAttribute('aria-disabled')).toBe('true');
+  unmount();
+});`
+        )
+      );
+    }
   }
 }
 
