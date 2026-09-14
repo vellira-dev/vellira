@@ -201,7 +201,6 @@ describe.sequential('component production end-to-end fixtures', () => {
 
       await generateFixture(root, fixture);
       expectCanonicalGeneratedSurfaces(root, fixture.input);
-      completeManualCoverage(root, fixture.input);
 
       if (fixture.roles.includes('intentional-divergence'))
         expectCompoundPlatformDivergence(root);
@@ -372,8 +371,6 @@ describe.sequential('component production end-to-end fixtures', () => {
         )
       ).toBe(true);
 
-      completeManualCoverage(root, fixture.input);
-
       const manualTest = path.join(
         componentDirectory(root, fixture.input, 'react'),
         `${fixture.input.componentName}.manual.test.tsx`
@@ -382,6 +379,11 @@ describe.sequential('component production end-to-end fixtures', () => {
 
       expect(manualSource).toContain('// Coverage contract:');
       expect(manualSource).toContain('instance-isolation');
+      expect(
+        beforeEvidence.stages[0].findings.some((finding) =>
+          finding.message.includes('no executable test evidence')
+        )
+      ).toBe(true);
     },
     FIXTURE_TIMEOUT_MS
   );
@@ -825,31 +827,6 @@ function expectCanonicalGeneratedSurfaces(
     expectFile(
       root,
       `packages/tokens/src/factories/components/create${input.componentName}Tokens.ts`
-    );
-  }
-}
-
-function completeManualCoverage(
-  root: string,
-  input: ComponentProductionInputV1
-) {
-  for (const platform of selectedPlatforms(input)) {
-    const contract = readCoverageContract(root, input, platform.platform);
-    const requirements = contract.componentSpecific.requirements ?? [];
-
-    if (requirements.length === 0) {
-      continue;
-    }
-
-    const manualTest = path.join(
-      componentDirectory(root, input, platform.platform),
-      `${input.componentName}.manual.test.tsx`
-    );
-    const marker = `// Coverage contract: ${requirements.join(', ')}`;
-
-    fs.writeFileSync(
-      manualTest,
-      `${marker}\nimport { describe, expect, it } from 'vitest';\n\ndescribe('${input.componentName} semantic fixture coverage', () => {\n  it('records deterministic manual coverage evidence', () => {\n    expect(true).toBe(true);\n  });\n});\n`
     );
   }
 }
