@@ -83,10 +83,15 @@ export function readBaseLifecycleStatuses(params: {
   metadataRegistry?: readonly ComponentMetadata[];
 }) {
   const statuses = new Map<string, ComponentLifecycle>();
+  const gitPrefix = [
+    '-c',
+    `safe.directory=${params.rootDir}`,
+    '--no-optional-locks',
+  ];
   const revision = spawnSync(
     'git',
     [
-      '--no-optional-locks',
+      ...gitPrefix,
       'rev-parse',
       '--verify',
       `${params.baseRevision}^{commit}`,
@@ -109,7 +114,7 @@ export function readBaseLifecycleStatuses(params: {
     const file = `packages/metadata/src/components/${metadata.name}.metadata.ts`;
     const result = spawnSync(
       'git',
-      ['--no-optional-locks', 'show', `${params.baseRevision}:${file}`],
+      [...gitPrefix, 'show', `${params.baseRevision}:${file}`],
       {
         cwd: params.rootDir,
         encoding: 'utf8',
