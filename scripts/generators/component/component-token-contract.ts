@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { formatGeneratedContent } from '../format-generated-files';
 import {
   renderComponentTokenBarrelExport,
   renderComponentTokenFactoryBarrelExport,
@@ -111,7 +112,9 @@ export function ensureComponentTokenContract(params: {
   }
 }
 
-export function checkComponentTokenContract(plan: ComponentGenerationPlan) {
+export async function checkComponentTokenContract(
+  plan: ComponentGenerationPlan
+) {
   const drift: string[] = [];
   const expectedFactoryExport = renderComponentTokenFactoryBarrelExport(
     plan.componentName
@@ -150,12 +153,15 @@ export function checkComponentTokenContract(plan: ComponentGenerationPlan) {
     return uniqueSorted(drift);
   }
 
-  const expectedFactory = renderComponentTokenFactoryTemplate({
-    componentName: plan.componentName,
-    componentTokens: plan.componentTokens,
-    profile: plan.profile,
-    control: plan.control,
-  });
+  const expectedFactory = await formatGeneratedContent(
+    plan.tokenFactoryFile,
+    renderComponentTokenFactoryTemplate({
+      componentName: plan.componentName,
+      componentTokens: plan.componentTokens,
+      profile: plan.profile,
+      control: plan.control,
+    })
+  );
 
   if (!fs.existsSync(plan.tokenFactoryFile)) {
     drift.push(path.relative(plan.root, plan.tokenFactoryFile));
@@ -170,14 +176,19 @@ export function checkComponentTokenContract(plan: ComponentGenerationPlan) {
   }
 
   for (const target of plan.tokenThemeTargets) {
-    const expectedTheme = renderThemeComponentTokensTemplate({
+    const renderedTheme = renderThemeComponentTokensTemplate({
       componentName: plan.componentName,
       componentTokens: plan.componentTokens,
       profile: plan.profile,
       control: plan.control,
     });
 
-    assertGeneratedThemeTokenDependencyPolicy(expectedTheme);
+    assertGeneratedThemeTokenDependencyPolicy(renderedTheme);
+
+    const expectedTheme = await formatGeneratedContent(
+      target.componentFile,
+      renderedTheme
+    );
 
     if (!fs.existsSync(target.componentFile)) {
       drift.push(path.relative(plan.root, target.componentFile));

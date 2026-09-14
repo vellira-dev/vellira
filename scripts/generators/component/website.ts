@@ -3,15 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  deriveComponentPresentationScenarios,
   getComponentPresentationScenarioDescription,
   getComponentPresentationScenarioTitle,
   readCanonicalComponentCapabilities,
-  type ComponentPresentationScenario,
 } from '../component-presentation';
 import { getCatalogPaths } from '../component-page/helpers/paths';
 
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
+import { getEffectiveWebsitePresentationScenarios } from './website-presentation';
 
 export type WebsiteComponentProfile =
   'primitive' | 'form-control' | 'compound' | 'overlay';
@@ -29,105 +28,6 @@ export function resolveWebsiteComponentProfile(
   return profile === 'base' ? 'primitive' : profile;
 }
 
-function readComponentTypeSources(params: {
-  root: string;
-  componentName: string;
-}) {
-  const sharedFile = `${params.componentName[0].toLowerCase()}${params.componentName.slice(1)}.ts`;
-  const candidates = [
-    path.join(params.root, 'packages/types/src', sharedFile),
-    ...['react', 'react-native'].flatMap((packageName) =>
-      ['primitives', 'components', 'patterns'].map((layer) =>
-        path.join(
-          params.root,
-          'packages',
-          packageName,
-          'src',
-          layer,
-          params.componentName,
-          'types.ts'
-        )
-      )
-    ),
-  ];
-
-  return candidates
-    .filter((filePath) => fs.existsSync(filePath))
-    .map((filePath) => fs.readFileSync(filePath, 'utf8'))
-    .join('\n');
-}
-
-function sourceHasProp(source: string, propName: string) {
-  return new RegExp(`\\b${propName}\\??\\s*:`).test(source);
-}
-
-function getScenarioProps(params: {
-  scenario: ComponentPresentationScenario;
-  profile: ComponentProfileArg;
-  source: string;
-}) {
-  const { scenario, profile, source } = params;
-  const props: string[] = [];
-  const hasType = sourceHasProp(source, 'type');
-  const booleanControl = sourceHasProp(source, 'checked');
-
-  if (profile === 'compound' && hasType && scenario !== 'multiple') {
-    props.push("type='single'");
-  }
-
-  switch (scenario) {
-    case 'basic':
-    case 'rich-content':
-      break;
-    case 'multiple':
-      if (hasType) {
-        props.push("type='multiple'");
-      }
-      if (sourceHasProp(source, 'defaultValue')) {
-        props.push("defaultValue={['item-1', 'item-2']}");
-      }
-      break;
-    case 'controlled':
-      if (booleanControl) {
-        props.push('checked');
-      } else if (sourceHasProp(source, 'value')) {
-        props.push(
-          profile === 'compound' ? "value='item-1'" : "value='Example value'"
-        );
-      }
-      break;
-    case 'uncontrolled':
-      if (booleanControl && sourceHasProp(source, 'defaultChecked')) {
-        props.push('defaultChecked');
-      } else if (sourceHasProp(source, 'defaultValue')) {
-        props.push(
-          profile === 'compound'
-            ? "defaultValue='item-1'"
-            : "defaultValue='Example value'"
-        );
-      }
-      break;
-    case 'collapsible':
-      if (sourceHasProp(source, 'collapsible')) {
-        props.push('collapsible');
-      }
-      if (sourceHasProp(source, 'defaultValue')) {
-        props.push("defaultValue='item-1'");
-      }
-      break;
-    case 'disabled':
-    case 'required':
-    case 'invalid':
-    case 'loading':
-      if (sourceHasProp(source, scenario)) {
-        props.push(scenario);
-      }
-      break;
-  }
-
-  return props;
-}
-
 function toTsString(value: string) {
   return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 }
@@ -138,27 +38,16 @@ function renderGeneratedPresentationMetadata(params: {
   profile: ComponentProfileArg;
   capabilities: readonly import('@vellira-ui/metadata').ComponentCapability[];
 }) {
-  const source = readComponentTypeSources(params);
-  const scenarios = deriveComponentPresentationScenarios({
-    profile: params.profile,
-    capabilities: params.capabilities,
-  });
-  const examples = scenarios
-    .map((scenario) => {
-      const props = getScenarioProps({
-        scenario,
-        profile: params.profile,
-        source,
-      });
-
-      return `    {
+  const examples = getEffectiveWebsitePresentationScenarios(params)
+    .map(
+      ({ scenario, props }) => `    {
       title: ${toTsString(getComponentPresentationScenarioTitle(scenario))},
       description: ${toTsString(
         getComponentPresentationScenarioDescription(scenario)
       )},
       props: [${props.map(toTsString).join(', ')}],
-    },`;
-    })
+    },`
+    )
     .join('\n');
 
   return `import { defineComponentPageMetadata } from '../../metadata';

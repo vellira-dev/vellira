@@ -13,14 +13,17 @@ import { renderNativeStylesTemplate } from './templates/component-native-styles'
 import { renderStylesTemplate } from './templates/component-styles';
 import { renderTestTemplate } from './templates/component-test';
 
-const fixtureName = '__GeneratedContractSwitch';
+// Exercise the canonical Switch token contract in an unexported fixture module.
+// Arbitrary newly owned token families are covered by production E2E fixtures.
+const fixtureName = 'Switch';
+const fixtureLayer = '__generated-contract-fixtures';
 const packageRoots = [
   path.resolve('packages/react'),
   path.resolve('packages/react-native'),
 ];
 
 function fixtureDirectory(packageRoot: string) {
-  return path.join(packageRoot, 'src', 'components', fixtureName);
+  return path.join(packageRoot, 'src', fixtureLayer, fixtureName);
 }
 
 function runCommand(params: { cwd: string; args: string[]; label: string }) {
@@ -135,7 +138,7 @@ describe('generated component baseline tests', () => {
           'exec',
           'vitest',
           'run',
-          `src/components/${fixtureName}/${fixtureName}.test.tsx`,
+          `src/${fixtureLayer}/${fixtureName}/${fixtureName}.test.tsx`,
           '--config',
           'vitest.config.ts',
         ],

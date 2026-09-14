@@ -4,6 +4,25 @@ import { renderNativeStylesTemplate } from './component-native-styles';
 import { renderStylesTemplate } from './component-styles';
 
 describe('component style templates', () => {
+  it('keeps generated boolean-control consumption in its declared component token family', () => {
+    const params = {
+      componentName: 'ExampleToggle',
+      profile: 'form-control',
+      control: 'boolean',
+    } as const;
+    const web = renderStylesTemplate(params);
+    const native = renderNativeStylesTemplate(params);
+
+    expect(web).toContain('var(--example-toggle-off-track-bg)');
+    expect(web).toContain('var(--example-toggle-geometry-track-width)');
+    expect(web).not.toContain('--switch-');
+    expect(native).toContain('theme.components.exampleToggle.off.trackBg');
+    expect(native).toContain(
+      'theme.components.exampleToggle.geometry.trackWidth'
+    );
+    expect(native).not.toContain('theme.components.switch');
+  });
+
   it('renders component-token-aware Web styles for boolean form controls', () => {
     const result = renderStylesTemplate({
       componentName: 'Switch',

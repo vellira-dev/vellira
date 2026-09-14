@@ -118,7 +118,7 @@ beforeEach(() => {
       'SnapshotProbeExamples.tsx',
       'SnapshotProbePlayground.tsx',
       'SnapshotProbeAccessibility.tsx',
-      'snapshotProbeApi.ts',
+      'snapshot-probeApi.ts',
       'SnapshotProbeDemo.tsx',
       'SnapshotProbeCatalogPreview.tsx',
     ].map((name) => `${website}/${name}`),

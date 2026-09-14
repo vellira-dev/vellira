@@ -8,10 +8,12 @@ import {
   identifierFromSlug,
   objectPropertyKey,
 } from '../helpers/format';
+import { generatedFileHeader } from '../helpers/paths';
 import type { GeneratedPageModel } from '../model/types';
 import type { CatalogCategory } from '../profiles/profiles';
 import {
   requiresGeneratedCatalogPreview,
+  synchronizeGeneratedCatalogPreview,
   synchronizeGeneratedCatalogPreviewRegistry,
 } from './catalog-preview-registry';
 
@@ -37,7 +39,6 @@ export function insertAfterMarker(params: {
     existsCheck,
     slug,
   } = params;
-
   const originalSource = fs.readFileSync(filePath, 'utf8');
   const source = originalSource;
 
@@ -380,6 +381,16 @@ export async function updateComponentRegistry(params: {
     model,
   } = params;
 
+  await synchronizeGeneratedCatalogPreview({
+    root,
+    check,
+    checkFailures,
+    componentCatalogDir,
+    componentsRegistryFile,
+    model,
+    generatedFileHeader,
+  });
+
   const catalogPreviewFile = path.join(
     componentCatalogDir,
     `${model.componentName}CatalogPreview.tsx`
@@ -393,7 +404,9 @@ export async function updateComponentRegistry(params: {
     const relativePreviewFile = path.relative(root, catalogPreviewFile);
 
     if (check) {
-      checkFailures.push(relativePreviewFile);
+      if (!checkFailures.includes(relativePreviewFile)) {
+        checkFailures.push(relativePreviewFile);
+      }
     } else {
       console.error(
         `Catalog signature preview is required before registering ${model.componentName}: ${relativePreviewFile}`
@@ -414,7 +427,6 @@ export async function updateComponentRegistry(params: {
     model.platforms.includes('react')
       ? path.join(componentCatalogDir, `${model.componentName}Demo.tsx`)
       : null,
-
     model.platforms.includes('react-native')
       ? path.join(componentCatalogDir, `Native${model.componentName}Demo.tsx`)
       : null,

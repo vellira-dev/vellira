@@ -12,6 +12,7 @@ export function renderNativeStylesTemplate({
   control = 'value',
 }: NativeStylesTemplateParams) {
   if (profile === 'form-control' && control === 'boolean') {
+    const tokenName = `${componentName[0].toLowerCase()}${componentName.slice(1)}`;
     return `import { StyleSheet } from 'react-native';
 
 import type { NativeTheme } from '../../theme';
@@ -19,51 +20,51 @@ import type { NativeTheme } from '../../theme';
 export const createStyles = (theme: NativeTheme) =>
   StyleSheet.create({
     root: {
-      width: theme.components.switch.geometry.trackWidth,
-      height: theme.components.switch.geometry.trackHeight,
+      width: theme.components.${tokenName}.geometry.trackWidth,
+      height: theme.components.${tokenName}.geometry.trackHeight,
       borderRadius: theme.tokens.radius.full,
-      borderWidth: theme.components.switch.geometry.borderWidth,
-      padding: theme.components.switch.geometry.padding,
+      borderWidth: theme.components.${tokenName}.geometry.borderWidth,
+      padding: theme.components.${tokenName}.geometry.padding,
       justifyContent: 'center',
-      backgroundColor: theme.components.switch.off.trackBg,
-      borderColor: theme.components.switch.off.trackBorder,
+      backgroundColor: theme.components.${tokenName}.off.trackBg,
+      borderColor: theme.components.${tokenName}.off.trackBorder,
     },
     checked: {
-      backgroundColor: theme.components.switch.on.default.trackBg,
-      borderColor: theme.components.switch.on.default.trackBorder,
+      backgroundColor: theme.components.${tokenName}.on.default.trackBg,
+      borderColor: theme.components.${tokenName}.on.default.trackBorder,
     },
     pressed: {
-      transform: [{ scale: theme.components.switch.geometry.pressScale }],
+      transform: [{ scale: theme.components.${tokenName}.geometry.pressScale }],
     },
     checkedPressed: {
-      backgroundColor: theme.components.switch.on.pressed.trackBg,
-      borderColor: theme.components.switch.on.pressed.trackBorder,
+      backgroundColor: theme.components.${tokenName}.on.pressed.trackBg,
+      borderColor: theme.components.${tokenName}.on.pressed.trackBorder,
     },
     invalid: {
-      borderColor: theme.components.switch.errorBorder,
+      borderColor: theme.components.${tokenName}.errorBorder,
     },
     disabled: {
-      backgroundColor: theme.components.switch.disabled.trackBg,
-      borderColor: theme.components.switch.disabled.trackBorder,
+      backgroundColor: theme.components.${tokenName}.disabled.trackBg,
+      borderColor: theme.components.${tokenName}.disabled.trackBorder,
     },
     thumb: {
-      width: theme.components.switch.geometry.thumbSize,
-      height: theme.components.switch.geometry.thumbSize,
+      width: theme.components.${tokenName}.geometry.thumbSize,
+      height: theme.components.${tokenName}.geometry.thumbSize,
       borderRadius: theme.tokens.radius.full,
-      backgroundColor: theme.components.switch.off.thumbBg,
+      backgroundColor: theme.components.${tokenName}.off.thumbBg,
       transform: [{ translateX: 0 }],
     },
     thumbChecked: {
-      backgroundColor: theme.components.switch.on.default.thumbBg,
+      backgroundColor: theme.components.${tokenName}.on.default.thumbBg,
       transform: [
-        { translateX: theme.components.switch.geometry.thumbTravel },
+        { translateX: theme.components.${tokenName}.geometry.thumbTravel },
       ],
     },
     thumbCheckedPressed: {
-      backgroundColor: theme.components.switch.on.pressed.thumbBg,
+      backgroundColor: theme.components.${tokenName}.on.pressed.thumbBg,
     },
     thumbDisabled: {
-      backgroundColor: theme.components.switch.disabled.thumbBg,
+      backgroundColor: theme.components.${tokenName}.disabled.thumbBg,
     },
   });
 `;

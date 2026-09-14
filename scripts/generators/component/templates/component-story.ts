@@ -263,6 +263,35 @@ function renderFormControlStories(params: {
   return stories.length > 0 ? `\n${stories.join('\n\n')}\n` : '';
 }
 
+function renderOverlayStories(capabilities: readonly ComponentCapability[]) {
+  const scenarios = new Set(
+    deriveComponentPresentationScenarios({
+      profile: 'overlay',
+      capabilities,
+    })
+  );
+  const stories: string[] = [];
+
+  if (scenarios.has('controlled')) {
+    stories.push(`export const Controlled: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+  },
+};`);
+  }
+
+  if (scenarios.has('uncontrolled')) {
+    stories.push(`export const Uncontrolled: Story = {
+  args: {
+    defaultOpen: true,
+  },
+};`);
+  }
+
+  return stories.length > 0 ? `\n${stories.join('\n\n')}\n` : '';
+}
+
 function renderBaseStories(capabilities: readonly ComponentCapability[]) {
   const scenarios = new Set(
     deriveComponentPresentationScenarios({
@@ -374,7 +403,9 @@ ${hasMultiple ? "    type: 'single',\n" : ''}    children: (
         })
       : profile === 'form-control'
         ? renderFormControlStories({ control, capabilities })
-        : renderBaseStories(capabilities);
+        : profile === 'overlay'
+          ? renderOverlayStories(capabilities)
+          : renderBaseStories(capabilities);
 
   const nativeTextImport =
     isNative && profile !== 'form-control' ? `${NATIVE_TEXT_IMPORT}\n` : '';
