@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import { parseComponentProductionInput } from '../component-production/contracts';
+import { componentTokenReservationRequest } from './token-reservation';
 import {
   resolveMissingComponentUiFinding,
   type MissingComponentResolutionV1,
@@ -107,6 +108,22 @@ export function canonicalGapRequestFromComponentResolution(
   resolution: MissingComponentResolutionV1,
   options: { launchCritical?: boolean } = {}
 ): CanonicalGapRequestV1 | null {
+  if (resolution.productionEligibility?.hardInvalid) {
+    throw new CanonicalGapError(
+      'Invalid component-token lifecycle; reservation cannot override it.'
+    );
+  }
+  if (
+    resolution.productionEligibility?.reason ===
+      'component-token-reservation-required' &&
+    resolution.productionSeed
+  ) {
+    return componentTokenReservationRequest(
+      resolution.productionSeed,
+      resolution.request.consumer,
+      options.launchCritical
+    );
+  }
   if (
     resolution.kind === 'reuse-existing' ||
     resolution.kind === 'no-component-required'
@@ -429,6 +446,9 @@ function parseUiUsageFinding(value: unknown): VelliraUiUsageFinding {
 }
 
 function issueTitle(request: CanonicalGapRequestV1): string {
+  if (request.kind === 'component-token-reservation') {
+    return `chore(tokens): reserve ${request.canonicalTarget} component token family`;
+  }
   if (request.kind === 'component') {
     return `feat(components): add ${request.canonicalTarget}`;
   }
@@ -481,7 +501,7 @@ function issueBody(request: CanonicalGapRequestV1): string {
       JSON.stringify(request.productionSeed, null, 2),
       '```',
       '',
-      'This seed authorizes deterministic scaffold/plumbing only. Component-specific API, behavior, accessibility, and design semantics still require the normal reviewed completion path.'
+      'This seed preserves production intent, not execution permission. Token-lifecycle eligibility must pass before scaffold/plumbing; normal reviewed completion is still required.'
     );
   }
 
@@ -500,7 +520,7 @@ function labelDefinitionsForRequest(
 ): CanonicalGapLabelDefinition[] {
   const labels = [
     LABELS.base,
-    LABELS.ready,
+    ...(request.kind === 'component-token-reservation' ? [] : [LABELS.ready]),
     request.kind === 'component' || request.kind === 'component-enhancement'
       ? LABELS.component
       : LABELS.resource,

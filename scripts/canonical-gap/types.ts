@@ -1,4 +1,7 @@
-import type { ComponentProductionSeedV1 } from '../component-production/missing-component-request';
+import {
+  parseComponentProductionSeed,
+  type ComponentProductionSeedV1,
+} from '../component-production/production-seed';
 
 export const CANONICAL_GAP_SCHEMA_VERSION = '1' as const;
 export const CANONICAL_GAP_MARKER_PREFIX = 'vellira-canonical-gap:v1:';
@@ -8,6 +11,7 @@ export const CANONICAL_GAP_KINDS = [
   'icon',
   'token',
   'design-resource',
+  'component-token-reservation',
 ] as const;
 
 export type CanonicalGapKind = (typeof CANONICAL_GAP_KINDS)[number];
@@ -28,6 +32,10 @@ export type CanonicalGapRequestV1 = {
   launchCritical: boolean;
   source?: CanonicalGapSourceEvidenceV1;
   productionSeed?: ComponentProductionSeedV1;
+  reservation?: {
+    requiredState: 'reserved';
+    registryPath: 'packages/metadata/src/tokenLifecycle.ts';
+  };
 };
 export type CanonicalGapBatchV1 = {
   schemaVersion: '1';
@@ -102,6 +110,7 @@ const REQUEST_KEYS = new Set([
   'launchCritical',
   'source',
   'productionSeed',
+  'reservation',
 ]);
 const SOURCE_KEYS = new Set(['ruleId', 'path', 'line', 'column', 'detected']);
 const REQUEST_ID = /^[a-z0-9][a-z0-9._:-]{0,159}$/;
@@ -192,6 +201,30 @@ export function parseCanonicalGapRequest(
   }
   const source =
     value.source === undefined ? undefined : parseSource(value.source);
+  const productionSeed =
+    value.productionSeed === undefined
+      ? undefined
+      : parseComponentProductionSeed(value.productionSeed);
+  if (kind === 'component-token-reservation') {
+    if (
+      !productionSeed ||
+      productionSeed.componentTokens === false ||
+      productionSeed.componentName !== value.canonicalTarget ||
+      !isRecord(value.reservation) ||
+      Object.keys(value.reservation).length !== 2 ||
+      value.reservation.requiredState !== 'reserved' ||
+      value.reservation.registryPath !==
+        'packages/metadata/src/tokenLifecycle.ts'
+    ) {
+      throw new CanonicalGapError(
+        'Invalid component-token reservation authority.'
+      );
+    }
+  } else if (value.reservation !== undefined) {
+    throw new CanonicalGapError(
+      'Reservation authority requires component-token-reservation kind.'
+    );
+  }
   return {
     schemaVersion: CANONICAL_GAP_SCHEMA_VERSION,
     requestId,
@@ -201,8 +234,14 @@ export function parseCanonicalGapRequest(
     consumer: requiredString(value, 'consumer', 500),
     launchCritical: requiredBoolean(value, 'launchCritical'),
     ...(source ? { source } : {}),
-    ...(value.productionSeed !== undefined
-      ? { productionSeed: value.productionSeed as ComponentProductionSeedV1 }
+    ...(productionSeed !== undefined ? { productionSeed } : {}),
+    ...(kind === 'component-token-reservation'
+      ? {
+          reservation: {
+            requiredState: 'reserved' as const,
+            registryPath: 'packages/metadata/src/tokenLifecycle.ts' as const,
+          },
+        }
       : {}),
   };
 }

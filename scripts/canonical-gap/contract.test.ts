@@ -41,6 +41,7 @@ const authorities: MissingComponentAuthorities = {
       category: 'form',
       platforms: ['react', 'react-native'],
       profile: 'form-control',
+      componentTokens: 'standard',
       role: 'form-control',
     },
   ],
@@ -210,7 +211,7 @@ describe('canonical gap adapters', () => {
     );
 
     expect(canonicalGapRequestFromComponentResolution(missing)).toMatchObject({
-      kind: 'component',
+      kind: 'component-token-reservation',
       canonicalTarget: 'Textarea',
       productionSeed: { componentName: 'Textarea', platform: 'both' },
     });
@@ -275,7 +276,7 @@ describe('canonical gap adapters', () => {
     );
 
     expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([
-      'component',
+      'component-token-reservation',
       'icon',
       'token',
       'token',

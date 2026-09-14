@@ -51,6 +51,7 @@ const textareaTarget = {
   category: 'form',
   platforms: ['react', 'react-native'],
   profile: 'form-control',
+  componentTokens: 'standard',
   role: 'form-control',
 } as const satisfies ComponentExpansionTarget;
 
@@ -60,6 +61,7 @@ const dialogTarget = {
   category: 'overlay',
   platforms: ['react', 'react-native'],
   profile: 'overlay',
+  componentTokens: 'standard',
   role: 'catalog',
   representedBy: ['Modal'],
 } as const satisfies ComponentExpansionTarget;
@@ -152,7 +154,7 @@ describe('missing-component request workflow', () => {
     expect(result).toMatchObject({
       kind: 'missing-component',
       blocked: true,
-      nextAction: 'link-or-create-component-issue',
+      nextAction: 'link-or-create-component-token-reservation-issue',
       existingCandidates: [],
       issueRequest: {
         kind: 'new-component',
