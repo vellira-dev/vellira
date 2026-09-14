@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { runComponentGenerator } from '../generators/component/run';
 import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
+import { formatGeneratedContent } from '../generators/format-generated-files';
 import {
   createComponentProductionGeneratorOptions,
   type ComponentProductionInputV1,
@@ -29,6 +30,7 @@ const temporaryWorktrees: Array<{ parent: string; root: string }> = [];
 type Fixture = {
   id: string;
   roles: readonly string[];
+  contentGroupLabel?: string;
   input: ComponentProductionInputV1;
 };
 
@@ -36,6 +38,7 @@ const fixtures: readonly Fixture[] = [
   {
     id: 'base-web',
     roles: ['base'],
+    contentGroupLabel: 'Fixture details',
     input: {
       schemaVersion: '1',
       componentName: 'FixtureBaseProbe',
@@ -109,6 +112,7 @@ const fixtures: readonly Fixture[] = [
   {
     id: 'base-cross-platform',
     roles: ['base', 'cross-platform'],
+    contentGroupLabel: 'Fixture details',
     input: {
       schemaVersion: '1',
       componentName: 'FixtureCrossPlatformProbe',
@@ -188,6 +192,32 @@ describe.sequential('component production end-to-end fixtures', () => {
       expectCompoundPlatformDivergence(root);
       await expectInvalidFixtureToFailClosed(root);
       await expectDeterministicRegeneration(root);
+
+      // Base generation deliberately leaves product semantics to completion.
+      // These fixtures specify named, noninteractive content groups. Prove the
+      // scaffold is blocked before supplying that semantic implementation.
+      for (const fixture of fixtures.filter((item) => item.contentGroupLabel)) {
+        const scaffold = await runComponentProductionStructuredValidation({
+          root,
+          input: fixture.input,
+        });
+        expect(scaffold.stages[1].status).toBe('blocked');
+        expect(
+          scaffold.stages[1].findings.some((finding) =>
+            finding.id.endsWith(':platform.accessibility-semantics')
+          )
+        ).toBe(true);
+        await completeContentGroup(root, fixture);
+        await expect(
+          runComponentGenerator({
+            root,
+            options: {
+              ...createComponentProductionGeneratorOptions(fixture.input),
+              check: true,
+            },
+          })
+        ).resolves.toMatchObject({ check: true });
+      }
       commitFixtureCandidate(root);
 
       for (const fixture of fixtures) {
@@ -203,7 +233,10 @@ describe.sequential('component production end-to-end fixtures', () => {
           id: 'completeness',
           status: 'passed',
         });
-        expect(structured.stages[1], `${fixture.id}: quality`).toMatchObject({
+        expect(
+          structured.stages[1],
+          `${fixture.id}: quality: ${structured.stages[1].findings.map((finding) => finding.message).join('\n')}`
+        ).toMatchObject({
           id: 'quality',
           status: 'passed',
         });
@@ -321,6 +354,29 @@ async function prepareTokenLifecycle(
 ) {
   if (input.componentTokens !== false) {
     reserveTokenLifecycleFixture(root, input.componentName);
+  }
+}
+
+async function completeContentGroup(root: string, fixture: Fixture) {
+  for (const platform of selectedPlatforms(fixture.input)) {
+    const file = path.join(
+      componentDirectory(root, fixture.input, platform.platform),
+      `${fixture.input.componentName}.tsx`
+    );
+    const source = fs.readFileSync(file, 'utf8');
+    const element = platform.platform === 'react' ? '<div ' : '<View ';
+    expect(source.split(element)).toHaveLength(2);
+    const semantics =
+      platform.platform === 'react'
+        ? `role='group' aria-label=${JSON.stringify(fixture.contentGroupLabel)}`
+        : `accessible={true} accessibilityLabel=${JSON.stringify(fixture.contentGroupLabel)}`;
+    fs.writeFileSync(
+      file,
+      await formatGeneratedContent(
+        file,
+        source.replace(element, `${element}${semantics} `)
+      )
+    );
   }
 }
 
