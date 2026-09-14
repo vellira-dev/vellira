@@ -49,7 +49,7 @@
     "test:unit": "pnpm test:tokens && pnpm test:core && pnpm test:metadata && pnpm test:web && pnpm test:native",
     "test:core": "pnpm --filter @vellira-ui/core test",
     "test:metadata": "pnpm --filter @vellira-ui/metadata test",
-    "test:tooling": "vitest run --config vitest.tooling.config.ts --exclude scripts/checks/token-semantic/cli.test.ts && vitest run --config vitest.tooling.config.ts scripts/checks/token-semantic/cli.test.ts",
+    "test:tooling": "node scripts/ci/run-tooling-tests.mjs",
     "test:tooling:readiness": "pnpm test:tooling && pnpm check:tokens-semantic:strict",
     "test:blog": "pnpm exec turbo run build --filter=@vellira-ui/react --filter=@vellira-ui/icons && vitest run --config vitest.tooling.config.ts scripts/blog",
     "test:web": "pnpm --filter @vellira-ui/react test",
