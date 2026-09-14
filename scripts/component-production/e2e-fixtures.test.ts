@@ -7,6 +7,11 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { runComponentGenerator } from '../generators/component/run';
+import { createComponentGenerationPlan } from '../generators/component/plan';
+import {
+  createComponentMetadataFromPlan,
+  generateComponentDocumentation,
+} from '../generators/component/docs';
 import { generateComponentWebsitePage } from '../generators/component/website';
 import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
 import { formatGeneratedContent } from '../generators/format-generated-files';
@@ -248,6 +253,20 @@ describe.sequential('component production end-to-end fixtures', () => {
         if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
       }
       for (const fixture of fixtures) {
+        const plan = createComponentGenerationPlan({
+          root,
+          options: {
+            ...createComponentProductionGeneratorOptions(fixture.input),
+            force: true,
+          },
+        });
+        await generateComponentDocumentation({
+          root,
+          plan,
+          metadata: createComponentMetadataFromPlan(plan),
+          createdFiles: [],
+          updatedFiles: [],
+        });
         generateComponentWebsitePage({
           root,
           componentName: fixture.input.componentName,
