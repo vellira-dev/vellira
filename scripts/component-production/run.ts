@@ -2,6 +2,12 @@ import type { ComponentCompletenessResult } from '../checks/component-completene
 import type { ComponentQualityRunResult } from '../checks/component-quality/types';
 
 import {
+  parseCandidateSnapshot,
+  verifyCandidateSnapshot,
+  type CandidateSnapshotV1,
+} from './candidate-snapshot';
+
+import {
   runComponentProductionCommandValidation,
   type ComponentProductionCommandValidationResult,
 } from './command-validation';
@@ -156,6 +162,7 @@ export async function runComponentProduction(params: {
 export async function runComponentProductionValidation(params: {
   root: string;
   input: unknown;
+  candidateSnapshot?: CandidateSnapshotV1;
   dependencies?: Pick<
     ComponentProductionRunDependencies,
     | 'runCommandValidation'
@@ -169,6 +176,7 @@ export async function runComponentProductionValidation(params: {
   const validation = await validateComponentProductionCandidate({
     root: params.root,
     input,
+    candidateSnapshot: params.candidateSnapshot,
     dependencies: params.dependencies,
   });
 
@@ -206,6 +214,7 @@ export async function runComponentProductionValidation(params: {
 export async function validateComponentProductionCandidate(params: {
   root: string;
   input: ComponentProductionInputV1;
+  candidateSnapshot?: CandidateSnapshotV1;
   dependencies?: Pick<
     ComponentProductionRunDependencies,
     | 'runCommandValidation'
@@ -214,6 +223,16 @@ export async function validateComponentProductionCandidate(params: {
     | 'runReviewBundle'
   >;
 }): Promise<ComponentProductionValidationResult> {
+  // Copy/canonicalize before awaiting validators; a caller cannot mutate authority
+  // mid-run. Earlier validation failures still return no review bundle.
+  const candidateSnapshot =
+    params.candidateSnapshot === undefined
+      ? undefined
+      : parseCandidateSnapshot(params.candidateSnapshot);
+  const before =
+    candidateSnapshot === undefined
+      ? undefined
+      : verifyCandidateSnapshot(params.root, candidateSnapshot);
   const runCommandValidation =
     params.dependencies?.runCommandValidation ??
     runComponentProductionCommandValidation;
@@ -228,7 +247,9 @@ export async function validateComponentProductionCandidate(params: {
 
   const runReviewBundle =
     params.dependencies?.runReviewBundle ??
-    (params.dependencies === undefined ? runComponentReviewBundle : null);
+    (params.dependencies === undefined || candidateSnapshot !== undefined
+      ? runComponentReviewBundle
+      : null);
 
   const commandValidation = runCommandValidation({
     root: params.root,
@@ -304,6 +325,9 @@ export async function validateComponentProductionCandidate(params: {
     root: params.root,
     input: params.input,
     completenessStage: structuredValidation.stages[0],
+    candidateSnapshot,
+    snapshotIssuesBeforeValidation:
+      before && !before.valid ? before.issues : [],
   });
 
   return {

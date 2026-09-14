@@ -5,6 +5,13 @@ import path from 'node:path';
 import type { ComponentPlatform } from '@vellira-ui/metadata';
 import { slugify } from '../generators/component-page/helpers/format';
 
+import {
+  verifyCandidateSnapshot,
+  type CandidateIdentity,
+  type CandidateSnapshotIssue,
+  type CandidateSnapshotV1,
+} from './candidate-snapshot';
+
 import type {
   ComponentProductionFinding,
   ComponentProductionInputV1,
@@ -19,7 +26,9 @@ export type ComponentReviewBundleSurfaceStatus =
 export type ComponentReviewBundleEvidence = {
   kind: 'local-preview' | 'validation';
   description: string;
-  revision: string;
+  /** Present only when the candidate is exactly a clean Git revision. */
+  revision?: string;
+  candidateIdentity: CandidateIdentity | null;
   command?: readonly string[];
   route?: string;
   stage?: ComponentProductionStageResult['id'];
@@ -40,6 +49,7 @@ export type ComponentReviewBundleReport = {
   schemaVersion: typeof COMPONENT_REVIEW_BUNDLE_SCHEMA_VERSION;
   componentName: string;
   revision: string | null;
+  candidateIdentity: CandidateIdentity | null;
   workingTreeClean: boolean;
   status: 'ready' | 'blocked';
   readyForHumanReview: boolean;
@@ -67,7 +77,10 @@ type SurfaceSpec = {
     path: string;
     includes?: string;
   }[];
-  evidence?: readonly Omit<ComponentReviewBundleEvidence, 'revision'>[];
+  evidence?: readonly Omit<
+    ComponentReviewBundleEvidence,
+    'revision' | 'candidateIdentity'
+  >[];
 };
 
 export type ComponentReviewBundleDependencies = {
@@ -79,17 +92,78 @@ export function runComponentReviewBundle(params: {
   root: string;
   input: ComponentProductionInputV1;
   completenessStage: ComponentProductionStageResult;
+  candidateSnapshot?: CandidateSnapshotV1;
+  /** Negative evidence captured before validation; cannot grant snapshot authority. */
+  snapshotIssuesBeforeValidation?: readonly CandidateSnapshotIssue[];
   dependencies?: ComponentReviewBundleDependencies;
 }): ComponentReviewBundleResult {
   const root = path.resolve(params.root);
+  // Snapshot authority always uses actual Git observations, never test overrides.
   const revision =
-    params.dependencies?.resolveRevision?.(root) ?? resolveExactRevision(root);
+    params.candidateSnapshot !== undefined
+      ? resolveExactRevision(root)
+      : (params.dependencies?.resolveRevision?.(root) ??
+        resolveExactRevision(root));
   const workingTreeClean =
-    params.dependencies?.isWorkingTreeClean?.(root) ??
-    resolveWorkingTreeClean(root);
-  const specs = buildSurfaceSpecs(params.input);
-  const surfaces = specs.map((spec) => evaluateSurface(root, spec, revision));
+    params.candidateSnapshot !== undefined
+      ? resolveWorkingTreeClean(root)
+      : (params.dependencies?.isWorkingTreeClean?.(root) ??
+        resolveWorkingTreeClean(root));
   const blockingFindings: ComponentProductionFinding[] = [];
+  let candidateIdentity: CandidateIdentity | null =
+    workingTreeClean && revision ? { kind: 'revision', revision } : null;
+  const snapshotIssues = [...(params.snapshotIssuesBeforeValidation ?? [])];
+  if (params.candidateSnapshot !== undefined) {
+    const verified = verifyCandidateSnapshot(root, params.candidateSnapshot);
+    if (!verified.valid) snapshotIssues.push(...verified.issues);
+    else if (
+      verified.identity.baseRevision !== revision ||
+      (verified.identity.changedPaths.length === 0) !== workingTreeClean
+    ) {
+      snapshotIssues.push({
+        code: 'observation-drift',
+        message: 'Git observations contradict verified candidate identity.',
+      });
+    } else if (!workingTreeClean) candidateIdentity = verified.identity;
+  }
+  if (snapshotIssues.length) candidateIdentity = null;
+  for (const [index, issue] of snapshotIssues.entries()) {
+    blockingFindings.push({
+      id: `completeness:review-bundle:snapshot:${issue.code}:${index}`,
+      stage: 'completeness',
+      severity: 'blocking',
+      ruleId: `review-bundle.candidate-snapshot.${issue.code}`,
+      message: issue.message,
+      ...(issue.path === undefined ? {} : { path: issue.path }),
+    });
+  }
+  const specs = buildSurfaceSpecs(params.input);
+  const surfaces = specs.map((spec) =>
+    evaluateSurface(root, spec, candidateIdentity)
+  );
+  // Surface reads must not hide a candidate mutation after identity verification.
+  if (params.candidateSnapshot !== undefined && candidateIdentity !== null) {
+    const verified = verifyCandidateSnapshot(root, params.candidateSnapshot);
+    if (!verified.valid) {
+      candidateIdentity = null;
+      for (const issue of verified.issues)
+        blockingFindings.push({
+          id: `completeness:review-bundle:snapshot:after-surfaces:${issue.code}`,
+          stage: 'completeness',
+          severity: 'blocking',
+          ruleId: `review-bundle.candidate-snapshot.${issue.code}`,
+          message: issue.message,
+          ...(issue.path === undefined ? {} : { path: issue.path }),
+        });
+      for (const surface of surfaces) {
+        surface.evidence = surface.evidence.map((item) => {
+          const evidence = { ...item, candidateIdentity: null };
+          delete evidence.revision;
+          return evidence;
+        });
+      }
+    }
+  }
 
   if (!revision) {
     blockingFindings.push({
@@ -102,7 +176,7 @@ export function runComponentReviewBundle(params: {
     });
   }
 
-  if (!workingTreeClean) {
+  if (!workingTreeClean && params.candidateSnapshot === undefined) {
     blockingFindings.push({
       id: 'completeness:review-bundle:working-tree',
       stage: 'completeness',
@@ -136,6 +210,7 @@ export function runComponentReviewBundle(params: {
     schemaVersion: COMPONENT_REVIEW_BUNDLE_SCHEMA_VERSION,
     componentName: params.input.componentName,
     revision,
+    candidateIdentity,
     workingTreeClean,
     status: ready ? 'ready' : 'blocked',
     readyForHumanReview: ready,
@@ -358,7 +433,7 @@ function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
 function evaluateSurface(
   root: string,
   spec: SurfaceSpec,
-  revision: string | null
+  candidateIdentity: CandidateIdentity | null
 ): ComponentReviewBundleSurface {
   const required = spec.required ?? true;
   const requiredPaths = spec.requiredPaths ?? [];
@@ -442,7 +517,10 @@ function evaluateSurface(
     missingArtifacts: [...new Set(missingArtifacts)].sort(),
     evidence: (spec.evidence ?? []).map((item) => ({
       ...item,
-      revision: revision ?? 'unresolved',
+      candidateIdentity,
+      ...(candidateIdentity?.kind === 'revision'
+        ? { revision: candidateIdentity.revision }
+        : {}),
     })),
   };
 }
@@ -478,11 +556,11 @@ function selectedPlatforms(input: ComponentProductionInputV1) {
 
 function validationEvidence(
   stage: ComponentProductionStageResult['id']
-): Omit<ComponentReviewBundleEvidence, 'revision'> {
+): Omit<ComponentReviewBundleEvidence, 'revision' | 'candidateIdentity'> {
   return {
     kind: 'validation',
     stage,
-    description: `Canonical ${stage} validation passed for this candidate revision.`,
+    description: `Canonical ${stage} validation passed for this candidate identity.`,
   };
 }
 
@@ -490,7 +568,7 @@ function localEvidence(
   command: readonly string[],
   route: string | undefined,
   description: string
-): Omit<ComponentReviewBundleEvidence, 'revision'> {
+): Omit<ComponentReviewBundleEvidence, 'revision' | 'candidateIdentity'> {
   return {
     kind: 'local-preview',
     command,
@@ -499,27 +577,32 @@ function localEvidence(
   };
 }
 
-function resolveExactRevision(root: string): string | null {
-  const result = spawnSync('git', ['rev-parse', 'HEAD'], {
+function inspectGit(root: string, args: string[]) {
+  const env = { ...process.env };
+  for (const key of Object.keys(env))
+    if (key.startsWith('GIT_')) delete env[key];
+  return spawnSync('git', ['--no-optional-locks', ...args], {
     cwd: root,
     encoding: 'utf8',
     shell: false,
+    env,
+    timeout: 10_000,
   });
+}
+
+function resolveExactRevision(root: string): string | null {
+  const result = inspectGit(root, ['rev-parse', 'HEAD']);
   const revision = result.status === 0 ? result.stdout.trim() : '';
 
   return /^[0-9a-f]{40}$/i.test(revision) ? revision : null;
 }
 
 function resolveWorkingTreeClean(root: string): boolean {
-  const result = spawnSync(
-    'git',
-    ['status', '--porcelain=v1', '--untracked-files=all'],
-    {
-      cwd: root,
-      encoding: 'utf8',
-      shell: false,
-    }
-  );
+  const result = inspectGit(root, [
+    'status',
+    '--porcelain=v1',
+    '--untracked-files=all',
+  ]);
 
   return result.status === 0 && result.stdout.trim().length === 0;
 }

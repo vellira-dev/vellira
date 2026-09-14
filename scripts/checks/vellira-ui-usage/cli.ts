@@ -1,7 +1,9 @@
 import { runVelliraUiUsageCheck } from './checker';
+import { toBlockingVelliraUiUsageReport } from './enforcement';
 
-const report = runVelliraUiUsageCheck();
+const report = toBlockingVelliraUiUsageReport(runVelliraUiUsageCheck());
 const json = process.argv.includes('--json');
+const reportOnly = process.argv.includes('--report-only');
 
 if (json) {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
@@ -9,11 +11,11 @@ if (json) {
   printHumanReport();
 }
 
-process.exitCode = report.summary.blockingFindings > 0 ? 1 : 0;
+process.exitCode = !reportOnly && report.summary.blockingFindings > 0 ? 1 : 0;
 
 function printHumanReport() {
   console.log(
-    `Vellira UI usage audit: ${report.summary.findings} finding(s), ${report.summary.exceptionsApplied} explicit exception(s), ${report.summary.filesScanned} file(s) scanned.`
+    `Vellira UI usage enforcement: ${report.summary.findings} finding(s), ${report.summary.exceptionsApplied} explicit exception(s), ${report.summary.filesScanned} file(s) scanned.`
   );
 
   for (const finding of report.findings) {
@@ -38,6 +40,6 @@ function printHumanReport() {
   }
 
   console.log(
-    'Audit mode is non-blocking. Classify and repair the baseline in #852 before enabling enforcement.'
+    'Blocking mode is enabled. Any unexcepted first-party UI usage finding fails this command and CI.'
   );
 }

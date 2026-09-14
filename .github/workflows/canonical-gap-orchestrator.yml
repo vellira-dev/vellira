@@ -1,0 +1,205 @@
+name: Canonical Gap Orchestrator
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview canonical gap routing without mutating GitHub issues
+        required: true
+        type: boolean
+        default: true
+      launch_critical:
+        description: Mark discovered work as launch critical
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: canonical-gap-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Route canonical gaps
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout trusted orchestration code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || 'main' }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install trusted tooling dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build trusted metadata dependency
+        run: pnpm --filter @vellira-ui/metadata build
+
+      - name: Prepare exact gap report
+        id: report
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/canonical-gap
+          report_path=.artifacts/canonical-gap/report.json
+
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            if [[ -z "$SOURCE_PR_NUMBER" ]]; then
+              echo "::warning::CI workflow_run did not expose an associated pull request."
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            current_head="$(
+              gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" --jq '.head.sha'
+            )"
+            if [[ "$current_head" != "$SOURCE_HEAD_SHA" ]]; then
+              echo "::warning::Ignoring stale CI run $SOURCE_RUN_ID at $SOURCE_HEAD_SHA; PR #$SOURCE_PR_NUMBER is now at $current_head."
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            download_dir="$RUNNER_TEMP/canonical-gap-source"
+            mkdir -p "$download_dir"
+            artifact_name="vellira-ui-usage-$SOURCE_HEAD_SHA"
+
+            set +e
+            gh run download "$SOURCE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "$artifact_name" \
+              --dir "$download_dir"
+            download_status=$?
+            set -e
+
+            if [[ "$download_status" -ne 0 ]]; then
+              echo "::warning::No exact-head Vellira UI usage artifact was available for run $SOURCE_RUN_ID."
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            source_report="$download_dir/report.json"
+            if [[ ! -f "$source_report" || -L "$source_report" ]]; then
+              echo "::warning::Downloaded canonical gap source artifact did not contain a regular report.json."
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            cp "$source_report" "$report_path"
+            echo "source_revision=$SOURCE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          else
+            pnpm check:vellira-ui-usage:json > "$report_path"
+            echo "source_revision=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          node -e "JSON.parse(require('fs').readFileSync('$report_path', 'utf8'))"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Verify current source before routing
+        id: source
+        if: steps.report.outputs.ready == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          set -euo pipefail
+          trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap source verification failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            if [[ -z "$SOURCE_PR_NUMBER" ]]; then
+              echo "current=false" >> "$GITHUB_OUTPUT"
+              printf '%s\n' '{"schemaVersion":"1","status":"skipped","reason":"unverified-source"}' > .artifacts/canonical-gap/result.json
+              exit 0
+            fi
+            current_pr="$(
+              gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" \
+                --jq '[.head.sha, .head.repo.full_name, .base.repo.full_name] | @tsv'
+            )"
+            IFS=$'\t' read -r current_head current_repo target_repo <<< "$current_pr"
+            if [[ "$current_head" != "$SOURCE_HEAD_SHA" ||
+                  "$current_repo" != "$GITHUB_REPOSITORY" ||
+                  "$target_repo" != "$GITHUB_REPOSITORY" ]]; then
+              echo "::warning::Skipping stale or cross-repository canonical gap source."
+              echo "current=false" >> "$GITHUB_OUTPUT"
+              printf '%s\n' '{"schemaVersion":"1","status":"skipped","reason":"unverified-source"}' > .artifacts/canonical-gap/result.json
+              exit 0
+            fi
+          fi
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Preview canonical gap routing
+        if: >-
+          steps.report.outputs.ready == 'true' &&
+          steps.source.outputs.current == 'true' &&
+          github.event_name == 'workflow_dispatch' &&
+          inputs.dry_run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap routing failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT
+          node --import tsx scripts/canonical-gap/cli.ts \
+            --repo "${{ github.repository }}" \
+            --report .artifacts/canonical-gap/report.json \
+            ${{ inputs.launch_critical && '--launch-critical' || '' }} \
+            > .artifacts/canonical-gap/result.json
+          cat .artifacts/canonical-gap/result.json
+
+      - name: Apply canonical gap routing
+        if: >-
+          steps.report.outputs.ready == 'true' &&
+          steps.source.outputs.current == 'true' &&
+          (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap routing failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT
+          node --import tsx scripts/canonical-gap/cli.ts \
+            --repo "${{ github.repository }}" \
+            --report .artifacts/canonical-gap/report.json \
+            --apply \
+            ${{ github.event_name == 'workflow_dispatch' && inputs.launch_critical && '--launch-critical' || '' }} \
+            > .artifacts/canonical-gap/result.json
+          cat .artifacts/canonical-gap/result.json
+
+      - name: Upload canonical gap evidence
+        if: always() && steps.report.outputs.ready == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: canonical-gap-${{ steps.report.outputs.source_revision || github.sha }}-${{ github.run_id }}
+          path: |
+            .artifacts/canonical-gap/report.json
+            .artifacts/canonical-gap/result.json
+          if-no-files-found: error
+          retention-days: 14
