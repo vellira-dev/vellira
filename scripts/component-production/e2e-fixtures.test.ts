@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { runComponentGenerator } from '../generators/component/run';
+import { generateComponentWebsitePage } from '../generators/component/website';
 import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
 import { formatGeneratedContent } from '../generators/format-generated-files';
 import {
@@ -16,6 +17,8 @@ import {
   type ComponentProductionStageResult,
 } from './contracts';
 import { runComponentProductionGeneration } from './generation';
+import { completeDisclosureFixture } from './fixtures/complete-disclosure';
+import { completeOverlayFixture } from './fixtures/complete-overlay';
 import { runComponentReviewBundle } from './review-bundle';
 import {
   runComponentProductionValidation,
@@ -199,6 +202,15 @@ describe.sequential('component production end-to-end fixtures', () => {
       expectCompoundPlatformDivergence(root);
       await expectInvalidFixtureToFailClosed(root);
       await expectDeterministicRegeneration(root);
+      await completeDisclosureFixture(
+        root,
+        divergentCompoundFixture().input.componentName
+      );
+      const overlay = fixtures.find(
+        (fixture) => fixture.input.profile === 'overlay'
+      );
+      if (!overlay) throw new Error('Overlay fixture is missing.');
+      await completeOverlayFixture(root, overlay.input.componentName);
 
       // Base generation deliberately leaves product semantics to completion.
       // These fixtures specify named, noninteractive content groups. Prove the
@@ -233,6 +245,12 @@ describe.sequential('component production end-to-end fixtures', () => {
         await completeTokenSurface(root, fixture);
       }
       for (const fixture of fixtures) {
+        generateComponentWebsitePage({
+          root,
+          componentName: fixture.input.componentName,
+          profile: fixture.input.profile,
+          category: fixture.input.category,
+        });
         await expect(
           runComponentGenerator({
             root,
@@ -243,6 +261,7 @@ describe.sequential('component production end-to-end fixtures', () => {
           })
         ).resolves.toMatchObject({ check: true });
       }
+      runSemanticFixtureTests(root);
       commitFixtureCandidate(root);
 
       for (const fixture of fixtures) {
@@ -379,6 +398,35 @@ async function prepareTokenLifecycle(
 ) {
   if (input.componentTokens !== false) {
     reserveTokenLifecycleFixture(root, input.componentName);
+  }
+}
+
+function runSemanticFixtureTests(root: string) {
+  for (const platform of ['react', 'react-native'] as const) {
+    const tests = fixtures
+      .filter(
+        (fixture) =>
+          fixture.input.profile === 'compound' ||
+          (platform === 'react' && fixture.input.profile === 'overlay')
+      )
+      .map(
+        ({ input }) =>
+          `src/${input.layer}/${input.componentName}/${input.componentName}.manual.test.tsx`
+      );
+    const result = spawnSync(
+      'pnpm',
+      ['exec', 'vitest', 'run', ...tests, '--config', 'vitest.config.ts'],
+      {
+        cwd: path.join(root, 'packages', platform),
+        encoding: 'utf8',
+        shell: false,
+        env: { ...process.env, CI: 'true' },
+      }
+    );
+    expect(
+      result.status,
+      `${platform} fixture behavior:\n${result.stdout}\n${result.stderr}`
+    ).toBe(0);
   }
 }
 
