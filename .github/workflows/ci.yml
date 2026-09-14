@@ -472,6 +472,8 @@ jobs:
 
       - name: Browser tests (Chromium baseline + cross-browser launch contracts)
         run: pnpm test:e2e:web
+        env:
+          HOME: /root
 
       - name: Visual regression
         run: pnpm test:e2e:web:visual
