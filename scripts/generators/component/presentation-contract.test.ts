@@ -46,6 +46,62 @@ function createPlan(root: string) {
   });
 }
 
+function writeRootApi(plan: ReturnType<typeof createPlan>) {
+  fs.writeFileSync(
+    path.join(plan.root, 'tsconfig.base.json'),
+    JSON.stringify({
+      compilerOptions: {
+        target: 'ES2022',
+        module: 'NodeNext',
+        moduleResolution: 'NodeNext',
+        strict: true,
+        jsx: 'react-jsx',
+      },
+    })
+  );
+
+  for (const target of plan.targets) {
+    const packageRoot = path.join(
+      plan.root,
+      'packages',
+      target.packageName,
+      'src'
+    );
+    fs.mkdirSync(packageRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(plan.root, 'packages', target.packageName, 'tsconfig.json'),
+      JSON.stringify({
+        extends: '../../tsconfig.base.json',
+        compilerOptions: {
+          rootDir: 'src',
+          noEmit: true,
+        },
+        include: ['src/**/*.ts', 'src/**/*.tsx'],
+      })
+    );
+    fs.mkdirSync(target.componentDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(target.componentDir, 'types.ts'),
+      `export interface AccordionProps {
+  type?: 'single' | 'multiple';
+  value?: string;
+  defaultValue?: string;
+  collapsible?: boolean;
+}
+`
+    );
+    const itemDir = path.join(target.componentDir, 'Item');
+    fs.mkdirSync(itemDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(itemDir, 'types.ts'),
+      `export interface AccordionItemProps {
+  disabled?: boolean;
+}
+`
+    );
+  }
+}
+
 function writeCompletePresentation(root: string) {
   const plan = createPlan(root);
   const story = `export const Default = {};
@@ -98,6 +154,19 @@ export const RichContent = {};
 describe('component presentation contract', () => {
   it('accepts comparable Web and Native capability coverage', () => {
     const { plan } = writeCompletePresentation(createRoot());
+
+    expect(checkComponentPresentationContract(plan)).toEqual([]);
+  });
+
+  it('keeps part-only capabilities out of website scenario requirements', () => {
+    const { plan, examplesFile } = writeCompletePresentation(createRoot());
+    writeRootApi(plan);
+    const source = fs
+      .readFileSync(examplesFile, 'utf8')
+      .split('\n')
+      .filter((line) => !line.includes('Disabled state'))
+      .join('\n');
+    fs.writeFileSync(examplesFile, source);
 
     expect(checkComponentPresentationContract(plan)).toEqual([]);
   });

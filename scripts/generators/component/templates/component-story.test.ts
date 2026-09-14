@@ -108,6 +108,29 @@ describe('component story templates', () => {
     expect(source).not.toContain('Replace this section');
   });
 
+  it('renders overlay controlled and uncontrolled scenarios', () => {
+    const source = renderStoryTemplate({
+      componentName: 'DialogProbe',
+      layer: 'components',
+      isNative: false,
+      profile: 'overlay',
+      capabilities: [
+        'controlled',
+        'uncontrolled',
+        'keyboard',
+        'focus-management',
+        'portal',
+      ],
+      parts: ['Root', 'Trigger', 'Content'],
+    });
+
+    expect(source).toContain('export const Controlled: Story');
+    expect(source).toContain('open: true');
+    expect(source).toContain('onOpenChange: () => undefined');
+    expect(source).toContain('export const Uncontrolled: Story');
+    expect(source).toContain('defaultOpen: true');
+  });
+
   it('renders rich compound scenarios from reusable capabilities', () => {
     const source = renderStoryTemplate({
       componentName: 'DisclosureProbe',

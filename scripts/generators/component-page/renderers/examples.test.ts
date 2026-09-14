@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ExtractedProp, GeneratedExample } from '../model/types';
+import type { ExtractedProp, GeneratedExample, Platform } from '../model/types';
 import { buildExamples, renderExamples } from './examples';
 
 type PropKind = ExtractedProp['kind'];
@@ -8,6 +8,7 @@ type RenderConfig = Parameters<typeof renderExamples>[0]['componentConfig'];
 
 type RenderParams = {
   componentName?: string;
+  platforms?: readonly Platform[];
   generatedExamples?: readonly GeneratedExample[];
   reactApiProps?: readonly ExtractedProp[];
   nativeApiProps?: readonly ExtractedProp[];
@@ -47,6 +48,7 @@ function render(params: RenderParams) {
 
   return renderExamples({
     componentName: params.componentName ?? 'Accordion',
+    platforms: params.platforms ?? ['react', 'react-native'],
     componentConfig: params.componentConfig ?? {},
     generatedExamples,
     generatedFileHeader: '',
@@ -106,6 +108,105 @@ describe('buildExamples', () => {
 });
 
 describe('renderExamples', () => {
+  it.each(['react', 'react-native'] as const)(
+    'renders overlay examples only for the supported %s platform',
+    (platform) => {
+      const otherPlatform = platform === 'react' ? 'react-native' : 'react';
+      const apiProps = [
+        prop('open', 'boolean', 'boolean'),
+        prop('defaultOpen', 'boolean', 'boolean'),
+      ];
+      const content = render({
+        componentName: 'Overlay',
+        platforms: [platform],
+        reactApiProps: platform === 'react' ? apiProps : [],
+        nativeApiProps: platform === 'react-native' ? apiProps : [],
+        componentConfig: {
+          react: { imports: ["import { WebHelper } from 'web-helper';"] },
+          native: {
+            imports: ["import { NativeHelper } from 'native-helper';"],
+          },
+        },
+        generatedExamples: [
+          { title: 'Controlled', description: 'Controlled.', props: ['open'] },
+          {
+            title: 'Uncontrolled',
+            description: 'Uncontrolled.',
+            props: ['defaultOpen'],
+          },
+          {
+            title: 'Unavailable',
+            description: 'Other platform only.',
+            props: ['missing'],
+            platforms: [otherPlatform],
+            imports: ["import { Unavailable } from 'unavailable';"],
+          },
+        ],
+      });
+
+      expect(content).toContain(`from '@vellira-ui/${platform}';`);
+      expect(content).not.toContain(`from '@vellira-ui/${otherPlatform}';`);
+      expect(content).toContain("title: 'Controlled'");
+      expect(content).toContain("title: 'Uncontrolled'");
+      expect(content).toContain('\n          open');
+      expect(content).toContain('\n          defaultOpen');
+      expect(content).not.toContain('Unavailable');
+      expect(content).toContain(
+        platform === 'react' ? 'WebHelper' : 'NativeHelper'
+      );
+      expect(content).not.toContain(
+        platform === 'react' ? 'NativeHelper' : 'WebHelper'
+      );
+      expect(content).not.toContain(
+        platform === 'react' ? '<NativeOverlay' : '<ReactOverlay'
+      );
+    }
+  );
+
+  it.each(['react', 'react-native'] as const)(
+    'rejects an invalid shared fragment against the %s contract even when the other platform accepts it',
+    (platform) => {
+      expect(() =>
+        render({
+          generatedExamples: [
+            {
+              title: 'Controlled',
+              description: 'Controlled.',
+              props: ['open'],
+            },
+          ],
+          reactApiProps:
+            platform === 'react' ? [] : [prop('open', 'boolean', 'boolean')],
+          nativeApiProps:
+            platform === 'react-native'
+              ? []
+              : [prop('open', 'boolean', 'boolean')],
+        })
+      ).toThrow(
+        `Example "Controlled" ${platform} prop fragment "open" does not match the component API`
+      );
+    }
+  );
+
+  it('validates intentional platform-specific fragments against their own APIs', () => {
+    const content = render({
+      generatedExamples: [
+        {
+          title: 'Platform states',
+          description: 'Platform-specific states.',
+          props: [],
+          reactProps: ['open'],
+          nativeProps: ['visible'],
+        },
+      ],
+      reactApiProps: [prop('open', 'boolean', 'boolean')],
+      nativeApiProps: [prop('visible', 'boolean', 'boolean')],
+    });
+
+    expect(content).toContain('<ReactAccordion\n          open');
+    expect(content).toContain('<NativeAccordion\n          visible');
+  });
+
   it('filters unavailable demo shortcuts', () => {
     const content = render({
       componentConfig: {

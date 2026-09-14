@@ -11,6 +11,7 @@ import {
   resolveExtractedProps,
 } from './resolve-page-input';
 import { buildPlaygroundArtifacts } from '../renderers/playground';
+import { buildExamples, renderExamples } from '../renderers/examples';
 
 import type { ExtractedProp } from './types';
 
@@ -362,6 +363,56 @@ describe('resolveComponentPageProfile', () => {
       })
     ).toBe('navigation');
   });
+});
+
+describe('resolvePageInput example platform boundary', () => {
+  it.each(['react', 'react-native'] as const)(
+    'carries source-derived %s support into overlay example rendering',
+    async (platform) => {
+      const root = createFixtureRoot();
+      writeComponentFixture({
+        root,
+        packageName: platform,
+        types:
+          'export type ExampleProps = { open?: boolean; defaultOpen?: boolean };',
+      });
+      writeMetadata({
+        root,
+        source: `export default {
+          profile: 'overlay',
+          examples: [
+            { title: 'Controlled', description: 'Controlled.', props: ['open'] },
+            { title: 'Uncontrolled', description: 'Uncontrolled.', props: ['defaultOpen'] },
+          ],
+        };`,
+      });
+      const input = await resolvePageInput({
+        root,
+        componentName: 'Example',
+        catalogComponentsRoot: getCatalogComponentsRoot(root),
+      });
+      expect(input.platforms).toEqual([platform]);
+      expect(
+        platform === 'react' ? input.nativeApiProps : input.reactApiProps
+      ).toEqual([]);
+
+      const content = renderExamples({
+        ...input,
+        componentName: 'Example',
+        generatedFileHeader: '',
+        generatedExamples: buildExamples({
+          ...input,
+          componentName: 'Example',
+        }),
+      });
+      expect(content).toContain("title: 'Controlled'");
+      expect(content).toContain("title: 'Uncontrolled'");
+      expect(content).toContain(`from '@vellira-ui/${platform}';`);
+      expect(content).not.toContain(
+        `from '@vellira-ui/${platform === 'react' ? 'react-native' : 'react'}';`
+      );
+    }
+  );
 });
 
 describe('resolvePageInput related metadata validation', () => {

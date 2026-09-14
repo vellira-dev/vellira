@@ -52,6 +52,69 @@ afterEach(() => {
 });
 
 describe('component review bundle', () => {
+  it('requires the canonical slug-based API artifact for multiword components', () => {
+    const root = createCompleteWebFixture();
+    const directory = path.join(
+      root,
+      'apps/website/src/component-catalog/components/ExampleBox'
+    );
+    fs.mkdirSync(directory);
+    for (const file of [
+      'index.ts',
+      'ExampleBoxExamples.tsx',
+      'ExampleBoxPlayground.tsx',
+      'ExampleBoxAccessibility.tsx',
+      'ExampleBoxDemo.tsx',
+      'example-boxApi.ts',
+    ]) {
+      fs.writeFileSync(path.join(directory, file), 'artifact');
+    }
+    const evaluate = () =>
+      runComponentReviewBundle({
+        root,
+        input: { ...WEB_INPUT, componentName: 'ExampleBox' },
+        completenessStage: passedCompletenessStage(),
+        dependencies: {
+          resolveRevision: () => revision,
+          isWorkingTreeClean: () => true,
+        },
+      }).report.surfaces.find(
+        (surface) => surface.id === 'website-component-page'
+      );
+
+    expect(evaluate()).toMatchObject({ status: 'ready', missingArtifacts: [] });
+    fs.renameSync(
+      path.join(directory, 'example-boxApi.ts'),
+      path.join(directory, 'exampleBoxApi.ts')
+    );
+    expect(evaluate()).toMatchObject({
+      status: 'missing',
+      missingArtifacts: [
+        'apps/website/src/component-catalog/components/ExampleBox/example-boxApi.ts',
+      ],
+    });
+  });
+
+  it.each(['RadioGroup', 'FormField'])(
+    'accepts the maintained %s website artifacts',
+    (componentName) => {
+      const result = runComponentReviewBundle({
+        root: process.cwd(),
+        input: { ...WEB_INPUT, componentName, platform: 'both' },
+        completenessStage: passedCompletenessStage(),
+        dependencies: {
+          resolveRevision: () => revision,
+          isWorkingTreeClean: () => true,
+        },
+      });
+      expect(
+        result.report.surfaces.find(
+          (surface) => surface.id === 'website-component-page'
+        )
+      ).toMatchObject({ status: 'ready', missingArtifacts: [] });
+    }
+  );
+
   it('marks one complete candidate revision ready for human review', () => {
     const root = createCompleteWebFixture();
     const result = runComponentReviewBundle({

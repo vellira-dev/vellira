@@ -70,9 +70,8 @@ export function checkComponentWebsiteContract(
   const result = spawnSync(
     'pnpm',
     [
-      'exec',
-      'tsx',
-      'scripts/generators/component-page/create-component-page.ts',
+      '--silent',
+      'create:component-page',
       plan.componentName,
       '--force',
       '--check',

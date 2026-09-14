@@ -161,7 +161,7 @@ export async function runComponentGenerator(params: {
       ...checkPublicApiContractSynchronization(plan),
       ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
-      ...checkComponentTokenContract(plan),
+      ...(await checkComponentTokenContract(plan)),
       ...checkSharedTypesContract(plan),
       ...(await checkGeneratedPlanContract(plan)),
       ...checkComponentWebsiteContract(plan),

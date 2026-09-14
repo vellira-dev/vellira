@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { ComponentPlatform } from '@vellira-ui/metadata';
+import { slugify } from '../generators/component-page/helpers/format';
 
 import {
   verifyCandidateSnapshot,
@@ -238,7 +239,7 @@ export function runComponentReviewBundle(params: {
 
 function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
   const componentName = input.componentName;
-  const slug = slugifyComponentName(componentName);
+  const slug = slugify(componentName);
   const lowerName = `${componentName[0]?.toLowerCase() ?? ''}${componentName.slice(1)}`;
   const platforms = selectedPlatforms(input);
   const websiteDir = `apps/website/src/component-catalog/components/${componentName}`;
@@ -272,7 +273,7 @@ function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
         `${websiteDir}/${componentName}Examples.tsx`,
         `${websiteDir}/${componentName}Playground.tsx`,
         `${websiteDir}/${componentName}Accessibility.tsx`,
-        `${websiteDir}/${lowerName}Api.ts`,
+        `${websiteDir}/${slug}Api.ts`,
         ...(input.platform === 'web' || input.platform === 'both'
           ? [`${websiteDir}/${componentName}Demo.tsx`]
           : []),
@@ -604,14 +605,6 @@ function resolveWorkingTreeClean(root: string): boolean {
   ]);
 
   return result.status === 0 && result.stdout.trim().length === 0;
-}
-
-function slugifyComponentName(componentName: string) {
-  return componentName
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase();
 }
 
 function normalizeId(value: string) {

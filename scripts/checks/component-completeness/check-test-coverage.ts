@@ -50,6 +50,10 @@ function collectManualTestFiles(directory: string): string[] {
   return files.sort();
 }
 
+function hasExecutableManualEvidence(source: string) {
+  return /\b(?:it|test)(?:\.each)?\s*\(/.test(source);
+}
+
 function validateManualCoverage(params: {
   componentDir: string;
   requirements: readonly string[];
@@ -83,6 +87,15 @@ function validateManualCoverage(params: {
       platform,
       ok: false,
       details: `Manual test coverage is missing the required marker in ${manualTests.join(', ')}. Expected marker: ${expectedMarker}`,
+    };
+  }
+
+  if (!hasExecutableManualEvidence(combinedSource)) {
+    return {
+      name: 'tests',
+      platform,
+      ok: false,
+      details: `Manual test coverage marker is present but no executable test evidence was found in ${manualTests.join(', ')}. Add at least one it(...) or test(...) case for: ${requirements.join(', ')}.`,
     };
   }
 
