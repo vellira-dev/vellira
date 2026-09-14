@@ -31,6 +31,10 @@ type Fixture = {
   id: string;
   roles: readonly string[];
   contentGroupLabel?: string;
+  tokenSurface?: {
+    part?: 'Root' | 'Content';
+    background: 'root.bg' | 'default.bg';
+  };
   input: ComponentProductionInputV1;
 };
 
@@ -70,6 +74,7 @@ const fixtures: readonly Fixture[] = [
   {
     id: 'compound-divergent',
     roles: ['compound', 'cross-platform', 'intentional-divergence'],
+    tokenSurface: { part: 'Root', background: 'root.bg' },
     input: {
       schemaVersion: '1',
       componentName: 'FixtureCompoundProbe',
@@ -91,6 +96,7 @@ const fixtures: readonly Fixture[] = [
   {
     id: 'overlay-web',
     roles: ['overlay'],
+    tokenSurface: { part: 'Content', background: 'default.bg' },
     input: {
       schemaVersion: '1',
       componentName: 'FixtureOverlayProbe',
@@ -113,6 +119,7 @@ const fixtures: readonly Fixture[] = [
     id: 'base-cross-platform',
     roles: ['base', 'cross-platform'],
     contentGroupLabel: 'Fixture details',
+    tokenSurface: { background: 'default.bg' },
     input: {
       schemaVersion: '1',
       componentName: 'FixtureCrossPlatformProbe',
@@ -208,6 +215,24 @@ describe.sequential('component production end-to-end fixtures', () => {
           )
         ).toBe(true);
         await completeContentGroup(root, fixture);
+      }
+
+      // Structural compound/overlay scaffolds deliberately have no generic
+      // visual surface. Apply each fixture's explicit presentation to the
+      // actual runtime element using its newly generated token family.
+      for (const fixture of fixtures.filter((item) => item.tokenSurface)) {
+        const scaffold = await runComponentProductionStructuredValidation({
+          root,
+          input: fixture.input,
+        });
+        expect(
+          scaffold.stages[1].findings.some((finding) =>
+            finding.id.endsWith(':conformity.component-token-contract')
+          )
+        ).toBe(true);
+        await completeTokenSurface(root, fixture);
+      }
+      for (const fixture of fixtures) {
         await expect(
           runComponentGenerator({
             root,
@@ -377,6 +402,63 @@ async function completeContentGroup(root: string, fixture: Fixture) {
         source.replace(element, `${element}${semantics} `)
       )
     );
+  }
+}
+
+async function completeTokenSurface(root: string, fixture: Fixture) {
+  const surface = fixture.tokenSurface;
+  if (!surface) throw new Error('Fixture token presentation is missing.');
+  const name = fixture.input.componentName;
+  const tokenName = `${name[0].toLowerCase()}${name.slice(1)}`;
+  for (const platform of selectedPlatforms(fixture.input)) {
+    const directory = componentDirectory(
+      root,
+      fixture.input,
+      platform.platform
+    );
+    const runtimeFile = path.join(
+      directory,
+      surface.part ?? '',
+      `${name}${surface.part ?? ''}.tsx`
+    );
+    let source = fs.readFileSync(runtimeFile, 'utf8');
+    const relative = surface.part ? '..' : '.';
+    const native = platform.platform === 'react-native';
+    const styleFile = path.join(
+      directory,
+      native ? `${name}.styles.ts` : `${name}.module.scss`
+    );
+    const styleSource = native
+      ? `import { StyleSheet } from 'react-native';
+import type { NativeTheme } from '../../theme';
+export const createStyles = (theme: NativeTheme) => StyleSheet.create({
+  ${tokenName}: { backgroundColor: theme.components.${tokenName}.${surface.background} },
+});`
+      : `.${tokenName} { background: var(--${slugify(name)}-${surface.background.replaceAll('.', '-')}); }`;
+
+    if (native) {
+      const styleImport = `import { styles } from '${relative}/${name}.styles';`;
+      source = source.replace(styleImport, '');
+      source = `import { useThemeStyles } from '${surface.part ? '../../..' : '../..'}/theme';
+import { createStyles } from '${relative}/${name}.styles';\n${source}`;
+      expect(source.split('return ')).toHaveLength(2);
+      source = source.replace(
+        'return ',
+        'const styles = useThemeStyles(createStyles);\n  return '
+      );
+      if (surface.part)
+        source = source.replace('<View>', `<View style={styles.${tokenName}}>`);
+    } else if (surface.part) {
+      source = `import styles from '${relative}/${name}.module.scss';\n${source}`;
+      expect(source.split('<div')).toHaveLength(2);
+      source = source.replace('<div', `<div className={styles.${tokenName}}`);
+    }
+    for (const [file, content] of [
+      [runtimeFile, source],
+      [styleFile, styleSource],
+    ]) {
+      fs.writeFileSync(file, await formatGeneratedContent(file, content));
+    }
   }
 }
 
