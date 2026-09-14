@@ -6,12 +6,7 @@ const runProductionFixtureShard =
   process.env.GITHUB_JOB === 'generator-blog';
 
 const tasks = [
-  [
-    'exec',
-    'vitest',
-    'run',
-    'scripts/generators/component-page/**/*.test.ts',
-  ],
+  ['exec', 'vitest', 'run', 'scripts/generators/component-page'],
 ];
 
 if (runProductionFixtureShard) {
