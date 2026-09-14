@@ -478,6 +478,26 @@ async function completeContentGroup(root: string, fixture: Fixture) {
         `${fs.readFileSync(barrel, 'utf8')}\nexport * from './${name[0].toLowerCase()}${name.slice(1)}';\n`
       )
     );
+    // Website metadata is author-owned after generation. Add the newly
+    // completed root state explicitly instead of overwriting curated examples.
+    const metadataFile = path.join(
+      root,
+      'apps/website/src/component-catalog/components',
+      name,
+      'metadata.ts'
+    );
+    const metadata = fs.readFileSync(metadataFile, 'utf8');
+    expect(metadata).toContain('examples: [');
+    fs.writeFileSync(
+      metadataFile,
+      await formatGeneratedContent(
+        metadataFile,
+        metadata.replace(
+          'examples: [',
+          "examples: [{ title: 'Disabled', description: 'Disabled content group.', props: ['disabled'] },"
+        )
+      )
+    );
   }
   for (const platform of selectedPlatforms(fixture.input)) {
     const file = path.join(

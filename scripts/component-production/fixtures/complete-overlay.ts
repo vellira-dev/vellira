@@ -8,17 +8,19 @@ import { formatGeneratedContent } from '../../generators/format-generated-files'
 export async function completeOverlayFixture(root: string, name: string) {
   const directory = path.join(root, 'packages/react/src/components', name);
   const files = {
-    [`Root/${name}Root.tsx`]: `import { createContext, useContext, useState } from 'react';
+    'internal/state.ts': `import { createContext, useContext } from 'react';
+export const OverlayContext = createContext({ open: false, setOpen: (_open: boolean) => {}, closeOnEscape: true, restoreFocus: true });
+export const useOverlayState = () => useContext(OverlayContext);`,
+    [`Root/${name}Root.tsx`]: `import { useState } from 'react';
+import { OverlayContext } from '../internal/state';
 import type { ${name}Props } from '../types';
-const OverlayContext = createContext({ open: false, setOpen: (_open: boolean) => {}, closeOnEscape: true, restoreFocus: true });
-export const useOverlayState = () => useContext(OverlayContext);
 export function ${name}Root({ children, open, defaultOpen = false, onOpenChange, closeOnEscape = true, restoreFocus = true }: ${name}Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const resolvedOpen = open ?? uncontrolledOpen;
   const setOpen = (next: boolean) => { if (open === undefined) setUncontrolledOpen(next); onOpenChange?.(next); };
   return <OverlayContext.Provider value={{ open: resolvedOpen, setOpen, closeOnEscape, restoreFocus }}><div data-state={resolvedOpen ? 'open' : 'closed'}>{children}</div></OverlayContext.Provider>;
 }`,
-    [`Trigger/${name}Trigger.tsx`]: `import { useOverlayState } from '../Root/${name}Root';
+    [`Trigger/${name}Trigger.tsx`]: `import { useOverlayState } from '../internal/state';
 import type { ${name}TriggerProps } from './types';
 export function ${name}Trigger({ children, disabled = false }: ${name}TriggerProps) {
   const state = useOverlayState();
@@ -26,7 +28,7 @@ export function ${name}Trigger({ children, disabled = false }: ${name}TriggerPro
 }`,
     [`Content/${name}Content.tsx`]: `import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useOverlayState } from '../Root/${name}Root';
+import { useOverlayState } from '../internal/state';
 import type { ${name}ContentProps } from './types';
 export function ${name}Content({ children }: ${name}ContentProps) {
   const { open, setOpen, closeOnEscape, restoreFocus } = useOverlayState();
@@ -43,6 +45,7 @@ export function ${name}Content({ children }: ${name}ContentProps) {
   };
   for (const [relative, source] of Object.entries(files)) {
     const file = path.join(directory, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, await formatGeneratedContent(file, source));
   }
   const testFile = path.join(directory, `${name}.manual.test.tsx`);

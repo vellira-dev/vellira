@@ -40,11 +40,13 @@ export async function completeDisclosureFixture(root: string, name: string) {
       name
     );
     const files = {
-      [`Item/${name}Item.tsx`]: `import { createContext, useContext, useState } from 'react';
+      'internal/state.ts': `import { createContext, useContext } from 'react';
+export const ItemContext = createContext({ open: true, setOpen: (_open: boolean) => {} });
+export const useItemState = () => useContext(ItemContext);`,
+      [`Item/${name}Item.tsx`]: `import { useState } from 'react';
+import { ItemContext } from '../internal/state';
 ${native ? "import { View } from 'react-native';" : ''}
 import type { ${name}ItemProps } from './types';
-const ItemContext = createContext({ open: true, setOpen: (_open: boolean) => {} });
-export const useItemState = () => useContext(ItemContext);
 export function ${name}Item({ children, open, defaultOpen = false, onOpenChange }: ${name}ItemProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const resolvedOpen = open ?? uncontrolledOpen;
@@ -55,7 +57,7 @@ export function ${name}Item({ children, open, defaultOpen = false, onOpenChange 
   return <ItemContext.Provider value={{ open: resolvedOpen, setOpen }}><${native ? 'View' : 'div'}>{children}</${native ? 'View' : 'div'}></ItemContext.Provider>;
 }`,
       [`Trigger/${name}Trigger.tsx`]: `${native ? "import { Pressable } from 'react-native';" : ''}
-import { useItemState } from '../Item/${name}Item';
+import { useItemState } from '../internal/state';
 import type { ${name}TriggerProps } from './types';
 export function ${name}Trigger({ children, disabled = false, onActivate }: ${name}TriggerProps) {
   const state = useItemState();
@@ -67,7 +69,7 @@ export function ${name}Trigger({ children, disabled = false, onActivate }: ${nam
   };
 }`,
       [`Content/${name}Content.tsx`]: `${native ? "import { View } from 'react-native';" : ''}
-import { useItemState } from '../Item/${name}Item';
+import { useItemState } from '../internal/state';
 import type { ${name}ContentProps } from './types';
 export function ${name}Content({ children, hidden = false }: ${name}ContentProps) {
   const state = useItemState();
@@ -77,6 +79,7 @@ export function ${name}Content({ children, hidden = false }: ${name}ContentProps
     };
     for (const [relative, source] of Object.entries(files)) {
       const file = path.join(directory, relative);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, await formatGeneratedContent(file, source));
     }
     const testFile = path.join(directory, `${name}.manual.test.tsx`);
