@@ -2,6 +2,7 @@ import {
   componentCapabilities,
   type ComponentCategory,
   type ComponentLayer,
+  componentLifecycleStatuses,
   type ComponentMetadata,
   type ComponentPlatform,
   type ComponentStatus,
@@ -40,11 +41,8 @@ const componentPlatforms: readonly ComponentPlatform[] = [
   'react-native',
 ];
 
-const componentStatuses: readonly ComponentStatus[] = [
-  'experimental',
-  'stable',
-  'deprecated',
-];
+const componentStatuses: readonly ComponentStatus[] =
+  componentLifecycleStatuses;
 
 const COMPONENT_PROFILES = [
   'base',

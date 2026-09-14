@@ -36,6 +36,9 @@ const capabilityPatterns: Partial<
     /\bContent\b/,
     /\bItem\b/,
   ],
+  multiple: [/\bmultiple\b/i, /type\s*[:=]\s*['"]multiple['"]/],
+  collapsible: [/\bcollapsible\b/i],
+  responsive: [/\bresponsive\b/i, /\buseWindowDimensions\b/, /@media\b/],
 };
 
 function platformPackage(platform: ComponentPlatform) {
@@ -250,7 +253,12 @@ export const sharedTypeContractRule: ComponentQualityRule = {
       declaresSharedDependency || hasSharedFile || hasSharedBarrelExport;
 
     if (!expectsSharedOwnership) {
-      return finding(sharedTypeContractRule, context, 'not-applicable');
+      return finding(
+        sharedTypeContractRule,
+        context,
+        'not-applicable',
+        'No canonical shared type dependency, module, or barrel export is declared.'
+      );
     }
 
     const missing: string[] = [];
@@ -319,7 +327,12 @@ export const controlledContractRule: ComponentQualityRule = {
     const expectsUncontrolled = capabilities.includes('uncontrolled');
 
     if (!expectsControlled && !expectsUncontrolled) {
-      return finding(controlledContractRule, context, 'not-applicable');
+      return finding(
+        controlledContractRule,
+        context,
+        'not-applicable',
+        'Neither controlled nor uncontrolled capability is declared.'
+      );
     }
 
     const source = readSourceSnapshot(
@@ -367,7 +380,12 @@ export const declaredCapabilitiesRule: ComponentQualityRule = {
     );
 
     if (declared.length === 0) {
-      return finding(declaredCapabilitiesRule, context, 'not-applicable');
+      return finding(
+        declaredCapabilitiesRule,
+        context,
+        'not-applicable',
+        'No source capability handled by this rule is declared.'
+      );
     }
 
     const source = readSourceSnapshot(

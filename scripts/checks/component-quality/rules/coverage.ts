@@ -67,6 +67,10 @@ const sharedTestSignals: Partial<
   required: [/\brequired\b/i],
   invalid: [/\binvalid\b/i, /\berror\b/i, /\baria-invalid\b/i],
   loading: [/\bloading\b/i],
+  'compound-api': [/\.(?:Root|Item|Trigger|Content)\b/, /\bcompound\b/i],
+  multiple: [/\bmultiple\b/i, /type\s*=\s*['"]multiple['"]/],
+  collapsible: [/\bcollapsible\b/i],
+  responsive: [/\bresponsive\b/i, /\buseWindowDimensions\b/, /\bresize\b/i],
 };
 
 function escapeRegExp(value: string) {
@@ -133,7 +137,12 @@ export const testCoverageRule: ComponentQualityRule = {
   },
   evaluate(context) {
     if (!context.metadata.requirements.tests) {
-      return finding(testCoverageRule, context, 'not-applicable');
+      return finding(
+        testCoverageRule,
+        context,
+        'not-applicable',
+        'Canonical metadata does not require tests.'
+      );
     }
 
     const componentDir = componentDirectory(
@@ -231,7 +240,12 @@ export const storybookCoverageRule: ComponentQualityRule = {
   },
   evaluate(context) {
     if (!context.metadata.requirements.storybook) {
-      return finding(storybookCoverageRule, context, 'not-applicable');
+      return finding(
+        storybookCoverageRule,
+        context,
+        'not-applicable',
+        'Canonical metadata does not require Storybook.'
+      );
     }
 
     const componentDir = componentDirectory(
@@ -315,7 +329,12 @@ export const documentationCoverageRule: ComponentQualityRule = {
   },
   evaluate(context) {
     if (!context.metadata.requirements.docs) {
-      return finding(documentationCoverageRule, context, 'not-applicable');
+      return finding(
+        documentationCoverageRule,
+        context,
+        'not-applicable',
+        'Canonical metadata does not require public documentation.'
+      );
     }
 
     const docsDir = documentationDirectory(

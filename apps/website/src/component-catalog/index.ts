@@ -35,6 +35,7 @@ export { ComponentNavigationTrigger } from './shared/ComponentNavigationTrigger'
 
 export type {
   ComponentCatalogEntry,
+  ComponentCatalogPresentationEntry,
   ComponentCategory,
   ComponentPlatform,
   ComponentStatus,

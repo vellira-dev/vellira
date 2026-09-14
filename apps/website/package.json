@@ -5,7 +5,7 @@
   "scripts": {
     "sync:brand": "pnpm --filter @vellira-ui/assets sync-brand apps/website/public/brand",
     "sync:tokens": "pnpm --filter @vellira-ui/tokens build:tokens",
-    "sync:components": "pnpm --filter @vellira-ui/react build && pnpm --filter @vellira-ui/react-native build",
+    "sync:components": "pnpm --filter @vellira-ui/metadata build && pnpm --filter @vellira-ui/react build && pnpm --filter @vellira-ui/react-native build",
     "predev": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:components",
     "dev": "next dev",
     "prebuild": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:components",
@@ -22,6 +22,7 @@
     "@mdx-js/react": "^3.1.1",
     "@vellira-ui/assets": "workspace:*",
     "@vellira-ui/icons": "workspace:*",
+    "@vellira-ui/metadata": "workspace:*",
     "@vellira-ui/react": "workspace:*",
     "@vellira-ui/react-native": "workspace:*",
     "@vellira-ui/tokens": "workspace:*",
