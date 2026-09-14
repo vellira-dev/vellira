@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { componentExpansionCatalog } from '@vellira-ui/metadata';
 import { createHash } from 'node:crypto';
 import { readTokenLifecycleAuthority } from '../token-lifecycle/authority';
 import { parseComponentProductionSeed } from './production-seed';
@@ -29,13 +30,19 @@ export function resolveComponentProductionEligibility(
       }
     : null;
   const tokenless = seed.componentTokens === false;
+  const target = componentExpansionCatalog.find(
+    ({ name }) => name === seed.componentName
+  );
+  const intentMismatch =
+    target !== undefined && target.componentTokens !== seed.componentTokens;
   const hardInvalid =
-    !tokenless &&
-    entry !== null &&
-    (entry.status === 'deprecated' ||
-      entry.owner !== seed.componentName ||
-      !entry.public);
-  const eligible = tokenless || (entry !== null && !hardInvalid);
+    intentMismatch ||
+    (!tokenless &&
+      entry !== null &&
+      (entry.status === 'deprecated' ||
+        entry.owner !== seed.componentName ||
+        !entry.public));
+  const eligible = !hardInvalid && (tokenless || entry !== null);
   const evidence = {
     schemaVersion: '1' as const,
     revision,
@@ -51,10 +58,10 @@ export function resolveComponentProductionEligibility(
     hardInvalid,
     lifecycleMutationRequired:
       !tokenless && eligible && entry?.status === 'reserved',
-    reason: tokenless
-      ? 'tokenless'
-      : hardInvalid
-        ? 'invalid-component-token-lifecycle'
+    reason: hardInvalid
+      ? 'invalid-component-token-lifecycle'
+      : tokenless
+        ? 'tokenless'
         : !entry
           ? 'component-token-reservation-required'
           : entry.status,

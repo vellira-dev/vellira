@@ -118,6 +118,19 @@ describe('canonical component-token production eligibility', () => {
       })
     ).toBe('');
   });
+  it('rejects token intent that contradicts the canonical expansion target', () => {
+    const avatar = productionSeedForTarget(componentExpansionCatalog[2]);
+    expect(
+      resolveComponentProductionEligibility(
+        { ...avatar, componentTokens: false },
+        root
+      )
+    ).toMatchObject({
+      eligible: false,
+      hardInvalid: true,
+      reason: 'invalid-component-token-lifecycle',
+    });
+  });
   it.each(['reserved', 'current'] as const)(
     'allows valid %s without promoting it',
     (status) => {
