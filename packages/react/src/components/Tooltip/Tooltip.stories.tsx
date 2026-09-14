@@ -392,6 +392,9 @@ export const NoDelay: Story = {
       <TooltipDemo {...args} tooltipContent='Appears instantly'>
         <Button>Instant Tooltip</Button>
       </TooltipDemo>
+      <Button appearance='outline' color='neutral'>
+        Next focus target
+      </Button>
     </Section>
   ),
 };

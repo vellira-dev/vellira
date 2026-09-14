@@ -13,6 +13,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     contextOptions: {
       reducedMotion: 'reduce',
     },
@@ -31,6 +32,16 @@ export default defineConfig({
     {
       name: 'mobile-chromium',
       use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'firefox',
+      testMatch: /cross-browser-interactions\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      testMatch: /cross-browser-interactions\.spec\.ts/,
+      use: { ...devices['Desktop Safari'] },
     },
   ],
 });

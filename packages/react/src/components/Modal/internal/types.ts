@@ -40,6 +40,7 @@ export type ModalContextValue = {
   shouldRender: boolean;
   titleId: string;
   trapFocus: boolean;
+  triggerRef: MutableRefObject<HTMLElement | null>;
 };
 
 export type ModalContentContextValue = {

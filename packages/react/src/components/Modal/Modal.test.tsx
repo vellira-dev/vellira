@@ -322,6 +322,46 @@ describe('Modal', () => {
     unmount();
   });
 
+  it('restores focus to Modal.Trigger when pointer activation does not focus it', async () => {
+    const { container, unmount } = render(
+      <Modal>
+        <Modal.Trigger>Open modal</Modal.Trigger>
+        <Portal>
+          <Modal.Overlay />
+          <Modal.Content>
+            <Modal.Header>
+              <Modal.Title>Delete file</Modal.Title>
+              <Modal.Close />
+            </Modal.Header>
+          </Modal.Content>
+        </Portal>
+      </Modal>
+    );
+    const trigger = container.querySelector<HTMLButtonElement>('button');
+
+    expect(document.activeElement).not.toBe(trigger);
+
+    act(() => trigger?.click());
+
+    await new Promise<void>((resolve) => {
+      queueMicrotask(() => resolve());
+    });
+
+    expect(document.activeElement).toBe(
+      document.querySelector('button[aria-label="Close dialog"]')
+    );
+
+    pressDocumentKey('Escape');
+
+    await new Promise<void>((resolve) => {
+      queueMicrotask(() => resolve());
+    });
+
+    expect(document.activeElement).toBe(trigger);
+
+    unmount();
+  });
+
   it('locks body scroll while open and restores the previous overflow', () => {
     document.body.style.overflow = 'auto';
 
