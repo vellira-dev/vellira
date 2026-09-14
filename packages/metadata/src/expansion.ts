@@ -3,6 +3,7 @@ import type {
   ComponentLayer,
   ComponentPlatform,
   ComponentProfile,
+  ComponentTokenContract,
 } from './component';
 
 export type ComponentExpansionRole =
@@ -14,6 +15,8 @@ export interface ComponentExpansionTarget {
   category: ComponentCategory;
   platforms: readonly ComponentPlatform[];
   profile: ComponentProfile;
+  /** Explicit production intent; expansion targets never infer a default. */
+  componentTokens: ComponentTokenContract | false;
   role: ComponentExpansionRole;
 
   /**

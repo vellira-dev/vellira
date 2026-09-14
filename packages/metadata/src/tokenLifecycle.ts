@@ -26,6 +26,12 @@ export type SemanticTokenLifecycleEntry = {
  * be treated as canonical component ownership.
  */
 export const componentTokenLifecycle = {
+  Avatar: {
+    status: 'reserved',
+    public: true,
+    owner: 'Avatar',
+    purpose: 'Reserved for the canonical Avatar component token contract.',
+  },
   Accordion: {
     status: 'current',
     public: true,

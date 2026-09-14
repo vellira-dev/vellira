@@ -7,6 +7,7 @@ export const componentExpansionCatalog = [
     category: 'form',
     platforms: ['react', 'react-native'],
     profile: 'form-control',
+    componentTokens: 'standard',
     role: 'form-control',
   },
   {
@@ -15,6 +16,7 @@ export const componentExpansionCatalog = [
     category: 'layout',
     platforms: ['react', 'react-native'],
     profile: 'compound',
+    componentTokens: 'disclosure',
     role: 'catalog',
   },
   {
@@ -23,6 +25,7 @@ export const componentExpansionCatalog = [
     category: 'data-display',
     platforms: ['react', 'react-native'],
     profile: 'base',
+    componentTokens: 'standard',
     role: 'foundational',
   },
   {
@@ -31,6 +34,7 @@ export const componentExpansionCatalog = [
     category: 'data-display',
     platforms: ['react', 'react-native'],
     profile: 'base',
+    componentTokens: 'standard',
     role: 'foundational',
   },
 ] as const satisfies readonly ComponentExpansionTarget[];

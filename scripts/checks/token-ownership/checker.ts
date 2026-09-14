@@ -604,7 +604,9 @@ export function checkTokenOwnership(root: string): TokenOwnershipReport {
 
   const publicComponentFamilies = new Set(
     Object.entries(componentTokenLifecycle)
-      .filter(([, entry]) => entry.public)
+      // Reservation is future authority, not a materialized public export.
+      // Exporting it before Generator promotion still fails exact inventory parity.
+      .filter(([, entry]) => entry.public && entry.status !== 'reserved')
       .map(([name]) => componentTokenExportName(name))
   );
   const publicSemanticNamespaces = new Set(

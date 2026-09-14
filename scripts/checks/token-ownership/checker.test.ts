@@ -31,7 +31,9 @@ describe('token ownership checker', () => {
   it('reports exactly the lifecycle entries that remain public', () => {
     const report = checkTokenOwnership(process.cwd());
     const expectedComponentFamilies = Object.entries(componentTokenLifecycle)
-      .filter(([, lifecycle]) => lifecycle.public)
+      .filter(
+        ([, lifecycle]) => lifecycle.public && lifecycle.status !== 'reserved'
+      )
       .map(([name]) => toComponentFamily(name))
       .sort();
     const expectedSemanticNamespaces = Object.entries(semanticTokenLifecycle)
@@ -105,6 +107,27 @@ function changeBarrel(
 }
 
 describe('token ownership mutations', () => {
+  it('does not require reserved exports, but rejects premature materialization', () => {
+    const root = fixture();
+    mutateTokenLifecycleFixture(root, ({ components }) => {
+      components.FutureFamily = {
+        status: 'reserved',
+        public: true,
+        owner: 'FutureFamily',
+        purpose: 'Test reservation.',
+      };
+    });
+    expect(checkTokenOwnership(root).findings).toEqual([]);
+    changeBarrel(
+      root,
+      'light',
+      'components',
+      (source) => source + "\nexport { futureFamily } from './FutureFamily';\n"
+    );
+    expect(checkTokenOwnership(root).findings).toContainEqual(
+      expect.objectContaining({ code: 'unclassified-component-family' })
+    );
+  });
   it('reads exactly the canonical source authority used by metadata exports', () => {
     const authority = readTokenLifecycleAuthority(process.cwd());
     expect(authority.components).toEqual(componentTokenLifecycle);
