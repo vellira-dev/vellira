@@ -194,25 +194,21 @@ afterEach(() => {
 });
 
 describe.sequential('component production end-to-end fixtures', () => {
-  it(
-    'locks the generated lifecycle across representative component families',
-    async () => {
+  it.each(fixtures)(
+    '$id completes the generated production lifecycle',
+    async (fixture) => {
       const root = createIsolatedWorktree();
 
-      for (const fixture of fixtures) {
-        await generateFixture(root, fixture);
-        expectCanonicalGeneratedSurfaces(root, fixture.input);
-        completeManualCoverage(root, fixture.input);
-      }
+      await generateFixture(root, fixture);
+      expectCanonicalGeneratedSurfaces(root, fixture.input);
+      completeManualCoverage(root, fixture.input);
 
-      expectCompoundPlatformDivergence(root);
-      await expectInvalidFixtureToFailClosed(root);
-      await expectDeterministicRegeneration(root);
+      if (fixture.roles.includes('intentional-divergence'))
+        expectCompoundPlatformDivergence(root);
+      await expectDeterministicRegeneration(root, fixture);
       // Prove incomplete scaffolds fail before semantic changes can make their
       // derived documentation stale. No metadata or quality gate is relaxed.
-      for (const fixture of fixtures.filter(
-        (item) => item.contentGroupLabel || item.tokenSurface
-      )) {
+      if (fixture.contentGroupLabel || fixture.tokenSurface) {
         const scaffold = await runComponentProductionStructuredValidation({
           root,
           input: fixture.input,
@@ -238,96 +234,91 @@ describe.sequential('component production end-to-end fixtures', () => {
           ).toBe(true);
         }
       }
-      await completeDisclosureFixture(
+      if (fixture.input.profile === 'compound')
+        await completeDisclosureFixture(root, fixture.input.componentName);
+      if (fixture.input.profile === 'overlay')
+        await completeOverlayFixture(root, fixture.input.componentName);
+      if (fixture.contentGroupLabel) await completeContentGroup(root, fixture);
+      if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
+      const plan = createComponentGenerationPlan({
         root,
-        divergentCompoundFixture().input.componentName
-      );
-      const overlay = fixtures.find(
-        (fixture) => fixture.input.profile === 'overlay'
-      );
-      if (!overlay) throw new Error('Overlay fixture is missing.');
-      await completeOverlayFixture(root, overlay.input.componentName);
-      for (const fixture of fixtures) {
-        if (fixture.contentGroupLabel)
-          await completeContentGroup(root, fixture);
-        if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
-      }
-      for (const fixture of fixtures) {
-        const plan = createComponentGenerationPlan({
+        options: {
+          ...createComponentProductionGeneratorOptions(fixture.input),
+          force: true,
+        },
+      });
+      await generateComponentDocumentation({
+        root,
+        plan,
+        metadata: createComponentMetadataFromPlan(plan),
+        createdFiles: [],
+        updatedFiles: [],
+      });
+      generateComponentWebsitePage({
+        root,
+        componentName: fixture.input.componentName,
+        profile: fixture.input.profile,
+        category: fixture.input.category,
+      });
+      await expect(
+        runComponentGenerator({
           root,
           options: {
             ...createComponentProductionGeneratorOptions(fixture.input),
-            force: true,
+            check: true,
           },
-        });
-        await generateComponentDocumentation({
-          root,
-          plan,
-          metadata: createComponentMetadataFromPlan(plan),
-          createdFiles: [],
-          updatedFiles: [],
-        });
-        generateComponentWebsitePage({
-          root,
-          componentName: fixture.input.componentName,
-          profile: fixture.input.profile,
-          category: fixture.input.category,
-        });
-        await expect(
-          runComponentGenerator({
-            root,
-            options: {
-              ...createComponentProductionGeneratorOptions(fixture.input),
-              check: true,
-            },
-          })
-        ).resolves.toMatchObject({ check: true });
-      }
-      runSemanticFixtureTests(root);
+        })
+      ).resolves.toMatchObject({ check: true });
+      runSemanticFixtureTests(root, fixture);
       commitFixtureCandidate(root);
 
-      for (const fixture of fixtures) {
-        const structured = await runComponentProductionStructuredValidation({
-          root,
-          input: fixture.input,
-        });
+      const structured = await runComponentProductionStructuredValidation({
+        root,
+        input: fixture.input,
+      });
 
-        expect(
-          structured.stages[0],
-          `${fixture.id}: completeness`
-        ).toMatchObject({
+      expect(structured.stages[0], `${fixture.id}: completeness`).toMatchObject(
+        {
           id: 'completeness',
           status: 'passed',
-        });
-        expect(
-          structured.stages[1],
-          `${fixture.id}: quality: ${structured.stages[1].findings.map((finding) => finding.message).join('\n')}`
-        ).toMatchObject({
-          id: 'quality',
-          status: 'passed',
-        });
-        expect(structured.completeness, fixture.id).not.toBeNull();
-        expect(structured.quality, fixture.id).not.toBeNull();
+        }
+      );
+      expect(
+        structured.stages[1],
+        `${fixture.id}: quality: ${structured.stages[1].findings.map((finding) => finding.message).join('\n')}`
+      ).toMatchObject({
+        id: 'quality',
+        status: 'passed',
+      });
+      expect(structured.completeness, fixture.id).not.toBeNull();
+      expect(structured.quality, fixture.id).not.toBeNull();
 
-        const result = await runMachineReadableValidation({
-          root,
-          input: fixture.input,
-          structured,
-        });
+      const result = await runMachineReadableValidation({
+        root,
+        input: fixture.input,
+        structured,
+      });
 
-        expect(result, fixture.id).toMatchObject({
+      expect(result, fixture.id).toMatchObject({
+        schemaVersion: '1',
+        status: 'ready',
+        readyForReview: true,
+        reviewBundle: {
           schemaVersion: '1',
           status: 'ready',
-          readyForReview: true,
-          reviewBundle: {
-            schemaVersion: '1',
-            status: 'ready',
-            readyForHumanReview: true,
-            workingTreeClean: true,
-          },
-        });
-        expect(result.blockingFindings, fixture.id).toEqual([]);
-      }
+          readyForHumanReview: true,
+          workingTreeClean: true,
+        },
+      });
+      expect(result.blockingFindings, fixture.id).toEqual([]);
+    },
+    FIXTURE_TIMEOUT_MS
+  );
+
+  it(
+    'rejects invalid resources before writing component artifacts',
+    async () => {
+      await expectInvalidFixtureToFailClosed(createIsolatedWorktree());
     },
     FIXTURE_TIMEOUT_MS
   );
@@ -423,9 +414,9 @@ async function prepareTokenLifecycle(
   }
 }
 
-function runSemanticFixtureTests(root: string) {
+function runSemanticFixtureTests(root: string, fixture: Fixture) {
   for (const platform of ['react', 'react-native'] as const) {
-    const tests = fixtures
+    const tests = [fixture]
       .filter(
         (fixture) =>
           fixture.input.profile === 'compound' ||
@@ -437,6 +428,7 @@ function runSemanticFixtureTests(root: string) {
         ({ input }) =>
           `src/${input.layer}/${input.componentName}/${input.componentName}.manual.test.tsx`
       );
+    if (tests.length === 0) continue;
     const result = spawnSync(
       'pnpm',
       ['exec', 'vitest', 'run', ...tests, '--config', 'vitest.config.ts'],
@@ -644,32 +636,28 @@ async function expectInvalidFixtureToFailClosed(root: string) {
   ).toBe(false);
 }
 
-async function expectDeterministicRegeneration(root: string) {
+async function expectDeterministicRegeneration(root: string, fixture: Fixture) {
   const before = fingerprintWorkingTree(root);
 
-  for (const fixture of fixtures) {
-    await runComponentGenerator({
-      root,
-      options: {
-        ...createComponentProductionGeneratorOptions(fixture.input),
-        force: true,
-      },
-    });
-  }
+  await runComponentGenerator({
+    root,
+    options: {
+      ...createComponentProductionGeneratorOptions(fixture.input),
+      force: true,
+    },
+  });
 
   expect(fingerprintWorkingTree(root)).toEqual(before);
 
-  for (const fixture of fixtures) {
-    await expect(
-      runComponentGenerator({
-        root,
-        options: {
-          ...createComponentProductionGeneratorOptions(fixture.input),
-          check: true,
-        },
-      })
-    ).resolves.toMatchObject({ check: true });
-  }
+  await expect(
+    runComponentGenerator({
+      root,
+      options: {
+        ...createComponentProductionGeneratorOptions(fixture.input),
+        check: true,
+      },
+    })
+  ).resolves.toMatchObject({ check: true });
 }
 
 async function runMachineReadableValidation(params: {
