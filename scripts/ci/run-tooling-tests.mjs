@@ -13,6 +13,8 @@ const tasks = [
       'vitest.tooling.config.ts',
       '--exclude',
       'scripts/checks/token-semantic/cli.test.ts',
+      '--exclude',
+      'scripts/component-production/e2e-fixtures.test.ts',
     ],
   },
   {
@@ -24,6 +26,32 @@ const tasks = [
       '--config',
       'vitest.tooling.config.ts',
       'scripts/checks/token-semantic/cli.test.ts',
+    ],
+  },
+  {
+    name: 'component production fixtures A',
+    args: [
+      'exec',
+      'vitest',
+      'run',
+      '--config',
+      'vitest.tooling.config.ts',
+      'scripts/component-production/e2e-fixtures.test.ts',
+      '--testNamePattern',
+      'boolean-form-control|compound-divergent',
+    ],
+  },
+  {
+    name: 'component production fixtures B',
+    args: [
+      'exec',
+      'vitest',
+      'run',
+      '--config',
+      'vitest.tooling.config.ts',
+      'scripts/component-production/e2e-fixtures.test.ts',
+      '--testNamePattern',
+      'base-web|overlay-web|base-cross-platform|rejects invalid resources|blocks compound completeness',
     ],
   },
 ];
