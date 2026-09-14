@@ -126,6 +126,7 @@ const fixtures: readonly Fixture[] = [
     input: {
       schemaVersion: '1',
       componentName: 'FixtureCrossPlatformProbe',
+      dependencies: { packages: ['@vellira-ui/types'] },
       platform: 'both',
       layer: 'primitives',
       category: 'utility',
@@ -443,17 +444,19 @@ async function completeContentGroup(root: string, fixture: Fixture) {
       'packages/types/src',
       `${name[0].toLowerCase()}${name.slice(1)}.ts`
     );
-    const source = fs.readFileSync(sharedFile, 'utf8');
-    const placeholder = `export type Base${name}Props = unknown;`;
-    expect(source).toContain(placeholder);
     fs.writeFileSync(
       sharedFile,
       await formatGeneratedContent(
         sharedFile,
-        source.replace(
-          placeholder,
-          `export type Base${name}Props = { disabled?: boolean };`
-        )
+        `export type Base${name}Props = { disabled?: boolean };`
+      )
+    );
+    const barrel = path.join(root, 'packages/types/src/index.ts');
+    fs.writeFileSync(
+      barrel,
+      await formatGeneratedContent(
+        barrel,
+        `${fs.readFileSync(barrel, 'utf8')}\nexport * from './${name[0].toLowerCase()}${name.slice(1)}';\n`
       )
     );
   }
@@ -465,6 +468,21 @@ async function completeContentGroup(root: string, fixture: Fixture) {
     let source = fs.readFileSync(file, 'utf8');
     if (disabled)
       source = source.replace('children,', 'children, disabled = false,');
+    if (disabled) {
+      const typesFile = path.join(
+        componentDirectory(root, fixture.input, platform.platform),
+        'types.ts'
+      );
+      fs.writeFileSync(
+        typesFile,
+        await formatGeneratedContent(
+          typesFile,
+          `import type { ReactNode } from 'react';
+import type { Base${name}Props } from '@vellira-ui/types';
+export type ${name}Props = Base${name}Props & { children?: ReactNode };`
+        )
+      );
+    }
     const element = platform.platform === 'react' ? '<div ' : '<View ';
     expect(source.split(element)).toHaveLength(2);
     let semantics =
