@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1",
+  "component": "Accordion",
+  "decision": "approved",
+  "question": "Would I ship this component today without requesting any code, UX, accessibility, docs, or presentation change?",
+  "answer": "yes",
+  "approvedBy": "romanbakurov",
+  "approvedAt": "2026-09-04",
+  "source": {
+    "kind": "github-pull-request",
+    "url": "https://github.com/vellira-dev/vellira/pull/779",
+    "number": 779,
+    "revision": "a6ca6121004dfbe65551d34b132231f4030dafa0"
+  },
+  "scope": [
+    "website React preview",
+    "website React Native preview",
+    "public catalog preview",
+    "Storybook",
+    "React docs",
+    "React Native docs",
+    "interaction states",
+    "visual quality"
+  ]
+}

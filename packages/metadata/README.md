@@ -122,8 +122,12 @@ A component must support at least one platform.
 Lifecycle state:
 
 - `experimental`
+- `beta`
 - `stable`
 - `deprecated`
+
+See [Component lifecycle and Stable graduation](../../docs/architecture/component-lifecycle.md)
+for the canonical semantics and promotion contract.
 
 ### `capabilities`
 
@@ -141,6 +145,8 @@ V1 capabilities include:
 - `keyboard`
 - `focus-management`
 - `compound-api`
+- `multiple`
+- `collapsible`
 - `portal`
 - `responsive`
 

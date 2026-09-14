@@ -80,7 +80,7 @@ interface ComponentMetadata {
     | 'utility';
   platforms: readonly ('react' | 'react-native')[];
   profile: 'base' | 'form-control' | 'compound' | 'overlay';
-  status: 'experimental' | 'stable' | 'deprecated';
+  status: 'experimental' | 'beta' | 'stable' | 'deprecated';
   capabilities?: readonly ComponentCapability[];
   dependencies?: ComponentDependencies;
   requirements: ComponentRequirements;
@@ -642,7 +642,7 @@ Do not begin with a speculative universal ontology.
 A union such as:
 
 ```text
-stable | experimental | deprecated
+experimental | beta | stable | deprecated
 ```
 
 is more useful to tooling than an unrestricted status string.

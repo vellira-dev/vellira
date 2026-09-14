@@ -137,10 +137,11 @@ export function runComponentReviewBundle(params: {
       ...(issue.path === undefined ? {} : { path: issue.path }),
     });
   }
-  const specs = buildSurfaceSpecs(params.input);
-  const surfaces = specs.map((spec) =>
-    evaluateSurface(root, spec, candidateIdentity)
-  );
+  const surfaces = evaluateComponentReviewSurfaces({
+    root,
+    input: params.input,
+    candidateIdentity,
+  });
   // Surface reads must not hide a candidate mutation after identity verification.
   if (params.candidateSnapshot !== undefined && candidateIdentity !== null) {
     const verified = verifyCandidateSnapshot(root, params.candidateSnapshot);
@@ -235,6 +236,22 @@ export function runComponentReviewBundle(params: {
       findings: [...params.completenessStage.findings, ...blockingFindings],
     },
   };
+}
+
+/**
+ * Reuses the canonical production review-surface contract without asserting
+ * that human review happened or requiring a clean Git candidate.
+ */
+export function evaluateComponentReviewSurfaces(params: {
+  root: string;
+  input: ComponentProductionInputV1;
+  candidateIdentity?: CandidateIdentity | null;
+}): ComponentReviewBundleSurface[] {
+  const root = path.resolve(params.root);
+
+  return buildSurfaceSpecs(params.input).map((spec) =>
+    evaluateSurface(root, spec, params.candidateIdentity ?? null)
+  );
 }
 
 function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {

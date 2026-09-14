@@ -48,10 +48,10 @@ function writeCatalog(root: string, entry: string) {
 
 function generatedEntry(componentName: string, slug: string) {
   return `  {
+    component: '${componentName}',
     slug: '${slug}',
     name: '${componentName}',
     description: '${componentName} component for Vellira applications.',
-    status: 'beta',
     order: 999,
   },`;
 }
@@ -95,10 +95,10 @@ describe('generated catalog preview registry', () => {
     const componentsRegistryFile = writeCatalog(
       root,
       `  {
+    component: 'Button',
     slug: 'button',
     name: 'Button',
     description: 'Trigger an action.',
-    status: 'stable',
     order: 10,
   },`
     );

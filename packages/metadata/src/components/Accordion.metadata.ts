@@ -6,7 +6,7 @@ export const accordionMetadata = defineComponentMetadata({
   category: 'navigation',
   platforms: ['react', 'react-native'],
   profile: 'compound',
-  status: 'experimental',
+  status: 'beta',
   capabilities: [
     'compound-api',
     'multiple',

@@ -6,7 +6,7 @@ export const switchMetadata = defineComponentMetadata({
   category: 'form',
   platforms: ['react', 'react-native'],
   profile: 'form-control',
-  status: 'experimental',
+  status: 'beta',
   capabilities: [
     'controlled',
     'uncontrolled',

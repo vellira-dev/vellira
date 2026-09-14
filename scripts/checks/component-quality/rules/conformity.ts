@@ -531,7 +531,12 @@ export const tokenIntegrationRule: ComponentQualityRule = {
     );
 
     if (styleFiles.length === 0) {
-      return finding(tokenIntegrationRule, context, 'not-applicable');
+      return finding(
+        tokenIntegrationRule,
+        context,
+        'not-applicable',
+        'No implementation styling surface exists for this platform.'
+      );
     }
 
     const source = styleFiles.map((file) => file.source).join('\n');
@@ -542,7 +547,12 @@ export const tokenIntegrationRule: ComponentQualityRule = {
         : hasNativeTokenRelevantDesignProperties(source);
 
     if (!hasTokenRelevantProperties) {
-      return finding(tokenIntegrationRule, context, 'not-applicable');
+      return finding(
+        tokenIntegrationRule,
+        context,
+        'not-applicable',
+        'The implementation styling surface has no token-owned design properties.'
+      );
     }
 
     const hasEvidence =

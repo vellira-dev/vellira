@@ -53,7 +53,7 @@ const validGeneratedMetadata = fc.record({
     maxLength: 2,
   }),
   profile: fc.constantFrom('base', 'form-control', 'compound', 'overlay'),
-  status: fc.constantFrom('experimental', 'stable', 'deprecated'),
+  status: fc.constantFrom('experimental', 'beta', 'stable', 'deprecated'),
   capabilities: fc.option(
     fc.uniqueArray(
       fc.constantFrom(
@@ -136,7 +136,7 @@ describe('validateComponentMetadata', () => {
         'platforms contains unsupported values: web.'
       );
       expect(result.errors).toContain(
-        'status must be one of: experimental, stable, deprecated.'
+        'status must be one of: experimental, beta, stable, deprecated.'
       );
     }
   });

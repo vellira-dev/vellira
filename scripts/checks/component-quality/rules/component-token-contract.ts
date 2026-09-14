@@ -216,7 +216,8 @@ export const componentTokenContractRule: ComponentQualityRule = {
       return createRuleFinding(
         componentTokenContractRule,
         context,
-        'not-applicable'
+        'not-applicable',
+        'Canonical metadata does not declare a component-owned token contract.'
       );
     }
 

@@ -2,7 +2,40 @@ export type ComponentPlatform = 'react' | 'react-native';
 
 export type ComponentLayer = 'primitives' | 'components' | 'patterns';
 
-export type ComponentStatus = 'experimental' | 'stable' | 'deprecated';
+/** Canonical public component lifecycle, ordered from earliest to latest. */
+export const componentLifecycleStatuses = [
+  'experimental',
+  'beta',
+  'stable',
+  'deprecated',
+] as const;
+
+export type ComponentLifecycle = (typeof componentLifecycleStatuses)[number];
+
+/** Backwards-compatible name for consumers that render lifecycle status. */
+export type ComponentStatus = ComponentLifecycle;
+
+export const componentLifecycleDefinitions: Record<
+  ComponentLifecycle,
+  { description: string }
+> = {
+  experimental: {
+    description:
+      'Scaffolded or incomplete; not yet ready for public production use.',
+  },
+  beta: {
+    description:
+      'Public and production-reviewable, but the Stable graduation contract is not yet satisfied.',
+  },
+  stable: {
+    description:
+      'Passed the deterministic Stable graduation contract and has explicit human approval.',
+  },
+  deprecated: {
+    description:
+      'Deprecated by an explicit lifecycle decision; quality failure never infers this state.',
+  },
+};
 
 export type ComponentCategory =
   | 'action'
