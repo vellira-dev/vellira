@@ -205,8 +205,26 @@ describe.sequential('component production end-to-end fixtures', () => {
       if (fixture.roles.includes('intentional-divergence'))
         expectCompoundPlatformDivergence(root);
       await expectDeterministicRegeneration(root, fixture);
-      // Prove incomplete scaffolds fail before semantic changes can make their
-      // derived documentation stale. No metadata or quality gate is relaxed.
+      if (['compound', 'overlay'].includes(fixture.input.profile)) {
+        const scaffold = await runComponentProductionStructuredValidation({
+          root,
+          input: fixture.input,
+        });
+        expect(scaffold.stages[0].status, fixture.id).toBe('blocked');
+        expect(scaffold.stages[1].status, fixture.id).toBe('skipped');
+        expect(
+          scaffold.stages[0].findings.some((finding) =>
+            finding.message.includes('no executable test evidence')
+          ),
+          fixture.id
+        ).toBe(true);
+        if (fixture.input.profile === 'compound')
+          await completeDisclosureFixture(root, fixture.input.componentName);
+        else await completeOverlayFixture(root, fixture.input.componentName);
+        await regenerateFixtureDocumentation(root, fixture);
+      }
+      // Behavior and its derived docs are complete; missing accessibility and
+      // token presentation must still block the unmodified quality gate.
       if (fixture.contentGroupLabel || fixture.tokenSurface) {
         const scaffold = await runComponentProductionStructuredValidation({
           root,
@@ -233,32 +251,9 @@ describe.sequential('component production end-to-end fixtures', () => {
           ).toBe(true);
         }
       }
-      if (fixture.input.profile === 'compound')
-        await completeDisclosureFixture(root, fixture.input.componentName);
-      if (fixture.input.profile === 'overlay')
-        await completeOverlayFixture(root, fixture.input.componentName);
       if (fixture.contentGroupLabel) await completeContentGroup(root, fixture);
       if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
-      const plan = createComponentGenerationPlan({
-        root,
-        options: {
-          ...createComponentProductionGeneratorOptions(fixture.input),
-          force: true,
-        },
-      });
-      await generateComponentDocumentation({
-        root,
-        plan,
-        metadata: createComponentMetadataFromPlan(plan),
-        createdFiles: [],
-        updatedFiles: [],
-      });
-      generateComponentWebsitePage({
-        root,
-        componentName: fixture.input.componentName,
-        profile: fixture.input.profile,
-        category: fixture.input.category,
-      });
+      await regenerateFixtureDocumentation(root, fixture);
       await expect(
         runComponentGenerator({
           root,
@@ -414,6 +409,29 @@ async function prepareTokenLifecycle(
   if (input.componentTokens !== false) {
     reserveTokenLifecycleFixture(root, input.componentName);
   }
+}
+
+async function regenerateFixtureDocumentation(root: string, fixture: Fixture) {
+  const plan = createComponentGenerationPlan({
+    root,
+    options: {
+      ...createComponentProductionGeneratorOptions(fixture.input),
+      force: true,
+    },
+  });
+  await generateComponentDocumentation({
+    root,
+    plan,
+    metadata: createComponentMetadataFromPlan(plan),
+    createdFiles: [],
+    updatedFiles: [],
+  });
+  generateComponentWebsitePage({
+    root,
+    componentName: fixture.input.componentName,
+    profile: fixture.input.profile,
+    category: fixture.input.category,
+  });
 }
 
 function runSemanticFixtureTests(root: string, fixture: Fixture) {
