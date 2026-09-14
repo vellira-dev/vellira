@@ -1,21 +1,27 @@
 import { spawn } from 'node:child_process';
 
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const splitProductionFixtures =
+  process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_JOB === 'tooling';
+
+const baseArgs = [
+  'exec',
+  'vitest',
+  'run',
+  '--config',
+  'vitest.tooling.config.ts',
+  '--exclude',
+  'scripts/checks/token-semantic/cli.test.ts',
+];
+
+if (splitProductionFixtures) {
+  baseArgs.push('--exclude', 'scripts/component-production/e2e-fixtures.test.ts');
+}
 
 const tasks = [
   {
     name: 'tooling suite',
-    args: [
-      'exec',
-      'vitest',
-      'run',
-      '--config',
-      'vitest.tooling.config.ts',
-      '--exclude',
-      'scripts/checks/token-semantic/cli.test.ts',
-      '--exclude',
-      'scripts/component-production/e2e-fixtures.test.ts',
-    ],
+    args: baseArgs,
   },
   {
     name: 'token semantic CLI integration',
@@ -26,32 +32,6 @@ const tasks = [
       '--config',
       'vitest.tooling.config.ts',
       'scripts/checks/token-semantic/cli.test.ts',
-    ],
-  },
-  {
-    name: 'component production fixtures A',
-    args: [
-      'exec',
-      'vitest',
-      'run',
-      '--config',
-      'vitest.tooling.config.ts',
-      'scripts/component-production/e2e-fixtures.test.ts',
-      '--testNamePattern',
-      'boolean-form-control|compound-divergent',
-    ],
-  },
-  {
-    name: 'component production fixtures B',
-    args: [
-      'exec',
-      'vitest',
-      'run',
-      '--config',
-      'vitest.tooling.config.ts',
-      'scripts/component-production/e2e-fixtures.test.ts',
-      '--testNamePattern',
-      'base-web|overlay-web|base-cross-platform|rejects invalid resources|blocks compound completeness',
     ],
   },
 ];
@@ -81,9 +61,10 @@ function runTask(task) {
   });
 }
 
-const results = await Promise.all(tasks.map(runTask));
-const exitCode = Math.max(...results);
-
-if (exitCode !== 0) {
-  process.exitCode = exitCode;
+for (const task of tasks) {
+  const exitCode = await runTask(task);
+  if (exitCode !== 0) {
+    process.exitCode = exitCode;
+    break;
+  }
 }
