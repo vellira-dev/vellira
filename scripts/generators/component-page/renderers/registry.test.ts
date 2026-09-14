@@ -49,7 +49,7 @@ describe('component catalog registration', async () => {
 
     fs.writeFileSync(
       componentsRegistryFile,
-      `import type { ComponentCatalogEntry } from '../types';\n\nexport const webComponents = [\n] as const satisfies readonly ComponentCatalogEntry[];\n`
+      `import type { ComponentCatalogPresentationEntry } from '../types';\n\nconst componentCatalogPresentation = [\n] as const satisfies readonly ComponentCatalogPresentationEntry[];\n`
     );
 
     await updateCatalogRegistry({
@@ -75,15 +75,17 @@ describe('component catalog registration', async () => {
     const content = fs.readFileSync(componentsRegistryFile, 'utf8');
 
     expect(content.match(/slug: 'switch'/g)).toHaveLength(1);
+    expect(content).toContain("component: 'Switch'");
     expect(content).toContain("category: 'forms'");
-    expect(content).toContain("status: 'beta'");
+    expect(content).not.toContain('status:');
+    expect(content).not.toContain('platforms:');
     expect(content).toContain("'react-native'");
   });
 
   it('preserves an existing curated catalog entry with --force', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-catalog-'));
     const componentsRegistryFile = path.join(root, 'components.ts');
-    const curatedSource = `import type { ComponentCatalogEntry } from '../types';\n\nexport const webComponents = [\n  {\n    slug: 'switch',\n    name: 'Switch',\n    description: 'Curated description.',\n    category: 'general',\n    status: 'stable',\n    order: 42,\n    platforms: ['react'],\n    docs: {\n      react: 'https://docs.vellira.dev/react/switch',\n    },\n  },\n] as const satisfies readonly ComponentCatalogEntry[];\n`;
+    const curatedSource = `import type { ComponentCatalogPresentationEntry } from '../types';\n\nconst componentCatalogPresentation = [\n  {\n    component: 'Switch',\n    slug: 'switch',\n    name: 'Switch',\n    description: 'Curated description.',\n    category: 'general',\n    order: 42,\n    docs: {\n      react: 'https://docs.vellira.dev/react/switch',\n    },\n  },\n] as const satisfies readonly ComponentCatalogPresentationEntry[];\n`;
 
     fs.writeFileSync(componentsRegistryFile, curatedSource);
 
@@ -101,7 +103,7 @@ describe('component catalog registration', async () => {
 
     expect(content).toBe(curatedSource);
     expect(content).toContain('Curated description.');
-    expect(content).toContain("status: 'stable'");
+    expect(content).not.toContain('status:');
     expect(content).toContain('order: 42');
   });
 });
@@ -113,23 +115,22 @@ describe('generated component catalog correction', async () => {
 
     fs.writeFileSync(
       componentsRegistryFile,
-      `import type { ComponentCatalogEntry } from '../types';
+      `import type { ComponentCatalogPresentationEntry } from '../types';
 
-export const webComponents = [
+const componentCatalogPresentation = [
   {
+    component: 'Switch',
     slug: 'switch',
     name: 'Switch',
     description: 'Switch component for Vellira applications.',
     category: 'general',
-    status: 'beta',
     order: 999,
-    platforms: ['react', 'react-native'],
     docs: {
       react: 'https://docs.vellira.dev/react/switch',
       'react-native': 'https://docs.vellira.dev/react-native/switch',
     },
   },
-] as const satisfies readonly ComponentCatalogEntry[];
+] as const satisfies readonly ComponentCatalogPresentationEntry[];
 `
     );
 

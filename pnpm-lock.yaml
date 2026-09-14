@@ -519,6 +519,9 @@ importers:
       '@vellira-ui/icons':
         specifier: workspace:*
         version: link:../../packages/icons
+      '@vellira-ui/metadata':
+        specifier: workspace:*
+        version: link:../../packages/metadata
       '@vellira-ui/react':
         specifier: workspace:*
         version: link:../../packages/react

@@ -220,13 +220,12 @@ export function renderCatalogEntry(params: {
     .join('\n');
 
   return `  {
+    component: '${model.componentName}',
     slug: '${model.slug}',
     name: '${model.componentName}',
     description: '${model.componentName} component for Vellira applications.',
     category: '${catalogCategory}',
-    status: 'beta',
     order: 999,
-    platforms: [${model.platforms.map((platform) => `'${platform}'`).join(', ')}],
     docs: {
 ${docsEntries}
     },
@@ -300,7 +299,7 @@ export async function updateCatalogRegistry(params: {
       existingEntry.includes(
         `description: '${model.componentName} component for Vellira applications.'`
       ) &&
-      existingEntry.includes("status: 'beta'") &&
+      existingEntry.includes(`component: '${model.componentName}'`) &&
       existingEntry.includes('order: 999');
 
     if (!force || !isGeneratedEntry) {
@@ -331,7 +330,8 @@ export async function updateCatalogRegistry(params: {
     return;
   }
 
-  const marker = '] as const satisfies readonly ComponentCatalogEntry[];';
+  const marker =
+    '] as const satisfies readonly ComponentCatalogPresentationEntry[];';
 
   if (!source.includes(marker)) {
     console.error(

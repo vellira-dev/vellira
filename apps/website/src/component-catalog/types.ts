@@ -1,3 +1,10 @@
+import type {
+  ComponentLifecycle,
+  ComponentPlatform,
+} from '@vellira-ui/metadata';
+
+export type { ComponentPlatform } from '@vellira-ui/metadata';
+
 export type ComponentCategory =
   | 'general'
   | 'layout'
@@ -27,8 +34,7 @@ export const componentCategoryLabels: Record<ComponentCategory, string> = {
   'data-display': 'Data display',
 };
 
-export type ComponentStatus = 'stable' | 'beta';
-export type ComponentPlatform = 'react' | 'react-native';
+export type ComponentStatus = ComponentLifecycle;
 
 export type ComponentCatalogEntry = {
   slug: string;
@@ -39,4 +45,11 @@ export type ComponentCatalogEntry = {
   category: ComponentCategory;
   platforms: readonly ComponentPlatform[];
   docs: Partial<Record<ComponentPlatform, string>>;
+};
+
+export type ComponentCatalogPresentationEntry = Omit<
+  ComponentCatalogEntry,
+  'status' | 'platforms'
+> & {
+  component: string;
 };

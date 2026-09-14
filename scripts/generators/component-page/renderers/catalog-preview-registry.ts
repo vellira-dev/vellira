@@ -63,7 +63,7 @@ export function requiresGeneratedCatalogPreview(params: {
     existingEntry.includes(
       `description: '${params.model.componentName} component for Vellira applications.'`
     ) &&
-    existingEntry.includes("status: 'beta'") &&
+    existingEntry.includes(`component: '${params.model.componentName}'`) &&
     existingEntry.includes('order: 999')
   );
 }

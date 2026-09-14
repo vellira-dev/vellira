@@ -127,7 +127,12 @@ export const accessibilitySemanticsRule: ComponentQualityRule = {
   },
   evaluate(context) {
     if (!context.metadata.requirements.accessibility) {
-      return finding(accessibilitySemanticsRule, context, 'not-applicable');
+      return finding(
+        accessibilitySemanticsRule,
+        context,
+        'not-applicable',
+        'Canonical metadata does not require accessibility evidence.'
+      );
     }
 
     const snapshot = readComponentSource(context);
@@ -192,7 +197,12 @@ export const platformInteractionRule: ComponentQualityRule = {
     const capabilities = context.metadata.capabilities ?? [];
 
     if (!capabilities.includes('keyboard')) {
-      return finding(platformInteractionRule, context, 'not-applicable');
+      return finding(
+        platformInteractionRule,
+        context,
+        'not-applicable',
+        'Keyboard capability is not declared.'
+      );
     }
 
     const snapshot = readComponentSource(context, {
@@ -257,7 +267,12 @@ export const focusManagementRule: ComponentQualityRule = {
   },
   evaluate(context) {
     if (!(context.metadata.capabilities ?? []).includes('focus-management')) {
-      return finding(focusManagementRule, context, 'not-applicable');
+      return finding(
+        focusManagementRule,
+        context,
+        'not-applicable',
+        'Focus-management capability is not declared.'
+      );
     }
 
     const snapshot = readComponentSource(context);
@@ -310,7 +325,12 @@ export const overlayPresentationRule: ComponentQualityRule = {
   },
   evaluate(context) {
     if (!(context.metadata.capabilities ?? []).includes('portal')) {
-      return finding(overlayPresentationRule, context, 'not-applicable');
+      return finding(
+        overlayPresentationRule,
+        context,
+        'not-applicable',
+        'Portal capability is not declared.'
+      );
     }
 
     const snapshot = readComponentSource(context);

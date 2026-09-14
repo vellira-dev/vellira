@@ -4,7 +4,6 @@ import { pathToFileURL } from 'node:url';
 
 import ts from 'typescript';
 
-import { canonicalComponentSlugSet } from '../../../../apps/website/src/component-catalog/registry/componentIdentity';
 import type { ComponentPageMetadata } from '../../../../apps/website/src/component-catalog/metadata';
 import type { ExtractedProp, Platform } from '../model/types';
 import { slugify } from '../helpers/format';
@@ -454,6 +453,25 @@ function validateSetupSyntax(source: string) {
 const canonicalSlugSemantics =
   'expected an exact canonical public component slug from apps/website/src/component-catalog/registry/components.ts, using lowercase kebab-case where applicable';
 
+function loadCanonicalComponentSlugSet() {
+  const registryFile = path.join(
+    process.cwd(),
+    'apps',
+    'website',
+    'src',
+    'component-catalog',
+    'registry',
+    'components.ts'
+  );
+  const source = fs.readFileSync(registryFile, 'utf8');
+
+  return new Set(
+    [...source.matchAll(/\bslug:\s*['"]([^'"]+)['"]/g)].map(
+      (match) => match[1]!
+    )
+  );
+}
+
 export function validateRelatedComponentSlugs(params: {
   componentName: string;
   related: readonly string[] | undefined;
@@ -462,6 +480,7 @@ export function validateRelatedComponentSlugs(params: {
   const related = params.related ?? [];
   const sourceSlug = slugify(params.componentName);
   const seen = new Set<string>();
+  const canonicalComponentSlugSet = loadCanonicalComponentSlugSet();
 
   for (const [index, relatedSlug] of related.entries()) {
     const field = `related[${index}]`;
