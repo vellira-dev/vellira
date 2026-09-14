@@ -43,7 +43,7 @@ export const ModalContent = ({
     active: focusScopeActive,
     contentRef: root.contentRef,
     enabled: root.trapFocus,
-    finalFocus: root.finalFocus,
+    finalFocus: root.finalFocus ?? root.triggerRef,
     initialFocus: root.initialFocus,
     onCloseAutoFocus: root.onCloseAutoFocus,
     onOpenAutoFocus: root.onOpenAutoFocus,

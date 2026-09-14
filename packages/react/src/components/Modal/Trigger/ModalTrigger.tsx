@@ -55,13 +55,19 @@ export const ModalTrigger = ({
   if (child) {
     return cloneElement(child, {
       ...triggerProps,
-      ref: composeRefs(child.props.ref),
+      ref: composeRefs(child.props.ref, root.triggerRef),
       className: cn(child.props.className, className),
     });
   }
 
   return (
-    <button type='button' {...triggerProps}>
+    <button
+      ref={(node) => {
+        root.triggerRef.current = node;
+      }}
+      type='button'
+      {...triggerProps}
+    >
       {children}
     </button>
   );

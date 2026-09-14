@@ -57,6 +57,7 @@
     "test:native": "pnpm --filter @vellira-ui/react-native test",
     "test:storybook": "pnpm --filter @vellira-ui/react-storybook test",
     "test:e2e:web": "pnpm --filter @vellira-ui/react-storybook test:e2e",
+    "test:e2e:web:cross-browser": "pnpm --filter @vellira-ui/react-storybook test:e2e:cross-browser",
     "test:e2e:web:visual": "pnpm --filter @vellira-ui/react-storybook test:e2e:visual",
     "test:e2e:web:visual:docker": "pnpm docker:e2e:visual",
     "test:e2e:docker": "pnpm docker:e2e",

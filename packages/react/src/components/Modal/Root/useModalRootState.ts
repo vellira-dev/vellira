@@ -65,6 +65,7 @@ export const useModalRootState = ({
   role = 'dialog',
 }: UseModalRootStateOptions) => {
   const contentRef = useRef<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const modalState = useModal({
     open,
     defaultOpen,
@@ -240,6 +241,7 @@ export const useModalRootState = ({
       shouldRender,
       titleId,
       trapFocus,
+      triggerRef,
     }),
     [
       animation,

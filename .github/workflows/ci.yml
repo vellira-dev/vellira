@@ -470,7 +470,7 @@ jobs:
       - name: Storybook tests
         run: pnpm test:storybook
 
-      - name: Browser tests
+      - name: Browser tests (Chromium baseline + cross-browser launch contracts)
         run: pnpm test:e2e:web
 
       - name: Visual regression
