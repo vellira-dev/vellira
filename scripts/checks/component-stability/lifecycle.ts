@@ -90,12 +90,7 @@ export function readBaseLifecycleStatuses(params: {
   ];
   const revision = spawnSync(
     'git',
-    [
-      ...gitPrefix,
-      'rev-parse',
-      '--verify',
-      `${params.baseRevision}^{commit}`,
-    ],
+    [...gitPrefix, 'rev-parse', '--verify', `${params.baseRevision}^{commit}`],
     {
       cwd: params.rootDir,
       encoding: 'utf8',
