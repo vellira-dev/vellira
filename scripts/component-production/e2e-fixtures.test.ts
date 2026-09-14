@@ -202,6 +202,36 @@ describe.sequential('component production end-to-end fixtures', () => {
       expectCompoundPlatformDivergence(root);
       await expectInvalidFixtureToFailClosed(root);
       await expectDeterministicRegeneration(root);
+      // Prove incomplete scaffolds fail before semantic changes can make their
+      // derived documentation stale. No metadata or quality gate is relaxed.
+      for (const fixture of fixtures.filter(
+        (item) => item.contentGroupLabel || item.tokenSurface
+      )) {
+        const scaffold = await runComponentProductionStructuredValidation({
+          root,
+          input: fixture.input,
+        });
+        expect(scaffold.stages[1].status, fixture.id).toBe('blocked');
+        const missingRules = scaffold.stages[1].findings.map(
+          (finding) => finding.id
+        );
+        if (fixture.contentGroupLabel) {
+          expect(
+            missingRules.some((id) =>
+              id.endsWith(':platform.accessibility-semantics')
+            ),
+            fixture.id
+          ).toBe(true);
+        }
+        if (fixture.tokenSurface) {
+          expect(
+            missingRules.some((id) =>
+              id.endsWith(':conformity.component-token-contract')
+            ),
+            fixture.id
+          ).toBe(true);
+        }
+      }
       await completeDisclosureFixture(
         root,
         divergentCompoundFixture().input.componentName
@@ -211,38 +241,10 @@ describe.sequential('component production end-to-end fixtures', () => {
       );
       if (!overlay) throw new Error('Overlay fixture is missing.');
       await completeOverlayFixture(root, overlay.input.componentName);
-
-      // Base generation deliberately leaves product semantics to completion.
-      // These fixtures specify named, noninteractive content groups. Prove the
-      // scaffold is blocked before supplying that semantic implementation.
-      for (const fixture of fixtures.filter((item) => item.contentGroupLabel)) {
-        const scaffold = await runComponentProductionStructuredValidation({
-          root,
-          input: fixture.input,
-        });
-        expect(scaffold.stages[1].status).toBe('blocked');
-        expect(
-          scaffold.stages[1].findings.some((finding) =>
-            finding.id.endsWith(':platform.accessibility-semantics')
-          )
-        ).toBe(true);
-        await completeContentGroup(root, fixture);
-      }
-
-      // Structural compound/overlay scaffolds deliberately have no generic
-      // visual surface. Apply each fixture's explicit presentation to the
-      // actual runtime element using its newly generated token family.
-      for (const fixture of fixtures.filter((item) => item.tokenSurface)) {
-        const scaffold = await runComponentProductionStructuredValidation({
-          root,
-          input: fixture.input,
-        });
-        expect(
-          scaffold.stages[1].findings.some((finding) =>
-            finding.id.endsWith(':conformity.component-token-contract')
-          )
-        ).toBe(true);
-        await completeTokenSurface(root, fixture);
+      for (const fixture of fixtures) {
+        if (fixture.contentGroupLabel)
+          await completeContentGroup(root, fixture);
+        if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
       }
       for (const fixture of fixtures) {
         generateComponentWebsitePage({
