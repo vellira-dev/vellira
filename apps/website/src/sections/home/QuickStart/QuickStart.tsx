@@ -306,7 +306,7 @@ export function QuickStart() {
                 </div>
 
                 <Button
-                  href='https://docs.vellira.dev/getting-started'
+                  href='https://docs.vellira.dev/start/getting-started'
                   target='_blank'
                   rel='noreferrer'
                   appearance={appearance}
@@ -328,7 +328,7 @@ export function QuickStart() {
 
           <footer className={styles.footer}>
             <a
-              href='https://docs.vellira.dev/getting-started'
+              href='https://docs.vellira.dev/start/getting-started'
               target='_blank'
               rel='noreferrer'
             >
@@ -344,7 +344,7 @@ export function QuickStart() {
             </a>
 
             <a
-              href='https://github.com/vellira-dev/Vellira'
+              href='https://github.com/vellira-dev/vellira'
               target='_blank'
               rel='noreferrer'
             >
