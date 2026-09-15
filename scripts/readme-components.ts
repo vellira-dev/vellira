@@ -22,7 +22,10 @@ interface ReadmeComponentRow {
   reactNative: string;
 }
 
-function compareNames(left: ComponentMetadata, right: ComponentMetadata): number {
+function compareNames(
+  left: ComponentMetadata,
+  right: ComponentMetadata
+): number {
   if (left.name < right.name) return -1;
   if (left.name > right.name) return 1;
   return 0;
@@ -40,7 +43,9 @@ function extractInventoryBlock(readme: string): string {
   const end = readme.indexOf(END_MARKER);
 
   if (start === -1 || end === -1 || end < start) {
-    throw new Error('README component inventory markers are missing or invalid.');
+    throw new Error(
+      'README component inventory markers are missing or invalid.'
+    );
   }
 
   return readme.slice(start, end + END_MARKER.length);
@@ -118,7 +123,9 @@ export function validateReadmeComponentInventory(
   const actualOrder = rows.map(({ name }) => name).join('\n');
   const expectedOrder = expected.map(({ name }) => name).join('\n');
   if (actualOrder !== expectedOrder) {
-    errors.push('README component inventory order must match canonical metadata.');
+    errors.push(
+      'README component inventory order must match canonical metadata.'
+    );
   }
 
   const portalIsCanonical = expectedNames.has(PORTAL_NAME);
