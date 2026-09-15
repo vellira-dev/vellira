@@ -49,6 +49,11 @@ jobs:
           registry-url: https://registry.npmjs.org
           scope: '@vellira-ui'
 
+      - name: Install npm for Trusted Publishing
+        run: |
+          npm install --global npm@11.5.1
+          npm --version
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -230,6 +235,11 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
           scope: '@vellira-ui'
+
+      - name: Install npm for Trusted Publishing
+        run: |
+          npm install --global npm@11.5.1
+          npm --version
 
       - name: Fail-closed recovery preflight
         id: recovery
