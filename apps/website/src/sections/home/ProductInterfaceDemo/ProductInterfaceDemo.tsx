@@ -48,7 +48,7 @@ const navigationItems: readonly NavigationItem[] = [
     active: true,
   },
   {
-    label: 'Components',
+    label: 'Projects',
     icon: Package,
     badge: '28',
   },
