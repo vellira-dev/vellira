@@ -648,17 +648,17 @@ export function ThemeStudio() {
 
                         <div className={styles.statsGrid}>
                           <article data-change='color'>
-                            <span>Components</span>
-                            <strong>42</strong>
+                            <span>Projects</span>
+                            <strong>12</strong>
                           </article>
 
                           <article data-change='radius'>
-                            <span>Coverage</span>
-                            <strong>98%</strong>
+                            <span>Members</span>
+                            <strong>8</strong>
                           </article>
 
                           <article data-change='theme'>
-                            <span>Themes</span>
+                            <span>Environments</span>
                             <strong>3</strong>
                           </article>
                         </div>
@@ -710,7 +710,7 @@ export function ThemeStudio() {
                                   </>
                                 ) : null}
                               </p>
-                              <small>Updated 18 component states</small>
+                              <small>Updated preview states</small>
                             </div>
                           </article>
 
@@ -729,7 +729,7 @@ export function ThemeStudio() {
                                   : null}
                                 {radiusLabel}px
                               </p>
-                              <small>Updated 42 surfaces</small>
+                              <small>Updated preview surfaces</small>
                             </div>
                           </article>
 
@@ -798,11 +798,11 @@ export function ThemeStudio() {
 
                         <div className={styles.outputGrid}>
                           <span>CSS vars</span>
-                          <strong>128</strong>
+                          <strong>Synced</strong>
                           <span>Web states</span>
-                          <strong>18</strong>
+                          <strong>Ready</strong>
                           <span>Native aliases</span>
-                          <strong>42</strong>
+                          <strong>Mapped</strong>
                         </div>
                       </div>
                     </Tabs.Content>
