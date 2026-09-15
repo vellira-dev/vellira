@@ -80,8 +80,7 @@ export function validateReadmeComponentInventory(
 ): string[] {
   const block = extractInventoryBlock(readme);
   const rows = parseInventoryRows(block);
-  const expected = metadata.filter(({ layer }) => layer === 'components');
-  expected.sort(compareNames);
+  const expected = [...metadata].sort(compareNames);
 
   const errors: string[] = [];
   const rowByName = new Map<string, ReadmeComponentRow>();
@@ -152,8 +151,7 @@ export async function checkReadmeComponentInventory(): Promise<void> {
     );
   }
 
-  const count = componentMetadata.filter(
-    ({ layer }) => layer === 'components'
-  ).length;
-  console.log(`README component inventory: PASS (${count} components)`);
+  console.log(
+    `README component inventory: PASS (${componentMetadata.length} components)`
+  );
 }
