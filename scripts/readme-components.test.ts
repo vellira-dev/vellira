@@ -52,16 +52,13 @@ describe('README component inventory', () => {
     );
   });
 
-  it(
-    'requires explicit Portal support-infrastructure classification',
-    async () => {
-      const readme = await readCurrentReadme();
-      const drifted = readme.replace(/^> `Portal`.*\n/m, '');
-      const errors = validateReadmeComponentInventory(drifted);
+  it('requires explicit Portal support-infrastructure classification', async () => {
+    const readme = await readCurrentReadme();
+    const drifted = readme.replace(/^> `Portal`.*\n/m, '');
+    const errors = validateReadmeComponentInventory(drifted);
 
-      expect(errors).toContain(
-        'README must classify Portal as support infrastructure.'
-      );
-    }
-  );
+    expect(errors).toContain(
+      'README must classify Portal as support infrastructure.'
+    );
+  });
 });
