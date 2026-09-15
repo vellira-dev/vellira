@@ -29,7 +29,9 @@ describe('homepage launch positioning and navigation', () => {
   it('states the primary React and React Native use case in the hero', () => {
     expect(heroSource).toContain('Building for React web and React Native?');
     expect(heroSource).toContain('Share component APIs and');
-    expect(heroSource).toContain('design tokens across both while each platform keeps a native');
+    expect(heroSource).toContain(
+      'design tokens across both while each platform keeps a native'
+    );
     expect(heroSource).toContain('implementation.');
   });
 
