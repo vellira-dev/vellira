@@ -208,13 +208,18 @@ function snapshotManagedWebsiteArtifacts(params: {
   root: string;
   componentName: string;
 }): ManagedWebsiteSnapshot {
-  const { componentCatalogDir, catalogRegistryFile, componentsRegistryFile } =
-    getCatalogPaths(params);
+  const {
+    componentCatalogDir,
+    catalogRegistryFile,
+    componentsRegistryFile,
+    generatedCatalogPreviewsFile,
+  } = getCatalogPaths(params);
 
   const candidateFiles = [
     ...listFilesRecursively(componentCatalogDir),
     catalogRegistryFile,
     componentsRegistryFile,
+    generatedCatalogPreviewsFile,
   ];
 
   const snapshot: ManagedWebsiteSnapshot = new Map();

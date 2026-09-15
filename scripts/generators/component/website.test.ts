@@ -95,11 +95,27 @@ describe('generateComponentWebsitePage', () => {
     const componentPagesFile = path.join(registryDir, 'componentPages.ts');
 
     const componentsRegistryFile = path.join(registryDir, 'components.ts');
+    const generatedCatalogPreviewsFile = path.join(
+      registryDir,
+      'generatedCatalogPreviews.ts'
+    );
 
     fs.writeFileSync(componentPagesFile, 'before component pages\n');
     fs.writeFileSync(componentsRegistryFile, 'before components\n');
+    fs.writeFileSync(
+      generatedCatalogPreviewsFile,
+      'before generated catalog previews\n'
+    );
 
     const usageFile = path.join(componentDir, 'AvatarUsage.tsx');
+    const catalogPreviewFile = path.join(
+      componentDir,
+      'AvatarCatalogPreview.tsx'
+    );
+    const unrelatedRegistryFile = path.join(
+      registryDir,
+      'relatedComponents.ts'
+    );
 
     vi.mocked(spawnSync).mockImplementation(() => {
       fs.mkdirSync(componentDir, {
@@ -107,8 +123,14 @@ describe('generateComponentWebsitePage', () => {
       });
 
       fs.writeFileSync(usageFile, 'generated usage\n');
+      fs.writeFileSync(catalogPreviewFile, 'generated catalog preview\n');
       fs.writeFileSync(componentPagesFile, 'after component pages\n');
       fs.writeFileSync(componentsRegistryFile, 'after components\n');
+      fs.writeFileSync(
+        generatedCatalogPreviewsFile,
+        'after generated catalog previews\n'
+      );
+      fs.writeFileSync(unrelatedRegistryFile, 'unrelated registry\n');
 
       return {
         pid: 1,
@@ -128,9 +150,15 @@ describe('generateComponentWebsitePage', () => {
     });
 
     expect(result).toEqual({
-      createdFiles: [usageFile],
-      updatedFiles: [componentPagesFile, componentsRegistryFile].sort(),
+      createdFiles: [catalogPreviewFile, usageFile].sort(),
+      updatedFiles: [
+        componentPagesFile,
+        componentsRegistryFile,
+        generatedCatalogPreviewsFile,
+      ].sort(),
     });
+    expect(result.createdFiles).not.toContain(unrelatedRegistryFile);
+    expect(result.updatedFiles).not.toContain(unrelatedRegistryFile);
   });
 
   it('maps the base generator profile to primitive website profile', () => {

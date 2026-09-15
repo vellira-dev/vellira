@@ -194,6 +194,64 @@ afterEach(() => {
 });
 
 describe.sequential('component production end-to-end fixtures', () => {
+  it(
+    'reports exactly every real generation mutation for a fresh both-platform base component',
+    async () => {
+      const fixture = fixtures.find(
+        (item) => item.id === 'base-cross-platform'
+      );
+      if (!fixture) throw new Error('Base cross-platform fixture is missing.');
+
+      const root = createIsolatedWorktree();
+      const beforeReservation = fingerprintWorkingTree(root);
+
+      await prepareTokenLifecycle(root, fixture.input);
+      const beforeGeneration = fingerprintWorkingTree(root);
+
+      expect(
+        changedWorkingTreePaths(beforeReservation, beforeGeneration)
+      ).toEqual(['packages/metadata/src/tokenLifecycle.ts']);
+
+      const generation = await runComponentProductionGeneration({
+        root,
+        input: fixture.input,
+      });
+
+      expect(generation.preflight, fixture.id).toMatchObject({
+        status: 'passed',
+      });
+      expect(
+        generation.generation,
+        `${fixture.id}: ${generation.generation.findings
+          .map((finding) => finding.message)
+          .join('\n')}`
+      ).toMatchObject({ status: 'passed' });
+
+      const afterGeneration = fingerprintWorkingTree(root);
+      const actualChangedPaths = changedWorkingTreePaths(
+        beforeGeneration,
+        afterGeneration
+      );
+
+      expect(generation.generatedArtifacts).toEqual(actualChangedPaths);
+      expect(generation.generation.artifacts).toEqual(actualChangedPaths);
+
+      const generatedCatalogPreviewsFile =
+        'apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts';
+      expect(actualChangedPaths).toContain(generatedCatalogPreviewsFile);
+      expect(generation.generatedArtifacts).toContain(
+        generatedCatalogPreviewsFile
+      );
+      expect(actualChangedPaths).toContain(
+        `apps/website/src/component-catalog/components/${fixture.input.componentName}/${fixture.input.componentName}CatalogPreview.tsx`
+      );
+      expect(actualChangedPaths).toContain(
+        'packages/metadata/src/tokenLifecycle.ts'
+      );
+    },
+    FIXTURE_TIMEOUT_MS
+  );
+
   it.each(fixtures)(
     '$id completes the generated production lifecycle',
     async (fixture) => {
@@ -956,26 +1014,37 @@ function commitFixtureCandidate(root: string) {
 }
 
 function fingerprintWorkingTree(root: string) {
-  return runGit(root, [
+  const fingerprint = new Map<string, string>();
+
+  for (const record of runGit(root, [
     'status',
     '--porcelain=v1',
     '-z',
     '--untracked-files=all',
   ])
     .split('\u0000')
-    .filter(Boolean)
-    .map((record) => {
-      const filePath = record.slice(3);
-      const absolutePath = path.join(root, filePath);
-      const hash = fs.existsSync(absolutePath)
-        ? crypto
-            .createHash('sha256')
-            .update(fs.readFileSync(absolutePath))
-            .digest('hex')
-        : '<missing>';
+    .filter(Boolean)) {
+    const filePath = record.slice(3);
+    const absolutePath = path.join(root, filePath);
+    const hash = fs.existsSync(absolutePath)
+      ? crypto
+          .createHash('sha256')
+          .update(fs.readFileSync(absolutePath))
+          .digest('hex')
+      : '<missing>';
 
-      return `${record.slice(0, 2)} ${filePath} ${hash}`;
-    })
+    fingerprint.set(filePath, `${record.slice(0, 2)} ${hash}`);
+  }
+
+  return fingerprint;
+}
+
+function changedWorkingTreePaths(
+  before: ReadonlyMap<string, string>,
+  after: ReadonlyMap<string, string>
+) {
+  return [...new Set([...before.keys(), ...after.keys()])]
+    .filter((filePath) => before.get(filePath) !== after.get(filePath))
     .sort();
 }
 

@@ -26,6 +26,7 @@ export function getPlannedComponentWebsiteArtifacts(
     componentCatalogDir,
     catalogRegistryFile,
     componentsRegistryFile,
+    generatedCatalogPreviewsFile,
     slug,
   } = getCatalogPaths({
     root: plan.root,
@@ -54,12 +55,17 @@ export function getPlannedComponentWebsiteArtifacts(
     ...(hasNative
       ? [path.join(componentCatalogDir, `Native${plan.componentName}Demo.tsx`)]
       : []),
+    path.join(componentCatalogDir, `${plan.componentName}CatalogPreview.tsx`),
     path.join(componentCatalogDir, 'index.ts'),
   ];
 
   return {
     createdFiles: [...new Set(createdFiles)].sort(),
-    updatedFiles: [catalogRegistryFile, componentsRegistryFile].sort(),
+    updatedFiles: [
+      catalogRegistryFile,
+      componentsRegistryFile,
+      generatedCatalogPreviewsFile,
+    ].sort(),
   };
 }
 

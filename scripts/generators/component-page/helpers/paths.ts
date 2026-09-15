@@ -30,6 +30,11 @@ export function getCatalogPaths(params: {
     'registry',
     'components.ts'
   );
+  const generatedCatalogPreviewsFile = path.join(
+    catalogRoot,
+    'registry',
+    'generatedCatalogPreviews.ts'
+  );
   const componentCatalogDir = path.join(catalogComponentsRoot, componentName);
   const slug = slugify(componentName);
 
@@ -38,6 +43,7 @@ export function getCatalogPaths(params: {
     catalogComponentsRoot,
     catalogRegistryFile,
     componentsRegistryFile,
+    generatedCatalogPreviewsFile,
     componentCatalogDir,
     slug,
   };

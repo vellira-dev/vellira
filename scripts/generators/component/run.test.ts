@@ -846,6 +846,12 @@ export { switchDocs };
     expect(result.createdFiles).toContain(
       path.join(root, 'apps/docs/src/react-native/avatar.md')
     );
+    expect(result.createdFiles).toContain(
+      path.join(
+        root,
+        'apps/website/src/component-catalog/components/Avatar/AvatarCatalogPreview.tsx'
+      )
+    );
 
     expect(result.updatedFiles).toContain(result.plan.metadataBarrelFile);
     expect(result.updatedFiles).toContain(result.plan.docsContractRegistryFile);
@@ -855,6 +861,12 @@ export { switchDocs };
     );
     expect(result.updatedFiles).toContain(
       path.join(root, 'packages/react-native/API.md')
+    );
+    expect(result.updatedFiles).toContain(
+      path.join(
+        root,
+        'apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts'
+      )
     );
 
     expect(fs.existsSync(result.plan.metadataFile)).toBe(false);
