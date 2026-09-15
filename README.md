@@ -299,7 +299,7 @@ pnpm docker:e2e:update
 
 <!-- vellira:component-inventory:start -->
 
-Platform availability is derived from the canonical component metadata registry.
+Platform availability is validated against the canonical component metadata registry.
 
 > `Portal` and `PortalProvider` are support primitives used by overlay components. They are public package infrastructure, not canonical catalog components.
 
