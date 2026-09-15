@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,8 +12,19 @@ import {
   validateComponentMetadata,
   validateRelatedComponentSlugs,
 } from './metadata';
+import {
+  canonicalComponentSlugs,
+  canonicalComponentSlugsFromEntries,
+} from '../../../../apps/website/src/component-catalog/registry/componentIdentity';
+import { deriveComponentCatalogEntries } from '../../../../apps/website/src/component-catalog/registry/deriveComponentCatalogEntries';
+import type { ComponentCatalogPresentationEntry } from '../../../../apps/website/src/component-catalog/types';
 import { NATIVE_TEXT_IMPORT } from '../../native-text-host';
 import type { ExtractedProp } from '../model/types';
+import {
+  buildSemanticMetadataContract,
+  COMPONENT_REGISTRY_PATH,
+  METADATA_SCHEMA_PATH,
+} from '../semantic-metadata-contract';
 
 const roots: string[] = [];
 
@@ -547,6 +559,154 @@ Line two</Example.Content>
         },
       })
     ).toThrow(/duplicate prop "size"|target must be a JSX component name/);
+  });
+});
+
+describe('semantic metadata contract', () => {
+  it('exports the exact sorted canonical registry vocabulary and source digest', () => {
+    const contract = buildSemanticMetadataContract({
+      root: process.cwd(),
+      componentName: 'Avatar',
+    });
+    const registryBytes = fs.readFileSync(
+      path.join(process.cwd(), COMPONENT_REGISTRY_PATH)
+    );
+
+    expect(contract.schemaPath).toBe(METADATA_SCHEMA_PATH);
+    expect(contract.metadataSchemaPath).toBe(METADATA_SCHEMA_PATH);
+    expect(contract.relatedComponentRegistry.path).toBe(
+      COMPONENT_REGISTRY_PATH
+    );
+    expect(contract.relatedComponentRegistry.sha256).toBe(
+      crypto.createHash('sha256').update(registryBytes).digest('hex')
+    );
+    expect(contract.relatedComponentRegistry.slugs).toEqual(
+      [...canonicalComponentSlugs].sort()
+    );
+    expect(contract.relatedComponentRegistry.slugs).toContain('radio-group');
+    expect(contract.relatedComponentRegistry.slugs).toContain('form-field');
+    expect(contract.sourceComponent).toEqual({
+      name: 'Avatar',
+      slug: 'avatar',
+      isCanonical: false,
+    });
+    expect(contract.constraints).toEqual({
+      relatedMustUseCanonicalSlug: true,
+      relatedMustNotReferenceSelf: true,
+      relatedMustBeUnique: true,
+      relatedMustUseExactCase: true,
+      relatedSlugFormat: 'lowercase-kebab-case',
+    });
+  });
+
+  it('keeps exported vocabulary and validator acceptance in parity', () => {
+    const contract = buildSemanticMetadataContract({
+      root: process.cwd(),
+      componentName: 'FutureComponent',
+    });
+
+    for (const slug of contract.relatedComponentRegistry.slugs) {
+      expect(
+        validateRelatedComponentSlugs({
+          componentName: 'FutureComponent',
+          related: [slug],
+        }),
+        slug
+      ).toEqual([]);
+    }
+
+    expect(
+      validateRelatedComponentSlugs({
+        componentName: 'FutureComponent',
+        related: ['Badge', 'Image', 'RadioGroup', 'FormField'],
+      })
+    ).toHaveLength(4);
+  });
+
+  it('preserves exact source self-reference semantics', () => {
+    const contract = buildSemanticMetadataContract({
+      root: process.cwd(),
+      componentName: 'RadioGroup',
+    });
+
+    expect(contract.sourceComponent).toMatchObject({
+      name: 'RadioGroup',
+      slug: 'radio-group',
+      isCanonical: true,
+    });
+    expect(
+      validateRelatedComponentSlugs({
+        componentName: contract.sourceComponent.name,
+        related: [contract.sourceComponent.slug],
+      })
+    ).toEqual([
+      'RadioGroup related[0] "radio-group" is invalid: related components must not reference the source component "radio-group"',
+    ]);
+  });
+
+  it('fails closed on duplicate or malformed canonical registry evidence', () => {
+    expect(() => canonicalComponentSlugsFromEntries([])).toThrow(
+      'Canonical component registry is empty'
+    );
+
+    expect(() =>
+      canonicalComponentSlugsFromEntries([
+        { slug: 'radio-group' },
+        { slug: 'radio-group' },
+      ])
+    ).toThrow('Duplicate canonical component slug');
+
+    expect(() =>
+      canonicalComponentSlugsFromEntries([{ slug: 'RadioGroup' }])
+    ).toThrow('Invalid canonical component slug');
+
+    const entry: ComponentCatalogPresentationEntry = {
+      component: 'Button',
+      slug: 'button',
+      name: 'Button',
+      description: 'Button.',
+      category: 'general',
+      order: 1,
+      docs: {},
+    };
+
+    expect(() =>
+      deriveComponentCatalogEntries([entry, { ...entry }], [])
+    ).toThrow('Duplicate canonical component slug');
+    expect(() =>
+      deriveComponentCatalogEntries([{ ...entry, slug: 'Button' }], [])
+    ).toThrow('Invalid canonical component slug');
+
+    expect(() =>
+      buildSemanticMetadataContract({
+        root: process.cwd(),
+        componentName: 'FutureComponent',
+        components: [{ slug: 'radio-group' }, { slug: 'radio-group' }],
+      })
+    ).toThrow('Duplicate canonical component slug');
+
+    expect(() =>
+      buildSemanticMetadataContract({
+        root: process.cwd(),
+        componentName: 'Not A Component',
+      })
+    ).toThrow('Invalid canonical component slug in source component');
+  });
+
+  it('does not derive related slugs from display names', () => {
+    expect(
+      validateRelatedComponentSlugs({
+        componentName: 'FutureComponent',
+        related: ['RadioGroup', 'FormField', 'badge', 'image'],
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('"RadioGroup"'),
+        expect.stringContaining('"FormField"'),
+        expect.stringContaining('"badge"'),
+        expect.stringContaining('"image"'),
+      ])
+    );
   });
 });
 

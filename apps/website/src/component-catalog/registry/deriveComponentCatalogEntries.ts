@@ -4,11 +4,14 @@ import type {
   ComponentCatalogEntry,
   ComponentCatalogPresentationEntry,
 } from '../types';
+import { canonicalComponentSlugsFromEntries } from './canonicalComponentSlugs';
 
 export function deriveComponentCatalogEntries(
   presentationEntries: readonly ComponentCatalogPresentationEntry[],
   metadataRegistry: readonly ComponentMetadata[]
 ): readonly ComponentCatalogEntry[] {
+  canonicalComponentSlugsFromEntries(presentationEntries);
+
   const metadataByName = new Map(
     metadataRegistry.map((metadata) => [metadata.name, metadata])
   );
