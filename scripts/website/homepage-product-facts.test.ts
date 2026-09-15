@@ -17,9 +17,16 @@ type PackageManifest = {
   private?: boolean;
 };
 
-const socialProofSource = readFileSync(
-  resolve('apps/website/src/sections/home/SocialProof/SocialProof.tsx'),
-  'utf8'
+const readHomepageSource = (path: string) =>
+  readFileSync(resolve('apps/website/src/sections/home', path), 'utf8');
+
+const socialProofSource = readHomepageSource('SocialProof/SocialProof.tsx');
+const componentShowcaseSource = readHomepageSource(
+  'ComponentShowcase/ComponentShowcase.tsx'
+);
+const themeStudioSource = readHomepageSource('ThemeStudio/ThemeStudio.tsx');
+const productInterfaceDemoSource = readHomepageSource(
+  'ProductInterfaceDemo/ProductInterfaceDemo.tsx'
 );
 
 function getPublishableWorkspacePackages() {
@@ -94,5 +101,38 @@ describe('homepage product facts', () => {
     expect(socialProofSource).not.toContain('AnimatedMetric');
     expect(socialProofSource).toContain("{value ?? '—'}");
     expect(socialProofSource).toContain("{productFacts.stableRelease ?? '—'}");
+  });
+
+  it('keeps demo metrics clearly separate from Vellira product facts', () => {
+    const demoSources = [
+      componentShowcaseSource,
+      themeStudioSource,
+      productInterfaceDemoSource,
+    ].join('\n');
+
+    expect(demoSources).not.toMatch(
+      /<span>Components<\/span>\s*<strong>\d+<\/strong>/
+    );
+    expect(demoSources).not.toMatch(
+      /<span>Coverage<\/span>\s*<strong>\d+%<\/strong>/
+    );
+    expect(productInterfaceDemoSource).not.toMatch(
+      /label: 'Components',[\s\S]*?badge: '\d+'/m
+    );
+    expect(themeStudioSource).not.toContain('Updated 18 component states');
+    expect(themeStudioSource).not.toContain('Updated 42 surfaces');
+    expect(themeStudioSource).not.toMatch(
+      /<span>CSS vars<\/span>\s*<strong>\d+<\/strong>/
+    );
+    expect(themeStudioSource).not.toMatch(
+      /<span>Web states<\/span>\s*<strong>\d+<\/strong>/
+    );
+    expect(themeStudioSource).not.toMatch(
+      /<span>Native aliases<\/span>\s*<strong>\d+<\/strong>/
+    );
+
+    expect(componentShowcaseSource).toContain('<span>Projects</span>');
+    expect(themeStudioSource).toContain('<span>Members</span>');
+    expect(productInterfaceDemoSource).toContain("label: 'Projects'");
   });
 });

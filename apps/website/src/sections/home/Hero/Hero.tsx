@@ -28,13 +28,14 @@ export function Hero() {
           </h1>
 
           <p className={styles.description}>
-            Production-ready React and React Native components with shared APIs,
-            accessible behaviour, themes, and design tokens.
+            Building for React web and React Native? Share component APIs and
+            design tokens across both while each platform keeps a native
+            implementation.
           </p>
 
           <div className={styles.actions}>
             <Button asChild>
-              <Link href='https://docs.vellira.dev/getting-started'>
+              <Link href='https://docs.vellira.dev/start/getting-started'>
                 Get started
               </Link>
             </Button>
@@ -44,7 +45,7 @@ export function Hero() {
             </Button>
 
             <Button appearance='ghost' color='neutral' asChild>
-              <Link href='https://github.com/vellira-dev/Vellira'>GitHub</Link>
+              <Link href='https://github.com/vellira-dev/vellira'>GitHub</Link>
             </Button>
           </div>
         </div>
