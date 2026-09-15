@@ -20,14 +20,19 @@ function compareNames(left: ComponentMetadata, right: ComponentMetadata): number
   return 0;
 }
 
-function platformCell(metadata: ComponentMetadata, platform: 'react' | 'react-native'): string {
+function platformCell(
+  metadata: ComponentMetadata,
+  platform: 'react' | 'react-native'
+): string {
   return metadata.platforms.includes(platform) ? '✅' : '—';
 }
 
 export function renderComponentInventory(
   metadata: readonly ComponentMetadata[] = componentMetadata
 ): string {
-  const components = metadata.filter(({ layer }) => layer === 'components').sort(compareNames);
+  const components = metadata
+    .filter(({ layer }) => layer === 'components')
+    .sort(compareNames);
   const hasPortalComponent = components.some(({ name }) => name === 'Portal');
 
   const lines = [
@@ -49,7 +54,10 @@ export function renderComponentInventory(
     '| --- | :---: | :---: |',
     ...components.map(
       (metadataEntry) =>
-        `| ${metadataEntry.name} | ${platformCell(metadataEntry, 'react')} | ${platformCell(metadataEntry, 'react-native')} |`
+        `| ${metadataEntry.name} | ${platformCell(metadataEntry, 'react')} | ${platformCell(
+          metadataEntry,
+          'react-native'
+        )} |`
     ),
     '',
     END_MARKER
@@ -89,7 +97,9 @@ export async function checkReadmeComponentInventory(): Promise<void> {
     );
   }
 
-  console.log(`README component inventory: PASS (${componentMetadata.length} canonical components)`);
+  console.log(
+    `README component inventory: PASS (${componentMetadata.length} canonical components)`
+  );
 }
 
 export async function generateReadmeComponentInventory(): Promise<void> {
@@ -102,7 +112,9 @@ export async function generateReadmeComponentInventory(): Promise<void> {
   }
 
   await writeFile(readmePath, expected, 'utf8');
-  console.log(`Updated README component inventory from ${componentMetadata.length} canonical components.`);
+  console.log(
+    `Updated README component inventory from ${componentMetadata.length} canonical components.`
+  );
 }
 
 async function main(): Promise<void> {
