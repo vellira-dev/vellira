@@ -9,10 +9,14 @@ import { componentMetadata } from '../packages/metadata/src/components';
 
 const START_MARKER = '<!-- vellira:component-inventory:start -->';
 const END_MARKER = '<!-- vellira:component-inventory:end -->';
+const PORTAL_NOTE =
+  '> `Portal` and `PortalProvider` are support primitives used by overlay components. They are public package infrastructure, not canonical catalog components.';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = resolve(dirname(scriptPath), '..');
 const readmePath = resolve(repoRoot, 'README.md');
+
+type ComponentPlatform = ComponentMetadata['platforms'][number];
 
 function compareNames(left: ComponentMetadata, right: ComponentMetadata): number {
   if (left.name < right.name) return -1;
@@ -22,19 +26,24 @@ function compareNames(left: ComponentMetadata, right: ComponentMetadata): number
 
 function platformCell(
   metadata: ComponentMetadata,
-  platform: 'react' | 'react-native'
+  platform: ComponentPlatform
 ): string {
   return metadata.platforms.includes(platform) ? '✅' : '—';
+}
+
+function renderInventoryRow(metadata: ComponentMetadata): string {
+  const react = platformCell(metadata, 'react');
+  const native = platformCell(metadata, 'react-native');
+  return `| ${metadata.name} | ${react} | ${native} |`;
 }
 
 export function renderComponentInventory(
   metadata: readonly ComponentMetadata[] = componentMetadata
 ): string {
-  const components = metadata
-    .filter(({ layer }) => layer === 'components')
-    .sort(compareNames);
-  const hasPortalComponent = components.some(({ name }) => name === 'Portal');
+  const components = metadata.filter(({ layer }) => layer === 'components');
+  components.sort(compareNames);
 
+  const hasPortalComponent = components.some(({ name }) => name === 'Portal');
   const lines = [
     START_MARKER,
     '',
@@ -43,22 +52,13 @@ export function renderComponentInventory(
   ];
 
   if (!hasPortalComponent) {
-    lines.push(
-      '> `Portal` and `PortalProvider` are support primitives used by overlay components. They are public package infrastructure, not canonical catalog components.',
-      ''
-    );
+    lines.push(PORTAL_NOTE, '');
   }
 
   lines.push(
     '| Component | React | React Native |',
     '| --- | :---: | :---: |',
-    ...components.map(
-      (metadataEntry) =>
-        `| ${metadataEntry.name} | ${platformCell(metadataEntry, 'react')} | ${platformCell(
-          metadataEntry,
-          'react-native'
-        )} |`
-    ),
+    ...components.map(renderInventoryRow),
     '',
     END_MARKER
   );
@@ -74,9 +74,10 @@ export function replaceComponentInventory(
   const end = readme.indexOf(END_MARKER);
 
   if (start === -1 || end === -1 || end < start) {
-    throw new Error(
-      `README component inventory markers are missing or invalid. Expected ${START_MARKER} and ${END_MARKER}.`
-    );
+    const message =
+      `README component inventory markers are missing or invalid. ` +
+      `Expected ${START_MARKER} and ${END_MARKER}.`;
+    throw new Error(message);
   }
 
   const afterEnd = end + END_MARKER.length;
@@ -92,14 +93,14 @@ export async function checkReadmeComponentInventory(): Promise<void> {
   const expected = await expectedReadme(readme);
 
   if (readme !== expected) {
-    throw new Error(
-      'README component inventory is stale. Run `node --import tsx scripts/readme-components.ts` and commit the result.'
-    );
+    const message =
+      'README component inventory is stale. Run ' +
+      '`node --import tsx scripts/readme-components.ts` and commit the result.';
+    throw new Error(message);
   }
 
-  console.log(
-    `README component inventory: PASS (${componentMetadata.length} canonical components)`
-  );
+  const count = componentMetadata.length;
+  console.log(`README component inventory: PASS (${count} canonical components)`);
 }
 
 export async function generateReadmeComponentInventory(): Promise<void> {
@@ -112,9 +113,8 @@ export async function generateReadmeComponentInventory(): Promise<void> {
   }
 
   await writeFile(readmePath, expected, 'utf8');
-  console.log(
-    `Updated README component inventory from ${componentMetadata.length} canonical components.`
-  );
+  const count = componentMetadata.length;
+  console.log(`Updated README component inventory from ${count} canonical components.`);
 }
 
 async function main(): Promise<void> {
