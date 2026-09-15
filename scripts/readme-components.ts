@@ -10,7 +10,8 @@ import { componentMetadata } from '../packages/metadata/src/components';
 const START_MARKER = '<!-- vellira:component-inventory:start -->';
 const END_MARKER = '<!-- vellira:component-inventory:end -->';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const scriptPath = fileURLToPath(import.meta.url);
+const repoRoot = resolve(dirname(scriptPath), '..');
 const readmePath = resolve(repoRoot, 'README.md');
 
 function compareNames(left: ComponentMetadata, right: ComponentMetadata): number {
@@ -74,32 +75,50 @@ export function replaceComponentInventory(
   return `${readme.slice(0, start)}${inventory}${readme.slice(afterEnd)}`;
 }
 
-async function main(): Promise<void> {
-  const checkOnly = process.argv.slice(2).includes('--check');
+async function expectedReadme(readme: string): Promise<string> {
+  return format(replaceComponentInventory(readme), { filepath: readmePath });
+}
+
+export async function checkReadmeComponentInventory(): Promise<void> {
   const readme = await readFile(readmePath, 'utf8');
-  const updated = replaceComponentInventory(readme);
-  const formatted = await format(updated, { filepath: readmePath });
+  const expected = await expectedReadme(readme);
 
-  if (checkOnly) {
-    if (readme !== formatted) {
-      console.error(
-        'README component inventory is stale. Run `pnpm readme:components:generate` and commit the result.'
-      );
-      process.exitCode = 1;
-      return;
-    }
-
-    console.log(`README component inventory: PASS (${componentMetadata.length} canonical components)`);
-    return;
+  if (readme !== expected) {
+    throw new Error(
+      'README component inventory is stale. Run `node --import tsx scripts/readme-components.ts` and commit the result.'
+    );
   }
 
-  if (readme === formatted) {
+  console.log(`README component inventory: PASS (${componentMetadata.length} canonical components)`);
+}
+
+export async function generateReadmeComponentInventory(): Promise<void> {
+  const readme = await readFile(readmePath, 'utf8');
+  const expected = await expectedReadme(readme);
+
+  if (readme === expected) {
     console.log('README component inventory is already current.');
     return;
   }
 
-  await writeFile(readmePath, formatted, 'utf8');
+  await writeFile(readmePath, expected, 'utf8');
   console.log(`Updated README component inventory from ${componentMetadata.length} canonical components.`);
 }
 
-await main();
+async function main(): Promise<void> {
+  if (process.argv.slice(2).includes('--check')) {
+    await checkReadmeComponentInventory();
+    return;
+  }
+
+  await generateReadmeComponentInventory();
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === scriptPath) {
+  try {
+    await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
+}
