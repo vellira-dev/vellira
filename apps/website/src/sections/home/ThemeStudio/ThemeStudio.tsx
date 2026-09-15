@@ -648,7 +648,7 @@ export function ThemeStudio() {
 
                         <div className={styles.statsGrid}>
                           <article data-change='color'>
-                            <span>Components</span>
+                            <span>UI surfaces</span>
                             <strong>42</strong>
                           </article>
 

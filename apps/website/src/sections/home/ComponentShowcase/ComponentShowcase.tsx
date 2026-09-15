@@ -924,7 +924,7 @@ export function ComponentShowcase() {
                             <strong>98%</strong>
                           </div>
                           <div>
-                            <span>Components</span>
+                            <span>Projects</span>
                             <strong>42</strong>
                           </div>
                           <div>
