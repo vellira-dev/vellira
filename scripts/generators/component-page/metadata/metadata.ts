@@ -5,6 +5,10 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
 import type { ComponentPageMetadata } from '../../../../apps/website/src/component-catalog/metadata';
+import {
+  CANONICAL_RELATED_COMPONENT_CONSTRAINTS,
+  canonicalComponentSlugs,
+} from '../../../../apps/website/src/component-catalog/registry/componentIdentity';
 import type { ExtractedProp, Platform } from '../model/types';
 import { slugify } from '../helpers/format';
 
@@ -453,25 +457,6 @@ function validateSetupSyntax(source: string) {
 const canonicalSlugSemantics =
   'expected an exact canonical public component slug from apps/website/src/component-catalog/registry/components.ts, using lowercase kebab-case where applicable';
 
-function loadCanonicalComponentSlugSet() {
-  const registryFile = path.join(
-    process.cwd(),
-    'apps',
-    'website',
-    'src',
-    'component-catalog',
-    'registry',
-    'components.ts'
-  );
-  const source = fs.readFileSync(registryFile, 'utf8');
-
-  return new Set(
-    [...source.matchAll(/\bslug:\s*['"]([^'"]+)['"]/g)].map(
-      (match) => match[1]!
-    )
-  );
-}
-
 export function validateRelatedComponentSlugs(params: {
   componentName: string;
   related: readonly string[] | undefined;
@@ -480,19 +465,25 @@ export function validateRelatedComponentSlugs(params: {
   const related = params.related ?? [];
   const sourceSlug = slugify(params.componentName);
   const seen = new Set<string>();
-  const canonicalComponentSlugSet = loadCanonicalComponentSlugSet();
+  const canonicalComponentSlugSet = new Set(canonicalComponentSlugs);
 
   for (const [index, relatedSlug] of related.entries()) {
     const field = `related[${index}]`;
     const prefix = `${params.componentName} ${field} "${relatedSlug}"`;
 
-    if (relatedSlug === sourceSlug) {
+    if (
+      CANONICAL_RELATED_COMPONENT_CONSTRAINTS.relatedMustNotReferenceSelf &&
+      relatedSlug === sourceSlug
+    ) {
       errors.push(
         `${prefix} is invalid: related components must not reference the source component "${sourceSlug}"`
       );
     }
 
-    if (seen.has(relatedSlug)) {
+    if (
+      CANONICAL_RELATED_COMPONENT_CONSTRAINTS.relatedMustBeUnique &&
+      seen.has(relatedSlug)
+    ) {
       errors.push(
         `${prefix} is invalid: duplicate related component slug "${relatedSlug}"`
       );
@@ -500,7 +491,10 @@ export function validateRelatedComponentSlugs(params: {
 
     seen.add(relatedSlug);
 
-    if (!canonicalComponentSlugSet.has(relatedSlug)) {
+    if (
+      CANONICAL_RELATED_COMPONENT_CONSTRAINTS.relatedMustUseCanonicalSlug &&
+      !canonicalComponentSlugSet.has(relatedSlug)
+    ) {
       errors.push(
         `${prefix} is invalid: unknown or non-canonical related component slug; ${canonicalSlugSemantics}`
       );
