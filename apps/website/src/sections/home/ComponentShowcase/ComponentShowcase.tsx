@@ -920,15 +920,15 @@ export function ComponentShowcase() {
 
                         <div className={styles.metricGrid}>
                           <div>
-                            <span>Coverage</span>
-                            <strong>98%</strong>
+                            <span>Projects</span>
+                            <strong>12</strong>
                           </div>
                           <div>
-                            <span>Components</span>
-                            <strong>42</strong>
+                            <span>Members</span>
+                            <strong>8</strong>
                           </div>
                           <div>
-                            <span>Themes</span>
+                            <span>Environments</span>
                             <strong>3</strong>
                           </div>
                         </div>
