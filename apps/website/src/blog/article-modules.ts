@@ -5,6 +5,7 @@ import componentMetadataSourceOfTruthMetadata from '../../content/blog/component
 import controlledUncontrolledReactNativeMetadata from '../../content/blog/controlled-uncontrolled-react-native/metadata.json';
 import crossPlatformFormVelliraMetadata from '../../content/blog/cross-platform-form-vellira/metadata.json';
 import designSystemComponentGeneratorMetadata from '../../content/blog/design-system-component-generator/metadata.json';
+import pr1112AddCrossBrowserInteractionRegressionSuiteMetadata from '../../content/blog/pr-1112-add-cross-browser-interaction-regression-suite/metadata.json';
 import productionReadyCrossPlatformComponentMetadata from '../../content/blog/production-ready-cross-platform-component/metadata.json';
 import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/quality-gates-before-component-growth/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
@@ -49,6 +50,10 @@ const blogArticleMetadataRegistryEntries = [
     metadata: designSystemComponentGeneratorMetadata,
   },
   {
+    slug: 'pr-1112-add-cross-browser-interaction-regression-suite',
+    metadata: pr1112AddCrossBrowserInteractionRegressionSuiteMetadata,
+  },
+  {
     slug: 'production-ready-cross-platform-component',
     metadata: productionReadyCrossPlatformComponentMetadata,
   },
@@ -75,6 +80,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
       import('../../content/blog/cross-platform-form-vellira/article.mdx'),
     'design-system-component-generator': () =>
       import('../../content/blog/design-system-component-generator/article.mdx'),
+    'pr-1112-add-cross-browser-interaction-regression-suite': () =>
+      import('../../content/blog/pr-1112-add-cross-browser-interaction-regression-suite/article.mdx'),
     'production-ready-cross-platform-component': () =>
       import('../../content/blog/production-ready-cross-platform-component/article.mdx'),
     'quality-gates-before-component-growth': () =>

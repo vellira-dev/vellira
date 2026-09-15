@@ -1,0 +1,9 @@
+{
+  "title": "Adding cross-browser interaction regression suite in Vellira",
+  "description": "Focused tests cover these review boundaries—not runtime guarantees: “Dropdown supports keyboard navigation, focus restore, portal, outside click, and positioning” and “Modal renders in a portal, traps focus, and closes with Escape”.",
+  "slug": "pr-1112-add-cross-browser-interaction-regression-suite",
+  "publishedAt": "2026-09-14",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}
