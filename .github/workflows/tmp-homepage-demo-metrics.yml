@@ -1,0 +1,56 @@
+name: Temporary homepage demo metric cleanup
+
+on:
+  push:
+    branches:
+      - fix/homepage-demo-metrics
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/homepage-demo-metrics
+          fetch-depth: 0
+
+      - name: Replace ambiguous demo metrics
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path('apps/website/src/sections/home/ComponentShowcase/ComponentShowcase.tsx'): (
+                  "<span>Components</span>\n                            <strong>42</strong>",
+                  "<span>Projects</span>\n                            <strong>42</strong>",
+              ),
+              Path('apps/website/src/sections/home/ThemeStudio/ThemeStudio.tsx'): (
+                  "<span>Components</span>\n                            <strong>42</strong>",
+                  "<span>UI surfaces</span>\n                            <strong>42</strong>",
+              ),
+          }
+
+          for path, (old, new) in replacements.items():
+              text = path.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one ambiguous metric, found {count}')
+              path.write_text(text.replace(old, new))
+          PY
+
+      - name: Commit cleanup and remove temporary workflow
+        run: |
+          git config user.name "vellira-maintenance[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-homepage-demo-metrics.yml
+          git add apps/website/src/sections/home/ComponentShowcase/ComponentShowcase.tsx
+          git add apps/website/src/sections/home/ThemeStudio/ThemeStudio.tsx
+          git diff --check
+          git commit -m "fix(website): clarify homepage demo metrics"
+          git push origin HEAD:fix/homepage-demo-metrics
