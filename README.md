@@ -297,10 +297,15 @@ pnpm docker:e2e:update
 
 ## Components
 
-Every component is available for both React and React Native, providing a familiar developer experience with a consistent API across platforms.
+<!-- vellira:component-inventory:start -->
+
+Platform availability is derived from the canonical component metadata registry.
+
+> `Portal` and `PortalProvider` are support primitives used by overlay components. They are public package infrastructure, not canonical catalog components.
 
 | Component  | React | React Native |
 | ---------- | :---: | :----------: |
+| Accordion  |  ✅   |      ✅      |
 | Button     |  ✅   |      ✅      |
 | Checkbox   |  ✅   |      ✅      |
 | Dropdown   |  ✅   |      ✅      |
@@ -308,12 +313,14 @@ Every component is available for both React and React Native, providing a famili
 | Input      |  ✅   |      ✅      |
 | Modal      |  ✅   |      ✅      |
 | Popover    |  ✅   |      ✅      |
-| Portal     |  ✅   |      ✅      |
 | Radio      |  ✅   |      ✅      |
 | RadioGroup |  ✅   |      ✅      |
 | Select     |  ✅   |      ✅      |
+| Switch     |  ✅   |      ✅      |
 | Tabs       |  ✅   |      ✅      |
 | Tooltip    |  ✅   |      ✅      |
+
+<!-- vellira:component-inventory:end -->
 
 ---
 
