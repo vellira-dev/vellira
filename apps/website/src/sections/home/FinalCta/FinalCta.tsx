@@ -20,7 +20,7 @@ const secondaryLinks = [
   },
   {
     label: 'View on GitHub',
-    href: 'https://github.com/vellira-dev/Vellira',
+    href: 'https://github.com/vellira-dev/vellira',
   },
 ] as const;
 
@@ -85,7 +85,7 @@ export function FinalCta() {
           <div className={styles.actions}>
             <Button asChild size='lg'>
               <a
-                href='https://docs.vellira.dev/getting-started'
+                href='https://docs.vellira.dev/start/getting-started'
                 target='_blank'
                 rel='noreferrer'
               >

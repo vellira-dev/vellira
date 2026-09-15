@@ -236,7 +236,7 @@ export function Pro() {
                 iconEnd={<ArrowRight size={14} aria-hidden='true' />}
               >
                 <a
-                  href='https://docs.vellira.dev/getting-started'
+                  href='https://docs.vellira.dev/start/getting-started'
                   target='_blank'
                   rel='noreferrer'
                 >
