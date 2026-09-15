@@ -82,7 +82,14 @@ const componentPages = read('registry/componentPages.ts');
 const dropdownDemo = read('components/Dropdown/DropdownDemo.tsx');
 const nativeDropdownDemo = read('components/Dropdown/NativeDropdownDemo.tsx');
 const dropdownExamples = read('components/Dropdown/DropdownExamples.tsx');
+const dropdownAccessibility = read(
+  'components/Dropdown/DropdownAccessibility.tsx'
+);
 const dropdownApi = read('components/Dropdown/dropdownApi.ts');
+const dropdownReactDocs = fs.readFileSync(
+  path.join(root, 'apps', 'docs', 'src', 'react', 'dropdown.md'),
+  'utf8'
+);
 const modalExamples = read('components/Modal/ModalExamples.tsx');
 const modalAccessibility = read('components/Modal/ModalAccessibility.tsx');
 const nativeModalDemo = read('components/Modal/NativeModalDemo.tsx');
@@ -262,8 +269,33 @@ assertIncludes(
 );
 assertIncludes(
   dropdownExamples,
-  "title: 'Submenu'",
-  'Dropdown submenu example exists'
+  "title: 'Nested React dropdown submenu'",
+  'Dropdown nested React submenu example exists'
+);
+assertIncludes(
+  dropdownExamples,
+  '<ReactDropdown.SubTrigger>',
+  'Dropdown nested React submenu uses SubTrigger'
+);
+assertIncludes(
+  dropdownExamples,
+  '<ReactDropdown.SubContent>',
+  'Dropdown nested React submenu uses SubContent'
+);
+assertIncludes(
+  dropdownAccessibility,
+  "title: 'Nested menu navigation'",
+  'Dropdown nested menu accessibility guidance exists'
+);
+assertIncludes(
+  dropdownAccessibility,
+  "props: ['Dropdown.Sub', 'Dropdown.SubTrigger', 'Dropdown.SubContent']",
+  'Dropdown nested menu API slots remain discoverable'
+);
+assertIncludes(
+  dropdownApi,
+  "name: 'Dropdown.Sub'",
+  'Dropdown.Sub API section exists'
 );
 assertIncludes(
   dropdownApi,
@@ -274,6 +306,73 @@ assertIncludes(
   dropdownApi,
   "name: 'Dropdown.SubTrigger'",
   'Dropdown.SubTrigger API section exists'
+);
+assertIncludes(
+  dropdownApi,
+  "name: 'Dropdown.SubContent'",
+  'Dropdown.SubContent API section exists'
+);
+const nativeDropdownApiStart = dropdownApi.indexOf(
+  'const nativeDropdownApiSections'
+);
+assert.ok(
+  nativeDropdownApiStart >= 0,
+  'React Native Dropdown API sections remain present'
+);
+const nativeDropdownApi = dropdownApi.slice(nativeDropdownApiStart);
+const nativeDropdownAccessibilityStart =
+  dropdownAccessibility.indexOf('const nativeItems');
+assert.ok(
+  nativeDropdownAccessibilityStart >= 0,
+  'React Native Dropdown accessibility guidance remains present'
+);
+const nativeDropdownAccessibility = dropdownAccessibility.slice(
+  nativeDropdownAccessibilityStart
+);
+assertNotIncludes(
+  nativeDropdownApi,
+  "name: 'Dropdown.Sub'",
+  'React Native Dropdown API does not claim submenu slots'
+);
+assertNotIncludes(
+  nativeDropdownAccessibility,
+  'Nested menu navigation',
+  'React Native Dropdown accessibility guidance does not claim submenu slots'
+);
+assertNotIncludes(
+  nativeDropdownDemo,
+  '<NativeDropdown.Sub',
+  'React Native Dropdown demo does not claim submenu slots'
+);
+assertNotIncludes(
+  dropdownExamples,
+  '<NativeDropdown.Sub',
+  'React Native Dropdown examples do not claim submenu slots'
+);
+assertIncludes(
+  dropdownReactDocs,
+  '## Nested Dropdowns and Submenus',
+  'React Dropdown docs explain nested submenu intent'
+);
+assertIncludes(
+  dropdownReactDocs,
+  '<Dropdown.SubTrigger>',
+  'React Dropdown docs show the canonical SubTrigger API'
+);
+assertIncludes(
+  dropdownReactDocs,
+  'React Native Dropdown currently does not',
+  'React Dropdown docs preserve the native capability boundary'
+);
+assertIncludes(
+  dropdownReactDocs,
+  '- [Popover](/react/popover)',
+  'React Dropdown docs link to the canonical Popover surface'
+);
+assertIncludes(
+  componentPages,
+  "related: ['button', 'select', 'popover']",
+  'Dropdown related components use canonical website surfaces'
 );
 assertIncludes(
   modalExamples,

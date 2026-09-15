@@ -236,9 +236,9 @@ import { Button as ReactButton } from '@vellira-ui/react';
 </Dropdown>`,
     },
     {
-      title: 'Submenu',
+      title: 'Nested React dropdown submenu',
       description:
-        'Nests secondary actions when the web menu has more choices.',
+        'Groups secondary actions under a nested React dropdown submenu.',
       preview: (
         <ReactDropdown>
           <ReactDropdown.Trigger asChild>
