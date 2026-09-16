@@ -241,6 +241,14 @@ function renderFormControlStories(params: {
     );
   }
 
+  if (booleanControl && scenarios.has('indeterminate')) {
+    stories.push(`export const Indeterminate: Story = {
+  args: {
+    indeterminate: true,
+  },
+};`);
+  }
+
   for (const [scenario, prop] of [
     ['disabled', 'disabled'],
     ['required', 'required'],
