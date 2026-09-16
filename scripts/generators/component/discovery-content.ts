@@ -33,7 +33,8 @@ export type ComponentDiscoveryContent = {
 
 const categoryUseCase: Record<ComponentCategoryArg, string> = {
   action: 'Use it when a user needs to trigger a clear application action.',
-  form: 'Use it when an interface needs explicit user input, selection, or form participation.',
+  form:
+    'Use it when an interface needs explicit user input, selection, or form participation.',
   navigation:
     'Use it when users need to move between related views or sections.',
   overlay:
