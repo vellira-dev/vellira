@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 
+import type { ComponentDiscoveryMetadata } from '../metadata';
 import type {
   ComponentApiProp,
   ComponentApiSection,
@@ -130,6 +131,7 @@ type PlatformDemoRegistry = Partial<Record<ComponentPlatform, ComponentType>>;
 
 type ComponentPageConfig = {
   name: string;
+  discovery?: ComponentDiscoveryMetadata;
   demos: PlatformDemoRegistry;
   Usage: PlatformSection;
   Examples: PlatformSection;
