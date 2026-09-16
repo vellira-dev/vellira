@@ -5,6 +5,7 @@ import type {
   ComponentProfile,
   ComponentTokenContract,
 } from './component';
+import type { ComponentIntentDefinitionV1 } from './intent';
 
 export type ComponentExpansionRole =
   'foundational' | 'form-control' | 'composition-dependency' | 'catalog';
@@ -18,6 +19,8 @@ export interface ComponentExpansionTarget {
   /** Explicit production intent; expansion targets never infer a default. */
   componentTokens: ComponentTokenContract | false;
   role: ComponentExpansionRole;
+  /** Approved semantic intent. Structural generation must not treat it as implementation evidence. */
+  intent: ComponentIntentDefinitionV1;
 
   /**
    * Existing public component APIs that intentionally satisfy this target.
