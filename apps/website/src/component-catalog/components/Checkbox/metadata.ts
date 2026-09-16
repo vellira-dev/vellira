@@ -130,7 +130,8 @@ export default defineComponentPageMetadata({
     },
     {
       title: 'Disabled',
-      description: 'Keep unavailable choices visible while preventing interaction.',
+      description:
+        'Keep unavailable choices visible while preventing interaction.',
       props: ['disabled'],
     },
   ],
