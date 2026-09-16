@@ -6,10 +6,12 @@ import {
   getComponentPresentationScenarioDescription,
   getComponentPresentationScenarioTitle,
   readCanonicalComponentCapabilities,
+  readCanonicalComponentPlatforms,
 } from '../component-presentation';
 import { getCatalogPaths } from '../component-page/helpers/paths';
 
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
+import { deriveComponentDiscoveryContent } from './discovery-content';
 import { getEffectiveWebsitePresentationScenarios } from './website-presentation';
 
 export type WebsiteComponentProfile =
@@ -36,6 +38,7 @@ function renderGeneratedPresentationMetadata(params: {
   root: string;
   componentName: string;
   profile: ComponentProfileArg;
+  category: ComponentCategoryArg;
   capabilities: readonly import('@vellira-ui/metadata').ComponentCapability[];
 }) {
   const examples = getEffectiveWebsitePresentationScenarios(params)
@@ -49,11 +52,24 @@ function renderGeneratedPresentationMetadata(params: {
     },`
     )
     .join('\n');
+  const platforms = readCanonicalComponentPlatforms(params) ?? [];
+  const discovery = deriveComponentDiscoveryContent({
+    componentName: params.componentName,
+    category: params.category,
+    profile: params.profile,
+    capabilities: params.capabilities,
+    platforms,
+  });
+  const discoverySource = JSON.stringify(discovery, null, 2)
+    .split('\n')
+    .map((line, index) => (index === 0 ? line : `  ${line}`))
+    .join('\n');
 
   return `import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
   profile: '${resolveWebsiteComponentProfile(params.profile)}',
+  discovery: ${discoverySource},
   examples: [
 ${examples}
   ],
@@ -65,6 +81,7 @@ function ensureGeneratedPresentationMetadata(params: {
   root: string;
   componentName: string;
   profile: ComponentProfileArg;
+  category: ComponentCategoryArg;
 }) {
   const componentDir = path.join(
     params.root,
@@ -111,6 +128,7 @@ export function generateComponentWebsitePage(params: {
     root,
     componentName: params.componentName,
     profile: params.profile,
+    category: params.category,
   });
 
   const result = spawnSync(

@@ -2,7 +2,9 @@
 
 import { Fragment, useMemo, useState } from 'react';
 
+import type { ComponentDiscoveryMetadata } from '../../metadata';
 import type { ComponentCatalogEntry, ComponentPlatform } from '../../types';
+import { ComponentAccessibility as ComponentGuidance } from '../ComponentAccessibility';
 import { ComponentHeader } from '../ComponentHeader';
 import { ComponentDemoStateProvider } from '../ComponentDemoStateProvider';
 import { componentPages } from '../../registry/componentPages';
@@ -65,6 +67,50 @@ function getPlatformApi(
   };
 }
 
+function getDiscoveryItems(
+  discovery: ComponentDiscoveryMetadata | undefined,
+  platform: ComponentPlatform
+) {
+  if (!discovery) {
+    return [];
+  }
+
+  return [
+    ...(discovery.whenToUse && discovery.whenToUse.length > 0
+      ? [
+          {
+            title: 'When to use',
+            description: (
+              <ul>
+                {discovery.whenToUse.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ),
+          },
+        ]
+      : []),
+    ...(discovery.patterns ?? []).map((pattern) => ({
+      title: pattern.title,
+      description: pattern.description,
+    })),
+    ...((discovery.platformNotes?.[platform] ?? []).length > 0
+      ? [
+          {
+            title: platform === 'react' ? 'React notes' : 'React Native notes',
+            description: (
+              <ul>
+                {(discovery.platformNotes?.[platform] ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ),
+          },
+        ]
+      : []),
+  ];
+}
+
 export function ComponentPlatformView({
   component,
 }: ComponentPlatformViewProps) {
@@ -73,11 +119,15 @@ export function ComponentPlatformView({
   );
 
   const page = componentPages[component.slug as keyof typeof componentPages];
+  const discovery = (
+    page as { discovery?: ComponentDiscoveryMetadata } | undefined
+  )?.discovery;
 
   const Demo = page?.demos[platform];
   const platformApi = page
     ? getPlatformApi(page.api as ApiWithPlatformSections, platform)
     : null;
+  const discoveryItems = getDiscoveryItems(discovery, platform);
 
   const relatedSlugs = page?.related ?? [];
   const transientStateKeys = useMemo(
@@ -113,6 +163,17 @@ export function ComponentPlatformView({
 
         {page && (
           <>
+            {discovery && discoveryItems.length > 0 && (
+              <ComponentGuidance
+                title='Usage guidance'
+                description={
+                  discovery.summary ??
+                  `Capability-grounded guidance for ${page.name}.`
+                }
+                items={discoveryItems}
+              />
+            )}
+
             <page.Usage platform={platform} />
             <Fragment key={`${component.slug}:${platform}:examples`}>
               <page.Examples platform={platform} />

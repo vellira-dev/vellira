@@ -17,7 +17,7 @@ import {
   synchronizeGeneratedCatalogPreviewRegistry,
 } from './catalog-preview-registry';
 
-export function insertAfterMarker(params: {
+export async function insertAfterMarker(params: {
   root: string;
   force: boolean;
   check: boolean;
@@ -85,16 +85,20 @@ export function insertAfterMarker(params: {
 
     const nextSource =
       source.slice(0, entryStart) + content + source.slice(entryEnd);
+    const formattedNextSource = await formatGeneratedContent(
+      filePath,
+      nextSource
+    );
 
     if (check) {
-      if (nextSource !== source) {
+      if (formattedNextSource !== source) {
         checkFailures.push(path.relative(root, filePath));
       }
 
       return;
     }
 
-    fs.writeFileSync(filePath, nextSource);
+    fs.writeFileSync(filePath, formattedNextSource);
 
     console.log(`♻️ Updated registry: ${existsCheck}`);
     return;
@@ -106,16 +110,20 @@ export function insertAfterMarker(params: {
   }
 
   const nextSource = source.replace(marker, `${marker}\n${content}`);
+  const formattedNextSource = await formatGeneratedContent(
+    filePath,
+    nextSource
+  );
 
   if (check) {
-    if (nextSource !== source) {
+    if (formattedNextSource !== source) {
       checkFailures.push(path.relative(root, filePath));
     }
 
     return;
   }
 
-  fs.writeFileSync(filePath, nextSource);
+  fs.writeFileSync(filePath, formattedNextSource);
 
   console.log(`✅ Updated: ${path.relative(root, filePath)}`);
 }
@@ -175,6 +183,14 @@ export function insertMissingLinesAfterMarker(params: {
   console.log(`✅ Updated imports: ${path.relative(root, filePath)}`);
 }
 
+function renderDiscoverySource(discovery: GeneratedPageModel['discovery']) {
+  if (!discovery) {
+    return '';
+  }
+
+  return `    discovery: ${JSON.stringify(discovery)},\n`;
+}
+
 export function renderPageConfigSnippet(model: GeneratedPageModel) {
   const slugIdentifier = identifierFromSlug(model.slug);
   const demoEntries = [
@@ -191,7 +207,7 @@ export function renderPageConfigSnippet(model: GeneratedPageModel) {
   return `
   ${objectPropertyKey(model.slug)}: {
     name: '${model.componentName}',
-    demos: {
+${renderDiscoverySource(model.discovery)}    demos: {
 ${demoEntries}
     },
     Usage: ${model.componentName}Usage,
@@ -218,12 +234,15 @@ export function renderCatalogEntry(params: {
         `      '${platform}': 'https://docs.vellira.dev/${platform}/${model.slug}',`
     )
     .join('\n');
+  const description =
+    model.discovery?.description ??
+    `${model.componentName} component for Vellira applications.`;
 
   return `  {
     component: '${model.componentName}',
     slug: '${model.slug}',
     name: '${model.componentName}',
-    description: '${model.componentName} component for Vellira applications.',
+    description: ${JSON.stringify(description)},
     category: '${catalogCategory}',
     order: 999,
     docs: {
@@ -296,9 +315,6 @@ export async function updateCatalogRegistry(params: {
     const existingEntry = source.slice(entryStart + 1, entryEnd);
 
     const isGeneratedEntry =
-      existingEntry.includes(
-        `description: '${model.componentName} component for Vellira applications.'`
-      ) &&
       existingEntry.includes(`component: '${model.componentName}'`) &&
       existingEntry.includes('order: 999');
 
@@ -481,7 +497,7 @@ ${registryImportNames.map((name) => `  ${name},`).join('\n')}
     lines: registryImports,
   });
 
-  insertAfterMarker({
+  await insertAfterMarker({
     root,
     force,
     check,

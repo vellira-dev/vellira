@@ -11,6 +11,7 @@ import { validateComponentDocs } from '../../../apps/docs/src/component-docs';
 import { generateApiDocs, section } from '../../generate-api-docs';
 import { generateComponentDocs } from '../component-docs/generate-component-docs';
 
+import { deriveComponentDiscoveryContent } from './discovery-content';
 import type { ComponentGenerationPlan } from './plan';
 import { getComponentProfile } from './profiles';
 import { getGeneratedPublicPartPropTypeNames } from './public-api';
@@ -82,20 +83,14 @@ export function resolvePlanCapabilities(plan: ComponentGenerationPlan) {
   return [...new Set([...profile.capabilities, ...plan.capabilities])];
 }
 
-function getGeneratedDocsDescription(
-  plan: ComponentGenerationPlan,
-  platform: ComponentPlatform
-) {
-  const platformLabel = platform === 'react' ? 'React' : 'React Native';
-  const capabilityLabels = resolvePlanCapabilities(plan).map((capability) =>
-    capability.replaceAll('-', ' ')
-  );
-  const coverage =
-    capabilityLabels.length > 0
-      ? ` Coverage includes ${capabilityLabels.join(', ')}.`
-      : '';
-
-  return `${plan.componentName} is a Vellira ${plan.profile.replaceAll('-', ' ')} component for ${platformLabel}.${coverage}`;
+function getPlanDiscoveryContent(plan: ComponentGenerationPlan) {
+  return deriveComponentDiscoveryContent({
+    componentName: plan.componentName,
+    category: plan.category,
+    profile: plan.profile,
+    capabilities: resolvePlanCapabilities(plan),
+    platforms: plan.targets.map((target) => target.packageName),
+  });
 }
 
 function getGeneratedDocsSummary(
@@ -110,6 +105,8 @@ function getGeneratedDocsSummary(
 export function createComponentDocsContractFromPlan(
   plan: ComponentGenerationPlan
 ): ComponentDocsContract {
+  const discovery = getPlanDiscoveryContent(plan);
+
   return {
     component: plan.componentName,
     platforms: Object.fromEntries(
@@ -123,8 +120,10 @@ export function createComponentDocsContractFromPlan(
               platform === 'react'
                 ? `${plan.componentName} - React`
                 : `${plan.componentName} - React Native`,
-            description: getGeneratedDocsDescription(plan, platform),
+            description: discovery.description,
             summary: getGeneratedDocsSummary(plan, platform),
+            whenToUse: discovery.whenToUse,
+            notes: discovery.platformNotes[platform],
             storybook: {
               story: 'Default',
               title: storybookTitle(plan),
@@ -134,6 +133,15 @@ export function createComponentDocsContractFromPlan(
       })
     ),
   };
+}
+
+function renderOptionalStringArray(
+  field: string,
+  values: readonly string[] | undefined
+) {
+  return values && values.length > 0
+    ? `      ${field}: ${JSON.stringify(values)},\n`
+    : '';
 }
 
 export function renderComponentDocsContract(plan: ComponentGenerationPlan) {
@@ -151,7 +159,7 @@ export function renderComponentDocsContract(plan: ComponentGenerationPlan) {
       title: ${JSON.stringify(platformDocs.title)},
       description: ${JSON.stringify(platformDocs.description)},
       summary: ${JSON.stringify(platformDocs.summary)},
-      storybook: {
+${renderOptionalStringArray('whenToUse', platformDocs.whenToUse)}${renderOptionalStringArray('notes', platformDocs.notes)}      storybook: {
         story: 'Default',
         title: ${JSON.stringify(platformDocs.storybook?.title)},
       },

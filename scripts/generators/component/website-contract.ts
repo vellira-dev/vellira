@@ -69,6 +69,44 @@ export function getPlannedComponentWebsiteArtifacts(
   };
 }
 
+function checkDiscoveryContentContract(plan: ComponentGenerationPlan) {
+  if (!fs.existsSync(plan.metadataFile)) {
+    return [];
+  }
+
+  const canonicalMetadata = fs.readFileSync(plan.metadataFile, 'utf8');
+
+  if (!/\bstatus\s*:\s*['"]stable['"]/.test(canonicalMetadata)) {
+    return [];
+  }
+
+  const pageMetadataFile = path.join(
+    plan.root,
+    'apps/website/src/component-catalog/components',
+    plan.componentName,
+    'metadata.ts'
+  );
+
+  if (!fs.existsSync(pageMetadataFile)) {
+    return [];
+  }
+
+  const pageMetadata = fs.readFileSync(pageMetadataFile, 'utf8');
+
+  if (!/\bdiscovery\s*:/.test(pageMetadata)) {
+    // Existing Stable components are migrated by #1136. This contract only
+    // prevents components that have adopted Discovery V1 from graduating with
+    // unresolved semantic intent.
+    return [];
+  }
+
+  return /["']?status["']?\s*:\s*["']needs-authored-intent["']/.test(
+    pageMetadata
+  )
+    ? [pageMetadataFile]
+    : [];
+}
+
 export function checkComponentWebsiteContract(
   plan: ComponentGenerationPlan
 ): string[] {
@@ -129,9 +167,10 @@ export function checkComponentWebsiteContract(
   }
 
   const presentationDrift = checkComponentPresentationContract(plan);
+  const discoveryDrift = checkDiscoveryContentContract(plan);
 
   if (result.status === 0 && payload.status === 'up-to-date') {
-    return presentationDrift;
+    return [...new Set([...presentationDrift, ...discoveryDrift])].sort();
   }
 
   if (result.status === 1 && payload.status === 'stale') {
@@ -139,6 +178,7 @@ export function checkComponentWebsiteContract(
       ...new Set([
         ...payload.staleFiles.map((filePath) => path.join(plan.root, filePath)),
         ...presentationDrift,
+        ...discoveryDrift,
       ]),
     ].sort();
   }
