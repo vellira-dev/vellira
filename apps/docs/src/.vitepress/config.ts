@@ -14,6 +14,14 @@ const siteUrl = 'https://docs.vellira.dev';
 const siteDescription =
   'TypeScript-first design system documentation for React and React Native applications.';
 const socialImage = `${siteUrl}/brand/social/vellira-og-code-to-ui.png`;
+const docsSiteNameJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${siteUrl}/#website`,
+  url: `${siteUrl}/`,
+  name: 'Vellira Docs',
+  alternateName: ['docs.vellira.dev'],
+}).replace(/</g, '\\u003c');
 const navigationIcon = (name: string) =>
   readFileSync(
     resolve(process.cwd(), '../../packages/assets/brand/navigation', name),
@@ -76,6 +84,14 @@ export default defineConfig({
       ['meta', { name: 'twitter:title', content: socialTitle }],
       ['meta', { name: 'twitter:description', content: description }]
     );
+
+    if (isHome) {
+      pageData.frontmatter.head.push([
+        'script',
+        { type: 'application/ld+json' },
+        docsSiteNameJsonLd,
+      ]);
+    }
   },
   head: [
     [
@@ -130,7 +146,7 @@ export default defineConfig({
     logo: {
       light: '/brand/logos/logo-dark.svg',
       dark: '/brand/logos/logo-light.svg',
-      alt: 'Vellira',
+      alt: 'Vellira Docs',
     },
     nav: [
       { text: 'Quick Start', link: '/start/getting-started' },
