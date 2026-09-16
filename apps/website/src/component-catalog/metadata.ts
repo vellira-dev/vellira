@@ -106,9 +106,7 @@ export type ComponentDiscoveryMetadata = {
   description?: string;
   whenToUse?: readonly string[];
   patterns?: readonly ComponentDiscoveryPatternMetadata[];
-  platformNotes?: Partial<
-    Record<ComponentCatalogPlatform, readonly string[]>
-  >;
+  platformNotes?: Partial<Record<ComponentCatalogPlatform, readonly string[]>>;
   missingEvidence?: readonly string[];
 };
 
