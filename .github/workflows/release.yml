@@ -49,11 +49,6 @@ jobs:
           registry-url: https://registry.npmjs.org
           scope: '@vellira-ui'
 
-      - name: Install npm for Trusted Publishing
-        run: |
-          npm install --global npm@11.5.1
-          npm --version
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -87,6 +82,18 @@ jobs:
         run: |
           pnpm exec npm --version
           pnpm exec npm ping --registry=https://registry.npmjs.org
+
+      - name: Set up Trusted Publishing runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Verify Trusted Publishing runtime
+        run: |
+          node --version
+          npm --version
 
       - name: Release
         env:
@@ -236,11 +243,6 @@ jobs:
           registry-url: https://registry.npmjs.org
           scope: '@vellira-ui'
 
-      - name: Install npm for Trusted Publishing
-        run: |
-          npm install --global npm@11.5.1
-          npm --version
-
       - name: Fail-closed recovery preflight
         id: recovery
         env:
@@ -270,6 +272,18 @@ jobs:
         run: |
           node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
           pnpm install --lockfile-only
+
+      - name: Set up Trusted Publishing runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Verify Trusted Publishing runtime
+        run: |
+          node --version
+          npm --version
 
       - name: Reconcile and verify all npm packages
         working-directory: tagged-source
