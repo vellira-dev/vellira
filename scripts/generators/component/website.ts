@@ -6,8 +6,8 @@ import {
   getComponentPresentationScenarioDescription,
   getComponentPresentationScenarioTitle,
   readCanonicalComponentCapabilities,
+  readCanonicalComponentPlatforms,
 } from '../component-presentation';
-import { existsInPackage } from '../component-page/extractors/source';
 import { getCatalogPaths } from '../component-page/helpers/paths';
 
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
@@ -34,19 +34,6 @@ function toTsString(value: string) {
   return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 }
 
-function readGeneratedPlatforms(params: {
-  root: string;
-  componentName: string;
-}) {
-  return (['react', 'react-native'] as const).filter((platform) =>
-    existsInPackage({
-      root: params.root,
-      packageName: platform,
-      componentName: params.componentName,
-    })
-  );
-}
-
 function renderGeneratedPresentationMetadata(params: {
   root: string;
   componentName: string;
@@ -65,12 +52,13 @@ function renderGeneratedPresentationMetadata(params: {
     },`
     )
     .join('\n');
+  const platforms = readCanonicalComponentPlatforms(params) ?? [];
   const discovery = deriveComponentDiscoveryContent({
     componentName: params.componentName,
     category: params.category,
     profile: params.profile,
     capabilities: params.capabilities,
-    platforms: readGeneratedPlatforms(params),
+    platforms,
   });
   const discoverySource = JSON.stringify(discovery, null, 2)
     .split('\n')
