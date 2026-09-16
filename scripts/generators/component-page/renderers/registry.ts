@@ -17,7 +17,7 @@ import {
   synchronizeGeneratedCatalogPreviewRegistry,
 } from './catalog-preview-registry';
 
-export function insertAfterMarker(params: {
+export async function insertAfterMarker(params: {
   root: string;
   force: boolean;
   check: boolean;
@@ -85,16 +85,20 @@ export function insertAfterMarker(params: {
 
     const nextSource =
       source.slice(0, entryStart) + content + source.slice(entryEnd);
+    const formattedNextSource = await formatGeneratedContent(
+      filePath,
+      nextSource
+    );
 
     if (check) {
-      if (nextSource !== source) {
+      if (formattedNextSource !== source) {
         checkFailures.push(path.relative(root, filePath));
       }
 
       return;
     }
 
-    fs.writeFileSync(filePath, nextSource);
+    fs.writeFileSync(filePath, formattedNextSource);
 
     console.log(`♻️ Updated registry: ${existsCheck}`);
     return;
@@ -106,16 +110,17 @@ export function insertAfterMarker(params: {
   }
 
   const nextSource = source.replace(marker, `${marker}\n${content}`);
+  const formattedNextSource = await formatGeneratedContent(filePath, nextSource);
 
   if (check) {
-    if (nextSource !== source) {
+    if (formattedNextSource !== source) {
       checkFailures.push(path.relative(root, filePath));
     }
 
     return;
   }
 
-  fs.writeFileSync(filePath, nextSource);
+  fs.writeFileSync(filePath, formattedNextSource);
 
   console.log(`✅ Updated: ${path.relative(root, filePath)}`);
 }
@@ -489,7 +494,7 @@ ${registryImportNames.map((name) => `  ${name},`).join('\n')}
     lines: registryImports,
   });
 
-  insertAfterMarker({
+  await insertAfterMarker({
     root,
     force,
     check,
