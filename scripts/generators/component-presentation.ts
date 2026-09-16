@@ -11,6 +11,7 @@ export type ComponentPresentationScenario =
   | 'multiple'
   | 'controlled'
   | 'uncontrolled'
+  | 'indeterminate'
   | 'collapsible'
   | 'disabled'
   | 'required'
@@ -23,6 +24,7 @@ export const componentPresentationScenarioOrder = [
   'multiple',
   'controlled',
   'uncontrolled',
+  'indeterminate',
   'collapsible',
   'disabled',
   'required',
@@ -37,6 +39,7 @@ const scenarioByCapability: Partial<
   multiple: 'multiple',
   controlled: 'controlled',
   uncontrolled: 'uncontrolled',
+  indeterminate: 'indeterminate',
   collapsible: 'collapsible',
   disabled: 'disabled',
   required: 'required',
@@ -49,6 +52,7 @@ const scenarioTitle: Record<ComponentPresentationScenario, string> = {
   multiple: 'Multiple',
   controlled: 'Controlled',
   uncontrolled: 'Uncontrolled',
+  indeterminate: 'Indeterminate',
   collapsible: 'Collapsible',
   disabled: 'Disabled',
   required: 'Required',
@@ -62,6 +66,7 @@ const scenarioDescription: Record<ComponentPresentationScenario, string> = {
   multiple: 'Multiple values or sections active at the same time.',
   controlled: 'State controlled by the parent application.',
   uncontrolled: 'State initialized and then managed by the component.',
+  indeterminate: 'Mixed selection state for partial group selection.',
   collapsible: 'An active item can collapse back to an empty state.',
   disabled: 'Disabled state with interaction unavailable.',
   required: 'Required state for form participation.',
