@@ -79,6 +79,7 @@ export type GeneratedPageModel = {
   componentName: string;
   slug: string;
   platforms: readonly Platform[];
+  discovery?: ComponentPageMetadata['discovery'];
   demo: {
     staticProps: Partial<Record<Platform, string>>;
     children: GeneratedPlatformChildren;
