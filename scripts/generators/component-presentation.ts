@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { ComponentCapability } from '@vellira-ui/metadata';
+import type {
+  ComponentCapability,
+  ComponentPlatform,
+} from '@vellira-ui/metadata';
 
 export type ComponentPresentationScenario =
   | 'basic'
@@ -105,10 +108,10 @@ export function getComponentPresentationScenarioDescription(
   return scenarioDescription[scenario];
 }
 
-export function readCanonicalComponentCapabilities(params: {
+function readCanonicalComponentMetadataSource(params: {
   root: string;
   componentName: string;
-}): readonly ComponentCapability[] | null {
+}) {
   const metadataFile = path.join(
     params.root,
     'packages',
@@ -122,7 +125,19 @@ export function readCanonicalComponentCapabilities(params: {
     return null;
   }
 
-  const source = fs.readFileSync(metadataFile, 'utf8');
+  return fs.readFileSync(metadataFile, 'utf8');
+}
+
+export function readCanonicalComponentCapabilities(params: {
+  root: string;
+  componentName: string;
+}): readonly ComponentCapability[] | null {
+  const source = readCanonicalComponentMetadataSource(params);
+
+  if (source === null) {
+    return null;
+  }
+
   const capabilityBlock = source.match(/\bcapabilities:\s*\[([\s\S]*?)\]/)?.[1];
 
   if (!capabilityBlock) {
@@ -134,6 +149,35 @@ export function readCanonicalComponentCapabilities(params: {
       [...capabilityBlock.matchAll(/['"]([^'"]+)['"]/g)].map(
         (match) => match[1] as ComponentCapability
       )
+    ),
+  ];
+}
+
+export function readCanonicalComponentPlatforms(params: {
+  root: string;
+  componentName: string;
+}): readonly ComponentPlatform[] | null {
+  const source = readCanonicalComponentMetadataSource(params);
+
+  if (source === null) {
+    return null;
+  }
+
+  const platformBlock = source.match(/\bplatforms:\s*\[([\s\S]*?)\]/)?.[1];
+
+  if (!platformBlock) {
+    return [];
+  }
+
+  const supported = new Set<ComponentPlatform>(['react', 'react-native']);
+
+  return [
+    ...new Set(
+      [...platformBlock.matchAll(/['"]([^'"]+)['"]/g)]
+        .map((match) => match[1])
+        .filter((platform): platform is ComponentPlatform =>
+          supported.has(platform as ComponentPlatform)
+        )
     ),
   ];
 }
