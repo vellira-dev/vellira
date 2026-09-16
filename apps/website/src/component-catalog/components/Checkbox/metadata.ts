@@ -86,7 +86,7 @@ export default defineComponentPageMetadata({
     {
       title: 'Indeterminate / Select All',
       description:
-        'Represent partial group selection while keeping the stored selection model boolean.',
+        'Represent partial group selection while deriving checked and mixed state from the group.',
       inheritDemoProps: false,
       props: [
         'checked={allSelected}',
