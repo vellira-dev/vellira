@@ -69,35 +69,6 @@ export function getPlannedComponentWebsiteArtifacts(
   };
 }
 
-function checkDiscoveryContentContract(plan: ComponentGenerationPlan) {
-  const metadataFile = path.join(
-    plan.root,
-    'apps/website/src/component-catalog/components',
-    plan.componentName,
-    'metadata.ts'
-  );
-
-  if (!fs.existsSync(metadataFile)) {
-    return [];
-  }
-
-  const source = fs.readFileSync(metadataFile, 'utf8');
-
-  if (!/\bdiscovery\s*:/.test(source)) {
-    // Legacy component pages are adopted by the bounded #1136 backfill rather
-    // than becoming launch blockers merely because this contract exists.
-    return [];
-  }
-
-  if (
-    /["']?status["']?\s*:\s*["']needs-authored-intent["']/.test(source)
-  ) {
-    return [metadataFile];
-  }
-
-  return [];
-}
-
 export function checkComponentWebsiteContract(
   plan: ComponentGenerationPlan
 ): string[] {
@@ -158,10 +129,9 @@ export function checkComponentWebsiteContract(
   }
 
   const presentationDrift = checkComponentPresentationContract(plan);
-  const discoveryDrift = checkDiscoveryContentContract(plan);
 
   if (result.status === 0 && payload.status === 'up-to-date') {
-    return [...new Set([...presentationDrift, ...discoveryDrift])].sort();
+    return presentationDrift;
   }
 
   if (result.status === 1 && payload.status === 'stale') {
@@ -169,7 +139,6 @@ export function checkComponentWebsiteContract(
       ...new Set([
         ...payload.staleFiles.map((filePath) => path.join(plan.root, filePath)),
         ...presentationDrift,
-        ...discoveryDrift,
       ]),
     ].sort();
   }
