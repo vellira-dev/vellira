@@ -310,6 +310,7 @@ const generatedPageModel = buildGeneratedPageModel({
   componentName,
   slug,
   platforms,
+  discovery: componentConfig.discovery,
   reactStaticDemoProps,
   nativeStaticDemoProps,
   reactDemoChildren,
@@ -388,7 +389,7 @@ const registrySourcesBefore = check
       ])
     );
 
-await await updateComponentRegistry({
+await updateComponentRegistry({
   root,
   force,
   check,
