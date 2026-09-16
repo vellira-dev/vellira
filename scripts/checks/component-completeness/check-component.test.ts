@@ -206,7 +206,7 @@ function createWebsiteDocumentationFixture(params: {
   fs.mkdirSync(registryDir, { recursive: true });
 
   fs.writeFileSync(
-    path.join(registryDir, 'components.ts'),
+    path.join(registryDir, 'componentPresentation.ts'),
     `export const webComponents = [
   {
     slug: '${slug}',
@@ -584,7 +584,7 @@ describe('component completeness checker', () => {
     fs.mkdirSync(registryDir, { recursive: true });
 
     fs.writeFileSync(
-      path.join(registryDir, 'components.ts'),
+      path.join(registryDir, 'componentPresentation.ts'),
       `export const webComponents = [];
 `
     );
@@ -654,7 +654,7 @@ describe('component completeness checker', () => {
     fs.mkdirSync(registryDir, { recursive: true });
 
     fs.writeFileSync(
-      path.join(registryDir, 'components.ts'),
+      path.join(registryDir, 'componentPresentation.ts'),
       `export const webComponents = [
   {
     slug: 'avatar',
@@ -725,7 +725,7 @@ describe('component completeness checker', () => {
     fs.mkdirSync(registryDir, { recursive: true });
 
     fs.writeFileSync(
-      path.join(registryDir, 'components.ts'),
+      path.join(registryDir, 'componentPresentation.ts'),
       `export const webComponents = [
   {
     slug: 'avatar',
@@ -806,7 +806,7 @@ describe('component completeness checker', () => {
     fs.mkdirSync(registryDir, { recursive: true });
 
     fs.writeFileSync(
-      path.join(registryDir, 'components.ts'),
+      path.join(registryDir, 'componentPresentation.ts'),
       `export const webComponents = [
   {
     slug: 'dialog',
@@ -884,7 +884,7 @@ describe('component completeness checker', () => {
     fs.mkdirSync(registryDir, { recursive: true });
 
     fs.writeFileSync(
-      path.join(registryDir, 'components.ts'),
+      path.join(registryDir, 'componentPresentation.ts'),
       `export const webComponents = [
   {
     slug: 'avatar',
