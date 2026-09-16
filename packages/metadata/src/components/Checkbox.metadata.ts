@@ -10,6 +10,7 @@ export const checkboxMetadata = defineComponentMetadata({
   capabilities: [
     'controlled',
     'uncontrolled',
+    'indeterminate',
     'disabled',
     'required',
     'invalid',
