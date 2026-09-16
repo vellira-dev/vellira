@@ -125,7 +125,7 @@ beforeEach(() => {
   ])
     write(file);
   write(
-    'apps/website/src/component-catalog/registry/components.ts',
+    'apps/website/src/component-catalog/registry/componentPresentation.ts',
     "slug: 'snapshot-probe'"
   );
   write(

@@ -25,7 +25,7 @@ export function getPlannedComponentWebsiteArtifacts(
   const {
     componentCatalogDir,
     catalogRegistryFile,
-    componentsRegistryFile,
+    componentPresentationRegistryFile,
     generatedCatalogPreviewsFile,
     slug,
   } = getCatalogPaths({
@@ -63,7 +63,7 @@ export function getPlannedComponentWebsiteArtifacts(
     createdFiles: [...new Set(createdFiles)].sort(),
     updatedFiles: [
       catalogRegistryFile,
-      componentsRegistryFile,
+      componentPresentationRegistryFile,
       generatedCatalogPreviewsFile,
     ].sort(),
   };

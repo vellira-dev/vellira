@@ -49,10 +49,13 @@ function getCatalogEntrySource(source: string, slug: string) {
 }
 
 export function requiresGeneratedCatalogPreview(params: {
-  componentsRegistryFile: string;
+  componentPresentationRegistryFile: string;
   model: GeneratedPageModel;
 }) {
-  const source = fs.readFileSync(params.componentsRegistryFile, 'utf8');
+  const source = fs.readFileSync(
+    params.componentPresentationRegistryFile,
+    'utf8'
+  );
   const existingEntry = getCatalogEntrySource(source, params.model.slug);
 
   if (!existingEntry) {
@@ -92,13 +95,14 @@ export async function synchronizeGeneratedCatalogPreview(params: {
   check: boolean;
   checkFailures: string[];
   componentCatalogDir: string;
-  componentsRegistryFile: string;
+  componentPresentationRegistryFile: string;
   model: GeneratedPageModel;
   generatedFileHeader: string;
 }) {
   if (
     !requiresGeneratedCatalogPreview({
-      componentsRegistryFile: params.componentsRegistryFile,
+      componentPresentationRegistryFile:
+        params.componentPresentationRegistryFile,
       model: params.model,
     })
   ) {

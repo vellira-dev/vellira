@@ -542,7 +542,7 @@ describe('createComponentProductionResult', () => {
   it('reports website generation from canonical generation artifacts', () => {
     const websiteArtifacts = [
       'apps/website/src/component-catalog/components/Avatar/index.ts',
-      'apps/website/src/component-catalog/registry/components.ts',
+      'apps/website/src/component-catalog/registry/componentPresentation.ts',
     ];
 
     const result = createComponentProductionResult({

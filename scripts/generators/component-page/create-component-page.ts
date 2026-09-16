@@ -140,6 +140,7 @@ const {
   catalogComponentsRoot,
   catalogRegistryFile,
   componentsRegistryFile,
+  componentPresentationRegistryFile,
   componentCatalogDir,
   slug,
 } = getCatalogPaths({ root, componentName });
@@ -376,7 +377,7 @@ const componentIndexContent = renderComponentIndex({
 
 await writeIfMissing(componentIndexFile, componentIndexContent);
 
-const registryFiles = [catalogRegistryFile, componentsRegistryFile];
+const registryFiles = [catalogRegistryFile, componentPresentationRegistryFile];
 
 const registrySourcesBefore = check
   ? null
@@ -395,6 +396,7 @@ await await updateComponentRegistry({
   componentCatalogDir,
   componentPagesFile: catalogRegistryFile,
   componentsRegistryFile,
+  componentPresentationRegistryFile,
   catalogCategory,
   model: generatedPageModel,
 });

@@ -238,7 +238,7 @@ export async function updateCatalogRegistry(params: {
   force: boolean;
   check: boolean;
   checkFailures: string[];
-  componentsRegistryFile: string;
+  componentPresentationRegistryFile: string;
   model: GeneratedPageModel;
   catalogCategory: CatalogCategory;
 }) {
@@ -247,11 +247,11 @@ export async function updateCatalogRegistry(params: {
     force,
     check,
     checkFailures,
-    componentsRegistryFile,
+    componentPresentationRegistryFile,
     model,
     catalogCategory,
   } = params;
-  const source = fs.readFileSync(componentsRegistryFile, 'utf8');
+  const source = fs.readFileSync(componentPresentationRegistryFile, 'utf8');
   const entry = renderCatalogEntry({ model, catalogCategory });
   const slugMarker = `slug: '${model.slug}'`;
 
@@ -311,19 +311,21 @@ export async function updateCatalogRegistry(params: {
       source.slice(0, entryStart + 1) + entry + source.slice(entryEnd);
 
     const formattedNextSource = await formatGeneratedContent(
-      componentsRegistryFile,
+      componentPresentationRegistryFile,
       nextSource
     );
 
     if (check) {
       if (formattedNextSource !== source) {
-        checkFailures.push(path.relative(root, componentsRegistryFile));
+        checkFailures.push(
+          path.relative(root, componentPresentationRegistryFile)
+        );
       }
 
       return;
     }
 
-    fs.writeFileSync(componentsRegistryFile, formattedNextSource);
+    fs.writeFileSync(componentPresentationRegistryFile, formattedNextSource);
 
     console.log(`♻️ Updated component catalog registration: ${model.slug}`);
 
@@ -335,27 +337,31 @@ export async function updateCatalogRegistry(params: {
 
   if (!source.includes(marker)) {
     console.error(
-      `Component catalog marker not found in ${componentsRegistryFile}`
+      `Component catalog marker not found in ${componentPresentationRegistryFile}`
     );
     process.exit(1);
   }
 
   const nextSource = source.replace(marker, `${entry}${marker}`);
   const formattedNextSource = await formatGeneratedContent(
-    componentsRegistryFile,
+    componentPresentationRegistryFile,
     nextSource
   );
 
   if (check) {
     if (formattedNextSource !== source) {
-      checkFailures.push(path.relative(root, componentsRegistryFile));
+      checkFailures.push(
+        path.relative(root, componentPresentationRegistryFile)
+      );
     }
 
     return;
   }
 
-  fs.writeFileSync(componentsRegistryFile, formattedNextSource);
-  console.log(`✅ Updated: ${path.relative(root, componentsRegistryFile)}`);
+  fs.writeFileSync(componentPresentationRegistryFile, formattedNextSource);
+  console.log(
+    `✅ Updated: ${path.relative(root, componentPresentationRegistryFile)}`
+  );
 }
 
 export async function updateComponentRegistry(params: {
@@ -366,6 +372,7 @@ export async function updateComponentRegistry(params: {
   componentCatalogDir: string;
   componentPagesFile: string;
   componentsRegistryFile: string;
+  componentPresentationRegistryFile: string;
   catalogCategory: CatalogCategory;
   model: GeneratedPageModel;
 }) {
@@ -377,6 +384,7 @@ export async function updateComponentRegistry(params: {
     componentCatalogDir,
     componentPagesFile,
     componentsRegistryFile,
+    componentPresentationRegistryFile,
     catalogCategory,
     model,
   } = params;
@@ -386,7 +394,7 @@ export async function updateComponentRegistry(params: {
     check,
     checkFailures,
     componentCatalogDir,
-    componentsRegistryFile,
+    componentPresentationRegistryFile,
     model,
     generatedFileHeader,
   });
@@ -396,7 +404,7 @@ export async function updateComponentRegistry(params: {
     `${model.componentName}CatalogPreview.tsx`
   );
   const generatedCatalogPreviewRequired = requiresGeneratedCatalogPreview({
-    componentsRegistryFile,
+    componentPresentationRegistryFile,
     model,
   });
 
@@ -490,7 +498,7 @@ ${registryImportNames.map((name) => `  ${name},`).join('\n')}
     force,
     check,
     checkFailures,
-    componentsRegistryFile,
+    componentPresentationRegistryFile,
     model,
     catalogCategory,
   });

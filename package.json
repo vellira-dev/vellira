@@ -71,6 +71,7 @@
     "component-docs:generate": "node --import tsx scripts/generators/component-docs/generate-component-docs.ts",
     "component-docs:check": "pnpm component-docs:generate --check",
     "component-pages:generate": "node --import tsx scripts/generators/component-page/generate-component-pages.ts",
+    "component-page:semantic-metadata:json": "node --import tsx scripts/generators/component-page/semantic-metadata-contract.ts",
     "component-pages:check": "node --import tsx scripts/generators/component-page/check-component-pages.ts",
     "component-pages:audit": "tsx scripts/generators/component-page/audit-component-pages.ts",
     "test:component-pages": "tsx scripts/generators/component-page/component-page-contract.ts",

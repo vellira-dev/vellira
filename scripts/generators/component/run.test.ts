@@ -266,7 +266,7 @@ describe('component generator', () => {
 
     const websiteUpdatedFile = path.join(
       root,
-      'apps/website/src/component-catalog/registry/components.ts'
+      'apps/website/src/component-catalog/registry/componentPresentation.ts'
     );
 
     vi.mocked(generateComponentWebsitePage).mockReturnValue({

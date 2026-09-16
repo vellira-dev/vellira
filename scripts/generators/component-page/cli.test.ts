@@ -3,7 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 const fixtureRoots: string[] = [];
 
@@ -141,7 +149,7 @@ function fixtureStateFiles(fixture: string) {
     ),
     path.join(
       fixture,
-      'apps/website/src/component-catalog/registry/components.ts'
+      'apps/website/src/component-catalog/registry/componentPresentation.ts'
     ),
   ];
 }
@@ -168,7 +176,10 @@ function createCanonicalFixtureRepo() {
   const fixture = createFixtureRepo();
   const result = runGenerator(fixture, ['Button', '--force']);
 
-  expect(result.status).toBe(0);
+  expect(
+    result.status,
+    [result.stdout, result.stderr].filter(Boolean).join('\n')
+  ).toBe(0);
   expect(result.stderr).toBe('');
 
   return fixture;
@@ -193,6 +204,37 @@ afterAll(() => {
 });
 
 describe.sequential('component page CLI check modes', () => {
+  it('loads semantic vocabulary without the metadata package runtime', async () => {
+    vi.resetModules();
+    vi.doMock('@vellira-ui/metadata', () => {
+      throw new Error(
+        'The metadata package runtime must not be loaded by semantic contract tooling.'
+      );
+    });
+
+    try {
+      const { buildSemanticMetadataContract } =
+        await import('./semantic-metadata-contract');
+      const { validateRelatedComponentSlugs } =
+        await import('./metadata/metadata');
+      const contract = buildSemanticMetadataContract({
+        root: process.cwd(),
+        componentName: 'FutureComponent',
+      });
+
+      expect(contract.relatedComponentRegistry.slugs).toContain('radio-group');
+      expect(
+        validateRelatedComponentSlugs({
+          componentName: 'FutureComponent',
+          related: ['radio-group'],
+        })
+      ).toEqual([]);
+    } finally {
+      vi.doUnmock('@vellira-ui/metadata');
+      vi.resetModules();
+    }
+  });
+
   it('keeps human-readable check compatible with registry validation', () => {
     const before = snapshotFiles(generatedButtonFiles(fixture));
 

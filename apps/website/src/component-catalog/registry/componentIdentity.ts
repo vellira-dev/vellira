@@ -1,7 +1,17 @@
-import { webComponents } from './components';
+import { canonicalComponentSlugsFromEntries } from './canonicalComponentSlugs';
+import { componentCatalogPresentation } from './componentPresentation';
 
-export const canonicalComponentSlugs = webComponents.map(
-  (component) => component.slug
+export {
+  CANONICAL_COMPONENT_SLUG_PATTERN,
+  CANONICAL_RELATED_COMPONENT_CONSTRAINTS,
+} from './canonicalComponentSlugs';
+export {
+  assertCanonicalComponentSlug,
+  canonicalComponentSlugsFromEntries,
+} from './canonicalComponentSlugs';
+
+export const canonicalComponentSlugs = canonicalComponentSlugsFromEntries(
+  componentCatalogPresentation
 );
 
 export const canonicalComponentSlugSet = new Set<string>(

@@ -69,7 +69,7 @@ describe('generated catalog preview registry', () => {
 
     expect(
       requiresGeneratedCatalogPreview({
-        componentsRegistryFile,
+        componentPresentationRegistryFile: componentsRegistryFile,
         model: createModel('Accordion', 'accordion'),
       })
     ).toBe(true);
@@ -84,7 +84,7 @@ describe('generated catalog preview registry', () => {
 
     expect(
       requiresGeneratedCatalogPreview({
-        componentsRegistryFile,
+        componentPresentationRegistryFile: componentsRegistryFile,
         model: createModel('Accordion', 'accordion'),
       })
     ).toBe(true);
@@ -105,7 +105,7 @@ describe('generated catalog preview registry', () => {
 
     expect(
       requiresGeneratedCatalogPreview({
-        componentsRegistryFile,
+        componentPresentationRegistryFile: componentsRegistryFile,
         model: createModel('Button', 'button'),
       })
     ).toBe(false);
@@ -150,7 +150,7 @@ describe('generated catalog preview registry', () => {
       check: false,
       checkFailures,
       componentCatalogDir,
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model: createModel('Avatar', 'avatar'),
       generatedFileHeader,
     });
@@ -183,7 +183,7 @@ describe('generated catalog preview registry', () => {
       check: false,
       checkFailures: [],
       componentCatalogDir,
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model: createModel('Accordion', 'accordion'),
       generatedFileHeader,
     });
@@ -208,7 +208,7 @@ describe('generated catalog preview registry', () => {
       check: true,
       checkFailures,
       componentCatalogDir,
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model: createModel('Avatar', 'avatar'),
       generatedFileHeader,
     });

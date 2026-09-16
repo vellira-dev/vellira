@@ -90,8 +90,8 @@ export * from './types';
   fs.mkdirSync(registryDir, { recursive: true });
 
   fs.writeFileSync(
-    path.join(registryDir, 'components.ts'),
-    `export const webComponents = [
+    path.join(registryDir, 'componentPresentation.ts'),
+    `export const componentCatalogPresentation = [
   {
     slug: 'button',
     name: 'Button',
