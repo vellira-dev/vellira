@@ -1,5 +1,5 @@
 import { canonicalComponentSlugsFromEntries } from './canonicalComponentSlugs';
-import { webComponents } from './components';
+import { componentCatalogPresentation } from './componentPresentation';
 
 export {
   CANONICAL_COMPONENT_SLUG_PATTERN,
@@ -10,8 +10,9 @@ export {
   canonicalComponentSlugsFromEntries,
 } from './canonicalComponentSlugs';
 
-export const canonicalComponentSlugs =
-  canonicalComponentSlugsFromEntries(webComponents);
+export const canonicalComponentSlugs = canonicalComponentSlugsFromEntries(
+  componentCatalogPresentation
+);
 
 export const canonicalComponentSlugSet = new Set<string>(
   canonicalComponentSlugs

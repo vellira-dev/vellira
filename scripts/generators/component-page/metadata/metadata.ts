@@ -455,7 +455,7 @@ function validateSetupSyntax(source: string) {
 }
 
 const canonicalSlugSemantics =
-  'expected an exact canonical public component slug from apps/website/src/component-catalog/registry/components.ts, using lowercase kebab-case where applicable';
+  'expected an exact canonical public component slug from apps/website/src/component-catalog/registry/componentPresentation.ts, using lowercase kebab-case where applicable';
 
 export function validateRelatedComponentSlugs(params: {
   componentName: string;

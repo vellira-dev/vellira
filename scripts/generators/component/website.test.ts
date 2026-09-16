@@ -95,6 +95,10 @@ describe('generateComponentWebsitePage', () => {
     const componentPagesFile = path.join(registryDir, 'componentPages.ts');
 
     const componentsRegistryFile = path.join(registryDir, 'components.ts');
+    const componentPresentationRegistryFile = path.join(
+      registryDir,
+      'componentPresentation.ts'
+    );
     const generatedCatalogPreviewsFile = path.join(
       registryDir,
       'generatedCatalogPreviews.ts'
@@ -102,6 +106,10 @@ describe('generateComponentWebsitePage', () => {
 
     fs.writeFileSync(componentPagesFile, 'before component pages\n');
     fs.writeFileSync(componentsRegistryFile, 'before components\n');
+    fs.writeFileSync(
+      componentPresentationRegistryFile,
+      'before component presentation\n'
+    );
     fs.writeFileSync(
       generatedCatalogPreviewsFile,
       'before generated catalog previews\n'
@@ -125,7 +133,10 @@ describe('generateComponentWebsitePage', () => {
       fs.writeFileSync(usageFile, 'generated usage\n');
       fs.writeFileSync(catalogPreviewFile, 'generated catalog preview\n');
       fs.writeFileSync(componentPagesFile, 'after component pages\n');
-      fs.writeFileSync(componentsRegistryFile, 'after components\n');
+      fs.writeFileSync(
+        componentPresentationRegistryFile,
+        'after component presentation\n'
+      );
       fs.writeFileSync(
         generatedCatalogPreviewsFile,
         'after generated catalog previews\n'
@@ -153,7 +164,7 @@ describe('generateComponentWebsitePage', () => {
       createdFiles: [catalogPreviewFile, usageFile].sort(),
       updatedFiles: [
         componentPagesFile,
-        componentsRegistryFile,
+        componentPresentationRegistryFile,
         generatedCatalogPreviewsFile,
       ].sort(),
     });

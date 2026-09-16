@@ -14,7 +14,7 @@ const catalogRoot = path.join(
 
 const findings = getCatalogPreviewFindings({
   componentsRegistrySource: fs.readFileSync(
-    path.join(catalogRoot, 'registry', 'components.ts'),
+    path.join(catalogRoot, 'registry', 'componentPresentation.ts'),
     'utf8'
   ),
   legacyPreviewSource: fs.readFileSync(

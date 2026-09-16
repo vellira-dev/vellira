@@ -311,12 +311,12 @@ function buildSurfaceSpecs(input: ComponentProductionInputV1): SurfaceSpec[] {
       id: 'catalog-registration',
       label: 'Public component catalog registration',
       requiredPaths: [
-        'apps/website/src/component-catalog/registry/components.ts',
+        'apps/website/src/component-catalog/registry/componentPresentation.ts',
         'apps/website/src/component-catalog/registry/componentPages.ts',
       ],
       contentRequirements: [
         {
-          path: 'apps/website/src/component-catalog/registry/components.ts',
+          path: 'apps/website/src/component-catalog/registry/componentPresentation.ts',
           includes: `slug: '${slug}'`,
         },
         {

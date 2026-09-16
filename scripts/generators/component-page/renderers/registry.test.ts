@@ -57,7 +57,7 @@ describe('component catalog registration', async () => {
       force: false,
       check: false,
       checkFailures: [],
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model,
       catalogCategory: 'forms',
     });
@@ -67,7 +67,7 @@ describe('component catalog registration', async () => {
       force: false,
       check: false,
       checkFailures: [],
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model,
       catalogCategory: 'forms',
     });
@@ -94,7 +94,7 @@ describe('component catalog registration', async () => {
       force: true,
       check: false,
       checkFailures: [],
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model,
       catalogCategory: 'forms',
     });
@@ -139,7 +139,7 @@ const componentCatalogPresentation = [
       force: true,
       check: false,
       checkFailures: [],
-      componentsRegistryFile,
+      componentPresentationRegistryFile: componentsRegistryFile,
       model,
       catalogCategory: 'navigation',
     });

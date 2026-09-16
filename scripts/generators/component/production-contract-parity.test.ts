@@ -300,7 +300,7 @@ describe('component production contract regression matrix', () => {
 
     expect(both.updatedFiles).toEqual([
       '/repo/apps/website/src/component-catalog/registry/componentPages.ts',
-      '/repo/apps/website/src/component-catalog/registry/components.ts',
+      '/repo/apps/website/src/component-catalog/registry/componentPresentation.ts',
       '/repo/apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts',
     ]);
 
@@ -324,7 +324,7 @@ describe('component production contract regression matrix', () => {
 
     for (const registryFile of [
       catalogPaths.catalogRegistryFile,
-      catalogPaths.componentsRegistryFile,
+      catalogPaths.componentPresentationRegistryFile,
       catalogPaths.generatedCatalogPreviewsFile,
     ]) {
       fs.writeFileSync(registryFile, `before ${path.basename(registryFile)}\n`);

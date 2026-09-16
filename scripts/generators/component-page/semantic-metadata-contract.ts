@@ -7,15 +7,15 @@ import {
   CANONICAL_RELATED_COMPONENT_CONSTRAINTS,
   assertCanonicalComponentSlug,
   canonicalComponentSlugsFromEntries,
-} from '../../../apps/website/src/component-catalog/registry/componentIdentity';
-import { webComponents } from '../../../apps/website/src/component-catalog/registry/components';
+} from '../../../apps/website/src/component-catalog/registry/canonicalComponentSlugs';
+import { componentCatalogPresentation } from '../../../apps/website/src/component-catalog/registry/componentPresentation';
 import { slugify } from './helpers/format';
 
 export const SEMANTIC_METADATA_CONTRACT_SCHEMA_VERSION = '1' as const;
 export const METADATA_SCHEMA_PATH =
   'apps/website/src/component-catalog/metadata.ts';
 export const COMPONENT_REGISTRY_PATH =
-  'apps/website/src/component-catalog/registry/components.ts';
+  'apps/website/src/component-catalog/registry/componentPresentation.ts';
 export const SEMANTIC_METADATA_CONTRACT_COMMAND = [
   'pnpm',
   '--silent',
@@ -68,7 +68,7 @@ export function buildSemanticMetadataContract(params: {
     'component registry'
   );
   const slugs = canonicalComponentSlugsFromEntries(
-    params.components ?? webComponents
+    params.components ?? componentCatalogPresentation
   );
   const sourceSlug = slugify(params.componentName);
   assertCanonicalComponentSlug(sourceSlug, 'source component');

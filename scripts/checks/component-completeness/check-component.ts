@@ -588,14 +588,14 @@ function checkWebsiteDocumentation(params: {
 
   const slug = componentNameToSlug(componentName);
 
-  const componentsRegistryFile = path.join(
+  const componentPresentationRegistryFile = path.join(
     root,
     'apps',
     'website',
     'src',
     'component-catalog',
     'registry',
-    'components.ts'
+    'componentPresentation.ts'
   );
 
   const componentPagesRegistryFile = path.join(
@@ -608,11 +608,11 @@ function checkWebsiteDocumentation(params: {
     'componentPages.ts'
   );
 
-  if (!fs.existsSync(componentsRegistryFile)) {
+  if (!fs.existsSync(componentPresentationRegistryFile)) {
     return {
       name: 'website',
       ok: false,
-      details: `Missing website component registry: ${componentsRegistryFile}`,
+      details: `Missing website component presentation registry: ${componentPresentationRegistryFile}`,
     };
   }
 
@@ -624,7 +624,10 @@ function checkWebsiteDocumentation(params: {
     };
   }
 
-  const componentsRegistry = fs.readFileSync(componentsRegistryFile, 'utf8');
+  const componentPresentationRegistry = fs.readFileSync(
+    componentPresentationRegistryFile,
+    'utf8'
+  );
   const componentPagesRegistry = fs.readFileSync(
     componentPagesRegistryFile,
     'utf8'
@@ -634,7 +637,7 @@ function checkWebsiteDocumentation(params: {
   const quotedPageEntry = `'${slug}':`;
   const plainPageEntry = `${slug}:`;
 
-  if (!componentsRegistry.includes(catalogEntry)) {
+  if (!componentPresentationRegistry.includes(catalogEntry)) {
     return {
       name: 'website',
       ok: false,

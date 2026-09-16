@@ -212,6 +212,7 @@ function snapshotManagedWebsiteArtifacts(params: {
     componentCatalogDir,
     catalogRegistryFile,
     componentsRegistryFile,
+    componentPresentationRegistryFile,
     generatedCatalogPreviewsFile,
   } = getCatalogPaths(params);
 
@@ -219,6 +220,7 @@ function snapshotManagedWebsiteArtifacts(params: {
     ...listFilesRecursively(componentCatalogDir),
     catalogRegistryFile,
     componentsRegistryFile,
+    componentPresentationRegistryFile,
     generatedCatalogPreviewsFile,
   ];
 

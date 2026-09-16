@@ -300,7 +300,7 @@ function createCompleteWebFixture() {
       'demo',
     'apps/website/src/component-catalog/components/Avatar/AvatarCatalogPreview.tsx':
       'preview',
-    'apps/website/src/component-catalog/registry/components.ts':
+    'apps/website/src/component-catalog/registry/componentPresentation.ts':
       "{ slug: 'avatar', name: 'Avatar' }",
     'apps/website/src/component-catalog/registry/componentPages.ts':
       "avatar: { name: 'Avatar' }",
