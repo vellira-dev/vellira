@@ -62,6 +62,19 @@ export const componentCapabilities = [
   'collapsible',
   'portal',
   'responsive',
+  'image-source',
+  'fallback-content',
+  'error-fallback',
+  'size-variants',
+  'accessible-name',
+  'multiline',
+  'semantic-variants',
+  'value-range',
+  'reduced-motion',
+  'dismissible',
+  'auto-dismiss',
+  'stacking',
+  'announcement',
 ] as const;
 
 export type ComponentCapability = (typeof componentCapabilities)[number];
