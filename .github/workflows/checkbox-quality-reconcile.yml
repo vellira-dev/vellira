@@ -1,0 +1,90 @@
+name: One-time Checkbox Quality Reconcile
+
+on:
+  push:
+    branches:
+      - feat/checkbox-discovery-reference-fixture
+    paths:
+      - .github/workflows/checkbox-quality-reconcile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/checkbox-discovery-reference-fixture
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Add indeterminate quality evidence contracts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path_str, old, new):
+              path = Path(path_str)
+              source = path.read_text()
+              if old not in source:
+                  raise SystemExit(f'Expected block not found in {path_str}: {old!r}')
+              path.write_text(source.replace(old, new, 1))
+
+          replace(
+              'scripts/checks/component-stability/engine.ts',
+              "  uncontrolled: ['api.controlled-contract', 'coverage.tests'],\n  disabled:",
+              "  uncontrolled: ['api.controlled-contract', 'coverage.tests'],\n  indeterminate: ['api.declared-capabilities', 'coverage.tests'],\n  disabled:"
+          )
+
+          replace(
+              'scripts/checks/component-quality/rules/api-feature.ts',
+              "  disabled: [/\\bdisabled\\b/i, /\\bisDisabled\\b/],",
+              "  indeterminate: [/\\bindeterminate\\b/i],\n  disabled: [/\\bdisabled\\b/i, /\\bisDisabled\\b/],"
+          )
+
+          replace(
+              'scripts/checks/component-quality/rules/coverage.ts',
+              "  disabled: [/\\bdisabled\\b/i],",
+              "  indeterminate: [/\\bindeterminate\\b/i],\n  disabled: [/\\bdisabled\\b/i],"
+          )
+
+          replace(
+              'scripts/checks/component-quality/rules/coverage.ts',
+              "  disabled: [/\\bDisabled\\b/, /\\bdisabled\\b/],",
+              "  indeterminate: [/\\bIndeterminate\\b/, /\\bindeterminate\\b/],\n  disabled: [/\\bDisabled\\b/, /\\bdisabled\\b/],"
+          )
+          PY
+
+      - name: Run focused quality and generator tests
+        run: |
+          pnpm exec vitest run \
+            scripts/checks/component-quality/rules/coverage.test.ts \
+            scripts/checks/component-quality/rules/api-feature.test.ts \
+            scripts/generators/component/templates/component-story.test.ts \
+            scripts/generators/component/component-presentation.test.ts \
+            scripts/generators/component/discovery-content.test.ts
+
+      - name: Commit quality reconciliation
+        run: |
+          rm .github/workflows/checkbox-quality-reconcile.yml
+          git config user.name 'vellira-fixture-reconcile[bot]'
+          git config user.email 'vellira-fixture-reconcile[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo 'No reconciliation changes produced.'
+            exit 1
+          fi
+          git commit -m 'fix(quality): validate indeterminate capability evidence'
+          git push origin HEAD:feat/checkbox-discovery-reference-fixture
