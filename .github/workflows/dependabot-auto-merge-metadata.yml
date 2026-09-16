@@ -1,0 +1,80 @@
+name: Dependabot Auto Merge Metadata
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  inspect:
+    if: >
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98
+        with:
+          github-token: ${{ github.token }}
+
+      - name: Write immutable auto-merge decision
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          set -euo pipefail
+          mkdir -p .dependabot-auto-merge
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const pullRequestNumber = Number(process.env.PR_NUMBER);
+          const headSha = process.env.PR_HEAD_SHA ?? '';
+          const updateType = process.env.UPDATE_TYPE ?? '';
+
+          if (!Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) {
+            throw new Error('Dependabot pull request number must be a positive integer');
+          }
+          if (!/^[0-9a-f]{40}$/.test(headSha)) {
+            throw new Error('Dependabot pull request head must be an exact SHA');
+          }
+
+          const decision = {
+            schemaVersion: 1,
+            repository: process.env.REPOSITORY,
+            pullRequestNumber,
+            author: process.env.PR_AUTHOR,
+            headSha,
+            baseRef: process.env.PR_BASE_REF,
+            updateType,
+            eligible: updateType === 'version-update:semver-patch',
+          };
+
+          fs.writeFileSync(
+            '.dependabot-auto-merge/decision.json',
+            `${JSON.stringify(decision, null, 2)}\n`,
+            'utf8'
+          );
+          console.log(JSON.stringify(decision));
+          NODE
+
+      - name: Upload auto-merge decision
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependabot-auto-merge-decision
+          path: .dependabot-auto-merge/decision.json
+          if-no-files-found: error
+          retention-days: 1
