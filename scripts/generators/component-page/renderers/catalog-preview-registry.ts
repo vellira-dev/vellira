@@ -63,9 +63,6 @@ export function requiresGeneratedCatalogPreview(params: {
   }
 
   return (
-    existingEntry.includes(
-      `description: '${params.model.componentName} component for Vellira applications.'`
-    ) &&
     existingEntry.includes(`component: '${params.model.componentName}'`) &&
     existingEntry.includes('order: 999')
   );
