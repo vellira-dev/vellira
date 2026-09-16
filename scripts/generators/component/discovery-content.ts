@@ -12,8 +12,7 @@ import {
 import type { ComponentCategoryArg, ComponentProfileArg } from './cli';
 
 export type ComponentDiscoveryContentStatus =
-  | 'complete'
-  | 'needs-authored-intent';
+  'complete' | 'needs-authored-intent';
 
 export type ComponentDiscoveryPattern = {
   id: ComponentPresentationScenario;
@@ -33,8 +32,7 @@ export type ComponentDiscoveryContent = {
 
 const categoryUseCase: Record<ComponentCategoryArg, string> = {
   action: 'Use it when a user needs to trigger a clear application action.',
-  form:
-    'Use it when an interface needs explicit user input, selection, or form participation.',
+  form: 'Use it when an interface needs explicit user input, selection, or form participation.',
   navigation:
     'Use it when users need to move between related views or sections.',
   overlay:
@@ -169,10 +167,7 @@ export function deriveComponentDiscoveryContent(params: {
     );
   }
 
-  if (
-    params.profile === 'compound' &&
-    !capabilities.includes('compound-api')
-  ) {
+  if (params.profile === 'compound' && !capabilities.includes('compound-api')) {
     missingEvidence.push(
       'Compound profile requires explicit compound-api evidence before composition guidance is considered complete.'
     );
@@ -182,8 +177,7 @@ export function deriveComponentDiscoveryContent(params: {
   const platforms = platformLabel(params.platforms);
 
   return {
-    status:
-      missingEvidence.length === 0 ? 'complete' : 'needs-authored-intent',
+    status: missingEvidence.length === 0 ? 'complete' : 'needs-authored-intent',
     summary: `Use ${params.componentName} as the canonical Vellira ${params.category.replaceAll(
       '-',
       ' '
