@@ -17,6 +17,11 @@ const navigationSource = read('apps/website/src/config/navigation.ts');
 const headerSource = read(
   'apps/website/src/components/layout/SiteHeader/SiteHeader.tsx'
 );
+const websiteJsonLdSource = read(
+  'apps/website/src/components/seo/JsonLd/JsonLd.tsx'
+);
+const docsConfigSource = read('apps/docs/src/.vitepress/config.ts');
+const docsHomeSource = read('apps/docs/src/index.md');
 
 const launchCtaSource = [
   heroSource,
@@ -57,5 +62,30 @@ describe('homepage launch positioning and navigation', () => {
     expect(launchCtaSource).not.toContain(
       'https://github.com/vellira-dev/Vellira'
     );
+  });
+});
+
+describe('public brand site identity', () => {
+  it('keeps vellira.dev as the preferred root site identity', () => {
+    expect(websiteJsonLdSource).toContain("'@type': 'WebSite'");
+    expect(websiteJsonLdSource).toContain("url: 'https://vellira.dev/'");
+    expect(websiteJsonLdSource).toContain("name: 'Vellira'");
+    expect(websiteJsonLdSource).toContain("alternateName: ['vellira.dev']");
+  });
+
+  it('gives the docs subdomain its own explicit site-name identity', () => {
+    expect(docsConfigSource).toContain("name: 'Vellira Docs'");
+    expect(docsConfigSource).toContain("alternateName: ['docs.vellira.dev']");
+    expect(docsConfigSource).toContain('url: `${siteUrl}/`');
+    expect(docsConfigSource).toContain('if (isHome)');
+    expect(docsConfigSource).toContain("type: 'application/ld+json'");
+    expect(docsConfigSource).toContain("content: 'Vellira Docs'");
+  });
+
+  it('presents docs identity and links to the brand home', () => {
+    expect(docsHomeSource).toContain('name: Vellira Docs');
+    expect(docsHomeSource).toContain("Vellira's cross-platform");
+    expect(docsHomeSource).toContain('text: Vellira Website');
+    expect(docsHomeSource).toContain('link: https://vellira.dev');
   });
 });

@@ -18,8 +18,9 @@ const jsonLd = {
     {
       '@type': 'WebSite',
       '@id': 'https://vellira.dev/#website',
-      url: 'https://vellira.dev',
+      url: 'https://vellira.dev/',
       name: 'Vellira',
+      alternateName: ['vellira.dev'],
       description: siteDescription,
       publisher: {
         '@id': 'https://vellira.dev/#organization',
