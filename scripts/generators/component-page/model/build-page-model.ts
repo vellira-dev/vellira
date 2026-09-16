@@ -10,6 +10,7 @@ export function buildGeneratedPageModel(params: {
   componentName: string;
   slug: string;
   platforms: readonly Platform[];
+  discovery?: GeneratedPageModel['discovery'];
   reactStaticDemoProps: string;
   nativeStaticDemoProps: string;
   reactDemoChildren: string;
@@ -40,6 +41,7 @@ export function buildGeneratedPageModel(params: {
     componentName: params.componentName,
     slug: params.slug,
     platforms: params.platforms,
+    discovery: params.discovery,
     demo: {
       staticProps: {
         react: params.reactStaticDemoProps,
