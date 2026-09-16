@@ -175,6 +175,14 @@ export function insertMissingLinesAfterMarker(params: {
   console.log(`✅ Updated imports: ${path.relative(root, filePath)}`);
 }
 
+function renderDiscoverySource(discovery: GeneratedPageModel['discovery']) {
+  if (!discovery) {
+    return '';
+  }
+
+  return `    discovery: ${JSON.stringify(discovery)},\n`;
+}
+
 export function renderPageConfigSnippet(model: GeneratedPageModel) {
   const slugIdentifier = identifierFromSlug(model.slug);
   const demoEntries = [
@@ -191,7 +199,7 @@ export function renderPageConfigSnippet(model: GeneratedPageModel) {
   return `
   ${objectPropertyKey(model.slug)}: {
     name: '${model.componentName}',
-    demos: {
+${renderDiscoverySource(model.discovery)}    demos: {
 ${demoEntries}
     },
     Usage: ${model.componentName}Usage,
@@ -218,12 +226,15 @@ export function renderCatalogEntry(params: {
         `      '${platform}': 'https://docs.vellira.dev/${platform}/${model.slug}',`
     )
     .join('\n');
+  const description =
+    model.discovery?.description ??
+    `${model.componentName} component for Vellira applications.`;
 
   return `  {
     component: '${model.componentName}',
     slug: '${model.slug}',
     name: '${model.componentName}',
-    description: '${model.componentName} component for Vellira applications.',
+    description: ${JSON.stringify(description)},
     category: '${catalogCategory}',
     order: 999,
     docs: {
@@ -296,9 +307,6 @@ export async function updateCatalogRegistry(params: {
     const existingEntry = source.slice(entryStart + 1, entryEnd);
 
     const isGeneratedEntry =
-      existingEntry.includes(
-        `description: '${model.componentName} component for Vellira applications.'`
-      ) &&
       existingEntry.includes(`component: '${model.componentName}'`) &&
       existingEntry.includes('order: 999');
 
