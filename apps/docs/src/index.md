@@ -1,11 +1,11 @@
 ---
 layout: home
 title: React & React Native Design System
-description: Explore Vellira, a production-ready React and React Native design system with accessible UI components, shared design tokens, theming, and TypeScript support.
+description: Documentation for Vellira, a production-ready React and React Native design system with accessible UI components, shared design tokens, theming, and TypeScript support.
 
 hero:
-  name: Vellira
-  text: Cross-platform UI components for React and React Native.
+  name: Vellira Docs
+  text: Documentation for Vellira's cross-platform React and React Native UI system.
   tagline: Accessible components, shared design tokens, and native rendering.
   actions:
     - theme: brand
@@ -15,8 +15,8 @@ hero:
       text: Components
       link: /react/
     - theme: alt
-      text: GitHub
-      link: https://github.com/vellira-dev/vellira
+      text: Vellira Website
+      link: https://vellira.dev
 ---
 
 ## Why Vellira
