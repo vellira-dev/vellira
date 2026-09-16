@@ -115,6 +115,7 @@ function getScenarioProps(params: {
         props.push("defaultValue='item-1'");
       }
       break;
+    case 'indeterminate':
     case 'disabled':
     case 'required':
     case 'invalid':

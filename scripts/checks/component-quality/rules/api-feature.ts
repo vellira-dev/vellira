@@ -25,6 +25,7 @@ type SourceSnapshot = {
 const capabilityPatterns: Partial<
   Record<ComponentCapability, readonly RegExp[]>
 > = {
+  indeterminate: [/\bindeterminate\b/i],
   disabled: [/\bdisabled\b/i, /\bisDisabled\b/],
   required: [/\brequired\b/i, /\bisRequired\b/],
   invalid: [/\binvalid\b/i, /\bisInvalid\b/, /\berror\b/i],

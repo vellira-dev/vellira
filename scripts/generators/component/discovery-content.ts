@@ -60,6 +60,7 @@ const capabilityLabels: Partial<Record<ComponentCapability, string>> = {
   disabled: 'disabled state',
   required: 'required state',
   invalid: 'validation state',
+  indeterminate: 'indeterminate state',
   loading: 'loading state',
   keyboard: 'keyboard interaction',
   'focus-management': 'focus management',

@@ -4,6 +4,7 @@ import { componentCapabilities, validateComponentMetadata } from './index';
 
 describe('component capability authority', () => {
   it('keeps runtime validation aligned with the exported capability vocabulary', () => {
+    expect(componentCapabilities).toContain('indeterminate');
     expect(componentCapabilities).toContain('multiple');
     expect(componentCapabilities).toContain('collapsible');
 
@@ -16,6 +17,26 @@ describe('component capability authority', () => {
         profile: 'compound',
         status: 'experimental',
         capabilities: ['compound-api', 'multiple', 'collapsible'],
+        requirements: {
+          tests: true,
+          storybook: true,
+          docs: true,
+          accessibility: true,
+        },
+      })
+    ).toMatchObject({
+      valid: true,
+    });
+
+    expect(
+      validateComponentMetadata({
+        name: 'MixedStateProbe',
+        layer: 'primitives',
+        category: 'form',
+        platforms: ['react', 'react-native'],
+        profile: 'form-control',
+        status: 'experimental',
+        capabilities: ['controlled', 'uncontrolled', 'indeterminate'],
         requirements: {
           tests: true,
           storybook: true,

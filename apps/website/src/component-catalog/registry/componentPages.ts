@@ -288,6 +288,61 @@ export const componentPages = {
   },
   checkbox: {
     name: 'Checkbox',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Checkbox as the canonical Vellira form component across React and React Native.',
+      description:
+        'Checkbox for React and React Native with controlled and uncontrolled state, indeterminate state, disabled state, required state, and validation state.',
+      whenToUse: [
+        'Use it when an interface needs explicit user input, selection, or form participation.',
+        'Prefer the canonical state and validation API instead of rebuilding form-control behavior in application code.',
+        'Use Checkbox for independent boolean choices; use RadioGroup when exactly one option must be selected.',
+        'Use Checkbox for form-like independent selections; use Switch for persistent settings that apply immediately.',
+      ],
+      patterns: [
+        { id: 'basic', title: 'Basic', description: 'Basic component usage.' },
+        {
+          id: 'controlled',
+          title: 'Controlled',
+          description: 'State controlled by the parent application.',
+        },
+        {
+          id: 'uncontrolled',
+          title: 'Uncontrolled',
+          description: 'State initialized and then managed by the component.',
+        },
+        {
+          id: 'indeterminate',
+          title: 'Indeterminate',
+          description: 'Mixed selection state for partial group selection.',
+        },
+        {
+          id: 'disabled',
+          title: 'Disabled',
+          description: 'Disabled state with interaction unavailable.',
+        },
+        {
+          id: 'required',
+          title: 'Required',
+          description: 'Required state for form participation.',
+        },
+        {
+          id: 'invalid',
+          title: 'Invalid',
+          description: 'Invalid state with validation semantics.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'The React package uses web platform semantics; keep DOM, keyboard, and ARIA guidance scoped to behavior verified by the web implementation.',
+        ],
+        'react-native': [
+          'The React Native package uses native rendering and accessibility props; browser-only DOM and keyboard behavior does not automatically apply.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: CheckboxDemo,
       'react-native': NativeCheckboxDemo,
@@ -296,7 +351,7 @@ export const componentPages = {
     Examples: CheckboxExamples,
     Accessibility: CheckboxAccessibility,
     api: checkboxApi,
-    related: ['radio', 'select'],
+    related: ['radio-group', 'switch', 'form-field'],
   },
   button: {
     name: 'Button',

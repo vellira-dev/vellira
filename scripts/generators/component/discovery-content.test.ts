@@ -11,6 +11,7 @@ describe('deriveComponentDiscoveryContent', () => {
       capabilities: [
         'controlled',
         'uncontrolled',
+        'indeterminate',
         'disabled',
         'required',
         'invalid',
@@ -20,10 +21,12 @@ describe('deriveComponentDiscoveryContent', () => {
 
     expect(content.status).toBe('complete');
     expect(content.description).toContain('controlled and uncontrolled state');
+    expect(content.description).toContain('indeterminate state');
     expect(content.patterns.map((pattern) => pattern.id)).toEqual([
       'basic',
       'controlled',
       'uncontrolled',
+      'indeterminate',
       'disabled',
       'required',
       'invalid',

@@ -50,6 +50,7 @@ export type ComponentCategory =
 export const componentCapabilities = [
   'controlled',
   'uncontrolled',
+  'indeterminate',
   'disabled',
   'required',
   'invalid',

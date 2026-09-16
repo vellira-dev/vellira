@@ -36,6 +36,7 @@ describe('component presentation scenarios', () => {
           'controlled',
           'required',
           'uncontrolled',
+          'indeterminate',
           'disabled',
         ],
       })
@@ -43,6 +44,7 @@ describe('component presentation scenarios', () => {
       'basic',
       'controlled',
       'uncontrolled',
+      'indeterminate',
       'disabled',
       'required',
       'invalid',
