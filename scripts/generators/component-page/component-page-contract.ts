@@ -122,58 +122,88 @@ const nativeAccordionDemo = read(
 const accordionApi = read('components/Accordion/accordionApi.ts');
 
 assert.ok(
-  !fs.existsSync(checkboxMetadataFile),
-  'Checkbox proves metadata-free component generation'
+  fs.existsSync(checkboxMetadataFile),
+  'Checkbox proves authoritative component-page metadata generation'
 );
 assertIncludes(
   checkboxUsage,
   'Checkbox',
-  'Metadata-free Checkbox usage is generated'
+  'Checkbox usage remains generated from the authoritative metadata path'
 );
 assertIncludes(
   checkboxExamples,
-  "title: 'Basic'",
-  'Metadata-free Checkbox examples are generated'
+  "title: 'Controlled Checkbox'",
+  'Checkbox exposes a real controlled-state example'
+);
+assertIncludes(
+  checkboxExamples,
+  "title: 'Uncontrolled Checkbox'",
+  'Checkbox exposes an uncontrolled-state example'
+);
+assertIncludes(
+  checkboxExamples,
+  "title: 'Indeterminate / Select All'",
+  'Checkbox exposes the mixed-selection reference pattern'
+);
+assertIncludes(
+  checkboxExamples,
+  "title: 'Validation / Required State'",
+  'Checkbox exposes required validation behavior'
+);
+assertIncludes(
+  checkboxExamples,
+  "title: 'Accessible Labels and Descriptions'",
+  'Checkbox exposes durable label and description guidance'
+);
+assertIncludes(
+  checkboxExamples,
+  'onCheckedChange={setChecked}',
+  'Checkbox controlled example includes its change handler'
+);
+assertIncludes(
+  checkboxExamples,
+  'indeterminate={someSelected && !allSelected}',
+  'Checkbox select-all example derives mixed state from selection evidence'
 );
 assertIncludes(
   checkboxApi,
   "defaultValue: 'false'",
-  'Metadata-free Checkbox receives profile defaults'
+  'Checkbox keeps selection-control profile defaults'
 );
 assertIncludes(
   checkboxUsage,
   "label='Accept terms'",
-  'Metadata-free Checkbox usage receives accessible label'
-);
-assertIncludes(
-  checkboxExamples,
-  "label='Accept terms'",
-  'Metadata-free Checkbox examples receive accessible label'
+  'Checkbox usage keeps an accessible visible label'
 );
 assertIncludes(
   checkboxDemo,
   "label='Accept terms'",
-  'Metadata-free React Checkbox demo receives accessible label'
+  'React Checkbox demo keeps an accessible visible label'
 );
 assertIncludes(
   nativeCheckboxDemo,
   "label='Accept terms'",
-  'Metadata-free React Native Checkbox demo receives accessible label'
+  'React Native Checkbox demo keeps an accessible visible label'
 );
 assertIncludes(
   componentPages,
-  "related: ['radio', 'select']",
-  'Metadata-free Checkbox receives selection-control related components'
+  'Use Checkbox for independent boolean choices',
+  'Checkbox discovery guidance reaches the generated page registry'
+);
+assertIncludes(
+  componentPages,
+  "related: ['radio-group', 'switch', 'form-field']",
+  'Checkbox uses explicit related component guidance'
 );
 assertIncludes(
   checkboxPlayground,
   "labelPosition: 'end'",
-  'Metadata-free Checkbox defaults labelPosition to end'
+  'Checkbox defaults labelPosition to end'
 );
 assertIncludes(
   checkboxPlaygroundSchema,
   "options: ['end', 'start']",
-  'Metadata-free Checkbox orders labelPosition controls end before start'
+  'Checkbox orders labelPosition controls end before start'
 );
 
 assertIncludes(buttonExamples, "title: 'Icons'", 'Button icon example exists');

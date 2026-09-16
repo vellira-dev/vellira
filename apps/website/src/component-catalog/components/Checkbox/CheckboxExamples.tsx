@@ -5,9 +5,98 @@
 
 import { Checkbox as ReactCheckbox } from '@vellira-ui/react';
 import { Checkbox as NativeCheckbox } from '@vellira-ui/react-native';
+import { useState } from 'react';
 
 import { ComponentExamples } from '../../shared/ComponentExamples';
 import type { ComponentPlatform } from '../../types';
+
+function ReactCheckboxExample2Preview() {
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <ReactCheckbox
+      label='Accept terms'
+      checked={checked}
+      onCheckedChange={setChecked}
+    />
+  );
+}
+
+function ReactCheckboxExample4Preview() {
+  const [selectedCount, setSelectedCount] = useState(1);
+  const totalCount = 3;
+  const allSelected = selectedCount === totalCount;
+  const someSelected = selectedCount > 0;
+  const toggleAll = (checked: boolean) =>
+    setSelectedCount(checked ? totalCount : 0);
+
+  return (
+    <ReactCheckbox
+      checked={allSelected}
+      indeterminate={someSelected && !allSelected}
+      onCheckedChange={toggleAll}
+      label='Select all projects'
+    />
+  );
+}
+
+function ReactCheckboxExample5Preview() {
+  const [accepted, setAccepted] = useState(false);
+
+  return (
+    <ReactCheckbox
+      required
+      checked={accepted}
+      onCheckedChange={setAccepted}
+      label='Accept the terms'
+      error={accepted ? undefined : 'Accept the terms to continue.'}
+    />
+  );
+}
+
+function NativeCheckboxExample2Preview() {
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <NativeCheckbox
+      label='Accept terms'
+      checked={checked}
+      onCheckedChange={setChecked}
+    />
+  );
+}
+
+function NativeCheckboxExample4Preview() {
+  const [selectedCount, setSelectedCount] = useState(1);
+  const totalCount = 3;
+  const allSelected = selectedCount === totalCount;
+  const someSelected = selectedCount > 0;
+  const toggleAll = (checked: boolean) =>
+    setSelectedCount(checked ? totalCount : 0);
+
+  return (
+    <NativeCheckbox
+      checked={allSelected}
+      indeterminate={someSelected && !allSelected}
+      onCheckedChange={toggleAll}
+      label='Select all projects'
+    />
+  );
+}
+
+function NativeCheckboxExample5Preview() {
+  const [accepted, setAccepted] = useState(false);
+
+  return (
+    <NativeCheckbox
+      required
+      checked={accepted}
+      onCheckedChange={setAccepted}
+      label='Accept the terms'
+      error={accepted ? undefined : 'Accept the terms to continue.'}
+    />
+  );
+}
 
 type CheckboxExamplesProps = {
   platform: ComponentPlatform;
@@ -17,7 +106,7 @@ export function CheckboxExamples({ platform }: CheckboxExamplesProps) {
   const reactExamples = [
     {
       title: 'Basic',
-      description: 'Basic component usage.',
+      description: 'An independent boolean choice with a visible label.',
       preview: <ReactCheckbox label='Accept terms' />,
       code: `import { Checkbox } from '@vellira-ui/react';
 
@@ -26,8 +115,105 @@ export function CheckboxExamples({ platform }: CheckboxExamplesProps) {
 />`,
     },
     {
+      title: 'Controlled Checkbox',
+      description:
+        'Keep checked state in application state when another part of the interface needs to read or change it.',
+      preview: <ReactCheckboxExample2Preview />,
+      code: `import { Checkbox } from '@vellira-ui/react';
+import { useState } from 'react';
+
+function Example() {
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <Checkbox
+      label='Accept terms'
+      checked={checked}
+      onCheckedChange={setChecked}
+    />
+  );
+}`,
+    },
+    {
+      title: 'Uncontrolled Checkbox',
+      description:
+        'Set the initial checked state and let Checkbox manage later interaction.',
+      preview: <ReactCheckbox label='Accept terms' defaultChecked />,
+      code: `import { Checkbox } from '@vellira-ui/react';
+
+<Checkbox
+  label='Accept terms'
+  defaultChecked
+/>`,
+    },
+    {
+      title: 'Indeterminate / Select All',
+      description:
+        'Represent partial group selection while keeping the stored selection model boolean.',
+      preview: <ReactCheckboxExample4Preview />,
+      code: `import { Checkbox } from '@vellira-ui/react';
+import { useState } from 'react';
+
+function Example() {
+  const [selectedCount, setSelectedCount] = useState(1);
+  const totalCount = 3;
+  const allSelected = selectedCount === totalCount;
+  const someSelected = selectedCount > 0;
+  const toggleAll = (checked: boolean) => setSelectedCount(checked ? totalCount : 0);
+
+  return (
+    <Checkbox
+      checked={allSelected}
+      indeterminate={someSelected && !allSelected}
+      onCheckedChange={toggleAll}
+      label='Select all projects'
+    />
+  );
+}`,
+    },
+    {
+      title: 'Validation / Required State',
+      description:
+        'Combine required state with visible validation feedback when acceptance is mandatory.',
+      preview: <ReactCheckboxExample5Preview />,
+      code: `import { Checkbox } from '@vellira-ui/react';
+import { useState } from 'react';
+
+function Example() {
+  const [accepted, setAccepted] = useState(false);
+
+  return (
+    <Checkbox
+      required
+      checked={accepted}
+      onCheckedChange={setAccepted}
+      label='Accept the terms'
+      error={accepted ? undefined : 'Accept the terms to continue.'}
+    />
+  );
+}`,
+    },
+    {
+      title: 'Accessible Labels and Descriptions',
+      description:
+        'Pair a visible label with durable supporting context instead of relying on hover-only help.',
+      preview: (
+        <ReactCheckbox
+          label='Email product updates'
+          description='Receive important release and billing updates.'
+        />
+      ),
+      code: `import { Checkbox } from '@vellira-ui/react';
+
+<Checkbox
+  label='Email product updates'
+  description='Receive important release and billing updates.'
+/>`,
+    },
+    {
       title: 'Disabled',
-      description: 'Disabled state.',
+      description:
+        'Keep unavailable choices visible while preventing interaction.',
       preview: <ReactCheckbox label='Accept terms' disabled />,
       code: `import { Checkbox } from '@vellira-ui/react';
 
@@ -36,61 +222,12 @@ export function CheckboxExamples({ platform }: CheckboxExamplesProps) {
   disabled
 />`,
     },
-    {
-      title: 'Selected',
-      description: 'Selected state.',
-      preview: <ReactCheckbox label='Accept terms' checked />,
-      code: `import { Checkbox } from '@vellira-ui/react';
-
-<Checkbox
-  label='Accept terms'
-  checked
-/>`,
-    },
-    {
-      title: 'Error',
-      description: 'Validation error state.',
-      preview: (
-        <ReactCheckbox
-          label='Accept terms'
-          error='Please review this option.'
-        />
-      ),
-      code: `import { Checkbox } from '@vellira-ui/react';
-
-<Checkbox
-  label='Accept terms'
-  error='Please review this option.'
-/>`,
-    },
-    {
-      title: 'Size',
-      description: 'Alternative size option.',
-      preview: <ReactCheckbox label='Accept terms' size='sm' />,
-      code: `import { Checkbox } from '@vellira-ui/react';
-
-<Checkbox
-  label='Accept terms'
-  size='sm'
-/>`,
-    },
-    {
-      title: 'Required',
-      description: 'Required form control.',
-      preview: <ReactCheckbox label='Accept terms' required />,
-      code: `import { Checkbox } from '@vellira-ui/react';
-
-<Checkbox
-  label='Accept terms'
-  required
-/>`,
-    },
   ] as const;
 
   const nativeExamples = [
     {
       title: 'Basic',
-      description: 'Basic component usage.',
+      description: 'An independent boolean choice with a visible label.',
       preview: <NativeCheckbox label='Accept terms' />,
       code: `import { Checkbox } from '@vellira-ui/react-native';
 
@@ -99,63 +236,111 @@ export function CheckboxExamples({ platform }: CheckboxExamplesProps) {
 />`,
     },
     {
+      title: 'Controlled Checkbox',
+      description:
+        'Keep checked state in application state when another part of the interface needs to read or change it.',
+      preview: <NativeCheckboxExample2Preview />,
+      code: `import { Checkbox } from '@vellira-ui/react-native';
+import { useState } from 'react';
+
+function Example() {
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <Checkbox
+      label='Accept terms'
+      checked={checked}
+      onCheckedChange={setChecked}
+    />
+  );
+}`,
+    },
+    {
+      title: 'Uncontrolled Checkbox',
+      description:
+        'Set the initial checked state and let Checkbox manage later interaction.',
+      preview: <NativeCheckbox label='Accept terms' defaultChecked />,
+      code: `import { Checkbox } from '@vellira-ui/react-native';
+
+<Checkbox
+  label='Accept terms'
+  defaultChecked
+/>`,
+    },
+    {
+      title: 'Indeterminate / Select All',
+      description:
+        'Represent partial group selection while keeping the stored selection model boolean.',
+      preview: <NativeCheckboxExample4Preview />,
+      code: `import { Checkbox } from '@vellira-ui/react-native';
+import { useState } from 'react';
+
+function Example() {
+  const [selectedCount, setSelectedCount] = useState(1);
+  const totalCount = 3;
+  const allSelected = selectedCount === totalCount;
+  const someSelected = selectedCount > 0;
+  const toggleAll = (checked: boolean) => setSelectedCount(checked ? totalCount : 0);
+
+  return (
+    <Checkbox
+      checked={allSelected}
+      indeterminate={someSelected && !allSelected}
+      onCheckedChange={toggleAll}
+      label='Select all projects'
+    />
+  );
+}`,
+    },
+    {
+      title: 'Validation / Required State',
+      description:
+        'Combine required state with visible validation feedback when acceptance is mandatory.',
+      preview: <NativeCheckboxExample5Preview />,
+      code: `import { Checkbox } from '@vellira-ui/react-native';
+import { useState } from 'react';
+
+function Example() {
+  const [accepted, setAccepted] = useState(false);
+
+  return (
+    <Checkbox
+      required
+      checked={accepted}
+      onCheckedChange={setAccepted}
+      label='Accept the terms'
+      error={accepted ? undefined : 'Accept the terms to continue.'}
+    />
+  );
+}`,
+    },
+    {
+      title: 'Accessible Labels and Descriptions',
+      description:
+        'Pair a visible label with durable supporting context instead of relying on hover-only help.',
+      preview: (
+        <NativeCheckbox
+          label='Email product updates'
+          description='Receive important release and billing updates.'
+        />
+      ),
+      code: `import { Checkbox } from '@vellira-ui/react-native';
+
+<Checkbox
+  label='Email product updates'
+  description='Receive important release and billing updates.'
+/>`,
+    },
+    {
       title: 'Disabled',
-      description: 'Disabled state.',
+      description:
+        'Keep unavailable choices visible while preventing interaction.',
       preview: <NativeCheckbox label='Accept terms' disabled />,
       code: `import { Checkbox } from '@vellira-ui/react-native';
 
 <Checkbox
   label='Accept terms'
   disabled
-/>`,
-    },
-    {
-      title: 'Selected',
-      description: 'Selected state.',
-      preview: <NativeCheckbox label='Accept terms' checked />,
-      code: `import { Checkbox } from '@vellira-ui/react-native';
-
-<Checkbox
-  label='Accept terms'
-  checked
-/>`,
-    },
-    {
-      title: 'Error',
-      description: 'Validation error state.',
-      preview: (
-        <NativeCheckbox
-          label='Accept terms'
-          error='Please review this option.'
-        />
-      ),
-      code: `import { Checkbox } from '@vellira-ui/react-native';
-
-<Checkbox
-  label='Accept terms'
-  error='Please review this option.'
-/>`,
-    },
-    {
-      title: 'Size',
-      description: 'Alternative size option.',
-      preview: <NativeCheckbox label='Accept terms' size='sm' />,
-      code: `import { Checkbox } from '@vellira-ui/react-native';
-
-<Checkbox
-  label='Accept terms'
-  size='sm'
-/>`,
-    },
-    {
-      title: 'Required',
-      description: 'Required form control.',
-      preview: <NativeCheckbox label='Accept terms' required />,
-      code: `import { Checkbox } from '@vellira-ui/react-native';
-
-<Checkbox
-  label='Accept terms'
-  required
 />`,
     },
   ] as const;
