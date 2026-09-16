@@ -149,7 +149,7 @@ function Example() {
     {
       title: 'Indeterminate / Select All',
       description:
-        'Represent partial group selection while keeping the stored selection model boolean.',
+        'Represent partial group selection while deriving checked and mixed state from the group.',
       preview: <ReactCheckboxExample4Preview />,
       code: `import { Checkbox } from '@vellira-ui/react';
 import { useState } from 'react';
@@ -270,7 +270,7 @@ function Example() {
     {
       title: 'Indeterminate / Select All',
       description:
-        'Represent partial group selection while keeping the stored selection model boolean.',
+        'Represent partial group selection while deriving checked and mixed state from the group.',
       preview: <NativeCheckboxExample4Preview />,
       code: `import { Checkbox } from '@vellira-ui/react-native';
 import { useState } from 'react';
