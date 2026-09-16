@@ -93,6 +93,15 @@ function getPlanDiscoveryContent(plan: ComponentGenerationPlan) {
   });
 }
 
+function getGeneratedDocsSummary(
+  plan: ComponentGenerationPlan,
+  platform: ComponentPlatform
+) {
+  const platformLabel = platform === 'react' ? 'React' : 'React Native';
+
+  return `Use ${plan.componentName} in ${platformLabel} ${plan.category.replaceAll('-', ' ')} interfaces when you need the canonical Vellira behavior and styling for this component.`;
+}
+
 export function createComponentDocsContractFromPlan(
   plan: ComponentGenerationPlan
 ): ComponentDocsContract {
@@ -112,7 +121,7 @@ export function createComponentDocsContractFromPlan(
                 ? `${plan.componentName} - React`
                 : `${plan.componentName} - React Native`,
             description: discovery.description,
-            summary: discovery.summary,
+            summary: getGeneratedDocsSummary(plan, platform),
             whenToUse: discovery.whenToUse,
             notes: discovery.platformNotes[platform],
             storybook: {
