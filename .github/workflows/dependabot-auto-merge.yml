@@ -1,39 +1,159 @@
 name: Dependabot Auto Merge
 
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
+  workflow_run:
+    workflows: ['Dependabot Auto Merge Metadata']
+    types: [completed]
 
 permissions:
+  actions: read
   contents: read
+  pull-requests: read
 
 jobs:
   dependabot:
     if: >
-      github.event.pull_request.user.login == 'dependabot[bot]' &&
-      github.event.pull_request.draft == false
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
 
-    # Auto-merge needs write access to update the pull request and merge its
-    # head into the protected base branch. Keep these permissions job-scoped.
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
-      - name: Fetch Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98
+      - name: Download auto-merge decision
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: dependabot-auto-merge-decision
+          path: .dependabot-auto-merge
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
 
-      - name: Enable auto-merge for patch updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
-        run: gh pr merge --auto --merge "$PR_URL"
+      - name: Validate immutable auto-merge decision
+        id: candidate
+        shell: bash
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const decision = JSON.parse(
+            fs.readFileSync('.dependabot-auto-merge/decision.json', 'utf8')
+          );
+          const repository = process.env.REPOSITORY;
+          const workflowHeadSha = process.env.WORKFLOW_HEAD_SHA ?? '';
+
+          if (decision.schemaVersion !== 1) {
+            throw new Error('Unsupported Dependabot auto-merge decision schema');
+          }
+          if (decision.repository !== repository) {
+            throw new Error('Dependabot auto-merge decision repository mismatch');
+          }
+          if (
+            !Number.isSafeInteger(decision.pullRequestNumber) ||
+            decision.pullRequestNumber <= 0
+          ) {
+            throw new Error('Dependabot auto-merge decision PR number is invalid');
+          }
+          if (!/^[0-9a-f]{40}$/.test(decision.headSha ?? '')) {
+            throw new Error('Dependabot auto-merge decision head SHA is invalid');
+          }
+          if (decision.headSha !== workflowHeadSha) {
+            throw new Error('Dependabot auto-merge decision does not match workflow head');
+          }
+          if (decision.author !== 'dependabot[bot]') {
+            throw new Error('Dependabot auto-merge decision author mismatch');
+          }
+          if (decision.baseRef !== 'main') {
+            throw new Error('Dependabot auto-merge decision must target main');
+          }
+
+          const eligible =
+            decision.eligible === true &&
+            decision.updateType === 'version-update:semver-patch';
+          if (decision.eligible !== eligible) {
+            throw new Error('Dependabot auto-merge eligibility is inconsistent');
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `eligible=${eligible}\n` +
+              `pr_number=${decision.pullRequestNumber}\n` +
+              `head_sha=${decision.headSha}\n`
+          );
+          console.log(
+            JSON.stringify({
+              pullRequestNumber: decision.pullRequestNumber,
+              headSha: decision.headSha,
+              updateType: decision.updateType,
+              eligible,
+            })
+          );
+          NODE
+
+      - name: Revalidate current Dependabot pull request
+        if: steps.candidate.outputs.eligible == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > .dependabot-auto-merge/current-pr.json
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const pull = JSON.parse(
+            fs.readFileSync('.dependabot-auto-merge/current-pr.json', 'utf8')
+          );
+          const expectedHeadSha = process.env.EXPECTED_HEAD_SHA;
+          const repository = process.env.REPOSITORY;
+
+          if (pull.state !== 'open') {
+            throw new Error('Dependabot pull request is no longer open');
+          }
+          if (pull.draft !== false) {
+            throw new Error('Dependabot pull request is a draft');
+          }
+          if (pull.user?.login !== 'dependabot[bot]') {
+            throw new Error('Dependabot pull request author mismatch');
+          }
+          if (pull.base?.ref !== 'main') {
+            throw new Error('Dependabot pull request no longer targets main');
+          }
+          if (pull.head?.sha !== expectedHeadSha) {
+            throw new Error('Dependabot pull request head moved after inspection');
+          }
+          if (pull.head?.repo?.full_name !== repository) {
+            throw new Error('Dependabot pull request head repository mismatch');
+          }
+          NODE
+
+      - name: Create short-lived auto-merge GitHub App token
+        if: steps.candidate.outputs.eligible == 'true'
+        id: auto-merge-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Enable auto-merge for patch update
+        if: steps.candidate.outputs.eligible == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.auto-merge-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --auto \
+            --merge \
+            --match-head-commit "$EXPECTED_HEAD_SHA"
