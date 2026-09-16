@@ -184,7 +184,10 @@ export function deriveComponentDiscoveryContent(params: {
   return {
     status:
       missingEvidence.length === 0 ? 'complete' : 'needs-authored-intent',
-    summary: `Use ${params.componentName} as the canonical Vellira ${params.category.replaceAll('-', ' ')} component across ${platforms}.`,
+    summary: `Use ${params.componentName} as the canonical Vellira ${params.category.replaceAll(
+      '-',
+      ' '
+    )} component across ${platforms}.`,
     description: `${params.componentName} for ${platforms} with ${coverage}.`,
     whenToUse,
     patterns,
