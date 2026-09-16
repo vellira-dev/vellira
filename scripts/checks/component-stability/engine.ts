@@ -71,6 +71,7 @@ type GateSignal = {
 const capabilityRuleIds: Record<ComponentCapability, readonly string[]> = {
   controlled: ['api.controlled-contract', 'coverage.tests'],
   uncontrolled: ['api.controlled-contract', 'coverage.tests'],
+  indeterminate: ['api.declared-capabilities', 'coverage.tests'],
   disabled: ['api.declared-capabilities', 'coverage.tests'],
   required: ['api.declared-capabilities', 'coverage.tests'],
   invalid: ['api.declared-capabilities', 'coverage.tests'],
