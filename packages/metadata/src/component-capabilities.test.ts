@@ -4,6 +4,7 @@ import { componentCapabilities, validateComponentMetadata } from './index';
 
 describe('component capability authority', () => {
   it('keeps runtime validation aligned with the exported capability vocabulary', () => {
+    expect(componentCapabilities).toContain('indeterminate');
     expect(componentCapabilities).toContain('multiple');
     expect(componentCapabilities).toContain('collapsible');
 
