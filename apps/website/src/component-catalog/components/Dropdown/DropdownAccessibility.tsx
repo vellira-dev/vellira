@@ -28,6 +28,12 @@ export function DropdownAccessibility({
       props: ['loop', 'modal', 'open'],
     },
     {
+      title: 'Nested menu navigation',
+      description:
+        'Use the web submenu slots for related secondary actions. ArrowRight opens the active submenu, ArrowLeft closes it, and the submenu trigger exposes menu and expanded state semantics.',
+      props: ['Dropdown.Sub', 'Dropdown.SubTrigger', 'Dropdown.SubContent'],
+    },
+    {
       title: 'Item states',
       description:
         'Use disabled and color state to communicate unavailable or destructive actions.',

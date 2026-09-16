@@ -615,12 +615,17 @@ describe('Dropdown', () => {
     pressKey(trigger!, 'Enter');
 
     const menu = document.querySelector<HTMLElement>('[role="menu"]');
+    const subTrigger = document.querySelector<HTMLElement>('[role="menuitem"]');
+
+    expect(subTrigger?.getAttribute('aria-haspopup')).toBe('menu');
+    expect(subTrigger?.getAttribute('aria-expanded')).toBe('false');
 
     pressKey(menu!, 'ArrowRight');
 
     const menus = document.querySelectorAll('[role="menu"]');
 
     expect(menus).toHaveLength(2);
+    expect(subTrigger?.getAttribute('aria-expanded')).toBe('true');
     expect(document.body.textContent).toContain('Email');
 
     pressKey(menu!, 'ArrowLeft');

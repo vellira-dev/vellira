@@ -151,6 +151,57 @@ Radio items store their value inside `Dropdown.RadioGroup`, not on the root.
 </Dropdown>
 ```
 
+## Nested Dropdowns and Submenus
+
+Use a submenu when a secondary set of actions belongs to a parent command, such
+as choosing an export format. Keep primary actions in the top-level menu so
+they remain easy to find. Use Select when the user is choosing a value, and use
+Popover when the content needs explanation or a richer layout instead of an
+action list. Avoid nesting unrelated commands or making users move through
+many hidden levels.
+
+This pattern uses the web React API. React Native Dropdown currently does not
+expose `Dropdown.Sub`, `Dropdown.SubTrigger`, or `Dropdown.SubContent`.
+
+```tsx
+import { Button, Dropdown } from '@vellira-ui/react';
+
+type ExportFormat = 'pdf' | 'csv';
+
+type ExportMenuProps = {
+  onCopyLink: () => void;
+  onExport: (format: ExportFormat) => void;
+};
+
+export function ExportMenu({ onCopyLink, onExport }: ExportMenuProps) {
+  return (
+    <Dropdown>
+      <Dropdown.Trigger asChild>
+        <Button appearance='outline'>Export</Button>
+      </Dropdown.Trigger>
+
+      <Dropdown.Content>
+        <Dropdown.Item onSelect={onCopyLink}>Copy link</Dropdown.Item>
+
+        <Dropdown.Sub>
+          <Dropdown.SubTrigger>Download</Dropdown.SubTrigger>
+          <Dropdown.SubContent>
+            <Dropdown.Item onSelect={() => onExport('pdf')}>PDF</Dropdown.Item>
+            <Dropdown.Item onSelect={() => onExport('csv')}>CSV</Dropdown.Item>
+          </Dropdown.SubContent>
+        </Dropdown.Sub>
+      </Dropdown.Content>
+    </Dropdown>
+  );
+}
+```
+
+With the root menu open, move to the submenu trigger and press `ArrowRight`
+to open its nested menu. `ArrowLeft` closes the nested menu. The web
+implementation exposes the submenu trigger as a menu item with
+`aria-haspopup="menu"` and `aria-expanded` state; `Escape` closes the menu and
+returns focus to the root trigger.
+
 ## Accessibility
 
 - Trigger uses `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls`.
@@ -163,4 +214,5 @@ Radio items store their value inside `Dropdown.RadioGroup`, not on the root.
 
 - [Button](/react/button) for triggers and command buttons.
 - [Select](/react/select) for value selection.
+- [Popover](/react/popover) for contextual content that is not an action menu.
 - [Modal](/react/modal) for confirmation flows.

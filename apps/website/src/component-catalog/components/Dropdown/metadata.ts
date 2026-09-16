@@ -170,9 +170,9 @@ export default defineComponentPageMetadata({
       platforms: ['react'],
     },
     {
-      title: 'Submenu',
+      title: 'Nested React dropdown submenu',
       description:
-        'Nests secondary actions when the web menu has more choices.',
+        'Groups secondary actions under a nested React dropdown submenu.',
       props: [],
       reactImports: reactTriggerImports,
       reactChildren: `<Dropdown.Trigger asChild>
@@ -271,6 +271,12 @@ export default defineComponentPageMetadata({
         description:
           'Preserve arrow-key navigation, Escape dismissal, and focus return to the trigger.',
         props: ['loop', 'modal', 'open'],
+      },
+      {
+        title: 'Nested menu navigation',
+        description:
+          'Use the web submenu slots for related secondary actions. ArrowRight opens the active submenu, ArrowLeft closes it, and the submenu trigger exposes menu and expanded state semantics.',
+        props: ['Dropdown.Sub', 'Dropdown.SubTrigger', 'Dropdown.SubContent'],
       },
       {
         title: 'Item states',
