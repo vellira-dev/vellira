@@ -93,7 +93,6 @@ describe('component story templates', () => {
       capabilities: [
         'controlled',
         'uncontrolled',
-        'indeterminate',
         'disabled',
         'required',
         'invalid',
@@ -102,8 +101,6 @@ describe('component story templates', () => {
 
     expect(source).toContain('export const Controlled: Story');
     expect(source).toContain('export const Uncontrolled: Story');
-    expect(source).toContain('export const Indeterminate: Story');
-    expect(source).toContain('indeterminate: true');
     expect(source).toContain('export const Disabled: Story');
     expect(source).toContain('export const Required: Story');
     expect(source).toContain('export const Invalid: Story');
