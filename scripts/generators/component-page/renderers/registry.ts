@@ -110,7 +110,10 @@ export async function insertAfterMarker(params: {
   }
 
   const nextSource = source.replace(marker, `${marker}\n${content}`);
-  const formattedNextSource = await formatGeneratedContent(filePath, nextSource);
+  const formattedNextSource = await formatGeneratedContent(
+    filePath,
+    nextSource
+  );
 
   if (check) {
     if (formattedNextSource !== source) {
