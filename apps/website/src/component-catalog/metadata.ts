@@ -94,6 +94,24 @@ export type ComponentAccessibilityMetadata = {
   }[];
 };
 
+export type ComponentDiscoveryPatternMetadata = {
+  id: string;
+  title: string;
+  description: string;
+};
+
+export type ComponentDiscoveryMetadata = {
+  status?: 'complete' | 'needs-authored-intent';
+  summary?: string;
+  description?: string;
+  whenToUse?: readonly string[];
+  patterns?: readonly ComponentDiscoveryPatternMetadata[];
+  platformNotes?: Partial<
+    Record<ComponentCatalogPlatform, readonly string[]>
+  >;
+  missingEvidence?: readonly string[];
+};
+
 export type ComponentPageMetadata = {
   profile?: ComponentCatalogProfile;
   react?: ComponentPlatformMetadata;
@@ -104,6 +122,7 @@ export type ComponentPageMetadata = {
     react?: Record<string, string | boolean | number>;
     native?: Record<string, string | boolean | number>;
   };
+  discovery?: ComponentDiscoveryMetadata;
   examples?: readonly ComponentExampleMetadata[];
   api?: ComponentApiMetadata;
   accessibility?: ComponentAccessibilityMetadata;
