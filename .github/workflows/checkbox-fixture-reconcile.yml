@@ -1,0 +1,204 @@
+name: One-time Checkbox Fixture Reconcile
+
+on:
+  push:
+    branches:
+      - feat/checkbox-discovery-reference-fixture
+    paths:
+      - .github/workflows/checkbox-fixture-reconcile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/checkbox-discovery-reference-fixture
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Update Checkbox component-page contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/generators/component-page/component-page-contract.ts')
+          source = path.read_text()
+          old = """assert.ok(
+            !fs.existsSync(checkboxMetadataFile),
+            'Checkbox proves metadata-free component generation'
+          );
+          assertIncludes(
+            checkboxUsage,
+            'Checkbox',
+            'Metadata-free Checkbox usage is generated'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"title: 'Basic'\",
+            'Metadata-free Checkbox examples are generated'
+          );
+          assertIncludes(
+            checkboxApi,
+            \"defaultValue: 'false'\",
+            'Metadata-free Checkbox receives profile defaults'
+          );
+          assertIncludes(
+            checkboxUsage,
+            \"label='Accept terms'\",
+            'Metadata-free Checkbox usage receives accessible label'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"label='Accept terms'\",
+            'Metadata-free Checkbox examples receive accessible label'
+          );
+          assertIncludes(
+            checkboxDemo,
+            \"label='Accept terms'\",
+            'Metadata-free React Checkbox demo receives accessible label'
+          );
+          assertIncludes(
+            nativeCheckboxDemo,
+            \"label='Accept terms'\",
+            'Metadata-free React Native Checkbox demo receives accessible label'
+          );
+          assertIncludes(
+            componentPages,
+            \"related: ['radio', 'select']\",
+            'Metadata-free Checkbox receives selection-control related components'
+          );
+          assertIncludes(
+            checkboxPlayground,
+            \"labelPosition: 'end'\",
+            'Metadata-free Checkbox defaults labelPosition to end'
+          );
+          assertIncludes(
+            checkboxPlaygroundSchema,
+            \"options: ['end', 'start']\",
+            'Metadata-free Checkbox orders labelPosition controls end before start'
+          );
+          """
+          new = """assert.ok(
+            fs.existsSync(checkboxMetadataFile),
+            'Checkbox proves authoritative component-page metadata generation'
+          );
+          assertIncludes(
+            checkboxUsage,
+            'Checkbox',
+            'Checkbox usage remains generated from the authoritative metadata path'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"title: 'Controlled Checkbox'\",
+            'Checkbox exposes a real controlled-state example'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"title: 'Uncontrolled Checkbox'\",
+            'Checkbox exposes an uncontrolled-state example'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"title: 'Indeterminate / Select All'\",
+            'Checkbox exposes the mixed-selection reference pattern'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"title: 'Validation / Required State'\",
+            'Checkbox exposes required validation behavior'
+          );
+          assertIncludes(
+            checkboxExamples,
+            \"title: 'Accessible Labels and Descriptions'\",
+            'Checkbox exposes durable label and description guidance'
+          );
+          assertIncludes(
+            checkboxExamples,
+            'onCheckedChange={setChecked}',
+            'Checkbox controlled example includes its change handler'
+          );
+          assertIncludes(
+            checkboxExamples,
+            'indeterminate={someSelected && !allSelected}',
+            'Checkbox select-all example derives mixed state from selection evidence'
+          );
+          assertIncludes(
+            checkboxApi,
+            \"defaultValue: 'false'\",
+            'Checkbox keeps selection-control profile defaults'
+          );
+          assertIncludes(
+            checkboxUsage,
+            \"label='Accept terms'\",
+            'Checkbox usage keeps an accessible visible label'
+          );
+          assertIncludes(
+            checkboxDemo,
+            \"label='Accept terms'\",
+            'React Checkbox demo keeps an accessible visible label'
+          );
+          assertIncludes(
+            nativeCheckboxDemo,
+            \"label='Accept terms'\",
+            'React Native Checkbox demo keeps an accessible visible label'
+          );
+          assertIncludes(
+            componentPages,
+            'Use Checkbox for independent boolean choices',
+            'Checkbox discovery guidance reaches the generated page registry'
+          );
+          assertIncludes(
+            componentPages,
+            \"related: ['radio-group', 'switch', 'form-field']\",
+            'Checkbox uses explicit related component guidance'
+          );
+          assertIncludes(
+            checkboxPlayground,
+            \"labelPosition: 'end'\",
+            'Checkbox defaults labelPosition to end'
+          );
+          assertIncludes(
+            checkboxPlaygroundSchema,
+            \"options: ['end', 'start']\",
+            'Checkbox orders labelPosition controls end before start'
+          );
+          """
+          if old not in source:
+              raise SystemExit('stale Checkbox metadata-free contract block not found')
+          path.write_text(source.replace(old, new, 1))
+          PY
+
+      - name: Regenerate Checkbox public surface
+        run: pnpm create:component-page Checkbox --force --profile=selection-control --category=form
+
+      - name: Validate focused contracts
+        run: |
+          pnpm test:component-pages
+          pnpm test:component-page-generator
+
+      - name: Commit deterministic reconciliation
+        run: |
+          rm .github/workflows/checkbox-fixture-reconcile.yml
+          git config user.name 'vellira-fixture-reconcile[bot]'
+          git config user.email 'vellira-fixture-reconcile[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo 'No reconciliation changes produced.'
+            exit 1
+          fi
+          git commit -m 'chore(generator): regenerate Checkbox discovery fixture'
+          git push origin HEAD:feat/checkbox-discovery-reference-fixture
