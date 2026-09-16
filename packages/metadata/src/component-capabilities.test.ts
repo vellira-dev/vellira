@@ -27,5 +27,25 @@ describe('component capability authority', () => {
     ).toMatchObject({
       valid: true,
     });
+
+    expect(
+      validateComponentMetadata({
+        name: 'MixedStateProbe',
+        layer: 'primitives',
+        category: 'form',
+        platforms: ['react', 'react-native'],
+        profile: 'form-control',
+        status: 'experimental',
+        capabilities: ['controlled', 'uncontrolled', 'indeterminate'],
+        requirements: {
+          tests: true,
+          storybook: true,
+          docs: true,
+          accessibility: true,
+        },
+      })
+    ).toMatchObject({
+      valid: true,
+    });
   });
 });
