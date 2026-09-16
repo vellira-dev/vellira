@@ -34,12 +34,18 @@ export type ComponentDiscoveryContent = {
 const categoryUseCase: Record<ComponentCategoryArg, string> = {
   action: 'Use it when a user needs to trigger a clear application action.',
   form: 'Use it when an interface needs explicit user input, selection, or form participation.',
-  navigation: 'Use it when users need to move between related views or sections.',
-  overlay: 'Use it when contextual or layered content should appear above the surrounding interface.',
-  feedback: 'Use it when the interface needs to communicate status, progress, or feedback.',
-  'data-display': 'Use it when structured application data needs a reusable visual presentation.',
-  layout: 'Use it when interface structure or spatial composition should follow a reusable layout contract.',
-  utility: 'Use it when a reusable UI behavior does not belong to a more specific component category.',
+  navigation:
+    'Use it when users need to move between related views or sections.',
+  overlay:
+    'Use it when contextual or layered content should appear above the surrounding interface.',
+  feedback:
+    'Use it when the interface needs to communicate status, progress, or feedback.',
+  'data-display':
+    'Use it when structured application data needs a reusable visual presentation.',
+  layout:
+    'Use it when interface structure or spatial composition should follow a reusable layout contract.',
+  utility:
+    'Use it when a reusable UI behavior does not belong to a more specific component category.',
 };
 
 const profileUseCase: Partial<Record<ComponentProfileArg, string>> = {
