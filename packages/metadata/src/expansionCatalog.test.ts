@@ -27,7 +27,7 @@ describe('componentExpansionCatalog', () => {
   });
 
   it('keeps all six remaining launch components in public intent authority', () => {
-    const names = new Set(
+    const names = new Set<string>(
       componentExpansionCatalog.map((target) => target.name)
     );
 
