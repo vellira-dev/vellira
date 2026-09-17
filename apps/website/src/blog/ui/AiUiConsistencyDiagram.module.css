@@ -9,7 +9,7 @@
     minmax(98px, 1fr) 10px
     minmax(98px, 1fr) 10px
     minmax(98px, 1fr) 10px
-    minmax(166px, 1.55fr) 42px
+    minmax(166px, 1.55fr) 63px
     minmax(84px, 0.78fr) 10px
     minmax(98px, 1fr);
   align-items: center;
@@ -220,29 +220,24 @@
 
 .concernMerge {
   display: grid;
-  width: 42px;
+  width: 63px;
   height: 316px;
   color: var(--text-brand);
   place-items: center;
 }
 
-.concernMergeArrow {
+.concernMergeGraphic {
   display: block;
-  width: 42px;
-  height: 316px;
-  overflow: visible;
+  width: 63px;
+  height: 248px;
+  background: currentcolor;
   filter: drop-shadow(
     0 0 8px color-mix(in srgb, var(--color-primary-400) 32%, transparent)
   );
-}
-
-.concernMergePath {
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
+  -webkit-mask: url('/blog/ai-ui-consistency/concern-merge.svg') center /
+    contain no-repeat;
+  mask: url('/blog/ai-ui-consistency/concern-merge.svg') center / contain
+    no-repeat;
 }
 
 .concernMergeMobileArrow {
@@ -353,7 +348,7 @@
     height: 24px;
   }
 
-  .concernMergeArrow {
+  .concernMergeGraphic {
     display: none;
   }
 
