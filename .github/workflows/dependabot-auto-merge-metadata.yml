@@ -7,13 +7,85 @@ on:
       - synchronize
       - reopened
       - ready_for_review
+      - converted_to_draft
 
 permissions:
   contents: read
   pull-requests: read
 
 jobs:
+  disarm:
+    if: >
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Inspect legacy auto-merge request
+        id: legacy
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          enabled="$(
+            gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" \
+              --jq 'if .auto_merge == null then "false" else "true" end'
+          )"
+          case "$enabled" in
+            true|false) ;;
+            *)
+              echo "Unexpected auto-merge state: $enabled" >&2
+              exit 1
+              ;;
+          esac
+          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
+          echo "Legacy auto-merge enabled: $enabled"
+
+      - name: Create short-lived cleanup GitHub App token
+        if: steps.legacy.outputs.enabled == 'true'
+        id: cleanup-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-pull-requests: write
+
+      - name: Disable legacy auto-merge request
+        if: steps.legacy.outputs.enabled == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.cleanup-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --disable-auto
+
+      - name: Verify no persistent auto-merge request remains
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          enabled="$(
+            gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" \
+              --jq 'if .auto_merge == null then "false" else "true" end'
+          )"
+          if [ "$enabled" != 'false' ]; then
+            echo 'Persistent auto-merge request is still enabled' >&2
+            exit 1
+          fi
+
   inspect:
+    needs: disarm
     if: >
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.draft == false
