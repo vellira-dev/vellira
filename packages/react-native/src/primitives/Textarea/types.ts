@@ -11,6 +11,7 @@ export interface TextareaProps
       | 'multiline'
       | 'onChangeText'
       | 'placeholder'
+      | 'style'
       | 'value'
     > {
   /** Style applied to the outer FormField wrapper in shorthand mode. */
