@@ -33,6 +33,16 @@ updates:
         # ecosystem on patch updates so Dependabot cannot cross that boundary.
         update-types:
           - patch
+      next:
+        patterns:
+          - next
+          - '@next/*'
+          - eslint-config-next
+        # Keep the framework, MDX adapter, and lint config on the same 16.x
+        # line while requiring an intentional migration for the next major.
+        update-types:
+          - minor
+          - patch
       linting:
         patterns:
           - eslint
