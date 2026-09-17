@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: 22.22.0
+  NODE_VERSION: 22.22.2
   STORYBOOK_DIST_DIR: apps/react-storybook/storybook-static
   CLOUDFLARE_WORKER_NAME: vellira-storybook
 
