@@ -29,6 +29,10 @@ updates:
           - 'expo-*'
           - react-native
           - react-native-*
+        # Expo SDKs target a specific React Native line. Keep the grouped
+        # ecosystem on patch updates so Dependabot cannot cross that boundary.
+        update-types:
+          - patch
       linting:
         patterns:
           - eslint
