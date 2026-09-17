@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { componentMetadata } from './components';
+import { validateComponentIntentTarget } from './componentIntent';
 import type { ComponentExpansionTarget } from './expansion';
 import { componentExpansionCatalog } from './expansionCatalog';
 import { getComponentExpansionReport } from './expansionReport';
@@ -12,13 +13,31 @@ describe('componentExpansionCatalog', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('declares at least one supported platform for every target', () => {
+  it('declares at least one supported platform and valid V1 intent for every target', () => {
     for (const target of componentExpansionCatalog) {
       expect(target.platforms.length).toBeGreaterThan(0);
+      expect(target.intent.schemaVersion).toBe('1');
+      expect(target.intent.job.length).toBeGreaterThan(0);
+      expect(validateComponentIntentTarget(target)).toEqual([]);
 
       for (const platform of target.platforms) {
         expect(['react', 'react-native']).toContain(platform);
       }
+    }
+  });
+
+  it('keeps all six remaining launch components in public intent authority', () => {
+    const names = new Set(componentExpansionCatalog.map((target) => target.name));
+
+    for (const name of [
+      'Textarea',
+      'Avatar',
+      'Badge',
+      'Progress',
+      'Skeleton',
+      'Toast',
+    ]) {
+      expect(names.has(name)).toBe(true);
     }
   });
 
