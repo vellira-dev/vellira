@@ -1,27 +1,28 @@
 import Image from 'next/image';
 
 import {
+  Accessibility,
+  Api,
   ArrowRight,
   Docs,
-  Eye,
-  Grid,
-  Monitor,
-  Settings,
-  Success,
-  System,
-  Tag,
-  Warning,
+  Platforms,
+  Quality,
+  Tokens,
 } from '@vellira-ui/icons';
 
+import aiVisual from '../../../content/blog/ai-ui-consistency/visuals/ai.png';
+import coherentSystemVisual from '../../../content/blog/ai-ui-consistency/visuals/coherent-system.png';
+import componentsVisual from '../../../content/blog/ai-ui-consistency/visuals/components.png';
+import coordinationVisual from '../../../content/blog/ai-ui-consistency/visuals/coordination.png';
 import styles from './AiUiConsistencyDiagram.module.css';
 
 const concerns = [
-  { label: 'APIs', Icon: Settings },
-  { label: 'Accessibility', Icon: Eye },
-  { label: 'Tokens', Icon: Tag },
+  { label: 'APIs', Icon: Api },
+  { label: 'Accessibility', Icon: Accessibility },
+  { label: 'Tokens', Icon: Tokens },
   { label: 'Docs', Icon: Docs },
-  { label: 'Platforms', Icon: Monitor },
-  { label: 'Quality', Icon: Success },
+  { label: 'Platforms', Icon: Platforms },
+  { label: 'Quality', Icon: Quality },
 ] as const;
 
 function FlowArrow() {
@@ -38,7 +39,12 @@ export function AiUiConsistencyDiagram() {
       <div className={styles.visual} aria-hidden='true'>
         <div className={styles.node}>
           <div className={styles.iconFrame}>
-            <span className={styles.aiChip}>AI</span>
+            <Image
+              src={aiVisual}
+              alt=''
+              className={styles.stageVisual}
+              sizes='54px'
+            />
           </div>
           <span className={styles.label}>
             <span>AI generates</span>
@@ -50,7 +56,12 @@ export function AiUiConsistencyDiagram() {
 
         <div className={styles.node}>
           <div className={styles.iconFrame}>
-            <Grid size={30} />
+            <Image
+              src={componentsVisual}
+              alt=''
+              className={styles.stageVisual}
+              sizes='54px'
+            />
           </div>
           <span className={styles.label}>
             <span>More</span>
@@ -63,7 +74,12 @@ export function AiUiConsistencyDiagram() {
 
         <div className={styles.node}>
           <div className={styles.iconFrame}>
-            <Warning size={30} />
+            <Image
+              src={coordinationVisual}
+              alt=''
+              className={styles.stageVisual}
+              sizes='54px'
+            />
           </div>
           <span className={styles.label}>
             <span>More</span>
@@ -109,7 +125,12 @@ export function AiUiConsistencyDiagram() {
 
         <div className={styles.node}>
           <div className={styles.iconFrame}>
-            <System size={30} />
+            <Image
+              src={coherentSystemVisual}
+              alt=''
+              className={styles.stageVisual}
+              sizes='54px'
+            />
           </div>
           <span className={styles.label}>
             <span>One coherent</span>
