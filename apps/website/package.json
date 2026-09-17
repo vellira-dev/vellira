@@ -27,7 +27,7 @@
     "@vellira-ui/react-native": "workspace:*",
     "@vellira-ui/tokens": "workspace:*",
     "lottie-web": "^5.13.0",
-    "motion": "^12.42.2",
+    "motion": "^13.3.0",
     "next": "16.3.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
