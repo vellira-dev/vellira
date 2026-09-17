@@ -31,7 +31,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: 22.22.0
+  NODE_VERSION: 22.22.2
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
   PRODUCTION_PUBLIC_URL: https://vellira.dev
