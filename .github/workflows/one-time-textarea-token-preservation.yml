@@ -1,0 +1,100 @@
+name: One-time Textarea Token Preservation
+
+on:
+  push:
+    branches:
+      - feat/textarea-launch-component
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/textarea-launch-component
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Record canonical Textarea additions
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'packages/tokens/src/preservation/token-migrations.ts';
+          let source = fs.readFileSync(file, 'utf8');
+
+          const declarationMarker = "const boldFontWeightAdditionV1 = {";
+          if (!source.includes(declarationMarker)) {
+            throw new Error('Textarea migration declaration marker not found.');
+          }
+          if (source.includes('textareaComponentTokenAdditionMigrationsV1')) {
+            throw new Error('Textarea migration evidence already exists.');
+          }
+
+          const paths = [
+            'components.textarea.default.bg',
+            'components.textarea.default.fg',
+            'components.textarea.default.border',
+            'components.textarea.hover.bg',
+            'components.textarea.hover.fg',
+            'components.textarea.hover.border',
+            'components.textarea.pressed.bg',
+            'components.textarea.pressed.fg',
+            'components.textarea.pressed.border',
+            'components.textarea.focusRing',
+            'components.textarea.error.fg',
+            'components.textarea.error.border',
+            'components.textarea.error.ring',
+            'components.textarea.disabled.bg',
+            'components.textarea.disabled.fg',
+            'components.textarea.disabled.border',
+          ];
+
+          const block = `const textareaComponentTokenAdditionPathsV1 = [\n${paths
+            .map((path) => `  '${path}',`)
+            .join('\n')}\n] as const;\n\nconst textareaComponentTokenAdditionMigrationsV1 =\n  textareaComponentTokenAdditionPathsV1.map(\n    (to) =>\n      ({\n        id: \`558-textarea-token-addition-\${to.replaceAll('.', '-')}\`,\n        kind: 'addition',\n        issue: '#558',\n        reason:\n          'Materialize the canonical Textarea component-token family for the public-launch multiline form-control contract through Generator V2.',\n        to,\n      }) as const\n  ) satisfies readonly TokenMigrationEntry[];\n\n`;
+
+          source = source.replace(declarationMarker, block + declarationMarker);
+
+          const manifestMarker = '  monoFontFamilyAdditionV1,\n';
+          if (!source.includes(manifestMarker)) {
+            throw new Error('Textarea migration manifest marker not found.');
+          }
+          source = source.replace(
+            manifestMarker,
+            `${manifestMarker}  ...textareaComponentTokenAdditionMigrationsV1,\n`
+          );
+
+          fs.writeFileSync(file, source);
+          NODE
+
+          pnpm --filter @vellira-ui/tokens preservation:check
+
+      - name: Commit verified evidence and remove helper
+        shell: bash
+        run: |
+          rm .github/workflows/one-time-textarea-token-preservation.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "chore(tokens): record Textarea preservation evidence"
+          git push origin HEAD:feat/textarea-launch-component
