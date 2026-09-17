@@ -97,7 +97,6 @@ export function componentIntentEvidenceForPlatform(
 ): readonly ComponentIntentCapability[] {
   return uniqueCapabilities([
     ...(metadata.capabilities ?? []),
-    ...(metadata.platformCapabilities?.[platform] ?? []),
     ...(metadata.semanticCapabilities ?? []),
     ...(metadata.platformSemanticCapabilities?.[platform] ?? []),
   ]);
