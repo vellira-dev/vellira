@@ -149,3 +149,15 @@ export interface ComponentMetadata {
   dependencies?: ComponentDependencies;
   requirements: ComponentRequirements;
 }
+
+export function componentCapabilitiesForPlatform(
+  metadata: ComponentMetadata,
+  platform: ComponentPlatform
+): readonly ComponentCapability[] {
+  return [
+    ...new Set([
+      ...(metadata.capabilities ?? []),
+      ...(metadata.platformCapabilities?.[platform] ?? []),
+    ]),
+  ];
+}
