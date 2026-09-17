@@ -85,7 +85,15 @@ function uniqueCapabilities(
 }
 
 export function componentIntentId(target: ComponentIntentTargetV1) {
-  return `component:${target.name}:intent:v${target.intent.schemaVersion}`;
+  const schemaVersion = (
+    target as ComponentIntentTargetV1 & {
+      intent?: { schemaVersion?: unknown };
+    }
+  ).intent?.schemaVersion;
+
+  return `component:${target.name}:intent:v${String(
+    schemaVersion ?? 'unknown'
+  )}`;
 }
 
 export function componentIntentEvidenceForPlatform(
