@@ -294,6 +294,57 @@ export function validateComponentMetadata(
     });
   }
 
+  if (input.platformCapabilities !== undefined) {
+    if (!isRecord(input.platformCapabilities)) {
+      errors.push('platformCapabilities must be an object.');
+    } else {
+      const declaredPlatforms = new Set(
+        isStringArray(input.platforms) ? input.platforms : []
+      );
+      const sharedCapabilities = new Set(
+        isStringArray(input.capabilities) ? input.capabilities : []
+      );
+
+      for (const [platform, capabilities] of Object.entries(
+        input.platformCapabilities
+      )) {
+        if (!componentPlatforms.includes(platform as ComponentPlatform)) {
+          errors.push(
+            `platformCapabilities contains unsupported platform: ${platform}.`
+          );
+          continue;
+        }
+
+        if (!declaredPlatforms.has(platform)) {
+          errors.push(
+            `platformCapabilities.${platform} must refer to a declared component platform.`
+          );
+        }
+
+        validateStringArray({
+          value: capabilities,
+          field: `platformCapabilities.${platform}`,
+          errors,
+          allowedValues: componentCapabilities,
+        });
+
+        if (isStringArray(capabilities)) {
+          const duplicateSharedCapabilities = capabilities.filter((capability) =>
+            sharedCapabilities.has(capability)
+          );
+
+          if (duplicateSharedCapabilities.length > 0) {
+            errors.push(
+              `platformCapabilities.${platform} must not repeat shared capabilities: ${duplicateSharedCapabilities.join(
+                ', '
+              )}.`
+            );
+          }
+        }
+      }
+    }
+  }
+
   if (input.dependencies !== undefined) {
     if (!isRecord(input.dependencies)) {
       errors.push('dependencies must be an object.');
