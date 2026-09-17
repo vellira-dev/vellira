@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react",
-  "version": "2.115.2",
+  "version": "2.115.3",
   "description": "Web components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -89,7 +89,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.0",
     "axe-core": "^4.12.1",
-    "jsdom": "^28.1.0",
+    "jsdom": "^30.0.1",
     "lottie-web": "^5.13.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
