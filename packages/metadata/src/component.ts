@@ -47,6 +47,10 @@ export type ComponentCategory =
   | 'layout'
   | 'utility';
 
+/**
+ * Existing generator/quality capability vocabulary. These capabilities may
+ * drive deterministic scaffold, test, quality, and Stable contracts.
+ */
 export const componentCapabilities = [
   'controlled',
   'uncontrolled',
@@ -62,6 +66,15 @@ export const componentCapabilities = [
   'collapsible',
   'portal',
   'responsive',
+] as const;
+
+export type ComponentCapability = (typeof componentCapabilities)[number];
+
+/**
+ * Small V1 vocabulary for approved product semantics that are intentionally
+ * more specific than Generator V2's structural/behavior capability model.
+ */
+export const componentSemanticCapabilities = [
   'accessible-name',
   'accessible-value',
   'announcement',
@@ -76,7 +89,8 @@ export const componentCapabilities = [
   'value-range',
 ] as const;
 
-export type ComponentCapability = (typeof componentCapabilities)[number];
+export type ComponentSemanticCapability =
+  (typeof componentSemanticCapabilities)[number];
 
 export type ComponentProfile = 'base' | 'form-control' | 'compound' | 'overlay';
 
@@ -120,11 +134,17 @@ export interface ComponentMetadata {
   platforms: readonly ComponentPlatform[];
   profile: ComponentProfile;
   status: ComponentStatus;
-  /** Capabilities implemented across every declared platform. */
+  /** Existing generator/quality capabilities implemented across every platform. */
   capabilities?: readonly ComponentCapability[];
-  /** Additional implementation evidence that is intentionally platform-scoped. */
+  /** Existing generator/quality capabilities that are intentionally platform-scoped. */
   platformCapabilities?: Partial<
     Record<ComponentPlatform, readonly ComponentCapability[]>
+  >;
+  /** Product-semantic evidence implemented across every declared platform. */
+  semanticCapabilities?: readonly ComponentSemanticCapability[];
+  /** Product-semantic evidence that is intentionally platform-scoped. */
+  platformSemanticCapabilities?: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
   >;
   dependencies?: ComponentDependencies;
   requirements: ComponentRequirements;
