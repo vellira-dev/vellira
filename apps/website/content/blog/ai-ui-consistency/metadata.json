@@ -1,0 +1,9 @@
+{
+  "title": "AI Can Generate More UI. Who Keeps It Consistent?",
+  "description": "AI makes UI faster to produce — and easier to fragment. Why Vellira is building cross-platform components and developer tooling to keep growing UI systems coherent as humans and coding agents move faster.",
+  "slug": "ai-ui-consistency",
+  "publishedAt": "2026-09-17",
+  "author": "Roman Bakurov",
+  "tags": ["AI", "Design Systems", "Tooling", "React", "React Native"],
+  "draft": false
+}
