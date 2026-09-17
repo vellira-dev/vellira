@@ -285,7 +285,46 @@ export type ${componentName}TokensConfig = {
   disabled: ${componentName}VisualState;
 };
 
+export type ${componentName}ThemeSemantics = {
+  control: {
+    default: ${componentName}VisualState;
+    hover: ${componentName}VisualState;
+    pressed: ${componentName}VisualState;
+    disabled: ${componentName}VisualState;
+  };
+  focus: {
+    ring: {
+      color: string;
+    };
+  };
+  status: {
+    error: {
+      fg: string;
+      border: string;
+      ring: string;
+    };
+  };
+};
+
 export const create${componentName}Tokens = (config: ${componentName}TokensConfig) => config;
+
+export const create${componentName}TokensFromSemantics = ({
+  control,
+  focus,
+  status,
+}: ${componentName}ThemeSemantics) =>
+  create${componentName}Tokens({
+    default: control.default,
+    hover: control.hover,
+    pressed: control.pressed,
+    focusRing: focus.ring.color,
+    error: {
+      fg: status.error.fg,
+      border: status.error.border,
+      ring: status.error.ring,
+    },
+    disabled: control.disabled,
+  });
 `;
 }
 
@@ -326,22 +365,15 @@ export const ${tokenName} = create${componentName}TokensFromSemantics({
 `;
   }
 
-  return `import { create${componentName}Tokens } from '../../factories/components/create${componentName}Tokens.js';
+  return `import { create${componentName}TokensFromSemantics } from '../../factories/components/create${componentName}Tokens.js';
 import { control } from '../semantic/control.js';
 import { focus } from '../semantic/focus.js';
 import { status } from '../semantic/status.js';
 
-export const ${tokenName} = create${componentName}Tokens({
-  default: control.default,
-  hover: control.hover,
-  pressed: control.pressed,
-  focusRing: focus.ring.color,
-  error: {
-    fg: status.error.fg,
-    border: status.error.border,
-    ring: status.error.ring,
-  },
-  disabled: control.disabled,
+export const ${tokenName} = create${componentName}TokensFromSemantics({
+  control,
+  focus,
+  status,
 });
 `;
 }

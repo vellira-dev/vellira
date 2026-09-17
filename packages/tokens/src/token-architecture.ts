@@ -714,7 +714,7 @@ export const maintainedComponentFactories = [
   {
     name: 'createTextareaTokens',
     source: 'packages/tokens/src/factories/components/createTextareaTokens.ts',
-    semanticAdapter: null,
+    semanticAdapter: 'createTextareaTokensFromSemantics',
     stateKeys: ['default', 'hover', 'pressed', 'error', 'disabled'],
   },
   {

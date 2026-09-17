@@ -93,15 +93,20 @@ describe('component token templates', () => {
 
     expect(factory).toContain('export type AvatarVisualState');
     expect(factory).toContain('export const createAvatarTokens');
+    expect(factory).toContain('export const createAvatarTokensFromSemantics');
     expect(theme).toContain(
-      "import { createAvatarTokens } from '../../factories/components/createAvatarTokens.js';"
+      "import { createAvatarTokensFromSemantics } from '../../factories/components/createAvatarTokens.js';"
     );
     expect(theme).not.toContain('../../factories/createAvatarTokens.js');
-    expect(theme).toContain('default: control.default');
-    expect(theme).toContain('hover: control.hover');
-    expect(theme).toContain('pressed: control.pressed');
+    expect(theme).toContain(
+      `export const avatarTokens = createAvatarTokensFromSemantics({
+  control,
+  focus,
+  status,
+});`
+    );
+    expect(theme).not.toContain('default: control.default');
     expect(theme).not.toContain('pressed: control.active');
-    expect(theme).toContain('disabled: control.disabled');
   });
 
   it('renders grouped factory barrel exports', () => {
