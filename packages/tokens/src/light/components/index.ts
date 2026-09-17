@@ -12,4 +12,5 @@ export { radioGroup } from './radioGroup.js';
 export { select } from './select.js';
 export { switchTokens as switch } from './switch.js';
 export { tabs } from './tabs.js';
+export { textareaTokens as textarea } from './textarea.js';
 export { tooltip } from './tooltip.js';

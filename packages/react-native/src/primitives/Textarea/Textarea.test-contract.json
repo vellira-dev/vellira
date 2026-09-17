@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "component": "Textarea",
+  "platform": "native",
+  "profile": "form-control",
+  "control": "text",
+  "parts": [],
+  "baseline": {
+    "ownership": "generated",
+    "requirements": [
+      "render",
+      "accessibility",
+      "callback",
+      "controlled",
+      "uncontrolled",
+      "disabled",
+      "required",
+      "invalid"
+    ]
+  },
+  "componentSpecific": {
+    "ownership": "manual",
+    "required": false,
+    "requirements": []
+  }
+}

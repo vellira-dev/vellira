@@ -104,5 +104,7 @@ export type { RadioProps } from './primitives/Radio';
 export { Radio } from './primitives/Radio';
 export type { SwitchProps } from './primitives/Switch';
 export { Switch } from './primitives/Switch';
+export type { TextareaProps } from './primitives/Textarea';
+export { Textarea } from './primitives/Textarea';
 export type { NativeThemeName, ThemeProviderProps } from './theme';
 export { nativeThemes, ThemeProvider, useTheme } from './theme';

@@ -183,4 +183,17 @@ export const componentCatalogPresentation = [
       'react-native': 'https://docs.vellira.dev/react-native/accordion',
     },
   },
+  {
+    component: 'Textarea',
+    slug: 'textarea',
+    name: 'Textarea',
+    description:
+      'Textarea for React and React Native with controlled and uncontrolled state, disabled state, required state, and validation state.',
+    category: 'forms',
+    order: 999,
+    docs: {
+      react: 'https://docs.vellira.dev/react/textarea',
+      'react-native': 'https://docs.vellira.dev/react-native/textarea',
+    },
+  },
 ] as const satisfies readonly ComponentCatalogPresentationEntry[];
