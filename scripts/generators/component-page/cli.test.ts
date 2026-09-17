@@ -203,7 +203,7 @@ afterAll(() => {
   }
 });
 
-describe.sequential('component page CLI check modes', () => {
+describe('component page CLI check modes', { concurrent: false }, () => {
   it('loads semantic vocabulary without the metadata package runtime', async () => {
     vi.resetModules();
     vi.doMock('@vellira-ui/metadata', () => {
