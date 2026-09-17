@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: 22.22.0
+  NODE_VERSION: 22.22.2
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
   CANDIDATE_SHA: ${{ github.sha }}
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}

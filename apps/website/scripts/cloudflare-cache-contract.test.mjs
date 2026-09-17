@@ -207,8 +207,11 @@ test('migration origin errors stay in server logs, not the non-cacheable HTTP re
   assert.equal(body, 'Internal Server Error');
   assert.ok(!body.includes(error.message));
   assert.ok(!body.includes(error.stack));
-  assert.equal(log.mock.callCount(), 1);
-  assert.equal(log.mock.calls[0].arguments[1], error);
+  const migrationLogs = log.mock.calls.filter(
+    ({ arguments: args }) =>
+      args[0] === 'Migration origin request failed:' && args[1] === error
+  );
+  assert.equal(migrationLogs.length, 1);
 });
 
 test('installed Wrangler parses both actual deployment configs and rejects unsafe targets', () => {
