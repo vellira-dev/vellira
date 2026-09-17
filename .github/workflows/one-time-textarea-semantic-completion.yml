@@ -170,7 +170,7 @@ jobs:
           replaceOnce(
             'scripts/generators/component-page/renderers/catalog-preview-registry.test.ts',
             "    expect(source).toContain('return <NativeNativeOnlyDemo />;');",
-            `    expect(source).toContain(\n      "<ComponentDemoStateProvider resetKey='catalog:native-only'>"\n    );\n    expect(source).toContain('<NativeNativeOnlyDemo />');`,
+            `    expect(source).toContain(\n      "<ComponentDemoStateProvider resetKey='catalog:nativeonly'>"\n    );\n    expect(source).toContain('<NativeNativeOnlyDemo />');`,
             'Native catalog preview provider regression'
           );
           NODE
