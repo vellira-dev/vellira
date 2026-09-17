@@ -15,7 +15,7 @@ function target(name: string) {
 }
 
 function avatarMetadata(
-  capabilities: ComponentMetadata['capabilities'] = []
+  semanticCapabilities: ComponentMetadata['semanticCapabilities'] = []
 ): ComponentMetadata {
   return {
     name: 'Avatar',
@@ -24,7 +24,7 @@ function avatarMetadata(
     platforms: ['react', 'react-native'],
     profile: 'base',
     status: 'experimental',
-    capabilities,
+    semanticCapabilities,
     requirements: {
       tests: true,
       storybook: true,
@@ -63,11 +63,16 @@ describe('Component Intent / Capability Coverage V1', () => {
     );
   });
 
-  it('accepts fully represented Avatar capability evidence', () => {
+  it('accepts fully represented Avatar semantic evidence', () => {
     const avatarTarget = target('Avatar');
     const coverage = evaluateComponentIntentCoverage(
       avatarTarget,
-      avatarMetadata(avatarTarget.intent.requiredCapabilities)
+      avatarMetadata([
+        'image-source',
+        'fallback',
+        'size-variants',
+        'accessible-name',
+      ])
     );
 
     expect(coverage).toMatchObject({
@@ -75,9 +80,9 @@ describe('Component Intent / Capability Coverage V1', () => {
       structuralMismatches: [],
       errors: [],
     });
-    expect(coverage.platforms.every((platform) => platform.status === 'satisfied')).toBe(
-      true
-    );
+    expect(
+      coverage.platforms.every((platform) => platform.status === 'satisfied')
+    ).toBe(true);
   });
 
   it('proves a mature canonical component against the same public authority', () => {
@@ -152,9 +157,10 @@ describe('Component Intent / Capability Coverage V1', () => {
     } as unknown as ComponentIntentTargetV1;
 
     expect(
-      evaluateComponentIntentCoverage(invalidTarget, avatarMetadata([
-        'image-source',
-      ]))
+      evaluateComponentIntentCoverage(
+        invalidTarget,
+        avatarMetadata(['image-source'])
+      )
     ).toMatchObject({
       status: 'unknown',
       errors: [expect.stringContaining('unknown capability')],
@@ -163,7 +169,12 @@ describe('Component Intent / Capability Coverage V1', () => {
 
   it('is deterministic for identical target and metadata evidence', () => {
     const avatarTarget = target('Avatar');
-    const metadata = avatarMetadata(avatarTarget.intent.requiredCapabilities);
+    const metadata = avatarMetadata([
+      'image-source',
+      'fallback',
+      'size-variants',
+      'accessible-name',
+    ]);
 
     expect(evaluateComponentIntentCoverage(avatarTarget, metadata)).toEqual(
       evaluateComponentIntentCoverage(avatarTarget, metadata)
