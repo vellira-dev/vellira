@@ -225,7 +225,12 @@ describe('missing-component request workflow', () => {
       platforms: ['react', 'react-native'],
       profile: 'base',
       status: 'experimental',
-      capabilities: avatarTarget.intent.requiredCapabilities,
+      semanticCapabilities: [
+        'image-source',
+        'fallback',
+        'size-variants',
+        'accessible-name',
+      ],
       requirements: {
         ...requirements,
         componentTokens: 'standard',
