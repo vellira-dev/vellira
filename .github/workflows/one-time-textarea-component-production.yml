@@ -57,17 +57,21 @@ jobs:
           }
           JSON
 
+          set +e
           node --import tsx scripts/component-production/cli.ts \
             --spec /tmp/textarea-production.json \
             > /tmp/textarea-production-result.json
+          production_status=$?
+          set -e
 
           cat /tmp/textarea-production-result.json
+          echo "component-production exit: ${production_status}"
 
           node - <<'NODE'
           const fs = require('node:fs');
           const result = JSON.parse(fs.readFileSync('/tmp/textarea-production-result.json', 'utf8'));
           if (result.status !== 'blocked' || result.lifecycle?.current !== 'semantic-completion-required') {
-            console.error('Expected generated Textarea to stop at semantic-completion-required.');
+            console.error(`Production stopped before semantic completion: status=${result.status}, lifecycle=${result.lifecycle?.current ?? 'none'}`);
             process.exit(1);
           }
           NODE
