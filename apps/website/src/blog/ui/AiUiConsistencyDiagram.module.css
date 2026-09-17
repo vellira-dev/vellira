@@ -139,7 +139,7 @@
   min-height: 42px;
   min-width: 0;
   padding: 8px 9px;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
   border-radius: var(--radius-md);
   font-size: 11px;
@@ -162,8 +162,46 @@
   content: '';
 }
 
-.concern svg {
+.concernIcon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+}
+
+.concernIcon svg {
+  display: block;
   color: var(--text-brand);
+}
+
+.concern:nth-child(1) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(2) .concernIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.concern:nth-child(3) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(4) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(5) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(6) .concernIcon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .hub {
