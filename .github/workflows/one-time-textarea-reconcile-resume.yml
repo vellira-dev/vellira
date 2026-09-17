@@ -1,0 +1,153 @@
+name: One-time Textarea Reconcile Resume
+
+on:
+  push:
+    branches:
+      - feat/textarea-launch-component
+    paths:
+      - .github/workflows/one-time-textarea-reconcile-resume.yml
+
+permissions:
+  contents: write
+
+jobs:
+  resume:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/textarea-launch-component
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Replay proven reconcile preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          workflow = Path('.github/workflows/one-time-textarea-reconcile.yml').read_text().splitlines()
+
+          def run_step(name: str) -> None:
+              marker = f'      - name: {name}'
+              try:
+                  start = workflow.index(marker)
+              except ValueError as error:
+                  raise SystemExit(f'missing workflow step: {name}') from error
+              run_index = None
+              for index in range(start + 1, len(workflow)):
+                  if workflow[index].startswith('      - name: '):
+                      break
+                  if workflow[index] == '        run: |':
+                      run_index = index + 1
+                      break
+              if run_index is None:
+                  raise SystemExit(f'missing run block for: {name}')
+              body = []
+              for line in workflow[run_index:]:
+                  if line.startswith('      - name: '):
+                      break
+                  body.append(line[10:] if line.startswith('          ') else line)
+              script = '\n'.join(body).rstrip() + '\n'
+              result = subprocess.run(['bash', '-euo', 'pipefail'], input=script, text=True)
+              if result.returncode:
+                  raise SystemExit(result.returncode)
+
+          run_step('Reconcile Textarea governance and post-production contracts')
+          run_step('Align RN TextInput test harness with multiline props')
+          PY
+
+      - name: Prove Textarea runtime and governance contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm test:tokens
+          pnpm --filter @vellira-ui/react exec vitest run --config vitest.config.ts src/primitives/Textarea/Textarea.test.tsx
+          pnpm --filter @vellira-ui/react-native exec vitest run --config vitest.config.ts src/primitives/Textarea/Textarea.test.tsx
+          pnpm check:public-api
+          pnpm test:tooling
+          pnpm check:tokens-semantic:strict
+
+      - name: Record semantic evidence after proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          workflow = Path('.github/workflows/one-time-textarea-reconcile.yml').read_text().splitlines()
+
+          def run_step(name: str) -> None:
+              marker = f'      - name: {name}'
+              start = workflow.index(marker)
+              run_index = None
+              for index in range(start + 1, len(workflow)):
+                  if workflow[index].startswith('      - name: '):
+                      break
+                  if workflow[index] == '        run: |':
+                      run_index = index + 1
+                      break
+              if run_index is None:
+                  raise SystemExit(f'missing run block for: {name}')
+              body = []
+              for line in workflow[run_index:]:
+                  if line.startswith('      - name: '):
+                      break
+                  body.append(line[10:] if line.startswith('          ') else line)
+              result = subprocess.run(
+                  ['bash', '-euo', 'pipefail'],
+                  input='\n'.join(body).rstrip() + '\n',
+                  text=True,
+              )
+              if result.returncode:
+                  raise SystemExit(result.returncode)
+
+          run_step('Record semantic evidence only after proofs pass')
+          run_step('Regenerate canonical public surfaces')
+          PY
+
+      - name: Verify final Textarea integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm check:tokens-semantic:strict
+          pnpm check:component --all
+          pnpm check:public-api
+          pnpm docs:api:check
+          pnpm component-docs:check
+          pnpm component-pages:check
+          pnpm test:component-pages
+          pnpm test:tooling
+          pnpm --filter @vellira-ui/website build
+          pnpm format:check
+
+      - name: Commit verified Textarea candidate and remove helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/one-time-textarea-reconcile.yml \
+            .github/workflows/one-time-textarea-reconcile-resume.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(textarea): reconcile launch contracts'
+          git push origin HEAD:feat/textarea-launch-component
