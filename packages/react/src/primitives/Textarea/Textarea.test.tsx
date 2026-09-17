@@ -100,7 +100,7 @@ describe('Textarea', () => {
     );
     const textarea = container.querySelector<HTMLTextAreaElement>('textarea');
 
-    expect(textarea?.id).toBe('notes-control');
+    expect(textarea?.id).toBe('notes');
     expect(textarea?.required).toBe(true);
     expect(textarea?.disabled).toBe(true);
     expect(textarea?.getAttribute('aria-invalid')).toBe('true');
