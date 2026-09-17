@@ -100,11 +100,24 @@ describe('validateComponentMetadata', () => {
     }
   });
 
-  it('accepts platform-scoped capability evidence', () => {
+  it('accepts platform-scoped generator capability evidence', () => {
     const result = validateComponentMetadata({
       ...validMetadata,
       platformCapabilities: {
         react: ['keyboard'],
+        'react-native': ['focus-management'],
+      },
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('accepts shared and platform-scoped semantic capability evidence', () => {
+    const result = validateComponentMetadata({
+      ...validMetadata,
+      semanticCapabilities: ['image-source', 'fallback'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
         'react-native': ['accessible-name'],
       },
     });
@@ -118,7 +131,7 @@ describe('validateComponentMetadata', () => {
       platforms: ['react'],
       platformCapabilities: {
         react: ['disabled'],
-        'react-native': ['accessible-name'],
+        'react-native': ['focus-management'],
         web: ['keyboard'],
       },
     });
@@ -134,6 +147,32 @@ describe('validateComponentMetadata', () => {
       );
       expect(result.errors).toContain(
         'platformCapabilities contains unsupported platform: web.'
+      );
+    }
+  });
+
+  it('rejects malformed, undeclared, or duplicate semantic capability evidence', () => {
+    const result = validateComponentMetadata({
+      ...validMetadata,
+      platforms: ['react'],
+      semanticCapabilities: ['fallback'],
+      platformSemanticCapabilities: {
+        react: ['fallback', 'not-real'],
+        'react-native': ['accessible-name'],
+      },
+    });
+
+    expect(result.valid).toBe(false);
+
+    if (!result.valid) {
+      expect(result.errors).toContain(
+        'platformSemanticCapabilities.react contains unsupported values: not-real.'
+      );
+      expect(result.errors).toContain(
+        'platformSemanticCapabilities.react must not repeat shared capabilities: fallback.'
+      );
+      expect(result.errors).toContain(
+        'platformSemanticCapabilities.react-native must refer to a declared component platform.'
       );
     }
   });
