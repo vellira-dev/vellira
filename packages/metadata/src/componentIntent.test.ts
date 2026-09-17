@@ -96,7 +96,7 @@ describe('Component Intent / Capability Coverage V1', () => {
     });
   });
 
-  it('keeps platform-specific coverage visible instead of claiming false parity', () => {
+  it('keeps platform-specific semantic coverage visible instead of claiming false parity', () => {
     const platformTarget: ComponentIntentTargetV1 = {
       name: 'PlatformProbe',
       layer: 'components',
@@ -106,11 +106,11 @@ describe('Component Intent / Capability Coverage V1', () => {
       componentTokens: false,
       intent: {
         schemaVersion: '1',
-        job: 'Exercise platform-scoped capability evidence.',
+        job: 'Exercise platform-scoped semantic capability evidence.',
         requiredCapabilities: ['disabled'],
         platformRequirements: {
-          react: ['keyboard'],
-          'react-native': ['accessible-name'],
+          react: ['accessible-name'],
+          'react-native': ['announcement'],
         },
       },
     };
@@ -122,8 +122,8 @@ describe('Component Intent / Capability Coverage V1', () => {
       profile: 'base',
       status: 'experimental',
       capabilities: ['disabled'],
-      platformCapabilities: {
-        react: ['keyboard'],
+      platformSemanticCapabilities: {
+        react: ['accessible-name'],
       },
       requirements: {
         tests: true,
@@ -142,7 +142,7 @@ describe('Component Intent / Capability Coverage V1', () => {
       expect.objectContaining({
         platform: 'react-native',
         status: 'partial',
-        missingCapabilities: ['accessible-name'],
+        missingCapabilities: ['announcement'],
       }),
     ]);
   });
