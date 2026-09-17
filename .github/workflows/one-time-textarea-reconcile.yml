@@ -1,0 +1,305 @@
+name: One-time Textarea Reconcile
+
+on:
+  push:
+    branches:
+      - feat/textarea-launch-component
+    paths:
+      - .github/workflows/one-time-textarea-reconcile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/textarea-launch-component
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Reconcile post-materialization contracts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str, count: int | None = None):
+              p = Path(path)
+              text = p.read_text()
+              occurrences = text.count(old)
+              if occurrences == 0:
+                  raise SystemExit(f'missing replacement anchor in {path}: {old[:100]!r}')
+              if count is not None and occurrences != count:
+                  raise SystemExit(f'unexpected replacement count in {path}: expected {count}, got {occurrences}')
+              p.write_text(text.replace(old, new))
+
+          # Register the generated full-component token factory in the canonical #887 authority.
+          replace(
+              'packages/tokens/src/token-architecture.ts',
+              "  {\n    name: 'createTooltipTokens',",
+              "  {\n    name: 'createTextareaTokens',\n    source: 'packages/tokens/src/factories/components/createTextareaTokens.ts',\n    semanticAdapter: null,\n    stateKeys: ['default', 'hover', 'pressed', 'error', 'disabled'],\n  },\n  {\n    name: 'createTooltipTokens',",
+              1,
+          )
+          replace(
+              'packages/tokens/src/component-token-factory-conventions.test.ts',
+              "  'createTabsTokens',\n  'createTooltipTokens',",
+              "  'createTabsTokens',\n  'createTextareaTokens',\n  'createTooltipTokens',",
+              1,
+          )
+
+          # Public type surface now includes the Textarea shared contract and size alias.
+          replace(
+              'scripts/check-public-api.mjs',
+              "    'BaseTabsTriggerProps',\n    'BaseTooltipProps',",
+              "    'BaseTabsTriggerProps',\n    'BaseTextareaProps',\n    'BaseTooltipProps',",
+              1,
+          )
+          replace(
+              'scripts/check-public-api.mjs',
+              "    'TabsVariant',\n    'TextWrap',",
+              "    'TabsVariant',\n    'TextareaSize',\n    'TextWrap',",
+              1,
+          )
+
+          # README inventory follows canonical metadata after Textarea materialization.
+          replace(
+              'README.md',
+              '| Tabs       |  ✅   |      ✅      |\n| Tooltip    |  ✅   |      ✅      |',
+              '| Tabs       |  ✅   |      ✅      |\n| Textarea   |  ✅   |      ✅      |\n| Tooltip    |  ✅   |      ✅      |',
+              1,
+          )
+
+          # Token reservation is no longer the correct route once the Textarea family is current.
+          replace(
+              'scripts/canonical-gap/contract.test.ts',
+              "kind: 'component-token-reservation',\n      canonicalTarget: 'Textarea',",
+              "kind: 'component',\n      canonicalTarget: 'Textarea',",
+              1,
+          )
+          replace(
+              'scripts/canonical-gap/contract.test.ts',
+              "      'component-token-reservation',\n      'icon',",
+              "      'component',\n      'icon',",
+              1,
+          )
+          replace(
+              'scripts/component-production/missing-component-request.test.ts',
+              "nextAction: 'link-or-create-component-token-reservation-issue',",
+              "nextAction: 'link-or-create-component-issue',",
+              1,
+          )
+
+          old_checker = '''  it('routes textarea through the missing-component workflow while Textarea is absent', () => {
+            const [finding] = checkSourceFile(
+              'apps/docs/src/example.tsx',
+              `export function Example() { return <textarea />; }`,
+              AUTHORITIES
+            );
+
+            expect(finding).toMatchObject({
+              ruleId: 'vellira-ui.missing-component',
+              detected: 'textarea',
+              severity: 'warning',
+              blocking: false,
+              nextAction: 'request-missing-component',
+            });
+            expect(finding.canonicalAlternative).toBeUndefined();
+          });'''
+          new_checker = '''  it('routes authored textarea markup to canonical Textarea after materialization', () => {
+            const [finding] = checkSourceFile(
+              'apps/docs/src/example.tsx',
+              `export function Example() { return <textarea />; }`,
+              AUTHORITIES
+            );
+
+            expect(finding).toMatchObject({
+              ruleId: 'vellira-ui.existing-component-bypass',
+              detected: 'textarea',
+              canonicalAlternative: 'Textarea',
+              severity: 'warning',
+              blocking: false,
+              nextAction: 'reuse-existing',
+            });
+          });'''
+          replace('scripts/checks/vellira-ui-usage/checker.test.ts', old_checker, new_checker, 1)
+
+          # Generator-owned catalog previews must provide demo state even on the /components index.
+          old_preview = '''  return `${generatedFileHeader}'use client';
+
+          import { ${demoName} } from './${demoName}';
+
+          export function ${model.componentName}CatalogPreview() {
+            return <${demoName} />;
+          }
+          `;'''
+          new_preview = '''  return `${generatedFileHeader}'use client';
+
+          import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';
+
+          import { ${demoName} } from './${demoName}';
+
+          export function ${model.componentName}CatalogPreview() {
+            return (
+              <ComponentDemoStateProvider>
+                <${demoName} />
+              </ComponentDemoStateProvider>
+            );
+          }
+          `;'''
+          replace(
+              'scripts/generators/component-page/renderers/catalog-preview-registry.ts',
+              old_preview,
+              new_preview,
+              1,
+          )
+          replace(
+              'scripts/generators/component-page/renderers/catalog-preview-registry.test.ts',
+              "    expect(source).toContain('return <AvatarDemo />;');",
+              "    expect(source).toContain('ComponentDemoStateProvider');\n    expect(source).toContain('<AvatarDemo />');",
+              1,
+          )
+          replace(
+              'scripts/generators/component-page/renderers/catalog-preview-registry.test.ts',
+              "    expect(source).toContain('return <NativeNativeOnlyDemo />;');",
+              "    expect(source).toContain('ComponentDemoStateProvider');\n    expect(source).toContain('<NativeNativeOnlyDemo />');",
+              1,
+          )
+
+          # The RN test adapter must expose the native multiline contract instead of hiding it.
+          replace(
+              'packages/react-native/test/react-native.mock.tsx',
+              "  value?: string;\n  editable?: boolean;",
+              "  value?: string;\n  defaultValue?: string;\n  editable?: boolean;\n  multiline?: boolean;\n  maxLength?: number;",
+              1,
+          )
+          replace(
+              'packages/react-native/test/react-native.mock.tsx',
+              "      value,\n      placeholder,\n      editable = true,",
+              "      value,\n      defaultValue,\n      placeholder,\n      editable = true,\n      multiline,\n      numberOfLines,\n      maxLength,",
+              1,
+          )
+          replace(
+              'packages/react-native/test/react-native.mock.tsx',
+              "      accessibilityLabelledBy,\n      accessibilityState,",
+              "      accessibilityLabelledBy,\n      'aria-describedby': ariaDescribedBy,\n      accessibilityState,",
+              1,
+          )
+          replace(
+              'packages/react-native/test/react-native.mock.tsx',
+              "      data-auto-focus={autoFocus ? 'true' : undefined}\n      aria-label={accessibilityLabel}\n      aria-description={accessibilityHint}\n      aria-labelledby={accessibilityLabelledBy}\n      value={value ?? ''}\n      placeholder={placeholder}",
+              "      data-auto-focus={autoFocus ? 'true' : undefined}\n      data-multiline={multiline ? 'true' : undefined}\n      data-number-of-lines={numberOfLines}\n      aria-label={accessibilityLabel}\n      aria-description={accessibilityHint}\n      aria-labelledby={accessibilityLabelledBy}\n      aria-describedby={ariaDescribedBy}\n      value={value}\n      defaultValue={value === undefined ? defaultValue : undefined}\n      placeholder={placeholder}\n      maxLength={maxLength}",
+              1,
+          )
+
+          rn_test = Path('packages/react-native/src/primitives/Textarea/Textarea.test.tsx')
+          text = rn_test.read_text()
+          text = text.replace("querySelector<HTMLTextAreaElement>('textarea')", "querySelector<HTMLInputElement>('input')")
+          text = text.replace("querySelector('textarea')", "querySelector('input')")
+          text = text.replace("querySelectorAll('textarea')", "querySelectorAll('input')")
+          text = text.replace('HTMLTextAreaElement.prototype', 'HTMLInputElement.prototype')
+          text = text.replace("expect(textarea?.rows).toBe(4);", "expect(textarea?.dataset.multiline).toBe('true');\n    expect(textarea?.dataset.numberOfLines).toBe('4');")
+          text = text.replace("expect(textarea?.rows).toBe(1);", "expect(textarea?.dataset.multiline).toBe('true');\n    expect(textarea?.dataset.numberOfLines).toBe('1');")
+          rn_test.write_text(text)
+          PY
+
+          pnpm exec prettier --write \
+            packages/react-native/src/primitives/Textarea/Textarea.test.tsx \
+            packages/react/src/primitives/Textarea/Textarea.test.tsx \
+            packages/react-native/test/react-native.mock.tsx \
+            packages/tokens/src/token-architecture.ts \
+            packages/tokens/src/component-token-factory-conventions.test.ts \
+            scripts/check-public-api.mjs \
+            README.md \
+            scripts/canonical-gap/contract.test.ts \
+            scripts/component-production/missing-component-request.test.ts \
+            scripts/checks/vellira-ui-usage/checker.test.ts \
+            scripts/generators/component-page/renderers/catalog-preview-registry.ts \
+            scripts/generators/component-page/renderers/catalog-preview-registry.test.ts
+
+      - name: Prove pre-evidence contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @vellira-ui/tokens test
+          pnpm --filter @vellira-ui/react exec vitest run --config vitest.config.ts src/primitives/Textarea/Textarea.test.tsx
+          pnpm --filter @vellira-ui/react-native exec vitest run --config vitest.config.ts src/primitives/Textarea/Textarea.test.tsx
+          pnpm check:public-api
+          pnpm test:tooling
+          pnpm check:tokens-semantic:strict
+
+      - name: Record semantic evidence after proofs pass
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('packages/metadata/src/components/Textarea.metadata.ts')
+          text = p.read_text()
+          anchor = "  ],\n  dependencies: {"
+          if "semanticCapabilities:" not in text:
+              if anchor not in text:
+                  raise SystemExit('Textarea metadata capability anchor missing')
+              text = text.replace(
+                  anchor,
+                  "  ],\n  semanticCapabilities: ['accessible-name', 'multiline'],\n  dependencies: {",
+                  1,
+              )
+          p.write_text(text)
+          PY
+          pnpm exec prettier --write packages/metadata/src/components/Textarea.metadata.ts
+
+      - name: Regenerate canonical public surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm docs:api
+          pnpm component-docs:generate
+          pnpm component-pages:generate
+          pnpm exec prettier --write \
+            packages/react/API.md \
+            packages/react-native/API.md \
+            apps/docs/src/react/textarea.md \
+            apps/docs/src/react-native/textarea.md \
+            apps/website/src/component-catalog/components/Textarea \
+            apps/website/src/component-catalog/registry
+
+      - name: Verify completed Textarea candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @vellira-ui/metadata build
+          pnpm component-docs:check
+          pnpm docs:api:check
+          pnpm component-pages:check
+          pnpm test:component-pages
+          pnpm check:component --all
+          pnpm --filter @vellira-ui/website build
+          pnpm check:public-api
+          pnpm check:tokens-semantic:strict
+          pnpm format:check
+
+      - name: Commit verified reconcile and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/one-time-textarea-reconcile.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(textarea): reconcile launch contracts'
+          git push origin HEAD:feat/textarea-launch-component
