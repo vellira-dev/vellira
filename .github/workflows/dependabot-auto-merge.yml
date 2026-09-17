@@ -2,13 +2,15 @@ name: Dependabot Auto Merge
 
 on:
   workflow_run:
-    workflows: ['Dependabot Auto Merge Metadata']
+    workflows: ['CI']
     types: [completed]
 
 permissions:
   actions: read
+  checks: read
   contents: read
   pull-requests: read
+  statuses: read
 
 jobs:
   dependabot:
@@ -19,20 +21,83 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Find matching Dependabot metadata run
+        id: metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p .dependabot-auto-merge
+          gh api --method GET \
+            "repos/$REPOSITORY/actions/workflows/dependabot-auto-merge-metadata.yml/runs" \
+            -f event=pull_request \
+            -f status=success \
+            -f head_sha="$EXPECTED_HEAD_SHA" \
+            -f per_page=100 \
+            > .dependabot-auto-merge/metadata-runs.json
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const payload = JSON.parse(
+            fs.readFileSync('.dependabot-auto-merge/metadata-runs.json', 'utf8')
+          );
+          const repository = process.env.REPOSITORY;
+          const expectedHeadSha = process.env.EXPECTED_HEAD_SHA ?? '';
+          const runs = Array.isArray(payload.workflow_runs)
+            ? payload.workflow_runs
+            : [];
+          const match = runs.find(
+            (run) =>
+              run.conclusion === 'success' &&
+              run.event === 'pull_request' &&
+              run.head_sha === expectedHeadSha &&
+              run.head_repository?.full_name === repository
+          );
+
+          if (!match) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'found=false\n');
+            console.log(
+              JSON.stringify({
+                found: false,
+                headSha: expectedHeadSha,
+                reason: 'no matching successful Dependabot metadata run',
+              })
+            );
+            process.exit(0);
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `found=true\nrun_id=${match.id}\n`
+          );
+          console.log(
+            JSON.stringify({
+              found: true,
+              headSha: expectedHeadSha,
+              metadataRunId: match.id,
+            })
+          );
+          NODE
+
       - name: Download auto-merge decision
+        if: steps.metadata.outputs.found == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dependabot-auto-merge-decision
           path: .dependabot-auto-merge
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.metadata.outputs.run_id }}
           github-token: ${{ github.token }}
 
       - name: Validate immutable auto-merge decision
+        if: steps.metadata.outputs.found == 'true'
         id: candidate
         shell: bash
         env:
           REPOSITORY: ${{ github.repository }}
-          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           node <<'NODE'
@@ -42,7 +107,7 @@ jobs:
             fs.readFileSync('.dependabot-auto-merge/decision.json', 'utf8')
           );
           const repository = process.env.REPOSITORY;
-          const workflowHeadSha = process.env.WORKFLOW_HEAD_SHA ?? '';
+          const ciHeadSha = process.env.CI_HEAD_SHA ?? '';
 
           if (decision.schemaVersion !== 1) {
             throw new Error('Unsupported Dependabot auto-merge decision schema');
@@ -59,8 +124,8 @@ jobs:
           if (!/^[0-9a-f]{40}$/.test(decision.headSha ?? '')) {
             throw new Error('Dependabot auto-merge decision head SHA is invalid');
           }
-          if (decision.headSha !== workflowHeadSha) {
-            throw new Error('Dependabot auto-merge decision does not match workflow head');
+          if (decision.headSha !== ciHeadSha) {
+            throw new Error('Dependabot auto-merge decision does not match successful CI head');
           }
           if (decision.author !== 'dependabot[bot]') {
             throw new Error('Dependabot auto-merge decision author mismatch');
@@ -125,16 +190,75 @@ jobs:
             throw new Error('Dependabot pull request no longer targets main');
           }
           if (pull.head?.sha !== expectedHeadSha) {
-            throw new Error('Dependabot pull request head moved after inspection');
+            throw new Error('Dependabot pull request head moved after successful CI');
           }
           if (pull.head?.repo?.full_name !== repository) {
             throw new Error('Dependabot pull request head repository mismatch');
           }
           NODE
 
-      - name: Create short-lived auto-merge GitHub App token
+      - name: Wait for required pull request checks
         if: steps.candidate.outputs.eligible == 'true'
-        id: auto-merge-token
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          timeout 900 gh pr checks "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --required \
+            --watch \
+            --fail-fast \
+            --interval 10
+
+      - name: Revalidate Dependabot pull request after checks
+        if: steps.candidate.outputs.eligible == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > .dependabot-auto-merge/current-pr-after-checks.json
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const pull = JSON.parse(
+            fs.readFileSync(
+              '.dependabot-auto-merge/current-pr-after-checks.json',
+              'utf8'
+            )
+          );
+          const expectedHeadSha = process.env.EXPECTED_HEAD_SHA;
+          const repository = process.env.REPOSITORY;
+
+          if (pull.state !== 'open') {
+            throw new Error('Dependabot pull request closed while checks were running');
+          }
+          if (pull.draft !== false) {
+            throw new Error('Dependabot pull request became a draft');
+          }
+          if (pull.user?.login !== 'dependabot[bot]') {
+            throw new Error('Dependabot pull request author mismatch');
+          }
+          if (pull.base?.ref !== 'main') {
+            throw new Error('Dependabot pull request no longer targets main');
+          }
+          if (pull.head?.sha !== expectedHeadSha) {
+            throw new Error('Dependabot pull request head moved while checks were running');
+          }
+          if (pull.head?.repo?.full_name !== repository) {
+            throw new Error('Dependabot pull request head repository mismatch');
+          }
+          NODE
+
+      - name: Create short-lived merge GitHub App token
+        if: steps.candidate.outputs.eligible == 'true'
+        id: merge-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
@@ -142,11 +266,11 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: Enable auto-merge for patch update
+      - name: Merge patch update after full CI
         if: steps.candidate.outputs.eligible == 'true'
         shell: bash
         env:
-          GH_TOKEN: ${{ steps.auto-merge-token.outputs.token }}
+          GH_TOKEN: ${{ steps.merge-token.outputs.token }}
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
@@ -154,6 +278,5 @@ jobs:
           set -euo pipefail
           gh pr merge "$PR_NUMBER" \
             --repo "$REPOSITORY" \
-            --auto \
             --merge \
             --match-head-commit "$EXPECTED_HEAD_SHA"
