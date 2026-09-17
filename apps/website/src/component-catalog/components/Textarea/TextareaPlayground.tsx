@@ -12,6 +12,11 @@ import { PlaygroundControlsFromSchema } from '../../shared/PlaygroundControls';
 import { textareaPlaygroundControls } from './textareaPlaygroundSchema';
 
 export type TextareaPlaygroundValue = {
+  label: string;
+  description: string;
+  error: string;
+  placeholder: string;
+  size: 'sm' | 'md' | 'lg';
   value: string;
   disabled: boolean;
   required: boolean;
@@ -30,6 +35,11 @@ type TextareaPlaygroundProps = {
 };
 
 export const initialTextareaPlaygroundValue: TextareaPlaygroundValue = {
+  label: '',
+  description: '',
+  error: '',
+  placeholder: '',
+  size: 'sm',
   value: '',
   disabled: false,
   required: false,

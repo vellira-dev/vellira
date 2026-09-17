@@ -13,6 +13,11 @@ export function TextareaDemo() {
       platform='react'
       renderTextarea={(value, onChange) => (
         <Textarea
+          label={value.label || undefined}
+          description={value.description || undefined}
+          error={value.error || undefined}
+          placeholder={value.placeholder || undefined}
+          size={value.size}
           value={value.value || undefined}
           onValueChange={(nextValue) => onChange('value', nextValue)}
           disabled={value.disabled}

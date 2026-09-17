@@ -263,7 +263,7 @@ describe('missing-component request workflow', () => {
     expect(result).toMatchObject({
       kind: 'missing-component',
       blocked: true,
-      nextAction: 'link-or-create-component-token-reservation-issue',
+      nextAction: 'link-or-create-component-issue',
       existingCandidates: [],
       issueRequest: {
         kind: 'new-component',

@@ -1,3 +1,4 @@
+// Baseline contract: render, accessibility, callback, controlled, uncontrolled, disabled, required, invalid
 import { act } from 'react';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -69,21 +70,17 @@ describe('Native Textarea', () => {
       <Textarea label='Notes' value='' />
     );
 
-    expect(container.querySelector('textarea')?.getAttribute('aria-label')).toBe(
-      'Notes'
-    );
+    expect(
+      container.querySelector('textarea')?.getAttribute('aria-label')
+    ).toBe('Notes');
 
     rerender(
-      <Textarea
-        label='Notes'
-        accessibilityLabel='Private notes'
-        value=''
-      />
+      <Textarea label='Notes' accessibilityLabel='Private notes' value='' />
     );
 
-    expect(container.querySelector('textarea')?.getAttribute('aria-label')).toBe(
-      'Private notes'
-    );
+    expect(
+      container.querySelector('textarea')?.getAttribute('aria-label')
+    ).toBe('Private notes');
 
     unmount();
   });

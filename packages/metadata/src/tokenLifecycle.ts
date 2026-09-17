@@ -36,7 +36,7 @@ export const componentTokenLifecycle = {
     status: 'current',
     public: true,
     owner: 'Textarea',
-    purpose: 'Reserved for the canonical Textarea component token contract.',
+    purpose: 'Canonical Textarea component token contract.',
   },
   Accordion: {
     status: 'current',

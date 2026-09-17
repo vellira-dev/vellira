@@ -8,6 +8,32 @@ import type { TextareaPlaygroundValue } from './TextareaPlayground';
 export const textareaPlaygroundControls = [
   {
     type: 'text',
+    key: 'label',
+    label: 'Label',
+  },
+  {
+    type: 'text',
+    key: 'description',
+    label: 'Description',
+  },
+  {
+    type: 'text',
+    key: 'error',
+    label: 'Error',
+  },
+  {
+    type: 'text',
+    key: 'placeholder',
+    label: 'Placeholder',
+  },
+  {
+    type: 'select',
+    key: 'size',
+    label: 'Size',
+    options: ['sm', 'md', 'lg'],
+  },
+  {
+    type: 'text',
     key: 'value',
     label: 'Value',
   },

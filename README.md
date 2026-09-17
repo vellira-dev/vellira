@@ -318,6 +318,7 @@ Platform availability is validated against the canonical component metadata regi
 | Select     |  ✅   |      ✅      |
 | Switch     |  ✅   |      ✅      |
 | Tabs       |  ✅   |      ✅      |
+| Textarea   |  ✅   |      ✅      |
 | Tooltip    |  ✅   |      ✅      |
 
 <!-- vellira:component-inventory:end -->

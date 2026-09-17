@@ -14,6 +14,7 @@ export const textareaMetadata = defineComponentMetadata({
     'required',
     'invalid',
   ],
+  semanticCapabilities: ['multiline', 'accessible-name'],
   dependencies: {
     packages: ['@vellira-ui/types'],
   },

@@ -16,10 +16,22 @@ export function TextareaAccessibility({
 }: TextareaAccessibilityProps) {
   const reactItems = [
     {
+      title: 'Accessible naming',
+      description:
+        'Provide a visible label or another accessible name that clearly identifies the control.',
+      props: ['label', 'children', 'aria-label', 'aria-labelledby'],
+    },
+    {
       title: 'Disabled state',
       description:
         'Disabled controls should remain identifiable while preventing interaction.',
       props: ['disabled'],
+    },
+    {
+      title: 'Validation feedback',
+      description:
+        'Associate validation feedback with the control and expose its invalid state to assistive technologies.',
+      props: ['error', 'invalid'],
     },
     {
       title: 'Required fields',
@@ -31,15 +43,28 @@ export function TextareaAccessibility({
       title: 'Keyboard and focus',
       description:
         'Preserve expected keyboard interaction and visible focus behavior.',
+      props: ['onKeyDown', 'onFocus', 'onBlur', 'onClick'],
     },
   ] as const;
 
   const nativeItems = [
     {
+      title: 'Accessible naming',
+      description:
+        'Provide a visible label or accessibilityLabel so screen readers can identify the control.',
+      props: ['label', 'children', 'accessibilityLabel'],
+    },
+    {
       title: 'Disabled state',
       description:
         'Disabled controls should remain identifiable while preventing interaction.',
       props: ['disabled'],
+    },
+    {
+      title: 'Validation feedback',
+      description:
+        'Announce validation feedback through accessible text or hints without relying only on visual styling.',
+      props: ['error', 'invalid'],
     },
     {
       title: 'Required fields',
@@ -51,6 +76,7 @@ export function TextareaAccessibility({
       title: 'Keyboard and focus',
       description:
         'Verify focus and screen reader interaction on supported React Native platforms.',
+      props: ['onFocus', 'onBlur', 'onPress'],
     },
   ] as const;
 

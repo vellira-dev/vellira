@@ -37,8 +37,11 @@ type NativeProps = {
   onChangeText?: (value: string) => void;
   onRequestClose?: () => void;
   value?: string;
+  defaultValue?: string;
+  multiline?: boolean;
   editable?: boolean;
   placeholder?: string;
+  maxLength?: number;
   placeholderTextColor?: string;
   secureTextEntry?: boolean;
   keyboardType?: string;
@@ -345,11 +348,18 @@ export const Pressable = forwardRef<HTMLButtonElement, NativeProps>(
 );
 Pressable.displayName = 'Pressable';
 
-export const TextInput = forwardRef<HTMLInputElement, NativeProps>(
+export const TextInput = forwardRef<
+  HTMLInputElement | HTMLTextAreaElement,
+  NativeProps
+>(
   (
     {
       value,
+      defaultValue,
+      multiline = false,
+      numberOfLines,
       placeholder,
+      maxLength,
       editable = true,
       secureTextEntry,
       keyboardType,
@@ -364,33 +374,58 @@ export const TextInput = forwardRef<HTMLInputElement, NativeProps>(
       accessibilityLabel,
       accessibilityHint,
       accessibilityLabelledBy,
+      'aria-describedby': ariaDescribedBy,
       accessibilityState,
     },
     ref
-  ) => (
-    <input
-      ref={ref}
-      data-testid={testID}
-      id={nativeID}
-      data-keyboard-type={keyboardType}
-      data-return-key-type={returnKeyType}
-      data-auto-focus={autoFocus ? 'true' : undefined}
-      aria-label={accessibilityLabel}
-      aria-description={accessibilityHint}
-      aria-labelledby={accessibilityLabelledBy}
-      value={value ?? ''}
-      placeholder={placeholder}
-      disabled={!editable}
-      autoFocus={autoFocus}
-      type={secureTextEntry ? 'password' : 'text'}
-      inputMode={keyboardType === 'numeric' ? 'numeric' : undefined}
-      style={flattenStyle(style)}
-      onChange={(event) => onChangeText?.(event.currentTarget.value)}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      {...stateProps(accessibilityState)}
-    />
-  )
+  ) => {
+    const sharedProps = {
+      'data-testid': testID,
+      id: nativeID,
+      'data-keyboard-type': keyboardType,
+      'data-return-key-type': returnKeyType,
+      'data-auto-focus': autoFocus ? 'true' : undefined,
+      'aria-label': accessibilityLabel,
+      'aria-description': accessibilityHint,
+      'aria-labelledby': accessibilityLabelledBy,
+      'aria-describedby': ariaDescribedBy,
+      placeholder,
+      maxLength,
+      disabled: !editable,
+      autoFocus,
+      style: flattenStyle(style),
+      onChange: (
+        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      ) => onChangeText?.(event.currentTarget.value),
+      onFocus,
+      onBlur,
+      ...stateProps(accessibilityState),
+    };
+
+    if (multiline) {
+      return (
+        <textarea
+          {...sharedProps}
+          ref={ref as React.ForwardedRef<HTMLTextAreaElement>}
+          data-multiline='true'
+          data-number-of-lines={numberOfLines}
+          rows={numberOfLines}
+          value={value}
+          defaultValue={value === undefined ? defaultValue : undefined}
+        />
+      );
+    }
+
+    return (
+      <input
+        {...sharedProps}
+        ref={ref as React.ForwardedRef<HTMLInputElement>}
+        value={value ?? ''}
+        type={secureTextEntry ? 'password' : 'text'}
+        inputMode={keyboardType === 'numeric' ? 'numeric' : undefined}
+      />
+    );
+  }
 );
 TextInput.displayName = 'TextInput';
 

@@ -30,6 +30,26 @@ function createTextareaCode(
 
   const children = platform === 'react' ? `` : ``;
 
+  if (value.label) {
+    props.push(`label='${value.label}'`);
+  }
+
+  if (value.description) {
+    props.push(`description='${value.description}'`);
+  }
+
+  if (value.error) {
+    props.push(`error='${value.error}'`);
+  }
+
+  if (value.placeholder) {
+    props.push(`placeholder='${value.placeholder}'`);
+  }
+
+  if (value.size !== 'sm') {
+    props.push(`size='${value.size}'`);
+  }
+
   if (value.value) {
     props.push(`value='${value.value}'`);
   }

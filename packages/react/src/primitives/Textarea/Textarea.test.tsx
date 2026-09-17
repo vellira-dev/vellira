@@ -1,13 +1,14 @@
+// Baseline contract: render, accessibility, callback, controlled, uncontrolled, disabled, required, invalid
 import { act } from 'react';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { FormField } from '#patterns/FormField';
 
 import { expectNoA11yViolations } from '../../test-utils/a11y';
 import { render } from '../../test-utils/render';
 
 import { Textarea } from './Textarea';
+
+import { FormField } from '#patterns/FormField';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -105,7 +106,9 @@ describe('Textarea', () => {
     expect(textarea?.disabled).toBe(true);
     expect(textarea?.getAttribute('aria-invalid')).toBe('true');
     expect(textarea?.getAttribute('aria-labelledby')).toBe('notes-label');
-    expect(textarea?.getAttribute('aria-describedby')).toBe('notes-description');
+    expect(textarea?.getAttribute('aria-describedby')).toBe(
+      'notes-description'
+    );
 
     unmount();
   });

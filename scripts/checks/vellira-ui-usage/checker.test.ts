@@ -101,7 +101,7 @@ describe('Vellira UI usage audit', () => {
     expect(findings).toEqual([]);
   });
 
-  it('routes textarea through the missing-component workflow while Textarea is absent', () => {
+  it('reports authored textarea when canonical Textarea exists', () => {
     const [finding] = checkSourceFile(
       'apps/docs/src/example.tsx',
       `export function Example() { return <textarea />; }`,
@@ -109,13 +109,13 @@ describe('Vellira UI usage audit', () => {
     );
 
     expect(finding).toMatchObject({
-      ruleId: 'vellira-ui.missing-component',
+      ruleId: 'vellira-ui.existing-component-bypass',
       detected: 'textarea',
       severity: 'warning',
       blocking: false,
-      nextAction: 'request-missing-component',
+      nextAction: 'reuse-existing',
     });
-    expect(finding.canonicalAlternative).toBeUndefined();
+    expect(finding.canonicalAlternative).toBe('Textarea');
   });
 
   it('keeps canonical component implementation internals outside consumer scope', () => {

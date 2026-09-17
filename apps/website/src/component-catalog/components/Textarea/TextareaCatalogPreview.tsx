@@ -3,8 +3,14 @@
 
 'use client';
 
+import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';
+
 import { TextareaDemo } from './TextareaDemo';
 
 export function TextareaCatalogPreview() {
-  return <TextareaDemo />;
+  return (
+    <ComponentDemoStateProvider resetKey='catalog:textarea'>
+      <TextareaDemo />
+    </ComponentDemoStateProvider>
+  );
 }
