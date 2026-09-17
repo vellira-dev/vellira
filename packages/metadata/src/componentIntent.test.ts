@@ -167,6 +167,21 @@ describe('Component Intent / Capability Coverage V1', () => {
     });
   });
 
+  it('fails closed without throwing when component intent is missing', () => {
+    const invalidTarget = {
+      ...target('Avatar'),
+      intent: undefined,
+    } as unknown as ComponentIntentTargetV1;
+
+    expect(
+      evaluateComponentIntentCoverage(invalidTarget, avatarMetadata())
+    ).toMatchObject({
+      intentId: 'component:Avatar:intent:vunknown',
+      status: 'unknown',
+      errors: ['Component intent is required for Avatar.'],
+    });
+  });
+
   it('is deterministic for identical target and metadata evidence', () => {
     const avatarTarget = target('Avatar');
     const metadata = avatarMetadata([
