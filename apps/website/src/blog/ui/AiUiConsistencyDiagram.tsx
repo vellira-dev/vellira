@@ -33,6 +33,31 @@ function FlowArrow() {
   );
 }
 
+function ConcernMergeArrow() {
+  const rows = [33, 83, 133, 183, 233, 283];
+
+  return (
+    <svg
+      className={styles.concernMergeArrow}
+      viewBox='0 0 42 316'
+      preserveAspectRatio='none'
+      aria-hidden='true'
+    >
+      {rows.map((row) => (
+        <path
+          key={row}
+          d={`M0 ${row} H6 C18 ${row} 14 158 27 158 H34`}
+          className={styles.concernMergePath}
+        />
+      ))}
+      <path
+        d='M30 151 L38 158 L30 165'
+        className={styles.concernMergePath}
+      />
+    </svg>
+  );
+}
+
 export function AiUiConsistencyDiagram() {
   return (
     <figure className={styles.figure}>
@@ -101,7 +126,7 @@ export function AiUiConsistencyDiagram() {
           ))}
         </div>
 
-        <FlowArrow />
+        <ConcernMergeArrow />
 
         <div className={styles.hub}>
           <span className={styles.logoMark}>
