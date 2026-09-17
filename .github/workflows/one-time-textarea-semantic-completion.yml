@@ -33,6 +33,185 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Align RN TextInput test harness with multiline props
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'packages/react-native/test/react-native.mock.tsx';
+          let source = fs.readFileSync(file, 'utf8');
+
+          const propsMarker = "  value?: string;\n  editable?: boolean;\n  placeholder?: string;";
+          if (!source.includes(propsMarker)) {
+            throw new Error('RN TextInput mock props marker not found.');
+          }
+          source = source.replace(
+            propsMarker,
+            "  value?: string;\n  defaultValue?: string;\n  multiline?: boolean;\n  editable?: boolean;\n  placeholder?: string;\n  maxLength?: number;"
+          );
+
+          const destructureMarker = `      value,\n      placeholder,\n      editable = true,\n      secureTextEntry,\n      keyboardType,\n      returnKeyType,\n      autoFocus,\n      onChangeText,\n      onFocus,\n      onBlur,\n      style,\n      testID,\n      nativeID,\n      accessibilityLabel,\n      accessibilityHint,\n      accessibilityLabelledBy,\n      accessibilityState,`;
+          if (!source.includes(destructureMarker)) {
+            throw new Error('RN TextInput mock destructure marker not found.');
+          }
+          source = source.replace(
+            destructureMarker,
+            `      value,\n      defaultValue,\n      multiline,\n      numberOfLines,\n      placeholder,\n      maxLength,\n      editable = true,\n      secureTextEntry,\n      keyboardType,\n      returnKeyType,\n      autoFocus,\n      onChangeText,\n      onFocus,\n      onBlur,\n      style,\n      testID,\n      nativeID,\n      accessibilityLabel,\n      accessibilityHint,\n      accessibilityLabelledBy,\n      'aria-describedby': ariaDescribedBy,\n      accessibilityState,`
+          );
+
+          const jsxMarker = `      data-return-key-type={returnKeyType}\n      data-auto-focus={autoFocus ? 'true' : undefined}\n      aria-label={accessibilityLabel}\n      aria-description={accessibilityHint}\n      aria-labelledby={accessibilityLabelledBy}\n      value={value ?? ''}\n      placeholder={placeholder}\n      disabled={!editable}\n      autoFocus={autoFocus}`;
+          if (!source.includes(jsxMarker)) {
+            throw new Error('RN TextInput mock JSX marker not found.');
+          }
+          source = source.replace(
+            jsxMarker,
+            `      data-return-key-type={returnKeyType}\n      data-auto-focus={autoFocus ? 'true' : undefined}\n      data-multiline={multiline ? 'true' : undefined}\n      data-number-of-lines={numberOfLines}\n      aria-label={accessibilityLabel}\n      aria-description={accessibilityHint}\n      aria-labelledby={accessibilityLabelledBy}\n      aria-describedby={ariaDescribedBy}\n      value={value}\n      defaultValue={value === undefined ? defaultValue : undefined}\n      placeholder={placeholder}\n      maxLength={maxLength}\n      disabled={!editable}\n      autoFocus={autoFocus}`
+          );
+
+          fs.writeFileSync(file, source);
+          NODE
+
+          cat > packages/react-native/src/primitives/Textarea/Textarea.test.tsx <<'TSX'
+          import { act } from 'react';
+
+          import { afterEach, describe, expect, it, vi } from 'vitest';
+
+          import { FormField } from '../../patterns/FormField';
+          import { render } from '../../test-utils/render';
+
+          import { Textarea } from './Textarea';
+
+          afterEach(() => {
+            document.body.innerHTML = '';
+          });
+
+          describe('Native Textarea', () => {
+            it('renders a labelled multiline TextInput with help and error semantics', () => {
+              const { container, unmount } = render(
+                <Textarea
+                  label='Biography'
+                  description='Tell us about yourself.'
+                  error='Biography is required.'
+                  defaultValue='Vellira builder'
+                  placeholder='Write a short biography'
+                  numberOfLines={4}
+                  maxLength={120}
+                />
+              );
+
+              const input = container.querySelector<HTMLInputElement>('input');
+
+              expect(input?.value).toBe('Vellira builder');
+              expect(input?.placeholder).toBe('Write a short biography');
+              expect(input?.dataset.multiline).toBe('true');
+              expect(input?.dataset.numberOfLines).toBe('4');
+              expect(input?.maxLength).toBe(120);
+              expect(input?.getAttribute('aria-label')).toBe('Biography');
+              expect(container.textContent).toContain('Tell us about yourself.');
+              expect(container.textContent).toContain('Biography is required.');
+
+              unmount();
+            });
+
+            it('emits uncontrolled multiline value changes', () => {
+              const onValueChange = vi.fn();
+              const { container, unmount } = render(
+                <Textarea
+                  accessibilityLabel='Message'
+                  defaultValue='First line'
+                  onValueChange={onValueChange}
+                />
+              );
+              const input = container.querySelector<HTMLInputElement>('input');
+              const valueSetter = Object.getOwnPropertyDescriptor(
+                HTMLInputElement.prototype,
+                'value'
+              )?.set;
+
+              act(() => {
+                valueSetter?.call(input, 'First line\nSecond line');
+                input?.dispatchEvent(new Event('input', { bubbles: true }));
+              });
+
+              expect(onValueChange).toHaveBeenCalledWith('First line\nSecond line');
+              expect(input?.value).toBe('First line\nSecond line');
+              expect(input?.dataset.multiline).toBe('true');
+
+              unmount();
+            });
+
+            it('uses label as accessible-name fallback and allows native override', () => {
+              const { container, rerender, unmount } = render(
+                <Textarea label='Notes' value='' />
+              );
+
+              expect(container.querySelector('input')?.getAttribute('aria-label')).toBe(
+                'Notes'
+              );
+
+              rerender(
+                <Textarea
+                  label='Notes'
+                  accessibilityLabel='Private notes'
+                  value=''
+                />
+              );
+
+              expect(container.querySelector('input')?.getAttribute('aria-label')).toBe(
+                'Private notes'
+              );
+
+              unmount();
+            });
+
+            it('inherits FormField state without rendering a nested field wrapper', () => {
+              const { container, unmount } = render(
+                <FormField
+                  id='notes'
+                  label='Notes'
+                  description='Internal notes.'
+                  required
+                  disabled
+                  invalid
+                  size='sm'
+                >
+                  <Textarea value='' />
+                </FormField>
+              );
+
+              const input = container.querySelector<HTMLInputElement>('input');
+
+              expect(input?.id).toBe('notes');
+              expect(input?.disabled).toBe(true);
+              expect(input?.getAttribute('aria-disabled')).toBe('true');
+              expect(input?.getAttribute('aria-labelledby')).toBe('notes-label');
+              expect(input?.getAttribute('aria-describedby')).toBe('notes-description');
+              expect(container.querySelectorAll('input')).toHaveLength(1);
+              expect(container.textContent).toContain('Internal notes.');
+
+              unmount();
+            });
+
+            it('preserves controlled value and clamps numberOfLines to a multiline control', () => {
+              const { container, unmount } = render(
+                <Textarea
+                  accessibilityLabel='Controlled message'
+                  value='Controlled\nvalue'
+                  numberOfLines={0}
+                />
+              );
+
+              const input = container.querySelector<HTMLInputElement>('input');
+
+              expect(input?.value).toBe('Controlled\nvalue');
+              expect(input?.dataset.multiline).toBe('true');
+              expect(input?.dataset.numberOfLines).toBe('1');
+
+              unmount();
+            });
+          });
+          TSX
+
       - name: Prove Textarea runtime semantics
         shell: bash
         run: |
