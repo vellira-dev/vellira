@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { deferOverlayFocusRestore } from '@vellira-ui/core';
 import type { RefObject } from 'react';
-import type { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 import { AccessibilityInfo, findNodeHandle, Platform } from 'react-native';
 
 export type OverlayFocusRestoreOptions = {
   active?: boolean;
   enabled?: boolean;
-  finalFocus?: RefObject<View | null>;
-  triggerRef: RefObject<View | null>;
+  finalFocus?: RefObject<ViewInstance | null>;
+  triggerRef: RefObject<ViewInstance | null>;
 };
 
 type FocusableWebNode = {
