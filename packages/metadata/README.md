@@ -24,6 +24,8 @@ V1 describes:
 - supported platforms
 - lifecycle status
 - capabilities
+- platform-scoped capability evidence
+- approved component intent and capability coverage
 - dependencies
 - test requirements
 - Storybook requirements
@@ -60,11 +62,12 @@ export const selectMetadata = defineComponentMetadata({
     'required',
     'invalid',
     'loading',
-    'keyboard',
-    'focus-management',
     'compound-api',
     'portal',
   ],
+  platformCapabilities: {
+    react: ['keyboard', 'focus-management'],
+  },
 
   dependencies: {
     packages: ['@vellira-ui/types', '@vellira-ui/core', '@vellira-ui/icons'],
@@ -131,13 +134,14 @@ for the canonical semantics and promotion contract.
 
 ### `capabilities`
 
-Important behavior that tooling may use when generating or validating a
-component.
+Important behavior implemented across every declared platform. Tooling may use
+this evidence when generating or validating a component.
 
 V1 capabilities include:
 
 - `controlled`
 - `uncontrolled`
+- `indeterminate`
 - `disabled`
 - `required`
 - `invalid`
@@ -149,11 +153,39 @@ V1 capabilities include:
 - `collapsible`
 - `portal`
 - `responsive`
+- `accessible-name`
+- `accessible-value`
+- `announcement`
+- `auto-dismiss`
+- `dismissible`
+- `fallback`
+- `image-source`
+- `multiline`
+- `reduced-motion`
+- `size-variants`
+- `stacking`
+- `value-range`
 
 Capabilities should describe meaningful engineering behavior.
 
 Do not add every prop, visual variant, event, or implementation detail as a
 capability.
+
+### `platformCapabilities`
+
+Optional evidence for behavior implemented on one declared platform rather
+than every platform. This keeps Web and React Native differences explicit
+instead of pretending they have identical semantics.
+
+```ts
+const platformCapabilities = {
+  react: ['keyboard', 'focus-management'],
+  'react-native': ['announcement'],
+};
+```
+
+A platform-specific capability must not repeat a shared `capabilities` entry,
+and its platform must already be declared in `platforms`.
 
 ### `dependencies`
 
@@ -212,6 +244,53 @@ const requirements = {
 };
 ```
 
+## Component Intent / Capability Coverage V1
+
+`ComponentExpansionTarget` is the public pre-implementation authority for an
+approved catalog target. Its versioned `intent` declares the reusable UI job,
+shared semantic capabilities required on every target platform, and optional
+platform-specific requirements.
+
+```ts
+const avatarTarget = {
+  name: 'Avatar',
+  layer: 'primitives',
+  category: 'data-display',
+  platforms: ['react', 'react-native'],
+  profile: 'base',
+  componentTokens: 'standard',
+  role: 'foundational',
+  intent: {
+    schemaVersion: '1',
+    job: 'Represent a person or entity with an image and deterministic fallback.',
+    requiredCapabilities: [
+      'image-source',
+      'fallback',
+      'size-variants',
+      'accessible-name',
+    ],
+  },
+};
+```
+
+`evaluateComponentIntentCoverage(target, metadata)` compares that approved
+intent with implemented `ComponentMetadata` and returns one of:
+
+- `satisfied`
+- `partial`
+- `missing`
+- `unknown`
+
+A component folder, generated scaffold, or matching name is not semantic
+coverage. Missing, partial, or invalid/unknown intent evidence blocks canonical
+completeness for tracked targets. Platform coverage is evaluated independently,
+so a Web capability cannot silently satisfy a React Native requirement.
+
+The production seed remains structural on purpose. Generator V2 may receive
+the approved name/platform/layer/category/profile/token contract, but unresolved
+semantic capabilities must be implemented and evidenced separately rather than
+being copied from intent into metadata and self-certified.
+
 ## Validation
 
 Use `validateComponentMetadata` when metadata comes from an unknown or
@@ -226,15 +305,15 @@ if (!result.valid) {
 ```
 
 Validation checks required fields, supported enum values, non-empty platform
-lists, duplicate entries, dependencies, requirements, token requirements, and
-icon requirements.
+lists, shared/platform capability evidence, duplicate entries, dependencies,
+requirements, token requirements, and icon requirements.
 
 ## V1 boundaries
 
 Component metadata V1 intentionally does not describe:
 
 - full prop APIs
-- variants and sizes
+- every variant or size value
 - Storybook story content
 - website demos
 - playground controls

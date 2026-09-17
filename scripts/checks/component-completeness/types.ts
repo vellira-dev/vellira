@@ -2,6 +2,7 @@ import type { ComponentPlatform } from '@vellira-ui/metadata';
 
 export type ComponentCheckName =
   | 'metadata'
+  | 'intent-coverage'
   | 'type-ownership'
   | 'production-authorities'
   | 'component-tokens'

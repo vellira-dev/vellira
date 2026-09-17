@@ -1,4 +1,5 @@
 export * from './component';
+export * from './componentIntent';
 export * from './components';
 export * from './defineComponentMetadata';
 export * from './expansion';

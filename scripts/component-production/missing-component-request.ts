@@ -4,11 +4,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
-  componentCapabilities,
   componentExpansionCatalog,
+  componentIntentCapabilities,
+  componentIntentEvidenceForPlatform,
   componentMetadata,
-  type ComponentCapability,
+  requiredComponentIntentCapabilitiesForPlatform,
+  validateComponentIntentTarget,
   type ComponentExpansionTarget,
+  type ComponentIntentCapability,
   type ComponentMetadata,
   type ComponentPlatform,
 } from '@vellira-ui/metadata';
@@ -52,7 +55,7 @@ export type MissingComponentRequestV1 = {
   consumer: string;
   platforms: readonly ComponentPlatform[];
   reusable: boolean;
-  requiredCapabilities: readonly ComponentCapability[];
+  requiredCapabilities: readonly ComponentIntentCapability[];
 };
 
 export type MissingComponentResolutionKind =
@@ -85,7 +88,7 @@ export type MissingComponentResolutionV1 = {
   existingCandidates: readonly string[];
   canonicalComponent?: string;
   missingPlatforms: readonly ComponentPlatform[];
-  missingCapabilities: readonly ComponentCapability[];
+  missingCapabilities: readonly ComponentIntentCapability[];
   requestId?: string;
   issueRequest?: MissingComponentIssueRequestV1;
   productionSeed?: ComponentProductionSeedV1;
@@ -182,6 +185,17 @@ export function resolveMissingComponentRequest(
 
   const requestedComponent = request.requestedComponent!;
   const target = findByName(authorities.targets, requestedComponent);
+  if (target) {
+    const intentErrors = validateComponentIntentTarget(target);
+    if (intentErrors.length > 0) {
+      throw new Error(
+        `Invalid canonical component intent for ${target.name}: ${intentErrors.join(
+          ' '
+        )}`
+      );
+    }
+  }
+
   const candidates = canonicalCandidates(
     authorities.components,
     requestedComponent,
@@ -193,9 +207,35 @@ export function resolveMissingComponentRequest(
     const missingPlatforms = request.platforms.filter(
       (platform) => !canonical.platforms.includes(platform)
     );
-    const capabilitySet = new Set(canonical.capabilities ?? []);
-    const missingCapabilities = request.requiredCapabilities.filter(
-      (capability) => !capabilitySet.has(capability)
+    const missingCapabilitySet = new Set<ComponentIntentCapability>();
+
+    for (const platform of request.platforms) {
+      if (!canonical.platforms.includes(platform)) {
+        continue;
+      }
+
+      const actualCapabilities = new Set(
+        componentIntentEvidenceForPlatform(canonical, platform)
+      );
+      const requiredCapabilities = new Set<ComponentIntentCapability>([
+        ...request.requiredCapabilities,
+        ...(target
+          ? requiredComponentIntentCapabilitiesForPlatform(
+              target.intent,
+              platform
+            )
+          : []),
+      ]);
+
+      for (const capability of requiredCapabilities) {
+        if (!actualCapabilities.has(capability)) {
+          missingCapabilitySet.add(capability);
+        }
+      }
+    }
+
+    const missingCapabilities = componentIntentCapabilities.filter(
+      (capability) => missingCapabilitySet.has(capability)
     );
 
     if (missingPlatforms.length === 0 && missingCapabilities.length === 0) {
@@ -357,7 +397,7 @@ function baseResolution(params: {
   nextAction: MissingComponentResolutionNextAction;
   existingCandidates?: readonly string[];
   missingPlatforms?: readonly ComponentPlatform[];
-  missingCapabilities?: readonly ComponentCapability[];
+  missingCapabilities?: readonly ComponentIntentCapability[];
 }): MissingComponentResolutionV1 {
   return {
     schemaVersion: MISSING_COMPONENT_REQUEST_SCHEMA_VERSION,
@@ -463,7 +503,7 @@ function requiredPlatforms(
 function optionalCapabilities(
   value: Record<string, unknown>,
   field: string
-): readonly ComponentCapability[] {
+): readonly ComponentIntentCapability[] {
   const raw = value[field];
   if (raw === undefined) {
     return [];
@@ -474,12 +514,14 @@ function optionalCapabilities(
     );
   }
 
-  const supported = new Set<ComponentCapability>(componentCapabilities);
-  const seen = new Set<ComponentCapability>();
+  const supported = new Set<ComponentIntentCapability>(
+    componentIntentCapabilities
+  );
+  const seen = new Set<ComponentIntentCapability>();
   for (const entry of raw) {
     if (
       typeof entry !== 'string' ||
-      !supported.has(entry as ComponentCapability)
+      !supported.has(entry as ComponentIntentCapability)
     ) {
       throw new Error(
         `Missing-component request field "${field}" contains unsupported capability "${String(
@@ -487,7 +529,7 @@ function optionalCapabilities(
         )}".`
       );
     }
-    const capability = entry as ComponentCapability;
+    const capability = entry as ComponentIntentCapability;
     if (seen.has(capability)) {
       throw new Error(
         `Missing-component request field "${field}" must not contain duplicates.`
@@ -496,7 +538,9 @@ function optionalCapabilities(
     seen.add(capability);
   }
 
-  return componentCapabilities.filter((capability) => seen.has(capability));
+  return componentIntentCapabilities.filter((capability) =>
+    seen.has(capability)
+  );
 }
 
 function requiredString(value: Record<string, unknown>, field: string): string {

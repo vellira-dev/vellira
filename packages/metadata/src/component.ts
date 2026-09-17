@@ -47,6 +47,10 @@ export type ComponentCategory =
   | 'layout'
   | 'utility';
 
+/**
+ * Existing generator/quality capability vocabulary. These capabilities may
+ * drive deterministic scaffold, test, quality, and Stable contracts.
+ */
 export const componentCapabilities = [
   'controlled',
   'uncontrolled',
@@ -65,6 +69,28 @@ export const componentCapabilities = [
 ] as const;
 
 export type ComponentCapability = (typeof componentCapabilities)[number];
+
+/**
+ * Small V1 vocabulary for approved product semantics that are intentionally
+ * more specific than Generator V2's structural/behavior capability model.
+ */
+export const componentSemanticCapabilities = [
+  'accessible-name',
+  'accessible-value',
+  'announcement',
+  'auto-dismiss',
+  'dismissible',
+  'fallback',
+  'image-source',
+  'multiline',
+  'reduced-motion',
+  'size-variants',
+  'stacking',
+  'value-range',
+] as const;
+
+export type ComponentSemanticCapability =
+  (typeof componentSemanticCapabilities)[number];
 
 export type ComponentProfile = 'base' | 'form-control' | 'compound' | 'overlay';
 
@@ -108,7 +134,14 @@ export interface ComponentMetadata {
   platforms: readonly ComponentPlatform[];
   profile: ComponentProfile;
   status: ComponentStatus;
+  /** Existing Generator/Quality capabilities implemented by the component. */
   capabilities?: readonly ComponentCapability[];
+  /** Product-semantic evidence implemented across every declared platform. */
+  semanticCapabilities?: readonly ComponentSemanticCapability[];
+  /** Product-semantic evidence that is intentionally platform-scoped. */
+  platformSemanticCapabilities?: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
+  >;
   dependencies?: ComponentDependencies;
   requirements: ComponentRequirements;
 }

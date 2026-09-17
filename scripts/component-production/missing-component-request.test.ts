@@ -53,6 +53,11 @@ const textareaTarget = {
   profile: 'form-control',
   componentTokens: 'standard',
   role: 'form-control',
+  intent: {
+    schemaVersion: '1',
+    job: 'Enter and edit multiline text.',
+    requiredCapabilities: ['multiline', 'accessible-name'],
+  },
 } as const satisfies ComponentExpansionTarget;
 
 const dialogTarget = {
@@ -64,6 +69,31 @@ const dialogTarget = {
   componentTokens: 'standard',
   role: 'catalog',
   representedBy: ['Modal'],
+  intent: {
+    schemaVersion: '1',
+    job: 'Present a blocking dialog surface.',
+    requiredCapabilities: ['portal'],
+  },
+} as const satisfies ComponentExpansionTarget;
+
+const avatarTarget = {
+  name: 'Avatar',
+  layer: 'primitives',
+  category: 'data-display',
+  platforms: ['react', 'react-native'],
+  profile: 'base',
+  componentTokens: 'standard',
+  role: 'foundational',
+  intent: {
+    schemaVersion: '1',
+    job: 'Represent identity with an image and deterministic fallback.',
+    requiredCapabilities: [
+      'image-source',
+      'fallback',
+      'size-variants',
+      'accessible-name',
+    ],
+  },
 } as const satisfies ComponentExpansionTarget;
 
 const authorities: MissingComponentAuthorities = {
@@ -145,6 +175,85 @@ describe('missing-component request workflow', () => {
         componentName: 'Button',
         title: 'feat(components): extend Button',
       },
+    });
+  });
+
+  it('does not reuse a generic component scaffold that misses approved target intent', () => {
+    const genericAvatar: ComponentMetadata = {
+      name: 'Avatar',
+      layer: 'primitives',
+      category: 'data-display',
+      platforms: ['react', 'react-native'],
+      profile: 'base',
+      status: 'experimental',
+      requirements: {
+        ...requirements,
+        componentTokens: 'standard',
+      },
+    };
+
+    const result = resolveMissingComponentRequest(
+      request({
+        requestedComponent: 'Avatar',
+        requestedIntent: 'identity image',
+        platforms: ['react', 'react-native'],
+      }),
+      {
+        components: [genericAvatar],
+        targets: [avatarTarget],
+      }
+    );
+
+    expect(result).toMatchObject({
+      kind: 'enhance-existing',
+      blocked: true,
+      canonicalComponent: 'Avatar',
+      missingCapabilities: [
+        'accessible-name',
+        'fallback',
+        'image-source',
+        'size-variants',
+      ],
+    });
+  });
+
+  it('reuses a component only when approved target intent is covered', () => {
+    const completeAvatar: ComponentMetadata = {
+      name: 'Avatar',
+      layer: 'primitives',
+      category: 'data-display',
+      platforms: ['react', 'react-native'],
+      profile: 'base',
+      status: 'experimental',
+      semanticCapabilities: [
+        'image-source',
+        'fallback',
+        'size-variants',
+        'accessible-name',
+      ],
+      requirements: {
+        ...requirements,
+        componentTokens: 'standard',
+      },
+    };
+
+    expect(
+      resolveMissingComponentRequest(
+        request({
+          requestedComponent: 'Avatar',
+          requestedIntent: 'identity image',
+          platforms: ['react', 'react-native'],
+        }),
+        {
+          components: [completeAvatar],
+          targets: [avatarTarget],
+        }
+      )
+    ).toMatchObject({
+      kind: 'reuse-existing',
+      blocked: false,
+      canonicalComponent: 'Avatar',
+      missingCapabilities: [],
     });
   });
 

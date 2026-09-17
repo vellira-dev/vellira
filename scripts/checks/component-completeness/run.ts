@@ -1,7 +1,12 @@
 import { checkComponentCompleteness } from './check-component';
 import { checkGeneratedComponentDocsCompleteness } from './check-generated-component-docs';
+import { checkComponentIntentCoverage } from './check-intent-coverage';
 
-import type { ComponentMetadata } from '@vellira-ui/metadata';
+import type {
+  ComponentExpansionTarget,
+  ComponentMetadata,
+} from '@vellira-ui/metadata';
+import { componentExpansionCatalog } from '../../../packages/metadata/src/expansionCatalog';
 import {
   componentDocsContracts as defaultComponentDocsContracts,
   type ComponentDocsContract,
@@ -78,20 +83,36 @@ export async function runComponentCompletenessCheck(params: {
   metadata: readonly ComponentMetadata[];
   componentDocsContracts?: readonly ComponentDocsContract[];
   generatedDocsScope?: 'all' | 'targeted';
+  intentTargets?: readonly ComponentExpansionTarget[];
 }) {
   const {
     root,
     metadata,
     componentDocsContracts = defaultComponentDocsContracts,
     generatedDocsScope = 'all',
+    intentTargets = componentExpansionCatalog,
   } = params;
 
-  const results = metadata.map((component) =>
-    checkComponentCompleteness({
+  const results = metadata.map((component) => {
+    const result = checkComponentCompleteness({
       root,
       metadata: component,
-    })
-  );
+    });
+    const intentChecks = checkComponentIntentCoverage({
+      metadata: component,
+      targets: intentTargets,
+    });
+
+    if (intentChecks.length === 0) {
+      return result;
+    }
+
+    return {
+      ...result,
+      ready: result.ready && intentChecks.every((check) => check.ok),
+      checks: [...result.checks, ...intentChecks],
+    };
+  });
 
   const metadataNames = new Set(metadata.map((component) => component.name));
   const docsContracts =
