@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/core",
-  "version": "2.114.1",
+  "version": "2.115.0",
   "description": "Shared logic and hooks for Vellira Design System",
   "keywords": [
     "vellira",
@@ -50,7 +50,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   },
   "publishConfig": {
     "access": "public"

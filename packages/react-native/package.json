@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react-native",
-  "version": "2.114.1",
+  "version": "2.115.0",
   "description": "React Native components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -67,14 +67,14 @@
     "@storybook/react-native": "^10.6.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.0",
     "jsdom": "^28.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "storybook": "^10.6.0",
     "tsdown": "^0.23.0",
     "typescript": "6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   },
   "publishConfig": {
     "access": "public"

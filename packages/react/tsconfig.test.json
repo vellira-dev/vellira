@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.typecheck.json",
   "compilerOptions": {
-    "types": ["node", "vitest", "@testing-library/jest-dom"]
+    "types": ["node", "vitest", "@testing-library/jest-dom/vitest"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.stories.ts", "**/*.stories.tsx"]

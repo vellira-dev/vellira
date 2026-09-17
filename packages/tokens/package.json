@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/tokens",
-  "version": "2.114.1",
+  "version": "2.115.0",
   "description": "Design tokens for Vellira Design System",
   "keywords": [
     "vellira",
@@ -67,6 +67,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }
