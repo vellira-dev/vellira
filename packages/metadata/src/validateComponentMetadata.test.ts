@@ -100,6 +100,44 @@ describe('validateComponentMetadata', () => {
     }
   });
 
+  it('accepts platform-scoped capability evidence', () => {
+    const result = validateComponentMetadata({
+      ...validMetadata,
+      platformCapabilities: {
+        react: ['keyboard'],
+        'react-native': ['accessible-name'],
+      },
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects malformed, undeclared, or duplicate platform capability evidence', () => {
+    const result = validateComponentMetadata({
+      ...validMetadata,
+      platforms: ['react'],
+      platformCapabilities: {
+        react: ['disabled'],
+        'react-native': ['accessible-name'],
+        web: ['keyboard'],
+      },
+    });
+
+    expect(result.valid).toBe(false);
+
+    if (!result.valid) {
+      expect(result.errors).toContain(
+        'platformCapabilities.react must not repeat shared capabilities: disabled.'
+      );
+      expect(result.errors).toContain(
+        'platformCapabilities.react-native must refer to a declared component platform.'
+      );
+      expect(result.errors).toContain(
+        'platformCapabilities contains unsupported platform: web.'
+      );
+    }
+  });
+
   it('rejects non-object input', () => {
     expect(validateComponentMetadata(null)).toEqual({
       valid: false,
