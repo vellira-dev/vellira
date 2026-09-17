@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import type { FloatingPlacement } from '@vellira-ui/types';
 import type { RefObject } from 'react';
-import type { LayoutChangeEvent, View } from 'react-native';
+import type { LayoutChangeEvent, ViewInstance } from 'react-native';
 import { Dimensions } from 'react-native';
 
 import { computeFloatingPosition } from './computeFloatingPosition';
@@ -27,13 +27,13 @@ export function useNativeFloatingPosition(
     height: 0,
   });
 
-  const lastTriggerRef = useRef<RefObject<View | null> | null>(null);
-  const lastContainerRef = useRef<RefObject<View | null> | null>(null);
+  const lastTriggerRef = useRef<RefObject<ViewInstance | null> | null>(null);
+  const lastContainerRef = useRef<RefObject<ViewInstance | null> | null>(null);
 
   const updatePosition = useCallback(
     (
-      triggerRef: RefObject<View | null>,
-      containerRef?: RefObject<View | null>,
+      triggerRef: RefObject<ViewInstance | null>,
+      containerRef?: RefObject<ViewInstance | null>,
       measuredSize = floatingSizeRef.current
     ) => {
       lastTriggerRef.current = triggerRef;
