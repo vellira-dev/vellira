@@ -72,11 +72,15 @@ jobs:
           }
           JSON
 
+          set +e
           pnpm component-production:validate:json \
             --spec /tmp/textarea-production.json \
             > /tmp/textarea-production-validation.json
+          validation_status=$?
+          set -e
 
           cat /tmp/textarea-production-validation.json
+          echo "component-production validation exit: ${validation_status}"
 
           node <<'NODE'
           const fs = require('node:fs');
