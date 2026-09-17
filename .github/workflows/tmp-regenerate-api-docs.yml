@@ -1,0 +1,57 @@
+name: Temporary API docs regeneration
+
+on:
+  push:
+    branches:
+      - chore/expo57-compatible-patches
+    paths:
+      - .github/workflows/tmp-regenerate-api-docs.yml
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate API docs
+        run: pnpm docs:api
+
+      - name: Verify generated scope
+        shell: bash
+        run: |
+          unexpected=$(git status --short | awk '{print $2}' | grep -Ev '^(apps/docs/src/react/|apps/docs/src/react-native/)' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::API docs generation changed unexpected paths:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit generated API docs
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/docs/src/react apps/docs/src/react-native
+          if git diff --cached --quiet; then
+            echo "API docs already up to date."
+            exit 0
+          fi
+          git commit -m "docs: regenerate native API reference"
+          git push origin HEAD:chore/expo57-compatible-patches
