@@ -48,7 +48,7 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
-  assert.match(candidate, /actions\/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131/);
+  assert.match(candidate, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
   assert.match(candidate, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/);
   assert.match(candidate, /cloudflare-staging-evidence-/);
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
