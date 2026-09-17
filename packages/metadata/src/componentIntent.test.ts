@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { ComponentMetadata } from './component';
 import {
-  evaluateComponentIntentCoverage,
   type ComponentIntentTargetV1,
+  evaluateComponentIntentCoverage,
 } from './componentIntent';
 import { accordionMetadata } from './components';
 import { componentExpansionCatalog } from './expansionCatalog';
