@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import type { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import {
   useModal,
@@ -25,7 +25,7 @@ export const ModalRoot = ({
   children,
 }: ModalProps) => {
   const initialOpen = open ?? defaultOpen;
-  const triggerRef = useRef<View | null>(null);
+  const triggerRef = useRef<ViewInstance | null>(null);
   const modal = useModal({
     open,
     defaultOpen,
