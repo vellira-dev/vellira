@@ -6,12 +6,12 @@
 .visual {
   display: grid;
   grid-template-columns:
-    minmax(108px, 1fr) 12px
-    minmax(108px, 1fr) 12px
-    minmax(108px, 1fr) 12px
-    minmax(128px, 1.18fr) 12px
-    minmax(94px, 0.88fr) 12px
-    minmax(108px, 1fr);
+    minmax(98px, 1fr) 10px
+    minmax(98px, 1fr) 10px
+    minmax(98px, 1fr) 10px
+    minmax(184px, 1.72fr) 10px
+    minmax(84px, 0.78fr) 10px
+    minmax(98px, 1fr);
   align-items: center;
   column-gap: 0;
 }
@@ -83,7 +83,7 @@
 
 .arrow {
   display: grid;
-  width: 12px;
+  width: 10px;
   min-width: 0;
   justify-self: start;
   margin-left: -1px;
@@ -95,15 +95,15 @@
 }
 
 .arrow svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .concerns {
   position: relative;
   display: grid;
   min-width: 0;
-  padding: 12px 10px 12px 24px;
+  padding: 12px 8px 12px 20px;
   background:
     linear-gradient(
       145deg,
@@ -123,7 +123,7 @@
   position: absolute;
   top: 33px;
   bottom: 33px;
-  left: 10px;
+  left: 8px;
   width: 1px;
   background: color-mix(
     in srgb,
@@ -138,21 +138,26 @@
   display: grid;
   min-height: 42px;
   min-width: 0;
-  padding: 8px 9px;
+  padding: 8px 8px;
   grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
   border-radius: var(--radius-md);
   font-size: 11px;
   font-weight: var(--font-weight-semibold);
   line-height: 1.2;
-  gap: 8px;
+  gap: 6px;
+}
+
+.concern > span:last-child {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .concern::before {
   position: absolute;
   top: 50%;
-  left: -14px;
-  width: 13px;
+  left: -12px;
+  width: 11px;
   height: 1px;
   background: color-mix(
     in srgb,
