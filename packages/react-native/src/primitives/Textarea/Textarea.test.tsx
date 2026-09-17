@@ -65,6 +65,33 @@ describe('Native Textarea', () => {
     unmount();
   });
 
+  it('forwards focus and blur callbacks for the multiline control', () => {
+    const onFocus = vi.fn();
+    const onBlur = vi.fn();
+    const { container, unmount } = render(
+      <Textarea
+        accessibilityLabel='Focus target'
+        value=''
+        onFocus={onFocus}
+        onBlur={onBlur}
+      />
+    );
+
+    const textarea = container.querySelector<HTMLTextAreaElement>('textarea');
+
+    act(() => {
+      textarea?.focus();
+    });
+    expect(onFocus).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      textarea?.blur();
+    });
+    expect(onBlur).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
+
   it('uses label as accessible-name fallback and allows native override', () => {
     const { container, rerender, unmount } = render(
       <Textarea label='Notes' value='' />

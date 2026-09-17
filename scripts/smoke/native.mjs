@@ -302,6 +302,7 @@ const expectedNativeApi = [
   'Select',
   'Switch',
   'Tabs',
+  'Textarea',
   'ThemeProvider',
   'Tooltip',
   'nativeThemes',

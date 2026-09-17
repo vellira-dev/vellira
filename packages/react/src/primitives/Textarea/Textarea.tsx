@@ -3,11 +3,12 @@ import { forwardRef, useId } from 'react';
 import { controlSizes } from '@vellira-ui/tokens';
 import type { ChangeEvent, CSSProperties } from 'react';
 
-import { FormField, useFormFieldContext } from '#patterns/FormField';
-import { cn } from '#utils/cn';
+import type { TextareaProps } from './types';
 
 import styles from './Textarea.module.scss';
-import type { TextareaProps } from './types';
+
+import { FormField, useFormFieldContext } from '#patterns/FormField';
+import { cn } from '#utils/cn';
 
 type TextareaSizeStyle = CSSProperties & {
   '--textarea-font-size': string;

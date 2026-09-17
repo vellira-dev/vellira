@@ -111,6 +111,7 @@ const expectedWebApi = [
   'Select',
   'Switch',
   'Tabs',
+  'Textarea',
   'ThemeProvider',
   'Tooltip',
   'useTheme',
