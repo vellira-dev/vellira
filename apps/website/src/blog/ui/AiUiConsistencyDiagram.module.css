@@ -225,44 +225,11 @@
   letter-spacing: 0.18em;
 }
 
-.aiChip {
-  position: relative;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  color: var(--text-brand);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  background: color-mix(in srgb, var(--color-primary-400) 10%, transparent);
-  border: 2px solid
-    color-mix(in srgb, var(--color-primary-400) 64%, var(--border-muted));
-  border-radius: var(--radius-md);
-  box-shadow:
-    inset 0 0 14px
-      color-mix(in srgb, var(--color-primary-400) 12%, transparent),
-    0 0 18px color-mix(in srgb, var(--color-primary-400) 16%, transparent);
-  place-items: center;
-}
-
-.aiChip::before,
-.aiChip::after {
-  position: absolute;
-  inset: 7px -7px;
-  border-right: 3px dotted
-    color-mix(in srgb, var(--color-primary-400) 54%, transparent);
-  border-left: 3px dotted
-    color-mix(in srgb, var(--color-primary-400) 54%, transparent);
-  content: '';
-}
-
-.aiChip::after {
-  inset: -7px 7px;
-  border: 0;
-  border-top: 3px dotted
-    color-mix(in srgb, var(--color-primary-400) 54%, transparent);
-  border-bottom: 3px dotted
-    color-mix(in srgb, var(--color-primary-400) 54%, transparent);
+.stageVisual {
+  display: block;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
 }
 
 .srOnly {
