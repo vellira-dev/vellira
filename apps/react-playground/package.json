@@ -14,13 +14,13 @@
     "@vellira-ui/assets": "workspace:*",
     "@vellira-ui/react": "workspace:^",
     "@vellira-ui/tokens": "workspace:*",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.0.3",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
