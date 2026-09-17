@@ -1,111 +1,145 @@
-AI is making UI generation dramatically faster.
+AI can now generate UI faster than many teams can review it.
 
-A developer can describe a component, ask a coding model to implement it, and get something usable in minutes. The same tools can refactor existing interfaces, write tests, update types, and produce variations at a pace that would have been difficult to imagine a few years ago.
+A developer can describe a component, ask a coding model to implement it, and get a plausible result in minutes. The same model can refactor nearby code, write tests, update types, and produce several variations before a traditional implementation would have reached its first review.
 
 That is a real improvement.
 
-But it also changes where the difficult part of UI engineering lives.
+But it also moves the bottleneck.
 
-The question is becoming less:
+The hard question is becoming less:
 
-> How quickly can we write another component?
+> How quickly can we create another component?
 
 And more:
 
-> How do we keep a growing UI system coherent when humans and AI can change it this quickly?
+> How do we keep the whole UI system coherent when humans and AI can change it this quickly?
 
-That second problem is one of the reasons we are building Vellira.
+That is one of the problems we are building Vellira around.
 
-## Faster UI creation creates a consistency problem
+## Generation is getting cheaper. Fragmentation is not.
 
-When UI changes slowly, teams can compensate for weak system boundaries with review, documentation, and memory.
+Imagine an AI-generated component that looks good, compiles, and works in a local preview.
 
-Someone remembers which component should be reused. Someone notices that a new color does not belong in the token set. Someone catches a missing React Native behavior. Someone realizes that Storybook or documentation was not updated.
+That still leaves a surprising number of questions unanswered.
 
-As the rate of change increases, that approach becomes harder to sustain.
+Does it duplicate something the system already has? Does its API fit the surrounding components? Does it use the shared design foundations? Is the same product capability represented correctly on React Native? Are accessibility expectations covered? Did the documentation and examples move with the implementation? Will the next contributor understand how this component is supposed to evolve?
 
-More UI output means more opportunities for small differences to accumulate:
+A locally correct component can still make the system around it less consistent.
 
-- APIs begin to drift between components;
+That distinction matters more as generation gets faster.
+
+When UI changes slowly, teams can compensate for weak system boundaries with review, documentation, and memory. Someone remembers which component should be reused. Someone catches the one-off visual value. Someone notices that Web changed but React Native did not. Someone remembers to update Storybook.
+
+As the rate of change increases, that becomes harder to sustain.
+
+More UI output creates more opportunities for small differences to accumulate:
+
+- APIs drift between similar components;
 - accessibility behavior becomes inconsistent;
-- local visual values bypass shared tokens;
+- local values bypass shared tokens;
 - documentation falls behind implementation;
-- Web and React Native versions stop matching where they should;
-- similar capabilities are implemented more than once;
-- tests cover different expectations from one component to another;
+- Web and React Native diverge unintentionally;
+- similar capabilities get implemented more than once;
+- tests encode different expectations for comparable behavior;
 - package and public surfaces become harder to keep aligned.
 
-None of these problems are new.
+None of these problems were invented by AI.
 
-What changes with AI-assisted development is the speed at which they can appear.
+AI simply increases the rate at which they can appear.
 
-If creating or modifying UI becomes 5x or 10x faster, the system around that code has to become stronger too.
+If a team can create five or ten times more UI changes, the system around those changes has to become stronger too.
 
-## A component catalog is useful, but it is not enough
+## A component library is necessary. It is no longer sufficient.
 
 Traditional design systems are often described as collections of reusable components, tokens, guidelines, and documentation.
 
-Those foundations still matter.
+Those foundations still matter. Vellira has them too.
 
-But a component catalog alone does not keep a codebase coherent.
+But a catalog can only tell you so much.
 
-It can show developers that a `Button`, `Select`, or `Tabs` component exists. It cannot automatically guarantee that every new change continues to fit the same expectations around platform support, accessibility, public APIs, documentation, testing, and quality.
+It can show that `Button`, `Select`, or `Tabs` exists. It cannot, by itself, keep every future change aligned with the same expectations around APIs, accessibility, platforms, documentation, testing, and quality.
 
-This becomes especially visible once UI work is shared between developers and coding agents.
+This becomes especially visible when UI work is shared between developers and coding agents.
 
-An AI tool can generate a perfectly reasonable component that still does not belong in the system around it.
+A coding model can generate a perfectly reasonable component that does not quite belong to the system around it.
 
-The code may work locally while introducing a slightly different API. It may solve a capability that already exists elsewhere. It may look correct on Web but ignore the React Native side of the project. It may use values that are visually close to existing tokens without actually using the token system.
+It may introduce a slightly different API. It may recreate a capability that already exists. It may look correct on Web while ignoring the native side of the project. It may use values that are visually close to existing tokens without actually using the shared token system.
 
-The problem is not that the generated code is necessarily bad.
+The code is not necessarily bad.
 
-The problem is that local correctness and system coherence are different things.
+The surrounding system is simply asking a larger question than "does this component work?"
 
-## What we are building with Vellira
+It is asking:
 
-Vellira started as a cross-platform design system for React and React Native, but the project has been expanding around the workflows required to keep that system maintainable as it grows.
+> Does this change still belong to the same product and engineering system?
 
-Today the public project combines several parts of that foundation:
+That is the layer we are increasingly interested in with Vellira.
+
+## What Vellira is becoming
+
+Vellira started as a cross-platform design system for React and React Native.
+
+The public project still has that foundation: reusable components, shared tokens, documentation, Storybook, and cross-platform implementation work.
+
+But building the component set exposed a second problem very quickly.
+
+Creating components is only part of the work. Keeping all of them aligned as the system grows requires repeatable workflows and tooling around the components themselves.
+
+Today the public Vellira project already combines:
 
 - reusable React and React Native components;
 - shared design tokens and cross-platform foundations;
-- Storybook and documentation for component discovery and usage;
+- Storybook and documentation for discovery and usage;
 - repeatable component-generation workflows;
-- automated quality checks around component development;
+- automated component quality checks;
 - accessibility-focused validation and testing;
-- metadata-backed tooling that keeps component information available to the rest of the project.
+- metadata-backed tooling that gives the project structured information about its own components.
 
-The important part is not any one of those features by itself.
+None of those features alone is the point.
 
-It is the direction they create together.
+The interesting part is what they allow us to work toward together: a UI system that becomes easier to extend without becoming easier to fragment.
 
-We want adding or changing UI in Vellira to involve more than producing files that compile. The surrounding tooling should help keep the result connected to the same component system, the same documentation, the same platform expectations, and the same engineering standards.
+We do not want adding a component to mean only "these files compile."
+
+We want the surrounding project to help keep that component connected to the same design foundations, the same platform expectations, the same documentation, and the same engineering standards as the rest of Vellira.
 
 That is useful when a developer writes the code manually.
 
-It becomes even more useful when part of the implementation is generated in seconds.
+It becomes even more useful when an implementation can appear in seconds.
 
-## AI can create a component. The system still has to absorb it.
+## Vellira is not trying to out-code the coding model
 
-Imagine asking an AI coding tool to create a new UI primitive.
+This distinction is important.
 
-Generating the first implementation is increasingly easy.
+Coding models are getting better quickly. They should be able to write more implementation code, understand larger codebases, make broader changes, and handle more routine engineering work over time.
 
-But a production design system has a longer lifecycle around that implementation.
+That is good for Vellira.
 
-The component has to fit the existing API conventions. Its supported platforms need to be clear. The relevant documentation and examples need to exist. Accessibility expectations need to be covered. Tests need to represent the right behavior. Public package surfaces need to stay current. Shared design foundations should be reused instead of recreated locally.
+We are not building the project around the assumption that AI will remain bad at writing components.
 
-For a human reviewer, checking all of that manually for every change is expensive.
+We are building around the opposite assumption: AI will get very good at producing and modifying UI.
 
-For an AI agent, remembering all of it from a prompt is fragile.
+If that happens, the surrounding system becomes more important, not less.
 
-Vellira's public tooling is moving more of that surrounding work into repeatable project workflows and checks.
+A model can generate a new component.
 
-The goal is simple: make it easier to grow the UI system without making the system less coherent every time it grows.
+The project still needs to keep APIs coherent.
 
-## Human-written and AI-written UI have the same final problem
+A model can change ten components in one pass.
 
-There is a temptation to create a separate mental model for AI-generated code, as if it needs an entirely different design-system workflow.
+The project still needs to keep accessibility, documentation, public surfaces, tokens, and platform behavior from drifting apart.
+
+A model can become better at understanding context.
+
+The repository still benefits from making its important expectations explicit and repeatable instead of depending on every author to remember them perfectly.
+
+So the goal is not to slow AI-assisted development down.
+
+The goal is to make that speed safer to absorb.
+
+## The author matters less than the result
+
+There is a temptation to treat AI-generated code as a completely separate category that needs a special design-system workflow.
 
 I do not think that is the most useful distinction.
 
@@ -113,86 +147,88 @@ Once code enters a repository, the important question is not who typed it.
 
 The important question is whether it fits the project.
 
-A component written manually can introduce an inconsistent API.
+A human can introduce an inconsistent API.
 
-A component generated by AI can follow the existing conventions perfectly.
+A coding agent can follow the existing conventions perfectly.
 
-A human can forget documentation.
+A developer can forget documentation.
 
 An automated workflow can keep it current.
 
-The author is not the reliable signal. The resulting system is.
+The author is not a reliable measure of system quality. The resulting state of the project is.
 
-That is why we are interested in tooling that works around the repository and component lifecycle rather than relying only on the intelligence of whichever author produced the latest change.
+That is why Vellira is investing in tooling around the component lifecycle rather than relying only on the intelligence or discipline of whichever author produced the latest change.
 
-As coding models improve, they should be able to do more of the implementation work. That is a benefit, not something a design system should fight.
+Humans and AI can both move faster when the project around them carries more of the consistency burden.
 
-The design system's job is to make that increased output easier to integrate and maintain.
-
-## Cross-platform UI makes this even more important
+## Cross-platform UI raises the stakes
 
 Vellira targets both React and React Native.
 
-That makes consistency especially interesting because "the same component" does not always mean "the same implementation."
+That makes this problem even more visible because "the same component" does not always mean "the same source code."
 
-Web and native platforms have different interaction models, accessibility APIs, primitives, and constraints. Some behavior should be shared. Some behavior needs to diverge intentionally.
+Web and native platforms have different primitives, interaction models, accessibility APIs, and constraints. Some behavior should be shared. Some behavior needs to diverge intentionally.
 
-A cross-platform design system therefore needs more than copied source files.
+A useful cross-platform design system therefore needs more than copied implementations.
 
-It needs a stable way to keep the product language aligned while allowing platform-specific implementation where necessary.
+It needs to keep one product language coherent while still respecting each platform.
 
 Faster code generation does not remove that challenge.
 
 It can amplify it.
 
-An AI tool can produce two implementations quickly, but speed alone does not tell us whether those implementations still represent one coherent component system.
+An AI tool can create two implementations very quickly, but speed alone cannot tell a team whether those implementations still represent one coherent component system.
 
-That is why Vellira continues to invest in the tooling around components, not only in the components themselves.
+That is why the tooling around Vellira's components matters as much as the component count itself.
 
-## The value of the system grows as the rate of change grows
+## The bottleneck is moving from production to coordination
 
-This is the part of AI-assisted development that I find most interesting.
+This is the part of AI-assisted frontend development that I find most interesting.
 
 Better coding models reduce the cost of producing code.
 
-That does not necessarily reduce the value of design-system infrastructure.
+When producing UI is expensive, teams naturally make fewer changes. When producing UI becomes cheap, experimentation increases, more contributors can work in parallel, and automated agents can make changes of their own.
 
-In many cases it does the opposite.
+The limiting resource starts moving away from typing speed.
 
-When producing UI is expensive, teams naturally make fewer changes. When producing UI becomes cheap, experimentation increases, more code gets generated, more contributors can move in parallel, and automated agents can make changes of their own.
-
-The limiting resource shifts from typing speed toward coordination and coherence.
+It moves toward coordination, consistency, review, and maintenance.
 
 That creates a different kind of leverage for developer tooling.
 
-If ten changes can be produced in the time it previously took to produce one, tooling that helps keep those ten changes aligned becomes more valuable.
+If ten changes can be produced in the time it previously took to produce one, tooling that helps those ten changes remain part of the same system becomes more valuable.
 
-This is the direction we are exploring with Vellira:
+This is the bet behind the direction Vellira is taking:
 
 > AI can generate more UI. Vellira is being built to help keep that UI coherent.
 
-## Where Vellira is going next
+The better generation becomes, the more important the system around generation becomes.
 
-We are still building the foundation.
+## Where Vellira is today
 
-The immediate work remains concrete: expanding the cross-platform component set, strengthening component workflows, improving quality and accessibility checks, and making the public project easier to adopt and use.
+We are still building the foundation, and I want to be precise about that.
 
-We are intentionally proving those pieces inside Vellira itself before making broader promises about what the tooling can understand or manage outside the project.
+The immediate work is concrete: expand the cross-platform component set, strengthen component workflows, improve quality and accessibility checks, and make the public project easier to adopt and use.
 
-But the longer-term problem is already clear.
+We are proving these ideas inside Vellira itself before making broader claims about what the tooling can understand or manage outside the project.
+
+That constraint is intentional.
+
+It is easy to describe an ambitious future for developer tooling. It is more useful to earn that future by making the current system work reliably first.
+
+But the product direction is already clear.
 
 Frontend teams are going to work with more generated code, more automation, and more AI-assisted changes — not less.
 
 The answer should not be to slow those tools down.
 
-It should be to give the UI system around them stronger foundations.
+It should be to make the UI system around them stronger.
 
-If you are interested in that direction, you can explore the public project today:
+If you are building React or React Native interfaces and thinking about how AI changes design-system workflows, follow Vellira as we build this in public:
 
-- [Vellira documentation](https://docs.vellira.dev)
-- [Vellira Storybook](https://storybook.vellira.dev)
-- [Vellira on GitHub](https://github.com/vellira-dev/vellira)
+- [Explore the Vellira documentation](https://docs.vellira.dev)
+- [Browse the component system in Storybook](https://storybook.vellira.dev)
+- [Follow Vellira on GitHub](https://github.com/vellira-dev/vellira)
 
 AI can help us build UI faster.
 
-The next challenge is making sure faster still produces one coherent system.
+Vellira is being built so that faster does not have to mean more fragmented.
