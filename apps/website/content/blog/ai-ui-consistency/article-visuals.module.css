@@ -19,16 +19,16 @@
   border-radius: var(--radius-lg);
 }
 
-.diagramDark {
-  display: none;
-}
-
-:global([data-vellira-theme='dark']) .diagramLight,
-:global([data-vellira-theme='high-contrast']) .diagramLight {
+.diagramLight {
   display: none;
 }
 
 :global([data-vellira-theme='dark']) .diagramDark,
 :global([data-vellira-theme='high-contrast']) .diagramDark {
+  display: none;
+}
+
+:global([data-vellira-theme='dark']) .diagramLight,
+:global([data-vellira-theme='high-contrast']) .diagramLight {
   display: block;
 }
