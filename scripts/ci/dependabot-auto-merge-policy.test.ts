@@ -7,9 +7,17 @@ const workflowPath = resolve(
   process.cwd(),
   '.github/workflows/dependabot-auto-merge.yml'
 );
+const metadataWorkflowPath = resolve(
+  process.cwd(),
+  '.github/workflows/dependabot-auto-merge-metadata.yml'
+);
 
 async function workflowSource() {
   return readFile(workflowPath, 'utf8');
+}
+
+async function metadataWorkflowSource() {
+  return readFile(metadataWorkflowPath, 'utf8');
 }
 
 describe('Dependabot auto-merge workflow policy', () => {
@@ -78,5 +86,46 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('statuses: read');
     expect(source).toContain('permission-contents: write');
     expect(source).toContain('permission-pull-requests: write');
+  });
+});
+
+describe('Dependabot auto-merge metadata workflow policy', () => {
+  it('disarms persistent auto-merge before inspecting eligibility', async () => {
+    const source = await metadataWorkflowSource();
+    const disarmIndex = source.indexOf('  disarm:');
+    const inspectIndex = source.indexOf('  inspect:');
+
+    expect(source).toContain('- converted_to_draft');
+    expect(disarmIndex).toBeGreaterThan(-1);
+    expect(inspectIndex).toBeGreaterThan(disarmIndex);
+    expect(source).toContain('needs: disarm');
+    expect(source).toContain('Inspect legacy auto-merge request');
+    expect(source).toContain('.auto_merge == null');
+    expect(source).toContain('--disable-auto');
+    expect(source).toContain(
+      'Verify no persistent auto-merge request remains'
+    );
+  });
+
+  it('keeps cleanup write credentials short-lived and conditional', async () => {
+    const source = await metadataWorkflowSource();
+    const inspectIndex = source.indexOf('Inspect legacy auto-merge request');
+    const tokenIndex = source.indexOf(
+      'Create short-lived cleanup GitHub App token'
+    );
+    const disableIndex = source.indexOf('Disable legacy auto-merge request');
+    const verifyIndex = source.indexOf(
+      'Verify no persistent auto-merge request remains'
+    );
+
+    expect(inspectIndex).toBeGreaterThan(-1);
+    expect(tokenIndex).toBeGreaterThan(inspectIndex);
+    expect(disableIndex).toBeGreaterThan(tokenIndex);
+    expect(verifyIndex).toBeGreaterThan(disableIndex);
+    expect(source).toContain("if: steps.legacy.outputs.enabled == 'true'");
+    expect(source).toContain('permission-pull-requests: write');
+    expect(source).not.toContain('permission-contents: write');
+    expect(source).toContain('contents: read');
+    expect(source).toContain('pull-requests: read');
   });
 });
