@@ -150,9 +150,31 @@
   gap: var(--space-2);
 }
 
-.logo {
+.logoMark {
+  display: grid;
+  place-items: center;
   width: 50px;
   height: 50px;
+}
+
+.logo {
+  grid-area: 1 / 1;
+  width: 50px;
+  height: 50px;
+}
+
+.logoLight {
+  display: none;
+}
+
+:global([data-vellira-theme='dark']) .logoDark,
+:global([data-vellira-theme='high-contrast']) .logoDark {
+  display: none;
+}
+
+:global([data-vellira-theme='dark']) .logoLight,
+:global([data-vellira-theme='high-contrast']) .logoLight {
+  display: block;
 }
 
 .wordmark {
