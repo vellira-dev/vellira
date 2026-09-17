@@ -99,6 +99,7 @@ jobs:
       - name: Run focused contracts
         run: |
           pnpm --filter @vellira-ui/metadata test
+          pnpm --filter @vellira-ui/metadata build
           pnpm exec vitest run \
             scripts/checks/component-completeness/check-intent-coverage.test.ts \
             scripts/component-production/production-eligibility.test.ts \
