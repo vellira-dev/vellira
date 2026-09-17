@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Close Textarea governance contracts
+      - name: Close Textarea governance and post-production contracts
         shell: bash
         run: |
           node <<'NODE'
@@ -95,6 +95,84 @@ jobs:
             `  {\n    factory: 'createTabsTokens',\n    component: 'tabs',\n    file: 'tabs.ts',\n    primitiveColorUsage: [\n      'intent-palette-construction',\n      'component-owned-presentation',\n    ],\n    unresolved: [],\n  },\n  {\n    factory: 'createTextareaTokens',\n    component: 'textarea',\n    file: 'textarea.ts',\n    primitiveColorUsage: ['none'],\n    unresolved: [],\n  },\n  {\n    factory: 'createTooltipTokens',`,
             'Textarea semantic dependency inventory'
           );
+
+          replaceOnce(
+            'scripts/check-public-api.mjs',
+            "    'BaseTabsTriggerProps',\n    'BaseTooltipProps',",
+            "    'BaseTabsTriggerProps',\n    'BaseTextareaProps',\n    'BaseTooltipProps',",
+            'Textarea shared base public API'
+          );
+          replaceOnce(
+            'scripts/check-public-api.mjs',
+            "    'TabsVariant',\n    'TextWrap',",
+            "    'TabsVariant',\n    'TextareaSize',\n    'TextWrap',",
+            'Textarea size public API'
+          );
+
+          replaceOnce(
+            'scripts/component-production/missing-component-request.test.ts',
+            "nextAction: 'link-or-create-component-token-reservation-issue',",
+            "nextAction: 'link-or-create-component-issue',",
+            'Textarea current-token production routing expectation'
+          );
+
+          replaceOnce(
+            'scripts/canonical-gap/contract.test.ts',
+            "kind: 'component-token-reservation',\n      canonicalTarget: 'Textarea',",
+            "kind: 'component',\n      canonicalTarget: 'Textarea',",
+            'Textarea canonical gap component expectation'
+          );
+          replaceOnce(
+            'scripts/canonical-gap/contract.test.ts',
+            `    expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([\n      'component-token-reservation',\n      'icon',\n      'token',\n      'token',\n    ]);`,
+            `    expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([\n      'icon',\n      'token',\n      'token',\n    ]);`,
+            'Textarea resolved UI finding canonical gap expectation'
+          );
+          replaceOnce(
+            'scripts/canonical-gap/contract.test.ts',
+            `    expect(\n      batch.requests.some(\n        ({ canonicalTarget }) => canonicalTarget === 'Textarea'\n      )\n    ).toBe(true);`,
+            `    expect(\n      batch.requests.some(\n        ({ canonicalTarget }) => canonicalTarget === 'Textarea'\n      )\n    ).toBe(false);`,
+            'Textarea resolved canonical target expectation'
+          );
+
+          replaceOnce(
+            'scripts/checks/vellira-ui-usage/checker.test.ts',
+            "it('routes textarea through the missing-component workflow while Textarea is absent',",
+            "it('reports authored textarea when canonical Textarea exists',",
+            'Textarea Vellira UI usage test title'
+          );
+          replaceOnce(
+            'scripts/checks/vellira-ui-usage/checker.test.ts',
+            `      ruleId: 'vellira-ui.missing-component',\n      detected: 'textarea',\n      severity: 'warning',\n      blocking: false,\n      nextAction: 'request-missing-component',`,
+            `      ruleId: 'vellira-ui.existing-component-bypass',\n      detected: 'textarea',\n      severity: 'warning',\n      blocking: false,\n      nextAction: 'reuse-existing',`,
+            'Textarea Vellira UI usage expectation'
+          );
+          replaceOnce(
+            'scripts/checks/vellira-ui-usage/checker.test.ts',
+            '    expect(finding.canonicalAlternative).toBeUndefined();',
+            "    expect(finding.canonicalAlternative).toBe('Textarea');",
+            'Textarea canonical alternative expectation'
+          );
+
+          replaceOnce(
+            'scripts/generators/component-page/renderers/catalog-preview-registry.ts',
+            "  return `${generatedFileHeader}'use client';\n\nimport { ${demoName} } from './${demoName}';\n\nexport function ${model.componentName}CatalogPreview() {\n  return <${demoName} />;\n}\n`;",
+            "  return `${generatedFileHeader}'use client';\n\nimport { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';\n\nimport { ${demoName} } from './${demoName}';\n\nexport function ${model.componentName}CatalogPreview() {\n  return (\n    <ComponentDemoStateProvider resetKey='catalog:${model.slug}'>\n      <${demoName} />\n    </ComponentDemoStateProvider>\n  );\n}\n`;",
+            'generated catalog preview state provider'
+          );
+
+          replaceOnce(
+            'scripts/generators/component-page/renderers/catalog-preview-registry.test.ts',
+            "    expect(source).toContain('return <AvatarDemo />;');",
+            `    expect(source).toContain(\n      "import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';"\n    );\n    expect(source).toContain(\n      "<ComponentDemoStateProvider resetKey='catalog:avatar'>"\n    );\n    expect(source).toContain('<AvatarDemo />');`,
+            'React catalog preview provider regression'
+          );
+          replaceOnce(
+            'scripts/generators/component-page/renderers/catalog-preview-registry.test.ts',
+            "    expect(source).toContain('return <NativeNativeOnlyDemo />;');",
+            `    expect(source).toContain(\n      "<ComponentDemoStateProvider resetKey='catalog:native-only'>"\n    );\n    expect(source).toContain('<NativeNativeOnlyDemo />');`,
+            'Native catalog preview provider regression'
+          );
           NODE
 
           pnpm exec prettier \
@@ -105,6 +183,12 @@ jobs:
             packages/tokens/src/token-architecture.ts \
             packages/tokens/src/component-token-factory-conventions.test.ts \
             packages/tokens/src/component-token-dependencies.ts \
+            scripts/check-public-api.mjs \
+            scripts/component-production/missing-component-request.test.ts \
+            scripts/canonical-gap/contract.test.ts \
+            scripts/checks/vellira-ui-usage/checker.test.ts \
+            scripts/generators/component-page/renderers/catalog-preview-registry.ts \
+            scripts/generators/component-page/renderers/catalog-preview-registry.test.ts \
             --write
 
       - name: Align RN TextInput test harness with multiline props
@@ -185,13 +269,15 @@ jobs:
           pnpm component-docs:check
           pnpm component-pages:check
 
-      - name: Verify semantic completion contract
+      - name: Verify final Textarea integration
         shell: bash
         run: |
           pnpm check:tokens-semantic:strict
           pnpm check:component --all
           pnpm check:public-api
           pnpm docs:api:check
+          pnpm test:tooling
+          pnpm exec turbo run build --filter=@vellira-ui/website
 
       - name: Commit verified semantic completion and remove helper
         shell: bash
