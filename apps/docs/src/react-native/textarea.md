@@ -50,5 +50,19 @@ API details are generated from `packages/react-native/API.md`.
 - The React Native package uses native rendering and accessibility props; browser-only DOM and keyboard behavior does not automatically apply.
 
 <!-- vellira-component-docs:authored:start -->
-<!-- Add manually authored content for this component here. -->
+
+## Multiline sizing and limits
+
+React Native keeps the same multiline intent while using native `TextInput`
+behavior instead of browser textarea assumptions.
+
+- `numberOfLines` sets the initial multiline geometry, defaults to `3`, and is
+  clamped to at least `1`. Vellira uses it to derive the control's minimum height.
+- Vellira does not expose browser-style resize controls or a shared `autoGrow`
+  prop at launch. Native layout remains platform-appropriate; applications can
+  compose additional growth/layout behavior when their product requires it.
+- `maxLength` is passed through to `TextInput` and is the canonical launch-time
+  character-limit mechanism. `Textarea` does not render a character counter;
+  applications can compose one with FormField description/error content.
+
 <!-- vellira-component-docs:authored:end -->
