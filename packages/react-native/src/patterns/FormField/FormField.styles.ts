@@ -1,12 +1,32 @@
-import { StyleSheet, type TextStyle } from 'react-native';
+import { StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 
 import type { NativeTheme } from '../../theme';
 
 const fontWeight = (value: string): TextStyle['fontWeight'] =>
   value as TextStyle['fontWeight'];
 
-export const createStyles = (theme: NativeTheme) =>
-  StyleSheet.create({
+type FormFieldStyles = {
+  root: ViewStyle;
+  label: TextStyle;
+  labelRow: ViewStyle;
+  labelAction: ViewStyle;
+  labelDisabled: TextStyle;
+  required: TextStyle;
+  optional: TextStyle;
+  labelInfo: TextStyle;
+  description: TextStyle;
+  descriptionDisabled: TextStyle;
+  customLabel: ViewStyle;
+  control: ViewStyle;
+  message: TextStyle;
+  messageSuccess: TextStyle;
+  messageWarning: TextStyle;
+  messageDanger: TextStyle;
+  helperTextDisabled: TextStyle;
+};
+
+export const createStyles = (theme: NativeTheme): FormFieldStyles =>
+  StyleSheet.create<FormFieldStyles>({
     root: {
       width: '100%',
       minWidth: 0,
