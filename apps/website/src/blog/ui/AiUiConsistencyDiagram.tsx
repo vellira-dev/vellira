@@ -87,13 +87,22 @@ export function AiUiConsistencyDiagram() {
         <FlowArrow />
 
         <div className={styles.hub}>
-          <Image
-            src='/brand/icons/logo-icon-white.svg'
-            alt=''
-            width={50}
-            height={50}
-            className={styles.logo}
-          />
+          <span className={styles.logoMark}>
+            <Image
+              src='/brand/icons/logo-icon-dark.svg'
+              alt=''
+              width={50}
+              height={50}
+              className={`${styles.logo} ${styles.logoDark}`}
+            />
+            <Image
+              src='/brand/icons/logo-icon-light.svg'
+              alt=''
+              width={50}
+              height={50}
+              className={`${styles.logo} ${styles.logoLight}`}
+            />
+          </span>
           <span className={styles.wordmark}>VELLIRA</span>
         </div>
 
