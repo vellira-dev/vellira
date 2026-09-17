@@ -13,7 +13,7 @@ const browser = await chromium.launch({ headless: true });
 
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  await page.goto(`${baseUrl}/blog`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/blog`, { waitUntil: 'domcontentloaded' });
 
   const search = page.getByRole('searchbox', { name: 'Search articles' });
   await search.waitFor();
@@ -71,9 +71,13 @@ try {
   assert.equal(desktopFilterStyle.underlineOpacity, '1');
 
   await search.fill('React');
-  await page.waitForFunction(() => new URL(window.location.href).searchParams.get('q') === 'React');
+  await page.waitForFunction(
+    () => new URL(window.location.href).searchParams.get('q') === 'React'
+  );
   await page.getByRole('button', { name: 'Clear input' }).click();
-  await page.waitForFunction(() => !new URL(window.location.href).searchParams.has('q'));
+  await page.waitForFunction(
+    () => !new URL(window.location.href).searchParams.has('q')
+  );
 
   const filterButtons = filters.getByRole('button');
   const filterCount = await filterButtons.count();
@@ -82,12 +86,16 @@ try {
   const firstTopic = filterButtons.nth(1);
   await firstTopic.click();
   assert.equal(await firstTopic.getAttribute('aria-pressed'), 'true');
-  await page.waitForFunction(() => new URL(window.location.href).searchParams.has('tags'));
+  await page.waitForFunction(() =>
+    new URL(window.location.href).searchParams.has('tags')
+  );
   await allFilter.click();
-  await page.waitForFunction(() => !new URL(window.location.href).searchParams.has('tags'));
+  await page.waitForFunction(
+    () => !new URL(window.location.href).searchParams.has('tags')
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
 
   const mobileSearch = page.getByRole('searchbox', { name: 'Search articles' });
   const mobileAllFilter = page
