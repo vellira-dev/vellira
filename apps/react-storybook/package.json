@@ -44,7 +44,7 @@
     "chromatic": "^18.0.1",
     "eslint-plugin-storybook": "^10.6.0",
     "lottie-web": "^5.13.0",
-    "sass": "^1.99.0",
+    "sass": "^1.104.1",
     "storybook": "^10.6.0",
     "typescript": "6.0.3",
     "typescript-plugin-css-modules": "^5.2.0",
