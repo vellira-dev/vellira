@@ -6,14 +6,14 @@
 .visual {
   display: grid;
   grid-template-columns:
-    minmax(0, 1fr) auto
-    minmax(0, 1fr) auto
-    minmax(0, 1fr) auto
-    minmax(160px, 1.25fr) auto
-    minmax(128px, 0.95fr) auto
-    minmax(0, 1fr);
+    minmax(88px, 1fr) 18px
+    minmax(88px, 1fr) 18px
+    minmax(88px, 1fr) 18px
+    minmax(150px, 1.65fr) 18px
+    minmax(104px, 1.08fr) 18px
+    minmax(88px, 1fr);
   align-items: center;
-  gap: clamp(7px, 0.9vw, 13px);
+  column-gap: 4px;
 }
 
 .node,
@@ -36,12 +36,14 @@
 .node {
   display: grid;
   width: 100%;
+  min-width: 0;
   height: 176px;
   box-sizing: border-box;
-  padding: clamp(14px, 1.8vw, 20px);
+  padding: 14px 10px;
   grid-template-rows: auto auto;
   align-content: center;
   justify-items: center;
+  overflow: hidden;
   border-radius: var(--radius-xl);
   text-align: center;
   gap: var(--space-3);
@@ -62,13 +64,17 @@
 }
 
 .label {
-  font-size: clamp(12px, 1.2vw, 15px);
+  max-width: 100%;
+  font-size: clamp(11px, 1.35vw, 13px);
   font-weight: var(--font-weight-semibold);
   line-height: 1.35;
+  overflow-wrap: normal;
 }
 
 .arrow {
   display: grid;
+  width: 18px;
+  min-width: 0;
   color: var(--text-brand);
   filter: drop-shadow(
     0 0 8px color-mix(in srgb, var(--color-primary-400) 40%, transparent)
@@ -76,10 +82,16 @@
   place-items: center;
 }
 
+.arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
 .concerns {
   position: relative;
   display: grid;
-  padding-left: 18px;
+  min-width: 0;
+  padding-left: 16px;
   gap: 8px;
 }
 
@@ -101,11 +113,12 @@
   position: relative;
   display: grid;
   min-height: 42px;
-  padding: 8px 11px;
-  grid-template-columns: 24px 1fr;
+  min-width: 0;
+  padding: 8px 9px;
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: var(--font-weight-semibold);
   line-height: 1.2;
   gap: 8px;
@@ -131,8 +144,9 @@
 
 .hub {
   display: grid;
+  min-width: 0;
   min-height: 154px;
-  padding: 18px 14px;
+  padding: 18px 10px;
   background:
     radial-gradient(
       circle at 50% 38%,
@@ -239,7 +253,7 @@
   margin: -1px;
 }
 
-@media (width <= 980px) {
+@media (width <= 720px) {
   .visual {
     grid-template-columns: 1fr;
     gap: 12px;
