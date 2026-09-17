@@ -100,18 +100,6 @@ describe('validateComponentMetadata', () => {
     }
   });
 
-  it('accepts platform-scoped generator capability evidence', () => {
-    const result = validateComponentMetadata({
-      ...validMetadata,
-      platformCapabilities: {
-        react: ['keyboard'],
-        'react-native': ['focus-management'],
-      },
-    });
-
-    expect(result.valid).toBe(true);
-  });
-
   it('accepts shared and platform-scoped semantic capability evidence', () => {
     const result = validateComponentMetadata({
       ...validMetadata,
@@ -125,32 +113,6 @@ describe('validateComponentMetadata', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('rejects malformed, undeclared, or duplicate platform capability evidence', () => {
-    const result = validateComponentMetadata({
-      ...validMetadata,
-      platforms: ['react'],
-      platformCapabilities: {
-        react: ['disabled'],
-        'react-native': ['focus-management'],
-        web: ['keyboard'],
-      },
-    });
-
-    expect(result.valid).toBe(false);
-
-    if (!result.valid) {
-      expect(result.errors).toContain(
-        'platformCapabilities.react must not repeat shared capabilities: disabled.'
-      );
-      expect(result.errors).toContain(
-        'platformCapabilities.react-native must refer to a declared component platform.'
-      );
-      expect(result.errors).toContain(
-        'platformCapabilities contains unsupported platform: web.'
-      );
-    }
-  });
-
   it('rejects malformed, undeclared, or duplicate semantic capability evidence', () => {
     const result = validateComponentMetadata({
       ...validMetadata,
@@ -159,6 +121,7 @@ describe('validateComponentMetadata', () => {
       platformSemanticCapabilities: {
         react: ['fallback', 'not-real'],
         'react-native': ['accessible-name'],
+        web: ['announcement'],
       },
     });
 
@@ -173,6 +136,9 @@ describe('validateComponentMetadata', () => {
       );
       expect(result.errors).toContain(
         'platformSemanticCapabilities.react-native must refer to a declared component platform.'
+      );
+      expect(result.errors).toContain(
+        'platformSemanticCapabilities contains unsupported platform: web.'
       );
     }
   });
