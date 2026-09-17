@@ -41,9 +41,8 @@ export function AiUiConsistencyDiagram() {
             <span className={styles.aiChip}>AI</span>
           </div>
           <span className={styles.label}>
-            AI generates
-            <br />
-            more UI
+            <span>AI generates</span>
+            <span>more UI</span>
           </span>
         </div>
 
@@ -54,9 +53,9 @@ export function AiUiConsistencyDiagram() {
             <Grid size={30} />
           </div>
           <span className={styles.label}>
-            More components
-            <br />
-            and changes
+            <span>More</span>
+            <span>components</span>
+            <span>and changes</span>
           </span>
         </div>
 
@@ -67,9 +66,9 @@ export function AiUiConsistencyDiagram() {
             <Warning size={30} />
           </div>
           <span className={styles.label}>
-            More coordination
-            <br />
-            pressure
+            <span>More</span>
+            <span>coordination</span>
+            <span>pressure</span>
           </span>
         </div>
 
@@ -113,9 +112,8 @@ export function AiUiConsistencyDiagram() {
             <System size={30} />
           </div>
           <span className={styles.label}>
-            One coherent
-            <br />
-            UI system
+            <span>One coherent</span>
+            <span>UI system</span>
           </span>
         </div>
       </div>
