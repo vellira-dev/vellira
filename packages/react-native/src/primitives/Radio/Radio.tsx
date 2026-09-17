@@ -7,6 +7,7 @@ import {
   type StyleProp,
   Text,
   View,
+  type ViewInstance,
   type ViewStyle,
 } from 'react-native';
 
@@ -22,7 +23,7 @@ const nativePointerEventsNone =
 const webPointerEventsNone =
   Platform.OS === 'web' ? { pointerEvents: 'none' as const } : undefined;
 
-export const Radio = forwardRef<View, RadioProps>(
+export const Radio = forwardRef<ViewInstance, RadioProps>(
   (
     {
       value,
