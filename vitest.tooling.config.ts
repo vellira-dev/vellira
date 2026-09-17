@@ -8,6 +8,7 @@ export default defineConfig({
         new URL('./packages/metadata/src/index.ts', import.meta.url)
       ),
       '@': fileURLToPath(new URL('./apps/website/src', import.meta.url)),
+      'react-native': 'react-native-web',
     },
   },
   test: {
