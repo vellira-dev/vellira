@@ -605,6 +605,38 @@ const platformNeutralPopoverWebAdditionV1 = {
   to: 'components.popover.content.shadow',
 } as const satisfies TokenMigrationEntry;
 
+const textareaComponentTokenAdditionPathsV1 = [
+  'components.textarea.default.bg',
+  'components.textarea.default.fg',
+  'components.textarea.default.border',
+  'components.textarea.hover.bg',
+  'components.textarea.hover.fg',
+  'components.textarea.hover.border',
+  'components.textarea.pressed.bg',
+  'components.textarea.pressed.fg',
+  'components.textarea.pressed.border',
+  'components.textarea.focusRing',
+  'components.textarea.error.fg',
+  'components.textarea.error.border',
+  'components.textarea.error.ring',
+  'components.textarea.disabled.bg',
+  'components.textarea.disabled.fg',
+  'components.textarea.disabled.border',
+] as const;
+
+const textareaComponentTokenAdditionMigrationsV1 =
+  textareaComponentTokenAdditionPathsV1.map(
+    (to) =>
+      ({
+        id: `558-textarea-token-addition-${to.replaceAll('.', '-')}`,
+        kind: 'addition',
+        issue: '#558',
+        reason:
+          'Materialize the canonical Textarea component-token family for the public-launch multiline form-control contract through Generator V2.',
+        to,
+      }) as const
+  ) satisfies readonly TokenMigrationEntry[];
+
 const boldFontWeightAdditionV1 = {
   id: '927-font-weight-bold-addition',
   kind: 'addition',
@@ -626,6 +658,7 @@ export const tokenMigrationManifestV1 = [
   ...stateVocabularyRenameMigrationsV1,
   boldFontWeightAdditionV1,
   monoFontFamilyAdditionV1,
+  ...textareaComponentTokenAdditionMigrationsV1,
   ...platformNeutralComponentRepresentationMigrationsV1,
   ...platformNeutralLegacyCanonicalRemovalMigrationsV1,
   platformNeutralPopoverShadowMigrationV1,
