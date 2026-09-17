@@ -5,6 +5,7 @@ import {
   componentLifecycleStatuses,
   type ComponentMetadata,
   type ComponentPlatform,
+  componentSemanticCapabilities,
   type ComponentStatus,
 } from './component';
 
@@ -114,6 +115,70 @@ function validateStringArray(params: {
       errors.push(
         `${field} contains unsupported values: ${invalidValues.join(', ')}.`
       );
+    }
+  }
+}
+
+function validatePlatformCapabilityMap(params: {
+  value: unknown;
+  field: string;
+  sharedValue: unknown;
+  declaredPlatformsValue: unknown;
+  allowedValues: readonly string[];
+  errors: string[];
+}) {
+  const {
+    value,
+    field,
+    sharedValue,
+    declaredPlatformsValue,
+    allowedValues,
+    errors,
+  } = params;
+
+  if (!isRecord(value)) {
+    errors.push(`${field} must be an object.`);
+    return;
+  }
+
+  const declaredPlatforms = new Set(
+    isStringArray(declaredPlatformsValue) ? declaredPlatformsValue : []
+  );
+  const sharedCapabilities = new Set(
+    isStringArray(sharedValue) ? sharedValue : []
+  );
+
+  for (const [platform, capabilities] of Object.entries(value)) {
+    if (!componentPlatforms.includes(platform as ComponentPlatform)) {
+      errors.push(`${field} contains unsupported platform: ${platform}.`);
+      continue;
+    }
+
+    if (!declaredPlatforms.has(platform)) {
+      errors.push(
+        `${field}.${platform} must refer to a declared component platform.`
+      );
+    }
+
+    validateStringArray({
+      value: capabilities,
+      field: `${field}.${platform}`,
+      errors,
+      allowedValues,
+    });
+
+    if (isStringArray(capabilities)) {
+      const duplicateSharedCapabilities = capabilities.filter((capability) =>
+        sharedCapabilities.has(capability)
+      );
+
+      if (duplicateSharedCapabilities.length > 0) {
+        errors.push(
+          `${field}.${platform} must not repeat shared capabilities: ${duplicateSharedCapabilities.join(
+            ', '
+          )}.`
+        );
+      }
     }
   }
 }
@@ -295,54 +360,34 @@ export function validateComponentMetadata(
   }
 
   if (input.platformCapabilities !== undefined) {
-    if (!isRecord(input.platformCapabilities)) {
-      errors.push('platformCapabilities must be an object.');
-    } else {
-      const declaredPlatforms = new Set(
-        isStringArray(input.platforms) ? input.platforms : []
-      );
-      const sharedCapabilities = new Set(
-        isStringArray(input.capabilities) ? input.capabilities : []
-      );
+    validatePlatformCapabilityMap({
+      value: input.platformCapabilities,
+      field: 'platformCapabilities',
+      sharedValue: input.capabilities,
+      declaredPlatformsValue: input.platforms,
+      allowedValues: componentCapabilities,
+      errors,
+    });
+  }
 
-      for (const [platform, capabilities] of Object.entries(
-        input.platformCapabilities
-      )) {
-        if (!componentPlatforms.includes(platform as ComponentPlatform)) {
-          errors.push(
-            `platformCapabilities contains unsupported platform: ${platform}.`
-          );
-          continue;
-        }
+  if (input.semanticCapabilities !== undefined) {
+    validateStringArray({
+      value: input.semanticCapabilities,
+      field: 'semanticCapabilities',
+      errors,
+      allowedValues: componentSemanticCapabilities,
+    });
+  }
 
-        if (!declaredPlatforms.has(platform)) {
-          errors.push(
-            `platformCapabilities.${platform} must refer to a declared component platform.`
-          );
-        }
-
-        validateStringArray({
-          value: capabilities,
-          field: `platformCapabilities.${platform}`,
-          errors,
-          allowedValues: componentCapabilities,
-        });
-
-        if (isStringArray(capabilities)) {
-          const duplicateSharedCapabilities = capabilities.filter((capability) =>
-            sharedCapabilities.has(capability)
-          );
-
-          if (duplicateSharedCapabilities.length > 0) {
-            errors.push(
-              `platformCapabilities.${platform} must not repeat shared capabilities: ${duplicateSharedCapabilities.join(
-                ', '
-              )}.`
-            );
-          }
-        }
-      }
-    }
+  if (input.platformSemanticCapabilities !== undefined) {
+    validatePlatformCapabilityMap({
+      value: input.platformSemanticCapabilities,
+      field: 'platformSemanticCapabilities',
+      sharedValue: input.semanticCapabilities,
+      declaredPlatformsValue: input.platforms,
+      allowedValues: componentSemanticCapabilities,
+      errors,
+    });
   }
 
   if (input.dependencies !== undefined) {
