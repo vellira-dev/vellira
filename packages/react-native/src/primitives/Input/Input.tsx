@@ -1,8 +1,9 @@
 import { cloneElement, forwardRef, useState } from 'react';
+import type { ForwardRefExoticComponent, RefAttributes } from 'react';
 
 import { Close } from '@vellira-ui/icons';
 import { controlSizes } from '@vellira-ui/tokens';
-import type { TextInputProps } from 'react-native';
+import type { TextInputInstance, TextInputProps } from 'react-native';
 import {
   ActivityIndicator,
   Platform,
@@ -94,7 +95,9 @@ const nativePointerEventsNone =
 const webPointerEventsNone =
   Platform.OS === 'web' ? { pointerEvents: 'none' as const } : undefined;
 
-export const Input = forwardRef<TextInput, InputProps>(
+export const Input: ForwardRefExoticComponent<
+  InputProps & RefAttributes<TextInputInstance>
+> = forwardRef<TextInputInstance, InputProps>(
   (
     {
       label,

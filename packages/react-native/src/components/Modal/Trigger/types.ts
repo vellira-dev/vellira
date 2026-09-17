@@ -1,5 +1,10 @@
 import type { ReactElement, ReactNode, Ref } from 'react';
-import type { PressableProps, StyleProp, View, ViewStyle } from 'react-native';
+import type {
+  PressableProps,
+  StyleProp,
+  ViewInstance,
+  ViewStyle,
+} from 'react-native';
 
 export type ModalTriggerProps = {
   /** Trigger content. */
@@ -14,7 +19,7 @@ export type ModalTriggerProps = {
 
 export type ModalTriggerChildProps = {
   /** Ref forwarded to the composed trigger child. */
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
   /** Press handler injected into the composed trigger child. */
   onPress?: PressableProps['onPress'];
   /** Disables trigger interaction on the composed child. */

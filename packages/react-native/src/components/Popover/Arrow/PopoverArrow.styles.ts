@@ -5,6 +5,9 @@ import type { nativeThemes } from '../../../theme';
 
 type NativeTheme = (typeof nativeThemes)[keyof typeof nativeThemes];
 type PopoverSide = 'top' | 'right' | 'bottom' | 'left';
+type PopoverArrowStyles = {
+  arrow: ViewStyle;
+};
 
 export function createPopoverArrowStyles({
   theme,
@@ -14,50 +17,59 @@ export function createPopoverArrowStyles({
   theme: NativeTheme;
   side: PopoverSide;
   arrowPosition: Pick<ViewStyle, 'top' | 'left'>;
-}) {
+}): PopoverArrowStyles {
   const tokens = theme.components.popover.arrow;
   const halfSize = tokens.size / 2;
 
   const position: ViewStyle =
-    side === 'top' || side === 'bottom'
+    side === 'top'
       ? {
           left: arrowPosition.left ?? 0,
+          bottom: -halfSize,
           transform: [{ translateX: -halfSize }, { rotate: '45deg' }],
         }
-      : {
-          top: arrowPosition.top ?? 0,
-          transform: [{ translateY: -halfSize }, { rotate: '45deg' }],
-        };
+      : side === 'bottom'
+        ? {
+            left: arrowPosition.left ?? 0,
+            top: -halfSize,
+            transform: [{ translateX: -halfSize }, { rotate: '45deg' }],
+          }
+        : side === 'left'
+          ? {
+              top: arrowPosition.top ?? 0,
+              right: -halfSize,
+              transform: [{ translateY: -halfSize }, { rotate: '45deg' }],
+            }
+          : {
+              top: arrowPosition.top ?? 0,
+              left: -halfSize,
+              transform: [{ translateY: -halfSize }, { rotate: '45deg' }],
+            };
 
-  const border: ViewStyle = {
-    borderColor: tokens.border,
-  };
-
-  switch (side) {
-    case 'top':
-      position.bottom = -halfSize;
-      border.borderRightWidth = 1;
-      border.borderBottomWidth = 1;
-      break;
-
-    case 'bottom':
-      position.top = -halfSize;
-      border.borderLeftWidth = 1;
-      border.borderTopWidth = 1;
-      break;
-
-    case 'left':
-      position.right = -halfSize;
-      border.borderRightWidth = 1;
-      border.borderTopWidth = 1;
-      break;
-
-    case 'right':
-      position.left = -halfSize;
-      border.borderLeftWidth = 1;
-      border.borderBottomWidth = 1;
-      break;
-  }
+  const border: ViewStyle =
+    side === 'top'
+      ? {
+          borderColor: tokens.border,
+          borderRightWidth: 1,
+          borderBottomWidth: 1,
+        }
+      : side === 'bottom'
+        ? {
+            borderColor: tokens.border,
+            borderLeftWidth: 1,
+            borderTopWidth: 1,
+          }
+        : side === 'left'
+          ? {
+              borderColor: tokens.border,
+              borderRightWidth: 1,
+              borderTopWidth: 1,
+            }
+          : {
+              borderColor: tokens.border,
+              borderLeftWidth: 1,
+              borderBottomWidth: 1,
+            };
 
   return StyleSheet.create({
     arrow: {

@@ -30,6 +30,7 @@ export interface InputProps
       | 'onChange'
       | 'onChangeText'
       | 'editable'
+      | 'readOnly'
       | 'style'
       | 'placeholder'
     > {

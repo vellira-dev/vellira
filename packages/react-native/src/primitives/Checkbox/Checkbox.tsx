@@ -1,7 +1,9 @@
 import { forwardRef, useEffect } from 'react';
 
 import { Check } from '@vellira-ui/icons';
+import type { ForwardRefExoticComponent, RefAttributes } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import { useControllableState } from '../../hooks';
 import { useTheme, useThemeStyles } from '../../theme';
@@ -16,7 +18,9 @@ const iconSizeBySize = {
   lg: 14,
 } as const;
 
-export const Checkbox = forwardRef<View, CheckboxProps>(
+export const Checkbox: ForwardRefExoticComponent<
+  CheckboxProps & RefAttributes<ViewInstance>
+> = forwardRef<ViewInstance, CheckboxProps>(
   (
     {
       label,

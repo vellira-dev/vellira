@@ -6,8 +6,51 @@ import type { NativeTheme } from '../../../theme';
 const fontWeight = (value: string): TextStyle['fontWeight'] =>
   value as TextStyle['fontWeight'];
 
-export const createStyles = (theme: NativeTheme) =>
-  StyleSheet.create({
+type TabsTriggerStyles = {
+  tab: ViewStyle;
+  tabIconOnly: ViewStyle;
+  tabSm: ViewStyle;
+  tabIconOnlySm: ViewStyle;
+  tabLg: ViewStyle;
+  tabIconOnlyLg: ViewStyle;
+  tabSegmented: ViewStyle;
+  tabSegmentedIconOnly: ViewStyle;
+  tabSegmentedSm: ViewStyle;
+  tabSegmentedIconOnlySm: ViewStyle;
+  tabSegmentedLg: ViewStyle;
+  tabSegmentedIconOnlyLg: ViewStyle;
+  tabVertical: ViewStyle;
+  tabHovered: ViewStyle;
+  tabPressed: ViewStyle;
+  tabFocused: ViewStyle;
+  tabDefaultActive: ViewStyle;
+  tabDisabled: ViewStyle;
+  tabText: TextStyle;
+  tabTextSm: TextStyle;
+  tabTextLg: TextStyle;
+  tabTextHover: TextStyle;
+  tabTextPressed: TextStyle;
+  tabTextDisabled: TextStyle;
+  tabTextActive: TextStyle;
+  tabTextPillsActive: TextStyle;
+  tabPills: ViewStyle;
+  tabPillsIconOnly: ViewStyle;
+  tabPillsActive: ViewStyle;
+  tabPillsHover: ViewStyle;
+  tabPillsPressed: ViewStyle;
+  tabIcon: ViewStyle;
+  tabDescription: TextStyle;
+  tabBadge: ViewStyle;
+  tabBadgeLg: ViewStyle;
+  tabBadgeText: TextStyle;
+  tabIconHover: TextStyle;
+  tabIconPressed: TextStyle;
+  tabIconActive: TextStyle;
+  tabIconPillsActive: TextStyle;
+};
+
+export const createStyles = (theme: NativeTheme): TabsTriggerStyles =>
+  StyleSheet.create<TabsTriggerStyles>({
     tab: {
       minHeight: 36,
       minWidth: 44,
@@ -231,7 +274,7 @@ export const createStyles = (theme: NativeTheme) =>
   });
 
 interface GetTabStyleOptions {
-  styles: ReturnType<typeof createStyles>;
+  styles: TabsTriggerStyles;
   isSm: boolean;
   isLg: boolean;
   isOnlyIcon: boolean;

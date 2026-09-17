@@ -1,4 +1,5 @@
 import { forwardRef, useEffect } from 'react';
+import type { ForwardRefExoticComponent, RefAttributes } from 'react';
 
 import {
   Platform,
@@ -7,6 +8,7 @@ import {
   type StyleProp,
   Text,
   View,
+  type ViewInstance,
   type ViewStyle,
 } from 'react-native';
 
@@ -22,7 +24,9 @@ const nativePointerEventsNone =
 const webPointerEventsNone =
   Platform.OS === 'web' ? { pointerEvents: 'none' as const } : undefined;
 
-export const Radio = forwardRef<View, RadioProps>(
+export const Radio: ForwardRefExoticComponent<
+  RadioProps & RefAttributes<ViewInstance>
+> = forwardRef<ViewInstance, RadioProps>(
   (
     {
       value,

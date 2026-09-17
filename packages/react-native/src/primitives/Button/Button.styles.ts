@@ -1,12 +1,31 @@
-import { Platform, StyleSheet, type TextStyle } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import type { NativeTheme } from '../../theme';
 
 const fontWeight = (value: string): TextStyle['fontWeight'] =>
   value as TextStyle['fontWeight'];
 
-export const createStyles = (theme: NativeTheme) =>
-  StyleSheet.create({
+type ButtonStyles = {
+  button: ViewStyle;
+  fullWidth: ViewStyle;
+  text: TextStyle;
+  labelSlot: ViewStyle;
+  labelMeasure: TextStyle;
+  spinner: TextStyle;
+  badge: TextStyle;
+  shortcut: TextStyle;
+  disabled: ViewStyle;
+  focused: ViewStyle;
+  pressed: ViewStyle;
+};
+
+export const createStyles = (theme: NativeTheme): ButtonStyles =>
+  StyleSheet.create<ButtonStyles>({
     button: {
       flexDirection: 'row',
       alignItems: 'center',

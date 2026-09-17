@@ -1,9 +1,9 @@
 import type { ReactElement, Ref } from 'react';
-import type { View, ViewProps } from 'react-native';
+import type { ViewInstance, ViewProps } from 'react-native';
 
 export interface PopoverAnchorChildProps {
   /** Ref forwarded to the anchor child for measurement. */
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 }
 
 export interface PopoverAnchorProps extends Omit<ViewProps, 'children'> {

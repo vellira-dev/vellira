@@ -1,6 +1,6 @@
 import type { FloatingPlacement, TooltipDelay } from '@vellira-ui/types';
 import type { RefObject } from 'react';
-import type { LayoutChangeEvent, View } from 'react-native';
+import type { LayoutChangeEvent, ViewInstance } from 'react-native';
 
 import type {
   OverlayOutsidePressProps,
@@ -22,7 +22,7 @@ export type TooltipContextValue = {
     top?: number;
     left?: number;
   };
-  triggerRef: RefObject<View | null>;
+  triggerRef: RefObject<ViewInstance | null>;
   setOpen: (open: boolean) => void;
   show: () => void;
   hide: () => void;

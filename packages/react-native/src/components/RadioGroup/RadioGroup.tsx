@@ -1,7 +1,11 @@
 import { RadioGroupItem } from './Item';
 import { RadioGroupRoot } from './Root';
 
-export const RadioGroup = Object.assign(RadioGroupRoot, {
+type RadioGroupComponent = typeof RadioGroupRoot & {
+  Item: typeof RadioGroupItem;
+};
+
+export const RadioGroup: RadioGroupComponent = Object.assign(RadioGroupRoot, {
   Item: RadioGroupItem,
 });
 

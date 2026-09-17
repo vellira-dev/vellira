@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 
-import type { View as NativeView } from 'react-native';
+import type { ViewInstance } from 'react-native';
 import { Platform, Pressable, View } from 'react-native';
 
 import { Portal } from '../../../primitives/Portal';
@@ -16,7 +16,7 @@ export function PopoverContent({
   ...contentProps
 }: PopoverContentProps) {
   const { theme } = useTheme();
-  const layerRef = useRef<NativeView | null>(null);
+  const layerRef = useRef<ViewInstance | null>(null);
 
   const themedStyles = useMemo(
     () => createPopoverContentStyles(theme),

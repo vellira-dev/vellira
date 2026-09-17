@@ -1,6 +1,6 @@
 import type { CompoundSlotComponent } from '@vellira-ui/core';
 import type { ReactNode, RefObject } from 'react';
-import type { LayoutChangeEvent, TextInput } from 'react-native';
+import type { LayoutChangeEvent, TextInputInstance } from 'react-native';
 
 import type {
   OverlayOutsidePressProps,
@@ -95,7 +95,7 @@ export type SelectContextValue = {
   itemHeight: number;
   query: string;
   searchPlaceholder: string;
-  searchInputRef: RefObject<TextInput | null>;
+  searchInputRef: RefObject<TextInputInstance | null>;
   empty: ReactNode;
   loadingContent: ReactNode;
   closeContent: () => void;

@@ -1,7 +1,7 @@
 import { cloneElement, isValidElement } from 'react';
 
 import type { Ref } from 'react';
-import type { GestureResponderEvent, View } from 'react-native';
+import type { GestureResponderEvent, ViewInstance } from 'react-native';
 import { Pressable, Text } from 'react-native';
 
 import { useModalContext } from '../internal/ModalContext';
@@ -38,7 +38,7 @@ export const ModalTrigger = ({
       : undefined;
 
   const composedTriggerRef = child
-    ? composeRefs<View>(root.triggerRef, child.props.ref)
+    ? composeRefs<ViewInstance>(root.triggerRef, child.props.ref)
     : root.triggerRef;
 
   const handlePress = (event: GestureResponderEvent) => {

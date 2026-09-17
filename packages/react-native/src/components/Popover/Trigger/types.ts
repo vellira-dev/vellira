@@ -1,9 +1,13 @@
 import type { ReactElement, Ref } from 'react';
-import type { GestureResponderEvent, PressableProps, View } from 'react-native';
+import type {
+  GestureResponderEvent,
+  PressableProps,
+  ViewInstance,
+} from 'react-native';
 
 export interface PopoverTriggerChildProps {
   /** Ref forwarded to the composed trigger child. */
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
   /** Press handler injected into the composed trigger child. */
   onPress?: (event: GestureResponderEvent) => void;
 }
