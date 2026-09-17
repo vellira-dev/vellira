@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
 
 import { FlatList, Text, View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import {
   useDropdown,
@@ -61,7 +62,7 @@ export function DropdownRoot({
 }: DropdownProps) {
   const styles = useThemeStyles(createStyles);
   const overlayId = useId();
-  const triggerRef = useRef<View | null>(null);
+  const triggerRef = useRef<ViewInstance | null>(null);
 
   const setTriggerRef = useCallback((node: unknown) => {
     if (
@@ -70,7 +71,7 @@ export function DropdownRoot({
       'measureInWindow' in node &&
       typeof node.measureInWindow === 'function'
     ) {
-      triggerRef.current = node as View;
+      triggerRef.current = node as ViewInstance;
       return;
     }
 
