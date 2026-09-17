@@ -29,7 +29,7 @@ Do not run `safaridriver` for the primary persistent-cache proof: use real Safar
 normal profile. Safari Technology Preview can be supplementary, not a substitute.
 
 From a clean checkout of the final review commit, use the pinned toolchain and
-frozen lockfile (Node 22.22.0 in CI):
+frozen lockfile (Node 22.22.2 in CI):
 
 ```sh
 pnpm install --frozen-lockfile

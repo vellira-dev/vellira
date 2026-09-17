@@ -37,7 +37,7 @@ env:
   ADOPTION_MAIN_SHA: ${{ inputs.expected_main_sha }}
   ADOPTION_CONFIRMATION: ${{ inputs.confirmation }}
   ADOPTION_NEVER_PUBLIC: ${{ inputs.never_public_attestation }}
-  NODE_VERSION: 22.22.0
+  NODE_VERSION: 22.22.2
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
