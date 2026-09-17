@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react';
-import type { Animated, View } from 'react-native';
+import type { Animated, ViewInstance } from 'react-native';
 
 import type {
   OverlayOutsidePressProps,
@@ -18,5 +18,5 @@ export interface ModalContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
   shouldRender: boolean;
-  triggerRef: MutableRefObject<View | null>;
+  triggerRef: MutableRefObject<ViewInstance | null>;
 }
