@@ -1,6 +1,10 @@
 import { cloneElement, isValidElement, useEffect } from 'react';
 
-import type { ReactElement } from 'react';
+import type {
+  MouseEvent as ReactMouseEvent,
+  ReactElement,
+  ReactNode,
+} from 'react';
 import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { Pressable, Text, View } from 'react-native';
 
@@ -9,6 +13,17 @@ import { useTabs } from '../internal/TabsContext';
 
 import { createStyles, getTriggerStyle } from './TabsTrigger.styles';
 import type { TabsTriggerChildProps, TabsTriggerProps } from './types';
+
+interface DomTabsTriggerChildProps {
+  children?: ReactNode;
+  disabled?: boolean;
+  onClick?: (event: ReactMouseEvent<HTMLElement>) => void;
+  style?: unknown;
+  tabIndex?: number;
+  'aria-current'?: 'page';
+  'aria-disabled'?: boolean;
+  'data-state'?: 'active' | 'inactive';
+}
 
 export const TabsTrigger = ({
   value,
@@ -181,6 +196,35 @@ export const TabsTrigger = ({
     segmentedActiveBorderColor: palette.segmented.active.border,
     style,
   });
+
+  if (mode === 'navigation' && child && typeof child.type === 'string') {
+    const domChild = child as unknown as ReactElement<DomTabsTriggerChildProps>;
+    const composedDisabled = isDisabled || Boolean(domChild.props.disabled);
+
+    return cloneElement(domChild, {
+      ...(domChild.type === 'button' ? { disabled: composedDisabled } : {}),
+      'aria-current': isActive ? 'page' : undefined,
+      'aria-disabled': composedDisabled || undefined,
+      'data-state': isActive ? 'active' : 'inactive',
+      tabIndex: composedDisabled ? -1 : domChild.props.tabIndex,
+      onClick: (event: ReactMouseEvent<HTMLElement>) => {
+        domChild.props.onClick?.(event);
+
+        if (event.defaultPrevented) return;
+
+        if (composedDisabled) {
+          event.preventDefault();
+          return;
+        }
+
+        if (!isActive) {
+          setValue(value);
+        }
+      },
+      style: domChild.props.style,
+      children: content,
+    });
+  }
 
   if (child) {
     return cloneElement(child, {
