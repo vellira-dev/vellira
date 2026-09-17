@@ -1,0 +1,42 @@
+name: TEMP Generate Next Companions Lockfile After Sass
+
+on:
+  push:
+    branches: ['tmp/next-companions-after-sass']
+    paths:
+      - 'apps/website/package.json'
+      - '.github/workflows/temp-next-companions-after-sass.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.0
+          check-latest: false
+      - name: Regenerate lockfile
+        run: pnpm install --lockfile-only
+      - name: Verify generator scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          if [ "$changed" != "pnpm-lock.yaml" ]; then
+            printf 'Unexpected lockfile generator changes:\n%s\n' "$changed" >&2
+            exit 1
+          fi
+      - name: Commit generated lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Roman Bakurov'
+          git config user.email '160579419+romanbakurov@users.noreply.github.com'
+          git add pnpm-lock.yaml
+          git commit -m 'chore(deps-dev): regenerate Next companion lockfile after Sass'
+          git push
