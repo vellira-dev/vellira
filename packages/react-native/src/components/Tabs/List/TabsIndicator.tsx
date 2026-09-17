@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { StyleProp, ViewStyle } from 'react-native';
 import { AccessibilityInfo, Animated, Easing, Platform } from 'react-native';
 
 import { useTheme } from '../../../theme';
@@ -208,7 +207,7 @@ export const TabsIndicator = ({ children, style }: TabsIndicatorProps) => {
     width,
   ]);
 
-  const indicatorStyle = useMemo<StyleProp<ViewStyle>>(() => {
+  const indicatorStyle = useMemo(() => {
     const baseStyle = {
       position: 'absolute' as const,
       opacity: visible ? 1 : 0,
