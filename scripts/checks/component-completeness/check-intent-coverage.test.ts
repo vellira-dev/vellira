@@ -28,7 +28,7 @@ const avatarTarget = {
 } as const satisfies ComponentExpansionTarget;
 
 function metadata(
-  capabilities: ComponentMetadata['capabilities'] = []
+  semanticCapabilities: ComponentMetadata['semanticCapabilities'] = []
 ): ComponentMetadata {
   return {
     name: 'Avatar',
@@ -37,7 +37,7 @@ function metadata(
     platforms: ['react', 'react-native'],
     profile: 'base',
     status: 'experimental',
-    capabilities,
+    semanticCapabilities,
     requirements: {
       tests: true,
       storybook: true,
@@ -62,10 +62,15 @@ describe('component completeness intent coverage', () => {
     });
   });
 
-  it('passes only when required target capabilities are represented', () => {
+  it('passes only when required target semantics are represented', () => {
     expect(
       checkComponentIntentCoverage({
-        metadata: metadata(avatarTarget.intent.requiredCapabilities),
+        metadata: metadata([
+          'image-source',
+          'fallback',
+          'size-variants',
+          'accessible-name',
+        ]),
         targets: [avatarTarget],
       })
     ).toEqual({
