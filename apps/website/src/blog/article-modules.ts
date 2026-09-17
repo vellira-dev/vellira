@@ -33,10 +33,7 @@ const blogArticleMetadataRegistryEntries = [
     slug: 'accessible-accordion-react-native',
     metadata: accessibleAccordionReactNativeMetadata,
   },
-  {
-    slug: 'ai-ui-consistency',
-    metadata: aiUiConsistencyMetadata,
-  },
+  { slug: 'ai-ui-consistency', metadata: aiUiConsistencyMetadata },
   {
     slug: 'component-metadata-source-of-truth',
     metadata: componentMetadataSourceOfTruthMetadata,
