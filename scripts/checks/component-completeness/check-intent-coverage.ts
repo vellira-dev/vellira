@@ -1,8 +1,9 @@
-import {
-  evaluateComponentIntentCoverage,
-  type ComponentExpansionTarget,
-  type ComponentMetadata,
+import type {
+  ComponentExpansionTarget,
+  ComponentMetadata,
 } from '@vellira-ui/metadata';
+
+import { evaluateComponentIntentCoverage } from '../../../packages/metadata/src/componentIntent';
 
 import type { ComponentCheckResult } from './types';
 

@@ -538,7 +538,9 @@ function optionalCapabilities(
     seen.add(capability);
   }
 
-  return componentIntentCapabilities.filter((capability) => seen.has(capability));
+  return componentIntentCapabilities.filter((capability) =>
+    seen.has(capability)
+  );
 }
 
 function requiredString(value: Record<string, unknown>, field: string): string {

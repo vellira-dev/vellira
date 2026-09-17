@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { componentMetadata } from './components';
 import { validateComponentIntentTarget } from './componentIntent';
+import { componentMetadata } from './components';
 import type { ComponentExpansionTarget } from './expansion';
 import { componentExpansionCatalog } from './expansionCatalog';
 import { getComponentExpansionReport } from './expansionReport';
@@ -27,7 +27,9 @@ describe('componentExpansionCatalog', () => {
   });
 
   it('keeps all six remaining launch components in public intent authority', () => {
-    const names = new Set(componentExpansionCatalog.map((target) => target.name));
+    const names = new Set(
+      componentExpansionCatalog.map((target) => target.name)
+    );
 
     for (const name of [
       'Textarea',
@@ -42,7 +44,7 @@ describe('componentExpansionCatalog', () => {
   });
 
   it('references known components when representedBy or dependsOn are used', () => {
-    const knownNames = new Set(
+    const knownNames = new Set<string>(
       componentMetadata.map((metadata) => metadata.name)
     );
 

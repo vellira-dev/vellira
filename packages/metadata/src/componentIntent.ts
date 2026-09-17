@@ -1,12 +1,12 @@
 import {
   componentCapabilities,
-  componentSemanticCapabilities,
   type ComponentCapability,
   type ComponentCategory,
   type ComponentLayer,
   type ComponentMetadata,
   type ComponentPlatform,
   type ComponentProfile,
+  componentSemanticCapabilities,
   type ComponentSemanticCapability,
   type ComponentTokenContract,
 } from './component';
@@ -14,13 +14,10 @@ import {
 export const COMPONENT_INTENT_SCHEMA_VERSION = '1' as const;
 
 export type ComponentIntentCapability =
-  | ComponentCapability
-  | ComponentSemanticCapability;
+  ComponentCapability | ComponentSemanticCapability;
 
-export const componentIntentCapabilities: readonly ComponentIntentCapability[] = [
-  ...componentCapabilities,
-  ...componentSemanticCapabilities,
-];
+export const componentIntentCapabilities: readonly ComponentIntentCapability[] =
+  [...componentCapabilities, ...componentSemanticCapabilities];
 
 export type ComponentIntentV1 = {
   schemaVersion: typeof COMPONENT_INTENT_SCHEMA_VERSION;
@@ -143,7 +140,9 @@ export function validateComponentIntentTarget(
 
   const targetPlatforms = new Set(target.platforms);
   if (targetPlatforms.size !== target.platforms.length) {
-    errors.push(`Component intent platforms must be unique for ${target.name}.`);
+    errors.push(
+      `Component intent platforms must be unique for ${target.name}.`
+    );
   }
 
   for (const platform of target.platforms) {
@@ -271,7 +270,10 @@ export function evaluateComponentIntentCoverage(
       status: 'missing',
       platforms: target.platforms.map((platform) => {
         const requiredCapabilities =
-          requiredComponentIntentCapabilitiesForPlatform(target.intent, platform);
+          requiredComponentIntentCapabilitiesForPlatform(
+            target.intent,
+            platform
+          );
         return {
           platform,
           status: 'missing' as const,
@@ -345,7 +347,9 @@ export function evaluateComponentIntentCoverage(
       };
     }
 
-    const actual = new Set(componentIntentEvidenceForPlatform(metadata, platform));
+    const actual = new Set(
+      componentIntentEvidenceForPlatform(metadata, platform)
+    );
     const satisfiedCapabilities = requiredCapabilities.filter((capability) =>
       actual.has(capability)
     );

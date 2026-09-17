@@ -2,11 +2,11 @@ import { checkComponentCompleteness } from './check-component';
 import { checkGeneratedComponentDocsCompleteness } from './check-generated-component-docs';
 import { checkComponentIntentCoverage } from './check-intent-coverage';
 
-import {
-  componentExpansionCatalog,
-  type ComponentExpansionTarget,
-  type ComponentMetadata,
+import type {
+  ComponentExpansionTarget,
+  ComponentMetadata,
 } from '@vellira-ui/metadata';
+import { componentExpansionCatalog } from '../../../packages/metadata/src/expansionCatalog';
 import {
   componentDocsContracts as defaultComponentDocsContracts,
   type ComponentDocsContract,

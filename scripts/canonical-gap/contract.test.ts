@@ -43,6 +43,11 @@ const authorities: MissingComponentAuthorities = {
       profile: 'form-control',
       componentTokens: 'standard',
       role: 'form-control',
+      intent: {
+        schemaVersion: '1',
+        job: 'Enter and edit multiline text.',
+        requiredCapabilities: ['multiline', 'accessible-name'],
+      },
     },
   ],
 };

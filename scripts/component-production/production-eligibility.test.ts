@@ -103,6 +103,9 @@ describe('canonical component-token production eligibility', () => {
       ['Accordion', 'disclosure'],
       ['Avatar', 'standard'],
       ['Badge', 'standard'],
+      ['Progress', 'standard'],
+      ['Skeleton', 'standard'],
+      ['Toast', 'standard'],
     ]);
   });
   it.each([false, 'standard', 'boolean-control', 'disclosure'] as const)(

@@ -55,11 +55,26 @@ describe('component completeness intent coverage', () => {
         metadata: metadata(),
         targets: [avatarTarget],
       })
-    ).toMatchObject({
-      name: 'intent-coverage',
-      ok: false,
-      details: expect.stringContaining('image-source'),
-    });
+    ).toEqual([
+      {
+        name: 'intent-coverage',
+        ok: true,
+      },
+      {
+        name: 'intent-coverage',
+        platform: 'react',
+        ok: false,
+        details:
+          'Component intent coverage is missing on react.\nMissing semantic capabilities: image-source, fallback, size-variants, accessible-name.',
+      },
+      {
+        name: 'intent-coverage',
+        platform: 'react-native',
+        ok: false,
+        details:
+          'Component intent coverage is missing on react-native.\nMissing semantic capabilities: image-source, fallback, size-variants, accessible-name.',
+      },
+    ]);
   });
 
   it('passes only when required target semantics are represented', () => {
@@ -73,10 +88,11 @@ describe('component completeness intent coverage', () => {
         ]),
         targets: [avatarTarget],
       })
-    ).toEqual({
-      name: 'intent-coverage',
-      ok: true,
-    });
+    ).toEqual([
+      { name: 'intent-coverage', ok: true },
+      { name: 'intent-coverage', platform: 'react', ok: true },
+      { name: 'intent-coverage', platform: 'react-native', ok: true },
+    ]);
   });
 
   it('does not invent intent requirements for unrelated components', () => {
@@ -88,6 +104,6 @@ describe('component completeness intent coverage', () => {
         },
         targets: [avatarTarget],
       })
-    ).toBeNull();
+    ).toEqual([]);
   });
 });
