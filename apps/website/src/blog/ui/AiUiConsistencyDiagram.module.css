@@ -9,7 +9,7 @@
     minmax(98px, 1fr) 10px
     minmax(98px, 1fr) 10px
     minmax(98px, 1fr) 10px
-    minmax(184px, 1.72fr) 10px
+    minmax(166px, 1.55fr) 42px
     minmax(84px, 0.78fr) 10px
     minmax(98px, 1fr);
   align-items: center;
@@ -153,11 +153,10 @@
   white-space: nowrap;
 }
 
-.concern::before {
+.concern::before,
+.concern::after {
   position: absolute;
   top: 50%;
-  left: -12px;
-  width: 11px;
   height: 1px;
   background: color-mix(
     in srgb,
@@ -165,6 +164,16 @@
     var(--border-muted)
   );
   content: '';
+}
+
+.concern::before {
+  left: -12px;
+  width: 11px;
+}
+
+.concern::after {
+  right: -9px;
+  width: 8px;
 }
 
 .concernIcon {
@@ -207,6 +216,37 @@
 .concern:nth-child(6) .concernIcon svg {
   width: 17px;
   height: 17px;
+}
+
+.concernMerge {
+  display: grid;
+  width: 42px;
+  height: 316px;
+  color: var(--text-brand);
+  place-items: center;
+}
+
+.concernMergeArrow {
+  display: block;
+  width: 42px;
+  height: 316px;
+  overflow: visible;
+  filter: drop-shadow(
+    0 0 8px color-mix(in srgb, var(--color-primary-400) 32%, transparent)
+  );
+}
+
+.concernMergePath {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.concernMergeMobileArrow {
+  display: none;
 }
 
 .hub {
@@ -306,5 +346,20 @@
 
   .concerns {
     width: 100%;
+  }
+
+  .concernMerge {
+    width: 100%;
+    height: 24px;
+  }
+
+  .concernMergeArrow {
+    display: none;
+  }
+
+  .concernMergeMobileArrow {
+    display: block;
+    color: var(--text-brand);
+    transform: rotate(90deg);
   }
 }
