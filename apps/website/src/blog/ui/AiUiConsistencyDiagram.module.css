@@ -40,13 +40,13 @@
   height: 176px;
   box-sizing: border-box;
   padding: 14px 10px;
-  grid-template-rows: auto auto;
+  grid-template-rows: 54px 58px;
   align-content: center;
   justify-items: center;
   overflow: hidden;
   border-radius: var(--radius-xl);
   text-align: center;
-  gap: var(--space-3);
+  row-gap: 14px;
 }
 
 .iconFrame {
@@ -64,11 +64,21 @@
 }
 
 .label {
+  display: grid;
+  width: 100%;
   max-width: 100%;
+  align-self: start;
+  justify-items: center;
+  align-content: start;
   font-size: clamp(11px, 1.35vw, 13px);
   font-weight: var(--font-weight-semibold);
   line-height: 1.35;
-  overflow-wrap: normal;
+}
+
+.label > span {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .arrow {
