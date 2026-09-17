@@ -119,8 +119,8 @@
 
 .concerns::before {
   position: absolute;
-  top: 14px;
-  bottom: 14px;
+  top: 33px;
+  bottom: 33px;
   left: 10px;
   width: 1px;
   background: color-mix(
