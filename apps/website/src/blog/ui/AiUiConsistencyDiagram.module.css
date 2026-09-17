@@ -1,7 +1,6 @@
 .figure {
-  width: min(1120px, calc(100vw - 48px));
-  margin: clamp(40px, 7vw, 68px) 50%;
-  transform: translateX(-50%);
+  width: 100%;
+  margin: clamp(40px, 7vw, 68px) 0;
 }
 
 .visual {
@@ -215,10 +214,6 @@
 }
 
 @media (width <= 980px) {
-  .figure {
-    width: min(620px, calc(100vw - 32px));
-  }
-
   .visual {
     grid-template-columns: 1fr;
     gap: 12px;
