@@ -44,7 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "esbuild": "0.28.1",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "16.2.11",
     "miniflare": "5.20260903.0-alpha",
     "typescript": "^5",
