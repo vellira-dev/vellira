@@ -193,7 +193,7 @@ afterEach(() => {
   );
 });
 
-describe.sequential('component production end-to-end fixtures', () => {
+describe('component production end-to-end fixtures', () => {
   it(
     'reports exactly every real generation mutation for a fresh both-platform base component',
     async () => {
