@@ -6,17 +6,18 @@
     "sync:brand": "pnpm --filter @vellira-ui/assets sync-brand apps/website/public/brand",
     "sync:tokens": "pnpm --filter @vellira-ui/tokens build:tokens",
     "sync:components": "pnpm --filter @vellira-ui/metadata build && pnpm --filter @vellira-ui/react build && pnpm --filter @vellira-ui/react-native build",
-    "predev": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:components",
+    "predev": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:icons && pnpm run sync:components",
     "dev": "next dev",
-    "prebuild": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:components",
+    "prebuild": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:icons && pnpm run sync:components",
     "build": "next build",
-    "prestart": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:components",
+    "prestart": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:icons && pnpm run sync:components",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "build:opennext": "opennextjs-cloudflare build",
     "preview:opennext": "opennextjs-cloudflare preview",
-    "deploy:opennext": "node scripts/cloudflare-deploy.mjs"
+    "deploy:opennext": "node scripts/cloudflare-deploy.mjs",
+    "sync:icons": "pnpm --filter @vellira-ui/icons build"
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.1",
