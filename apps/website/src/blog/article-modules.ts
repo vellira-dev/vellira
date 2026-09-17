@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 
 import accessibleAccordionReactNativeMetadata from '../../content/blog/accessible-accordion-react-native/metadata.json';
+import aiUiConsistencyMetadata from '../../content/blog/ai-ui-consistency/metadata.json';
 import componentMetadataSourceOfTruthMetadata from '../../content/blog/component-metadata-source-of-truth/metadata.json';
 import controlledUncontrolledReactNativeMetadata from '../../content/blog/controlled-uncontrolled-react-native/metadata.json';
 import crossPlatformFormVelliraMetadata from '../../content/blog/cross-platform-form-vellira/metadata.json';
@@ -31,6 +32,10 @@ const blogArticleMetadataRegistryEntries = [
   {
     slug: 'accessible-accordion-react-native',
     metadata: accessibleAccordionReactNativeMetadata,
+  },
+  {
+    slug: 'ai-ui-consistency',
+    metadata: aiUiConsistencyMetadata,
   },
   {
     slug: 'component-metadata-source-of-truth',
@@ -67,6 +72,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
   {
     'accessible-accordion-react-native': () =>
       import('../../content/blog/accessible-accordion-react-native/article.mdx'),
+    'ai-ui-consistency': () =>
+      import('../../content/blog/ai-ui-consistency/article.mdx'),
     'component-metadata-source-of-truth': () =>
       import('../../content/blog/component-metadata-source-of-truth/article.mdx'),
     'controlled-uncontrolled-react-native': () =>
