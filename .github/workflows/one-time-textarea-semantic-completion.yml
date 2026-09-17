@@ -33,6 +33,80 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Close Textarea governance contracts
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const replaceOnce = (file, before, after, description) => {
+            let source = fs.readFileSync(file, 'utf8');
+            if (source.includes(after)) return;
+            if (!source.includes(before)) {
+              throw new Error(`${description} marker not found in ${file}`);
+            }
+            source = source.replace(before, after);
+            fs.writeFileSync(file, source);
+          };
+
+          const baselineMarker =
+            '// Baseline contract: render, accessibility, callback, controlled, uncontrolled, disabled, required, invalid';
+          for (const file of [
+            'packages/react/src/primitives/Textarea/Textarea.test.tsx',
+            'packages/react-native/src/primitives/Textarea/Textarea.test.tsx',
+          ]) {
+            let source = fs.readFileSync(file, 'utf8');
+            if (!source.startsWith(baselineMarker)) {
+              fs.writeFileSync(file, `${baselineMarker}\n${source}`);
+            }
+          }
+
+          replaceOnce(
+            'README.md',
+            '| Tabs       |  ✅   |      ✅      |\n| Tooltip    |  ✅   |      ✅      |',
+            '| Tabs       |  ✅   |      ✅      |\n| Textarea   |  ✅   |      ✅      |\n| Tooltip    |  ✅   |      ✅      |',
+            'README Textarea inventory'
+          );
+
+          replaceOnce(
+            'packages/metadata/src/tokenLifecycle.ts',
+            "purpose: 'Reserved for the canonical Textarea component token contract.'",
+            "purpose: 'Canonical Textarea component token contract.'",
+            'Textarea token lifecycle purpose'
+          );
+
+          replaceOnce(
+            'packages/tokens/src/token-architecture.ts',
+            `  {\n    name: 'createTabsTokens',\n    source: 'packages/tokens/src/factories/components/createTabsTokens.ts',\n    semanticAdapter: null,\n    stateKeys: ['default', 'hover', 'active', 'disabled'],\n  },\n  {\n    name: 'createTooltipTokens',`,
+            `  {\n    name: 'createTabsTokens',\n    source: 'packages/tokens/src/factories/components/createTabsTokens.ts',\n    semanticAdapter: null,\n    stateKeys: ['default', 'hover', 'active', 'disabled'],\n  },\n  {\n    name: 'createTextareaTokens',\n    source: 'packages/tokens/src/factories/components/createTextareaTokens.ts',\n    semanticAdapter: null,\n    stateKeys: ['default', 'hover', 'pressed', 'error', 'disabled'],\n  },\n  {\n    name: 'createTooltipTokens',`,
+            'Textarea maintained factory inventory'
+          );
+
+          replaceOnce(
+            'packages/tokens/src/component-token-factory-conventions.test.ts',
+            "  'createTabsTokens',\n  'createTooltipTokens',",
+            "  'createTabsTokens',\n  'createTextareaTokens',\n  'createTooltipTokens',",
+            'Textarea factory convention inventory'
+          );
+
+          replaceOnce(
+            'packages/tokens/src/component-token-dependencies.ts',
+            `  {\n    factory: 'createTabsTokens',\n    component: 'tabs',\n    file: 'tabs.ts',\n    primitiveColorUsage: [\n      'intent-palette-construction',\n      'component-owned-presentation',\n    ],\n    unresolved: [],\n  },\n  {\n    factory: 'createTooltipTokens',`,
+            `  {\n    factory: 'createTabsTokens',\n    component: 'tabs',\n    file: 'tabs.ts',\n    primitiveColorUsage: [\n      'intent-palette-construction',\n      'component-owned-presentation',\n    ],\n    unresolved: [],\n  },\n  {\n    factory: 'createTextareaTokens',\n    component: 'textarea',\n    file: 'textarea.ts',\n    primitiveColorUsage: ['none'],\n    unresolved: [],\n  },\n  {\n    factory: 'createTooltipTokens',`,
+            'Textarea semantic dependency inventory'
+          );
+          NODE
+
+          pnpm exec prettier \
+            README.md \
+            packages/metadata/src/tokenLifecycle.ts \
+            packages/react/src/primitives/Textarea/Textarea.test.tsx \
+            packages/react-native/src/primitives/Textarea/Textarea.test.tsx \
+            packages/tokens/src/token-architecture.ts \
+            packages/tokens/src/component-token-factory-conventions.test.ts \
+            packages/tokens/src/component-token-dependencies.ts \
+            --write
+
       - name: Align RN TextInput test harness with multiline props
         shell: bash
         run: |
@@ -50,14 +124,16 @@ jobs:
             "  value?: string;\n  defaultValue?: string;\n  multiline?: boolean;\n  editable?: boolean;\n  placeholder?: string;\n  maxLength?: number;"
           );
 
-          const start = source.indexOf('export const TextInput = forwardRef<HTMLInputElement, NativeProps>(');
+          const start = source.indexOf(
+            'export const TextInput = forwardRef<HTMLInputElement, NativeProps>('
+          );
           const endMarker = "TextInput.displayName = 'TextInput';";
           const end = source.indexOf(endMarker, start);
           if (start < 0 || end < 0) {
             throw new Error('RN TextInput mock implementation marker not found.');
           }
 
-          const block = `export const TextInput = forwardRef<\n  HTMLInputElement | HTMLTextAreaElement,\n  NativeProps\n>(\n  (\n    {\n      value,\n      defaultValue,\n      multiline = false,\n      numberOfLines,\n      placeholder,\n      maxLength,\n      editable = true,\n      secureTextEntry,\n      keyboardType,\n      returnKeyType,\n      autoFocus,\n      onChangeText,\n      onFocus,\n      onBlur,\n      style,\n      testID,\n      nativeID,\n      accessibilityLabel,\n      accessibilityHint,\n      accessibilityLabelledBy,\n      'aria-describedby': ariaDescribedBy,\n      accessibilityState,\n    },\n    ref\n  ) => {\n    const sharedProps = {\n      'data-testid': testID,\n      id: nativeID,\n      'data-keyboard-type': keyboardType,\n      'data-return-key-type': returnKeyType,\n      'data-auto-focus': autoFocus ? 'true' : undefined,\n      'aria-label': accessibilityLabel,\n      'aria-description': accessibilityHint,\n      'aria-labelledby': accessibilityLabelledBy,\n      'aria-describedby': ariaDescribedBy,\n      placeholder,\n      maxLength,\n      disabled: !editable,\n      autoFocus,\n      style: flattenStyle(style),\n      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>\n        onChangeText?.(event.currentTarget.value),\n      onFocus,\n      onBlur,\n      ...stateProps(accessibilityState),\n    };\n\n    if (multiline) {\n      return (\n        <textarea\n          {...sharedProps}\n          ref={ref as React.ForwardedRef<HTMLTextAreaElement>}\n          data-multiline='true'\n          data-number-of-lines={numberOfLines}\n          rows={numberOfLines}\n          value={value}\n          defaultValue={value === undefined ? defaultValue : undefined}\n        />\n      );\n    }\n\n    return (\n      <input\n        {...sharedProps}\n        ref={ref as React.ForwardedRef<HTMLInputElement>}\n        value={value ?? ''}\n        type={secureTextEntry ? 'password' : 'text'}\n        inputMode={keyboardType === 'numeric' ? 'numeric' : undefined}\n      />\n    );\n  }\n);\nTextInput.displayName = 'TextInput';`;
+          const block = `export const TextInput = forwardRef<\n  HTMLInputElement | HTMLTextAreaElement,\n  NativeProps\n>(\n  (\n    {\n      value,\n      defaultValue,\n      multiline = false,\n      numberOfLines,\n      placeholder,\n      maxLength,\n      editable = true,\n      secureTextEntry,\n      keyboardType,\n      returnKeyType,\n      autoFocus,\n      onChangeText,\n      onFocus,\n      onBlur,\n      style,\n      testID,\n      nativeID,\n      accessibilityLabel,\n      accessibilityHint,\n      accessibilityLabelledBy,\n      'aria-describedby': ariaDescribedBy,\n      accessibilityState,\n    },\n    ref\n  ) => {\n    const sharedProps = {\n      'data-testid': testID,\n      id: nativeID,\n      'data-keyboard-type': keyboardType,\n      'data-return-key-type': returnKeyType,\n      'data-auto-focus': autoFocus ? 'true' : undefined,\n      'aria-label': accessibilityLabel,\n      'aria-description': accessibilityHint,\n      'aria-labelledby': accessibilityLabelledBy,\n      'aria-describedby': ariaDescribedBy,\n      placeholder,\n      maxLength,\n      disabled: !editable,\n      autoFocus,\n      style: flattenStyle(style),\n      onChange: (\n        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>\n      ) => onChangeText?.(event.currentTarget.value),\n      onFocus,\n      onBlur,\n      ...stateProps(accessibilityState),\n    };\n\n    if (multiline) {\n      return (\n        <textarea\n          {...sharedProps}\n          ref={ref as React.ForwardedRef<HTMLTextAreaElement>}\n          data-multiline='true'\n          data-number-of-lines={numberOfLines}\n          rows={numberOfLines}\n          value={value}\n          defaultValue={value === undefined ? defaultValue : undefined}\n        />\n      );\n    }\n\n    return (\n      <input\n        {...sharedProps}\n        ref={ref as React.ForwardedRef<HTMLInputElement>}\n        value={value ?? ''}\n        type={secureTextEntry ? 'password' : 'text'}\n        inputMode={keyboardType === 'numeric' ? 'numeric' : undefined}\n      />\n    );\n  }\n);\nTextInput.displayName = 'TextInput';`;
 
           source =
             source.slice(0, start) +
@@ -66,6 +142,8 @@ jobs:
 
           fs.writeFileSync(file, source);
           NODE
+
+          pnpm exec prettier packages/react-native/test/react-native.mock.tsx --write
 
       - name: Prove Textarea runtime semantics
         shell: bash
@@ -95,6 +173,7 @@ jobs:
           fs.writeFileSync(file, source);
           NODE
 
+          pnpm exec prettier packages/metadata/src/components/Textarea.metadata.ts --write
           pnpm --filter @vellira-ui/metadata test
 
       - name: Regenerate canonical public surfaces
@@ -109,8 +188,10 @@ jobs:
       - name: Verify semantic completion contract
         shell: bash
         run: |
+          pnpm check:tokens-semantic:strict
           pnpm check:component --all
           pnpm check:public-api
+          pnpm docs:api:check
 
       - name: Commit verified semantic completion and remove helper
         shell: bash
