@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 
 import { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import { useControllableState } from '../../../hooks';
 import { FormField } from '../../../patterns/FormField';
@@ -10,7 +11,7 @@ import { createStyles } from '../RadioGroup.styles';
 
 import type { RadioGroupProps } from './types';
 
-export const RadioGroupRoot = forwardRef<View, RadioGroupProps>(
+export const RadioGroupRoot = forwardRef<ViewInstance, RadioGroupProps>(
   (
     {
       value,
