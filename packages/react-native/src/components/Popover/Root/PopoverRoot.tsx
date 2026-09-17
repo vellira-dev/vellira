@@ -2,7 +2,7 @@ import { useCallback, useId, useRef } from 'react';
 
 import type { PopoverOpenChangeDetails } from '@vellira-ui/types';
 import type { MutableRefObject } from 'react';
-import type { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import {
   useControllableState,
@@ -38,8 +38,8 @@ export function PopoverRoot({
   sideOffset = 8,
   closeOnOutsidePress = true,
 }: PopoverProps) {
-  const triggerRef = useRef<View | null>(null);
-  const anchorRef = useRef<View | null>(null);
+  const triggerRef = useRef<ViewInstance | null>(null);
+  const anchorRef = useRef<ViewInstance | null>(null);
   const overlayId = useId();
 
   const getReferenceRef = useCallback(
@@ -101,7 +101,7 @@ export function PopoverRoot({
   });
 
   const updatePosition = useCallback(
-    (containerRef?: MutableRefObject<View | null>) => {
+    (containerRef?: MutableRefObject<ViewInstance | null>) => {
       updateFloatingPosition(getReferenceRef(), containerRef);
     },
     [getReferenceRef, updateFloatingPosition]
