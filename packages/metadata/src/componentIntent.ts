@@ -1,25 +1,36 @@
 import {
   componentCapabilities,
+  componentSemanticCapabilities,
   type ComponentCapability,
   type ComponentCategory,
   type ComponentLayer,
   type ComponentMetadata,
   type ComponentPlatform,
   type ComponentProfile,
+  type ComponentSemanticCapability,
   type ComponentTokenContract,
 } from './component';
 
 export const COMPONENT_INTENT_SCHEMA_VERSION = '1' as const;
 
+export type ComponentIntentCapability =
+  | ComponentCapability
+  | ComponentSemanticCapability;
+
+export const componentIntentCapabilities: readonly ComponentIntentCapability[] = [
+  ...componentCapabilities,
+  ...componentSemanticCapabilities,
+];
+
 export type ComponentIntentV1 = {
   schemaVersion: typeof COMPONENT_INTENT_SCHEMA_VERSION;
   /** Stable human-readable UI job owned by public product metadata. */
   job: string;
-  /** Semantic capabilities required on every target platform. */
-  requiredCapabilities: readonly ComponentCapability[];
-  /** Extra semantic requirements that intentionally differ by platform. */
+  /** Semantic/behavior capabilities required on every target platform. */
+  requiredCapabilities: readonly ComponentIntentCapability[];
+  /** Extra requirements that intentionally differ by platform. */
   platformRequirements?: Partial<
-    Record<ComponentPlatform, readonly ComponentCapability[]>
+    Record<ComponentPlatform, readonly ComponentIntentCapability[]>
   >;
 };
 
@@ -51,9 +62,9 @@ export type ComponentIntentCoverageStatus =
 export type ComponentIntentPlatformCoverageV1 = {
   platform: ComponentPlatform;
   status: ComponentIntentCoverageStatus;
-  requiredCapabilities: readonly ComponentCapability[];
-  satisfiedCapabilities: readonly ComponentCapability[];
-  missingCapabilities: readonly ComponentCapability[];
+  requiredCapabilities: readonly ComponentIntentCapability[];
+  satisfiedCapabilities: readonly ComponentIntentCapability[];
+  missingCapabilities: readonly ComponentIntentCapability[];
 };
 
 export type ComponentIntentCoverageV1 = {
@@ -67,12 +78,12 @@ export type ComponentIntentCoverageV1 = {
   errors: readonly string[];
 };
 
-const KNOWN_CAPABILITIES = new Set<string>(componentCapabilities);
+const KNOWN_CAPABILITIES = new Set<string>(componentIntentCapabilities);
 const KNOWN_PLATFORMS = new Set<ComponentPlatform>(['react', 'react-native']);
 
 function uniqueCapabilities(
-  values: readonly ComponentCapability[]
-): ComponentCapability[] {
+  values: readonly ComponentIntentCapability[]
+): ComponentIntentCapability[] {
   return [...new Set(values)];
 }
 
@@ -80,20 +91,22 @@ export function componentIntentId(target: ComponentIntentTargetV1) {
   return `component:${target.name}:intent:v${target.intent.schemaVersion}`;
 }
 
-export function componentCapabilitiesForPlatform(
+export function componentIntentEvidenceForPlatform(
   metadata: ComponentMetadata,
   platform: ComponentPlatform
-): readonly ComponentCapability[] {
+): readonly ComponentIntentCapability[] {
   return uniqueCapabilities([
     ...(metadata.capabilities ?? []),
     ...(metadata.platformCapabilities?.[platform] ?? []),
+    ...(metadata.semanticCapabilities ?? []),
+    ...(metadata.platformSemanticCapabilities?.[platform] ?? []),
   ]);
 }
 
 export function requiredComponentIntentCapabilitiesForPlatform(
   intent: ComponentIntentV1,
   platform: ComponentPlatform
-): readonly ComponentCapability[] {
+): readonly ComponentIntentCapability[] {
   return uniqueCapabilities([
     ...intent.requiredCapabilities,
     ...(intent.platformRequirements?.[platform] ?? []),
@@ -104,17 +117,29 @@ export function validateComponentIntentTarget(
   target: ComponentIntentTargetV1
 ): readonly string[] {
   const errors: string[] = [];
+  const intent = target.intent as ComponentIntentV1 | undefined;
 
-  if (target.intent.schemaVersion !== COMPONENT_INTENT_SCHEMA_VERSION) {
+  if (!intent || typeof intent !== 'object') {
+    return [`Component intent is required for ${target.name}.`];
+  }
+
+  if (intent.schemaVersion !== COMPONENT_INTENT_SCHEMA_VERSION) {
     errors.push(
       `Unsupported component intent schema version "${String(
-        target.intent.schemaVersion
+        intent.schemaVersion
       )}" for ${target.name}.`
     );
   }
 
-  if (target.intent.job.trim().length === 0) {
+  if (typeof intent.job !== 'string' || intent.job.trim().length === 0) {
     errors.push(`Component intent job must be non-empty for ${target.name}.`);
+  }
+
+  if (!Array.isArray(intent.requiredCapabilities)) {
+    errors.push(
+      `Component intent requiredCapabilities must be an array for ${target.name}.`
+    );
+    return errors;
   }
 
   const targetPlatforms = new Set(target.platforms);
@@ -131,11 +156,14 @@ export function validateComponentIntentTarget(
   }
 
   const sharedCapabilities = new Set<string>();
-  for (const capability of target.intent.requiredCapabilities) {
-    if (!KNOWN_CAPABILITIES.has(capability)) {
+  for (const capability of intent.requiredCapabilities) {
+    if (typeof capability !== 'string' || !KNOWN_CAPABILITIES.has(capability)) {
       errors.push(
-        `Component intent contains unknown capability "${capability}" for ${target.name}.`
+        `Component intent contains unknown capability "${String(
+          capability
+        )}" for ${target.name}.`
       );
+      continue;
     }
     if (sharedCapabilities.has(capability)) {
       errors.push(
@@ -145,8 +173,21 @@ export function validateComponentIntentTarget(
     sharedCapabilities.add(capability);
   }
 
+  const platformRequirements = intent.platformRequirements;
+  if (
+    platformRequirements !== undefined &&
+    (typeof platformRequirements !== 'object' ||
+      platformRequirements === null ||
+      Array.isArray(platformRequirements))
+  ) {
+    errors.push(
+      `Component intent platformRequirements must be an object for ${target.name}.`
+    );
+    return errors;
+  }
+
   for (const [platform, capabilities] of Object.entries(
-    target.intent.platformRequirements ?? {}
+    platformRequirements ?? {}
   )) {
     if (!KNOWN_PLATFORMS.has(platform as ComponentPlatform)) {
       errors.push(
@@ -159,13 +200,25 @@ export function validateComponentIntentTarget(
         `Component intent platform requirement "${platform}" is outside the target platforms for ${target.name}.`
       );
     }
+    if (!Array.isArray(capabilities)) {
+      errors.push(
+        `Component intent ${platform} requirements must be an array for ${target.name}.`
+      );
+      continue;
+    }
 
     const seen = new Set<string>();
-    for (const capability of capabilities ?? []) {
-      if (!KNOWN_CAPABILITIES.has(capability)) {
+    for (const capability of capabilities) {
+      if (
+        typeof capability !== 'string' ||
+        !KNOWN_CAPABILITIES.has(capability)
+      ) {
         errors.push(
-          `Component intent contains unknown ${platform} capability "${capability}" for ${target.name}.`
+          `Component intent contains unknown ${platform} capability "${String(
+            capability
+          )}" for ${target.name}.`
         );
+        continue;
       }
       if (sharedCapabilities.has(capability)) {
         errors.push(
@@ -293,9 +346,7 @@ export function evaluateComponentIntentCoverage(
       };
     }
 
-    const actual = new Set(
-      componentCapabilitiesForPlatform(metadata, platform)
-    );
+    const actual = new Set(componentIntentEvidenceForPlatform(metadata, platform));
     const satisfiedCapabilities = requiredCapabilities.filter((capability) =>
       actual.has(capability)
     );
