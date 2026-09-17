@@ -1,4 +1,13 @@
-import { useCallback, useId, useRef, useState } from 'react';
+import {
+  type Dispatch,
+  type ReactNode,
+  type RefObject,
+  type SetStateAction,
+  useCallback,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 
 import type { TextInputInstance, ViewInstance } from 'react-native';
 
@@ -11,7 +20,9 @@ import { useSelectCollection } from '../../../hooks/behavior/select/useSelectCol
 import { useSelectSearch } from '../../../hooks/behavior/select/useSelectSearch';
 import { useNativeFloatingPosition } from '../../../managers';
 import { useFormFieldContext } from '../../../patterns/FormField';
+import type { NativeFormFieldContextValue } from '../../../patterns/FormField/FormFieldContext';
 import { resolveSelectAccessibility } from '../internal/resolveSelectAccessibility';
+import type { SelectContextValue } from '../internal/types';
 import type { SelectProps } from '../types';
 
 import { useSelectRootActions } from './useSelectRootActions';
@@ -19,7 +30,45 @@ import { useSelectRootContextValue } from './useSelectRootContextValue';
 import { useSelectRootDisplayValue } from './useSelectRootDisplayValue';
 import { useSelectRootSelection } from './useSelectRootSelection';
 
-export function useSelectRootState(props: SelectProps) {
+type SelectRootState = {
+  contextValue: SelectContextValue;
+  displayValue: ReactNode;
+  field: NativeFormFieldContextValue | null;
+  hasOwnField: boolean;
+  hasValue: boolean;
+  isDisabled: boolean;
+  isInvalid: boolean;
+  isOpen: boolean;
+  isRequired: boolean;
+  clearValue: () => void;
+  openDropdown: () => void;
+  resolvedHint: string | undefined;
+  resolvedLabel: string;
+  resolvedSize: NonNullable<SelectProps['size']>;
+  setTriggerWidth: Dispatch<SetStateAction<number | undefined>>;
+  triggerRef: RefObject<ViewInstance | null>;
+  controlProps: {
+    clearable: boolean;
+    color: NonNullable<SelectProps['color']>;
+    endIcon: SelectProps['endIcon'];
+    loading: boolean;
+    prefix: SelectProps['prefix'];
+    startIcon: SelectProps['startIcon'];
+    suffix: SelectProps['suffix'];
+    testID: SelectProps['testID'];
+    textStyle: SelectProps['textStyle'];
+    triggerStyle: SelectProps['triggerStyle'];
+    variant: NonNullable<SelectProps['variant']>;
+  };
+  formFieldProps: {
+    description: SelectProps['description'];
+    error: SelectProps['error'];
+    label: SelectProps['label'];
+    style: SelectProps['style'];
+  };
+};
+
+export function useSelectRootState(props: SelectProps): SelectRootState {
   const {
     label,
     description,
