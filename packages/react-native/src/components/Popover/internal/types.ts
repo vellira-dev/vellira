@@ -4,7 +4,11 @@ import type {
   PopoverOpenChangeDetails,
 } from '@vellira-ui/types';
 import type { MutableRefObject } from 'react';
-import type { LayoutChangeEvent, View, ViewStyle } from 'react-native';
+import type {
+  LayoutChangeEvent,
+  ViewInstance,
+  ViewStyle,
+} from 'react-native';
 
 import type {
   OverlayOutsidePressProps,
@@ -14,8 +18,8 @@ import type {
 export interface PopoverContextValue {
   open: boolean;
 
-  triggerRef: MutableRefObject<View | null>;
-  anchorRef: MutableRefObject<View | null>;
+  triggerRef: MutableRefObject<ViewInstance | null>;
+  anchorRef: MutableRefObject<ViewInstance | null>;
 
   side: NonNullable<BasePopoverPositioningProps['side']>;
   align: NonNullable<BasePopoverPositioningProps['align']>;
@@ -26,7 +30,9 @@ export interface PopoverContextValue {
   arrowPosition: Pick<ViewStyle, 'top' | 'left'>;
 
   onFloatingLayout: (event: LayoutChangeEvent) => void;
-  updatePosition: (containerRef?: MutableRefObject<View | null>) => void;
+  updatePosition: (
+    containerRef?: MutableRefObject<ViewInstance | null>
+  ) => void;
 
   setOpen: (open: boolean, details: PopoverOpenChangeDetails) => void;
 
