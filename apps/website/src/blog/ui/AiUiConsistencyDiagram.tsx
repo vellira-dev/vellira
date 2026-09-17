@@ -93,7 +93,9 @@ export function AiUiConsistencyDiagram() {
         <div className={styles.concerns}>
           {concerns.map(({ label, Icon }) => (
             <div key={label} className={styles.concern}>
-              <Icon size={18} />
+              <span className={styles.concernIcon}>
+                <Icon size={20} />
+              </span>
               <span>{label}</span>
             </div>
           ))}
