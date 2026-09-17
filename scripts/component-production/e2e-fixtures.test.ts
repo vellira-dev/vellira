@@ -193,7 +193,7 @@ afterEach(() => {
   );
 });
 
-describe.sequential('component production end-to-end fixtures', () => {
+describe('component production end-to-end fixtures', { concurrent: false }, () => {
   it(
     'reports exactly every real generation mutation for a fresh both-platform base component',
     async () => {
@@ -797,7 +797,6 @@ function createIsolatedWorktree() {
 
   temporaryWorktrees.push({ parent, root });
   linkInstalledDependencies(root);
-
   return root;
 }
 
