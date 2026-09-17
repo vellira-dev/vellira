@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
 
 import { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import { useControllableState, useOverlayDismiss } from '../../../hooks';
 import { useNativeFloatingPosition } from '../../../managers';
@@ -23,7 +24,7 @@ export const TooltipRoot = ({
 }: TooltipRootProps) => {
   const generatedId = useId();
   const contentId = `${generatedId}-content`;
-  const triggerRef = useRef<View | null>(null);
+  const triggerRef = useRef<ViewInstance | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resolvedDelay = useMemo(() => resolveTooltipDelay(delay), [delay]);
   const [open, setOpenState] = useControllableState({
