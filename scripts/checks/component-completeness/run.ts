@@ -98,19 +98,19 @@ export async function runComponentCompletenessCheck(params: {
       root,
       metadata: component,
     });
-    const intentCheck = checkComponentIntentCoverage({
+    const intentChecks = checkComponentIntentCoverage({
       metadata: component,
       targets: intentTargets,
     });
 
-    if (!intentCheck) {
+    if (intentChecks.length === 0) {
       return result;
     }
 
     return {
       ...result,
-      ready: result.ready && intentCheck.ok,
-      checks: [...result.checks, intentCheck],
+      ready: result.ready && intentChecks.every((check) => check.ok),
+      checks: [...result.checks, ...intentChecks],
     };
   });
 
