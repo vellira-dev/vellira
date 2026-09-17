@@ -5,8 +5,11 @@ import { pathToFileURL } from 'node:url';
 
 import {
   componentCapabilities,
+  componentCapabilitiesForPlatform,
   componentExpansionCatalog,
   componentMetadata,
+  requiredComponentIntentCapabilitiesForPlatform,
+  validateComponentIntentTarget,
   type ComponentCapability,
   type ComponentExpansionTarget,
   type ComponentMetadata,
@@ -182,6 +185,17 @@ export function resolveMissingComponentRequest(
 
   const requestedComponent = request.requestedComponent!;
   const target = findByName(authorities.targets, requestedComponent);
+  if (target) {
+    const intentErrors = validateComponentIntentTarget(target);
+    if (intentErrors.length > 0) {
+      throw new Error(
+        `Invalid canonical component intent for ${target.name}: ${intentErrors.join(
+          ' '
+        )}`
+      );
+    }
+  }
+
   const candidates = canonicalCandidates(
     authorities.components,
     requestedComponent,
@@ -193,9 +207,35 @@ export function resolveMissingComponentRequest(
     const missingPlatforms = request.platforms.filter(
       (platform) => !canonical.platforms.includes(platform)
     );
-    const capabilitySet = new Set(canonical.capabilities ?? []);
-    const missingCapabilities = request.requiredCapabilities.filter(
-      (capability) => !capabilitySet.has(capability)
+    const missingCapabilitySet = new Set<ComponentCapability>();
+
+    for (const platform of request.platforms) {
+      if (!canonical.platforms.includes(platform)) {
+        continue;
+      }
+
+      const actualCapabilities = new Set(
+        componentCapabilitiesForPlatform(canonical, platform)
+      );
+      const requiredCapabilities = new Set<ComponentCapability>([
+        ...request.requiredCapabilities,
+        ...(target
+          ? requiredComponentIntentCapabilitiesForPlatform(
+              target.intent,
+              platform
+            )
+          : []),
+      ]);
+
+      for (const capability of requiredCapabilities) {
+        if (!actualCapabilities.has(capability)) {
+          missingCapabilitySet.add(capability);
+        }
+      }
+    }
+
+    const missingCapabilities = componentCapabilities.filter((capability) =>
+      missingCapabilitySet.has(capability)
     );
 
     if (missingPlatforms.length === 0 && missingCapabilities.length === 0) {
