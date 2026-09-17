@@ -1,3 +1,17 @@
+import Image from 'next/image';
+
+import banner from './banner.png';
+import diagramDark from './diagram-dark.png';
+import diagramLight from './diagram-light.png';
+import visuals from './article-visuals.module.css';
+
+<Image
+  src={banner}
+  alt='Vellira — AI Can Generate More UI. Who Keeps It Consistent?'
+  className={visuals.banner}
+  sizes='(max-width: 760px) 100vw, 760px'
+/>
+
 AI can now generate UI faster than many teams can review it.
 
 A developer can describe a component, ask a coding model to implement it, and get a plausible result in minutes. The same model can refactor nearby code, write tests, update types, and produce several variations before a traditional implementation would have reached its first review.
@@ -48,6 +62,27 @@ None of these problems were invented by AI.
 AI simply increases the rate at which they can appear.
 
 If a team can create five or ten times more UI changes, the system around those changes has to become stronger too.
+
+<div
+  className={visuals.diagram}
+  role='img'
+  aria-label='AI-generated UI creates more components and coordination pressure across APIs, accessibility, tokens, documentation, platforms, and quality. Vellira helps bring those concerns back into one coherent UI system.'
+>
+  <Image
+    src={diagramLight}
+    alt=''
+    aria-hidden='true'
+    className={`${visuals.diagramImage} ${visuals.diagramLight}`}
+    sizes='(max-width: 760px) 100vw, 760px'
+  />
+  <Image
+    src={diagramDark}
+    alt=''
+    aria-hidden='true'
+    className={`${visuals.diagramImage} ${visuals.diagramDark}`}
+    sizes='(max-width: 760px) 100vw, 760px'
+  />
+</div>
 
 ## A component library is necessary. It is no longer sufficient.
 
