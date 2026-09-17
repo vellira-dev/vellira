@@ -73,7 +73,7 @@ jobs:
           run_step('Align RN TextInput test harness with multiline props')
           PY
 
-      - name: Reconcile final tooling expectations
+      - name: Reconcile pre-semantic tooling expectations
         shell: bash
         run: |
           set -euo pipefail
@@ -94,14 +94,14 @@ jobs:
             'scripts/canonical-gap/contract.test.ts',
             `    expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([\n      'icon',\n      'token',\n      'token',\n    ]);`,
             `    expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([\n      'component-enhancement',\n      'icon',\n      'token',\n      'token',\n    ]);`,
-            'Textarea resolved UI finding enhancement expectation'
+            'Textarea pre-semantic UI finding enhancement expectation'
           );
 
           replaceOnce(
             'scripts/canonical-gap/contract.test.ts',
             `    expect(\n      batch.requests.some(\n        ({ canonicalTarget }) => canonicalTarget === 'Textarea'\n      )\n    ).toBe(false);`,
             `    expect(\n      batch.requests.some(\n        ({ canonicalTarget }) => canonicalTarget === 'Textarea'\n      )\n    ).toBe(true);`,
-            'Textarea resolved canonical target expectation'
+            'Textarea pre-semantic canonical target expectation'
           );
 
           replaceOnce(
@@ -167,6 +167,40 @@ jobs:
           run_step('Record semantic evidence only after proofs pass')
           run_step('Regenerate canonical public surfaces')
           PY
+
+      - name: Reconcile post-semantic tooling expectations
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const replaceOnce = (file, before, after, description) => {
+            let source = fs.readFileSync(file, 'utf8');
+            if (source.includes(after)) return;
+            if (!source.includes(before)) {
+              throw new Error(`${description} marker not found in ${file}`);
+            }
+            source = source.replace(before, after);
+            fs.writeFileSync(file, source);
+          };
+
+          replaceOnce(
+            'scripts/canonical-gap/contract.test.ts',
+            `    expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([\n      'component-enhancement',\n      'icon',\n      'token',\n      'token',\n    ]);`,
+            `    expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([\n      'icon',\n      'token',\n      'token',\n    ]);`,
+            'Textarea post-semantic UI finding resolution expectation'
+          );
+
+          replaceOnce(
+            'scripts/canonical-gap/contract.test.ts',
+            `    expect(\n      batch.requests.some(\n        ({ canonicalTarget }) => canonicalTarget === 'Textarea'\n      )\n    ).toBe(true);`,
+            `    expect(\n      batch.requests.some(\n        ({ canonicalTarget }) => canonicalTarget === 'Textarea'\n      )\n    ).toBe(false);`,
+            'Textarea post-semantic canonical target expectation'
+          );
+          NODE
+
+          pnpm exec prettier scripts/canonical-gap/contract.test.ts --write
 
       - name: Verify final Textarea integration
         shell: bash
