@@ -134,12 +134,8 @@ export interface ComponentMetadata {
   platforms: readonly ComponentPlatform[];
   profile: ComponentProfile;
   status: ComponentStatus;
-  /** Existing generator/quality capabilities implemented across every platform. */
+  /** Existing Generator/Quality capabilities implemented by the component. */
   capabilities?: readonly ComponentCapability[];
-  /** Existing generator/quality capabilities that are intentionally platform-scoped. */
-  platformCapabilities?: Partial<
-    Record<ComponentPlatform, readonly ComponentCapability[]>
-  >;
   /** Product-semantic evidence implemented across every declared platform. */
   semanticCapabilities?: readonly ComponentSemanticCapability[];
   /** Product-semantic evidence that is intentionally platform-scoped. */
@@ -148,16 +144,4 @@ export interface ComponentMetadata {
   >;
   dependencies?: ComponentDependencies;
   requirements: ComponentRequirements;
-}
-
-export function componentCapabilitiesForPlatform(
-  metadata: ComponentMetadata,
-  platform: ComponentPlatform
-): readonly ComponentCapability[] {
-  return [
-    ...new Set([
-      ...(metadata.capabilities ?? []),
-      ...(metadata.platformCapabilities?.[platform] ?? []),
-    ]),
-  ];
 }
