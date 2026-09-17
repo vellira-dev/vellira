@@ -116,7 +116,7 @@ describe('Native Textarea', () => {
     const { container, unmount } = render(
       <Textarea
         accessibilityLabel='Controlled message'
-        value='Controlled\nvalue'
+        value={'Controlled\nvalue'}
         numberOfLines={0}
       />
     );
