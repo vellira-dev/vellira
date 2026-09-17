@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import type { RefObject } from 'react';
-import type { LayoutChangeEvent, TextInput } from 'react-native';
+import type { LayoutChangeEvent, TextInputInstance } from 'react-native';
 
 import type {
   OverlayOutsidePressProps,
@@ -37,7 +37,7 @@ type UseSelectRootContextValueParams = {
   itemHeight: number;
   query: string;
   searchPlaceholder: string;
-  searchInputRef: RefObject<TextInput | null>;
+  searchInputRef: RefObject<TextInputInstance | null>;
   empty: SelectContextValue['empty'];
   loadingContent: SelectContextValue['loadingContent'];
   closeContent: () => void;
