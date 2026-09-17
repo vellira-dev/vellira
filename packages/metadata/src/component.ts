@@ -62,6 +62,18 @@ export const componentCapabilities = [
   'collapsible',
   'portal',
   'responsive',
+  'accessible-name',
+  'accessible-value',
+  'announcement',
+  'auto-dismiss',
+  'dismissible',
+  'fallback',
+  'image-source',
+  'multiline',
+  'reduced-motion',
+  'size-variants',
+  'stacking',
+  'value-range',
 ] as const;
 
 export type ComponentCapability = (typeof componentCapabilities)[number];
@@ -108,7 +120,12 @@ export interface ComponentMetadata {
   platforms: readonly ComponentPlatform[];
   profile: ComponentProfile;
   status: ComponentStatus;
+  /** Capabilities implemented across every declared platform. */
   capabilities?: readonly ComponentCapability[];
+  /** Additional implementation evidence that is intentionally platform-scoped. */
+  platformCapabilities?: Partial<
+    Record<ComponentPlatform, readonly ComponentCapability[]>
+  >;
   dependencies?: ComponentDependencies;
   requirements: ComponentRequirements;
 }
