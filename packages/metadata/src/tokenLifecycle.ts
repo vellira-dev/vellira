@@ -32,6 +32,12 @@ export const componentTokenLifecycle = {
     owner: 'Avatar',
     purpose: 'Reserved for the canonical Avatar component token contract.',
   },
+  Textarea: {
+    status: 'reserved',
+    public: true,
+    owner: 'Textarea',
+    purpose: 'Reserved for the canonical Textarea component token contract.',
+  },
   Accordion: {
     status: 'current',
     public: true,
