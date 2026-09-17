@@ -1,6 +1,6 @@
 import { useCallback, useId, useRef, useState } from 'react';
 
-import type { TextInput, View } from 'react-native';
+import type { TextInputInstance, ViewInstance } from 'react-native';
 
 import {
   useOverlayDismiss,
@@ -71,8 +71,8 @@ export function useSelectRootState(props: SelectProps) {
   const overlayId = useId();
   const hasOwnField = Boolean(label || description || error);
   const [triggerWidth, setTriggerWidth] = useState<number | undefined>();
-  const triggerRef = useRef<View | null>(null);
-  const searchInputRef = useRef<TextInput>(null);
+  const triggerRef = useRef<ViewInstance | null>(null);
+  const searchInputRef = useRef<TextInputInstance>(null);
   const selectedFocusValueRef = useRef<string | undefined>(undefined);
   const resolvedPresentation = useOverlayPresentation(presentation);
   const { position, updatePosition, onFloatingLayout } =
