@@ -1,0 +1,90 @@
+name: One-time Textarea Semantic Completion
+
+on:
+  push:
+    branches:
+      - feat/textarea-launch-component
+
+permissions:
+  contents: write
+
+jobs:
+  complete:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/textarea-launch-component
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove Textarea runtime semantics
+        shell: bash
+        run: |
+          pnpm --filter @vellira-ui/tokens preservation:check
+          pnpm --filter @vellira-ui/react exec vitest run --config vitest.config.ts src/primitives/Textarea/Textarea.test.tsx
+          pnpm --filter @vellira-ui/react-native exec vitest run --config vitest.config.ts src/primitives/Textarea/Textarea.test.tsx
+
+      - name: Record semantic evidence only after proofs pass
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'packages/metadata/src/components/Textarea.metadata.ts';
+          let source = fs.readFileSync(file, 'utf8');
+          if (source.includes('semanticCapabilities:')) {
+            throw new Error('Textarea semantic evidence already exists.');
+          }
+          const marker = "  capabilities: [\n    'controlled',\n    'uncontrolled',\n    'disabled',\n    'required',\n    'invalid',\n  ],\n";
+          if (!source.includes(marker)) {
+            throw new Error('Textarea metadata capability marker not found.');
+          }
+          source = source.replace(
+            marker,
+            `${marker}  semanticCapabilities: ['multiline', 'accessible-name'],\n`
+          );
+          fs.writeFileSync(file, source);
+          NODE
+
+          pnpm --filter @vellira-ui/metadata test
+
+      - name: Regenerate canonical public surfaces
+        shell: bash
+        run: |
+          pnpm docs:api
+          pnpm component-docs:generate
+          pnpm component-pages:generate
+          pnpm component-docs:check
+          pnpm component-pages:check
+
+      - name: Verify semantic completion contract
+        shell: bash
+        run: |
+          pnpm check:component --all
+          pnpm check:public-api
+
+      - name: Commit verified semantic completion and remove helper
+        shell: bash
+        run: |
+          rm .github/workflows/one-time-textarea-semantic-completion.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(textarea): complete canonical semantic intent"
+          git push origin HEAD:feat/textarea-launch-component
