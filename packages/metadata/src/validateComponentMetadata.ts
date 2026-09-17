@@ -359,17 +359,6 @@ export function validateComponentMetadata(
     });
   }
 
-  if (input.platformCapabilities !== undefined) {
-    validatePlatformCapabilityMap({
-      value: input.platformCapabilities,
-      field: 'platformCapabilities',
-      sharedValue: input.capabilities,
-      declaredPlatformsValue: input.platforms,
-      allowedValues: componentCapabilities,
-      errors,
-    });
-  }
-
   if (input.semanticCapabilities !== undefined) {
     validateStringArray({
       value: input.semanticCapabilities,
