@@ -13,7 +13,7 @@
     minmax(94px, 0.88fr) 12px
     minmax(108px, 1fr);
   align-items: center;
-  column-gap: 2px;
+  column-gap: 0;
 }
 
 .node,
@@ -85,6 +85,8 @@
   display: grid;
   width: 12px;
   min-width: 0;
+  justify-self: end;
+  margin-right: -1px;
   color: var(--text-brand);
   filter: drop-shadow(
     0 0 8px color-mix(in srgb, var(--color-primary-400) 40%, transparent)
