@@ -16,7 +16,7 @@ const productionBlogManifestUrl = 'https://vellira.dev/blog/manifest.json';
 const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
   process.env.BLOG_METRICS_PUBLICATION_MODE
 );
-const aggregateMetricsMaxAttempts = 6;
+const aggregateMetricsMaxAttempts = 8;
 const aggregateMetricsRetryDelayMs = 12_000;
 
 if (!baseUrl) {
@@ -187,6 +187,12 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
   const payload = await response.json();
   if (!Array.isArray(payload?.items)) {
     throw new Error('Production-catalog metrics proxy returned an invalid payload.');
+  }
+
+  if (payload.items.length !== productionSlugs.length) {
+    throw new Error(
+      'Production-catalog metrics proxy returned an unexpected item count.'
+    );
   }
 
   const metricsBySlug = new Map();
