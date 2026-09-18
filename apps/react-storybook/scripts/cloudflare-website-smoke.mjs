@@ -8,6 +8,7 @@ import {
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
   resolveBlogMetricsPublicationMode,
+  withBlogMetricsDeadline,
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
@@ -18,6 +19,12 @@ const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
 );
 const aggregateMetricsMaxAttempts = 8;
 const aggregateMetricsRetryDelayMs = 12_000;
+const blogMetricsRequestTimeoutMs = 10_000;
+const aggregateMetricsDeadlineMs =
+  blogMetricsPublicationMode ===
+  BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE
+    ? 75_000
+    : 240_000;
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -143,6 +150,7 @@ async function fetchBlogPublicationSlugs(url, label) {
   const response = await context.request.get(url, {
     failOnStatusCode: false,
     headers: { 'Cache-Control': 'no-cache' },
+    timeout: blogMetricsRequestTimeoutMs,
   });
 
   if (!response.ok()) {
@@ -176,6 +184,7 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
   const url = new URL(buildBlogMetricsBatchPath(productionSlugs), baseUrl);
   const response = await context.request.get(url.toString(), {
     failOnStatusCode: false,
+    timeout: blogMetricsRequestTimeoutMs,
   });
 
   if (!response.ok()) {
@@ -632,7 +641,10 @@ async function navigateWithinMobileComponentSidebar() {
 try {
   await page.setViewportSize({ width: 1280, height: 900 });
   await loadHomePage();
-  await verifyBlogIndexMetricsProxy();
+  await withBlogMetricsDeadline(() => verifyBlogIndexMetricsProxy(), {
+    timeoutMs: aggregateMetricsDeadlineMs,
+    label: `Blog aggregate metrics smoke (${blogMetricsPublicationMode})`,
+  });
   await navigateByLink(
     '/blog',
     '/blog/two-runtimes',
