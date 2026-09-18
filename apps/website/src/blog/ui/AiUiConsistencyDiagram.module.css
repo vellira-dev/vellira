@@ -196,7 +196,7 @@
   display: block;
   width: 63px;
   height: 248px;
-  transform: translateX(-13px);
+  transform: translateX(-3px);
   background: currentcolor;
   filter: drop-shadow(
     0 0 8px color-mix(in srgb, var(--color-primary-400) 32%, transparent)
