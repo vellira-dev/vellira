@@ -3,6 +3,7 @@ import { withAlpha } from '../../utils/color.js';
 
 export const surface = {
   canvas: colors.mono[950],
+  section: colors.gray[800],
   default: colors.mono[950],
   panel: colors.grayBlue[950],
   muted: colors.gray[900],
