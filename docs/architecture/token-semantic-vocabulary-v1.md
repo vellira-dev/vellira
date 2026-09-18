@@ -10,7 +10,7 @@ Semantic names describe **purpose**, not a primitive hue, renderer, interaction 
 
 ## Canonical namespaces
 
-- **surface** — canvas/layer backgrounds and generic interaction surfaces. `surface.canvas` is the application/page root backdrop; `surface.panel` is bounded neutral container/chrome that sits on the canvas without implying floating elevation; `surface.elevated` remains for raised/floating layers. `surface.background` stays removed because it mixed those purposes under one ambiguous name.
+- **surface** — canvas/layer backgrounds and generic interaction surfaces. `surface.canvas` is the application/page root backdrop; `surface.section` is a visually distinct large page-section plane; `surface.panel` is bounded neutral container/chrome that sits on the canvas without implying floating elevation; `surface.elevated` remains for raised/floating layers. `surface.background` stays removed because it mixed those purposes under one ambiguous name.
 - **text** — foreground hierarchy (`primary → secondary → muted → subtle → disabled`) plus brand and interaction-specific text roles.
 - **icons** — icon foreground hierarchy. `interactive`/`interactiveHover` describe interaction; `brand` remains a distinct identity role.
 - **border / divider** — structural borders and separators. `border.interactive` is generic interaction emphasis; actual focus indication belongs to `focus.ring`.
