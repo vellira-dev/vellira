@@ -114,12 +114,13 @@ export function AiUiConsistencyDiagram() {
 
         <div className={styles.hub}>
           <Image
-            src='/brand/logos/logo-gradient.svg'
-            alt='Vellira'
-            width={104}
-            height={28}
-            className={styles.hubLogo}
+            src='/brand/icons/logo-icon-gradient.svg'
+            alt=''
+            width={50}
+            height={50}
+            className={styles.logoMark}
           />
+          <span className={styles.wordmark}>VELLIRA</span>
         </div>
 
         <FlowArrow />
