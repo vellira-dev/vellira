@@ -2,7 +2,6 @@ import { chromium } from '@playwright/test';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
-  BLOG_METRICS_PUBLICATION_MODE_STRICT,
   buildBlogMetricsBatchPath,
   candidateOnlyBlogSlugs,
   classifyBlogMetricsAggregateResponse,
