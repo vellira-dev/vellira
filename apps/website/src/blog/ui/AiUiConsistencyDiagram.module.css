@@ -183,13 +183,12 @@
 }
 
 .concernMerge {
-  display: grid;
   width: 63px;
   height: 316px;
-  margin-left: -1px;
   color: var(--text-brand);
-  align-items: center;
-  justify-items: start;
+  place-items: center start;
+  margin-left: -4px;
+  display: grid;
 }
 
 .concernMergeGraphic {
@@ -240,37 +239,10 @@
   gap: 10px;
 }
 
-.logoMark {
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-}
-
-.logo {
-  grid-area: 1 / 1;
-  width: 50px;
-  height: 50px;
-}
-
-.logoLight {
-  display: none;
-}
-
-:global([data-vellira-theme='dark']) .logoDark,
-:global([data-vellira-theme='high-contrast']) .logoDark {
-  display: none;
-}
-
-:global([data-vellira-theme='dark']) .logoLight,
-:global([data-vellira-theme='high-contrast']) .logoLight {
+.hubLogo {
   display: block;
-}
-
-.wordmark {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  width: min(100%, 104px);
+  height: auto;
 }
 
 .stageVisual {
