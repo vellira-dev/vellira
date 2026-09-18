@@ -6,6 +6,8 @@ on:
     paths:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'
       - 'apps/react-storybook/scripts/cloudflare-navigation-soak.mjs'
       - 'apps/react-storybook/scripts/cloudflare-browser-diagnostics.mjs'
@@ -194,10 +196,11 @@ jobs:
       - name: Install Chromium for browser smoke
         run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
 
-      - name: Test browser forensic diagnostics
+      - name: Test browser and blog metrics smoke policies
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
+          scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
 
       - name: Smoke test navigation and actor metrics
         run: >-
@@ -205,6 +208,7 @@ jobs:
           scripts/cloudflare-website-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
+          BLOG_METRICS_PUBLICATION_MODE: staging-candidate
 
       - name: Soak test client navigation static assets
         run: >-
