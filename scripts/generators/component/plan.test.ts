@@ -120,6 +120,32 @@ describe('component generation plan', () => {
     expect(plan.profile).toBe('overlay');
   });
 
+  it('preserves semantic capability evidence', () => {
+    const plan = createComponentGenerationPlan({
+      root,
+      options: {
+        componentName: 'Textarea',
+        platform: 'both',
+        layer: 'primitives',
+        category: 'form',
+        profile: 'form-control',
+        semanticCapabilities: ['multiline', 'accessible-name'],
+        platformSemanticCapabilities: {
+          react: ['size-variants'],
+          'react-native': ['accessible-value'],
+        },
+        parts: [],
+        force: false,
+      },
+    });
+
+    expect(plan.semanticCapabilities).toEqual(['multiline', 'accessible-name']);
+    expect(plan.platformSemanticCapabilities).toEqual({
+      react: ['size-variants'],
+      'react-native': ['accessible-value'],
+    });
+  });
+
   it('preserves component parts', () => {
     const root = '/repo';
 

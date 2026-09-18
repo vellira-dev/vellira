@@ -52,6 +52,25 @@ describe('renderMetadataTemplate', () => {
     ).toContain("packages: ['@vellira-ui/types']");
   });
 
+  it('renders shared and platform semantic capability evidence', () => {
+    const result = renderMetadata({
+      semanticCapabilities: ['multiline', 'accessible-name'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
+        'react-native': ['accessible-value'],
+      },
+    });
+
+    expect(result).toContain(`  semanticCapabilities: [
+    'multiline',
+    'accessible-name',
+  ],`);
+    expect(result).toContain(`  platformSemanticCapabilities: {
+    'react': ['size-variants'],
+    'react-native': ['accessible-value'],
+  },`);
+  });
+
   it('defaults generated metadata to the standard component token contract', () => {
     expect(renderMetadata()).toContain(`  requirements: {
     tests: true,

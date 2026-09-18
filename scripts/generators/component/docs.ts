@@ -366,6 +366,14 @@ export function createComponentMetadataFromPlan(
     profile: plan.profile,
     status: 'experimental',
     capabilities: resolvePlanCapabilities(plan),
+    ...(plan.semanticCapabilities.length > 0
+      ? { semanticCapabilities: plan.semanticCapabilities }
+      : {}),
+    ...(Object.keys(plan.platformSemanticCapabilities).length > 0
+      ? {
+          platformSemanticCapabilities: plan.platformSemanticCapabilities,
+        }
+      : {}),
     ...(Object.keys(plan.dependencies).length > 0
       ? { dependencies: plan.dependencies }
       : {}),

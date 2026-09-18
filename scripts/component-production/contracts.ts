@@ -4,8 +4,11 @@ import type {
   ComponentDependencies,
   ComponentIconRequirement,
   ComponentPlatform,
+  ComponentSemanticCapability,
   ComponentTokenContract,
 } from '@vellira-ui/metadata';
+
+import { componentSemanticCapabilities } from '../../packages/metadata/src/component';
 
 import type { ComponentCompletenessResult } from '../checks/component-completeness/types';
 import type { ComponentQualityRunResult } from '../checks/component-quality/types';
@@ -30,6 +33,10 @@ export type ComponentProductionInputV1 = {
   profile: ComponentProfileArg;
   control?: FormControlKindArg;
   capabilities: readonly ComponentCapability[];
+  semanticCapabilities?: readonly ComponentSemanticCapability[];
+  platformSemanticCapabilities?: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
+  >;
   dependencies?: ComponentDependencies;
   icons?: readonly ComponentIconRequirement[];
   tokens?: readonly string[];
@@ -169,6 +176,8 @@ const INPUT_KEYS = new Set([
   'profile',
   'control',
   'capabilities',
+  'semanticCapabilities',
+  'platformSemanticCapabilities',
   'dependencies',
   'icons',
   'tokens',
@@ -215,6 +224,14 @@ export function parseComponentProductionInput(
   const profile = requiredString(value, 'profile');
   const control = optionalString(value, 'control');
   const capabilities = optionalStringArray(value, 'capabilities');
+  const semanticCapabilities = optionalSemanticCapabilityArray(
+    value,
+    'semanticCapabilities'
+  );
+  const platformSemanticCapabilities = optionalPlatformSemanticCapabilities(
+    value,
+    'platformSemanticCapabilities'
+  );
   const dependencies = optionalDependencies(value, 'dependencies');
   const icons = optionalIconRequirements(value, 'icons');
   const tokens = optionalNonEmptyStringArray(value, 'tokens');
@@ -254,6 +271,22 @@ export function parseComponentProductionInput(
   }
 
   const generatorOptions = parseComponentGeneratorArgs(args);
+  const selectedPlatforms = new Set<ComponentPlatform>(
+    generatorOptions.platform === 'both'
+      ? ['react', 'react-native']
+      : [generatorOptions.platform === 'web' ? 'react' : 'react-native']
+  );
+
+  for (const platform of Object.keys(
+    platformSemanticCapabilities
+  ) as ComponentPlatform[]) {
+    if (!selectedPlatforms.has(platform)) {
+      throw new Error(
+        `Component production input field "platformSemanticCapabilities.${platform}" targets an unselected platform.`
+      );
+    }
+  }
+
   const resolvedComponentTokens =
     componentTokens ??
     (generatorOptions.profile === 'form-control' &&
@@ -274,6 +307,10 @@ export function parseComponentProductionInput(
         }
       : {}),
     capabilities: generatorOptions.capabilities ?? [],
+    ...(semanticCapabilities.length > 0 ? { semanticCapabilities } : {}),
+    ...(Object.keys(platformSemanticCapabilities).length > 0
+      ? { platformSemanticCapabilities }
+      : {}),
     ...(dependencies ? { dependencies } : {}),
     ...((generatorOptions.icons ?? []).length > 0
       ? { icons: generatorOptions.icons }
@@ -302,6 +339,8 @@ export function createComponentProductionGeneratorOptions(
         }
       : {}),
     capabilities: input.capabilities,
+    semanticCapabilities: input.semanticCapabilities ?? [],
+    platformSemanticCapabilities: input.platformSemanticCapabilities,
     dependencies: input.dependencies,
     icons: input.icons ?? [],
     tokens: input.tokens ?? [],
@@ -642,6 +681,91 @@ function optionalStringArray(
   }
 
   return [...field];
+}
+
+function optionalSemanticCapabilityArray(
+  value: Record<string, unknown>,
+  key: string
+): ComponentSemanticCapability[] {
+  const field = value[key];
+
+  if (field === undefined) {
+    return [];
+  }
+
+  if (
+    !Array.isArray(field) ||
+    field.some((item) => typeof item !== 'string' || item.length === 0)
+  ) {
+    throw new Error(
+      `Component production input field "${key}" must be an array of semantic capability strings.`
+    );
+  }
+
+  const invalid = field.filter(
+    (item) =>
+      !componentSemanticCapabilities.includes(
+        item as ComponentSemanticCapability
+      )
+  );
+
+  if (invalid.length > 0) {
+    throw new Error(
+      `Component production input field "${key}" contains unsupported semantic capabilities: ${invalid.join(', ')}.`
+    );
+  }
+
+  if (new Set(field).size !== field.length) {
+    throw new Error(
+      `Component production input field "${key}" must not contain duplicates.`
+    );
+  }
+
+  return field as ComponentSemanticCapability[];
+}
+
+function optionalPlatformSemanticCapabilities(
+  value: Record<string, unknown>,
+  key: string
+): Partial<Record<ComponentPlatform, readonly ComponentSemanticCapability[]>> {
+  const field = value[key];
+
+  if (field === undefined) {
+    return {};
+  }
+
+  if (!isRecord(field)) {
+    throw new Error(
+      `Component production input field "${key}" must be an object.`
+    );
+  }
+
+  const result: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
+  > = {};
+
+  for (const [platform, rawCapabilities] of Object.entries(field)) {
+    if (platform !== 'react' && platform !== 'react-native') {
+      throw new Error(
+        `Component production input field "${key}" contains unsupported platform "${platform}".`
+      );
+    }
+
+    const parsed = optionalSemanticCapabilityArray(
+      { capabilities: rawCapabilities },
+      'capabilities'
+    );
+
+    if (parsed.length === 0) {
+      throw new Error(
+        `Component production input field "${key}.${platform}" must contain at least one semantic capability.`
+      );
+    }
+
+    result[platform] = parsed;
+  }
+
+  return result;
 }
 
 function optionalNonEmptyStringArray(

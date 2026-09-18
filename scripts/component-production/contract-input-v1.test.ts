@@ -74,6 +74,77 @@ describe('Component Production Contract input V1', () => {
     });
   });
 
+  it('parses and forwards shared and platform semantic capability evidence', () => {
+    const input = parseComponentProductionInput({
+      schemaVersion: '1',
+      componentName: 'Textarea',
+      platform: 'both',
+      layer: 'primitives',
+      category: 'form',
+      profile: 'form-control',
+      control: 'text',
+      semanticCapabilities: ['multiline', 'accessible-name'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
+        'react-native': ['accessible-value'],
+      },
+      componentTokens: 'standard',
+    });
+
+    expect(input).toMatchObject({
+      semanticCapabilities: ['multiline', 'accessible-name'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
+        'react-native': ['accessible-value'],
+      },
+    });
+
+    expect(createComponentProductionGeneratorOptions(input)).toMatchObject({
+      semanticCapabilities: ['multiline', 'accessible-name'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
+        'react-native': ['accessible-value'],
+      },
+    });
+  });
+
+  it('rejects invalid, duplicate, and unselected semantic capability evidence', () => {
+    const base = {
+      schemaVersion: '1',
+      componentName: 'Textarea',
+      platform: 'web',
+      layer: 'primitives',
+      category: 'form',
+      profile: 'form-control',
+      control: 'text',
+    };
+
+    expect(() =>
+      parseComponentProductionInput({
+        ...base,
+        semanticCapabilities: ['multiline', 'not-real'],
+      })
+    ).toThrow('contains unsupported semantic capabilities: not-real');
+
+    expect(() =>
+      parseComponentProductionInput({
+        ...base,
+        semanticCapabilities: ['multiline', 'multiline'],
+      })
+    ).toThrow('semanticCapabilities" must not contain duplicates');
+
+    expect(() =>
+      parseComponentProductionInput({
+        ...base,
+        platformSemanticCapabilities: {
+          'react-native': ['accessible-name'],
+        },
+      })
+    ).toThrow(
+      'platformSemanticCapabilities.react-native" targets an unselected platform'
+    );
+  });
+
   it('preserves explicit no-component-token intent', () => {
     const input = parseComponentProductionInput({
       schemaVersion: '1',
