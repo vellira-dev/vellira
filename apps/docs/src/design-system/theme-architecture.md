@@ -95,8 +95,9 @@ Canonical semantic groups include:
 ### Surface Vocabulary
 
 `surface.canvas` is the outer page or app canvas. `surface.default` is the
-normal content surface. `surface.subtle` and `surface.muted` are lower-emphasis
-planes. `surface.elevated` is used for raised content such as popovers, cards,
+normal content surface. `surface.section` is a large page-section plane used
+when a band such as a footer must remain visibly distinct across themes.
+`surface.subtle` and `surface.muted` are lower-emphasis planes. `surface.elevated` is used for raised content such as popovers, cards,
 and dialogs. `surface.hover`, `surface.active`, and `surface.pressed` are
 interactive state surfaces. `surface.disabled`, `surface.danger`, and
 `surface.inverse` are reserved roles.
