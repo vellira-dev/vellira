@@ -298,6 +298,8 @@
   .concernMerge {
     width: 100%;
     height: 24px;
+    margin-left: 0;
+    place-items: center;
   }
 
   .concernMergeGraphic {
@@ -306,6 +308,7 @@
 
   .concernMergeMobileArrow {
     display: block;
+    justify-self: center;
     color: var(--text-brand);
     transform: rotate(90deg);
   }
