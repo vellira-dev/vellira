@@ -1,17 +1,20 @@
 .figure {
-  width: 100%;
+  position: relative;
+  left: 50%;
+  width: min(1040px, calc(100vw - 32px));
   margin: clamp(40px, 7vw, 68px) 0;
+  transform: translateX(-50%);
 }
 
 .visual {
   display: grid;
   grid-template-columns:
-    minmax(98px, 1fr) 10px
-    minmax(98px, 1fr) 10px
-    minmax(98px, 1fr) 10px
-    minmax(166px, 1.55fr) 63px
-    minmax(84px, 0.78fr) 10px
-    minmax(98px, 1fr);
+    minmax(112px, 1fr) 20px
+    minmax(112px, 1fr) 20px
+    minmax(112px, 1fr) 20px
+    minmax(172px, 1.48fr) 72px
+    minmax(132px, 1.05fr) 20px
+    minmax(112px, 1fr);
   align-items: center;
   column-gap: 0;
 }
@@ -83,7 +86,7 @@
 
 .arrow {
   display: grid;
-  width: 10px;
+  width: 20px;
   min-width: 0;
   justify-self: start;
   margin-left: -1px;
@@ -95,8 +98,8 @@
 }
 
 .arrow svg {
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
 }
 
 .concerns {
@@ -220,7 +223,7 @@
 
 .concernMerge {
   display: grid;
-  width: 63px;
+  width: 72px;
   height: 316px;
   color: var(--text-brand);
   place-items: center;
@@ -246,9 +249,12 @@
 
 .hub {
   display: grid;
+  width: 100%;
   min-width: 0;
-  min-height: 154px;
-  padding: 18px 10px;
+  height: 138px;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 14px 12px;
   background:
     radial-gradient(
       circle at 50% 38%,
@@ -267,7 +273,7 @@
     0 0 38px color-mix(in srgb, var(--color-primary-400) 17%, transparent);
   place-items: center;
   text-align: center;
-  gap: var(--space-2);
+  gap: 10px;
 }
 
 .logoMark {
@@ -322,7 +328,7 @@
   margin: -1px;
 }
 
-@media (width <= 720px) {
+@media (width <= 980px) {
   .visual {
     grid-template-columns: 1fr;
     gap: 12px;
