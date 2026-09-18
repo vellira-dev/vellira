@@ -23,7 +23,7 @@ export default function ComponentsPage() {
     <>
       <ComponentsPageHero />
       <ComponentsCatalog />
-      <SiteFooter />
+      <SiteFooter startSurface='canvas' />
     </>
   );
 }
