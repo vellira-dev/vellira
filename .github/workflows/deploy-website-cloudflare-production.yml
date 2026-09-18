@@ -350,6 +350,7 @@ jobs:
           scripts/cloudflare-website-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
+          BLOG_METRICS_PUBLICATION_MODE: strict
 
       - name: Soak test production client navigation static assets
         run: >-
