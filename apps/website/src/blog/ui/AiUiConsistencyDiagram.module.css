@@ -1,9 +1,7 @@
 .figure {
   position: relative;
-  left: 50%;
   width: min(1040px, calc(100vw - 32px));
   margin: clamp(40px, 7vw, 68px) 0;
-  transform: translateX(-50%);
 }
 
 .visual {
@@ -12,7 +10,7 @@
     minmax(112px, 1fr) 20px
     minmax(112px, 1fr) 20px
     minmax(112px, 1fr) 20px
-    minmax(172px, 1.48fr) 72px
+    minmax(172px, 1.48fr) 63px
     minmax(132px, 1.05fr) 20px
     minmax(112px, 1fr);
   align-items: center;
@@ -106,7 +104,7 @@
   position: relative;
   display: grid;
   min-width: 0;
-  padding: 12px 8px 12px 20px;
+  padding: 12px;
   background:
     linear-gradient(
       145deg,
@@ -120,20 +118,6 @@
     var(--shadow-inset),
     0 0 28px color-mix(in srgb, var(--color-primary-400) 8%, transparent);
   gap: 8px;
-}
-
-.concerns::before {
-  position: absolute;
-  top: 33px;
-  bottom: 33px;
-  left: 8px;
-  width: 1px;
-  background: color-mix(
-    in srgb,
-    var(--color-primary-400) 42%,
-    var(--border-muted)
-  );
-  content: '';
 }
 
 .concern {
@@ -154,29 +138,6 @@
 .concern > span:last-child {
   min-width: 0;
   white-space: nowrap;
-}
-
-.concern::before,
-.concern::after {
-  position: absolute;
-  top: 50%;
-  height: 1px;
-  background: color-mix(
-    in srgb,
-    var(--color-primary-400) 42%,
-    var(--border-muted)
-  );
-  content: '';
-}
-
-.concern::before {
-  left: -12px;
-  width: 11px;
-}
-
-.concern::after {
-  right: -9px;
-  width: 8px;
 }
 
 .concernIcon {
@@ -223,10 +184,12 @@
 
 .concernMerge {
   display: grid;
-  width: 72px;
+  width: 63px;
   height: 316px;
+  margin-left: -1px;
   color: var(--text-brand);
-  place-items: center;
+  align-items: center;
+  justify-items: start;
 }
 
 .concernMergeGraphic {
@@ -329,6 +292,10 @@
 }
 
 @media (width <= 980px) {
+  .figure {
+    width: 100%;
+  }
+
   .visual {
     grid-template-columns: 1fr;
     gap: 12px;
