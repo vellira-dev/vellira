@@ -14,7 +14,7 @@ export default function BlogLayout({ children }: BlogLayoutProps) {
   return (
     <>
       {children}
-      <SiteFooter />
+      <SiteFooter startSurface='canvas' />
     </>
   );
 }
