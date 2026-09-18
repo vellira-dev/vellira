@@ -1,7 +1,24 @@
 import { chromium } from '@playwright/test';
 
+import {
+  BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
+  BLOG_METRICS_PUBLICATION_MODE_STRICT,
+  buildBlogMetricsBatchPath,
+  candidateOnlyBlogSlugs,
+  classifyBlogMetricsAggregateResponse,
+  parseBlogMetricsErrorCode,
+  parseBlogPublicationManifest,
+  resolveBlogMetricsPublicationMode,
+} from './cloudflare-blog-metrics-smoke-policy.mjs';
+
 const baseUrl = process.env.WEBSITE_URL;
 const metricsApiBaseUrl = 'https://api.vellira.dev';
+const productionBlogManifestUrl = 'https://vellira.dev/blog/manifest.json';
+const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
+  process.env.BLOG_METRICS_PUBLICATION_MODE
+);
+const aggregateMetricsMaxAttempts = 6;
+const aggregateMetricsRetryDelayMs = 12_000;
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -115,8 +132,117 @@ async function loadHomePage() {
   console.log('OK browser load /');
 }
 
-async function verifyBlogIndexMetricsProxy() {
-  const metricsResponsePromise = page.waitForResponse(
+async function readJsonResponse(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchBlogPublicationSlugs(url, label) {
+  const response = await context.request.get(url, {
+    failOnStatusCode: false,
+    headers: { 'Cache-Control': 'no-cache' },
+  });
+
+  if (!response.ok()) {
+    throw new Error(
+      `${label} request failed with ${response.status()} at ${url}.`
+    );
+  }
+
+  return parseBlogPublicationManifest(await response.json(), label);
+}
+
+function isValidBlogMetricsItem(item) {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    typeof item.slug === 'string' &&
+    Number.isSafeInteger(item.views) &&
+    item.views >= 0 &&
+    Number.isSafeInteger(item.likes) &&
+    item.likes >= 0
+  );
+}
+
+async function verifyProductionCatalogAggregateProxy(productionSlugs) {
+  if (productionSlugs.length === 0) {
+    throw new Error(
+      'Production blog publication manifest unexpectedly contains no slugs.'
+    );
+  }
+
+  const url = new URL(buildBlogMetricsBatchPath(productionSlugs), baseUrl);
+  const response = await context.request.get(url.toString(), {
+    failOnStatusCode: false,
+  });
+
+  if (!response.ok()) {
+    throw new Error(
+      `Production-catalog metrics proxy failed with ${response.status()}.`
+    );
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload?.items)) {
+    throw new Error('Production-catalog metrics proxy returned an invalid payload.');
+  }
+
+  const metricsBySlug = new Map();
+  for (const item of payload.items) {
+    if (!isValidBlogMetricsItem(item)) {
+      throw new Error(
+        'Production-catalog metrics proxy returned an invalid metrics item.'
+      );
+    }
+    metricsBySlug.set(item.slug, item);
+  }
+
+  for (const slug of productionSlugs) {
+    if (!metricsBySlug.has(slug)) {
+      throw new Error(
+        `Production-catalog metrics proxy omitted published slug ${slug}.`
+      );
+    }
+  }
+
+  if (metricsBySlug.size !== productionSlugs.length) {
+    throw new Error(
+      'Production-catalog metrics proxy returned unexpected article metrics.'
+    );
+  }
+
+  console.log(
+    `OK production catalog aggregate metrics through same-origin proxy: ${productionSlugs.length} slugs`
+  );
+}
+
+async function verifyExpectedStagingCatalogLag() {
+  const [candidateSlugs, productionSlugs] = await Promise.all([
+    fetchBlogPublicationSlugs(
+      new URL('/blog/manifest.json', baseUrl).toString(),
+      'Staging candidate blog publication manifest'
+    ),
+    fetchBlogPublicationSlugs(
+      productionBlogManifestUrl,
+      'Production blog publication manifest'
+    ),
+  ]);
+
+  const candidateOnlySlugs = candidateOnlyBlogSlugs(
+    candidateSlugs,
+    productionSlugs
+  );
+
+  await verifyProductionCatalogAggregateProxy(productionSlugs);
+
+  return candidateOnlySlugs;
+}
+
+async function waitForAggregateMetricsResponse() {
+  const responsePromise = page.waitForResponse(
     (response) => {
       const parsedUrl = new URL(response.url());
       return (
@@ -129,14 +255,10 @@ async function verifyBlogIndexMetricsProxy() {
   );
 
   await goto('/blog');
-  const response = await metricsResponsePromise;
+  return responsePromise;
+}
 
-  if (!response.ok()) {
-    throw new Error(
-      `Blog aggregate metrics proxy failed with ${response.status()}.`
-    );
-  }
-
+async function waitForRenderedBlogMetrics() {
   await page.locator('[aria-label$=" views"]').first().waitFor({
     state: 'visible',
     timeout: 15_000,
@@ -145,8 +267,69 @@ async function verifyBlogIndexMetricsProxy() {
     state: 'visible',
     timeout: 15_000,
   });
+}
 
-  console.log('OK blog aggregate metrics use same-origin proxy and render');
+async function verifyBlogIndexMetricsProxy() {
+  for (let attempt = 1; attempt <= aggregateMetricsMaxAttempts; attempt += 1) {
+    const response = await waitForAggregateMetricsResponse();
+
+    if (response.ok()) {
+      await waitForRenderedBlogMetrics();
+      console.log(
+        `OK blog aggregate metrics use same-origin proxy and render (attempt ${attempt})`
+      );
+      return;
+    }
+
+    const payload = await readJsonResponse(response);
+    const errorCode = parseBlogMetricsErrorCode(payload);
+    let candidateOnlySlugs = [];
+
+    if (
+      blogMetricsPublicationMode ===
+        BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE &&
+      response.status() === 404 &&
+      errorCode === 'article_not_found'
+    ) {
+      candidateOnlySlugs = await verifyExpectedStagingCatalogLag();
+    }
+
+    const action = classifyBlogMetricsAggregateResponse({
+      mode: blogMetricsPublicationMode,
+      status: response.status(),
+      errorCode,
+      attempt,
+      maxAttempts: aggregateMetricsMaxAttempts,
+      candidateOnlySlugs,
+    });
+
+    if (action === 'expected-catalog-lag') {
+      await page.locator('main').first().waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+      console.log(
+        `OK expected staging publication catalog lag for candidate-only slugs: ${candidateOnlySlugs.join(', ')}`
+      );
+      return;
+    }
+
+    if (action === 'retry') {
+      console.log(
+        `Waiting for production blog publication catalog convergence after ${response.status()} ${errorCode ?? 'unknown_error'} (attempt ${attempt}/${aggregateMetricsMaxAttempts})`
+      );
+      await new Promise((resolve) =>
+        setTimeout(resolve, aggregateMetricsRetryDelayMs)
+      );
+      continue;
+    }
+
+    throw new Error(
+      `Blog aggregate metrics proxy failed with ${response.status()} (${errorCode ?? 'unknown_error'}) in ${blogMetricsPublicationMode} mode.`
+    );
+  }
+
+  throw new Error('Blog aggregate metrics proxy did not converge.');
 }
 
 async function navigateByLink(startPath, href, expectedText) {
