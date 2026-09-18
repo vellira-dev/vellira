@@ -110,3 +110,28 @@ export function classifyBlogMetricsAggregateResponse({
 
   return 'fail';
 }
+
+export async function withBlogMetricsDeadline(
+  task,
+  { timeoutMs, label = 'Blog metrics smoke' }
+) {
+  if (typeof task !== 'function') {
+    throw new Error('Blog metrics deadline requires a task function.');
+  }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error('Blog metrics deadline timeoutMs must be a positive integer.');
+  }
+
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms.`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([Promise.resolve().then(task), timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
