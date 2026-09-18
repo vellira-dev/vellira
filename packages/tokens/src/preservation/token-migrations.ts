@@ -344,6 +344,15 @@ const semanticPanelAdditionV1 = {
   to: 'semantic.surface.panel',
 } as const satisfies TokenMigrationEntry;
 
+const semanticSectionAdditionV1 = {
+  id: '1197-surface-section-addition',
+  kind: 'addition',
+  issue: '#1197',
+  reason:
+    'Add an explicit large page-section surface so theme-aware bands such as the site footer can remain visibly distinct from the page canvas without misusing interaction or lower-emphasis surface roles.',
+  to: 'semantic.surface.section',
+} as const satisfies TokenMigrationEntry;
+
 const semanticVocabularyVisualMigrationsV1 = [
   {
     id: '883-dark-text-muted-hierarchy',
