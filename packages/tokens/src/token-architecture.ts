@@ -368,10 +368,11 @@ export const legitimatePersistentActiveStateDomainsV1 = [
 export const semanticVocabularyV1 = {
   surface: {
     purpose:
-      'Layer and interaction backgrounds with explicit root, bounded-panel, and elevated ownership.',
+      'Layer and interaction backgrounds with explicit root, large-section, bounded-panel, and elevated ownership.',
     roles: [
       'canvas',
       'default',
+      'section',
       'panel',
       'subtle',
       'muted',
@@ -475,6 +476,7 @@ export const canonicalTokenVocabulary = {
   surface: [
     'canvas',
     'default',
+    'section',
     'panel',
     'subtle',
     'muted',
@@ -523,6 +525,7 @@ export const canonicalTokenVocabulary = {
 export const canonicalSemanticRolePaths = [
   'surface.canvas',
   'surface.default',
+  'surface.section',
   'surface.panel',
   'surface.subtle',
   'surface.muted',
