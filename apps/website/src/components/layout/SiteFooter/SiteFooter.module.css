@@ -7,16 +7,17 @@
   background: linear-gradient(
     180deg,
     var(--footer-start-surface) 0%,
-    color-mix(in srgb, var(--footer-start-surface) 82%, var(--surface-panel))
-      16%,
-    color-mix(in srgb, var(--footer-start-surface) 56%, var(--surface-panel))
-      32%,
-    color-mix(in srgb, var(--footer-start-surface) 28%, var(--surface-panel))
-      46%,
-    var(--surface-panel) 58%,
-    color-mix(in srgb, var(--surface-panel) 84%, var(--surface-muted)) 70%,
-    color-mix(in srgb, var(--surface-panel) 62%, var(--surface-muted)) 82%,
-    color-mix(in srgb, var(--surface-panel) 36%, var(--surface-muted)) 92%,
+    color-mix(in srgb, var(--footer-start-surface) 90%, var(--surface-muted))
+      10%,
+    color-mix(in srgb, var(--footer-start-surface) 75%, var(--surface-muted))
+      22%,
+    color-mix(in srgb, var(--footer-start-surface) 55%, var(--surface-muted))
+      36%,
+    color-mix(in srgb, var(--footer-start-surface) 32%, var(--surface-muted))
+      50%,
+    color-mix(in srgb, var(--footer-start-surface) 15%, var(--surface-muted))
+      62%,
+    var(--surface-muted) 72%,
     var(--surface-muted) 100%
   );
 }
