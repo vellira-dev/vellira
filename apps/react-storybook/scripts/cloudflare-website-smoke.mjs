@@ -201,6 +201,7 @@ async function fetchBlogPublicationSlugs(url, label) {
   const response = await context.request.get(url, {
     failOnStatusCode: false,
     headers: { 'Cache-Control': 'no-cache' },
+    timeout: 10_000,
   });
 
   if (!response.ok()) {
@@ -234,6 +235,7 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
   const url = new URL(buildBlogMetricsBatchPath(productionSlugs), baseUrl);
   const response = await context.request.get(url.toString(), {
     failOnStatusCode: false,
+    timeout: 10_000,
   });
 
   if (!response.ok()) {
