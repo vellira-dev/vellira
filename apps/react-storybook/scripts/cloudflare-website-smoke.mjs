@@ -176,6 +176,27 @@ async function readJsonResponse(response) {
   }
 }
 
+async function probeBlogAggregateResponse(url) {
+  // Do not read the Playwright page response body here. OpenNext/Cloudflare can
+  // expose the non-2xx status before the streamed body finishes, which made the
+  // deployment smoke wait until the job-level timeout. APIRequestContext gives
+  // this diagnostic read an explicit bound instead.
+  const response = await context.request.get(url, {
+    failOnStatusCode: false,
+    headers: { 'Cache-Control': 'no-cache' },
+    timeout: 10_000,
+  });
+
+  try {
+    return {
+      status: response.status(),
+      errorCode: parseBlogMetricsErrorCode(await readJsonResponse(response)),
+    };
+  } finally {
+    await response.dispose();
+  }
+}
+
 async function fetchBlogPublicationSlugs(url, label) {
   const response = await context.request.get(url, {
     failOnStatusCode: false,
@@ -323,8 +344,27 @@ async function verifyBlogIndexMetricsProxy() {
       return;
     }
 
-    const payload = await readJsonResponse(response);
-    const errorCode = parseBlogMetricsErrorCode(payload);
+    const probe = await probeBlogAggregateResponse(response.url());
+
+    if (
+      response.status() === 404 &&
+      probe.status >= 200 &&
+      probe.status < 300
+    ) {
+      markObservedAggregateMetrics404sHandled();
+      console.log(
+        'Blog aggregate metrics converged between browser response and bounded diagnostic probe; retrying browser render.'
+      );
+      continue;
+    }
+
+    if (probe.status !== response.status()) {
+      throw new Error(
+        `Blog aggregate metrics changed status during bounded diagnostic probe: browser=${response.status()} probe=${probe.status}.`
+      );
+    }
+
+    const errorCode = probe.errorCode;
     let candidateOnlySlugs = [];
 
     if (
