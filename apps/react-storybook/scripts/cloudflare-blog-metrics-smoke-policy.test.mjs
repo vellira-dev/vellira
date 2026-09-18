@@ -7,6 +7,8 @@ import {
   buildBlogMetricsBatchPath,
   candidateOnlyBlogSlugs,
   classifyBlogMetricsAggregateResponse,
+  isBrowserResource404ConsoleError,
+  reconcileHandledBlogMetrics404ConsoleDiagnostics,
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
   resolveBlogMetricsPublicationMode,
@@ -141,5 +143,56 @@ test('error envelope and batch path helpers preserve proxy contract', () => {
   assert.equal(
     buildBlogMetricsBatchPath(['two-runtimes', 'ai-ui-consistency']),
     '/api/blog-metrics/metrics?slug=two-runtimes&slug=ai-ui-consistency'
+  );
+});
+
+test('handled aggregate 404s consume only matching browser resource noise', () => {
+  assert.equal(
+    isBrowserResource404ConsoleError(
+      'Failed to load resource: the server responded with a status of 404 ()'
+    ),
+    true
+  );
+  assert.equal(
+    isBrowserResource404ConsoleError(
+      'Failed to load resource: the server responded with a status of 404 (Not Found)'
+    ),
+    true
+  );
+  assert.equal(
+    isBrowserResource404ConsoleError(
+      'Failed to load resource: the server responded with a status of 503 (Service Unavailable)'
+    ),
+    false
+  );
+  assert.equal(
+    isBrowserResource404ConsoleError('application console failure'),
+    false
+  );
+
+  assert.deepEqual(
+    reconcileHandledBlogMetrics404ConsoleDiagnostics(
+      ['console-404-a', 'console-404-b'],
+      1
+    ),
+    {
+      expected: ['console-404-a'],
+      critical: ['console-404-b'],
+    }
+  );
+  assert.deepEqual(
+    reconcileHandledBlogMetrics404ConsoleDiagnostics(['console-404-a'], 0),
+    {
+      expected: [],
+      critical: ['console-404-a'],
+    }
+  );
+  assert.throws(
+    () =>
+      reconcileHandledBlogMetrics404ConsoleDiagnostics(
+        ['console-404-a'],
+        -1
+      ),
+    /non-negative integer/
   );
 });

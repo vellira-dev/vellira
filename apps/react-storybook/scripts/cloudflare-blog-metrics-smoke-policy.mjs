@@ -110,3 +110,31 @@ export function classifyBlogMetricsAggregateResponse({
 
   return 'fail';
 }
+
+export function isBrowserResource404ConsoleError(text) {
+  return /^Failed to load resource: the server responded with a status of 404(?: \([^)]*\))?$/.test(
+    text
+  );
+}
+
+export function reconcileHandledBlogMetrics404ConsoleDiagnostics(
+  diagnostics,
+  handledAggregate404Count
+) {
+  if (
+    !Number.isSafeInteger(handledAggregate404Count) ||
+    handledAggregate404Count < 0
+  ) {
+    throw new Error('handledAggregate404Count must be a non-negative integer.');
+  }
+
+  const expectedCount = Math.min(
+    diagnostics.length,
+    handledAggregate404Count
+  );
+
+  return {
+    expected: diagnostics.slice(0, expectedCount),
+    critical: diagnostics.slice(expectedCount),
+  };
+}
