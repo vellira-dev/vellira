@@ -288,6 +288,8 @@
   }
 
   .arrow {
+    justify-self: center;
+    margin-left: 0;
     transform: rotate(90deg);
   }
 
