@@ -14,10 +14,10 @@
     color-mix(in srgb, var(--footer-start-surface) 28%, var(--surface-panel))
       46%,
     var(--surface-panel) 58%,
-    color-mix(in srgb, var(--surface-panel) 84%, var(--surface-subtle)) 70%,
-    color-mix(in srgb, var(--surface-panel) 62%, var(--surface-subtle)) 82%,
-    color-mix(in srgb, var(--surface-panel) 36%, var(--surface-subtle)) 92%,
-    var(--surface-subtle) 100%
+    color-mix(in srgb, var(--surface-panel) 84%, var(--surface-muted)) 70%,
+    color-mix(in srgb, var(--surface-panel) 62%, var(--surface-muted)) 82%,
+    color-mix(in srgb, var(--surface-panel) 36%, var(--surface-muted)) 92%,
+    var(--surface-muted) 100%
   );
 }
 
