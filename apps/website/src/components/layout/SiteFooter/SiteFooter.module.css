@@ -1,10 +1,5 @@
 .footer {
   --footer-start-surface: var(--surface-default);
-  --footer-end-surface: color-mix(
-    in srgb,
-    var(--surface-subtle) 42%,
-    var(--surface-default)
-  );
 
   position: relative;
   overflow: hidden;
@@ -12,42 +7,17 @@
   background: linear-gradient(
     180deg,
     var(--footer-start-surface) 0%,
-    color-mix(
-        in srgb,
-        var(--footer-start-surface) 88%,
-        var(--surface-default)
-      )
+    color-mix(in srgb, var(--footer-start-surface) 82%, var(--surface-panel))
       16%,
-    color-mix(
-        in srgb,
-        var(--footer-start-surface) 64%,
-        var(--surface-default)
-      )
-      34%,
-    var(--surface-default) 50%,
-    color-mix(in srgb, var(--footer-end-surface) 18%, var(--surface-default))
-      64%,
-    color-mix(in srgb, var(--footer-end-surface) 46%, var(--surface-default))
-      78%,
-    color-mix(in srgb, var(--footer-end-surface) 76%, var(--surface-default))
-      90%,
-    var(--footer-end-surface) 100%
-  );
-}
-
-:global([data-vellira-theme='light']) .footer {
-  --footer-end-surface: color-mix(
-    in srgb,
-    var(--surface-muted) 64%,
-    var(--surface-default)
-  );
-}
-
-:global([data-vellira-theme='high-contrast']) .footer {
-  --footer-end-surface: color-mix(
-    in srgb,
-    var(--surface-subtle) 68%,
-    var(--surface-default)
+    color-mix(in srgb, var(--footer-start-surface) 56%, var(--surface-panel))
+      32%,
+    color-mix(in srgb, var(--footer-start-surface) 28%, var(--surface-panel))
+      46%,
+    var(--surface-panel) 58%,
+    color-mix(in srgb, var(--surface-panel) 84%, var(--surface-subtle)) 70%,
+    color-mix(in srgb, var(--surface-panel) 62%, var(--surface-subtle)) 82%,
+    color-mix(in srgb, var(--surface-panel) 36%, var(--surface-subtle)) 92%,
+    var(--surface-subtle) 100%
   );
 }
 
