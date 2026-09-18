@@ -113,23 +113,13 @@ export function AiUiConsistencyDiagram() {
         <ConcernMergeArrow />
 
         <div className={styles.hub}>
-          <span className={styles.logoMark}>
-            <Image
-              src='/brand/icons/logo-icon-dark.svg'
-              alt=''
-              width={50}
-              height={50}
-              className={`${styles.logo} ${styles.logoDark}`}
-            />
-            <Image
-              src='/brand/icons/logo-icon-light.svg'
-              alt=''
-              width={50}
-              height={50}
-              className={`${styles.logo} ${styles.logoLight}`}
-            />
-          </span>
-          <span className={styles.wordmark}>VELLIRA</span>
+          <Image
+            src='/brand/logos/logo-gradient.svg'
+            alt='Vellira'
+            width={104}
+            height={28}
+            className={styles.hubLogo}
+          />
         </div>
 
         <FlowArrow />
