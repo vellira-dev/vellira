@@ -10,6 +10,7 @@ import {
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
   resolveBlogMetricsPublicationMode,
+  withBlogMetricsDeadline,
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
 
 test('publication mode defaults to strict and rejects unknown values', () => {
@@ -141,5 +142,31 @@ test('error envelope and batch path helpers preserve proxy contract', () => {
   assert.equal(
     buildBlogMetricsBatchPath(['two-runtimes', 'ai-ui-consistency']),
     '/api/blog-metrics/metrics?slug=two-runtimes&slug=ai-ui-consistency'
+  );
+});
+
+test('blog metrics deadline resolves successful work and rejects hung work', async () => {
+  assert.equal(
+    await withBlogMetricsDeadline(async () => 'ready', {
+      timeoutMs: 50,
+      label: 'aggregate metrics',
+    }),
+    'ready'
+  );
+
+  await assert.rejects(
+    withBlogMetricsDeadline(() => new Promise(() => {}), {
+      timeoutMs: 5,
+      label: 'staging aggregate metrics',
+    }),
+    /staging aggregate metrics timed out after 5ms/
+  );
+
+  await assert.rejects(
+    withBlogMetricsDeadline(async () => 'ready', {
+      timeoutMs: 0,
+      label: 'aggregate metrics',
+    }),
+    /timeoutMs must be a positive integer/
   );
 });
