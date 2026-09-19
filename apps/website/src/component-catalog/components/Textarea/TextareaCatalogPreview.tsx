@@ -3,14 +3,19 @@
 
 'use client';
 
-import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';
+import { Textarea } from '@vellira-ui/react';
 
-import { TextareaDemo } from './TextareaDemo';
+import styles from '../../shared/ComponentsCatalog/ComponentsCatalog.module.css';
 
 export function TextareaCatalogPreview() {
   return (
-    <ComponentDemoStateProvider resetKey='catalog:textarea'>
-      <TextareaDemo />
-    </ComponentDemoStateProvider>
+    <div className={styles.previewFormControl}>
+      <Textarea
+        label='Message'
+        placeholder='Write a message...'
+        size='sm'
+        rows={3}
+      />
+    </div>
   );
 }

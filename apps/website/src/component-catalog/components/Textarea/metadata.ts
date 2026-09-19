@@ -3,6 +3,15 @@ import { defineComponentPageMetadata } from '../../metadata';
 export default defineComponentPageMetadata({
   profile: 'form-control',
   related: ['input', 'form-field', 'select'],
+  catalogPreview: {
+    layout: 'field',
+    props: [
+      "label='Message'",
+      "placeholder='Write a message...'",
+      "size='sm'",
+      'rows={3}',
+    ],
+  },
   discovery: {
     status: 'complete',
     summary:

@@ -312,6 +312,7 @@ const generatedPageModel = buildGeneratedPageModel({
   slug,
   platforms,
   discovery: componentConfig.discovery,
+  catalogPreview: componentConfig.catalogPreview,
   reactStaticDemoProps,
   nativeStaticDemoProps,
   reactDemoChildren,

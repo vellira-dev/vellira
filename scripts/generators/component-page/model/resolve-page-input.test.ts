@@ -469,6 +469,34 @@ describe('resolvePageInput related metadata validation', () => {
     expect(input.componentConfig.related).toEqual([]);
   });
 
+  it('rejects an effective generated preview configuration without a catalog preview decision', async () => {
+    const root = createFixtureRoot();
+
+    writeComponentFixture({
+      root,
+      packageName: 'react',
+      types: 'export type ExampleProps = { value?: string };',
+    });
+    writeMetadata({
+      root,
+      source: `export default {
+        profile: 'form-control',
+        related: [],
+      };`,
+    });
+
+    await expect(
+      resolvePageInput({
+        root,
+        catalogComponentsRoot: getCatalogComponentsRoot(root),
+        componentName: 'Example',
+        requireCatalogPreviewDecision: true,
+      })
+    ).rejects.toThrow(
+      'catalogPreview must be explicitly defined; provide catalogPreview: {} or a hand-authored CatalogPreview'
+    );
+  });
+
   it('resolves Textarea curated related components', async () => {
     const input = await resolvePageInput({
       root: process.cwd(),
@@ -489,6 +517,15 @@ describe('resolvePageInput related metadata validation', () => {
       'form-field',
       'select',
     ]);
+    expect(input.componentConfig.catalogPreview).toEqual({
+      layout: 'field',
+      props: [
+        "label='Message'",
+        "placeholder='Write a message...'",
+        "size='sm'",
+        'rows={3}',
+      ],
+    });
   });
 
   it('validates and preserves profile-derived related values before rendering output', async () => {

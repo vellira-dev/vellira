@@ -508,8 +508,14 @@ export function validateComponentMetadata(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
   requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
 }) {
-  const { componentName, metadata, requireRelatedDecision = false } = params;
+  const {
+    componentName,
+    metadata,
+    requireRelatedDecision = false,
+    requireCatalogPreviewDecision = false,
+  } = params;
   const errors: string[] = [];
   const exampleTitles = new Set<string>();
   const apiSections = new Set<string>();
@@ -518,6 +524,35 @@ export function validateComponentMetadata(params: {
     errors.push(
       'related must be explicitly defined; use related: [] when no related components are intended'
     );
+  }
+
+  if (requireCatalogPreviewDecision && metadata.catalogPreview === undefined) {
+    errors.push(
+      'catalogPreview must be explicitly defined; provide catalogPreview: {} or a hand-authored CatalogPreview'
+    );
+  }
+
+  const catalogPreview = metadata.catalogPreview;
+
+  if (catalogPreview) {
+    errors.push(
+      ...validatePropFragments({
+        field: 'catalogPreview.props',
+        fragments: catalogPreview.props ?? [],
+      })
+    );
+
+    if (catalogPreview.children !== undefined) {
+      const childrenError = validateJsxChildren({
+        componentName,
+        field: 'catalogPreview.children',
+        source: catalogPreview.children,
+      });
+
+      if (childrenError) {
+        errors.push(childrenError);
+      }
+    }
   }
 
   errors.push(
