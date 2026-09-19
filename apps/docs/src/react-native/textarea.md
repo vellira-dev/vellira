@@ -29,14 +29,21 @@ API details are generated from `packages/react-native/API.md`.
 
 <!-- api-docgen:start native.TextareaProps.Textarea -->
 
-| Prop            | Type                      | Required | Description                    |
-| --------------- | ------------------------- | -------- | ------------------------------ |
-| `value`         | `string`                  | No       | Controlled value.              |
-| `defaultValue`  | `string`                  | No       | Initial uncontrolled value.    |
-| `disabled`      | `boolean`                 | No       | Disables interaction.          |
-| `required`      | `boolean`                 | No       | Marks the field as required.   |
-| `invalid`       | `boolean`                 | No       | —                              |
-| `onValueChange` | `(value: string) => void` | No       | Called when the value changes. |
+| Prop             | Type                      | Required | Description                               |
+| ---------------- | ------------------------- | -------- | ----------------------------------------- |
+| `containerStyle` | `ViewStyle`               | No       | —                                         |
+| `inputStyle`     | `TextStyle`               | No       | Extra style for the input element.        |
+| `label`          | `string`                  | No       | Visible label.                            |
+| `description`    | `string`                  | No       | Additional descriptive text.              |
+| `error`          | `string`                  | No       | Error message rendered for invalid state. |
+| `placeholder`    | `string`                  | No       | Placeholder text.                         |
+| `size`           | `InputSize`               | No       | Input size.                               |
+| `value`          | `string`                  | No       | Controlled value.                         |
+| `defaultValue`   | `string`                  | No       | Initial uncontrolled value.               |
+| `disabled`       | `boolean`                 | No       | Disables interaction.                     |
+| `required`       | `boolean`                 | No       | Marks the field as required.              |
+| `invalid`        | `boolean`                 | No       | —                                         |
+| `onValueChange`  | `(value: string) => void` | No       | Called when the value changes.            |
 
 <!-- api-docgen:end native.TextareaProps.Textarea -->
 
