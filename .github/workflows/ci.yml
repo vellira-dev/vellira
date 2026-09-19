@@ -396,6 +396,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Chromium for affected Storybook tests
+        if: needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-storybook')
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install --with-deps chromium
+
       - name: Unit tests
         if: needs.impact.outputs.execution_path != 'affected'
         run: pnpm test:unit
