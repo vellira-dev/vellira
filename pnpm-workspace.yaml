@@ -63,5 +63,8 @@ overrides:
   tmp: 0.2.7
 
 patchedDependencies:
+  # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
+  # Remove when a stable OpenNext release contains the string-shorthand guard.
+  '@opennextjs/cloudflare@1.20.6': patches/@opennextjs__cloudflare@1.20.6.patch
   next@16.3.3: patches/next@16.3.3.patch
 allowUnusedPatches: false
