@@ -167,6 +167,7 @@ const {
   root,
   catalogComponentsRoot,
   componentName,
+  requireRelatedDecision: true,
   requestedProfile,
   requestedCategory,
 });

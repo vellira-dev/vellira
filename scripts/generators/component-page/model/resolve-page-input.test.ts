@@ -416,6 +416,81 @@ describe('resolvePageInput example platform boundary', () => {
 });
 
 describe('resolvePageInput related metadata validation', () => {
+  it('rejects an effective component page metadata configuration without a related decision', async () => {
+    const root = createFixtureRoot();
+
+    writeComponentFixture({
+      root,
+      packageName: 'react',
+      types: 'export type ExampleProps = { value?: string };',
+    });
+    writeMetadata({
+      root,
+      source: `export default {
+        profile: 'form-control',
+      };`,
+    });
+
+    await expect(
+      resolvePageInput({
+        root,
+        catalogComponentsRoot: getCatalogComponentsRoot(root),
+        componentName: 'Example',
+        requireRelatedDecision: true,
+      })
+    ).rejects.toThrow(
+      'related must be explicitly defined; use related: [] when no related components are intended'
+    );
+  });
+
+  it('accepts an explicit empty related decision', async () => {
+    const root = createFixtureRoot();
+
+    writeComponentFixture({
+      root,
+      packageName: 'react',
+      types: 'export type ExampleProps = { value?: string };',
+    });
+    writeMetadata({
+      root,
+      source: `export default {
+        profile: 'form-control',
+        related: [],
+      };`,
+    });
+
+    const input = await resolvePageInput({
+      root,
+      catalogComponentsRoot: getCatalogComponentsRoot(root),
+      componentName: 'Example',
+      requireRelatedDecision: true,
+    });
+
+    expect(input.componentConfig.related).toEqual([]);
+  });
+
+  it('resolves Textarea curated related components', async () => {
+    const input = await resolvePageInput({
+      root: process.cwd(),
+      catalogComponentsRoot: path.join(
+        process.cwd(),
+        'apps',
+        'website',
+        'src',
+        'component-catalog',
+        'components'
+      ),
+      componentName: 'Textarea',
+      requireRelatedDecision: true,
+    });
+
+    expect(input.componentConfig.related).toEqual([
+      'input',
+      'form-field',
+      'select',
+    ]);
+  });
+
   it('validates and preserves profile-derived related values before rendering output', async () => {
     const root = createFixtureRoot();
 

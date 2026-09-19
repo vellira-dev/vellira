@@ -2,6 +2,7 @@ import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
   profile: 'form-control',
+  related: ['input', 'form-field', 'select'],
   discovery: {
     status: 'complete',
     summary:

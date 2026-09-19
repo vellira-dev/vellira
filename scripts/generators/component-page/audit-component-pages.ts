@@ -194,6 +194,7 @@ for (const componentName of generatedComponentPageComponents) {
         root,
         catalogComponentsRoot,
         componentName,
+        requireRelatedDecision: true,
       });
     } catch (error) {
       addFailure(

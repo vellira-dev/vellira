@@ -467,6 +467,7 @@ export async function resolvePageInput(params: {
   componentName: string;
   requestedProfile?: ComponentProfile;
   requestedCategory?: GeneratorComponentCategory;
+  requireRelatedDecision?: boolean;
 }) {
   const { root, catalogComponentsRoot, componentName } = params;
 
@@ -575,6 +576,7 @@ export async function resolvePageInput(params: {
   validateComponentMetadata({
     componentName,
     metadata: componentConfig,
+    requireRelatedDecision: params.requireRelatedDecision,
   });
 
   const componentProfile = componentConfig.profile ?? inferredComponentProfile;

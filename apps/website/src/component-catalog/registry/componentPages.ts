@@ -220,7 +220,7 @@ export const componentPages = {
     Examples: TextareaExamples,
     Accessibility: TextareaAccessibility,
     api: textareaApi,
-    related: [],
+    related: ['input', 'form-field', 'select'],
   },
   accordion: {
     name: 'Accordion',

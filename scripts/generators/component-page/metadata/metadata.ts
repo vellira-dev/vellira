@@ -507,11 +507,18 @@ export function validateRelatedComponentSlugs(params: {
 export function validateComponentMetadata(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
+  requireRelatedDecision?: boolean;
 }) {
-  const { componentName, metadata } = params;
+  const { componentName, metadata, requireRelatedDecision = false } = params;
   const errors: string[] = [];
   const exampleTitles = new Set<string>();
   const apiSections = new Set<string>();
+
+  if (requireRelatedDecision && metadata.related === undefined) {
+    errors.push(
+      'related must be explicitly defined; use related: [] when no related components are intended'
+    );
+  }
 
   errors.push(
     ...validateRelatedComponentSlugs({

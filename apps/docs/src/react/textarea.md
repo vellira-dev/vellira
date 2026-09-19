@@ -63,10 +63,11 @@ API details are generated from `packages/react/API.md`.
 second cross-platform sizing API.
 
 - `rows` controls the initial visible line count and defaults to `3`.
-- Web textareas resize vertically by default. Vellira does not add shared
-  `resize`, `minRows`, or `autoGrow` props for the launch contract. Use
-  `className`/`style` for app-specific sizing, or compose autogrow behavior
-  outside the primitive when a product requires it.
+- Vellira disables the browser resize UI by default for consistent control
+  presentation. It does not add shared `resize`, `minRows`, or `autoGrow`
+  props for the launch contract. Web applications can opt into resize behavior
+  through normal `className`/`style`; compose autogrow behavior outside the
+  primitive when a product requires it.
 - `maxLength` is passed through to the native `<textarea>` and is the canonical
   launch-time character-limit mechanism. `Textarea` does not render a character
   counter; applications can compose one with FormField description/error content.

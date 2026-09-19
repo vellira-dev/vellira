@@ -345,4 +345,24 @@ describe('component page CLI check modes', { concurrent: false }, () => {
       'button related[0] "Input" is invalid: unknown or non-canonical related component slug'
     );
   }, 60_000);
+
+  it('fails audit when effective metadata omits a related-components decision', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    fs.writeFileSync(
+      metadataFile,
+      source.replace("  related: ['input', 'checkbox', 'modal'],\n", '')
+    );
+
+    const result = runAudit(fixture);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(
+      /Button: effective generator input invalid:[\s\S]*related must be explicitly defined; use related: \[\] when no related components are intended/
+    );
+  }, 60_000);
 });
