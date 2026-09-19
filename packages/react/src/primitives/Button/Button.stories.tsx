@@ -27,7 +27,7 @@ Clickable action primitive for web interfaces.
 
 **Features**
 - Colors: primary, neutral, success, warning, and danger
-- Appearances: solid, outline, ghost, soft, and link
+- Appearances: solid, outline, ghost, soft, link, and bare
 - Shapes: square, rounded, and pill
 - Sizes: sm, md, and lg
 - Disabled, loading, icon-only, and full-width states
@@ -76,9 +76,11 @@ Correct usage:
     appearance: {
       description: 'Button visual appearance.',
       control: 'select',
-      options: ['solid', 'outline', 'ghost', 'soft', 'link'],
+      options: ['solid', 'outline', 'ghost', 'soft', 'link', 'bare'],
       table: {
-        type: { summary: `'solid' | 'outline' | 'ghost' | 'soft' | 'link'` },
+        type: {
+          summary: `'solid' | 'outline' | 'ghost' | 'soft' | 'link' | 'bare'`,
+        },
         defaultValue: { summary: 'solid' },
       },
     },
@@ -413,6 +415,35 @@ export const Appearances: Story = {
         </Button>
       </div>
     </Section>
+  ),
+};
+
+export const BareComposition: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The web-only `bare` appearance keeps Button behavior and accessibility while leaving chrome and geometry to the surrounding composition.',
+      },
+    },
+  },
+  args: {
+    appearance: 'bare',
+    children: 'Filter articles',
+    'aria-pressed': false,
+  },
+  render: (args) => (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        minHeight: 40,
+        paddingInline: 12,
+        borderBottom: '2px solid currentColor',
+      }}
+    >
+      <Button {...args} />
+    </div>
   ),
 };
 
