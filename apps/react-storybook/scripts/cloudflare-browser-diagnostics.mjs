@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { isBrowserResource404ConsoleError } from './cloudflare-blog-metrics-smoke-policy.mjs';
+
 export function diagnosticHeaders(headers) {
   return Object.fromEntries(
     Object.entries(headers).filter(
@@ -15,11 +17,19 @@ export function diagnosticHeaders(headers) {
   );
 }
 
-export async function captureDiagnostics(page, context, baseUrl, directory) {
+export async function captureDiagnostics(
+  page,
+  context,
+  baseUrl,
+  directory,
+  { isExpected404Response } = {}
+) {
   const origin = new URL(baseUrl).origin;
   const events = [];
   const staticFailures = [];
   const errors = [];
+  const handled404ResponsesByUrl = new Map();
+  const deferredResource404ConsoleErrors = [];
   const pending = new Set();
   const started = Date.now();
   const record = (kind, data) => {
@@ -82,6 +92,7 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
     const event = record('response', {
       url: response.url(),
       status: response.status(),
+      method: request.method(),
       resourceType: request.resourceType(),
       document: request.isNavigationRequest(),
       fromServiceWorker: response.fromServiceWorker(),
@@ -113,7 +124,14 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
       ),
     });
     if (response.status() >= 400) {
-      errors.push(event);
+      if (response.status() === 404 && isExpected404Response?.(event)) {
+        handled404ResponsesByUrl.set(
+          event.url,
+          (handled404ResponsesByUrl.get(event.url) ?? 0) + 1
+        );
+      } else {
+        errors.push(event);
+      }
       if (isStatic(response.url())) staticFailures.push(event);
     }
     if (headers['content-type']?.includes('text/x-component')) {
@@ -142,24 +160,48 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
   });
   page.on('console', (message) => {
     if (message.type() === 'error') {
-      errors.push(
-        record('console', {
-          text: message.text(),
-          location: message.location(),
-        })
-      );
+      const event = record('console', {
+        text: message.text(),
+        location: message.location(),
+      });
+      if (
+        isExpected404Response &&
+        isBrowserResource404ConsoleError(message.text())
+      ) {
+        deferredResource404ConsoleErrors.push(event);
+      } else {
+        errors.push(event);
+      }
     }
   });
   page.on('pageerror', (error) =>
     errors.push(record('pageerror', { error: error.stack ?? String(error) }))
   );
 
+  const unresolvedErrors = () => {
+    const handled404ConsoleCounts = new Map(handled404ResponsesByUrl);
+    const resource404ConsoleErrors = [];
+
+    for (const event of deferredResource404ConsoleErrors) {
+      const url = event.location?.url;
+      const remaining = handled404ConsoleCounts.get(url) ?? 0;
+      if (remaining > 0) {
+        handled404ConsoleCounts.set(url, remaining - 1);
+      } else {
+        resource404ConsoleErrors.push(event);
+      }
+    }
+
+    return [...errors, ...resource404ConsoleErrors];
+  };
+
   return {
     record,
     assertHealthy(stage) {
-      if (staticFailures.length || errors.length) {
+      const unresolved = unresolvedErrors();
+      if (staticFailures.length || unresolved.length) {
         throw new Error(
-          `Browser failure during ${stage}: ${JSON.stringify({ staticFailures, errors })}`
+          `Browser failure during ${stage}: ${JSON.stringify({ staticFailures, errors: unresolved })}`
         );
       }
     },
@@ -212,7 +254,7 @@ export async function captureDiagnostics(page, context, baseUrl, directory) {
           ) ?? null,
         cacheAttributionCaveat:
           'A cached cf-ray or request ID is not proof of a Worker execution. Correlate network-source events with origin request logs.',
-        errors,
+        errors: unresolvedErrors(),
         events,
       };
       await fs.writeFile(
