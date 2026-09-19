@@ -1,0 +1,315 @@
+.figure {
+  position: relative;
+  width: min(1040px, calc(100vw - 32px));
+  margin: clamp(40px, 7vw, 68px) 0;
+}
+
+.visual {
+  display: grid;
+  grid-template-columns:
+    minmax(112px, 1fr) 20px
+    minmax(112px, 1fr) 20px
+    minmax(112px, 1fr) 20px
+    minmax(172px, 1.48fr) 63px
+    minmax(132px, 1.05fr) 20px
+    minmax(112px, 1fr);
+  align-items: center;
+  column-gap: 0;
+}
+
+.node,
+.hub,
+.concern {
+  color: var(--text-primary);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-subtle) 92%, transparent),
+    color-mix(in srgb, var(--surface-default) 76%, transparent)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-400) 30%, var(--border-muted));
+  box-shadow:
+    var(--shadow-inset),
+    0 0 28px color-mix(in srgb, var(--color-primary-400) 8%, transparent);
+}
+
+.node {
+  display: grid;
+  width: 100%;
+  height: 176px;
+  padding: 14px 10px;
+  text-align: center;
+  border-radius: var(--radius-xl);
+  min-width: 0;
+  box-sizing: border-box;
+  grid-template-rows: 54px 58px;
+  align-content: center;
+  justify-items: center;
+  overflow: hidden;
+  row-gap: 14px;
+}
+
+.iconFrame {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  color: var(--text-brand);
+  background: color-mix(in srgb, var(--color-primary-400) 11%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-400) 24%, var(--border-muted));
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 22px
+    color-mix(in srgb, var(--color-primary-400) 12%, transparent);
+  place-items: center;
+}
+
+.label {
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  align-self: start;
+  justify-items: center;
+  align-content: start;
+  font-size: clamp(11px, 1.35vw, 13px);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+}
+
+.label > span {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.arrow {
+  display: grid;
+  width: 20px;
+  min-width: 0;
+  justify-self: start;
+  margin-left: -1px;
+  color: var(--text-brand);
+  filter: drop-shadow(
+    0 0 8px color-mix(in srgb, var(--color-primary-400) 40%, transparent)
+  );
+  place-items: center;
+}
+
+.arrow svg {
+  width: 20px;
+  height: 20px;
+}
+
+.concerns {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: 12px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-subtle) 92%, transparent),
+    color-mix(in srgb, var(--surface-default) 76%, transparent)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-400) 30%, var(--border-muted));
+  border-radius: var(--radius-xl);
+  box-shadow:
+    var(--shadow-inset),
+    0 0 28px color-mix(in srgb, var(--color-primary-400) 8%, transparent);
+  gap: 8px;
+}
+
+.concern {
+  position: relative;
+  display: grid;
+  align-items: center;
+  padding: 8px;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  border-radius: var(--radius-md);
+  min-height: 42px;
+  min-width: 0;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.concern > span:last-child {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.concernIcon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+}
+
+.concernIcon svg {
+  display: block;
+  color: var(--text-brand);
+}
+
+.concern:nth-child(1) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(2) .concernIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.concern:nth-child(3) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(4) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(5) .concernIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.concern:nth-child(6) .concernIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.concernMerge {
+  display: grid;
+  width: 63px;
+  height: 316px;
+  color: var(--text-brand);
+  place-items: center start;
+  margin-left: -4px;
+}
+
+.concernMergeGraphic {
+  display: block;
+  width: 63px;
+  height: 248px;
+  background: currentcolor;
+  transform: translateX(-3px);
+  filter: drop-shadow(
+    0 0 8px color-mix(in srgb, var(--color-primary-400) 32%, transparent)
+  );
+  mask: url('/blog/ai-ui-consistency/concern-merge.svg') center / contain
+    no-repeat;
+  mask: url('/blog/ai-ui-consistency/concern-merge.svg') center / contain
+    no-repeat;
+}
+
+.concernMergeMobileArrow {
+  display: none;
+}
+
+.hub {
+  display: grid;
+  width: 100%;
+  height: 138px;
+  padding: 14px 12px;
+  text-align: center;
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      color-mix(in srgb, var(--color-primary-400) 24%, transparent),
+      transparent 54%
+    ),
+    color-mix(in srgb, var(--surface-subtle) 88%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    var(--shadow-inset),
+    0 0 38px color-mix(in srgb, var(--color-primary-400) 17%, transparent);
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-400) 54%,
+    var(--border-muted)
+  );
+  place-items: center;
+  gap: 10px;
+}
+
+.logoMark {
+  display: block;
+  width: 50px;
+  height: 50px;
+}
+
+.wordmark {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.stageVisual {
+  display: block;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (width <= 980px) {
+  .figure {
+    width: 100%;
+  }
+
+  .visual {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .node,
+  .hub {
+    height: auto;
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .arrow {
+    justify-self: center;
+    margin-left: 0;
+    transform: rotate(90deg);
+  }
+
+  .concerns {
+    width: 100%;
+  }
+
+  .concernMerge {
+    width: 100%;
+    height: 24px;
+    margin-left: 0;
+    place-items: center;
+  }
+
+  .concernMergeGraphic {
+    display: none;
+  }
+
+  .concernMergeMobileArrow {
+    display: block;
+    justify-self: center;
+    color: var(--text-brand);
+    transform: rotate(90deg);
+  }
+}

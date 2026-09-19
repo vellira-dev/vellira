@@ -6,29 +6,3 @@
   border: 1px solid var(--border-muted);
   border-radius: var(--radius-xl);
 }
-
-.diagram {
-  width: 100%;
-  margin: clamp(36px, 6vw, 56px) 0;
-}
-
-.diagramImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: var(--radius-lg);
-}
-
-.diagramLight {
-  display: none;
-}
-
-:global([data-vellira-theme='dark']) .diagramDark,
-:global([data-vellira-theme='high-contrast']) .diagramDark {
-  display: none;
-}
-
-:global([data-vellira-theme='dark']) .diagramLight,
-:global([data-vellira-theme='high-contrast']) .diagramLight {
-  display: block;
-}
