@@ -344,6 +344,11 @@ jobs:
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
 
+      - name: Verify production component explorer browser geometry
+        run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
+
       - name: Smoke test production navigation and actor metrics
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
