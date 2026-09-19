@@ -6,6 +6,7 @@ import {
   candidateOnlyBlogSlugs,
   classifyBlogMetricsAggregateResponse,
   isBrowserResource404ConsoleError,
+  isExpectedStagingCandidateBlogMetricsRequest,
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
@@ -34,9 +35,10 @@ const diagnostics = [];
 const criticalDiagnostics = [];
 const vercelRuntimeRequests = [];
 const directMetricRequests = [];
-const aggregateMetrics404Responses = [];
+const blogMetrics404Responses = [];
 const deferredResource404ConsoleDiagnostics = [];
 let acceptedStagingCatalogLag = false;
+let acceptedStagingCandidateOnlySlugs = [];
 
 function sameOrigin(url) {
   return new URL(url).origin === baseOrigin;
@@ -76,8 +78,25 @@ function isBlogAggregateMetricsResponse(response) {
 }
 
 function markObservedAggregateMetrics404sHandled() {
-  for (const response of aggregateMetrics404Responses) {
-    response.handled = true;
+  for (const response of blogMetrics404Responses) {
+    if (response.aggregate) {
+      response.handled = true;
+    }
+  }
+}
+
+function markProvenStagingCatalogLag404sHandled(candidateOnlySlugs) {
+  for (const response of blogMetrics404Responses) {
+    if (
+      isExpectedStagingCandidateBlogMetricsRequest({
+        requestUrl: response.url,
+        method: response.method,
+        baseOrigin,
+        candidateOnlySlugs,
+      })
+    ) {
+      response.handled = true;
+    }
   }
 }
 
@@ -129,12 +148,28 @@ page.on('response', (response) => {
     response.url();
   diagnostics.push(diagnostic);
 
-  if (response.status() === 404 && isBlogAggregateMetricsResponse(response)) {
-    aggregateMetrics404Responses.push({
-      diagnostic,
-      handled: acceptedStagingCatalogLag,
-    });
-    return;
+  if (response.status() === 404) {
+    const method = response.request().method();
+    const aggregate = isBlogAggregateMetricsResponse(response);
+    const handled =
+      acceptedStagingCatalogLag &&
+      isExpectedStagingCandidateBlogMetricsRequest({
+        requestUrl: response.url(),
+        method,
+        baseOrigin,
+        candidateOnlySlugs: acceptedStagingCandidateOnlySlugs,
+      });
+
+    if (aggregate || handled) {
+      blogMetrics404Responses.push({
+        diagnostic,
+        url: response.url(),
+        method,
+        aggregate,
+        handled,
+      });
+      return;
+    }
   }
 
   criticalDiagnostics.push(diagnostic);
@@ -389,7 +424,8 @@ async function verifyBlogIndexMetricsProxy() {
 
     if (action === 'expected-catalog-lag') {
       acceptedStagingCatalogLag = true;
-      markObservedAggregateMetrics404sHandled();
+      acceptedStagingCandidateOnlySlugs = candidateOnlySlugs;
+      markProvenStagingCatalogLag404sHandled(candidateOnlySlugs);
       await page.locator('main').first().waitFor({
         state: 'visible',
         timeout: 15_000,
@@ -742,7 +778,7 @@ try {
   await navigateWithinComponentSidebar();
   await navigateWithinMobileComponentSidebar();
 
-  for (const response of aggregateMetrics404Responses) {
+  for (const response of blogMetrics404Responses) {
     if (!response.handled) {
       criticalDiagnostics.push(response.diagnostic);
     }
@@ -751,7 +787,7 @@ try {
   const reconciledResource404Diagnostics =
     reconcileHandledBlogMetrics404ConsoleDiagnostics(
       deferredResource404ConsoleDiagnostics,
-      aggregateMetrics404Responses.filter((response) => response.handled).length
+      blogMetrics404Responses.filter((response) => response.handled).length
     );
   criticalDiagnostics.push(...reconciledResource404Diagnostics.critical);
 
