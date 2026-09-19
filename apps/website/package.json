@@ -17,6 +17,7 @@
     "build:opennext": "opennextjs-cloudflare build",
     "preview:opennext": "opennextjs-cloudflare preview",
     "deploy:opennext": "node scripts/cloudflare-deploy.mjs",
+    "test:component-explorer-geometry": "node scripts/component-explorer-geometry.mjs",
     "sync:icons": "pnpm --filter @vellira-ui/icons build"
   },
   "dependencies": {
