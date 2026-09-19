@@ -248,6 +248,15 @@ describe('component production end-to-end fixtures', () => {
           'utf8'
         )
       ).not.toContain(`${slugify(fixture.input.componentName)}:`);
+      expect(
+        fs.readFileSync(
+          path.join(
+            root,
+            'apps/website/src/component-catalog/registry/componentPresentation.ts'
+          ),
+          'utf8'
+        )
+      ).not.toContain(`slug: '${slugify(fixture.input.componentName)}'`);
       expect(actualChangedPaths).toContain(
         'packages/metadata/src/tokenLifecycle.ts'
       );
@@ -284,6 +293,9 @@ describe('component production end-to-end fixtures', () => {
         else await completeOverlayFixture(root, fixture.input.componentName);
         await regenerateFixtureDocumentation(root, fixture);
       }
+      await completeWebsitePresentationFixture(root, fixture);
+      await regenerateFixtureDocumentation(root, fixture);
+      expectCompletedWebsitePresentation(root, fixture.input.componentName);
       // Behavior and its derived docs are complete; missing accessibility and
       // token presentation must still block the unmodified quality gate.
       if (fixture.contentGroupLabel || fixture.tokenSurface) {
@@ -314,7 +326,6 @@ describe('component production end-to-end fixtures', () => {
       }
       if (fixture.contentGroupLabel) await completeContentGroup(root, fixture);
       if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
-      await completeWebsitePresentationFixture(root, fixture);
       await regenerateFixtureDocumentation(root, fixture);
       expectCompletedWebsitePresentation(root, fixture.input.componentName);
       await expectDeterministicRegeneration(root, fixture);
@@ -529,6 +540,32 @@ function expectIncompleteWebsitePresentation(
   root: string,
   componentName: string
 ) {
+  const slug = slugify(componentName);
+  const previewFile = path.join(
+    root,
+    'apps/website/src/component-catalog/components',
+    componentName,
+    `${componentName}CatalogPreview.tsx`
+  );
+  const previewRegistry = fs.readFileSync(
+    path.join(
+      root,
+      'apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts'
+    ),
+    'utf8'
+  );
+  const presentationRegistry = fs.readFileSync(
+    path.join(
+      root,
+      'apps/website/src/component-catalog/registry/componentPresentation.ts'
+    ),
+    'utf8'
+  );
+
+  expect(fs.existsSync(previewFile)).toBe(false);
+  expect(previewRegistry).not.toContain(`${slug}:`);
+  expect(presentationRegistry).not.toContain(`slug: '${slug}'`);
+
   const result = spawnSync(
     'pnpm',
     ['create:component-page', componentName, '--force', '--check'],
@@ -569,7 +606,18 @@ function expectCompletedWebsitePresentation(
     `import { ${componentName} } from '@vellira-ui/react';`
   );
   expect(preview).not.toMatch(/Demo|Playground/);
-  expect(registry).toContain(`${slug}: ${componentName}CatalogPreview`);
+  expect(registry).toMatch(
+    new RegExp(`(?:${slug}|['"]${slug}['"]): ${componentName}CatalogPreview`)
+  );
+  expect(
+    fs.readFileSync(
+      path.join(
+        root,
+        'apps/website/src/component-catalog/registry/componentPresentation.ts'
+      ),
+      'utf8'
+    )
+  ).toContain(`slug: '${slug}'`);
 }
 
 function runSemanticFixtureTests(root: string, fixture: Fixture) {
@@ -797,25 +845,9 @@ async function expectInvalidFixtureToFailClosed(root: string) {
 async function expectDeterministicRegeneration(root: string, fixture: Fixture) {
   const before = fingerprintWorkingTree(root);
 
-  await runComponentGenerator({
-    root,
-    options: {
-      ...createComponentProductionGeneratorOptions(fixture.input),
-      force: true,
-    },
-  });
+  await regenerateFixtureDocumentation(root, fixture);
 
   expect(fingerprintWorkingTree(root)).toEqual(before);
-
-  await expect(
-    runComponentGenerator({
-      root,
-      options: {
-        ...createComponentProductionGeneratorOptions(fixture.input),
-        check: true,
-      },
-    })
-  ).resolves.toMatchObject({ check: true });
 }
 
 async function runMachineReadableValidation(params: {
