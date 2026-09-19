@@ -27,12 +27,14 @@ function createRoot() {
 function createModel(
   componentName: string,
   slug: string,
-  platforms: readonly Platform[] = ['react']
+  platforms: readonly Platform[] = ['react'],
+  catalogPreview: GeneratedPageModel['catalogPreview'] = {}
 ) {
   return {
     componentName,
     slug,
     platforms,
+    catalogPreview,
   } as GeneratedPageModel;
 }
 
@@ -111,35 +113,79 @@ describe('generated catalog preview registry', () => {
     ).toBe(false);
   });
 
-  it('renders a React demo-backed fallback preview', () => {
+  it('renders a direct React component signature preview without Demo or Playground imports', () => {
+    const source = renderGeneratedCatalogPreview({
+      model: createModel('Avatar', 'avatar', ['react'], {
+        layout: 'stack',
+        props: ["size='sm'"],
+        children: 'AB',
+      }),
+      generatedFileHeader,
+    });
+
+    expect(source).toContain("import { Avatar } from '@vellira-ui/react';");
+    expect(source).toContain(
+      "import styles from '../../shared/ComponentsCatalog/ComponentsCatalog.module.css';"
+    );
+    expect(source).toContain('<Avatar');
+    expect(source).toContain("size='sm'");
+    expect(source).toContain('AB');
+    expect(source).not.toMatch(/Demo|Playground/);
+  });
+
+  it('accepts an explicit empty preview decision', () => {
     const source = renderGeneratedCatalogPreview({
       model: createModel('Avatar', 'avatar'),
       generatedFileHeader,
     });
 
-    expect(source).toContain("import { AvatarDemo } from './AvatarDemo';");
-    expect(source).toContain(
-      "import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';"
-    );
-    expect(source).toContain(
-      "<ComponentDemoStateProvider resetKey='catalog:avatar'>"
-    );
-    expect(source).toContain('<AvatarDemo />');
+    expect(source).toContain('<Avatar/>');
   });
 
-  it('renders a native demo-backed fallback when React is unavailable', () => {
-    const source = renderGeneratedCatalogPreview({
-      model: createModel('NativeOnly', 'native-only', ['react-native']),
+  it('fails closed when generated preview metadata is absent or React is unavailable', () => {
+    expect(() =>
+      renderGeneratedCatalogPreview({
+        model: {
+          ...createModel('Avatar', 'avatar'),
+          catalogPreview: undefined,
+        },
+        generatedFileHeader,
+      })
+    ).toThrow(/requires catalogPreview metadata or a hand-authored/);
+
+    expect(() =>
+      renderGeneratedCatalogPreview({
+        model: createModel('NativeOnly', 'native-only', ['react-native']),
+        generatedFileHeader,
+      })
+    ).toThrow(/requires React support or a hand-authored/);
+  });
+
+  it('leaves an incomplete scaffold without a generated preview or registry authority', async () => {
+    const root = createRoot();
+    const componentCatalogDir = path.join(root, 'components', 'Avatar');
+    const componentsRegistryFile = writeCatalog(root, '');
+    const previewFile = path.join(
+      componentCatalogDir,
+      'AvatarCatalogPreview.tsx'
+    );
+
+    fs.mkdirSync(componentCatalogDir, { recursive: true });
+
+    await synchronizeGeneratedCatalogPreview({
+      root,
+      check: false,
+      checkFailures: [],
+      componentCatalogDir,
+      componentPresentationRegistryFile: componentsRegistryFile,
+      model: {
+        ...createModel('Avatar', 'avatar'),
+        catalogPreview: undefined,
+      },
       generatedFileHeader,
     });
 
-    expect(source).toContain(
-      "import { NativeNativeOnlyDemo } from './NativeNativeOnlyDemo';"
-    );
-    expect(source).toContain(
-      "<ComponentDemoStateProvider resetKey='catalog:native-only'>"
-    );
-    expect(source).toContain('<NativeNativeOnlyDemo />');
+    expect(fs.existsSync(previewFile)).toBe(false);
   });
 
   it('materializes a missing generator-owned preview before registration', async () => {
@@ -166,7 +212,7 @@ describe('generated catalog preview registry', () => {
 
     expect(checkFailures).toEqual([]);
     expect(fs.readFileSync(previewFile, 'utf8')).toContain(
-      "import { AvatarDemo } from './AvatarDemo';"
+      "import { Avatar } from '@vellira-ui/react';"
     );
   });
 
@@ -218,7 +264,10 @@ describe('generated catalog preview registry', () => {
       checkFailures,
       componentCatalogDir,
       componentPresentationRegistryFile: componentsRegistryFile,
-      model: createModel('Avatar', 'avatar'),
+      model: {
+        ...createModel('Avatar', 'avatar'),
+        catalogPreview: undefined,
+      },
       generatedFileHeader,
     });
 

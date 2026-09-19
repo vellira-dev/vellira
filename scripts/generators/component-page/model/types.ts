@@ -80,6 +80,7 @@ export type GeneratedPageModel = {
   slug: string;
   platforms: readonly Platform[];
   discovery?: ComponentPageMetadata['discovery'];
+  catalogPreview?: ComponentPageMetadata['catalogPreview'];
   demo: {
     staticProps: Partial<Record<Platform, string>>;
     children: GeneratedPlatformChildren;

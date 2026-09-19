@@ -5,7 +5,9 @@ import path from 'node:path';
 
 import { selectComponentPageAuditComponents } from './audit-options';
 import { getGeneratedComponentPageComponents } from './component-page-components';
+import { generatedFileHeader } from './helpers/paths';
 import { resolvePageInput } from './model/resolve-page-input';
+import { requiresGeneratedCatalogPreview } from './renderers/catalog-preview-registry';
 import {
   loadComponentMetadata,
   validateComponentMetadata,
@@ -190,10 +192,33 @@ for (const componentName of generatedComponentPageComponents) {
 
   if (metadataValid) {
     try {
+      const previewFile = path.join(
+        catalogComponentsRoot,
+        componentName,
+        `${componentName}CatalogPreview.tsx`
+      );
+      const hasHandAuthoredPreview =
+        fs.existsSync(previewFile) &&
+        !fs.readFileSync(previewFile, 'utf8').startsWith(generatedFileHeader);
+      const generatedPreviewRequired = requiresGeneratedCatalogPreview({
+        componentPresentationRegistryFile: path.join(
+          catalogRoot,
+          'registry',
+          'componentPresentation.ts'
+        ),
+        model: {
+          componentName,
+          slug: slugify(componentName),
+        },
+      });
+
       await resolvePageInput({
         root,
         catalogComponentsRoot,
         componentName,
+        requireRelatedDecision: true,
+        requireCatalogPreviewDecision:
+          generatedPreviewRequired && !hasHandAuthoredPreview,
       });
     } catch (error) {
       addFailure(

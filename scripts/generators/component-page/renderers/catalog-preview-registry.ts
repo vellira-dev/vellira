@@ -50,7 +50,7 @@ function getCatalogEntrySource(source: string, slug: string) {
 
 export function requiresGeneratedCatalogPreview(params: {
   componentPresentationRegistryFile: string;
-  model: GeneratedPageModel;
+  model: Pick<GeneratedPageModel, 'componentName' | 'slug'>;
 }) {
   const source = fs.readFileSync(
     params.componentPresentationRegistryFile,
@@ -73,22 +73,44 @@ export function renderGeneratedCatalogPreview(params: {
   generatedFileHeader: string;
 }) {
   const { model, generatedFileHeader } = params;
-  const demoName = model.platforms.includes('react')
-    ? `${model.componentName}Demo`
-    : `Native${model.componentName}Demo`;
+  const catalogPreview = model.catalogPreview;
+
+  if (!catalogPreview) {
+    throw new Error(
+      `Catalog signature preview for ${model.componentName} requires catalogPreview metadata or a hand-authored ${model.componentName}CatalogPreview.tsx.`
+    );
+  }
+
+  if (!model.platforms.includes('react')) {
+    throw new Error(
+      `Catalog signature preview for ${model.componentName} requires React support or a hand-authored ${model.componentName}CatalogPreview.tsx.`
+    );
+  }
+
+  const props = catalogPreview.props?.join('\n') ?? '';
+  const component = catalogPreview.children
+    ? `<${model.componentName}${props ? `\n${props}` : ''}>\n${catalogPreview.children}\n</${model.componentName}>`
+    : `<${model.componentName}${props ? `\n${props}\n` : ''}/>`;
+  const layoutClass =
+    catalogPreview.layout === 'field'
+      ? 'styles.previewFormControl'
+      : catalogPreview.layout === 'column'
+        ? 'styles.previewColumn'
+        : catalogPreview.layout === 'stack'
+          ? 'styles.previewStack'
+          : null;
+  const preview = layoutClass
+    ? `<div className={${layoutClass}}>\n      ${component}\n    </div>`
+    : component;
 
   return `${generatedFileHeader}'use client';
 
-import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';
+import { ${model.componentName} } from '@vellira-ui/react';
 
-import { ${demoName} } from './${demoName}';
+${layoutClass ? "import styles from '../../shared/ComponentsCatalog/ComponentsCatalog.module.css';\n" : ''}
 
 export function ${model.componentName}CatalogPreview() {
-  return (
-    <ComponentDemoStateProvider resetKey='catalog:${model.slug}'>
-      <${demoName} />
-    </ComponentDemoStateProvider>
-  );
+  return ${preview};
 }
 `;
 }
@@ -124,6 +146,22 @@ export async function synchronizeGeneratedCatalogPreview(params: {
     currentSource !== null &&
     !currentSource.startsWith(params.generatedFileHeader)
   ) {
+    return;
+  }
+
+  if (!params.model.catalogPreview) {
+    if (params.check) {
+      params.checkFailures.push(path.relative(params.root, previewFile));
+      return;
+    }
+
+    if (currentSource !== null) {
+      fs.rmSync(previewFile);
+      console.log(
+        `🗑 Removed incomplete catalog preview: ${path.relative(params.root, previewFile)}`
+      );
+    }
+
     return;
   }
 

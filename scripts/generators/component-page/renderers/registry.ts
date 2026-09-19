@@ -424,7 +424,9 @@ export async function updateComponentRegistry(params: {
     model,
   });
 
-  if (generatedCatalogPreviewRequired && !fs.existsSync(catalogPreviewFile)) {
+  const hasCatalogPreview = fs.existsSync(catalogPreviewFile);
+
+  if (generatedCatalogPreviewRequired && !hasCatalogPreview) {
     const relativePreviewFile = path.relative(root, catalogPreviewFile);
 
     if (check) {
@@ -432,10 +434,9 @@ export async function updateComponentRegistry(params: {
         checkFailures.push(relativePreviewFile);
       }
     } else {
-      console.error(
-        `Catalog signature preview is required before registering ${model.componentName}: ${relativePreviewFile}`
+      console.log(
+        `⏳ Deferred component catalog presentation for ${model.componentName}: catalog preview authority has not been authored yet.`
       );
-      process.exit(1);
     }
   }
 
@@ -509,13 +510,18 @@ ${registryImportNames.map((name) => `  ${name},`).join('\n')}
     slug: model.slug,
   });
 
-  await updateCatalogRegistry({
-    root,
-    force,
-    check,
-    checkFailures,
-    componentPresentationRegistryFile,
-    model,
-    catalogCategory,
-  });
+  // A generated catalog entry is visible presentation, so it must not be
+  // registered until it has a signature preview. Full component-page
+  // artifacts above remain available for the authoring/completion phase.
+  if (!generatedCatalogPreviewRequired || hasCatalogPreview) {
+    await updateCatalogRegistry({
+      root,
+      force,
+      check,
+      checkFailures,
+      componentPresentationRegistryFile,
+      model,
+      catalogCategory,
+    });
+  }
 }

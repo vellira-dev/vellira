@@ -11,6 +11,7 @@ export function buildGeneratedPageModel(params: {
   slug: string;
   platforms: readonly Platform[];
   discovery?: GeneratedPageModel['discovery'];
+  catalogPreview?: GeneratedPageModel['catalogPreview'];
   reactStaticDemoProps: string;
   nativeStaticDemoProps: string;
   reactDemoChildren: string;
@@ -42,6 +43,7 @@ export function buildGeneratedPageModel(params: {
     slug: params.slug,
     platforms: params.platforms,
     discovery: params.discovery,
+    catalogPreview: params.catalogPreview,
     demo: {
       staticProps: {
         react: params.reactStaticDemoProps,

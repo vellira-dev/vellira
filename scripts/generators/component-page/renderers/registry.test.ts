@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import type { GeneratedPageModel } from '../model/types';
-import { updateCatalogRegistry } from './registry';
+import { updateCatalogRegistry, updateComponentRegistry } from './registry';
 
 const model: GeneratedPageModel = {
   componentName: 'Switch',
@@ -149,5 +149,95 @@ const componentCatalogPresentation = [
     expect(content.match(/slug: 'switch'/g)).toHaveLength(1);
     expect(content).toContain("category: 'navigation'");
     expect(content).not.toContain("category: 'general'");
+  });
+});
+
+describe('generated catalog presentation lifecycle', () => {
+  it('defers visible catalog registration until preview authority is authored', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-catalog-'));
+    const componentCatalogDir = path.join(root, 'components', 'Switch');
+    const componentPagesFile = path.join(root, 'component-pages.ts');
+    const componentsRegistryFile = path.join(
+      root,
+      'registry',
+      'component-pages.ts'
+    );
+    const componentPresentationRegistryFile = path.join(
+      root,
+      'registry',
+      'components.ts'
+    );
+
+    fs.mkdirSync(componentCatalogDir, { recursive: true });
+    fs.mkdirSync(path.dirname(componentsRegistryFile), { recursive: true });
+    fs.writeFileSync(
+      componentPagesFile,
+      '// component-page-imports\n\nexport const componentPages = {\n  // component-page-entries\n};\n'
+    );
+    fs.writeFileSync(componentsRegistryFile, '// generated registry\n');
+    fs.writeFileSync(
+      componentPresentationRegistryFile,
+      "import type { ComponentCatalogPresentationEntry } from '../types';\n\nconst componentCatalogPresentation = [\n] as const satisfies readonly ComponentCatalogPresentationEntry[];\n"
+    );
+    fs.writeFileSync(
+      path.join(componentCatalogDir, 'SwitchDemo.tsx'),
+      'export function SwitchDemo() { return null; }\n'
+    );
+    fs.writeFileSync(
+      path.join(componentCatalogDir, 'NativeSwitchDemo.tsx'),
+      'export function NativeSwitchDemo() { return null; }\n'
+    );
+
+    const checkFailures: string[] = [];
+    await updateComponentRegistry({
+      root,
+      force: true,
+      check: false,
+      checkFailures,
+      componentCatalogDir,
+      componentPagesFile,
+      componentsRegistryFile,
+      componentPresentationRegistryFile,
+      catalogCategory: 'forms',
+      model,
+    });
+
+    expect(checkFailures).toEqual([]);
+    expect(
+      fs.existsSync(path.join(componentCatalogDir, 'SwitchCatalogPreview.tsx'))
+    ).toBe(false);
+    expect(
+      fs.readFileSync(componentPresentationRegistryFile, 'utf8')
+    ).not.toContain("slug: 'switch'");
+    expect(fs.readFileSync(componentPagesFile, 'utf8')).toContain('switch: {');
+
+    await updateComponentRegistry({
+      root,
+      force: true,
+      check: false,
+      checkFailures,
+      componentCatalogDir,
+      componentPagesFile,
+      componentsRegistryFile,
+      componentPresentationRegistryFile,
+      catalogCategory: 'forms',
+      model: { ...model, catalogPreview: {} },
+    });
+
+    expect(
+      fs.readFileSync(
+        path.join(componentCatalogDir, 'SwitchCatalogPreview.tsx'),
+        'utf8'
+      )
+    ).toContain("import { Switch } from '@vellira-ui/react';");
+    expect(
+      fs.readFileSync(
+        path.join(root, 'registry', 'generatedCatalogPreviews.ts'),
+        'utf8'
+      )
+    ).toContain('switch: SwitchCatalogPreview');
+    expect(
+      fs.readFileSync(componentPresentationRegistryFile, 'utf8')
+    ).toContain("slug: 'switch'");
   });
 });

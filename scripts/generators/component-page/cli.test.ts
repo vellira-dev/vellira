@@ -90,7 +90,10 @@ function runGenerator(
   );
 }
 
-function runAudit(fixture: string): {
+function runAudit(
+  fixture: string,
+  componentName = 'Button'
+): {
   status: number | null;
   stdout: string;
   stderr: string;
@@ -101,7 +104,7 @@ function runAudit(fixture: string): {
       path.join(repoRoot(), 'node_modules/tsx/dist/cli.mjs'),
       'scripts/generators/component-page/audit-component-pages.ts',
       '--component',
-      'Button',
+      componentName,
     ],
     {
       cwd: fixture,
@@ -343,6 +346,66 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
       'button related[0] "Input" is invalid: unknown or non-canonical related component slug'
+    );
+  }, 60_000);
+
+  it('fails audit when effective metadata omits a related-components decision', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    fs.writeFileSync(
+      metadataFile,
+      source.replace("  related: ['input', 'checkbox', 'modal'],\n", '')
+    );
+
+    const result = runAudit(fixture);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(
+      /Button: effective generator input invalid:[\s\S]*related must be explicitly defined; use related: \[\] when no related components are intended/
+    );
+  }, 60_000);
+
+  it('allows an incomplete related decision during scaffold generation but rejects it in check mode', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    fs.writeFileSync(
+      metadataFile,
+      source.replace("  related: ['input', 'checkbox', 'modal'],\n", '')
+    );
+
+    const scaffold = runGenerator(fixture, ['Button', '--force']);
+    expect(scaffold.status).toBe(0);
+
+    const check = runGenerator(fixture, ['Button', '--force', '--check']);
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('related must be explicitly defined');
+  }, 60_000);
+
+  it('fails audit when a generated preview lacks an explicit catalog preview decision', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Textarea/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    fs.writeFileSync(
+      metadataFile,
+      source.replace(/ {2}catalogPreview: \{[\s\S]*?\n {2}\},\n/, '')
+    );
+
+    const result = runAudit(fixture, 'Textarea');
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(
+      /Textarea: effective generator input invalid:[\s\S]*catalogPreview must be explicitly defined/
     );
   }, 60_000);
 });

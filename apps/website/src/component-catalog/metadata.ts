@@ -36,6 +36,15 @@ export type ComponentDemoMetadata = {
   previewWidth?: 'auto' | 'field' | 'full';
 };
 
+export type ComponentCatalogPreviewMetadata = {
+  /** Layout wrapper for a compact catalog signature preview. */
+  layout?: 'auto' | 'field' | 'column' | 'stack';
+  /** Safe JSX prop fragments applied directly to the React component. */
+  props?: readonly string[];
+  /** Safe inner JSX rendered inside the React component. */
+  children?: string;
+};
+
 export type ComponentExampleMetadata = {
   title: string;
   description: string;
@@ -115,6 +124,11 @@ export type ComponentPageMetadata = {
   react?: ComponentPlatformMetadata;
   native?: ComponentPlatformMetadata;
   demo?: ComponentDemoMetadata;
+  /**
+   * Explicit authority for a generated compact catalog signature preview.
+   * Omit only when a hand-authored <Component>CatalogPreview.tsx owns it.
+   */
+  catalogPreview?: ComponentCatalogPreviewMetadata;
   defaults?: {
     shared?: Record<string, string | boolean | number>;
     react?: Record<string, string | boolean | number>;
