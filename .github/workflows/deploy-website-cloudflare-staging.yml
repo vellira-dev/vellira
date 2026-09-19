@@ -202,6 +202,11 @@ jobs:
           scripts/cloudflare-browser-diagnostics.test.mjs
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
 
+      - name: Verify component explorer browser geometry
+        run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+
       - name: Smoke test navigation and actor metrics
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
