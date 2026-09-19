@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -18,6 +19,18 @@ import {
   buildTurboArgs,
   parseAffectedWorkspaces,
 } from './run-affected-workspaces.mjs';
+
+const ciWorkflow = await fs.readFile('.github/workflows/ci.yml', 'utf8');
+
+function jobBlock(jobId, nextJobId) {
+  const start = ciWorkflow.indexOf(`\n  ${jobId}:\n`);
+  assert.notEqual(start, -1, `Missing CI job: ${jobId}`);
+  const end = nextJobId
+    ? ciWorkflow.indexOf(`\n  ${nextJobId}:\n`, start + 1)
+    : ciWorkflow.length;
+  assert.notEqual(end, -1, `Missing following CI job: ${nextJobId}`);
+  return ciWorkflow.slice(start, end);
+}
 
 const classification = {
   sharedPrefixes: ['packages/tokens/', 'packages/types/', 'packages/core/'],
@@ -218,6 +231,35 @@ test('affected workspace runner rejects malformed inputs', () => {
   assert.throws(
     () => buildTurboArgs(['build;rm'], ['@vellira-ui/react']),
     /invalid Turbo task/
+  );
+});
+
+test('affected Storybook tests provision matching Chromium before execution', () => {
+  const unitCoverage = jobBlock('unit-coverage', 'generator-blog');
+  const browserInstall =
+    'pnpm --filter @vellira-ui/react-storybook exec playwright install --with-deps chromium';
+  const browserInstallIndex = unitCoverage.indexOf(browserInstall);
+  const affectedTestsIndex = unitCoverage.indexOf(
+    'node scripts/ci/run-affected-workspaces.mjs test test:coverage'
+  );
+
+  assert.match(
+    unitCoverage,
+    /if: needs\.impact\.outputs\.execution_path == 'affected' && contains\(fromJSON\(needs\.impact\.outputs\.affected_workspaces\), '@vellira-ui\/react-storybook'\)/
+  );
+  assert.match(
+    unitCoverage,
+    new RegExp(browserInstall.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
+  assert.doesNotMatch(
+    unitCoverage,
+    /playwright install --with-deps chromium firefox webkit/
+  );
+  assert.ok(browserInstallIndex >= 0);
+  assert.ok(affectedTestsIndex > browserInstallIndex);
+  assert.match(
+    unitCoverage,
+    /if: needs\.impact\.outputs\.execution_path == 'affected'\s+env:\s+VELLIRA_AFFECTED_WORKSPACES:/
   );
 });
 
