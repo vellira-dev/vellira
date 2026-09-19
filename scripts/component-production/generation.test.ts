@@ -566,6 +566,8 @@ function plan(root: string): ComponentGenerationPlan {
     control: 'value',
     typeOwnership: 'platform',
     capabilities: [],
+    semanticCapabilities: [],
+    platformSemanticCapabilities: {},
     dependencies: {},
     icons: [],
     assets: [],

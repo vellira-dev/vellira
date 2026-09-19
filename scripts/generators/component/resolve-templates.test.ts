@@ -28,6 +28,8 @@ const createPlan = (
   control,
   typeOwnership: profile === 'base' ? 'platform' : 'shared',
   capabilities: [],
+  semanticCapabilities: [],
+  platformSemanticCapabilities: {},
   dependencies: {},
   icons: [],
   assets: [],

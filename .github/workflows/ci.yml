@@ -186,7 +186,13 @@ jobs:
         run: >-
           pnpm exec eslint apps/website/cloudflare-worker.mjs apps/website/cloudflare/*.mjs
           apps/website/scripts/*.mjs apps/react-storybook/scripts/cloudflare-browser-diagnostics*.mjs
+          apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy*.mjs
           apps/react-storybook/scripts/cloudflare-navigation-soak.mjs
+          apps/react-storybook/scripts/cloudflare-website-smoke.mjs
+      - name: Test website smoke policies
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node --test
+          scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
       - run: pnpm test:cloudflare-cache
       - name: Build actual OpenNext runtime
         env:

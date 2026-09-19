@@ -3,6 +3,8 @@ import type {
   ComponentCapability,
   ComponentDependencies,
   ComponentIconRequirement,
+  ComponentPlatform,
+  ComponentSemanticCapability,
   ComponentTokenContract,
 } from '@vellira-ui/metadata';
 
@@ -27,6 +29,10 @@ export type MetadataTemplateParams = ComponentTemplateParams & {
   platforms: readonly ('react' | 'react-native')[];
   profile: 'base' | 'form-control' | 'compound' | 'overlay';
   capabilities: readonly ComponentCapability[];
+  semanticCapabilities?: readonly ComponentSemanticCapability[];
+  platformSemanticCapabilities?: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
+  >;
   typeOwnership?: ComponentTypeOwnership;
   dependencies?: ComponentDependencies;
   icons?: readonly ComponentIconRequirement[];
@@ -68,6 +74,46 @@ function renderDependencySet(
   return lines.join('\n');
 }
 
+function renderSemanticCapabilityArray(
+  field: string,
+  values: readonly ComponentSemanticCapability[] | undefined
+) {
+  if (!values || values.length === 0) {
+    return '';
+  }
+
+  return `  ${field}: [
+${values.map((value) => `    ${renderSingleQuotedString(value)},`).join('\n')}
+  ],
+`;
+}
+
+function renderPlatformSemanticCapabilities(
+  capabilities:
+    | Partial<Record<ComponentPlatform, readonly ComponentSemanticCapability[]>>
+    | undefined
+) {
+  const entries = Object.entries(capabilities ?? {})
+    .filter(([, values]) => values && values.length > 0)
+    .sort(([left], [right]) => left.localeCompare(right));
+
+  if (entries.length === 0) {
+    return '';
+  }
+
+  return `  platformSemanticCapabilities: {
+${entries
+  .map(
+    ([platform, values]) =>
+      `    ${renderSingleQuotedString(platform)}: [${(values ?? [])
+        .map(renderSingleQuotedString)
+        .join(', ')}],`
+  )
+  .join('\n')}
+  },
+`;
+}
+
 function renderDependencies(dependencies: ComponentDependencies | undefined) {
   if (!dependencies) {
     return '';
@@ -100,6 +146,8 @@ export function renderMetadataTemplate({
   platforms,
   profile,
   capabilities,
+  semanticCapabilities = [],
+  platformSemanticCapabilities = {},
   typeOwnership,
   dependencies,
   icons = [],
@@ -173,7 +221,7 @@ export const ${metadataName} = defineComponentMetadata({
   profile: '${profile}',
   status: 'experimental',
   capabilities: ${capabilitiesText},
-${dependenciesText}  requirements: {
+${renderSemanticCapabilityArray('semanticCapabilities', semanticCapabilities)}${renderPlatformSemanticCapabilities(platformSemanticCapabilities)}${dependenciesText}  requirements: {
     tests: true,
     storybook: true,
     docs: true,

@@ -216,6 +216,7 @@ jobs:
           scripts/cloudflare-navigation-soak.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
+          BLOG_METRICS_PUBLICATION_MODE: staging-candidate
 
       - name: Smoke test static chunk integrity
         if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
