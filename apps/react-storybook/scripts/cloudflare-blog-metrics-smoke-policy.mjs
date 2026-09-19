@@ -80,6 +80,76 @@ export function buildBlogMetricsBatchPath(slugs) {
   return `/api/blog-metrics/metrics?${params.toString()}`;
 }
 
+export function isExpectedStagingCandidateBlogMetricsRequest({
+  requestUrl,
+  method,
+  baseOrigin,
+  candidateOnlySlugs = [],
+}) {
+  let parsedUrl;
+  let expectedOrigin;
+
+  try {
+    parsedUrl = new URL(requestUrl);
+    expectedOrigin = new URL(baseOrigin).origin;
+  } catch {
+    return false;
+  }
+
+  if (
+    parsedUrl.origin !== expectedOrigin ||
+    candidateOnlySlugs.length === 0
+  ) {
+    return false;
+  }
+
+  const candidates = new Set(candidateOnlySlugs);
+  const normalizedMethod = String(method).toUpperCase();
+
+  if (
+    normalizedMethod === 'GET' &&
+    parsedUrl.pathname === '/api/blog-metrics/metrics'
+  ) {
+    return parsedUrl.searchParams
+      .getAll('slug')
+      .some((slug) => candidates.has(slug));
+  }
+
+  const singleMetricsMatch =
+    /^\/api\/blog-metrics\/metrics\/([^/]+)$/.exec(parsedUrl.pathname);
+  if (normalizedMethod === 'GET' && singleMetricsMatch) {
+    try {
+      return candidates.has(decodeURIComponent(singleMetricsMatch[1]));
+    } catch {
+      return false;
+    }
+  }
+
+  const articleMatch =
+    /^\/api\/blog-metrics\/articles\/([^/]+)\/(views|like)$/.exec(
+      parsedUrl.pathname
+    );
+  if (!articleMatch) {
+    return false;
+  }
+
+  let slug;
+  try {
+    slug = decodeURIComponent(articleMatch[1]);
+  } catch {
+    return false;
+  }
+
+  if (!candidates.has(slug)) {
+    return false;
+  }
+
+  return (
+    (articleMatch[2] === 'like' && normalizedMethod === 'GET') ||
+    (articleMatch[2] === 'views' && normalizedMethod === 'POST')
+  );
+}
+
 export function classifyBlogMetricsAggregateResponse({
   mode,
   status,
@@ -119,18 +189,18 @@ export function isBrowserResource404ConsoleError(text) {
 
 export function reconcileHandledBlogMetrics404ConsoleDiagnostics(
   diagnostics,
-  handledAggregate404Count
+  handledBlogMetrics404Count
 ) {
   if (
-    !Number.isSafeInteger(handledAggregate404Count) ||
-    handledAggregate404Count < 0
+    !Number.isSafeInteger(handledBlogMetrics404Count) ||
+    handledBlogMetrics404Count < 0
   ) {
-    throw new Error('handledAggregate404Count must be a non-negative integer.');
+    throw new Error('handledBlogMetrics404Count must be a non-negative integer.');
   }
 
   const expectedCount = Math.min(
     diagnostics.length,
-    handledAggregate404Count
+    handledBlogMetrics404Count
   );
 
   return {
