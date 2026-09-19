@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import Image, { type ImageProps } from 'next/image';
 
 import {
   Accessibility,
@@ -10,10 +10,6 @@ import {
   Tokens,
 } from '@vellira-ui/icons';
 
-import aiVisual from '../../../content/blog/ai-ui-consistency/visuals/ai.png';
-import coherentSystemVisual from '../../../content/blog/ai-ui-consistency/visuals/coherent-system.png';
-import componentsVisual from '../../../content/blog/ai-ui-consistency/visuals/components.png';
-import coordinationVisual from '../../../content/blog/ai-ui-consistency/visuals/coordination.png';
 import styles from './AiUiConsistencyDiagram.module.css';
 
 const concerns = [
@@ -24,6 +20,15 @@ const concerns = [
   { label: 'Platforms', Icon: Platforms },
   { label: 'Quality', Icon: Quality },
 ] as const;
+
+type DiagramImageSource = ImageProps['src'];
+
+interface AiUiConsistencyDiagramProps {
+  aiVisual: DiagramImageSource;
+  coherentSystemVisual: DiagramImageSource;
+  componentsVisual: DiagramImageSource;
+  coordinationVisual: DiagramImageSource;
+}
 
 function FlowArrow() {
   return (
@@ -42,7 +47,12 @@ function ConcernMergeArrow() {
   );
 }
 
-export function AiUiConsistencyDiagram() {
+export function AiUiConsistencyDiagram({
+  aiVisual,
+  coherentSystemVisual,
+  componentsVisual,
+  coordinationVisual,
+}: AiUiConsistencyDiagramProps) {
   return (
     <figure className={styles.figure}>
       <div className={styles.visual} aria-hidden='true'>
