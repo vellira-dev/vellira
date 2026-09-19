@@ -152,10 +152,9 @@ export function AiUiConsistencyDiagram({
       </div>
 
       <figcaption className={styles.srOnly}>
-        AI-generated UI creates more components and coordination pressure
-        across APIs, accessibility, tokens, documentation, platforms, and
-        quality. Vellira helps bring those concerns back into one coherent UI
-        system.
+        AI-generated UI creates more components and coordination pressure across
+        APIs, accessibility, tokens, documentation, platforms, and quality.
+        Vellira helps bring those concerns back into one coherent UI system.
       </figcaption>
     </figure>
   );
