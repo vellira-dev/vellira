@@ -28,7 +28,7 @@ Labeled text input primitive for short form values.
 - Controlled and uncontrolled usage
 - Label, description and placeholder support
 - Colors: primary, neutral, success, warning and danger
-- Variants: outline, filled and soft
+- Variants: outline, filled, soft and bare
 - Sizes: sm, md and lg
 - Smart type handling for email, password, tel, url, number and search
 - Icons, addons, prefix and suffix support
@@ -68,7 +68,10 @@ Labeled text input primitive for short form values.
     },
     variant: {
       control: 'radio',
-      options: ['outline', 'filled', 'soft'],
+      options: ['outline', 'filled', 'soft', 'bare'],
+      table: {
+        type: { summary: `'outline' | 'filled' | 'soft' | 'bare'` },
+      },
     },
     type: {
       control: 'select',
@@ -270,6 +273,29 @@ export const ShorthandAndComposed: Story = {
         </FormField>
       </div>
     </Section>
+  ),
+};
+
+export const BareComposition: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The web-only `bare` variant keeps Input behavior, search affordance, clear action, and accessibility while removing field chrome for composed surfaces.',
+      },
+    },
+  },
+  args: {
+    type: 'search',
+    variant: 'bare',
+    value: 'design systems',
+    clearable: true,
+    'aria-label': 'Search articles',
+  },
+  render: (args) => (
+    <div style={{ width: 520, maxWidth: '100%' }}>
+      <Input {...args} />
+    </div>
   ),
 };
 
