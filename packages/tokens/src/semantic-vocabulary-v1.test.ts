@@ -15,7 +15,6 @@ const themes = [
 describe('Semantic Vocabulary V1', () => {
   it.each(themes)('%s exposes only canonical renamed roles', (_name, theme) => {
     expect(theme.semantic.surface).not.toHaveProperty('background');
-    expect(theme.semantic.surface).toHaveProperty('section');
     expect(theme.semantic.surface).toHaveProperty('panel');
     expect(theme.semantic.action).toHaveProperty('accent');
     expect(theme.semantic.action).toHaveProperty('neutral');
@@ -56,7 +55,6 @@ describe('Semantic Vocabulary V1', () => {
       'overlay',
       'shadow',
     ]);
-    expect(semanticVocabularyV1.surface.roles).toContain('section');
     expect(semanticVocabularyV1.surface.roles).toContain('panel');
     expect(semanticVocabularyV1.action.roles).toEqual([
       'primary',
@@ -74,15 +72,12 @@ describe('Semantic Vocabulary V1', () => {
     ]);
   });
 
-  it('keeps section and panel roles distinct from the page canvas', () => {
+  it('keeps panel separate from canvas and preserves the former bounded-container values', () => {
     expect(lightTheme.semantic.surface.canvas).toBe(colors.vellira[50]);
-    expect(lightTheme.semantic.surface.section).toBe(colors.vellira[150]);
     expect(lightTheme.semantic.surface.panel).toBe(colors.mono[50]);
     expect(darkTheme.semantic.surface.canvas).toBe(colors.mono[950]);
-    expect(darkTheme.semantic.surface.section).toBe(colors.vellira[850]);
     expect(darkTheme.semantic.surface.panel).toBe(colors.vellira[950]);
     expect(highContrastTheme.semantic.surface.canvas).toBe(colors.mono[950]);
-    expect(highContrastTheme.semantic.surface.section).toBe(colors.gray[800]);
     expect(highContrastTheme.semantic.surface.panel).toBe(colors.grayBlue[950]);
   });
 

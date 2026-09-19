@@ -79,7 +79,6 @@ Example:
 
 ```ts
 darkTheme.semantic.surface.canvas;
-darkTheme.semantic.surface.section;
 darkTheme.semantic.surface.panel;
 darkTheme.semantic.surface.elevated;
 
@@ -92,10 +91,9 @@ darkTheme.semantic.status.success.fg;
 darkTheme.semantic.status.error.fg;
 ```
 
-`surface.canvas` is the application/root backdrop, `surface.section` is the
-visibly distinct plane for large page bands, `surface.panel` is bounded neutral
-container/chrome, and `surface.elevated` is reserved for genuinely raised or
-floating layers.
+`surface.canvas` is the application/root backdrop, `surface.panel` is bounded
+neutral container/chrome, and `surface.elevated` is reserved for genuinely
+raised or floating layers.
 
 Using semantic tokens instead of raw palette values keeps component styling
 consistent across renderers and themes.

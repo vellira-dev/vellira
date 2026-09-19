@@ -3,7 +3,6 @@ import { withAlpha } from '../../utils/color.js';
 
 export const surface = {
   canvas: colors.mono[950],
-  section: colors.vellira[850],
   default: colors.vellira[950],
   panel: colors.vellira[950],
   muted: colors.vellira[900],
