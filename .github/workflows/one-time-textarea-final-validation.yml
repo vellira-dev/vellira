@@ -1,0 +1,137 @@
+name: One-time Textarea Final Production Validation
+
+on:
+  push:
+    branches:
+      - feat/textarea-launch-component
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout candidate branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/textarea-launch-component
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize clean final candidate
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-time-textarea-final-validation.yml
+          git commit --no-verify -m "chore(ci): finalize verified Textarea candidate"
+          candidate_sha="$(git rev-parse HEAD)"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          echo "sha=${candidate_sha}" >> "$GITHUB_OUTPUT"
+          echo "CANDIDATE_SHA=${candidate_sha}" >> "$GITHUB_ENV"
+
+      - name: Run canonical Textarea production validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/textarea-production.json <<'JSON'
+          {
+            "schemaVersion": "1",
+            "componentName": "Textarea",
+            "platform": "both",
+            "layer": "primitives",
+            "category": "form",
+            "profile": "form-control",
+            "control": "text",
+            "capabilities": [
+              "controlled",
+              "uncontrolled",
+              "disabled",
+              "required",
+              "invalid"
+            ],
+            "semanticCapabilities": [
+              "multiline",
+              "accessible-name"
+            ],
+            "componentTokens": "standard",
+            "parts": []
+          }
+          JSON
+
+          set +e
+          pnpm component-production:validate:json \
+            --spec /tmp/textarea-production.json \
+            > /tmp/textarea-production-validation.json
+          validation_status=$?
+          set -e
+
+          cat /tmp/textarea-production-validation.json
+          echo "component-production validation exit: ${validation_status}"
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(
+            fs.readFileSync('/tmp/textarea-production-validation.json', 'utf8')
+          );
+          const candidate = process.env.CANDIDATE_SHA;
+          const identity = result.reviewBundle?.candidateIdentity;
+
+          if (result.status !== 'ready') {
+            throw new Error(`Expected ready validation status, got ${result.status}`);
+          }
+          if (result.readyForReview !== true) {
+            throw new Error('Expected readyForReview=true.');
+          }
+          if (result.lifecycle?.current !== 'ready-for-review') {
+            throw new Error(
+              `Expected ready-for-review lifecycle, got ${result.lifecycle?.current}`
+            );
+          }
+          if ((result.blockingFindings ?? []).length !== 0) {
+            throw new Error('Canonical validation returned blocking findings.');
+          }
+          if (result.reviewBundle?.status !== 'ready') {
+            throw new Error('Expected ready review bundle.');
+          }
+          if (result.reviewBundle?.workingTreeClean !== true) {
+            throw new Error('Expected a clean review-bundle working tree.');
+          }
+          if (identity?.kind !== 'revision' || identity.revision !== candidate) {
+            throw new Error(
+              `Candidate identity mismatch: expected ${candidate}, got ${JSON.stringify(identity)}`
+            );
+          }
+          if (result.reviewBundle?.revision !== candidate) {
+            throw new Error(
+              `Review-bundle revision mismatch: expected ${candidate}, got ${result.reviewBundle?.revision}`
+            );
+          }
+          NODE
+
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+      - name: Publish exact validated candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ steps.candidate.outputs.sha }}"
+          git push origin HEAD:feat/textarea-launch-component
