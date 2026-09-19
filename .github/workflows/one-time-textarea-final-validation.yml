@@ -67,6 +67,10 @@ jobs:
               "required",
               "invalid"
             ],
+            "semanticCapabilities": [
+              "multiline",
+              "accessible-name"
+            ],
             "componentTokens": "standard",
             "parts": []
           }
