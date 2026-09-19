@@ -86,30 +86,29 @@ export function isExpectedStagingCandidateBlogMetricsRequest({
   baseOrigin,
   candidateOnlySlugs = [],
 }) {
-  let parsedUrl;
-  let expectedOrigin;
-
-  try {
-    parsedUrl = new URL(requestUrl);
-    expectedOrigin = new URL(baseOrigin).origin;
-  } catch {
+  if (
+    !isPotentialStagingCandidateBlogMetricsRequest({
+      requestUrl,
+      method,
+      baseOrigin,
+    }) ||
+    candidateOnlySlugs.length === 0
+  ) {
     return false;
   }
 
-  if (
-    parsedUrl.origin !== expectedOrigin ||
-    candidateOnlySlugs.length === 0
-  ) {
+  let parsedUrl;
+
+  try {
+    parsedUrl = new URL(requestUrl);
+  } catch {
     return false;
   }
 
   const candidates = new Set(candidateOnlySlugs);
   const normalizedMethod = String(method).toUpperCase();
 
-  if (
-    normalizedMethod === 'GET' &&
-    parsedUrl.pathname === '/api/blog-metrics/metrics'
-  ) {
+  if (parsedUrl.pathname === '/api/blog-metrics/metrics') {
     return parsedUrl.searchParams
       .getAll('slug')
       .some((slug) => candidates.has(slug));
@@ -147,6 +146,56 @@ export function isExpectedStagingCandidateBlogMetricsRequest({
   return (
     (articleMatch[2] === 'like' && normalizedMethod === 'GET') ||
     (articleMatch[2] === 'views' && normalizedMethod === 'POST')
+  );
+}
+
+// This deliberately identifies only requests which may later be accepted after
+// a staging-vs-production manifest delta proves their slug candidate-only. It
+// is diagnostic retention, not an allowance: callers must still apply
+// isExpectedStagingCandidateBlogMetricsRequest before handling the 404.
+export function isPotentialStagingCandidateBlogMetricsRequest({
+  requestUrl,
+  method,
+  baseOrigin,
+}) {
+  let parsedUrl;
+  let expectedOrigin;
+
+  try {
+    parsedUrl = new URL(requestUrl);
+    expectedOrigin = new URL(baseOrigin).origin;
+  } catch {
+    return false;
+  }
+
+  if (parsedUrl.origin !== expectedOrigin) {
+    return false;
+  }
+
+  const normalizedMethod = String(method).toUpperCase();
+  if (
+    normalizedMethod === 'GET' &&
+    parsedUrl.pathname === '/api/blog-metrics/metrics'
+  ) {
+    return true;
+  }
+
+  if (
+    normalizedMethod === 'GET' &&
+    /^\/api\/blog-metrics\/metrics\/[^/]+$/.test(parsedUrl.pathname)
+  ) {
+    return true;
+  }
+
+  return (
+    (normalizedMethod === 'GET' &&
+      /^\/api\/blog-metrics\/articles\/[^/]+\/like$/.test(
+        parsedUrl.pathname
+      )) ||
+    (normalizedMethod === 'POST' &&
+      /^\/api\/blog-metrics\/articles\/[^/]+\/views$/.test(
+        parsedUrl.pathname
+      ))
   );
 }
 
