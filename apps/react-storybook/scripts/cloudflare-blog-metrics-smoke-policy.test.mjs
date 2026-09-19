@@ -8,6 +8,8 @@ import {
   candidateOnlyBlogSlugs,
   classifyBlogMetricsAggregateResponse,
   isBrowserResource404ConsoleError,
+  isExpectedStagingCandidateBlogMetricsRequest,
+  isPotentialStagingCandidateBlogMetricsRequest,
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
@@ -146,7 +148,162 @@ test('error envelope and batch path helpers preserve proxy contract', () => {
   );
 });
 
-test('handled aggregate 404s consume only matching browser resource noise', () => {
+test('candidate-only lag applies only to exact first-party bootstrap metrics paths', () => {
+  const baseOrigin = 'https://vellira-website-staging.vellira.workers.dev';
+  const candidateOnlySlugs = ['ai-ui-consistency'];
+  const expected = [
+    {
+      requestUrl:
+        baseOrigin +
+        '/api/blog-metrics/metrics?slug=two-runtimes&slug=ai-ui-consistency',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/metrics/ai-ui-consistency',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/ai-ui-consistency/like',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/ai-ui-consistency/views',
+      method: 'POST',
+    },
+  ];
+
+  for (const request of expected) {
+    assert.equal(
+      isExpectedStagingCandidateBlogMetricsRequest({
+        ...request,
+        baseOrigin,
+        candidateOnlySlugs,
+      }),
+      true
+    );
+  }
+
+  const unexpected = [
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/metrics?slug=two-runtimes',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/metrics/two-runtimes',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/two-runtimes/like',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/ai-ui-consistency/like',
+      method: 'PUT',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/ai-ui-consistency/like',
+      method: 'DELETE',
+    },
+    {
+      requestUrl:
+        'https://api.vellira.dev/v1/blog/metrics/ai-ui-consistency',
+      method: 'GET',
+    },
+    {
+      requestUrl: baseOrigin + '/api/unrelated/ai-ui-consistency',
+      method: 'GET',
+    },
+  ];
+
+  for (const request of unexpected) {
+    assert.equal(
+      isExpectedStagingCandidateBlogMetricsRequest({
+        ...request,
+        baseOrigin,
+        candidateOnlySlugs,
+      }),
+      false
+    );
+  }
+});
+
+test('pre-proof retention is limited to possible same-origin bootstrap requests', () => {
+  const baseOrigin = 'https://vellira-website-staging.vellira.workers.dev';
+
+  const retained = [
+    {
+      requestUrl: baseOrigin + '/api/blog-metrics/metrics?slug=unproven',
+      method: 'GET',
+    },
+    {
+      requestUrl: baseOrigin + '/api/blog-metrics/metrics/unproven',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/like',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/views',
+      method: 'POST',
+    },
+  ];
+
+  for (const request of retained) {
+    assert.equal(
+      isPotentialStagingCandidateBlogMetricsRequest({ ...request, baseOrigin }),
+      true
+    );
+    assert.equal(
+      isExpectedStagingCandidateBlogMetricsRequest({
+        ...request,
+        baseOrigin,
+        candidateOnlySlugs: [],
+      }),
+      false
+    );
+  }
+
+  const rejected = [
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/like',
+      method: 'PUT',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/like',
+      method: 'DELETE',
+    },
+    {
+      requestUrl: 'https://api.vellira.dev/v1/blog/metrics/unproven',
+      method: 'GET',
+    },
+    {
+      requestUrl: baseOrigin + '/api/unrelated/unproven',
+      method: 'GET',
+    },
+  ];
+
+  for (const request of rejected) {
+    assert.equal(
+      isPotentialStagingCandidateBlogMetricsRequest({ ...request, baseOrigin }),
+      false
+    );
+  }
+});
+
+test('handled blog metrics 404s consume only matching browser resource noise', () => {
   assert.equal(
     isBrowserResource404ConsoleError(
       'Failed to load resource: the server responded with a status of 404 ()'
@@ -193,6 +350,6 @@ test('handled aggregate 404s consume only matching browser resource noise', () =
         ['console-404-a'],
         -1
       ),
-    /non-negative integer/
+    /handledBlogMetrics404Count must be a non-negative integer/
   );
 });
