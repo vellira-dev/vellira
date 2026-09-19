@@ -27,6 +27,7 @@ import {
 } from './profiles/profiles';
 import { buildPlaygroundArtifacts } from './renderers/playground';
 import { updateComponentRegistry } from './renderers/registry';
+import { requiresGeneratedCatalogPreview } from './renderers/catalog-preview-registry';
 import { renderUsage } from './renderers/usage';
 
 const [, , componentName, ...args] = process.argv;
@@ -149,6 +150,17 @@ const velliraApiSourceRoots = getVelliraApiSourceRoots(root);
 
 const fileWriter = createFileWriter({ root, force, check });
 const { checkFailures, writeIfMissing } = fileWriter;
+const catalogPreviewFile = path.join(
+  componentCatalogDir,
+  `${componentName}CatalogPreview.tsx`
+);
+const hasHandAuthoredCatalogPreview =
+  fs.existsSync(catalogPreviewFile) &&
+  !fs.readFileSync(catalogPreviewFile, 'utf8').startsWith(generatedFileHeader);
+const generatedCatalogPreviewRequired = requiresGeneratedCatalogPreview({
+  componentPresentationRegistryFile,
+  model: { componentName, slug },
+});
 
 const {
   componentConfig,
@@ -167,7 +179,9 @@ const {
   root,
   catalogComponentsRoot,
   componentName,
-  requireRelatedDecision: true,
+  requireRelatedDecision: check,
+  requireCatalogPreviewDecision:
+    check && generatedCatalogPreviewRequired && !hasHandAuthoredCatalogPreview,
   requestedProfile,
   requestedCategory,
 });

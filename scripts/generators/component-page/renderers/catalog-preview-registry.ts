@@ -149,6 +149,22 @@ export async function synchronizeGeneratedCatalogPreview(params: {
     return;
   }
 
+  if (!params.model.catalogPreview) {
+    if (params.check) {
+      params.checkFailures.push(path.relative(params.root, previewFile));
+      return;
+    }
+
+    if (currentSource !== null) {
+      fs.rmSync(previewFile);
+      console.log(
+        `🗑 Removed incomplete catalog preview: ${path.relative(params.root, previewFile)}`
+      );
+    }
+
+    return;
+  }
+
   const expectedSource = await formatGeneratedContent(
     previewFile,
     renderGeneratedCatalogPreview({

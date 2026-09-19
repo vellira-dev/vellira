@@ -236,15 +236,18 @@ describe('component production end-to-end fixtures', () => {
       expect(generation.generatedArtifacts).toEqual(actualChangedPaths);
       expect(generation.generation.artifacts).toEqual(actualChangedPaths);
 
-      const generatedCatalogPreviewsFile =
-        'apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts';
-      expect(actualChangedPaths).toContain(generatedCatalogPreviewsFile);
-      expect(generation.generatedArtifacts).toContain(
-        generatedCatalogPreviewsFile
-      );
-      expect(actualChangedPaths).toContain(
-        `apps/website/src/component-catalog/components/${fixture.input.componentName}/${fixture.input.componentName}CatalogPreview.tsx`
-      );
+      const generatedPreviewFile = `apps/website/src/component-catalog/components/${fixture.input.componentName}/${fixture.input.componentName}CatalogPreview.tsx`;
+      expect(actualChangedPaths).not.toContain(generatedPreviewFile);
+      expect(generation.generatedArtifacts).not.toContain(generatedPreviewFile);
+      expect(
+        fs.readFileSync(
+          path.join(
+            root,
+            'apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts'
+          ),
+          'utf8'
+        )
+      ).not.toContain(`${slugify(fixture.input.componentName)}:`);
       expect(actualChangedPaths).toContain(
         'packages/metadata/src/tokenLifecycle.ts'
       );
@@ -259,10 +262,10 @@ describe('component production end-to-end fixtures', () => {
 
       await generateFixture(root, fixture);
       expectCanonicalGeneratedSurfaces(root, fixture.input);
+      expectIncompleteWebsitePresentation(root, fixture.input.componentName);
 
       if (fixture.roles.includes('intentional-divergence'))
         expectCompoundPlatformDivergence(root);
-      await expectDeterministicRegeneration(root, fixture);
       if (['compound', 'overlay'].includes(fixture.input.profile)) {
         const scaffold = await runComponentProductionStructuredValidation({
           root,
@@ -311,7 +314,10 @@ describe('component production end-to-end fixtures', () => {
       }
       if (fixture.contentGroupLabel) await completeContentGroup(root, fixture);
       if (fixture.tokenSurface) await completeTokenSurface(root, fixture);
+      await completeWebsitePresentationFixture(root, fixture);
       await regenerateFixtureDocumentation(root, fixture);
+      expectCompletedWebsitePresentation(root, fixture.input.componentName);
+      await expectDeterministicRegeneration(root, fixture);
       await expect(
         runComponentGenerator({
           root,
@@ -490,6 +496,80 @@ async function regenerateFixtureDocumentation(root: string, fixture: Fixture) {
     profile: fixture.input.profile,
     category: fixture.input.category,
   });
+}
+
+async function completeWebsitePresentationFixture(
+  root: string,
+  fixture: Fixture
+) {
+  const metadataFile = path.join(
+    root,
+    'apps/website/src/component-catalog/components',
+    fixture.input.componentName,
+    'metadata.ts'
+  );
+  const metadata = fs.readFileSync(metadataFile, 'utf8');
+
+  expect(metadata).not.toContain('related:');
+  expect(metadata).not.toContain('catalogPreview:');
+
+  fs.writeFileSync(
+    metadataFile,
+    await formatGeneratedContent(
+      metadataFile,
+      metadata.replace(
+        `profile: '${fixture.input.profile === 'base' ? 'primitive' : fixture.input.profile}',`,
+        `profile: '${fixture.input.profile === 'base' ? 'primitive' : fixture.input.profile}',\n  related: [],\n  catalogPreview: {},`
+      )
+    )
+  );
+}
+
+function expectIncompleteWebsitePresentation(
+  root: string,
+  componentName: string
+) {
+  const result = spawnSync(
+    'pnpm',
+    ['create:component-page', componentName, '--force', '--check'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      shell: false,
+      env: { ...process.env, CI: 'true' },
+    }
+  );
+  const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+
+  expect(result.status, output).not.toBe(0);
+  expect(output).toContain('related must be explicitly defined');
+}
+
+function expectCompletedWebsitePresentation(
+  root: string,
+  componentName: string
+) {
+  const slug = slugify(componentName);
+  const previewFile = path.join(
+    root,
+    'apps/website/src/component-catalog/components',
+    componentName,
+    `${componentName}CatalogPreview.tsx`
+  );
+  const preview = fs.readFileSync(previewFile, 'utf8');
+  const registry = fs.readFileSync(
+    path.join(
+      root,
+      'apps/website/src/component-catalog/registry/generatedCatalogPreviews.ts'
+    ),
+    'utf8'
+  );
+
+  expect(preview).toContain(
+    `import { ${componentName} } from '@vellira-ui/react';`
+  );
+  expect(preview).not.toMatch(/Demo|Playground/);
+  expect(registry).toContain(`${slug}: ${componentName}CatalogPreview`);
 }
 
 function runSemanticFixtureTests(root: string, fixture: Fixture) {

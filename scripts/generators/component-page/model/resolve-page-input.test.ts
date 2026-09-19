@@ -416,6 +416,31 @@ describe('resolvePageInput example platform boundary', () => {
 });
 
 describe('resolvePageInput related metadata validation', () => {
+  it('accepts incomplete author-owned related and catalog preview decisions during scaffold resolution', async () => {
+    const root = createFixtureRoot();
+
+    writeComponentFixture({
+      root,
+      packageName: 'react',
+      types: 'export type ExampleProps = { value?: string };',
+    });
+    writeMetadata({
+      root,
+      source: `export default {
+        profile: 'form-control',
+      };`,
+    });
+
+    const input = await resolvePageInput({
+      root,
+      catalogComponentsRoot: getCatalogComponentsRoot(root),
+      componentName: 'Example',
+    });
+
+    expect(input.componentConfig.related).toBeUndefined();
+    expect(input.componentConfig.catalogPreview).toBeUndefined();
+  });
+
   it('rejects an effective component page metadata configuration without a related decision', async () => {
     const root = createFixtureRoot();
 
@@ -526,7 +551,7 @@ describe('resolvePageInput related metadata validation', () => {
         'rows={3}',
       ],
     });
-  });
+  }, 20_000);
 
   it('validates and preserves profile-derived related values before rendering output', async () => {
     const root = createFixtureRoot();

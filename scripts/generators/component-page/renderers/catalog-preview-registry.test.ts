@@ -161,6 +161,33 @@ describe('generated catalog preview registry', () => {
     ).toThrow(/requires React support or a hand-authored/);
   });
 
+  it('leaves an incomplete scaffold without a generated preview or registry authority', async () => {
+    const root = createRoot();
+    const componentCatalogDir = path.join(root, 'components', 'Avatar');
+    const componentsRegistryFile = writeCatalog(root, '');
+    const previewFile = path.join(
+      componentCatalogDir,
+      'AvatarCatalogPreview.tsx'
+    );
+
+    fs.mkdirSync(componentCatalogDir, { recursive: true });
+
+    await synchronizeGeneratedCatalogPreview({
+      root,
+      check: false,
+      checkFailures: [],
+      componentCatalogDir,
+      componentPresentationRegistryFile: componentsRegistryFile,
+      model: {
+        ...createModel('Avatar', 'avatar'),
+        catalogPreview: undefined,
+      },
+      generatedFileHeader,
+    });
+
+    expect(fs.existsSync(previewFile)).toBe(false);
+  });
+
   it('materializes a missing generator-owned preview before registration', async () => {
     const root = createRoot();
     const componentCatalogDir = path.join(root, 'components', 'Avatar');
@@ -237,7 +264,10 @@ describe('generated catalog preview registry', () => {
       checkFailures,
       componentCatalogDir,
       componentPresentationRegistryFile: componentsRegistryFile,
-      model: createModel('Avatar', 'avatar'),
+      model: {
+        ...createModel('Avatar', 'avatar'),
+        catalogPreview: undefined,
+      },
       generatedFileHeader,
     });
 
