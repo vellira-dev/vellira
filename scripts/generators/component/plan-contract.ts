@@ -28,6 +28,8 @@ export async function checkGeneratedPlanContract(
       platforms,
       profile: plan.profile,
       capabilities,
+      semanticCapabilities: plan.semanticCapabilities,
+      platformSemanticCapabilities: plan.platformSemanticCapabilities,
       typeOwnership: plan.typeOwnership,
       dependencies: plan.dependencies,
       icons: plan.icons,

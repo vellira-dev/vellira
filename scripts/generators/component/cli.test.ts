@@ -195,6 +195,53 @@ describe('component generator CLI', () => {
     ]);
   });
 
+  it('parses shared and platform semantic capabilities', () => {
+    const result = parseComponentGeneratorArgs([
+      'Textarea',
+      'both',
+      'primitives',
+      'form',
+      '--profile=form-control',
+      '--control=text',
+      '--semantic-capabilities=multiline,accessible-name',
+      '--platform-semantic-capability=react:size-variants',
+      '--platform-semantic-capability=react-native:accessible-value',
+    ]);
+
+    expect(result.semanticCapabilities).toEqual([
+      'multiline',
+      'accessible-name',
+    ]);
+    expect(result.platformSemanticCapabilities).toEqual({
+      react: ['size-variants'],
+      'react-native': ['accessible-value'],
+    });
+  });
+
+  it('rejects invalid and unselected platform semantic capabilities', () => {
+    expect(() =>
+      parseComponentGeneratorArgs([
+        'Textarea',
+        'web',
+        'primitives',
+        'form',
+        '--semantic-capabilities=multiline,not-real',
+      ])
+    ).toThrow('Invalid component semantic capabilities: not-real.');
+
+    expect(() =>
+      parseComponentGeneratorArgs([
+        'Textarea',
+        'web',
+        'primitives',
+        'form',
+        '--platform-semantic-capability=react-native:accessible-name',
+      ])
+    ).toThrow(
+      'Platform semantic capabilities target unselected platform "react-native".'
+    );
+  });
+
   it('parses one icon requirement with a semantic purpose containing spaces', () => {
     const result = parseComponentGeneratorArgs([
       'Accordion',

@@ -75,6 +75,8 @@ async function writeCanonicalPlanArtifacts(plan: ComponentGenerationPlan) {
       platforms,
       profile: plan.profile,
       capabilities: resolvePlanCapabilities(plan),
+      semanticCapabilities: plan.semanticCapabilities,
+      platformSemanticCapabilities: plan.platformSemanticCapabilities,
       typeOwnership: plan.typeOwnership,
       dependencies: plan.dependencies,
       icons: plan.icons,
@@ -189,6 +191,10 @@ describe('component production contract regression matrix', () => {
       tokens: ['semantic.text.primary'],
       assets: [{ path: 'styles/probe.css', purpose: 'probe surface' }],
       componentTokens: 'disclosure',
+      semanticCapabilities: ['accessible-name', 'fallback'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
+      },
     });
 
     expect(result.typeOwnership).toBe('shared');
@@ -213,6 +219,13 @@ describe('component production contract regression matrix', () => {
       { path: 'styles/probe.css', purpose: 'probe surface' },
     ]);
     expect(result.componentTokens).toBe('disclosure');
+    expect(result.semanticCapabilities).toEqual([
+      'accessible-name',
+      'fallback',
+    ]);
+    expect(result.platformSemanticCapabilities).toEqual({
+      react: ['size-variants'],
+    });
   });
 
   it('does not invent core, shared types, or assets for a minimal base component', () => {
@@ -389,6 +402,10 @@ describe('component production contract regression matrix', () => {
       tokens: ['semantic.text.primary'],
       assets: [{ path: 'styles/probe.css', purpose: 'probe surface' }],
       componentTokens: 'disclosure',
+      semanticCapabilities: ['accessible-name', 'fallback'],
+      platformSemanticCapabilities: {
+        react: ['size-variants'],
+      },
     });
 
     await writeCanonicalPlanArtifacts(result);
@@ -401,6 +418,8 @@ describe('component production contract regression matrix', () => {
       ["'semantic.text.primary'", "'semantic.text.secondary'"],
       ["path: 'styles/probe.css'", "path: 'styles/drift.css'"],
       ["componentTokens: 'disclosure'", "componentTokens: 'standard'"],
+      ["'accessible-name'", "'announcement'"],
+      ["'size-variants'", "'value-range'"],
     ];
 
     for (const [from, to] of drifts) {
