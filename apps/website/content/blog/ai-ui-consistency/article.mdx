@@ -4,6 +4,10 @@ import { AiUiConsistencyDiagram } from '@/blog/ui/AiUiConsistencyDiagram';
 
 import banner from './banner.png';
 import visuals from './article-visuals.module.css';
+import aiVisual from './visuals/ai.png';
+import coherentSystemVisual from './visuals/coherent-system.png';
+import componentsVisual from './visuals/components.png';
+import coordinationVisual from './visuals/coordination.png';
 
 <Image
   src={banner}
@@ -63,7 +67,12 @@ AI simply increases the rate at which they can appear.
 
 If a team can create five or ten times more UI changes, the system around those changes has to become stronger too.
 
-<AiUiConsistencyDiagram />
+<AiUiConsistencyDiagram
+  aiVisual={aiVisual}
+  coherentSystemVisual={coherentSystemVisual}
+  componentsVisual={componentsVisual}
+  coordinationVisual={coordinationVisual}
+/>
 
 ## A component library is necessary. It is no longer sufficient.
 
