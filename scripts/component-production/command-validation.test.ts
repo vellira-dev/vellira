@@ -35,7 +35,8 @@ describe('componentProductionValidationCommands', () => {
       'react-build',
       'react-storybook-build',
       'component-docs',
-      'component-pages',
+      'component-page-check',
+      'component-page-audit',
     ]);
   });
 
@@ -58,7 +59,8 @@ describe('componentProductionValidationCommands', () => {
       'react-native-typecheck',
       'react-native-build',
       'component-docs',
-      'component-pages',
+      'component-page-check',
+      'component-page-audit',
     ]);
   });
 
@@ -75,6 +77,27 @@ describe('componentProductionValidationCommands', () => {
     expect(
       commands.find((command) => command.id === 'react-native-build')?.command
     ).toEqual(['pnpm', '--filter', '@vellira-ui/react-native...', 'build']);
+  });
+
+  it('scopes website validation to the exact component without the global catalog check', () => {
+    const websiteCommands = componentProductionValidationCommands({
+      ...WEB_INPUT,
+      componentName: 'Toast',
+    }).filter((command) => command.stage === 'website');
+
+    expect(websiteCommands.map((command) => command.id)).toEqual([
+      'component-page-check',
+      'component-page-audit',
+    ]);
+    expect(websiteCommands.map((command) => command.command)).toEqual([
+      ['pnpm', 'create:component-page', 'Toast', '--force', '--check'],
+      ['pnpm', 'component-pages:audit', '--component', 'Toast'],
+    ]);
+    expect(
+      websiteCommands.some((command) =>
+        command.command.includes('component-pages:check')
+      )
+    ).toBe(false);
   });
 });
 
@@ -102,7 +125,8 @@ describe('runComponentProductionCommandValidation', () => {
       'react-build',
       'react-storybook-build',
       'component-docs',
-      'component-pages',
+      'component-page-check',
+      'component-page-audit',
     ]);
 
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
@@ -135,7 +159,8 @@ describe('runComponentProductionCommandValidation', () => {
 
     expect(calls).not.toContain('react-storybook-build');
     expect(calls).toContain('component-docs');
-    expect(calls).toContain('component-pages');
+    expect(calls).toContain('component-page-check');
+    expect(calls).toContain('component-page-audit');
 
     expect(
       result.stages.find((stage) => stage.id === 'storybook')?.status
@@ -273,6 +298,37 @@ describe('runComponentProductionCommandValidation', () => {
 
     expect(build?.status).toBe('failed');
     expect(build?.findings[0]?.message).toContain('timed out');
+  });
+
+  it('keeps focused website command runtime failures blocking', () => {
+    const result = runComponentProductionCommandValidation({
+      root: '/tmp/vellira-production',
+      input: WEB_INPUT,
+      runner: (command) => {
+        if (command.id === 'component-page-audit') {
+          return {
+            exitCode: null,
+            stdout: '',
+            stderr: '',
+            timedOut: true,
+          };
+        }
+
+        return success();
+      },
+    });
+
+    const website = result.stages.find((stage) => stage.id === 'website');
+
+    expect(website?.status).toBe('failed');
+    expect(website?.findings).toEqual([
+      expect.objectContaining({
+        id: 'website:component-page-audit:runtime',
+        stage: 'website',
+        severity: 'blocking',
+      }),
+    ]);
+    expect(website?.findings[0]?.message).toContain('timed out');
   });
 
   it('fails closed when a command runner throws', () => {
