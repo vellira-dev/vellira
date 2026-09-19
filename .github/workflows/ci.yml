@@ -193,6 +193,8 @@ jobs:
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
+      - name: Test OpenNext string-export package patch
+        run: node --test apps/website/scripts/opennext-string-exports-patch.test.mjs
       - run: pnpm test:cloudflare-cache
       - name: Build actual OpenNext runtime
         env:
