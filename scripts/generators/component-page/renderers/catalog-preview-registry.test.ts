@@ -118,7 +118,13 @@ describe('generated catalog preview registry', () => {
     });
 
     expect(source).toContain("import { AvatarDemo } from './AvatarDemo';");
-    expect(source).toContain('return <AvatarDemo />;');
+    expect(source).toContain(
+      "import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';"
+    );
+    expect(source).toContain(
+      "<ComponentDemoStateProvider resetKey='catalog:avatar'>"
+    );
+    expect(source).toContain('<AvatarDemo />');
   });
 
   it('renders a native demo-backed fallback when React is unavailable', () => {
@@ -130,7 +136,10 @@ describe('generated catalog preview registry', () => {
     expect(source).toContain(
       "import { NativeNativeOnlyDemo } from './NativeNativeOnlyDemo';"
     );
-    expect(source).toContain('return <NativeNativeOnlyDemo />;');
+    expect(source).toContain(
+      "<ComponentDemoStateProvider resetKey='catalog:native-only'>"
+    );
+    expect(source).toContain('<NativeNativeOnlyDemo />');
   });
 
   it('materializes a missing generator-owned preview before registration', async () => {

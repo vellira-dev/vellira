@@ -79,10 +79,16 @@ export function renderGeneratedCatalogPreview(params: {
 
   return `${generatedFileHeader}'use client';
 
+import { ComponentDemoStateProvider } from '../../shared/ComponentDemoStateProvider';
+
 import { ${demoName} } from './${demoName}';
 
 export function ${model.componentName}CatalogPreview() {
-  return <${demoName} />;
+  return (
+    <ComponentDemoStateProvider resetKey='catalog:${model.slug}'>
+      <${demoName} />
+    </ComponentDemoStateProvider>
+  );
 }
 `;
 }

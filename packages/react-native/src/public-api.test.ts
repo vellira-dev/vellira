@@ -61,6 +61,7 @@ describe('public API', () => {
       'Select',
       'Switch',
       'Tabs',
+      'Textarea',
       'ThemeProvider',
       'Tooltip',
       'nativeThemes',

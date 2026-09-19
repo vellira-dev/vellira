@@ -99,6 +99,7 @@ function listProductionSourceFiles(root: string): string[] {
           entry.name === 'dist' ||
           entry.name === 'coverage' ||
           entry.name === '.next' ||
+          entry.name === 'storybook-static' ||
           entry.name === 'generated' ||
           child === 'packages/tokens/src/preservation'
         ) {

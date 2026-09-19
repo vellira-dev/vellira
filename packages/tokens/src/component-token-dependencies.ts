@@ -159,6 +159,13 @@ export const componentTokenDependencyAuditV1 = [
     unresolved: [],
   },
   {
+    factory: 'createTextareaTokens',
+    component: 'textarea',
+    file: 'textarea.ts',
+    primitiveColorUsage: ['none'],
+    unresolved: [],
+  },
+  {
     factory: 'createTooltipTokens',
     component: 'tooltip',
     file: 'tooltip.ts',

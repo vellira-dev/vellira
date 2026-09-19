@@ -11,6 +11,7 @@ import { radioGroupMetadata } from './RadioGroup.metadata';
 import { selectMetadata } from './Select.metadata';
 import { switchMetadata } from './Switch.metadata';
 import { tabsMetadata } from './Tabs.metadata';
+import { textareaMetadata } from './Textarea.metadata';
 import { tooltipMetadata } from './Tooltip.metadata';
 
 export {
@@ -27,6 +28,7 @@ export {
   selectMetadata,
   switchMetadata,
   tabsMetadata,
+  textareaMetadata,
   tooltipMetadata,
 };
 
@@ -45,4 +47,5 @@ export const componentMetadata = [
   tooltipMetadata,
   switchMetadata,
   accordionMetadata,
+  textareaMetadata,
 ] as const;

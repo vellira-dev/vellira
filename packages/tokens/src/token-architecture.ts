@@ -712,6 +712,12 @@ export const maintainedComponentFactories = [
     stateKeys: ['default', 'hover', 'active', 'disabled'],
   },
   {
+    name: 'createTextareaTokens',
+    source: 'packages/tokens/src/factories/components/createTextareaTokens.ts',
+    semanticAdapter: 'createTextareaTokensFromSemantics',
+    stateKeys: ['default', 'hover', 'pressed', 'error', 'disabled'],
+  },
+  {
     name: 'createTooltipTokens',
     source: 'packages/tokens/src/factories/components/createTooltipTokens.ts',
     semanticAdapter: 'createTooltipTokensFromTheme',

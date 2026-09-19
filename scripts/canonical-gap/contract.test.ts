@@ -216,7 +216,7 @@ describe('canonical gap adapters', () => {
     );
 
     expect(canonicalGapRequestFromComponentResolution(missing)).toMatchObject({
-      kind: 'component-token-reservation',
+      kind: 'component',
       canonicalTarget: 'Textarea',
       productionSeed: { componentName: 'Textarea', platform: 'both' },
     });
@@ -281,7 +281,6 @@ describe('canonical gap adapters', () => {
     );
 
     expect(batch.requests.map(({ kind }) => kind).sort()).toEqual([
-      'component-token-reservation',
       'icon',
       'token',
       'token',
@@ -290,6 +289,6 @@ describe('canonical gap adapters', () => {
       batch.requests.some(
         ({ canonicalTarget }) => canonicalTarget === 'Textarea'
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 });

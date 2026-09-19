@@ -29,6 +29,7 @@ const expectedCanonicalFactories = [
   'createSelectTokens',
   'createSwitchTokens',
   'createTabsTokens',
+  'createTextareaTokens',
   'createTooltipTokens',
 ] as const;
 

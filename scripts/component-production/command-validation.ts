@@ -77,9 +77,26 @@ export function componentProductionValidationCommands(
       timeoutMs: 120_000,
     },
     {
-      id: 'component-pages',
+      id: 'component-page-check',
       stage: 'website',
-      command: ['pnpm', 'component-pages:check'],
+      command: [
+        'pnpm',
+        'create:component-page',
+        input.componentName,
+        '--force',
+        '--check',
+      ],
+      timeoutMs: 120_000,
+    },
+    {
+      id: 'component-page-audit',
+      stage: 'website',
+      command: [
+        'pnpm',
+        'component-pages:audit',
+        '--component',
+        input.componentName,
+      ],
       timeoutMs: 120_000,
     },
   ];

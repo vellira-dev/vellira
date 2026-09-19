@@ -1154,3 +1154,26 @@ All interactive components support:
 | `forceMount` | `boolean`   | No       | Keeps this content mounted even when its item is collapsed. |
 
 <!-- api-docgen:end web.AccordionContentProps.AccordionContentProps -->
+
+## Textarea
+
+## Textarea
+
+<!-- api-docgen:start web.TextareaProps.Textarea -->
+
+| Prop               | Type                      | Required | Description                               |
+| ------------------ | ------------------------- | -------- | ----------------------------------------- |
+| `wrapperClassName` | `string`                  | No       | —                                         |
+| `label`            | `string`                  | No       | Visible label.                            |
+| `description`      | `string`                  | No       | Additional descriptive text.              |
+| `error`            | `string`                  | No       | Error message rendered for invalid state. |
+| `placeholder`      | `string`                  | No       | Placeholder text.                         |
+| `size`             | `InputSize`               | No       | Input size.                               |
+| `value`            | `string`                  | No       | Controlled value.                         |
+| `defaultValue`     | `string`                  | No       | Initial uncontrolled value.               |
+| `disabled`         | `boolean`                 | No       | Disables interaction.                     |
+| `required`         | `boolean`                 | No       | Marks the field as required.              |
+| `invalid`          | `boolean`                 | No       | —                                         |
+| `onValueChange`    | `(value: string) => void` | No       | Called when the value changes.            |
+
+<!-- api-docgen:end web.TextareaProps.Textarea -->
