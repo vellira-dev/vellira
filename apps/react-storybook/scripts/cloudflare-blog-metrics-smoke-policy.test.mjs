@@ -9,6 +9,7 @@ import {
   classifyBlogMetricsAggregateResponse,
   isBrowserResource404ConsoleError,
   isExpectedStagingCandidateBlogMetricsRequest,
+  isPotentialStagingCandidateBlogMetricsRequest,
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
@@ -229,6 +230,74 @@ test('candidate-only lag applies only to exact first-party bootstrap metrics pat
         baseOrigin,
         candidateOnlySlugs,
       }),
+      false
+    );
+  }
+});
+
+test('pre-proof retention is limited to possible same-origin bootstrap requests', () => {
+  const baseOrigin = 'https://vellira-website-staging.vellira.workers.dev';
+
+  const retained = [
+    {
+      requestUrl: baseOrigin + '/api/blog-metrics/metrics?slug=unproven',
+      method: 'GET',
+    },
+    {
+      requestUrl: baseOrigin + '/api/blog-metrics/metrics/unproven',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/like',
+      method: 'GET',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/views',
+      method: 'POST',
+    },
+  ];
+
+  for (const request of retained) {
+    assert.equal(
+      isPotentialStagingCandidateBlogMetricsRequest({ ...request, baseOrigin }),
+      true
+    );
+    assert.equal(
+      isExpectedStagingCandidateBlogMetricsRequest({
+        ...request,
+        baseOrigin,
+        candidateOnlySlugs: [],
+      }),
+      false
+    );
+  }
+
+  const rejected = [
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/like',
+      method: 'PUT',
+    },
+    {
+      requestUrl:
+        baseOrigin + '/api/blog-metrics/articles/unproven/like',
+      method: 'DELETE',
+    },
+    {
+      requestUrl: 'https://api.vellira.dev/v1/blog/metrics/unproven',
+      method: 'GET',
+    },
+    {
+      requestUrl: baseOrigin + '/api/unrelated/unproven',
+      method: 'GET',
+    },
+  ];
+
+  for (const request of rejected) {
+    assert.equal(
+      isPotentialStagingCandidateBlogMetricsRequest({ ...request, baseOrigin }),
       false
     );
   }

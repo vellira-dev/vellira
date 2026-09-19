@@ -6,6 +6,8 @@ import type {
   ComponentDependencies,
   ComponentDependencySet,
   ComponentIconRequirement,
+  ComponentPlatform,
+  ComponentSemanticCapability,
   ComponentTokenContract,
 } from '@vellira-ui/metadata';
 import type {
@@ -45,6 +47,10 @@ export type ComponentGenerationPlan = {
   control: FormControlKindArg;
   typeOwnership: ComponentTypeOwnership;
   capabilities: readonly ComponentCapability[];
+  semanticCapabilities: readonly ComponentSemanticCapability[];
+  platformSemanticCapabilities: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
+  >;
   dependencies: ComponentDependencies;
   icons: readonly ComponentIconRequirement[];
   tokens: readonly string[];
@@ -234,6 +240,8 @@ export function createComponentGenerationPlan(params: {
     control: options.control ?? 'value',
     typeOwnership,
     capabilities: options.capabilities ?? [],
+    semanticCapabilities: options.semanticCapabilities ?? [],
+    platformSemanticCapabilities: options.platformSemanticCapabilities ?? {},
     dependencies,
     icons: options.icons ?? [],
     tokens: options.tokens ?? [],

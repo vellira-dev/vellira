@@ -16,6 +16,8 @@ const plan: ComponentGenerationPlan = {
   control: 'value',
   typeOwnership: 'shared',
   capabilities: [],
+  semanticCapabilities: [],
+  platformSemanticCapabilities: {},
   dependencies: {},
   icons: [],
   assets: [],

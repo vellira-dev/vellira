@@ -7,6 +7,7 @@ import {
   classifyBlogMetricsAggregateResponse,
   isBrowserResource404ConsoleError,
   isExpectedStagingCandidateBlogMetricsRequest,
+  isPotentialStagingCandidateBlogMetricsRequest,
   parseBlogMetricsErrorCode,
   parseBlogPublicationManifest,
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
@@ -151,6 +152,12 @@ page.on('response', (response) => {
   if (response.status() === 404) {
     const method = response.request().method();
     const aggregate = isBlogAggregateMetricsResponse(response);
+    const potentialCandidateBootstrap =
+      isPotentialStagingCandidateBlogMetricsRequest({
+        requestUrl: response.url(),
+        method,
+        baseOrigin,
+      });
     const handled =
       acceptedStagingCatalogLag &&
       isExpectedStagingCandidateBlogMetricsRequest({
@@ -160,7 +167,7 @@ page.on('response', (response) => {
         candidateOnlySlugs: acceptedStagingCandidateOnlySlugs,
       });
 
-    if (aggregate || handled) {
+    if (aggregate || potentialCandidateBootstrap) {
       blogMetrics404Responses.push({
         diagnostic,
         url: response.url(),

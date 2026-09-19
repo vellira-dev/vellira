@@ -5,10 +5,21 @@ import {
   captureDiagnostics,
   waitForRoute,
 } from './cloudflare-browser-diagnostics.mjs';
+import {
+  BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
+  candidateOnlyBlogSlugs,
+  isExpectedStagingCandidateBlogMetricsRequest,
+  parseBlogPublicationManifest,
+  resolveBlogMetricsPublicationMode,
+} from './cloudflare-blog-metrics-smoke-policy.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
 if (!baseUrl) throw new Error('WEBSITE_URL is required.');
 const baseOrigin = new URL(baseUrl).origin;
+const productionBlogManifestUrl = 'https://vellira.dev/blog/manifest.json';
+const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
+  process.env.BLOG_METRICS_PUBLICATION_MODE
+);
 // With 14 component routes and 6 articles, 15 rounds with a one-second dwell
 // cross the observed 300-second router stale-time within one browser document.
 const rounds = Number(process.env.SOAK_ROUNDS ?? 15);
@@ -31,7 +42,64 @@ const page = await context.newPage();
 const directory = path.resolve(
   process.env.SOAK_ARTIFACT_DIR ?? 'test-results/cloudflare-soak'
 );
-const diagnostics = await captureDiagnostics(page, context, baseUrl, directory);
+
+async function fetchBlogPublicationSlugs(url, label) {
+  const response = await context.request.get(url, {
+    failOnStatusCode: false,
+    headers: { 'Cache-Control': 'no-cache' },
+    timeout: 10_000,
+  });
+
+  if (!response.ok()) {
+    throw new Error(
+      `${label} request failed with ${response.status()} at ${url}.`
+    );
+  }
+
+  return parseBlogPublicationManifest(await response.json(), label);
+}
+
+async function resolveCandidateOnlyStagingBlogSlugs() {
+  if (
+    blogMetricsPublicationMode !==
+    BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE
+  ) {
+    return [];
+  }
+
+  const [candidateSlugs, productionSlugs] = await Promise.all([
+    fetchBlogPublicationSlugs(
+      new URL('/blog/manifest.json', baseUrl).toString(),
+      'Staging candidate blog publication manifest'
+    ),
+    fetchBlogPublicationSlugs(
+      productionBlogManifestUrl,
+      'Production blog publication manifest'
+    ),
+  ]);
+
+  return candidateOnlyBlogSlugs(candidateSlugs, productionSlugs);
+}
+
+const candidateOnlyStagingBlogSlugs =
+  await resolveCandidateOnlyStagingBlogSlugs();
+if (candidateOnlyStagingBlogSlugs.length > 0) {
+  console.log(
+    `OK navigation soak expected staging publication catalog lag for candidate-only slugs: ${candidateOnlyStagingBlogSlugs.join(', ')}`
+  );
+}
+const diagnostics = await captureDiagnostics(page, context, baseUrl, directory, {
+  isExpected404Response:
+    candidateOnlyStagingBlogSlugs.length > 0
+      ? (response) =>
+          isExpectedStagingCandidateBlogMetricsRequest({
+            requestUrl: response.url,
+            method: response.method,
+            baseOrigin,
+            candidateOnlySlugs: candidateOnlyStagingBlogSlugs,
+          })
+      : undefined,
+});
 const sidebarSelector = 'aside[aria-label="Component navigation"]';
 const rscCachePolicyFailures = [];
 let observedRscResponses = 0;

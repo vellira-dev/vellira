@@ -3,10 +3,15 @@ import type {
   ComponentCapability,
   ComponentDependencies,
   ComponentIconRequirement,
+  ComponentPlatform,
+  ComponentSemanticCapability,
   ComponentTokenContract,
 } from '@vellira-ui/metadata';
 
-import { componentCapabilities } from '../../../packages/metadata/src/component';
+import {
+  componentCapabilities,
+  componentSemanticCapabilities,
+} from '../../../packages/metadata/src/component';
 
 export type ComponentPlatformArg = 'web' | 'native' | 'both';
 
@@ -35,6 +40,10 @@ export type ComponentGeneratorOptions = {
   profile: ComponentProfileArg;
   control?: FormControlKindArg;
   capabilities?: readonly ComponentCapability[];
+  semanticCapabilities?: readonly ComponentSemanticCapability[];
+  platformSemanticCapabilities?: Partial<
+    Record<ComponentPlatform, readonly ComponentSemanticCapability[]>
+  >;
   dependencies?: ComponentDependencies;
   icons?: readonly ComponentIconRequirement[];
   tokens?: readonly string[];
@@ -69,7 +78,7 @@ const componentNamePattern = /^[A-Z][A-Za-z0-9]*$/;
 const iconNamePattern = /^[A-Z][A-Za-z0-9]*$/;
 
 export const componentGeneratorUsage =
-  'Usage: pnpm create:component <Name> web|native|both primitives|components|patterns action|form|navigation|overlay|feedback|data-display|layout|utility [--profile=base|form-control|compound|overlay] [--control=value|boolean|text] [--capabilities=controlled,keyboard,...] [--parts=Root,Trigger,Content] [--icon=<IconName>:<semantic purpose>] [--token=<token.path>] [--component-tokens=standard|boolean-control|disclosure|none] [--force] [--dry-run] [--check]';
+  'Usage: pnpm create:component <Name> web|native|both primitives|components|patterns action|form|navigation|overlay|feedback|data-display|layout|utility [--profile=base|form-control|compound|overlay] [--control=value|boolean|text] [--capabilities=controlled,keyboard,...] [--semantic-capabilities=accessible-name,multiline,...] [--platform-semantic-capability=react:accessible-name] [--parts=Root,Trigger,Content] [--icon=<IconName>:<semantic purpose>] [--token=<token.path>] [--component-tokens=standard|boolean-control|disclosure|none] [--force] [--dry-run] [--check]';
 
 function parseIconRequirement(value: string): ComponentIconRequirement {
   const separator = value.indexOf(':');
@@ -112,6 +121,10 @@ export function parseComponentGeneratorArgs(
   let profile: ComponentProfileArg = 'base';
   let control: FormControlKindArg = 'value';
   let explicitCapabilities: ComponentCapability[] = [];
+  let explicitSemanticCapabilities: ComponentSemanticCapability[] = [];
+  const platformSemanticCapabilities: Partial<
+    Record<ComponentPlatform, ComponentSemanticCapability[]>
+  > = {};
   let force = false;
   let dryRun = false;
   let check = false;
@@ -225,6 +238,75 @@ export function parseComponentGeneratorArgs(
       continue;
     }
 
+    if (flag.startsWith('--semantic-capabilities=')) {
+      const value = flag.slice('--semantic-capabilities='.length);
+
+      if (!value.trim()) {
+        throw new Error(
+          '--semantic-capabilities must contain at least one semantic capability.'
+        );
+      }
+
+      const parsed = value
+        .split(',')
+        .map((capability) => capability.trim())
+        .filter(Boolean);
+
+      const invalid = parsed.filter(
+        (capability) =>
+          !componentSemanticCapabilities.includes(
+            capability as ComponentSemanticCapability
+          )
+      );
+
+      if (invalid.length > 0) {
+        throw new Error(
+          `Invalid component semantic capabilities: ${invalid.join(', ')}. Expected: ${componentSemanticCapabilities.join(', ')}.`
+        );
+      }
+
+      if (new Set(parsed).size !== parsed.length) {
+        throw new Error(
+          'Component semantic capabilities must not contain duplicates.'
+        );
+      }
+
+      explicitSemanticCapabilities = parsed as ComponentSemanticCapability[];
+      continue;
+    }
+
+    if (flag.startsWith('--platform-semantic-capability=')) {
+      const value = flag.slice('--platform-semantic-capability='.length);
+      const separator = value.indexOf(':');
+      const platform = value.slice(0, separator) as ComponentPlatform;
+      const capability = value.slice(separator + 1);
+
+      if (
+        separator <= 0 ||
+        (platform !== 'react' && platform !== 'react-native') ||
+        !componentSemanticCapabilities.includes(
+          capability as ComponentSemanticCapability
+        )
+      ) {
+        throw new Error(
+          '--platform-semantic-capability must use react|react-native:<semantic-capability>.'
+        );
+      }
+
+      const current = platformSemanticCapabilities[platform] ?? [];
+      if (current.includes(capability as ComponentSemanticCapability)) {
+        throw new Error(
+          `Platform semantic capabilities for ${platform} must not contain duplicates.`
+        );
+      }
+
+      platformSemanticCapabilities[platform] = [
+        ...current,
+        capability as ComponentSemanticCapability,
+      ];
+      continue;
+    }
+
     if (flag.startsWith('--parts=')) {
       const value = flag.slice('--parts='.length);
 
@@ -327,6 +409,22 @@ export function parseComponentGeneratorArgs(
     throw new Error('Token requirements must not contain duplicates.');
   }
 
+  const selectedPlatforms = new Set<ComponentPlatform>(
+    platformArg === 'both'
+      ? ['react', 'react-native']
+      : [platformArg === 'web' ? 'react' : 'react-native']
+  );
+
+  for (const semanticPlatform of Object.keys(
+    platformSemanticCapabilities
+  ) as ComponentPlatform[]) {
+    if (!selectedPlatforms.has(semanticPlatform)) {
+      throw new Error(
+        `Platform semantic capabilities target unselected platform "${semanticPlatform}".`
+      );
+    }
+  }
+
   return {
     componentName,
     platform: platformArg as ComponentPlatformArg,
@@ -335,6 +433,12 @@ export function parseComponentGeneratorArgs(
     profile,
     control,
     capabilities: explicitCapabilities,
+    ...(explicitSemanticCapabilities.length > 0
+      ? { semanticCapabilities: explicitSemanticCapabilities }
+      : {}),
+    ...(Object.keys(platformSemanticCapabilities).length > 0
+      ? { platformSemanticCapabilities }
+      : {}),
     icons,
     tokens,
     ...(componentTokens !== undefined ? { componentTokens } : {}),
