@@ -41,16 +41,27 @@ const footerSignals = [
   'Accessible foundations',
 ] as const;
 
-export function SiteFooter() {
+interface SiteFooterProps {
+  startSurface?: 'default' | 'canvas';
+}
+
+export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
   const shouldReduceMotion = useReducedMotion();
   const { theme } = useTheme();
   const logoSrc =
     theme === 'light'
-      ? '/brand/logos/logo-dark.svg'
-      : '/brand/logos/logo-light.svg';
+      ? '/brand/logos/vellira-dark.svg'
+      : '/brand/logos/vellira-light.svg';
+
+  const footerClassName = [
+    styles.footer,
+    startSurface === 'canvas' ? styles.canvasStart : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <footer className={styles.footer}>
+    <footer className={footerClassName}>
       <div className={styles.glow} aria-hidden='true' />
 
       <Container size='wide'>

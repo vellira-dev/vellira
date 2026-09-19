@@ -1,16 +1,29 @@
 .footer {
+  --footer-start-surface: var(--surface-default);
+
   position: relative;
   overflow: hidden;
   padding: var(--space-12) var(--space-6) var(--space-8);
   background: linear-gradient(
     180deg,
-    var(--surface-canvas) 0%,
-    color-mix(in srgb, var(--surface-default) 42%, var(--surface-canvas)) 16%,
-    var(--surface-default) 34%,
-    color-mix(in srgb, var(--surface-subtle) 8%, var(--surface-default)) 56%,
-    color-mix(in srgb, var(--surface-subtle) 34%, var(--surface-default)) 80%,
-    color-mix(in srgb, var(--surface-subtle) 58%, var(--surface-default)) 100%
+    var(--footer-start-surface) 0%,
+    color-mix(in srgb, var(--footer-start-surface) 90%, var(--surface-muted))
+      10%,
+    color-mix(in srgb, var(--footer-start-surface) 75%, var(--surface-muted))
+      22%,
+    color-mix(in srgb, var(--footer-start-surface) 55%, var(--surface-muted))
+      36%,
+    color-mix(in srgb, var(--footer-start-surface) 32%, var(--surface-muted))
+      50%,
+    color-mix(in srgb, var(--footer-start-surface) 15%, var(--surface-muted))
+      62%,
+    var(--surface-muted) 72%,
+    var(--surface-muted) 100%
   );
+}
+
+.canvasStart {
+  --footer-start-surface: var(--surface-canvas);
 }
 
 .glow {
