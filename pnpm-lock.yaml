@@ -41,6 +41,7 @@ overrides:
   tmp: 0.2.7
 
 patchedDependencies:
+  '@opennextjs/cloudflare@1.20.6': 4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115
   next@16.3.3: 496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b
 
 importers:
@@ -561,7 +562,7 @@ importers:
         version: 16.3.5(@mdx-js/loader@3.1.1(supports-color@10.2.2)(webpack@5.108.3(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.23)(uglify-js@3.19.3)))(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.0))
       '@opennextjs/cloudflare':
         specifier: 1.20.6
-        version: 1.20.6(next@16.3.3(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.129.0(@types/node@20.19.43))
+        version: 1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.3(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.129.0(@types/node@20.19.43))
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
@@ -14606,7 +14607,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.6(next@16.3.3(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.129.0(@types/node@20.19.43))':
+  '@opennextjs/cloudflare@1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.3(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.129.0(@types/node@20.19.43))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0

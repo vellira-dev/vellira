@@ -1,0 +1,45 @@
+diff --git a/dist/cli/build/utils/workerd.d.ts b/dist/cli/build/utils/workerd.d.ts
+index 7edbfd0c9846b303abdee57e3c3d4eac7ffff91d..a0e6c0de11abd88f446c2ef7971b2d80de852ca6 100644
+--- a/dist/cli/build/utils/workerd.d.ts
++++ b/dist/cli/build/utils/workerd.d.ts
+@@ -8,22 +8,14 @@ import type { BuildOptions } from "@opennextjs/aws/build/helper.js";
+  * @param condition The build condition to look for
+  * @returns An object with the transformed exports and a boolean indicating if the build condition was found
+  */
+-export declare function transformBuildCondition(conditionMap: {
+-    [key: string]: unknown;
+-}, condition: string): {
+-    transformedExports: {
+-        [key: string]: unknown;
+-    };
++export declare function transformBuildCondition(conditionMap: unknown, condition: string): {
++    transformedExports: unknown;
+     hasBuildCondition: boolean;
+ };
+ interface PackageJson {
+     name: string;
+-    exports?: {
+-        [key: string]: unknown;
+-    };
+-    imports?: {
+-        [key: string]: unknown;
+-    };
++    exports?: unknown;
++    imports?: unknown;
+ }
+ /**
+  *
+diff --git a/dist/cli/build/utils/workerd.js b/dist/cli/build/utils/workerd.js
+index 2567f7c3bb76d65b8703946e57c9d442814a2bc9..c196085d51977d0c2c5d329b656b0d8cfd215f51 100644
+--- a/dist/cli/build/utils/workerd.js
++++ b/dist/cli/build/utils/workerd.js
+@@ -13,6 +13,9 @@ import { getCrossPlatformPathRegex } from "@opennextjs/aws/utils/regex.js";
+  * @returns An object with the transformed exports and a boolean indicating if the build condition was found
+  */
+ export function transformBuildCondition(conditionMap, condition) {
++    if (typeof conditionMap !== "object" || conditionMap === null) {
++        return { transformedExports: conditionMap, hasBuildCondition: false };
++    }
+     const transformed = {};
+     const hasTopLevelBuildCondition = condition in conditionMap && conditionMap[condition] != null;
+     let hasBuildCondition = hasTopLevelBuildCondition;
