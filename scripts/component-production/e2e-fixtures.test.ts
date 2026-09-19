@@ -579,7 +579,7 @@ function expectIncompleteWebsitePresentation(
   const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
 
   expect(result.status, output).not.toBe(0);
-  expect(output).toContain('related must be explicitly defined');
+  expect(output).toContain('catalogPreview must be explicitly defined');
 }
 
 function expectCompletedWebsitePresentation(
