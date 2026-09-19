@@ -157,3 +157,55 @@ test('an existing heading cannot satisfy a different destination heading', async
     /Route readiness failed/
   );
 });
+
+test('an opt-in expected 404 is reconciled only with its matching resource console error', async (t) => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-browser-expected-404-test-')
+  );
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+  const context = await browser.newContext();
+  await context.route('**/*', (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/expected') {
+      return route.fulfill({ status: 404, body: 'expected' });
+    }
+    if (url.pathname === '/api/unexpected') {
+      return route.fulfill({ status: 404, body: 'unexpected' });
+    }
+    return route.fulfill({
+      contentType: 'text/html',
+      body: '<title>Fixture</title><h1>Fixture</h1>',
+    });
+  });
+  const page = await context.newPage();
+  const diagnostics = await captureDiagnostics(page, context, base, directory, {
+    isExpected404Response: (response) =>
+      response.url === `${base}/api/expected` && response.method === 'GET',
+  });
+
+  await page.goto(`${base}/fixture`);
+  await page.evaluate(() => fetch('/api/expected'));
+  await page.waitForTimeout(50);
+  assert.doesNotThrow(() => diagnostics.assertHealthy('expected 404'));
+
+  await page.evaluate(() =>
+    console.error(
+      'Failed to load resource: the server responded with a status of 404 ()'
+    )
+  );
+  await assert.rejects(
+    async () => diagnostics.assertHealthy('unmatched resource console error'),
+    /console/
+  );
+
+  await page.evaluate(() => fetch('/api/unexpected'));
+  await page.waitForTimeout(50);
+  assert.throws(
+    () => diagnostics.assertHealthy('unexpected 404'),
+    /api\/unexpected/
+  );
+});
