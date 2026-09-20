@@ -1,0 +1,75 @@
+Tracing a generic tooling contract is less about one clever parser than about keeping one decision recognizable across several layers. A field begins in an input shape, meets validation rules, becomes part of a generation plan, and is finally projected into output. If any handoff is implicit, a later edit can preserve the type declaration while quietly dropping the value or accepting a shape that downstream code was never prepared to carry.
+
+In this change, `platformSemanticCapabilities` provide concrete threads through that path. The useful lesson is not what those identifiers mean to a product. Their names are source-level anchors, and the engineering story comes from the relationships around them: where they are declared, which checks constrain input, which assignment carries a value into a plan, and which projection exposes it later. Reading those roles together turns a collection of TypeScript edits into a reviewable contract rather than a list of files.
+
+## Problem and constraint
+
+A structural contract can drift even when every individual file still looks plausible. A declaration may add a field without a parser rule. A parser may accept a value that never reaches the plan. A plan property may exist while output construction forgets to project it. Each local fragment can pass a superficial review, yet the end-to-end relationship is incomplete.
+
+The starting points here are `scripts/component-production/contracts.ts`, while parser responsibility is visible in `scripts/component-production/contracts.ts`. That separation matters because type shape and input acceptance answer different questions. Reviewers need to connect them deliberately instead of assuming that matching field names create a complete implementation.
+
+The practical constraint is therefore continuity. For each selected field, a reviewer should be able to follow a finite chain from declaration to accepted input, from input to plan, and from plan to output. Missing links should remain obvious enough to discuss in the same change, not become archaeology for the next contributor.
+
+## What changed
+
+The declaration layer now supplies explicit review anchors: `platformSemanticCapabilities` is a keyed record/map in `scripts/component-production/contracts.ts`; `semanticCapabilities` is a array-like collection in `scripts/component-production/contracts.ts`. These are structural descriptions. Their grounded declarations use keyed record/map and array-like collection as representation shapes. Product behavior, defaults, ordering, and compatibility remain separate concerns from those identifier names.
+
+That restraint improves the review. A contributor can compare each declared shape with the parser operation that consumes it and the plan property that receives it. If a shape changes, the discussion has named adjacent layers to inspect. If only a name changes, the same path exposes every direct assignment that must move with it.
+
+Treating the declaration as the start of a chain also keeps the change reusable. The article does not need to invent a domain interpretation for a field such as `platformSemanticCapabilities`. Its durable point is that a source-owned contract should remain legible as it crosses parser, planning, and projection boundaries.
+
+## How it works
+
+`semanticCapabilities` is read in `scripts/component-production/contracts.ts` and compared with an explicit source-owned vocabulary; duplicate entries are rejected there. Vocabulary validation confines accepted values to the explicit collection owned by the source. That parser decision is separate from the later plan and output relationships.
+
+For a parser change, trace the field access to the helper that performs the membership check. Compare that collection with the declaration before broadening what the input accepts.
+
+A focused case can then cover the newly accepted value or its rejection. Keeping that case near the vocabulary boundary gives review a precise place to inspect.
+
+The local evidence carries `platformSemanticCapabilities` from the input contract into a generation plan through a direct assignment. That short handoff gives review a named comparison point: the input property and plan property can be inspected together rather than inferred from matching text.
+
+This section establishes the plan handoff, not a later output relationship. Keep projection in its own source-backed section so a direct assignment is not mistaken for proof that a consumer exposes the same property. That separation makes a missing final handoff visible instead of silently extending the authority of this claim.
+
+For review, compare the parsed value with the plan property at this handoff. If those values diverge, the fault is in acceptance or propagation; a later output difference needs its own projection evidence. Keeping that distinction explicit prevents a plan-only change from silently taking responsibility for a consumer.
+
+## Failure modes and edge cases
+
+`platformSemanticCapabilities` rejects entries outside the selected scope set in `scripts/component-production/contracts.ts`. This later scope check keeps participation policy separate from ordinary collection membership. It names the guard a reviewer should revisit when the chosen operation changes.
+
+Review the selected-scope comparison as its own policy decision, even when the surrounding parser still accepts the same object shape. That keeps a changed operation from looking like a harmless structural edit.
+
+Place a focused rejection case beside this guard for a plausible key outside the selected scope. The case makes the participation rule available for later maintenance.
+
+For scenario navigation through assertion inspection, the selected rejection-oriented scenario labels are rejects invalid, duplicate, and unselected semantic capability evidence and rejects invalid and unselected platform semantic capabilities.
+
+Assertion inspection keeps duplicate-handling coverage scenario and selected-participation coverage scenario visible within scenario navigation without extending the labels beyond static coverage intent.
+
+Within scenario navigation, use assertion inspection to inspect the named cases alongside changed source and leave behavioral conclusions to independently grounded implementation evidence.
+
+## Integration and enforcement
+
+For scenario navigation, source comparison uses the static coverage name parses and forwards shared and platform semantic capability evidence. Source comparison treats the static scenario named “parses and forwards shared and platform semantic capability evidence” as a propagation and forwarding coverage scenario within scenario navigation.
+
+Scenario navigation keeps source comparison tied to “parses and forwards shared and platform semantic capability evidence” and the named assertion, while implementation evidence remains responsible for every behavioral conclusion.
+
+## Maintenance implications
+
+For scenario navigation, boundary review uses the static coverage name parses shared and platform semantic capabilities. Boundary review treats the static scenario named “parses shared and platform semantic capabilities” as a input-parsing coverage scenario within scenario navigation.
+
+Scenario navigation keeps boundary review tied to “parses shared and platform semantic capabilities” and the named assertion, while implementation evidence remains responsible for every behavioral conclusion.
+
+## Practical takeaway
+
+This later flow group records `platformSemanticCapabilities` leaving a plan property in deterministic output construction in `scripts/generators/component/docs.ts`. The named consumer gives review a final handoff to inspect.
+
+Compare the plan property with the output property at this point in the chain. A difference belongs to projection and should be reviewed at that source boundary.
+
+Keep the change focused on this projection and its nearby coverage. Earlier parser and plan assignments need their own source-backed explanation.
+
+## Current limitations
+
+The material limitation is about authority and observation. The relationships described here come from changed TypeScript declarations, parser structure, direct assignments, output projection, and static test titles. That scope can establish a reviewable source contract, but it does not prove that every runtime path executes, that every possible input is covered, or that an external consumer behaves correctly.
+
+There is a deliberate trade-off in relying on explicit handoffs. The extra declarations and assignments require coordinated maintenance when fields move, yet they make drift visible at review time. Hiding the same relationships behind inference would reduce local repetition while making ownership of validation and projection harder to find.
+
+Keep that boundary intact when extending the contract. A new field needs its own source-backed path and focused cases. Similarity to an existing identifier is not authority to claim the same validation, propagation, output behavior, or operational guarantee.

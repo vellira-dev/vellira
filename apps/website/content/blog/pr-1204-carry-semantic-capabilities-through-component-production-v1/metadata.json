@@ -1,0 +1,9 @@
+{
+  "title": "Carry semantic capabilities through Component Production V1",
+  "description": "How Vellira traces `platformSemanticCapabilities` through declaration, parser validation, generation planning, and deterministic output projection.",
+  "slug": "pr-1204-carry-semantic-capabilities-through-component-production-v1",
+  "publishedAt": "2026-09-19",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}
