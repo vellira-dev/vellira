@@ -9,7 +9,7 @@ export const velliraUiUsageExceptions = [
   {
     ruleId: 'vellira-ui.existing-component-bypass',
     path: 'apps/website/src/blog/ui/BlogNewsletterSignup.tsx',
-    line: 37,
+    line: 38,
     detected: 'input',
     category: 'architectural-exception',
     reason:
@@ -19,7 +19,7 @@ export const velliraUiUsageExceptions = [
   {
     ruleId: 'vellira-ui.existing-component-bypass',
     path: 'apps/website/src/blog/ui/BlogNewsletterSignup.tsx',
-    line: 47,
+    line: 48,
     detected: 'button',
     category: 'architectural-exception',
     reason:

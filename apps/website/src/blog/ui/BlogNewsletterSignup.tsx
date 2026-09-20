@@ -30,6 +30,7 @@ export function BlogNewsletterSignup() {
             method='post'
           >
             <div className={styles.actions}>
+              <input type='hidden' name='embed' value='1' />
               <div className={styles.field}>
                 <label className={styles.label} htmlFor='blog-newsletter-email'>
                   Email address
