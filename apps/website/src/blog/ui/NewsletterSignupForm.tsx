@@ -1,6 +1,5 @@
 'use client';
 
-import { Info } from '@vellira-ui/icons';
 import { Button, FormField, Input, Portal, Tooltip } from '@vellira-ui/react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
@@ -103,18 +102,12 @@ export function NewsletterSignupForm() {
         error={error}
         bindControl={false}
         labelInfo={
-          <Tooltip placement='top'>
-            <Tooltip.Trigger asChild>
-              <Button
-                type='button'
-                appearance='bare'
-                color='neutral'
-                size='sm'
-                shape='rounded'
-                iconOnly
-                aria-label='Newsletter email privacy information'
-                iconStart={<Info aria-hidden='true' />}
-              />
+          <Tooltip placement='top' delay={0}>
+            <Tooltip.Trigger
+              className={styles.infoTrigger}
+              aria-label='Newsletter email privacy information'
+            >
+              <span aria-hidden='true'>i</span>
             </Tooltip.Trigger>
             <Portal>
               <Tooltip.Content withArrow>
@@ -123,6 +116,9 @@ export function NewsletterSignupForm() {
             </Portal>
           </Tooltip>
         }
+        message=' '
+        messageClassName={styles.idleMessage}
+        errorClassName={styles.errorMessage}
       >
         <div className={styles.controlRow}>
           <Input
