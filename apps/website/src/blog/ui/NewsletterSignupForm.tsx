@@ -98,9 +98,9 @@ export function NewsletterSignupForm() {
     <form noValidate onSubmit={handleSubmit} aria-busy={isSubmitting}>
       <FormField
         label='Email address'
-        required
         error={error}
         bindControl={false}
+        className={styles.field}
         labelInfo={
           <Tooltip placement='top' delay={0}>
             <Tooltip.Trigger
@@ -125,6 +125,7 @@ export function NewsletterSignupForm() {
             ref={inputRef}
             name='email'
             type='email'
+            required
             autoComplete='email'
             placeholder='you@example.com'
             value={email}

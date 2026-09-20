@@ -3,6 +3,11 @@
 }
 
 .card {
+  --newsletter-feedback-height: calc(
+    var(--form-field-size-md-helper-text-line-height) * 2
+  );
+  --newsletter-form-gap: var(--form-field-size-md-gap);
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
   align-items: end;
@@ -76,6 +81,26 @@
 
 .button {
   flex: 0 0 auto;
+}
+
+@media (width > 720px) {
+  .card {
+    padding-block-end: max(
+      clamp(28px, 5vw, 48px),
+      calc(var(--newsletter-feedback-height) + var(--newsletter-form-gap))
+    );
+  }
+
+  .field {
+    position: relative;
+  }
+
+  .idleMessage,
+  .errorMessage {
+    position: absolute;
+    inset-block-start: calc(100% + var(--newsletter-form-gap));
+    inset-inline: 0;
+  }
 }
 
 .idleMessage,

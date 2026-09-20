@@ -76,15 +76,13 @@ describe('newsletter status pages', () => {
     expect(form).toHaveAttribute('novalidate');
     expect(form).not.toHaveAttribute('action');
     expect(form.querySelector('input[name="embed"]')).toBeNull();
-    expect(form.querySelector('input[name="email"]')).toHaveAttribute(
-      'type',
-      'email'
-    );
-    expect(form.querySelector('input[name="email"]')).toHaveAttribute(
-      'autocomplete',
-      'email'
-    );
-    expect(form.querySelector('input[name="email"]')).toBeRequired();
+    const emailInput = form.querySelector('input[name="email"]');
+    expect(emailInput).toHaveAttribute('type', 'email');
+    expect(emailInput).toHaveAttribute('autocomplete', 'email');
+    expect(emailInput).toBeRequired();
+    const emailLabel = form.querySelector(`label[for="${emailInput?.id}"]`);
+    expect(emailLabel).toHaveTextContent('Email address');
+    expect(emailLabel).not.toHaveTextContent('*');
     expect(form.querySelector('button[type="submit"]')).toHaveTextContent(
       'Subscribe'
     );

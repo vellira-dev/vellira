@@ -16,7 +16,7 @@ export function BlogNewsletterSignup() {
             <h2 id='blog-newsletter-heading' className={styles.heading}>
               Keep up with Vellira
             </h2>
-            <p className={styles.description}>
+            <p className={styles.description} data-newsletter-description>
               Engineering notes on design systems, React, React Native,
               developer tooling, accessibility, and automation.
             </p>
