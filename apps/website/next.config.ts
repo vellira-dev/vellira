@@ -1,9 +1,12 @@
 import createMDX from '@next/mdx';
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 import type { NextConfig } from 'next';
 import { deploymentIdentity } from './cloudflare/build-identity.mjs';
 
 const withMDX = createMDX({});
 const deploymentBuildId = deploymentIdentity();
+
+void initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   devIndicators: false,

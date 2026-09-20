@@ -12,6 +12,10 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 import type { BlogArticleMetadata } from '../../apps/website/src/blog';
 import { BlogIndex } from '../../apps/website/src/blog/ui';
 

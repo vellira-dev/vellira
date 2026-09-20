@@ -11,6 +11,10 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 import type { BlogArticleMetadata } from '../../apps/website/src/blog';
 import { BlogIndex } from '../../apps/website/src/blog/ui';
 
@@ -30,14 +34,14 @@ function createArticle(
 }
 
 function installMetricsFetch() {
-  const fetchMock = vi.fn(
-    async (_input: RequestInfo | URL) =>
-      ({
-        ok: true,
-        status: 200,
-        json: async () => ({ items: [] }),
-      }) as Response
-  );
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    void input;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [] }),
+    } as Response;
+  });
 
   vi.stubGlobal('fetch', fetchMock);
 
