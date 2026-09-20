@@ -17,6 +17,7 @@ import {
 } from '../topicFilters';
 import { BlogMetricsDisplay } from './BlogMetricsDisplay';
 import { formatBlogDate } from './formatBlogDate';
+import { BlogNewsletterSignup } from './BlogNewsletterSignup';
 
 import styles from './BlogExperience.module.css';
 import searchStyles from './BlogIndexSearch.module.css';
@@ -472,6 +473,7 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
           )}
         </Container>
       </section>
+      <BlogNewsletterSignup />
     </main>
   );
 }

@@ -5,6 +5,7 @@ import type { BlogArticle, BlogArticleMetadata } from '@/blog';
 import { BlogArticleActions } from './BlogArticleActions';
 import { BlogContinueReading } from './BlogContinueReading';
 import { formatBlogDate } from './formatBlogDate';
+import { BlogNewsletterSignup } from './BlogNewsletterSignup';
 
 import responsive from './BlogArticleResponsive.module.css';
 import styles from './BlogExperience.module.css';
@@ -87,6 +88,7 @@ export function BlogArticleView({
           <BlogContinueReading articles={relatedArticles} />
         </Container>
       </article>
+      <BlogNewsletterSignup />
     </main>
   );
 }
