@@ -2,9 +2,8 @@
 
 ## CI enforcement rollout
 
-Component Quality Checker V1 initially runs in advisory mode so the rule set can
-be calibrated against real repository changes before quality failures become
-blocking.
+Normal PR CI currently runs Component Quality in blocking mode. The staged
+advisory rollout described below is retained as historical context.
 
 ### Advisory mode
 
@@ -46,6 +45,15 @@ rule implementations.
 - Runtime/configuration errors block CI with exit code `2`.
 - `not-applicable` remains neutral.
 - Machine-readable reports continue to be retained.
+
+### Current normal PR CI enforcement
+
+`COMPONENT_QUALITY_ENFORCEMENT=blocking`
+
+- `PASS` is non-blocking.
+- `WARN` is non-blocking.
+- `FAIL` is blocking.
+- Runtime/configuration errors are blocking.
 
 ### CI report
 
