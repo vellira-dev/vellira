@@ -336,6 +336,7 @@ describe('Vellira UI usage audit', () => {
 
     const report = runVelliraUiUsageCheck(root, {
       authorities: AUTHORITIES,
+      exceptions: [],
     });
 
     expect(report).toMatchObject({
