@@ -53,6 +53,22 @@ function normalized(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+function allowsWorkflowRun(params: {
+  name: string;
+  event: string;
+  conclusion: string;
+  repository: string;
+  sourceRepository: string;
+}) {
+  if (params.repository !== params.sourceRepository) return false;
+  return (
+    (params.name === 'CI' && params.event === 'pull_request') ||
+    (params.name === 'Component Production' &&
+      params.event === 'workflow_dispatch' &&
+      params.conclusion === 'success')
+  );
+}
+
 function assertSecurityContract(raw: string) {
   const source = raw.replace(/^\s*#.*$/gm, '');
   expect(normalized(topLevel(source, 'permissions'))).toBe(
@@ -73,7 +89,7 @@ function assertSecurityContract(raw: string) {
   );
   expect(source).toContain('if [[ "$SOURCE_CONCLUSION" != success ]]');
   expect(normalized(source)).toContain(
-    "if: >- github.event_name != 'workflow_run' || (github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.head_repository.full_name == github.repository)"
+    "if: >- github.event_name != 'workflow_run' || (github.event.workflow_run.head_repository.full_name == github.repository && ((github.event.workflow_run.name == 'CI' && github.event.workflow_run.event == 'pull_request') || (github.event.workflow_run.name == 'Component Production' && github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.conclusion == 'success')))"
   );
   expect(normalized(topLevel(source, 'concurrency'))).toBe(
     'group: canonical-gap-orchestrator cancel-in-progress: false'
@@ -217,6 +233,71 @@ function assertSecurityContract(raw: string) {
 
 it('enforces the complete trusted orchestration security contract', () =>
   assertSecurityContract(workflow));
+
+it.each([
+  [
+    'CI pull request',
+    'CI',
+    'pull_request',
+    'success',
+    'vellira-dev/vellira',
+    true,
+  ],
+  [
+    'Component Production dispatch success',
+    'Component Production',
+    'workflow_dispatch',
+    'success',
+    'vellira-dev/vellira',
+    true,
+  ],
+  [
+    'Component Production dispatch failure',
+    'Component Production',
+    'workflow_dispatch',
+    'failure',
+    'vellira-dev/vellira',
+    false,
+  ],
+  [
+    'Component Production pull request',
+    'Component Production',
+    'pull_request',
+    'success',
+    'vellira-dev/vellira',
+    false,
+  ],
+  [
+    'CI dispatch',
+    'CI',
+    'workflow_dispatch',
+    'success',
+    'vellira-dev/vellira',
+    false,
+  ],
+  ['cross repository', 'CI', 'pull_request', 'success', 'fork/vellira', false],
+  [
+    'unsupported workflow',
+    'Other',
+    'pull_request',
+    'success',
+    'vellira-dev/vellira',
+    false,
+  ],
+] as const)(
+  'allows only trusted workflow_run source: %s',
+  (_label, name, event, conclusion, sourceRepository, expected) => {
+    expect(
+      allowsWorkflowRun({
+        name,
+        event,
+        conclusion,
+        sourceRepository,
+        repository: 'vellira-dev/vellira',
+      })
+    ).toBe(expected);
+  }
+);
 
 it.each([
   ['contents: read', 'contents: write'],

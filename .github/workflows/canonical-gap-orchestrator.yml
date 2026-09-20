@@ -34,8 +34,12 @@ jobs:
     name: Route canonical gaps
     if: >-
       github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.event == 'pull_request' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       ((github.event.workflow_run.name == 'CI' &&
+         github.event.workflow_run.event == 'pull_request') ||
+        (github.event.workflow_run.name == 'Component Production' &&
+         github.event.workflow_run.event == 'workflow_dispatch' &&
+         github.event.workflow_run.conclusion == 'success')))
     runs-on: ubuntu-latest
 
     steps:
