@@ -1,0 +1,110 @@
+name: Component Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact 40-character repository revision containing the candidate specification.
+        required: true
+        type: string
+      spec_path:
+        description: Tracked repository-relative Component Production V1 specification path.
+        required: true
+        type: string
+      launch_critical:
+        description: Preserve launch-critical routing intent in the signed artifact context.
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: component-production-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    name: Produce canonical Component Production report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate exact source input
+        shell: bash
+        env:
+          SOURCE_HEAD_SHA: ${{ inputs.source_sha }}
+          SPEC_PATH: ${{ inputs.spec_path }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ -n "$SPEC_PATH" && "$SPEC_PATH" != /* && "$SPEC_PATH" != *..* && "$SPEC_PATH" != *\\* ]]
+
+      - name: Checkout exact trusted source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Verify exact source and canonical specification
+        shell: bash
+        env:
+          SOURCE_HEAD_SHA: ${{ inputs.source_sha }}
+          SPEC_PATH: ${{ inputs.spec_path }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD_SHA"
+          git ls-files --error-unmatch -- "$SPEC_PATH"
+          test -f "$SPEC_PATH"
+          test ! -L "$SPEC_PATH"
+
+      - name: Install trusted production dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run canonical Component Production
+        id: production
+        shell: bash
+        env:
+          SPEC_PATH: ${{ inputs.spec_path }}
+        run: |
+          set -uo pipefail
+          mkdir -p .artifacts/component-production
+          report=.artifacts/component-production/production-report.json
+          pnpm --silent component-production:json --spec "$SPEC_PATH" > "$report"
+          status=$?
+          if [[ "$status" -gt 1 ]]; then
+            exit "$status"
+          fi
+          node -e "const value=require('fs').readFileSync('$report','utf8'); const result=JSON.parse(value); if (result.schemaVersion !== '1' || !result.input || !['ready','blocked','failed'].includes(result.status) || typeof result.readyForReview !== 'boolean') process.exit(2); if ($status === 1 && result.status !== 'blocked') process.exit(2);"
+          echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Bind routing context to exact report bytes
+        if: always()
+        shell: bash
+        env:
+          SOURCE_HEAD_SHA: ${{ inputs.source_sha }}
+          LAUNCH_CRITICAL: ${{ inputs.launch_critical }}
+        run: |
+          set -euo pipefail
+          report=.artifacts/component-production/production-report.json
+          test -f "$report"
+          test ! -L "$report"
+          digest="$(sha256sum "$report" | awk '{print $1}')"
+          SOURCE_HEAD_SHA="$SOURCE_HEAD_SHA" LAUNCH_CRITICAL="$LAUNCH_CRITICAL" REPORT_SHA256="$digest" node -e "process.stdout.write(JSON.stringify({schemaVersion:'1',repository:process.env.GITHUB_REPOSITORY,sourceRevision:process.env.SOURCE_HEAD_SHA,reportSha256:process.env.REPORT_SHA256,launchCritical:process.env.LAUNCH_CRITICAL === 'true'})+'\\n')" > .artifacts/component-production/routing-context.json
+
+      - name: Upload canonical Component Production report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: component-production-${{ inputs.source_sha }}
+          path: |
+            .artifacts/component-production/production-report.json
+            .artifacts/component-production/routing-context.json
+          if-no-files-found: error
+          retention-days: 14
