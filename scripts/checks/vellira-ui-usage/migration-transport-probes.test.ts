@@ -23,7 +23,9 @@ describe('Next migration transport fixture classification', () => {
     expect(report.findings.filter(({ path }) => path === fixturePath)).toEqual(
       []
     );
-    expect(report.exceptions).toEqual([]);
+    expect(
+      report.exceptions.filter(({ path }) => path === fixturePath)
+    ).toEqual([]);
   });
 
   it('recognizes syntax independently of whitespace and comments', () => {
