@@ -22,6 +22,9 @@ function assertStablePosition(before, after, controlName) {
 async function controlTops(form) {
   return form.evaluate((element) => ({
     label: element.querySelector('label')?.getBoundingClientRect().top,
+    controlRow: element
+      .querySelector('[data-newsletter-control-row]')
+      ?.getBoundingClientRect().top,
     email: element.querySelector('input[name="email"]')?.getBoundingClientRect()
       .top,
     subscribe: Array.from(element.querySelectorAll('button'))
@@ -37,11 +40,32 @@ async function newsletterLayoutMetrics(card) {
       element.ownerDocument.defaultView.getComputedStyle(element);
     const leftContent = element.firstElementChild?.getBoundingClientRect();
     const form = element.querySelector('form')?.getBoundingClientRect();
+    const description = element
+      .querySelector('[data-newsletter-description]')
+      ?.getBoundingClientRect();
     const label = element.querySelector('form label')?.getBoundingClientRect();
     const controls = element
       .querySelector('[data-newsletter-control-row]')
       ?.getBoundingClientRect();
-    if (!leftContent || !form || !label || !controls)
+    const input = element
+      .querySelector('input[name="email"]')
+      ?.getBoundingClientRect();
+    const subscribe = Array.from(element.querySelectorAll('button'))
+      .find((button) => button.textContent?.trim() === 'Subscribe')
+      ?.getBoundingClientRect();
+    const message = element
+      .querySelector('[id$="-message"], [id$="-error"]')
+      ?.getBoundingClientRect();
+    if (
+      !leftContent ||
+      !form ||
+      !description ||
+      !label ||
+      !controls ||
+      !input ||
+      !subscribe ||
+      !message
+    )
       throw new Error('Newsletter cluster is incomplete');
 
     const top = Math.min(label.top, controls.top);
@@ -58,6 +82,11 @@ async function newsletterLayoutMetrics(card) {
         bottom: leftContent.bottom,
         height: leftContent.height,
       },
+      description: {
+        top: description.top,
+        bottom: description.bottom,
+        height: description.height,
+      },
       form: {
         top: form.top,
         bottom: form.bottom,
@@ -73,6 +102,24 @@ async function newsletterLayoutMetrics(card) {
         bottom,
         height: bottom - top,
       },
+      controlRow: {
+        top: controls.top,
+        bottom: controls.bottom,
+        height: controls.height,
+      },
+      input: {
+        top: input.top,
+        bottom: input.bottom,
+      },
+      subscribe: {
+        top: subscribe.top,
+        bottom: subscribe.bottom,
+      },
+      message: {
+        top: message.top,
+        bottom: message.bottom,
+        height: message.height,
+      },
     };
   });
 }
@@ -80,6 +127,30 @@ async function newsletterLayoutMetrics(card) {
 async function messageHeight(form) {
   const message = form.locator('[id$="-error"]');
   return message.evaluate((element) => element.getBoundingClientRect().height);
+}
+
+function assertFeedbackContained(layoutMetrics) {
+  assert.ok(
+    layoutMetrics.message.top >= layoutMetrics.controlRow.bottom,
+    'newsletter message is not below the control row'
+  );
+  assert.ok(
+    layoutMetrics.message.bottom <= layoutMetrics.card.bottom - 1,
+    'newsletter message overlaps the card border'
+  );
+}
+
+function assertDesktopAlignment(layoutMetrics) {
+  assert.ok(
+    layoutMetrics.formPaddingBlockStart === 0,
+    'newsletter form has an unexpected top balancing lane'
+  );
+  assert.ok(
+    Math.abs(
+      layoutMetrics.controlRow.bottom - layoutMetrics.description.bottom
+    ) <= 1,
+    'newsletter control row does not align with the description bottom'
+  );
 }
 
 async function restoreScrollPosition(page, scrollY) {
@@ -129,17 +200,9 @@ async function checkViewport(viewport) {
 
     const layoutMetrics = await newsletterLayoutMetrics(card);
     if (viewport.width >= 1000) {
-      assert.ok(
-        layoutMetrics.formPaddingBlockStart === 0,
-        'newsletter form has an unexpected top balancing lane'
-      );
-      const contentBottom =
-        layoutMetrics.card.bottom - layoutMetrics.cardPaddingBottom;
-      assert.ok(
-        Math.abs(layoutMetrics.form.bottom - contentBottom) <= 1,
-        'newsletter form is not naturally aligned to the card content end'
-      );
+      assertDesktopAlignment(layoutMetrics);
     }
+    assertFeedbackContained(layoutMetrics);
 
     const idleMessage = form.locator('[id$="-message"]');
     const idleMessageMetrics = await idleMessage.evaluate((element) => {
@@ -163,6 +226,9 @@ async function checkViewport(viewport) {
       form.getByText('Enter your email address.', { exact: true })
     ).toBeVisible();
     const emptyMessageHeight = await messageHeight(form);
+    const emptyLayoutMetrics = await newsletterLayoutMetrics(card);
+    assertFeedbackContained(emptyLayoutMetrics);
+    if (viewport.width >= 1000) assertDesktopAlignment(emptyLayoutMetrics);
     assert.ok(
       emptyMessageHeight <= idleMessageMetrics.height + 1,
       `empty error exceeds the reserved message area: ${emptyMessageHeight}px > ${idleMessageMetrics.height}px`
@@ -175,6 +241,11 @@ async function checkViewport(viewport) {
         beforeEmpty.label,
         afterEmpty.label,
         'Newsletter label'
+      ),
+      controlRow: assertStablePosition(
+        beforeEmpty.controlRow,
+        afterEmpty.controlRow,
+        'Newsletter control row'
       ),
       email: assertStablePosition(
         beforeEmpty.email,
@@ -209,6 +280,9 @@ async function checkViewport(viewport) {
     await subscribe.click();
     await expect(form.getByText(longestError, { exact: true })).toBeVisible();
     const longestMessageHeight = await messageHeight(form);
+    const longestLayoutMetrics = await newsletterLayoutMetrics(card);
+    assertFeedbackContained(longestLayoutMetrics);
+    if (viewport.width >= 1000) assertDesktopAlignment(longestLayoutMetrics);
     assert.ok(
       longestMessageHeight <= idleMessageMetrics.height + 1,
       `longest error exceeds the reserved message area: ${longestMessageHeight}px > ${idleMessageMetrics.height}px`
@@ -221,6 +295,11 @@ async function checkViewport(viewport) {
         beforeLongest.label,
         afterLongest.label,
         'Newsletter label'
+      ),
+      controlRow: assertStablePosition(
+        beforeLongest.controlRow,
+        afterLongest.controlRow,
+        'Newsletter control row'
       ),
       email: assertStablePosition(
         beforeLongest.email,
@@ -242,6 +321,8 @@ async function checkViewport(viewport) {
         idleMessageMetrics.height / idleMessageMetrics.lineHeight,
       emptyMessageHeight,
       longestMessageHeight,
+      emptyMessage: emptyLayoutMetrics.message,
+      longestMessage: longestLayoutMetrics.message,
       emptyDeltas,
       longestDeltas,
     });
