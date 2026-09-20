@@ -116,6 +116,8 @@ describe('newsletter status pages', () => {
     expect(
       screen.getByText('Enter a valid email address.')
     ).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.getAttribute('aria-describedby')).toMatch(/-error/);
 
     fireEvent.change(input, { target: { value: 'valid@example.com' } });
     expect(
