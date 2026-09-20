@@ -2,7 +2,7 @@ name: Canonical Gap Orchestrator
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, Component Production]
     types: [completed]
   push:
     branches: [main]
@@ -34,8 +34,12 @@ jobs:
     name: Route canonical gaps
     if: >-
       github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.event == 'pull_request' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       ((github.event.workflow_run.name == 'CI' &&
+         github.event.workflow_run.event == 'pull_request') ||
+        (github.event.workflow_run.name == 'Component Production' &&
+         github.event.workflow_run.event == 'workflow_dispatch' &&
+         github.event.workflow_run.conclusion == 'success')))
     runs-on: ubuntu-latest
 
     steps:
@@ -66,30 +70,58 @@ jobs:
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
           SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          SOURCE_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          SOURCE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
           set -euo pipefail
           mkdir -p .artifacts/canonical-gap
           report_path=.artifacts/canonical-gap/report.json
+          context_path=.artifacts/canonical-gap/source.json
+          report_kind=report
+          launch_critical=false
+          source_revision=
 
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            if [[ -z "$SOURCE_PR_NUMBER" ]]; then
+            if [[ "$SOURCE_WORKFLOW_NAME" == CI && -z "$SOURCE_PR_NUMBER" ]]; then
               echo "::warning::CI workflow_run did not expose an associated pull request."
               echo "ready=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
-            current_head="$(
-              gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" --jq '.head.sha'
-            )"
-            if [[ "$current_head" != "$SOURCE_HEAD_SHA" ]]; then
-              echo "::warning::Ignoring stale CI run $SOURCE_RUN_ID at $SOURCE_HEAD_SHA; PR #$SOURCE_PR_NUMBER is now at $current_head."
-              echo "ready=false" >> "$GITHUB_OUTPUT"
-              exit 0
+            if [[ "$SOURCE_WORKFLOW_NAME" == CI ]]; then
+              current_head="$(
+                gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" --jq '.head.sha'
+              )"
+              if [[ "$current_head" != "$SOURCE_HEAD_SHA" ]]; then
+                echo "::warning::Ignoring stale CI run $SOURCE_RUN_ID at $SOURCE_HEAD_SHA; PR #$SOURCE_PR_NUMBER is now at $current_head."
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
             fi
 
             download_dir="$RUNNER_TEMP/canonical-gap-source"
             mkdir -p "$download_dir"
-            artifact_name="vellira-ui-usage-$SOURCE_HEAD_SHA"
+            case "$SOURCE_WORKFLOW_NAME" in
+              CI)
+                artifact_name="vellira-ui-usage-$SOURCE_HEAD_SHA"
+                source_name=report.json
+                ;;
+              'Component Production')
+                if [[ "$SOURCE_CONCLUSION" != success ]]; then
+                  echo "::warning::Component Production did not complete successfully."
+                  echo "ready=false" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                artifact_name="component-production-$SOURCE_HEAD_SHA"
+                source_name=production-report.json
+                report_kind=production-report
+                ;;
+              *)
+                echo "::warning::Unsupported workflow_run source: $SOURCE_WORKFLOW_NAME"
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
 
             set +e
             gh run download "$SOURCE_RUN_ID" \
@@ -105,7 +137,7 @@ jobs:
               exit 0
             fi
 
-            source_report="$download_dir/report.json"
+            source_report="$download_dir/$source_name"
             if [[ ! -f "$source_report" || -L "$source_report" ]]; then
               echo "::warning::Downloaded canonical gap source artifact did not contain a regular report.json."
               echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -113,13 +145,39 @@ jobs:
             fi
 
             cp "$source_report" "$report_path"
+            if [[ "$report_kind" == production-report ]]; then
+              source_context="$download_dir/routing-context.json"
+              if [[ ! -f "$source_context" || -L "$source_context" ]]; then
+                echo "::warning::Component Production routing context was unavailable."
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              report_sha256="$(shasum -a 256 "$report_path" | awk '{print $1}')"
+              launch_critical="$(REPORT_SHA256="$report_sha256" node --input-type=module -e '
+                import fs from "node:fs";
+                const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+                if (!value || value.schemaVersion !== "1" || value.repository !== process.env.GITHUB_REPOSITORY || value.sourceRevision !== process.env.SOURCE_HEAD_SHA || !Number.isInteger(value.sourcePullRequest) || value.sourcePullRequest < 1 || value.reportSha256 !== process.env.REPORT_SHA256 || typeof value.launchCritical !== "boolean") process.exit(2);
+                process.stdout.write(`${value.sourcePullRequest}\n`);
+                process.stdout.write(String(value.launchCritical));
+              ' "$source_context")"
+              source_pr_number="${launch_critical%%$'\n'*}"
+              launch_critical="${launch_critical##*$'\n'}"
+            fi
             echo "source_revision=$SOURCE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+            source_revision="$SOURCE_HEAD_SHA"
+            if [[ "$report_kind" == production-report ]]; then
+              echo "source_pr_number=$source_pr_number" >> "$GITHUB_OUTPUT"
+            fi
           else
             pnpm check:vellira-ui-usage:json > "$report_path"
             echo "source_revision=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            source_revision="${{ github.sha }}"
           fi
 
           node -e "JSON.parse(require('fs').readFileSync('$report_path', 'utf8'))"
+          SOURCE_REVISION="$source_revision" REPORT_KIND="$report_kind" LAUNCH_CRITICAL="$launch_critical" REPORT_PATH="$report_path" node -e "JSON.stringify({schemaVersion:'1',sourceRevision:process.env.SOURCE_REVISION,reportKind:process.env.REPORT_KIND,launchCritical:process.env.LAUNCH_CRITICAL === 'true',reportSha256:require('crypto').createHash('sha256').update(require('fs').readFileSync(process.env.REPORT_PATH)).digest('hex')})" > "$context_path"
+          echo "report_kind=$report_kind" >> "$GITHUB_OUTPUT"
+          echo "launch_critical=$launch_critical" >> "$GITHUB_OUTPUT"
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Verify current source before routing
@@ -129,7 +187,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          SOURCE_PR_NUMBER: ${{ steps.report.outputs.source_pr_number || github.event.workflow_run.pull_requests[0].number }}
         run: |
           set -euo pipefail
           trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap source verification failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT
@@ -169,8 +227,8 @@ jobs:
           trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap routing failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT
           node --import tsx scripts/canonical-gap/cli.ts \
             --repo "${{ github.repository }}" \
-            --report .artifacts/canonical-gap/report.json \
-            ${{ inputs.launch_critical && '--launch-critical' || '' }} \
+            ${{ steps.report.outputs.report_kind == 'production-report' && '--production-report' || '--report' }} .artifacts/canonical-gap/report.json \
+            ${{ (inputs.launch_critical || steps.report.outputs.launch_critical == 'true') && '--launch-critical' || '' }} \
             > .artifacts/canonical-gap/result.json
           cat .artifacts/canonical-gap/result.json
 
@@ -187,9 +245,9 @@ jobs:
           trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap routing failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT
           node --import tsx scripts/canonical-gap/cli.ts \
             --repo "${{ github.repository }}" \
-            --report .artifacts/canonical-gap/report.json \
+            ${{ steps.report.outputs.report_kind == 'production-report' && '--production-report' || '--report' }} .artifacts/canonical-gap/report.json \
             --apply \
-            ${{ github.event_name == 'workflow_dispatch' && inputs.launch_critical && '--launch-critical' || '' }} \
+            ${{ ((github.event_name == 'workflow_dispatch' && inputs.launch_critical) || steps.report.outputs.launch_critical == 'true') && '--launch-critical' || '' }} \
             > .artifacts/canonical-gap/result.json
           cat .artifacts/canonical-gap/result.json
 
@@ -200,6 +258,7 @@ jobs:
           name: canonical-gap-${{ steps.report.outputs.source_revision || github.sha }}-${{ github.run_id }}
           path: |
             .artifacts/canonical-gap/report.json
+            .artifacts/canonical-gap/source.json
             .artifacts/canonical-gap/result.json
           if-no-files-found: error
           retention-days: 14
