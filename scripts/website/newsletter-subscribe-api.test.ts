@@ -12,6 +12,10 @@ import {
 } from '../../apps/website/src/server/newsletter/buttondown';
 
 const API_URL = 'https://vellira.dev/api/newsletter/subscribe';
+type ButtondownFetcher = (
+  input: string | URL | Request,
+  init?: RequestInit
+) => Promise<Response>;
 
 function request(
   body: string,
@@ -125,7 +129,7 @@ describe('newsletter subscribe API', () => {
 
 describe('Buttondown provider boundary', () => {
   it('uses the documented server request contract without bypassing confirmation or firewall', async () => {
-    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+    const fetcher = vi.fn<ButtondownFetcher>(async (input, init) => {
       void input;
       void init;
       return new Response('{}', { status: 201 });
@@ -193,7 +197,7 @@ describe('Buttondown provider boundary', () => {
   );
 
   it('fails closed for missing secrets and provider network failures', async () => {
-    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+    const fetcher = vi.fn<ButtondownFetcher>(async (input, init) => {
       void input;
       void init;
       throw new Error('provider-private-detail');
