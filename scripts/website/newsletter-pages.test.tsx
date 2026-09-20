@@ -133,13 +133,14 @@ describe('newsletter status pages', () => {
   });
 
   it('submits valid email to the same-origin API and navigates on success', async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ ok: true }), {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' },
-        })
-    );
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      void input;
+      void init;
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const { container } = render(<BlogIndex articles={[]} />);
@@ -171,12 +172,13 @@ describe('newsletter status pages', () => {
 
   it('disables duplicate submission while the API request is pending', async () => {
     let resolveResponse: ((response: Response) => void) | undefined;
-    const fetchMock = vi.fn(
-      () =>
-        new Promise<Response>((resolve) => {
-          resolveResponse = resolve;
-        })
-    );
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      void input;
+      void init;
+      return new Promise<Response>((resolve) => {
+        resolveResponse = resolve;
+      });
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const { container } = render(<BlogIndex articles={[]} />);
@@ -210,20 +212,21 @@ describe('newsletter status pages', () => {
   });
 
   it('renders a safe API error inline and restores the form', async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({
-            ok: false,
-            code: 'rate_limited',
-            message: 'provider-private-detail',
-          }),
-          {
-            status: 429,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-    );
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      void input;
+      void init;
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          code: 'rate_limited',
+          message: 'provider-private-detail',
+        }),
+        {
+          status: 429,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const { container } = render(<BlogIndex articles={[]} />);

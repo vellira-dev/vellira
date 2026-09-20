@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createNewsletterSubscribeHandler,
   resolveSubscriberIp,
-} from '../../apps/website/src/app/api/newsletter/subscribe/route';
+} from '../../apps/website/src/server/newsletter/subscribe';
 import {
   BUTTONDOWN_SUBSCRIBERS_URL,
   newsletterErrors,
@@ -125,7 +125,11 @@ describe('newsletter subscribe API', () => {
 
 describe('Buttondown provider boundary', () => {
   it('uses the documented server request contract without bypassing confirmation or firewall', async () => {
-    const fetcher = vi.fn(async () => new Response('{}', { status: 201 }));
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      void input;
+      void init;
+      return new Response('{}', { status: 201 });
+    });
 
     const result = await subscribeWithButtondown({
       apiKey: 'server-only-test-key',
@@ -189,7 +193,9 @@ describe('Buttondown provider boundary', () => {
   );
 
   it('fails closed for missing secrets and provider network failures', async () => {
-    const fetcher = vi.fn(async () => {
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      void input;
+      void init;
       throw new Error('provider-private-detail');
     });
 
