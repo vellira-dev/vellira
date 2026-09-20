@@ -93,6 +93,17 @@ describe('newsletter status pages', () => {
         name: 'Newsletter email privacy information',
       })
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', {
+        name: 'Newsletter email privacy information',
+      })
+    ).toHaveLength(1);
+    const infoTrigger = screen.getByRole('button', {
+      name: 'Newsletter email privacy information',
+    });
+    infoTrigger.focus();
+    expect(infoTrigger).toHaveFocus();
+    expect(infoTrigger.querySelector('button')).toBeNull();
   });
 
   it('shows branded validation for an empty email', () => {

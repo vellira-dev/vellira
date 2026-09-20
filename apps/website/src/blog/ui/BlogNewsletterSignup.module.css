@@ -39,6 +39,29 @@
   line-height: 1.7;
 }
 
+.infoTrigger {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  cursor: help;
+}
+
+.infoTrigger:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--space-1);
+}
+
 .controlRow {
   display: flex;
   flex-wrap: wrap;
@@ -53,6 +76,33 @@
 
 .button {
   flex: 0 0 auto;
+}
+
+.idleMessage,
+.errorMessage {
+  min-height: calc(var(--form-field-size-md-helper-text-line-height) * 4);
+  transform: translateY(0);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.idleMessage {
+  opacity: 0;
+  transform: translateY(calc(var(--space-1) * -1));
+}
+
+.errorMessage {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idleMessage,
+  .errorMessage {
+    transform: none;
+    transition: none;
+  }
 }
 
 @media (width <= 720px) {
