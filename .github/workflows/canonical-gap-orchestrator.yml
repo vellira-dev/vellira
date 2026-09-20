@@ -67,6 +67,7 @@ jobs:
           SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
           SOURCE_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          SOURCE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
           set -euo pipefail
           mkdir -p .artifacts/canonical-gap
@@ -77,19 +78,21 @@ jobs:
           source_revision=
 
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            if [[ -z "$SOURCE_PR_NUMBER" ]]; then
+            if [[ "$SOURCE_WORKFLOW_NAME" == CI && -z "$SOURCE_PR_NUMBER" ]]; then
               echo "::warning::CI workflow_run did not expose an associated pull request."
               echo "ready=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
-            current_head="$(
-              gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" --jq '.head.sha'
-            )"
-            if [[ "$current_head" != "$SOURCE_HEAD_SHA" ]]; then
-              echo "::warning::Ignoring stale CI run $SOURCE_RUN_ID at $SOURCE_HEAD_SHA; PR #$SOURCE_PR_NUMBER is now at $current_head."
-              echo "ready=false" >> "$GITHUB_OUTPUT"
-              exit 0
+            if [[ "$SOURCE_WORKFLOW_NAME" == CI ]]; then
+              current_head="$(
+                gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" --jq '.head.sha'
+              )"
+              if [[ "$current_head" != "$SOURCE_HEAD_SHA" ]]; then
+                echo "::warning::Ignoring stale CI run $SOURCE_RUN_ID at $SOURCE_HEAD_SHA; PR #$SOURCE_PR_NUMBER is now at $current_head."
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
             fi
 
             download_dir="$RUNNER_TEMP/canonical-gap-source"
@@ -100,6 +103,11 @@ jobs:
                 source_name=report.json
                 ;;
               'Component Production')
+                if [[ "$SOURCE_CONCLUSION" != success ]]; then
+                  echo "::warning::Component Production did not complete successfully."
+                  echo "ready=false" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
                 artifact_name="component-production-$SOURCE_HEAD_SHA"
                 source_name=production-report.json
                 report_kind=production-report
@@ -144,12 +152,18 @@ jobs:
               launch_critical="$(REPORT_SHA256="$report_sha256" node --input-type=module -e '
                 import fs from "node:fs";
                 const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-                if (!value || value.schemaVersion !== "1" || value.repository !== process.env.GITHUB_REPOSITORY || value.sourceRevision !== process.env.SOURCE_HEAD_SHA || value.reportSha256 !== process.env.REPORT_SHA256 || typeof value.launchCritical !== "boolean") process.exit(2);
+                if (!value || value.schemaVersion !== "1" || value.repository !== process.env.GITHUB_REPOSITORY || value.sourceRevision !== process.env.SOURCE_HEAD_SHA || !Number.isInteger(value.sourcePullRequest) || value.sourcePullRequest < 1 || value.reportSha256 !== process.env.REPORT_SHA256 || typeof value.launchCritical !== "boolean") process.exit(2);
+                process.stdout.write(`${value.sourcePullRequest}\n`);
                 process.stdout.write(String(value.launchCritical));
               ' "$source_context")"
+              source_pr_number="${launch_critical%%$'\n'*}"
+              launch_critical="${launch_critical##*$'\n'}"
             fi
             echo "source_revision=$SOURCE_HEAD_SHA" >> "$GITHUB_OUTPUT"
             source_revision="$SOURCE_HEAD_SHA"
+            if [[ "$report_kind" == production-report ]]; then
+              echo "source_pr_number=$source_pr_number" >> "$GITHUB_OUTPUT"
+            fi
           else
             pnpm check:vellira-ui-usage:json > "$report_path"
             echo "source_revision=${{ github.sha }}" >> "$GITHUB_OUTPUT"
@@ -169,7 +183,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          SOURCE_PR_NUMBER: ${{ steps.report.outputs.source_pr_number || github.event.workflow_run.pull_requests[0].number }}
         run: |
           set -euo pipefail
           trap 'status=$?; if [[ "$status" -ne 0 ]]; then printf "%s\n" "{\"schemaVersion\":\"1\",\"status\":\"error\",\"error\":{\"message\":\"Canonical gap source verification failed; see workflow logs.\"}}" > .artifacts/canonical-gap/result.json; fi' EXIT

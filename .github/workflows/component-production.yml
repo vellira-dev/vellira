@@ -11,6 +11,10 @@ on:
         description: Tracked repository-relative Component Production V1 specification path.
         required: true
         type: string
+      source_pr_number:
+        description: Open same-repository pull request whose current head is source_sha.
+        required: true
+        type: string
       launch_critical:
         description: Preserve launch-critical routing intent in the signed artifact context.
         required: true
@@ -19,6 +23,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: component-production-${{ inputs.source_sha }}
@@ -33,10 +38,14 @@ jobs:
         shell: bash
         env:
           SOURCE_HEAD_SHA: ${{ inputs.source_sha }}
+          WORKFLOW_HEAD_SHA: ${{ github.sha }}
+          SOURCE_PR_NUMBER: ${{ inputs.source_pr_number }}
           SPEC_PATH: ${{ inputs.spec_path }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$SOURCE_HEAD_SHA" = "$WORKFLOW_HEAD_SHA"
+          [[ "$SOURCE_PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
           [[ -n "$SPEC_PATH" && "$SPEC_PATH" != /* && "$SPEC_PATH" != *..* && "$SPEC_PATH" != *\\* ]]
 
       - name: Checkout exact trusted source
@@ -57,12 +66,20 @@ jobs:
         env:
           SOURCE_HEAD_SHA: ${{ inputs.source_sha }}
           SPEC_PATH: ${{ inputs.spec_path }}
+          SOURCE_PR_NUMBER: ${{ inputs.source_pr_number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_HEAD_SHA"
           git ls-files --error-unmatch -- "$SPEC_PATH"
           test -f "$SPEC_PATH"
           test ! -L "$SPEC_PATH"
+          current_pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER" --jq '[.state, .head.sha, .head.repo.full_name, .base.repo.full_name] | @tsv')"
+          IFS=$'\t' read -r state head source_repo base_repo <<< "$current_pr"
+          test "$state" = open
+          test "$head" = "$SOURCE_HEAD_SHA"
+          test "$source_repo" = "$GITHUB_REPOSITORY"
+          test "$base_repo" = "$GITHUB_REPOSITORY"
 
       - name: Install trusted production dependencies
         run: pnpm install --frozen-lockfile
@@ -90,13 +107,14 @@ jobs:
         env:
           SOURCE_HEAD_SHA: ${{ inputs.source_sha }}
           LAUNCH_CRITICAL: ${{ inputs.launch_critical }}
+          SOURCE_PR_NUMBER: ${{ inputs.source_pr_number }}
         run: |
           set -euo pipefail
           report=.artifacts/component-production/production-report.json
           test -f "$report"
           test ! -L "$report"
           digest="$(sha256sum "$report" | awk '{print $1}')"
-          SOURCE_HEAD_SHA="$SOURCE_HEAD_SHA" LAUNCH_CRITICAL="$LAUNCH_CRITICAL" REPORT_SHA256="$digest" node -e "process.stdout.write(JSON.stringify({schemaVersion:'1',repository:process.env.GITHUB_REPOSITORY,sourceRevision:process.env.SOURCE_HEAD_SHA,reportSha256:process.env.REPORT_SHA256,launchCritical:process.env.LAUNCH_CRITICAL === 'true'})+'\\n')" > .artifacts/component-production/routing-context.json
+          SOURCE_HEAD_SHA="$SOURCE_HEAD_SHA" LAUNCH_CRITICAL="$LAUNCH_CRITICAL" SOURCE_PR_NUMBER="$SOURCE_PR_NUMBER" REPORT_SHA256="$digest" node -e "process.stdout.write(JSON.stringify({schemaVersion:'1',repository:process.env.GITHUB_REPOSITORY,sourceRevision:process.env.SOURCE_HEAD_SHA,sourcePullRequest:Number(process.env.SOURCE_PR_NUMBER),reportSha256:process.env.REPORT_SHA256,launchCritical:process.env.LAUNCH_CRITICAL === 'true'})+'\\n')" > .artifacts/component-production/routing-context.json
 
       - name: Upload canonical Component Production report
         if: always()

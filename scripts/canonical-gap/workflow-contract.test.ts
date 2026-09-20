@@ -68,7 +68,10 @@ function assertSecurityContract(raw: string) {
     'workflow_run:\n    workflows: [CI, Component Production]\n    types: [completed]'
   );
   expect(topLevel(source, 'on')).toContain('push:\n    branches: [main]');
-  expect(source).not.toContain('workflow_run.conclusion');
+  expect(source).toContain(
+    'SOURCE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}'
+  );
+  expect(source).toContain('if [[ "$SOURCE_CONCLUSION" != success ]]');
   expect(normalized(source)).toContain(
     "if: >- github.event_name != 'workflow_run' || (github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.head_repository.full_name == github.repository)"
   );
@@ -139,7 +142,7 @@ function assertSecurityContract(raw: string) {
     'SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}'
   );
   expect(guard).toContain(
-    'SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}'
+    'SOURCE_PR_NUMBER: ${{ steps.report.outputs.source_pr_number || github.event.workflow_run.pull_requests[0].number }}'
   );
   expect(guard).toContain('[[ -z "$SOURCE_PR_NUMBER" ]]');
   expect(guard).toContain(
