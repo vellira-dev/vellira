@@ -96,6 +96,25 @@ function createMetadata(
 }
 
 describe('Blog V1 index experience', () => {
+  it('renders the native Buttondown newsletter form', () => {
+    const html = renderToStaticMarkup(<BlogIndex articles={[]} />);
+
+    expect(html).toContain('Keep up with Vellira');
+    expect(html).toContain(
+      'action="https://buttondown.com/api/emails/embed-subscribe/vellira"'
+    );
+    expect(html).toContain('method="post"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain('type="email"');
+    expect(html).toContain('autoComplete="email"');
+    expect(html).toContain('required=""');
+    expect(html).toContain('for="blog-newsletter-email"');
+    expect(html).toContain('>Email address</label>');
+    expect(html).toContain('you@example.com');
+    expect(html).toContain('Subscribe');
+    expect(html).not.toContain('<iframe');
+  });
+
   it('renders an explicit empty state when there are no published articles', () => {
     const html = renderToStaticMarkup(<BlogIndex articles={[]} />);
 
@@ -309,6 +328,9 @@ describe('Blog V1 article experience', () => {
     expect(html).toContain('September 2, 2026');
     expect(html).toContain('<h2>Shared contracts</h2>');
     expect(html).toContain('const platform = &quot;web&quot;;');
+    expect(html).toContain(
+      'action="https://buttondown.com/api/emails/embed-subscribe/vellira"'
+    );
   });
 
   it('loads article metrics and registers a view from the client experience', async () => {

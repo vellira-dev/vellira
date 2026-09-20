@@ -1,0 +1,116 @@
+.section {
+  padding: clamp(48px, 7vw, 88px) 0 clamp(80px, 10vw, 132px);
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  align-items: end;
+  gap: clamp(24px, 5vw, 64px);
+  padding: clamp(28px, 5vw, 48px);
+  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-inset);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--text-brand);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(25px, 3vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.description {
+  max-width: 640px;
+  margin: var(--space-3) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: 1.7;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.field {
+  display: grid;
+  flex: 1 1 220px;
+  gap: var(--space-2);
+}
+
+.label {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 var(--space-3);
+  color: var(--text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  background: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.input::placeholder {
+  color: var(--text-secondary);
+}
+
+.input:focus-visible,
+.button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--space-1);
+}
+
+.button {
+  flex: 0 0 auto;
+  padding: 0 var(--space-5);
+  color: var(--button-primary-solid-default-fg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  background: var(--button-primary-solid-default-bg);
+  border: 1px solid var(--button-primary-solid-default-border);
+  border-radius: var(--radius-md);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+  cursor: pointer;
+  min-height: 46px;
+  font-family: var(--font-family-base);
+}
+
+.button:hover {
+  color: var(--button-primary-solid-hover-fg);
+  background: var(--button-primary-solid-hover-bg);
+  border-color: var(--button-primary-solid-hover-border);
+}
+
+@media (width <= 720px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+}

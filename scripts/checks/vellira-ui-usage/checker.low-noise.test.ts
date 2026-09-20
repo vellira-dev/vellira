@@ -38,6 +38,7 @@ describe('Vellira UI usage low-noise evidence', () => {
 
     const report = runVelliraUiUsageCheck(root, {
       authorities: AUTHORITIES,
+      exceptions: [],
     });
 
     expect(report.findings).toEqual([]);
