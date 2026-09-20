@@ -1,0 +1,55 @@
+Cross-browser interaction coverage is easy to make broad and hard to maintain. A suite needs a clear answer to three practical questions: how a contributor selects it, which environments are part of the matrix, and which interaction contracts deserve careful review when the UI changes. In this change, the focused command `test:e2e:web:cross-browser` selects the suite, the configuration declares projects `chromium`, `firefox`, `mobile-chromium`, and `webkit`, the test policy records `screenshot=only-on-failure` and `retries: 0`, the workflow invokes `test:e2e:web:visual` and `test:e2e:web`, and the static cases name scenarios such as “Dropdown supports keyboard navigation, focus restore, portal, outside click, and positioning” and “Modal renders in a portal, traps focus, and closes with Escape”.
+
+That arrangement gives the suite a useful shape. The command is the entry point for a focused investigation; the configuration is the map of the environments and controls; and the named cases keep the interaction work concrete. A maintainer can start with a broken or changing scenario, trace it to the selected suite, and then see which project or policy declaration should move with it. The rest of the article follows those jobs rather than treating the suite as a long list of test titles. It also gives review a shared vocabulary for changes that cross those files.
+
+## Problem and constraint
+
+The engineering problem is coordination across several ordinary repository files. A scenario can be important without being easy to select. A project matrix can be complete on paper while its command or diagnostics drift. And an automation step can keep running after the focused suite it was meant to exercise has changed. Here, a focused test entrypoint provides the starting point and the workflow wiring records the automation connection.
+
+The design keeps those responsibilities separate. The command owns selection, the configuration owns the matrix and policy, and the scenarios give reviewers concrete interaction questions. That division makes a test change easier to discuss than a single opaque end-to-end label, especially when a future edit touches only one part of the suite.
+
+## What changed
+
+The package scripts expose a focused test command, and the configuration declares the selected projects. The policy records the suite controls. Together, those changes turn a focused suite into a recognizable maintenance surface instead of leaving its selection implicit.
+
+The named cases add the interaction side of that surface: the represented interaction scenarios. A contributor changing one of those contracts can locate the selection path, the matrix that travels with it, and the policy that shapes failure diagnostics. Each artifact remains small, but the connection between them is what makes the suite practical to maintain.
+
+## How it works
+
+The mechanism is deliberately simple. A named command selects the suite; the project configuration (the configured project set) supplies the matrix; and the policy (the declared test controls) makes retry and diagnostic choices explicit. A workflow can invoke a package command without taking over any of those responsibilities.
+
+This arrangement makes drift visible in the right place. If a project is added, review its policy alongside the matrix. If a command changes, trace the callers that select it. If a scenario changes, use its name to find the interaction contract that motivated the test. The reader gets a route through the system rather than a list of configuration fragments.
+
+## Cross-platform details
+
+The platform matrix is explicit: `chromium`, `firefox`, `mobile-chromium`, and `webkit`. That list gives a maintainer a concrete comparison set when a focused interaction change needs to travel across desktop and mobile surfaces. Each project belongs to the suite’s selection model, so a matrix edit is a useful prompt to review the neighboring command and policy.
+
+Use the matrix as the place to make platform scope explicit during review.
+
+The practical maintenance rule is to review a changed project declaration with its related policy and invocation. That keeps platform scope legible while the suite changes.
+
+## Failure modes and edge cases
+
+Failure-oriented review starts with the explicit controls: `retries: 0` and `screenshot=only-on-failure`. Those settings determine what the suite keeps when an interaction investigation needs more than a test name. The scenarios add the concrete edge cases, including the represented interaction scenarios.
+
+That combination distinguishes two kinds of maintenance work. A diagnostic policy change affects how a contributor investigates the suite. A scenario change affects the interaction contract the suite is meant to guard. Keeping both near the same command and matrix makes it easier to review the right consequence instead of repairing an unrelated configuration setting.
+
+## Accessibility and interaction
+
+The interaction work is anchored in named cases such as “Dropdown supports keyboard navigation, focus restore, portal, outside click, and positioning”, “Modal renders in a portal, traps focus, and closes with Escape”, and “Select keeps focus on the trigger, handles keyboard dismissal, portals content, and uses its mobile sheet”. Those names make the review questions concrete: keyboard movement, focus management, portals, or dismissal behavior can be discussed as part of a specific scenario instead of as an abstract accessibility aspiration.
+
+This keeps the section focused on the relationship between named intent and the source surfaces that organize it. That focus helps a contributor decide what needs to move when an interaction contract changes.
+
+The useful maintenance question is whether the scenario still describes the interaction that the component exposes. If it does not, update the scenario, its selection path, and the relevant policy together so the next investigation starts from a coherent suite.
+
+## Integration and enforcement
+
+The workflow invokes `test:e2e:web:visual` and `test:e2e:web`. The focused package entrypoint is the suite command. Treat those as two explicit integration surfaces: one records automation invocation and the other records how contributors select the focused suite. Their names may be related without being interchangeable.
+
+The matrix (the configured projects) and policy (the suite controls) explain what belongs around the focused entrypoint. When automation changes, compare these declarations directly. That makes CI maintenance a concrete wiring task instead of a guess based on a workflow filename or a similarly named script.
+
+## Current limitations
+
+The suite documents a reviewable test arrangement, not a universal statement about every interaction outcome. Its command, project list, policies, workflow references, and static scenario names explain how the repository intends to organize coverage. They do not establish that a run completed successfully or that an unlisted interaction behaves the same way.
+
+That boundary keeps the engineering discussion honest without making the suite less useful. Use the declarations to decide which command, configuration, or scenario needs attention; use execution and implementation evidence for conclusions about observed behavior. New interaction shapes deserve their own focused coverage rather than borrowing authority from a similar-looking case.

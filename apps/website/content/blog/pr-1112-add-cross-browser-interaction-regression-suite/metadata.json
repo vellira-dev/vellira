@@ -1,0 +1,9 @@
+{
+  "title": "Cross-browser interaction regression suite in Vellira",
+  "description": "How Vellira keeps cross-browser interaction coverage reviewable through a focused command, project matrix, and test policy.",
+  "slug": "pr-1112-add-cross-browser-interaction-regression-suite",
+  "publishedAt": "2026-09-14",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}
