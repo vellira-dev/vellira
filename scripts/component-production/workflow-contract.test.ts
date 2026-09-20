@@ -18,6 +18,8 @@ it('keeps the trusted producer and canonical-gap consumer artifact contract alig
   expect(producer).toContain('source_pr_number:');
   expect(producer).toContain('WORKFLOW_HEAD_SHA: ${{ github.sha }}');
   expect(producer).toContain('test "$SOURCE_HEAD_SHA" = "$WORKFLOW_HEAD_SHA"');
+  expect(producer).toContain('ref: ${{ github.sha }}');
+  expect(producer).not.toContain('ref: ${{ inputs.source_sha }}');
   expect(producer).toContain(
     'pnpm --silent component-production:json --spec "$SPEC_PATH"'
   );
