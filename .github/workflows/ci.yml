@@ -616,6 +616,10 @@ jobs:
             pnpm --filter @vellira-ui/react-storybook exec node \
             scripts/blog-discovery-website-smoke.mjs
 
+          WEBSITE_URL=http://127.0.0.1:3100 \
+            pnpm --filter @vellira-ui/react-storybook exec node \
+            scripts/newsletter-website-smoke.mjs
+
       - name: Smoke packages
         if: ${{ needs.impact.outputs.execution_path != 'affected' && needs.impact.outputs.shape != 'docs-only' }}
         run: pnpm ci:smoke
