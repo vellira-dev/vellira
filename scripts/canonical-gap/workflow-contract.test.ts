@@ -65,7 +65,7 @@ function assertSecurityContract(raw: string) {
     '  sync:\n    name:',
   ]);
   expect(topLevel(source, 'on')).toContain(
-    'workflow_run:\n    workflows: [CI]\n    types: [completed]'
+    'workflow_run:\n    workflows: [CI, Component Production]\n    types: [completed]'
   );
   expect(topLevel(source, 'on')).toContain('push:\n    branches: [main]');
   expect(source).not.toContain('workflow_run.conclusion');
@@ -103,13 +103,16 @@ function assertSecurityContract(raw: string) {
     'SOURCE_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}'
   );
   expect(prepare).toContain(
+    'SOURCE_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}'
+  );
+  expect(prepare).toContain(
     'artifact_name="vellira-ui-usage-$SOURCE_HEAD_SHA"'
   );
   expect(normalized(prepare)).toContain(
     'gh run download "$SOURCE_RUN_ID" \\ --repo "$GITHUB_REPOSITORY" \\ --name "$artifact_name" \\ --dir "$download_dir"'
   );
   expect(prepare).not.toMatch(/--pattern|find .*report\.json/);
-  expect(prepare).toContain('source_report="$download_dir/report.json"');
+  expect(prepare).toContain('source_report="$download_dir/$source_name"');
   expect(prepare).toContain(
     '[[ ! -f "$source_report" || -L "$source_report" ]]'
   );
@@ -117,6 +120,16 @@ function assertSecurityContract(raw: string) {
   expect(prepare).toContain(
     'pnpm check:vellira-ui-usage:json > "$report_path"'
   );
+  expect(prepare).toContain("'Component Production')");
+  expect(prepare).toContain(
+    'artifact_name="component-production-$SOURCE_HEAD_SHA"'
+  );
+  expect(prepare).toContain('source_name=production-report.json');
+  expect(prepare).toContain('report_kind=production-report');
+  expect(prepare).toContain(
+    'source_context="$download_dir/routing-context.json"'
+  );
+  expect(prepare).toContain('value.reportSha256 !== process.env.REPORT_SHA256');
   expect(prepare).toContain('echo "source_revision=${{ github.sha }}"');
 
   const guard = namedStep(source, 'Verify current source before routing');
@@ -157,7 +170,8 @@ function assertSecurityContract(raw: string) {
     );
     expect(routing).toContain('node --import tsx scripts/canonical-gap/cli.ts');
     expect(routing).toContain('--repo "${{ github.repository }}"');
-    expect(routing).toContain('--report .artifacts/canonical-gap/report.json');
+    expect(routing).toContain("'--production-report' || '--report'");
+    expect(routing).toContain('.artifacts/canonical-gap/report.json');
     expect(routing).toContain('GITHUB_TOKEN: ${{ github.token }}');
     expect(routing).toContain('> .artifacts/canonical-gap/result.json');
     expect(routing).toContain('trap ');
@@ -185,7 +199,7 @@ function assertSecurityContract(raw: string) {
     'name: canonical-gap-${{ steps.report.outputs.source_revision || github.sha }}-${{ github.run_id }}'
   );
   expect(upload).toContain(
-    'path: |\n            .artifacts/canonical-gap/report.json\n            .artifacts/canonical-gap/result.json'
+    'path: |\n            .artifacts/canonical-gap/report.json\n            .artifacts/canonical-gap/source.json\n            .artifacts/canonical-gap/result.json'
   );
   expect(upload).not.toMatch(
     /include-hidden-files:\s*true|secrets|TOKEN|credentials|RUNNER_TEMP|\.git\//
@@ -229,7 +243,7 @@ it.each([
   ['"$target_repo" != "$GITHUB_REPOSITORY"', 'false'],
   ["steps.source.outputs.current == 'true'", 'true'],
   [
-    '.artifacts/canonical-gap/report.json\n            .artifacts/canonical-gap/result.json',
+    '.artifacts/canonical-gap/report.json\n            .artifacts/canonical-gap/source.json\n            .artifacts/canonical-gap/result.json',
     '.',
   ],
 ])('rejects an unsafe workflow regression: %s', (before, after) => {
