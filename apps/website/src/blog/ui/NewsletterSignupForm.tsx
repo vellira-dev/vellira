@@ -1,7 +1,7 @@
 'use client';
 
 import { Info } from '@vellira-ui/icons';
-import { Button, Input, Portal, Tooltip } from '@vellira-ui/react';
+import { Button, FormField, Input, Portal, Tooltip } from '@vellira-ui/react';
 import { useRef, useState, type FormEvent } from 'react';
 
 import styles from './BlogNewsletterSignup.module.css';
@@ -39,57 +39,57 @@ export function NewsletterSignupForm() {
 
   return (
     <form
-      className={styles.form}
       action={BUTTONDOWN_SUBSCRIBE_ENDPOINT}
       method='post'
       noValidate
       onSubmit={handleSubmit}
     >
-      <div className={styles.actions}>
-        <input type='hidden' name='embed' value='1' />
-        <div className={styles.field}>
-          <div className={styles.helper}>
-            <Tooltip placement='top'>
-              <Tooltip.Trigger asChild>
-                <Button
-                  type='button'
-                  appearance='bare'
-                  color='neutral'
-                  size='sm'
-                  shape='rounded'
-                  iconOnly
-                  aria-label='Newsletter email privacy information'
-                  iconStart={<Info aria-hidden='true' />}
-                />
-              </Tooltip.Trigger>
-              <Portal>
-                <Tooltip.Content withArrow>
-                  We’ll only send Vellira engineering notes. Unsubscribe
-                  anytime.
-                </Tooltip.Content>
-              </Portal>
-            </Tooltip>
-          </div>
+      <input type='hidden' name='embed' value='1' />
+      <FormField
+        label='Email address'
+        required
+        error={error}
+        bindControl={false}
+        labelInfo={
+          <Tooltip placement='top'>
+            <Tooltip.Trigger asChild>
+              <Button
+                type='button'
+                appearance='bare'
+                color='neutral'
+                size='sm'
+                shape='rounded'
+                iconOnly
+                aria-label='Newsletter email privacy information'
+                iconStart={<Info aria-hidden='true' />}
+              />
+            </Tooltip.Trigger>
+            <Portal>
+              <Tooltip.Content withArrow>
+                We’ll only send Vellira engineering notes. Unsubscribe anytime.
+              </Tooltip.Content>
+            </Portal>
+          </Tooltip>
+        }
+      >
+        <div className={styles.controlRow}>
           <Input
             ref={inputRef}
-            label='Email address'
             name='email'
             type='email'
             autoComplete='email'
             placeholder='you@example.com'
-            required
             value={email}
-            error={error}
             onValueChange={(value) => {
               setEmail(value);
               setError(undefined);
             }}
           />
+          <Button className={styles.button} type='submit' shape='rounded'>
+            Subscribe
+          </Button>
         </div>
-        <Button className={styles.button} type='submit' shape='rounded'>
-          Subscribe
-        </Button>
-      </div>
+      </FormField>
     </form>
   );
 }
