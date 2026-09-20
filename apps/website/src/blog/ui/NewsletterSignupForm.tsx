@@ -95,12 +95,7 @@ export function NewsletterSignupForm() {
   };
 
   return (
-    <form
-      className={styles.form}
-      noValidate
-      onSubmit={handleSubmit}
-      aria-busy={isSubmitting}
-    >
+    <form noValidate onSubmit={handleSubmit} aria-busy={isSubmitting}>
       <FormField
         label='Email address'
         required
