@@ -35,11 +35,11 @@ export function createGitHubCanonicalGapClient(
   const apiBaseUrl = options.apiBaseUrl ?? 'https://api.github.com';
   const fetchImpl = options.fetchImpl ?? fetch;
 
-  async function request<T>(
+  async function requestResponse<T>(
     requestPath: string,
     init: RequestInit = {},
     requireAuth = false
-  ): Promise<T> {
+  ): Promise<{ body: T; link: string | null }> {
     if (requireAuth && !options.token?.trim()) {
       throw new CanonicalGapError(
         'GITHUB_TOKEN is required for canonical gap GitHub mutations.'
@@ -64,20 +64,32 @@ export function createGitHubCanonicalGapClient(
       );
     }
 
-    if (response.status === 204) return undefined as T;
-    return (await response.json()) as T;
+    if (response.status === 204) return { body: undefined as T, link: null };
+    return {
+      body: (await response.json()) as T,
+      link: response.headers.get('link'),
+    };
+  }
+
+  async function request<T>(
+    requestPath: string,
+    init: RequestInit = {},
+    requireAuth = false
+  ): Promise<T> {
+    return (await requestResponse<T>(requestPath, init, requireAuth)).body;
   }
 
   async function listAll<T>(requestPath: string): Promise<T[]> {
     const result: T[] = [];
-    for (let page = 1; ; page += 1) {
-      const separator = requestPath.includes('?') ? '&' : '?';
-      const batch = await request<T[]>(
-        `${requestPath}${separator}per_page=100&page=${page}`
-      );
-      result.push(...batch);
-      if (batch.length < 100) return result;
+    let nextPath: string | null = `${requestPath}${
+      requestPath.includes('?') ? '&' : '?'
+    }per_page=100`;
+    while (nextPath) {
+      const response = await requestResponse<T[]>(nextPath);
+      result.push(...response.body);
+      nextPath = nextPagePath(response.link, apiBaseUrl);
     }
+    return result;
   }
 
   return {
@@ -147,6 +159,21 @@ export function createGitHubCanonicalGapClient(
       true
     );
   }
+}
+
+function nextPagePath(link: string | null, apiBaseUrl: string): string | null {
+  if (!link) return null;
+  const match = link.match(/<([^>]+)>;\s*rel="next"/);
+  if (!match?.[1]) return null;
+
+  const base = new URL(apiBaseUrl);
+  const next = new URL(match[1]);
+  if (next.origin !== base.origin || !next.pathname.startsWith(base.pathname)) {
+    throw new CanonicalGapError(
+      'GitHub pagination returned an unsafe next URL.'
+    );
+  }
+  return `${next.pathname}${next.search}`;
 }
 
 function normalizeIssue(

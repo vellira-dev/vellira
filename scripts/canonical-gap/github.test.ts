@@ -7,10 +7,10 @@ import {
 } from './orchestrator';
 import { canonicalGapIssueMarker, parseCanonicalGapRequest } from './types';
 
-function jsonResponse(value: unknown, status = 200) {
+function jsonResponse(value: unknown, status = 200, headers: HeadersInit = {}) {
   return new Response(JSON.stringify(value), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   });
 }
 
@@ -51,7 +51,7 @@ describe('canonical gap GitHub client', () => {
       },
     ]);
     expect(String(fetchImpl.mock.calls[0]?.[0])).toContain(
-      '/issues?state=all&per_page=100&page=1'
+      '/issues?state=all&per_page=100'
     );
   });
 
@@ -100,7 +100,11 @@ describe('canonical gap GitHub client', () => {
           Array.from({ length: 100 }, (_, index) => ({
             ...ordinary,
             number: index + 1,
-          }))
+          })),
+          200,
+          {
+            Link: '<https://api.github.com/repos/vellira-dev/vellira/issues?state=all&per_page=100&after=cursor-100>; rel="next"',
+          }
         )
       )
       .mockResolvedValueOnce(
@@ -127,8 +131,8 @@ describe('canonical gap GitHub client', () => {
       { number: 101, state: 'closed', requestId: 'historical-resource' },
     ]);
     expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
-      'https://api.github.com/repos/vellira-dev/vellira/issues?state=all&per_page=100&page=1',
-      'https://api.github.com/repos/vellira-dev/vellira/issues?state=all&per_page=100&page=2',
+      'https://api.github.com/repos/vellira-dev/vellira/issues?state=all&per_page=100',
+      'https://api.github.com/repos/vellira-dev/vellira/issues?state=all&per_page=100&after=cursor-100',
     ]);
   });
 
