@@ -50,7 +50,7 @@ jobs:
     name: Quality & Component Quality
     runs-on: ubuntu-latest
     env:
-      COMPONENT_QUALITY_ENFORCEMENT: advisory
+      COMPONENT_QUALITY_ENFORCEMENT: blocking
       VELLIRA_LIFECYCLE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
