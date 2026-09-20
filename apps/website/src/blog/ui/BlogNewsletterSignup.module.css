@@ -5,13 +5,19 @@
 .card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-  align-items: end;
+  align-items: center;
   gap: clamp(24px, 5vw, 64px);
   padding: clamp(28px, 5vw, 48px);
   background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
   border: 1px solid var(--border-muted);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-inset);
+}
+
+.form {
+  padding-block-start: calc(
+    var(--form-field-size-md-helper-text-line-height) * 2
+  );
 }
 
 .eyebrow {
@@ -80,7 +86,7 @@
 
 .idleMessage,
 .errorMessage {
-  min-height: calc(var(--form-field-size-md-helper-text-line-height) * 4);
+  min-height: calc(var(--form-field-size-md-helper-text-line-height) * 2);
   transform: translateY(0);
   transition:
     opacity 180ms ease,
@@ -108,6 +114,16 @@
 @media (width <= 720px) {
   .card {
     grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .form {
+    padding-block-start: 0;
+  }
+
+  .idleMessage,
+  .errorMessage {
+    min-height: calc(var(--form-field-size-md-helper-text-line-height) * 3);
   }
 
   .controlRow {

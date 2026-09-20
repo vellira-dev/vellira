@@ -21,12 +21,37 @@ function assertStablePosition(before, after, controlName) {
 
 async function controlTops(form) {
   return form.evaluate((element) => ({
+    label: element.querySelector('label')?.getBoundingClientRect().top,
     email: element.querySelector('input[name="email"]')?.getBoundingClientRect()
       .top,
     subscribe: Array.from(element.querySelectorAll('button'))
       .find((button) => button.textContent?.trim() === 'Subscribe')
       ?.getBoundingClientRect().top,
   }));
+}
+
+async function visibleClusterMetrics(card) {
+  return card.evaluate((element) => {
+    const label = element.querySelector('form label')?.getBoundingClientRect();
+    const controls = element
+      .querySelector('[data-newsletter-control-row]')
+      ?.getBoundingClientRect();
+    const cardRect = element.getBoundingClientRect();
+    if (!label || !controls)
+      throw new Error('Newsletter cluster is incomplete');
+
+    const top = Math.min(label.top, controls.top);
+    const bottom = Math.max(label.bottom, controls.bottom);
+    return {
+      cardCenter: cardRect.top + cardRect.height / 2,
+      clusterCenter: top + (bottom - top) / 2,
+    };
+  });
+}
+
+async function messageHeight(form) {
+  const message = form.locator('[id$="-error"]');
+  return message.evaluate((element) => element.getBoundingClientRect().height);
 }
 
 async function restoreScrollPosition(page, scrollY) {
@@ -58,6 +83,7 @@ async function checkViewport(viewport) {
     const newsletter = page.getByRole('region', {
       name: 'Keep up with Vellira',
     });
+    const card = newsletter.locator('[data-newsletter-card]');
     const form = newsletter.locator('form');
     const email = form.getByRole('textbox', { name: 'Email address' });
     const subscribe = form.getByRole('button', {
@@ -73,6 +99,17 @@ async function checkViewport(viewport) {
     await expect(subscribe).toBeVisible();
     await expect(info).toHaveCount(1);
 
+    const clusterMetrics = await visibleClusterMetrics(card);
+    const clusterCenterDelta = Math.abs(
+      clusterMetrics.clusterCenter - clusterMetrics.cardCenter
+    );
+    if (viewport.width >= 1000) {
+      assert.ok(
+        clusterCenterDelta <= 8,
+        `visible newsletter cluster is ${clusterCenterDelta}px from the card center; expected <= 8px`
+      );
+    }
+
     const idleMessage = form.locator('[id$="-message"]');
     const idleMessageMetrics = await idleMessage.evaluate((element) => {
       const style = element.ownerDocument.defaultView.getComputedStyle(element);
@@ -83,7 +120,7 @@ async function checkViewport(viewport) {
     });
     assert.ok(idleMessageMetrics.height > 0);
     assert.ok(
-      idleMessageMetrics.height <= idleMessageMetrics.lineHeight * 4 + 1,
+      idleMessageMetrics.height <= idleMessageMetrics.lineHeight * 3 + 1,
       `idle message area is unexpectedly tall: ${idleMessageMetrics.height}px`
     );
 
@@ -94,10 +131,20 @@ async function checkViewport(viewport) {
     await expect(
       form.getByText('Enter your email address.', { exact: true })
     ).toBeVisible();
+    const emptyMessageHeight = await messageHeight(form);
+    assert.ok(
+      emptyMessageHeight <= idleMessageMetrics.height + 1,
+      `empty error exceeds the reserved message area: ${emptyMessageHeight}px > ${idleMessageMetrics.height}px`
+    );
     await restoreScrollPosition(page, beforeEmptyScrollY);
     const afterEmpty = await controlTops(form);
 
     const emptyDeltas = {
+      label: assertStablePosition(
+        beforeEmpty.label,
+        afterEmpty.label,
+        'Newsletter label'
+      ),
       email: assertStablePosition(
         beforeEmpty.email,
         afterEmpty.email,
@@ -130,10 +177,20 @@ async function checkViewport(viewport) {
     const beforeLongest = await controlTops(form);
     await subscribe.click();
     await expect(form.getByText(longestError, { exact: true })).toBeVisible();
+    const longestMessageHeight = await messageHeight(form);
+    assert.ok(
+      longestMessageHeight <= idleMessageMetrics.height + 1,
+      `longest error exceeds the reserved message area: ${longestMessageHeight}px > ${idleMessageMetrics.height}px`
+    );
     await restoreScrollPosition(page, beforeLongestScrollY);
     const afterLongest = await controlTops(form);
 
     const longestDeltas = {
+      label: assertStablePosition(
+        beforeLongest.label,
+        afterLongest.label,
+        'Newsletter label'
+      ),
       email: assertStablePosition(
         beforeLongest.email,
         afterLongest.email,
@@ -146,7 +203,17 @@ async function checkViewport(viewport) {
       ),
     };
 
-    console.log({ viewport, emptyDeltas, longestDeltas });
+    console.log({
+      viewport,
+      clusterCenterDelta,
+      reservedMessageHeight: idleMessageMetrics.height,
+      reservedMessageLines:
+        idleMessageMetrics.height / idleMessageMetrics.lineHeight,
+      emptyMessageHeight,
+      longestMessageHeight,
+      emptyDeltas,
+      longestDeltas,
+    });
 
     await info.hover();
     await expect(page.getByRole('tooltip')).toContainText(tooltipText);
