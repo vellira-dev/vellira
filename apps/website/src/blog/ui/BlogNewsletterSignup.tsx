@@ -1,5 +1,3 @@
-import { Button, Input } from '@vellira-ui/react';
-
 import { Container } from '@/components/layout/Container';
 
 import styles from './BlogNewsletterSignup.module.css';
@@ -32,25 +30,23 @@ export function BlogNewsletterSignup() {
             method='post'
           >
             <div className={styles.actions}>
-              <Input
-                className={styles.input}
-                id='blog-newsletter-email'
-                label='Email address'
-                name='email'
-                type='email'
-                autoComplete='email'
-                placeholder='you@example.com'
-                required
-              />
-              <Button
-                className={styles.button}
-                type='submit'
-                color='primary'
-                size='md'
-                shape='rounded'
-              >
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor='blog-newsletter-email'>
+                  Email address
+                </label>
+                <input
+                  className={styles.input}
+                  id='blog-newsletter-email'
+                  name='email'
+                  type='email'
+                  autoComplete='email'
+                  placeholder='you@example.com'
+                  required
+                />
+              </div>
+              <button className={styles.button} type='submit'>
                 Subscribe
-              </Button>
+              </button>
             </div>
           </form>
         </div>

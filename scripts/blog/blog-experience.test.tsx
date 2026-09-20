@@ -107,6 +107,9 @@ describe('Blog V1 index experience', () => {
     expect(html).toContain('name="email"');
     expect(html).toContain('type="email"');
     expect(html).toContain('autoComplete="email"');
+    expect(html).toContain('required=""');
+    expect(html).toContain('for="blog-newsletter-email"');
+    expect(html).toContain('>Email address</label>');
     expect(html).toContain('you@example.com');
     expect(html).toContain('Subscribe');
     expect(html).not.toContain('<iframe');
