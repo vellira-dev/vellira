@@ -1,9 +1,7 @@
 import { Container } from '@/components/layout/Container';
 
+import { NewsletterSignupForm } from './NewsletterSignupForm';
 import styles from './BlogNewsletterSignup.module.css';
-
-const BUTTONDOWN_SUBSCRIBE_ENDPOINT =
-  'https://buttondown.com/api/emails/embed-subscribe/vellira';
 
 export function BlogNewsletterSignup() {
   return (
@@ -24,32 +22,7 @@ export function BlogNewsletterSignup() {
             </p>
           </div>
 
-          <form
-            className={styles.form}
-            action={BUTTONDOWN_SUBSCRIBE_ENDPOINT}
-            method='post'
-          >
-            <div className={styles.actions}>
-              <input type='hidden' name='embed' value='1' />
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor='blog-newsletter-email'>
-                  Email address
-                </label>
-                <input
-                  className={styles.input}
-                  id='blog-newsletter-email'
-                  name='email'
-                  type='email'
-                  autoComplete='email'
-                  placeholder='you@example.com'
-                  required
-                />
-              </div>
-              <button className={styles.button} type='submit'>
-                Subscribe
-              </button>
-            </div>
-          </form>
+          <NewsletterSignupForm />
         </div>
       </Container>
     </section>
