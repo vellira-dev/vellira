@@ -30,21 +30,49 @@ async function controlTops(form) {
   }));
 }
 
-async function visibleClusterMetrics(card) {
+async function newsletterLayoutMetrics(card) {
   return card.evaluate((element) => {
+    const cardRect = element.getBoundingClientRect();
+    const cardStyle =
+      element.ownerDocument.defaultView.getComputedStyle(element);
+    const leftContent = element.firstElementChild?.getBoundingClientRect();
+    const form = element.querySelector('form')?.getBoundingClientRect();
     const label = element.querySelector('form label')?.getBoundingClientRect();
     const controls = element
       .querySelector('[data-newsletter-control-row]')
       ?.getBoundingClientRect();
-    const cardRect = element.getBoundingClientRect();
-    if (!label || !controls)
+    if (!leftContent || !form || !label || !controls)
       throw new Error('Newsletter cluster is incomplete');
 
     const top = Math.min(label.top, controls.top);
     const bottom = Math.max(label.bottom, controls.bottom);
     return {
-      cardCenter: cardRect.top + cardRect.height / 2,
-      clusterCenter: top + (bottom - top) / 2,
+      card: {
+        height: cardRect.height,
+        top: cardRect.top,
+        bottom: cardRect.bottom,
+      },
+      cardPaddingBottom: Number.parseFloat(cardStyle.paddingBottom),
+      leftContent: {
+        top: leftContent.top,
+        bottom: leftContent.bottom,
+        height: leftContent.height,
+      },
+      form: {
+        top: form.top,
+        bottom: form.bottom,
+        height: form.height,
+      },
+      formPaddingBlockStart: Number.parseFloat(
+        element.ownerDocument.defaultView.getComputedStyle(
+          element.querySelector('form')
+        ).paddingBlockStart
+      ),
+      visibleCluster: {
+        top,
+        bottom,
+        height: bottom - top,
+      },
     };
   });
 }
@@ -99,14 +127,17 @@ async function checkViewport(viewport) {
     await expect(subscribe).toBeVisible();
     await expect(info).toHaveCount(1);
 
-    const clusterMetrics = await visibleClusterMetrics(card);
-    const clusterCenterDelta = Math.abs(
-      clusterMetrics.clusterCenter - clusterMetrics.cardCenter
-    );
+    const layoutMetrics = await newsletterLayoutMetrics(card);
     if (viewport.width >= 1000) {
       assert.ok(
-        clusterCenterDelta <= 8,
-        `visible newsletter cluster is ${clusterCenterDelta}px from the card center; expected <= 8px`
+        layoutMetrics.formPaddingBlockStart === 0,
+        'newsletter form has an unexpected top balancing lane'
+      );
+      const contentBottom =
+        layoutMetrics.card.bottom - layoutMetrics.cardPaddingBottom;
+      assert.ok(
+        Math.abs(layoutMetrics.form.bottom - contentBottom) <= 1,
+        'newsletter form is not naturally aligned to the card content end'
       );
     }
 
@@ -205,7 +236,7 @@ async function checkViewport(viewport) {
 
     console.log({
       viewport,
-      clusterCenterDelta,
+      layoutMetrics,
       reservedMessageHeight: idleMessageMetrics.height,
       reservedMessageLines:
         idleMessageMetrics.height / idleMessageMetrics.lineHeight,

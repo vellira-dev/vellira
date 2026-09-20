@@ -5,19 +5,13 @@
 .card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-  align-items: center;
+  align-items: end;
   gap: clamp(24px, 5vw, 64px);
   padding: clamp(28px, 5vw, 48px);
   background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
   border: 1px solid var(--border-muted);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-inset);
-}
-
-.form {
-  padding-block-start: calc(
-    var(--form-field-size-md-helper-text-line-height) * 2
-  );
 }
 
 .eyebrow {
@@ -115,10 +109,6 @@
   .card {
     grid-template-columns: 1fr;
     align-items: start;
-  }
-
-  .form {
-    padding-block-start: 0;
   }
 
   .idleMessage,
