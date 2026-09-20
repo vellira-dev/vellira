@@ -21,6 +21,25 @@ Never attach either public hostname to the staging Worker.
 
 The production Wrangler configuration is the source of truth for both custom domains. The production Worker owns the `www` redirect and emits the same deployment identity headers on that response as on the apex runtime.
 
+## Newsletter runtime secret
+
+The newsletter subscription route reads `BUTTONDOWN_API_KEY` only from the
+Cloudflare Worker runtime binding exposed to Next.js through OpenNext. It is
+never a `NEXT_PUBLIC_` value, a repository file, or a GitHub Actions deploy
+environment variable.
+
+Provision the same secret manually in **Workers & Pages → Worker → Settings →
+Variables and Secrets** for both Workers:
+
+- `vellira-website-staging`: `BUTTONDOWN_API_KEY`
+- `vellira-website`: `BUTTONDOWN_API_KEY`
+
+Set its type to **Secret**. The checked-in Wrangler configurations declare the
+required secret name only, so deployment fails safely when it is absent and
+never contains its value. The guarded deployment calls Wrangler without a
+secrets file or plaintext newsletter environment variable; existing manually
+provisioned Worker secrets are therefore preserved across code deployments.
+
 ## Proven production evidence
 
 PR #1010 made the live custom-domain checks part of the permanent production postflight rather than relying only on the Workers.dev diagnostic origin.

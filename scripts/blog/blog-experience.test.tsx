@@ -14,6 +14,10 @@ import {
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 import {
   BlogArticleActions,
   BlogArticleView,
@@ -96,14 +100,10 @@ function createMetadata(
 }
 
 describe('Blog V1 index experience', () => {
-  it('renders the native Buttondown newsletter form', () => {
+  it('renders the same-origin newsletter form', () => {
     const html = renderToStaticMarkup(<BlogIndex articles={[]} />);
 
     expect(html).toContain('Keep up with Vellira');
-    expect(html).toContain(
-      'action="https://buttondown.com/api/emails/embed-subscribe/vellira"'
-    );
-    expect(html).toContain('method="post"');
     expect(html).toContain('name="email"');
     expect(html).toContain('type="email"');
     expect(html).toContain('autoComplete="email"');
@@ -111,6 +111,7 @@ describe('Blog V1 index experience', () => {
     expect(html).toContain('Email address');
     expect(html).toContain('you@example.com');
     expect(html).toContain('Subscribe');
+    expect(html).not.toContain('buttondown.com');
     expect(html).not.toContain('<iframe');
   });
 
@@ -327,9 +328,8 @@ describe('Blog V1 article experience', () => {
     expect(html).toContain('September 2, 2026');
     expect(html).toContain('<h2>Shared contracts</h2>');
     expect(html).toContain('const platform = &quot;web&quot;;');
-    expect(html).toContain(
-      'action="https://buttondown.com/api/emails/embed-subscribe/vellira"'
-    );
+    expect(html).toContain('name="email"');
+    expect(html).not.toContain('buttondown.com');
   });
 
   it('loads article metrics and registers a view from the client experience', async () => {

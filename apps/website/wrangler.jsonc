@@ -4,6 +4,9 @@
   "main": "./cloudflare-worker.mjs",
   "compatibility_date": "2026-09-06",
   "compatibility_flags": ["nodejs_compat"],
+  "secrets": {
+    "required": ["BUTTONDOWN_API_KEY"],
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",
