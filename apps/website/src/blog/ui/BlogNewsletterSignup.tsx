@@ -10,7 +10,7 @@ export function BlogNewsletterSignup() {
       aria-labelledby='blog-newsletter-heading'
     >
       <Container size='wide'>
-        <div className={styles.card}>
+        <div className={styles.card} data-newsletter-card>
           <div>
             <p className={styles.eyebrow}>Newsletter</p>
             <h2 id='blog-newsletter-heading' className={styles.heading}>
