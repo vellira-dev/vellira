@@ -525,6 +525,41 @@ describe('component generator check mode', () => {
 });
 
 describe('component token CLI intent', () => {
+  it('parses an exact governed GitHub work-item URL', () => {
+    expect(
+      parseComponentGeneratorArgs([
+        'EvidenceProbe',
+        'both',
+        'components',
+        'feedback',
+        '--work-item=https://github.com/vellira-dev/vellira/issues/1283',
+      ]).workItem
+    ).toEqual({
+      provider: 'github',
+      repository: 'vellira-dev/vellira',
+      issue: '#1283',
+    });
+  });
+
+  it('rejects malformed and duplicate governed work-item URLs', () => {
+    const base = ['EvidenceProbe', 'both', 'components', 'feedback'];
+
+    expect(() =>
+      parseComponentGeneratorArgs([
+        ...base,
+        '--work-item=https://github.com/vellira-dev/vellira/pull/1283',
+      ])
+    ).toThrow('--work-item must be an exact');
+
+    expect(() =>
+      parseComponentGeneratorArgs([
+        ...base,
+        '--work-item=https://github.com/vellira-dev/vellira/issues/1283',
+        '--work-item=https://github.com/vellira-dev/vellira/issues/1284',
+      ])
+    ).toThrow('--work-item may be provided only once');
+  });
+
   it('parses explicit disclosure component-token intent', () => {
     expect(
       parseComponentGeneratorArgs([

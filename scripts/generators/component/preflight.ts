@@ -6,6 +6,7 @@ import ts from 'typescript';
 import type { ComponentGenerationPlan } from './plan';
 import { getComponentProfile } from './profiles';
 import { assertComponentTokenLifecycleCanMaterialize } from './token-lifecycle-contract';
+import { assertComponentTokenPreservationCanMaterialize } from './token-preservation-contract';
 import {
   canonicalAssetExists,
   canonicalAssetPath,
@@ -361,6 +362,7 @@ export function validateComponentGenerationPlan(
         plan.componentName,
         plan.root
       );
+      assertComponentTokenPreservationCanMaterialize(plan);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
