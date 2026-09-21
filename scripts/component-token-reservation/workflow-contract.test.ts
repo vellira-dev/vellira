@@ -49,7 +49,30 @@ it('retains deterministic evidence and dry-run/apply boundaries', () => {
     'component-token-reservation-${{ inputs.source_sha }}-${{ inputs.issue_number }}-${{ github.run_id }}'
   );
   expect(workflow).toContain(
-    '.artifacts/component-token-reservation/result.json'
+    'RESULT_DIR="$RUNNER_TEMP/component-token-reservation"'
+  );
+  expect(workflow).toContain('RESULT_PATH="$RESULT_DIR/result.json"');
+  expect(workflow).toContain('mkdir -p "$RESULT_DIR"');
+  expect(workflow).toContain(
+    'pnpm --silent component-token-reservation:json "${arguments[@]}" > "$RESULT_PATH"'
+  );
+  expect(workflow).toContain('cat "$RESULT_PATH"');
+  expect(workflow).toContain(
+    'path: ${{ runner.temp }}/component-token-reservation/result.json'
+  );
+  expect(workflow).not.toContain('.artifacts/component-token-reservation');
+  expect(
+    workflow.indexOf('RESULT_PATH="$RESULT_DIR/result.json"')
+  ).toBeLessThan(workflow.indexOf('component-token-reservation:json'));
+  const resolver = fs.readFileSync(
+    'scripts/component-token-reservation/resolver.ts',
+    'utf8'
+  );
+  expect(resolver).toContain("'status'");
+  expect(resolver).toContain("'--porcelain=v1'");
+  expect(resolver).toContain("'--untracked-files=all'");
+  expect(resolver).toContain(
+    'Component-token reservation requires a clean working tree.'
   );
 });
 
