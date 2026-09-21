@@ -51,6 +51,22 @@ describe('release state guard', () => {
     ).toThrow('Latest reachable release tag must be v-prefixed SemVer');
   });
 
+  it('bounds release execution and isolates machine version-sync commits from Husky', () => {
+    const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
+    const releaseStart = workflow.indexOf('jobs:\n  release:');
+    const recoveryStart = workflow.indexOf('\n  recover-existing-release:');
+    const releaseJob = workflow.slice(releaseStart, recoveryStart);
+
+    expect(releaseStart).toBeGreaterThan(-1);
+    expect(recoveryStart).toBeGreaterThan(releaseStart);
+    expect(releaseJob).toContain('timeout-minutes: 45');
+    expect(releaseJob).toContain(
+      "!startsWith(github.event.head_commit.message, 'chore(release): sync package versions')"
+    );
+    expect(workflow.match(/- name: Create version sync PR/g)).toHaveLength(2);
+    expect(workflow.match(/HUSKY: '0'/g)).toHaveLength(2);
+  });
+
   it('runs before dependency installation and semantic-release in the Release workflow', () => {
     const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
     const guard = workflow.indexOf('Guard synchronized release state');
