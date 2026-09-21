@@ -96,8 +96,12 @@ jobs:
           set -uo pipefail
           mkdir -p .artifacts/component-production
           report=.artifacts/component-production/production-report.json
+          # GitHub invokes bash with -e. A governed blocked report exits 1 and
+          # must be validated and published as successful producer evidence.
+          set +e
           pnpm --silent component-production:json --spec "$SPEC_PATH" > "$report"
           status=$?
+          set -e
           if [[ "$status" -gt 1 ]]; then
             exit "$status"
           fi

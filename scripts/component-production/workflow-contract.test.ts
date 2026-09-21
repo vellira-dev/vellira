@@ -59,6 +59,9 @@ it('keeps the trusted producer and canonical-gap consumer artifact contract alig
 });
 
 it('retains blocked reports while rejecting malformed production output', () => {
+  expect(producer).toContain(
+    'set +e\n          pnpm --silent component-production:json --spec "$SPEC_PATH" > "$report"\n          status=$?\n          set -e'
+  );
   expect(producer).toContain('if [[ "$status" -gt 1 ]]');
   expect(producer).toContain("$status === 1 && result.status !== 'blocked'");
   expect(producer).toContain("result.schemaVersion !== '1'");
