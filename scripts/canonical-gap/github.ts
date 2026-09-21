@@ -6,6 +6,8 @@ import {
   type CanonicalGapLabelDefinition,
   type CanonicalGapManagedIssue,
 } from './types';
+import { trustedGitHubNextPagePath } from './github-pagination';
+import { parseTrustedGitHubRepository } from './github-repository';
 
 type GitHubIssueResponse = {
   number: number;
@@ -31,7 +33,7 @@ export type GitHubCanonicalGapClientOptions = {
 export function createGitHubCanonicalGapClient(
   options: GitHubCanonicalGapClientOptions
 ): CanonicalGapIssueClient {
-  const { owner, repo } = parseRepository(options.repository);
+  const { owner, repo } = parseTrustedGitHubRepository(options.repository);
   const apiBaseUrl = options.apiBaseUrl ?? 'https://api.github.com';
   const fetchImpl = options.fetchImpl ?? fetch;
 
@@ -87,7 +89,7 @@ export function createGitHubCanonicalGapClient(
     while (nextPath) {
       const response = await requestResponse<T[]>(nextPath);
       result.push(...response.body);
-      nextPath = nextPagePath(response.link, apiBaseUrl);
+      nextPath = trustedGitHubNextPagePath(response.link, apiBaseUrl);
     }
     return result;
   }
@@ -161,21 +163,6 @@ export function createGitHubCanonicalGapClient(
   }
 }
 
-function nextPagePath(link: string | null, apiBaseUrl: string): string | null {
-  if (!link) return null;
-  const match = link.match(/<([^>]+)>;\s*rel="next"/);
-  if (!match?.[1]) return null;
-
-  const base = new URL(apiBaseUrl);
-  const next = new URL(match[1]);
-  if (next.origin !== base.origin || !next.pathname.startsWith(base.pathname)) {
-    throw new CanonicalGapError(
-      'GitHub pagination returned an unsafe next URL.'
-    );
-  }
-  return `${next.pathname}${next.search}`;
-}
-
 function normalizeIssue(
   issue: GitHubIssueResponse,
   requestId: string
@@ -200,22 +187,4 @@ function mutationBody(input: CanonicalGapIssueMutationInput): string {
     body: input.body,
     labels: input.labels,
   });
-}
-
-function parseRepository(repository: string): { owner: string; repo: string } {
-  const [owner, repo, ...rest] = repository.split('/');
-  if (
-    !owner ||
-    !repo ||
-    rest.length > 0 ||
-    !/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(owner) ||
-    !/^[A-Za-z0-9_.-]{1,100}$/.test(repo) ||
-    repo === '.' ||
-    repo === '..'
-  ) {
-    throw new CanonicalGapError(
-      `Expected repository in owner/name form, received "${repository}".`
-    );
-  }
-  return { owner, repo };
 }

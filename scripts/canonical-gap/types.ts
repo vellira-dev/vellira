@@ -5,6 +5,8 @@ import {
 
 export const CANONICAL_GAP_SCHEMA_VERSION = '1' as const;
 export const CANONICAL_GAP_MARKER_PREFIX = 'vellira-canonical-gap:v1:';
+export const CANONICAL_GAP_AUTHORITY_PREFIX =
+  'vellira-canonical-gap-authority:v1:';
 export const CANONICAL_GAP_KINDS = [
   'component',
   'component-enhancement',
@@ -122,6 +124,52 @@ export function canonicalGapIssueMarker(requestId: string): string {
     );
   }
   return `<!-- ${CANONICAL_GAP_MARKER_PREFIX}${requestId} -->`;
+}
+
+export function canonicalGapRequestAuthorityMarker(value: unknown): string {
+  const request = parseCanonicalGapRequest(value);
+  const encoded = Buffer.from(JSON.stringify(request), 'utf8').toString(
+    'base64url'
+  );
+  return `<!-- ${CANONICAL_GAP_AUTHORITY_PREFIX}${encoded} -->`;
+}
+
+export function extractCanonicalGapRequestAuthority(
+  body: string
+): CanonicalGapRequestV1 | null {
+  const escapedPrefix = CANONICAL_GAP_AUTHORITY_PREFIX.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  );
+  const matches = [
+    ...body.matchAll(
+      new RegExp(`<!--\\s*${escapedPrefix}([A-Za-z0-9_-]+)\\s*-->`, 'g')
+    ),
+  ];
+  if (matches.length === 0) return null;
+  if (matches.length !== 1) {
+    throw new CanonicalGapError(
+      'Managed canonical gap issue contains ambiguous request authority.'
+    );
+  }
+  try {
+    const request = parseCanonicalGapRequest(
+      JSON.parse(Buffer.from(matches[0][1], 'base64url').toString('utf8'))
+    );
+    if (extractCanonicalGapRequestId(body) !== request.requestId) {
+      throw new CanonicalGapError(
+        'Canonical gap request authority does not match its managed marker.'
+      );
+    }
+    return request;
+  } catch (error) {
+    if (error instanceof CanonicalGapError) throw error;
+    throw new CanonicalGapError(
+      `Invalid canonical gap request authority: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
 }
 
 export function extractCanonicalGapRequestId(body: string): string | null {

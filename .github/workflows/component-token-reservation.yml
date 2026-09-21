@@ -1,0 +1,97 @@
+name: Component Token Reservation
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Managed canonical-gap component-token-reservation issue number.
+        required: true
+        type: string
+      source_sha:
+        description: Exact current default-branch revision authorized by the managed issue.
+        required: true
+        type: string
+      dry_run:
+        description: Validate and preview without creating a reservation pull request.
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+
+concurrency:
+  group: component-token-reservation-${{ inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  reserve:
+    name: Resolve managed component-token reservation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bind dispatch to exact current default branch
+        shell: bash
+        env:
+          SOURCE_REVISION: ${{ inputs.source_sha }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          WORKFLOW_REVISION: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$SOURCE_REVISION" = "$WORKFLOW_REVISION"
+          default_branch="$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)"
+          test "$WORKFLOW_REF" = "refs/heads/$default_branch"
+          current_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$default_branch" --jq .object.sha)"
+          test "$current_sha" = "$SOURCE_REVISION"
+
+      - name: Checkout immutable reservation authority
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Install trusted resolver dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build canonical metadata authority
+        run: pnpm --filter @vellira-ui/metadata build
+
+      - name: Resolve canonical reservation
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          SOURCE_REVISION: ${{ inputs.source_sha }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/component-token-reservation
+          arguments=(
+            --repo "$GITHUB_REPOSITORY"
+            --issue-number "$ISSUE_NUMBER"
+            --source-revision "$SOURCE_REVISION"
+          )
+          if [[ "$DRY_RUN" != true ]]; then arguments+=(--apply); fi
+          pnpm --silent component-token-reservation:json "${arguments[@]}" > .artifacts/component-token-reservation/result.json
+          cat .artifacts/component-token-reservation/result.json
+
+      - name: Upload reservation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: component-token-reservation-${{ inputs.source_sha }}-${{ inputs.issue_number }}-${{ github.run_id }}
+          path: .artifacts/component-token-reservation/result.json
+          if-no-files-found: error
+          retention-days: 14

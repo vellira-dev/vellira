@@ -15,6 +15,7 @@ import {
   CANONICAL_GAP_SCHEMA_VERSION,
   CanonicalGapError,
   canonicalGapIssueMarker,
+  canonicalGapRequestAuthorityMarker,
   parseCanonicalGapRequest,
   type CanonicalGapBatchV1,
   type CanonicalGapIssueClient,
@@ -467,6 +468,7 @@ function issueTitle(request: CanonicalGapRequestV1): string {
 function issueBody(request: CanonicalGapRequestV1): string {
   const lines = [
     canonicalGapIssueMarker(request.requestId),
+    canonicalGapRequestAuthorityMarker(request),
     '',
     '## Canonical gap',
     '',
