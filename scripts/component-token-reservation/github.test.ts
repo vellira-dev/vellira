@@ -69,4 +69,25 @@ describe('component-token reservation GitHub candidate authority', () => {
     ).rejects.toThrow(/exact revisions/);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it('closes stale governed PRs through pull-request authority only', async () => {
+    const fetchImpl = vi.fn<
+      (input: unknown, init?: RequestInit) => Promise<Response>
+    >(async () => new Response(null, { status: 204 }));
+    const client = createComponentTokenReservationGitHubClient({
+      repository: 'vellira-dev/vellira',
+      token: 'workflow-token',
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+
+    await client.closePullRequest(1270);
+
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe(
+      'https://api.github.com/repos/vellira-dev/vellira/pulls/1270'
+    );
+    expect(fetchImpl.mock.calls[0]?.[1]).toMatchObject({
+      method: 'PATCH',
+      body: JSON.stringify({ state: 'closed' }),
+    });
+  });
 });

@@ -52,8 +52,9 @@ export interface ComponentTokenReservationGitHubClient {
   getIssue(number: number): Promise<CanonicalGapManagedIssue>;
   listManagedIssues(): Promise<readonly CanonicalGapManagedIssue[]>;
   listPullRequests(
-    headBranch: string
+    headBranch?: string
   ): Promise<readonly ReservationPullRequest[]>;
+  closePullRequest(number: number): Promise<void>;
   getFile(filePath: string, revision: string): Promise<ReservationFile>;
   compareCandidate(
     sourceRevision: string,
@@ -222,13 +223,18 @@ export function createComponentTokenReservationGitHubClient(options: {
     },
 
     async listPullRequests(headBranch) {
-      const query = new URLSearchParams({
-        state: 'all',
-        head: `${owner}:${headBranch}`,
-      });
+      const query = new URLSearchParams({ state: 'all' });
+      if (headBranch) query.set('head', `${owner}:${headBranch}`);
       return (
         await listAll<GitHubPull>(`${repositoryPath}/pulls?${query}`)
       ).map(normalizePull);
+    },
+
+    async closePullRequest(number) {
+      await request(`${repositoryPath}/pulls/${number}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ state: 'closed' }),
+      });
     },
 
     async getFile(filePath, revision) {

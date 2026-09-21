@@ -76,6 +76,34 @@ it('retains deterministic evidence and dry-run/apply boundaries', () => {
   );
 });
 
+it('keeps supersession bounded to source-scoped PR identity and pull-request writes', () => {
+  const orchestrator = fs.readFileSync(
+    'scripts/component-token-reservation/orchestrator.ts',
+    'utf8'
+  );
+  const github = fs.readFileSync(
+    'scripts/component-token-reservation/github.ts',
+    'utf8'
+  );
+  expect(orchestrator).toContain(
+    'reservationBranch(request.requestId, params.sourceRevision)'
+  );
+  expect(orchestrator).toContain('reservationLegacyBranch');
+  expect(orchestrator).toContain('superseded-and-created');
+  expect(orchestrator).toContain('superseded-and-linked-existing');
+  expect(orchestrator).toContain('Multiple current-source reservation PRs');
+  expect(orchestrator).toContain('refusing to reopen');
+  expect(orchestrator).toContain('supersedeStalePullRequests');
+  expect(github).toContain('closePullRequest(number: number)');
+  expect(github).toContain("method: 'PATCH'");
+  expect(github).toContain("body: JSON.stringify({ state: 'closed' })");
+  expect(normalized(workflow)).toContain(
+    'permissions: contents: write issues: read pull-requests: write'
+  );
+  expect(workflow).not.toContain('issues: write');
+  expect(workflow).not.toMatch(/git push|force|main mutation/);
+});
+
 it('contains no component-specific implementation or lifecycle reservation', () => {
   const productionSources = fs
     .readdirSync('scripts/component-token-reservation')
