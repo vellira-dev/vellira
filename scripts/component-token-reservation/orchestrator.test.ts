@@ -192,6 +192,16 @@ function deterministicCandidate(
 }
 
 describe('component-token reservation orchestration', () => {
+  it('uses a source-scoped sibling branch that cannot overlap the legacy ref', () => {
+    const requestId = genericReservationRequest().requestId;
+    const sourceRevision = 'a'.repeat(40);
+    const legacy = reservationLegacyBranch(requestId);
+    const scoped = reservationBranch(requestId, sourceRevision);
+    expect(scoped).toBe(`${legacy}--${sourceRevision}`);
+    expect(scoped).not.toBe(legacy);
+    expect(scoped.startsWith(`${legacy}/`)).toBe(false);
+  });
+
   it('creates one deterministic reservation PR and links it on a clean rerun', async () => {
     const first = temporaryRepository();
     dispose.push(first.dispose);
@@ -330,6 +340,76 @@ describe('component-token reservation orchestration', () => {
     ).toHaveLength(1);
   });
 
+  it('recovers from a closed legacy PR and its surviving branch without mutating it again', async () => {
+    const fixture = temporaryRepository();
+    dispose.push(fixture.dispose);
+    const baseContent = fs.readFileSync(fixture.registry, 'utf8');
+    const remote = fixtureClient({
+      sourceRevision: fixture.sourceRevision,
+      baseContent,
+    });
+    const request = genericReservationRequest();
+    const staleSource = '3'.repeat(40);
+    const staleHead = '4'.repeat(40);
+    const legacyBranch = reservationLegacyBranch(request.requestId);
+    const currentBranch = reservationBranch(
+      request.requestId,
+      fixture.sourceRevision
+    );
+    remote.branches.set(legacyBranch, staleHead);
+    remote.files.set(staleHead, baseContent);
+    remote.pulls.push({
+      number: 1270,
+      state: 'closed',
+      url: 'https://github.com/vellira-dev/vellira/pull/1270',
+      title: 'reservation',
+      body: reservationPullRequestMarker({
+        requestId: request.requestId,
+        sourceRevision: staleSource,
+      }),
+      headRef: legacyBranch,
+      headSha: staleHead,
+      headRepository: 'vellira-dev/vellira',
+      baseRef: 'main',
+      baseSha: fixture.sourceRevision,
+      baseRepository: 'vellira-dev/vellira',
+    });
+
+    const created = await runApply(fixture, remote.client);
+    expect(created.action).toBe('superseded-and-created');
+    expect(created.reservationPr?.branch).toBe(currentBranch);
+    expect(remote.branches.has(legacyBranch)).toBe(true);
+    expect(remote.branches.has(currentBranch)).toBe(true);
+    expect(remote.events).not.toContain('close:1270');
+    expect(remote.createCount).toBe(1);
+
+    fixture.restore();
+    const linked = await runApply(fixture, remote.client);
+    expect(linked.action).toBe('linked-existing');
+    expect(remote.events).not.toContain('close:1270');
+    expect(remote.createCount).toBe(1);
+  });
+
+  it('resumes from a verified source-scoped branch when PR creation previously failed', async () => {
+    const fixture = temporaryRepository();
+    dispose.push(fixture.dispose);
+    const remote = fixtureClient({
+      sourceRevision: fixture.sourceRevision,
+      baseContent: fs.readFileSync(fixture.registry, 'utf8'),
+    });
+    remote.installCandidate({
+      content: deterministicCandidate(fixture),
+      withPull: false,
+    });
+
+    const result = await runApply(fixture, remote.client);
+    expect(result.action).toBe('create-pr');
+    expect(remote.createCount).toBe(1);
+    expect(
+      remote.events.findIndex((event) => event.startsWith('compare:'))
+    ).toBeLessThan(remote.events.indexOf('create-pr'));
+  });
+
   it('fails closed on duplicate current-source PRs and human-closed candidates', async () => {
     const fixture = temporaryRepository();
     dispose.push(fixture.dispose);
@@ -389,6 +469,35 @@ describe('component-token reservation orchestration', () => {
         sourceRevision: '7'.repeat(40),
       }),
       headRef: branch,
+      headSha: '8'.repeat(40),
+      headRepository: 'vellira-dev/vellira',
+      baseRef: 'main',
+      baseSha: fixture.sourceRevision,
+      baseRepository: 'vellira-dev/vellira',
+    });
+    await expect(runApply(fixture, remote.client)).rejects.toThrow(
+      /branch and marker source revisions disagree/
+    );
+  });
+
+  it('rejects malformed source-scoped branch suffixes without confusing them with legacy', async () => {
+    const fixture = temporaryRepository();
+    dispose.push(fixture.dispose);
+    const remote = fixtureClient({
+      sourceRevision: fixture.sourceRevision,
+      baseContent: fs.readFileSync(fixture.registry, 'utf8'),
+    });
+    const request = genericReservationRequest();
+    remote.pulls.push({
+      number: 1404,
+      state: 'open',
+      url: 'https://github.com/vellira-dev/vellira/pull/1404',
+      title: 'reservation',
+      body: reservationPullRequestMarker({
+        requestId: request.requestId,
+        sourceRevision: '7'.repeat(40),
+      }),
+      headRef: `${reservationLegacyBranch(request.requestId)}--not-a-sha`,
       headSha: '8'.repeat(40),
       headRepository: 'vellira-dev/vellira',
       baseRef: 'main',
@@ -484,7 +593,10 @@ describe('component-token reservation orchestration', () => {
     await runApply(fixture, remote.client);
     fixture.restore();
     const tamperedHead = '4'.repeat(40);
-    const branch = reservationBranch(genericReservationRequest().requestId);
+    const branch = reservationBranch(
+      genericReservationRequest().requestId,
+      fixture.sourceRevision
+    );
     remote.branches.set(branch, tamperedHead);
     remote.pulls[0].headSha = tamperedHead;
     remote.files.set(tamperedHead, deterministicCandidate(fixture));
@@ -497,7 +609,7 @@ describe('component-token reservation orchestration', () => {
       ],
     });
     await expect(runApply(fixture, remote.client)).rejects.toThrow(
-      /authorized candidate identity/
+      /exact deterministic registry-only commit/
     );
   });
 

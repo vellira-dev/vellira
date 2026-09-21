@@ -88,6 +88,8 @@ it('keeps supersession bounded to source-scoped PR identity and pull-request wri
   expect(orchestrator).toContain(
     'reservationBranch(request.requestId, params.sourceRevision)'
   );
+  expect(orchestrator).toContain("const SOURCE_SCOPED_BRANCH_SEPARATOR = '--'");
+  expect(orchestrator).not.toContain("const LEGACY_BRANCH_SUFFIX = '/'");
   expect(orchestrator).toContain('reservationLegacyBranch');
   expect(orchestrator).toContain('superseded-and-created');
   expect(orchestrator).toContain('superseded-and-linked-existing');
