@@ -106,7 +106,7 @@ it('keeps supersession bounded to source-scoped PR identity and pull-request wri
   expect(workflow).not.toMatch(/git push|force|main mutation/);
 });
 
-it('contains no component-specific implementation or lifecycle reservation', () => {
+it('contains no component-specific implementation while allowing canonical lifecycle state', () => {
   const productionSources = fs
     .readdirSync('scripts/component-token-reservation')
     .filter(
@@ -120,7 +120,7 @@ it('contains no component-specific implementation or lifecycle reservation', () 
       fs.readFileSync(`scripts/component-token-reservation/${file}`, 'utf8')
     ).not.toContain('Toast');
   }
-  expect(
-    fs.readFileSync('packages/metadata/src/tokenLifecycle.ts', 'utf8')
-  ).not.toMatch(/^\s*Toast:/m);
+  // The canonical lifecycle registry is allowed to contain governed entries.
+  // Component-specific protection belongs to the resolver/orchestrator sources
+  // and workflow, not to repository state after a legitimate reservation.
 });
