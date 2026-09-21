@@ -35,6 +35,11 @@ import {
   getTokenLifecycleRegistryFile,
   needsComponentTokenLifecycleMutation,
 } from './token-lifecycle-contract';
+import {
+  checkComponentTokenPreservationContract,
+  getPlannedComponentTokenPreservationArtifacts,
+  synchronizeComponentTokenPreservationContract,
+} from './token-preservation-contract';
 
 import type { ComponentGeneratorOptions } from './cli';
 
@@ -128,6 +133,8 @@ function getPlannedUpdatedFiles(
     if (needsComponentTokenLifecycleMutation(plan.componentName, plan.root)) {
       files.push(getTokenLifecycleRegistryFile(plan.root));
     }
+
+    files.push(...getPlannedComponentTokenPreservationArtifacts(plan));
   }
 
   if (generatesSharedTypes(plan)) {
@@ -161,6 +168,7 @@ export async function runComponentGenerator(params: {
       ...checkPublicApiContractSynchronization(plan),
       ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
+      ...checkComponentTokenPreservationContract(plan),
       ...(await checkComponentTokenContract(plan)),
       ...checkSharedTypesContract(plan),
       ...(await checkGeneratedPlanContract(plan)),
@@ -211,6 +219,12 @@ export async function runComponentGenerator(params: {
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
 
+  const preservationResult = { updatedFiles: [] as string[] };
+  await synchronizeComponentTokenPreservationContract({
+    plan,
+    result: preservationResult,
+  });
+
   synchronizePublicSymbolContracts({
     plan,
     updatedFiles: result.updatedFiles,
@@ -256,6 +270,7 @@ export async function runComponentGenerator(params: {
   const updatedFiles = [
     ...new Set([
       ...lifecycleResult.updatedFiles,
+      ...preservationResult.updatedFiles,
       ...sharedTypesResult.updatedFiles,
       ...result.updatedFiles,
       ...tokenTypesResult.updatedFiles,

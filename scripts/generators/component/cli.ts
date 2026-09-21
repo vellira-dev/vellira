@@ -12,6 +12,10 @@ import {
   componentCapabilities,
   componentSemanticCapabilities,
 } from '../../../packages/metadata/src/component';
+import {
+  parseGovernedGitHubWorkItemUrl,
+  type GovernedGitHubWorkItem,
+} from './work-item';
 
 export type ComponentPlatformArg = 'web' | 'native' | 'both';
 
@@ -49,6 +53,7 @@ export type ComponentGeneratorOptions = {
   tokens?: readonly string[];
   assets?: readonly ComponentAssetRequirement[];
   componentTokens?: ComponentTokenContract | false;
+  workItem?: GovernedGitHubWorkItem;
   parts: readonly string[];
   force: boolean;
   dryRun?: boolean;
@@ -78,7 +83,7 @@ const componentNamePattern = /^[A-Z][A-Za-z0-9]*$/;
 const iconNamePattern = /^[A-Z][A-Za-z0-9]*$/;
 
 export const componentGeneratorUsage =
-  'Usage: pnpm create:component <Name> web|native|both primitives|components|patterns action|form|navigation|overlay|feedback|data-display|layout|utility [--profile=base|form-control|compound|overlay] [--control=value|boolean|text] [--capabilities=controlled,keyboard,...] [--semantic-capabilities=accessible-name,multiline,...] [--platform-semantic-capability=react:accessible-name] [--parts=Root,Trigger,Content] [--icon=<IconName>:<semantic purpose>] [--token=<token.path>] [--component-tokens=standard|boolean-control|disclosure|none] [--force] [--dry-run] [--check]';
+  'Usage: pnpm create:component <Name> web|native|both primitives|components|patterns action|form|navigation|overlay|feedback|data-display|layout|utility [--profile=base|form-control|compound|overlay] [--control=value|boolean|text] [--capabilities=controlled,keyboard,...] [--semantic-capabilities=accessible-name,multiline,...] [--platform-semantic-capability=react:accessible-name] [--parts=Root,Trigger,Content] [--icon=<IconName>:<semantic purpose>] [--token=<token.path>] [--component-tokens=standard|boolean-control|disclosure|none] [--work-item=https://github.com/<owner>/<repository>/issues/<number>] [--force] [--dry-run] [--check]';
 
 function parseIconRequirement(value: string): ComponentIconRequirement {
   const separator = value.indexOf(':');
@@ -130,6 +135,7 @@ export function parseComponentGeneratorArgs(
   let check = false;
   let parts: string[] = [];
   let componentTokens: ComponentTokenContract | false | undefined;
+  let workItem: GovernedGitHubWorkItem | undefined;
   const icons: ComponentIconRequirement[] = [];
   const tokens: string[] = [];
 
@@ -202,6 +208,17 @@ export function parseComponentGeneratorArgs(
       }
 
       componentTokens = value;
+      continue;
+    }
+
+    if (flag.startsWith('--work-item=')) {
+      if (workItem !== undefined) {
+        throw new Error('--work-item may be provided only once.');
+      }
+
+      workItem = parseGovernedGitHubWorkItemUrl(
+        flag.slice('--work-item='.length)
+      );
       continue;
     }
 
@@ -442,6 +459,7 @@ export function parseComponentGeneratorArgs(
     icons,
     tokens,
     ...(componentTokens !== undefined ? { componentTokens } : {}),
+    ...(workItem !== undefined ? { workItem } : {}),
     parts,
     force,
     dryRun,
