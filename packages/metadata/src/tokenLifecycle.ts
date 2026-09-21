@@ -26,6 +26,13 @@ export type SemanticTokenLifecycleEntry = {
  * be treated as canonical component ownership.
  */
 export const componentTokenLifecycle = {
+  Toast: {
+    status: 'reserved',
+    public: true,
+    owner: 'Toast',
+    purpose: 'Reserved for the canonical Toast component token contract.',
+  },
+
   Avatar: {
     status: 'reserved',
     public: true,

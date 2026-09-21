@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.121.4",
+  "version": "2.122.1",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -115,6 +115,7 @@
     "component-request:json": "node --import tsx scripts/component-production/missing-component-request.ts",
     "component-production:json": "node --import tsx scripts/component-production/cli.ts",
     "component-production:validate:json": "node --import tsx scripts/component-production/validate-cli.ts",
+    "component-token-reservation:json": "node --import tsx scripts/component-token-reservation/cli.ts",
     "check:component-quality:contract": "node --import tsx scripts/checks/component-quality/completion-contract-cli.ts"
   },
   "devDependencies": {
