@@ -22,6 +22,7 @@ export async function runComponentTokenReservationCli(
   try {
     const options = parseArguments(argv);
     const token = env.GITHUB_TOKEN ?? '';
+    const writeToken = env.GITHUB_WRITE_TOKEN ?? '';
     const result = await runComponentTokenReservation({
       root: path.resolve(dependencies.cwd ?? process.cwd()),
       repository: options.repository,
@@ -31,6 +32,7 @@ export async function runComponentTokenReservationCli(
       client: createComponentTokenReservationGitHubClient({
         repository: options.repository,
         token,
+        writeToken,
       }),
     });
     stdout.write(`${JSON.stringify(result, null, 2)}\n`);
