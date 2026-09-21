@@ -1,0 +1,57 @@
+Paired React and React Native component contract surfaces for `Textarea` give review a clear cross-platform boundary. The selected source paths identify paired canonical component contract surfaces. Those sources make the component surfaces reviewable together while keeping platform-specific decisions anchored to their own evidence. That boundary keeps the review scope precise as each platform evolves. The article follows that boundary through the selected component surfaces, platform-specific interaction evidence, and public documentation so maintainers can see which concerns need joint comparison and which require separate platform review. Start with the paired declarations, compare the grounded platform evidence, and reserve broader behavior claims for the source that establishes them.
+
+## Problem and constraint
+
+The maintenance problem begins with the selected source material. That surface is concrete, but it only remains useful when it can be compared with the checker implementation and the focused test cases. Looking at one file or command in isolation makes it easy to miss a responsibility that moved elsewhere in the same change.
+
+The constraint is to keep those responsibilities separate while making their boundaries inspectable. A reviewer should be able to identify the entry point, the implementation or configuration that shapes it, and the coverage that makes a specific concern visible. That sequence supports a maintenance decision and keeps broader behavior questions with their own source boundaries.
+
+## What changed
+
+This part of the change is anchored in the selected source material. It gives review a concrete surface to discuss instead of relying on a broad description of the repository. Its neighboring review surfaces are the checker implementation and the focused test cases, each with a distinct responsibility in the selected material.
+
+That separation matters during implementation review. A command, source module, configuration declaration, or result shape can change independently, so the useful question is which adjacent boundary needs to be compared before the change is considered complete. Keep those named surfaces as separate responsibilities. An unstated call graph or runtime outcome requires an additional source boundary beyond proximity between filenames.
+
+## How it works
+
+The mechanism starts with `textareaDocs` from `apps/docs/src/component-docs/Textarea.docs.ts` and `componentDocsContracts` from `apps/docs/src/component-docs/index.ts`. The selected material places that surface in a sequence of explicit responsibilities rather than leaving the next maintenance step implicit.
+
+For a focused investigation, begin at that boundary and then compare it with the checker implementation and the focused test cases. Keep each handoff narrow: a value, command, or result should be followed only to the next represented responsibility. That makes a missing connection easier to identify and gives the next change a clear source location to revisit.
+
+## Failure modes and edge cases
+
+The static case “keeps focused website command runtime failures blocking” identifies a boundary that deserves deliberate failure-oriented review. Its title identifies a focused review scenario. A change at this point can look harmless when only one source is inspected, even though a neighboring declaration, invocation, or result field may now need the same attention.
+
+When that boundary moves, inspect it beside the checker implementation and the focused test cases. Start with the source that owns the changed decision, then use the named coverage as a focused regression anchor. The scenario guides review while the implementation and execution surfaces remain separate places to investigate.
+
+## Integration and enforcement
+
+The static case “scopes website validation to the exact component without the global catalog check” records an explicit integration surface in the selected material. The important point is not that automation or configuration exists, but that a maintainer can compare this boundary with the checker implementation and the focused test cases when the normal engineering workflow changes.
+
+Keep the responsibilities distinct during that comparison. An invocation records how a command is reached; an implementation source records its own logic; and a result shape records what the selected checker can make observable. Reading those surfaces together supports a concrete wiring review and keeps execution questions with the command and source boundaries that own them.
+
+## Maintenance implications
+
+The maintenance boundary here is `auditDeprecatedSemanticConsumerSource` in `scripts/checks/token-semantic/semantic-vocabulary-consumers.ts`. A later edit should revisit that surface together with the checker implementation, because adjacent responsibilities can drift even when each individual declaration still appears reasonable.
+
+A practical sequence is to identify the changed owner first, compare the closest configuration or caller next, and then check the focused coverage that describes the review concern. That order turns a future change into a bounded investigation instead of a search for intent across unrelated files. The scenario name, configuration label, and implementation source remain separate maintenance cues.
+
+## Cross-platform details
+
+The platform detail is a comparison point for the source-backed surfaces placed in this section. It helps a maintainer keep the represented environments aligned as the suite evolves.
+
+Use the matrix as the place to make platform scope explicit during review.
+
+The practical maintenance rule is to review a changed project declaration with its related policy and invocation. That keeps platform scope legible while the suite changes.
+
+## Practical takeaway
+
+Use the static case “reports authored textarea when canonical Textarea exists” as the first stop when reviewing or debugging this kind of change. From there, compare the checker implementation and the focused test cases in the order the represented responsibilities are encountered. The goal is not to memorize a repository layout; it is to make each handoff concrete enough that a missing update has a likely place to investigate.
+
+That habit gives the change a repeatable review path. Runtime questions stay with the command and source boundaries that can be examined directly. A focused change remains easier to maintain when its command, implementation, configuration, output, and coverage boundaries are checked as adjacent responsibilities rather than as interchangeable labels.
+
+## Current limitations
+
+The boundary in this section is deliberate. The selected source material defines what this article can inspect directly, but it does not establish every runtime path, every consumer, or every adjacent repository surface. Treating a selected source as complete proof would make the article sound more certain than the change can support.
+
+Use the checker implementation and the focused test cases as the next places to inspect when the question needs a broader answer. Execution evidence, additional source inspection, or focused tests may be needed to establish behavior outside this article’s scope. Keeping that distinction explicit preserves a useful review path without converting it into a promise about uninspected code.

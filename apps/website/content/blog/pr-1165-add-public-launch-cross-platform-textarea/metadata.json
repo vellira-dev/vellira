@@ -1,0 +1,9 @@
+{
+  "title": "Public-launch cross-platform Textarea in Vellira",
+  "description": "How Vellira keeps cross-platform component contracts reviewable across React and React Native.",
+  "slug": "pr-1165-add-public-launch-cross-platform-textarea",
+  "publishedAt": "2026-09-19",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}
