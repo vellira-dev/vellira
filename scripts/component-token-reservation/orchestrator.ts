@@ -15,7 +15,7 @@ export const COMPONENT_TOKEN_RESERVATION_PR_MARKER_PREFIX =
   'vellira-component-token-reservation-pr:v1:';
 export const COMPONENT_TOKEN_RESERVATION_BRANCH_PREFIX =
   'component-token-reservation/';
-const LEGACY_BRANCH_SUFFIX = '/';
+const SOURCE_SCOPED_BRANCH_SEPARATOR = '--';
 
 export type StaleReservationPullRequestV1 = {
   number: number;
@@ -297,7 +297,8 @@ export async function runComponentTokenReservation(params: {
     params,
     requestId: request.requestId,
     issue,
-    action: openStale.length > 0 ? 'superseded-and-created' : 'create-pr',
+    action:
+      staleReservationPrs.length > 0 ? 'superseded-and-created' : 'create-pr',
     entry: applied.entry,
     pull,
     branch,
@@ -315,7 +316,7 @@ export function reservationBranch(requestId: string, sourceRevision?: string) {
   if (!/^[0-9a-f]{40}$/.test(sourceRevision)) {
     throw new CanonicalGapError('Invalid reservation source revision.');
   }
-  return `${COMPONENT_TOKEN_RESERVATION_BRANCH_PREFIX}${requestId}/${sourceRevision}`;
+  return `${reservationLegacyBranch(requestId)}${SOURCE_SCOPED_BRANCH_SEPARATOR}${sourceRevision}`;
 }
 
 export function reservationLegacyBranch(requestId: string) {
@@ -362,7 +363,7 @@ function discoverReservationPulls(params: {
     params.sourceRevision
   );
   const legacyBranch = reservationLegacyBranch(params.requestId);
-  const sourceScopedPrefix = `${legacyBranch}${LEGACY_BRANCH_SUFFIX}`;
+  const sourceScopedPrefix = `${legacyBranch}${SOURCE_SCOPED_BRANCH_SEPARATOR}`;
   const discovered: DiscoveredReservationPull[] = [];
   for (const pull of params.pulls) {
     const marker = parseReservationPullRequestMarker(pull.body);
