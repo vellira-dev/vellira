@@ -26,8 +26,11 @@ concurrency:
 
 jobs:
   release:
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' &&
+      !startsWith(github.event.head_commit.message, 'chore(release): sync package versions')
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
       id-token: write
@@ -182,6 +185,8 @@ jobs:
       - name: Create version sync PR
         if: steps.version-sync.outputs.changed == 'true'
         id: version-sync-pr
+        env:
+          HUSKY: '0'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           token: ${{ steps.release-sync-token.outputs.token }}
@@ -333,6 +338,8 @@ jobs:
       - name: Create version sync PR
         if: steps.recovery-version-sync.outputs.changed == 'true'
         id: version-sync-pr
+        env:
+          HUSKY: '0'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           token: ${{ steps.recovery-release-sync-token.outputs.token }}
