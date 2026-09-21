@@ -113,11 +113,14 @@ type GitHubComparison = {
 export function createComponentTokenReservationGitHubClient(options: {
   repository: string;
   token: string;
+  writeToken?: string;
   apiBaseUrl?: string;
   fetchImpl?: typeof fetch;
 }): ComponentTokenReservationGitHubClient {
   const { owner, repo } = parseTrustedGitHubRepository(options.repository);
-  if (!options.token.trim()) {
+  const readToken = options.token.trim();
+  const writeToken = options.writeToken?.trim() ?? '';
+  if (!readToken) {
     throw new CanonicalGapError(
       'GITHUB_TOKEN is required for component-token reservation GitHub access.'
     );
@@ -128,12 +131,13 @@ export function createComponentTokenReservationGitHubClient(options: {
 
   async function response<T>(
     requestPath: string,
-    init: RequestInit = {}
+    init: RequestInit = {},
+    token: string = readToken
   ): Promise<{ body: T; link: string | null; status: number }> {
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/vnd.github+json');
     headers.set('X-GitHub-Api-Version', '2022-11-28');
-    headers.set('Authorization', `Bearer ${options.token}`);
+    headers.set('Authorization', `Bearer ${token}`);
     if (init.body) headers.set('Content-Type', 'application/json');
     const result = await fetchImpl(`${apiBaseUrl}${requestPath}`, {
       ...init,
@@ -155,6 +159,19 @@ export function createComponentTokenReservationGitHubClient(options: {
 
   async function request<T>(requestPath: string, init: RequestInit = {}) {
     return (await response<T>(requestPath, init)).body;
+  }
+
+  function requireWriteToken() {
+    if (!writeToken) {
+      throw new CanonicalGapError(
+        'GITHUB_WRITE_TOKEN is required for component-token reservation mutations.'
+      );
+    }
+    return writeToken;
+  }
+
+  async function writeRequest<T>(requestPath: string, init: RequestInit = {}) {
+    return (await response<T>(requestPath, init, requireWriteToken())).body;
   }
 
   async function listAll<T>(requestPath: string) {
@@ -184,7 +201,7 @@ export function createComponentTokenReservationGitHubClient(options: {
       const headers = new Headers({
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
-        Authorization: `Bearer ${options.token}`,
+        Authorization: `Bearer ${readToken}`,
       });
       const result = await fetchImpl(`${apiBaseUrl}${requestPath}`, {
         headers,
@@ -231,7 +248,7 @@ export function createComponentTokenReservationGitHubClient(options: {
     },
 
     async closePullRequest(number) {
-      await request(`${repositoryPath}/pulls/${number}`, {
+      await writeRequest(`${repositoryPath}/pulls/${number}`, {
         method: 'PATCH',
         body: JSON.stringify({ state: 'closed' }),
       });
@@ -284,7 +301,7 @@ export function createComponentTokenReservationGitHubClient(options: {
     },
 
     async createBranch(branch, sourceRevision) {
-      await request(`${repositoryPath}/git/refs`, {
+      await writeRequest(`${repositoryPath}/git/refs`, {
         method: 'POST',
         body: JSON.stringify({
           ref: `refs/heads/${branch}`,
@@ -294,7 +311,7 @@ export function createComponentTokenReservationGitHubClient(options: {
     },
 
     async updateFile(params) {
-      await request(
+      await writeRequest(
         `${repositoryPath}/contents/${encodePath(params.filePath)}`,
         {
           method: 'PUT',
@@ -310,7 +327,7 @@ export function createComponentTokenReservationGitHubClient(options: {
 
     async createPullRequest(params) {
       return normalizePull(
-        await request<GitHubPull>(`${repositoryPath}/pulls`, {
+        await writeRequest<GitHubPull>(`${repositoryPath}/pulls`, {
           method: 'POST',
           body: JSON.stringify({
             title: params.title,
