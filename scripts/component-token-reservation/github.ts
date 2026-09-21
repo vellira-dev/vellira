@@ -13,8 +13,10 @@ export type ReservationPullRequest = {
   title: string;
   body: string;
   headRef: string;
+  headSha: string;
   headRepository: string;
   baseRef: string;
+  baseSha: string;
   baseRepository: string;
 };
 
@@ -27,6 +29,23 @@ export type ReservationFile = {
   content: string;
 };
 
+export type ReservationComparison = {
+  status: string;
+  aheadBy: number;
+  behindBy: number;
+  totalCommits: number;
+  mergeBaseSha: string;
+  commits: readonly {
+    sha: string;
+    parentShas: readonly string[];
+  }[];
+  files: readonly {
+    path: string;
+    status: string;
+    previousPath: string | null;
+  }[];
+};
+
 export interface ComponentTokenReservationGitHubClient {
   getRepository(): Promise<ReservationRepository>;
   getBranchSha(branch: string): Promise<string | null>;
@@ -36,6 +55,10 @@ export interface ComponentTokenReservationGitHubClient {
     headBranch: string
   ): Promise<readonly ReservationPullRequest[]>;
   getFile(filePath: string, revision: string): Promise<ReservationFile>;
+  compareCandidate(
+    sourceRevision: string,
+    headRevision: string
+  ): Promise<ReservationComparison>;
   createBranch(branch: string, sourceRevision: string): Promise<void>;
   updateFile(params: {
     filePath: string;
@@ -68,8 +91,22 @@ type GitHubPull = {
   html_url: string;
   title: string;
   body: string | null;
-  head: { ref: string; repo: { full_name: string } | null };
-  base: { ref: string; repo: { full_name: string } | null };
+  head: { ref: string; sha: string; repo: { full_name: string } | null };
+  base: { ref: string; sha: string; repo: { full_name: string } | null };
+};
+
+type GitHubComparison = {
+  status: string;
+  ahead_by: number;
+  behind_by: number;
+  total_commits: number;
+  merge_base_commit: { sha: string };
+  commits: Array<{ sha: string; parents: Array<{ sha: string }> }>;
+  files?: Array<{
+    filename: string;
+    status: string;
+    previous_filename?: string;
+  }>;
 };
 
 export function createComponentTokenReservationGitHubClient(options: {
@@ -216,6 +253,30 @@ export function createComponentTokenReservationGitHubClient(options: {
       };
     },
 
+    async compareCandidate(sourceRevision, headRevision) {
+      assertExactRevision(sourceRevision);
+      assertExactRevision(headRevision);
+      const value = await request<GitHubComparison>(
+        `${repositoryPath}/compare/${sourceRevision}...${headRevision}`
+      );
+      return {
+        status: value.status,
+        aheadBy: value.ahead_by,
+        behindBy: value.behind_by,
+        totalCommits: value.total_commits,
+        mergeBaseSha: value.merge_base_commit.sha,
+        commits: value.commits.map((commit) => ({
+          sha: commit.sha,
+          parentShas: commit.parents.map(({ sha }) => sha),
+        })),
+        files: (value.files ?? []).map((file) => ({
+          path: file.filename,
+          status: file.status,
+          previousPath: file.previous_filename ?? null,
+        })),
+      };
+    },
+
     async createBranch(branch, sourceRevision) {
       await request(`${repositoryPath}/git/refs`, {
         method: 'POST',
@@ -286,8 +347,10 @@ export function createComponentTokenReservationGitHubClient(options: {
       title: pull.title,
       body: pull.body ?? '',
       headRef: pull.head.ref,
+      headSha: pull.head.sha,
       headRepository: pull.head.repo?.full_name ?? '',
       baseRef: pull.base.ref,
+      baseSha: pull.base.sha,
       baseRepository: pull.base.repo?.full_name ?? '',
     };
   }
@@ -295,4 +358,10 @@ export function createComponentTokenReservationGitHubClient(options: {
 
 function encodePath(value: string) {
   return value.split('/').map(encodeURIComponent).join('/');
+}
+
+function assertExactRevision(value: string) {
+  if (!/^[0-9a-f]{40}$/.test(value)) {
+    throw new CanonicalGapError('GitHub comparison requires exact revisions.');
+  }
 }

@@ -108,15 +108,13 @@ export async function runComponentTokenReservation(params: {
       requestId: request.requestId,
       sourceRevision: params.sourceRevision,
     });
-    const branchFile = await params.client.getFile(
-      COMPONENT_TOKEN_RESERVATION_REGISTRY,
-      branch
-    );
-    if (branchFile.content !== mutation.nextSource) {
-      throw new CanonicalGapError(
-        'Existing reservation PR does not contain the deterministic registry mutation.'
-      );
-    }
+    await verifyExactReservationCandidate({
+      client: params.client,
+      branch,
+      sourceRevision: params.sourceRevision,
+      expectedHeadRevision: pulls[0].headSha,
+      expectedRegistrySource: mutation.nextSource,
+    });
     return result({
       params,
       requestId: request.requestId,
@@ -190,17 +188,14 @@ export async function runComponentTokenReservation(params: {
       content: applied.nextSource,
       message: `chore(tokens): reserve ${request.canonicalTarget} component token family`,
     });
-  } else {
-    const branchFile = await params.client.getFile(
-      COMPONENT_TOKEN_RESERVATION_REGISTRY,
-      branch
-    );
-    if (branchFile.content !== applied.nextSource) {
-      throw new CanonicalGapError(
-        `Deterministic reservation branch "${branch}" already exists with different content.`
-      );
-    }
   }
+
+  const candidateHead = await verifyExactReservationCandidate({
+    client: params.client,
+    branch,
+    sourceRevision: params.sourceRevision,
+    expectedRegistrySource: applied.nextSource,
+  });
 
   const currentBaseBeforePull = await params.client.getBranchSha(
     repository.defaultBranch
@@ -229,6 +224,14 @@ export async function runComponentTokenReservation(params: {
     branch,
     requestId: request.requestId,
     sourceRevision: params.sourceRevision,
+    expectedHeadRevision: candidateHead,
+  });
+  await verifyExactReservationCandidate({
+    client: params.client,
+    branch,
+    sourceRevision: params.sourceRevision,
+    expectedHeadRevision: pull.headSha,
+    expectedRegistrySource: applied.nextSource,
   });
   return result({
     params,
@@ -273,12 +276,16 @@ function validateExistingPullRequest(params: {
   branch: string;
   requestId: string;
   sourceRevision: string;
+  expectedHeadRevision?: string;
 }) {
   const expectedMarker = reservationPullRequestMarker(params);
   if (
     params.pull.body.split(expectedMarker).length !== 2 ||
     params.pull.headRef !== params.branch ||
+    (params.expectedHeadRevision !== undefined &&
+      params.pull.headSha !== params.expectedHeadRevision) ||
     params.pull.baseRef !== params.baseBranch ||
+    params.pull.baseSha !== params.sourceRevision ||
     params.pull.headRepository !== params.repository ||
     params.pull.baseRepository !== params.repository
   ) {
@@ -286,6 +293,60 @@ function validateExistingPullRequest(params: {
       'Existing reservation PR does not match deterministic same-repository authority.'
     );
   }
+}
+
+async function verifyExactReservationCandidate(params: {
+  client: ComponentTokenReservationGitHubClient;
+  branch: string;
+  sourceRevision: string;
+  expectedHeadRevision?: string;
+  expectedRegistrySource: string;
+}) {
+  const headRevision = await params.client.getBranchSha(params.branch);
+  if (
+    headRevision === null ||
+    (params.expectedHeadRevision !== undefined &&
+      headRevision !== params.expectedHeadRevision)
+  ) {
+    throw new CanonicalGapError(
+      'Reservation branch head does not match its authorized candidate identity.'
+    );
+  }
+  const comparison = await params.client.compareCandidate(
+    params.sourceRevision,
+    headRevision
+  );
+  const commit = comparison.commits[0];
+  const file = comparison.files[0];
+  if (
+    comparison.status !== 'ahead' ||
+    comparison.aheadBy !== 1 ||
+    comparison.behindBy !== 0 ||
+    comparison.totalCommits !== 1 ||
+    comparison.mergeBaseSha !== params.sourceRevision ||
+    comparison.commits.length !== 1 ||
+    commit?.sha !== headRevision ||
+    commit.parentShas.length !== 1 ||
+    commit.parentShas[0] !== params.sourceRevision ||
+    comparison.files.length !== 1 ||
+    file?.path !== COMPONENT_TOKEN_RESERVATION_REGISTRY ||
+    file.status !== 'modified' ||
+    file.previousPath !== null
+  ) {
+    throw new CanonicalGapError(
+      'Reservation candidate is not the exact deterministic registry-only commit derived from the authorized source revision.'
+    );
+  }
+  const registry = await params.client.getFile(
+    COMPONENT_TOKEN_RESERVATION_REGISTRY,
+    headRevision
+  );
+  if (registry.content !== params.expectedRegistrySource) {
+    throw new CanonicalGapError(
+      'Reservation candidate registry bytes do not match the deterministic mutation.'
+    );
+  }
+  return headRevision;
 }
 
 function assertReservedEligibility(
