@@ -146,6 +146,11 @@ asking generators or agents to infer it from names or implementation text.
     }
   ],
   "componentTokens": "disclosure",
+  "workItem": {
+    "provider": "github",
+    "repository": "vellira-dev/vellira",
+    "issue": "#123"
+  },
   "parts": ["Root", "Trigger", "Content"]
 }
 ```
@@ -186,6 +191,29 @@ private asset substitutes.
 `componentTokens` may be a supported canonical contract such as `standard`,
 `boolean-control`, or `disclosure`, or `false` when the component intentionally
 owns no component-token surface.
+
+When Generator V2 must admit a first-materialized component-token family to the
+immutable token-preservation contract, `workItem` supplies its governed audit
+authority. The object is strict: `provider` is `github`, `repository` is the
+exact owner/repository identity, and `issue` uses canonical `#<number>` form.
+The generator independently binds the repository to the tracked token package
+metadata. It never infers this identity from a PR title or body. Existing
+baseline families and current families with valid historical addition evidence
+do not require a new migration or duplicate work item.
+
+The equivalent direct Generator V2 authority is an exact URL:
+
+```bash
+pnpm create:component ... \
+  --work-item=https://github.com/<owner>/<repository>/issues/<number>
+```
+
+For a reserved family whose generated logical leaves are absent from the
+preservation baseline, dry-run reports `token-migrations.ts`, write mode emits
+one unscoped `addition` per logical leaf, and check mode detects missing or
+drifted evidence. Generator V2 writes that evidence before its exclusive
+`reserved -> current` lifecycle promotion. The preservation baseline itself is
+never changed by this path.
 
 ## Lifecycle
 

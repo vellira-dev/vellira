@@ -9,6 +9,10 @@ import type {
 } from '@vellira-ui/metadata';
 
 import { componentSemanticCapabilities } from '../../packages/metadata/src/component';
+import {
+  parseGovernedGitHubWorkItem,
+  type GovernedGitHubWorkItem,
+} from '../generators/component/work-item';
 
 import type { ComponentCompletenessResult } from '../checks/component-completeness/types';
 import type { ComponentQualityRunResult } from '../checks/component-quality/types';
@@ -42,6 +46,7 @@ export type ComponentProductionInputV1 = {
   tokens?: readonly string[];
   assets?: readonly ComponentAssetRequirement[];
   componentTokens: ComponentTokenContract | false;
+  workItem?: GovernedGitHubWorkItem;
   parts: readonly string[];
 };
 
@@ -183,6 +188,7 @@ const INPUT_KEYS = new Set([
   'tokens',
   'assets',
   'componentTokens',
+  'workItem',
   'parts',
 ]);
 
@@ -240,6 +246,13 @@ export function parseComponentProductionInput(
     value,
     'componentTokens'
   );
+  const workItem =
+    value.workItem === undefined
+      ? undefined
+      : parseGovernedGitHubWorkItem(
+          value.workItem,
+          'Component production input field "workItem"'
+        );
   const parts = optionalStringArray(value, 'parts');
 
   const args = [
@@ -320,6 +333,7 @@ export function parseComponentProductionInput(
       : {}),
     ...(assets.length > 0 ? { assets } : {}),
     componentTokens: resolvedComponentTokens,
+    ...(workItem !== undefined ? { workItem } : {}),
     parts: generatorOptions.parts,
   };
 }
@@ -346,6 +360,7 @@ export function createComponentProductionGeneratorOptions(
     tokens: input.tokens ?? [],
     assets: input.assets ?? [],
     componentTokens: input.componentTokens,
+    ...(input.workItem !== undefined ? { workItem: input.workItem } : {}),
     parts: input.parts,
     force: false,
     dryRun: false,

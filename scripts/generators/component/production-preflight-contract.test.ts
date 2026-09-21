@@ -27,6 +27,22 @@ function tempRoot() {
 function createRepositoryAuthorities(root: string) {
   copyTokenLifecycleFixture(root);
   reserveTokenLifecycleFixture(root, 'ContractProbe');
+  const preservationDir = path.join(root, 'packages/tokens/src/preservation');
+  fs.mkdirSync(preservationDir, { recursive: true });
+  fs.copyFileSync(
+    path.resolve(
+      'packages/tokens/src/preservation/token-preservation-baseline.v1.json'
+    ),
+    path.join(preservationDir, 'token-preservation-baseline.v1.json')
+  );
+  fs.copyFileSync(
+    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
+    path.join(preservationDir, 'token-migrations.ts')
+  );
+  fs.copyFileSync(
+    path.resolve('packages/tokens/package.json'),
+    path.join(root, 'packages/tokens/package.json')
+  );
   for (const packageName of ['react', 'react-native']) {
     const layerDir = path.join(
       root,
@@ -99,6 +115,11 @@ function plan(
       category: 'utility',
       profile: 'base',
       capabilities: [],
+      workItem: {
+        provider: 'github',
+        repository: 'vellira-dev/vellira',
+        issue: '#1283',
+      },
       parts: [],
       force: false,
       ...overrides,

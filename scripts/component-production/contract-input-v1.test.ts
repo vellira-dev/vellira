@@ -6,6 +6,67 @@ import {
 } from './contracts';
 
 describe('Component Production Contract input V1', () => {
+  it('parses and forwards exact governed GitHub work-item provenance', () => {
+    const input = parseComponentProductionInput({
+      schemaVersion: '1',
+      componentName: 'EvidenceProbe',
+      platform: 'both',
+      layer: 'components',
+      category: 'feedback',
+      profile: 'base',
+      componentTokens: 'standard',
+      workItem: {
+        provider: 'github',
+        repository: 'vellira-dev/vellira',
+        issue: '#1283',
+      },
+    });
+
+    expect(input.workItem).toEqual({
+      provider: 'github',
+      repository: 'vellira-dev/vellira',
+      issue: '#1283',
+    });
+    expect(createComponentProductionGeneratorOptions(input).workItem).toEqual(
+      input.workItem
+    );
+  });
+
+  it('rejects malformed or extensible work-item provenance', () => {
+    const base = {
+      schemaVersion: '1',
+      componentName: 'EvidenceProbe',
+      platform: 'both',
+      layer: 'components',
+      category: 'feedback',
+      profile: 'base',
+      componentTokens: 'standard',
+    };
+
+    expect(() =>
+      parseComponentProductionInput({
+        ...base,
+        workItem: {
+          provider: 'github',
+          repository: 'vellira-dev/vellira',
+          issue: '1283',
+        },
+      })
+    ).toThrow('must use canonical #<number> form');
+
+    expect(() =>
+      parseComponentProductionInput({
+        ...base,
+        workItem: {
+          provider: 'github',
+          repository: 'vellira-dev/vellira',
+          issue: '#1283',
+          title: 'untrusted issue body text',
+        },
+      })
+    ).toThrow('must contain exactly provider, repository, and issue');
+  });
+
   it('parses and forwards canonical dependency and resource intent', () => {
     const input = parseComponentProductionInput({
       schemaVersion: '1',
