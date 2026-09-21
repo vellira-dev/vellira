@@ -637,6 +637,13 @@ const textareaComponentTokenAdditionMigrationsV1 =
       }) as const
   ) satisfies readonly TokenMigrationEntry[];
 
+/**
+ * Generator V2 owns this array. It contains only deterministic first-
+ * materialization addition evidence for governed component-token families.
+ */
+const generatedComponentTokenAdditionMigrationsV1 =
+  [] as const satisfies readonly TokenMigrationEntry[];
+
 const boldFontWeightAdditionV1 = {
   id: '927-font-weight-bold-addition',
   kind: 'addition',
@@ -659,6 +666,7 @@ export const tokenMigrationManifestV1 = [
   boldFontWeightAdditionV1,
   monoFontFamilyAdditionV1,
   ...textareaComponentTokenAdditionMigrationsV1,
+  ...generatedComponentTokenAdditionMigrationsV1,
   ...platformNeutralComponentRepresentationMigrationsV1,
   ...platformNeutralLegacyCanonicalRemovalMigrationsV1,
   platformNeutralPopoverShadowMigrationV1,

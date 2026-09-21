@@ -9,7 +9,7 @@ import {
   createComponentMetadataFromPlan,
   getComponentDocsTargets,
 } from './docs';
-import { runComponentGenerator } from './run';
+import { runComponentGenerator as runComponentGeneratorImplementation } from './run';
 import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
 import { generateComponentWebsitePage } from './website';
 import {
@@ -47,12 +47,48 @@ vi.mock('./token-types', async () => {
   };
 });
 
+vi.mock('./token-preservation-contract', async () => {
+  const actual = await vi.importActual<
+    typeof import('./token-preservation-contract')
+  >('./token-preservation-contract');
+
+  return {
+    ...actual,
+    synchronizeComponentTokenPreservationContract: vi.fn(
+      actual.synchronizeComponentTokenPreservationContract
+    ),
+  };
+});
+
 import {
   copyTokenLifecycleFixture,
   reserveTokenLifecycleFixture,
 } from '../../token-lifecycle/fixtures/lifecycle';
+import {
+  getTokenMigrationManifestFile,
+  synchronizeComponentTokenPreservationContract,
+} from './token-preservation-contract';
 
 const tempRoots: string[] = [];
+const testWorkItem = {
+  provider: 'github',
+  repository: 'vellira-dev/vellira',
+  issue: '#1283',
+} as const;
+
+function runComponentGenerator(
+  params: Parameters<typeof runComponentGeneratorImplementation>[0]
+) {
+  return runComponentGeneratorImplementation({
+    ...params,
+    options: {
+      ...params.options,
+      ...(params.options.componentTokens === false || params.options.workItem
+        ? {}
+        : { workItem: testWorkItem }),
+    },
+  });
+}
 
 function createTempRoot() {
   const root = fs.mkdtempSync(
@@ -70,6 +106,29 @@ function createRequiredRepositoryStructure(
 ) {
   copyTokenLifecycleFixture(root);
   reserveTokenLifecycleFixture(root, 'Avatar');
+
+  const preservationDir = path.join(
+    root,
+    'packages',
+    'tokens',
+    'src',
+    'preservation'
+  );
+  fs.mkdirSync(preservationDir, { recursive: true });
+  fs.copyFileSync(
+    path.resolve(
+      'packages/tokens/src/preservation/token-preservation-baseline.v1.json'
+    ),
+    path.join(preservationDir, 'token-preservation-baseline.v1.json')
+  );
+  fs.copyFileSync(
+    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
+    path.join(preservationDir, 'token-migrations.ts')
+  );
+  fs.copyFileSync(
+    path.resolve('packages/tokens/package.json'),
+    path.join(root, 'packages', 'tokens', 'package.json')
+  );
 
   for (const packageName of ['react', 'react-native']) {
     const sourceRoot = path.join(root, 'packages', packageName, 'src');
@@ -182,6 +241,8 @@ beforeEach(() => {
     createdFiles: [],
     updatedFiles: [],
   });
+
+  vi.mocked(synchronizeComponentTokenPreservationContract).mockClear();
 });
 
 afterEach(() => {
@@ -1460,6 +1521,36 @@ describe('component generator check mode', () => {
 });
 
 describe('component-token run intent', () => {
+  it('fails closed before output when first materialization lacks governed provenance', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+
+    await expect(
+      runComponentGeneratorImplementation({
+        root,
+        options: {
+          componentName: 'Avatar',
+          platform: 'both',
+          layer: 'primitives',
+          category: 'data-display',
+          profile: 'base',
+          componentTokens: 'standard',
+          parts: [],
+          force: false,
+        },
+      })
+    ).rejects.toThrow('component-token-preservation-provenance-required');
+
+    expect(
+      fs.existsSync(
+        path.join(root, 'packages/react/src/primitives/Avatar/Avatar.tsx')
+      )
+    ).toBe(false);
+    expect(readTokenLifecycleAuthority(root).components.Avatar.status).toBe(
+      'reserved'
+    );
+  });
+
   it('plans generated token types as an updated artifact in dry-run mode', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
@@ -1487,6 +1578,7 @@ describe('component-token run intent', () => {
     });
 
     expect(dryRun.updatedFiles).toContain(tokenTypesFile);
+    expect(dryRun.updatedFiles).toContain(getTokenMigrationManifestFile(root));
     expect(synchronizeGeneratedTokenTypes).not.toHaveBeenCalled();
   });
 
@@ -1662,6 +1754,38 @@ describe('component generator lifecycle preflight', () => {
     expect(readFile(registry)).toBe(source);
     expect(fs.readdirSync(root, { recursive: true })).toEqual(before);
     expect(generateComponentWebsitePage).not.toHaveBeenCalled();
+    expect(synchronizeGeneratedTokenTypes).not.toHaveBeenCalled();
+  });
+
+  it('does not promote lifecycle ownership when preservation synchronization fails', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+
+    vi.mocked(
+      synchronizeComponentTokenPreservationContract
+    ).mockRejectedValueOnce(
+      new Error('Component token preservation synchronization failed.')
+    );
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          componentName: 'Avatar',
+          platform: 'both',
+          layer: 'primitives',
+          category: 'data-display',
+          profile: 'base',
+          componentTokens: 'standard',
+          parts: [],
+          force: false,
+        },
+      })
+    ).rejects.toThrow('Component token preservation synchronization failed.');
+
+    expect(readTokenLifecycleAuthority(root).components.Avatar.status).toBe(
+      'reserved'
+    );
     expect(synchronizeGeneratedTokenTypes).not.toHaveBeenCalled();
   });
 

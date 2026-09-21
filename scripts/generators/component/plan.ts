@@ -18,6 +18,7 @@ import type {
   FormControlKindArg,
 } from './cli';
 import { resolveComponentTypeOwnership } from './type-ownership';
+import type { GovernedGitHubWorkItem } from './work-item';
 
 import type { ComponentTypeOwnership } from './type-ownership';
 
@@ -56,6 +57,7 @@ export type ComponentGenerationPlan = {
   tokens: readonly string[];
   assets: readonly ComponentAssetRequirement[];
   componentTokens: ComponentTokenContract | false;
+  workItem?: GovernedGitHubWorkItem;
   force: boolean;
   parts: readonly string[];
   targets: readonly ComponentGenerationTarget[];
@@ -247,6 +249,7 @@ export function createComponentGenerationPlan(params: {
     tokens: options.tokens ?? [],
     assets: options.assets ?? [],
     componentTokens: resolveComponentTokenContract(options),
+    ...(options.workItem !== undefined ? { workItem: options.workItem } : {}),
     parts: options.parts,
     force: options.force,
     targets,

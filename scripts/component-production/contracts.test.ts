@@ -579,6 +579,7 @@ describe('createComponentProductionResult', () => {
             'packages/react/src/primitives/Avatar/Avatar.test.tsx',
             'packages/types/src/avatar.ts',
             'packages/tokens/src/factories/avatar.ts',
+            'packages/tokens/src/preservation/token-migrations.ts',
           ],
         },
       }),
@@ -597,6 +598,7 @@ describe('createComponentProductionResult', () => {
     ]);
     expect(result.outputs.designResources.artifacts).toEqual([
       'packages/tokens/src/factories/avatar.ts',
+      'packages/tokens/src/preservation/token-migrations.ts',
     ]);
     expect(result.outputs.testGeneration.artifacts).toEqual([
       'packages/react/src/primitives/Avatar/Avatar.test.tsx',
