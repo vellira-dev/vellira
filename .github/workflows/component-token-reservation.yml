@@ -18,9 +18,9 @@ on:
         default: true
 
 permissions:
-  contents: write
+  contents: read
   issues: read
-  pull-requests: write
+  pull-requests: read
 
 concurrency:
   group: component-token-reservation-${{ inputs.issue_number }}
@@ -68,10 +68,21 @@ jobs:
       - name: Build canonical metadata authority
         run: pnpm --filter @vellira-ui/metadata build
 
+      - name: Create short-lived reservation mutation token
+        if: inputs.dry_run == false
+        id: reservation-mutation-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Resolve canonical reservation
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_WRITE_TOKEN: ${{ steps.reservation-mutation-token.outputs.token }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           SOURCE_REVISION: ${{ inputs.source_sha }}
           DRY_RUN: ${{ inputs.dry_run }}
