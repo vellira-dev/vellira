@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1",
+  "componentName": "Toast",
+  "platform": "both",
+  "layer": "components",
+  "category": "feedback",
+  "profile": "overlay",
+  "capabilities": ["portal"],
+  "semanticCapabilities": [
+    "dismissible",
+    "auto-dismiss",
+    "stacking",
+    "announcement",
+    "reduced-motion"
+  ],
+  "componentTokens": "standard",
+  "parts": ["Root", "Viewport"]
+}
