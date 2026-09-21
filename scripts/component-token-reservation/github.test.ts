@@ -9,6 +9,10 @@ function jsonResponse(value: unknown, status = 200) {
   });
 }
 
+function authorization(init?: RequestInit) {
+  return new Headers(init?.headers).get('Authorization');
+}
+
 describe('component-token reservation GitHub candidate authority', () => {
   it('reads immutable compare ancestry, commits, and complete changed paths', async () => {
     const source = 'a'.repeat(40);
@@ -34,6 +38,7 @@ describe('component-token reservation GitHub candidate authority', () => {
     const client = createComponentTokenReservationGitHubClient({
       repository: 'vellira-dev/vellira',
       token: 'workflow-token',
+      writeToken: 'mutation-token',
       fetchImpl: fetchImpl as typeof fetch,
     });
 
@@ -54,6 +59,9 @@ describe('component-token reservation GitHub candidate authority', () => {
     });
     expect(String(fetchImpl.mock.calls[0]?.[0])).toBe(
       `https://api.github.com/repos/vellira-dev/vellira/compare/${source}...${head}`
+    );
+    expect(authorization(fetchImpl.mock.calls[0]?.[1])).toBe(
+      'Bearer workflow-token'
     );
   });
 
@@ -77,6 +85,7 @@ describe('component-token reservation GitHub candidate authority', () => {
     const client = createComponentTokenReservationGitHubClient({
       repository: 'vellira-dev/vellira',
       token: 'workflow-token',
+      writeToken: 'mutation-token',
       fetchImpl: fetchImpl as typeof fetch,
     });
 
@@ -89,5 +98,22 @@ describe('component-token reservation GitHub candidate authority', () => {
       method: 'PATCH',
       body: JSON.stringify({ state: 'closed' }),
     });
+    expect(authorization(fetchImpl.mock.calls[0]?.[1])).toBe(
+      'Bearer mutation-token'
+    );
+  });
+
+  it('fails closed before a mutation when no write token is available', async () => {
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const client = createComponentTokenReservationGitHubClient({
+      repository: 'vellira-dev/vellira',
+      token: 'workflow-token',
+      fetchImpl,
+    });
+
+    await expect(client.closePullRequest(1270)).rejects.toThrow(
+      /GITHUB_WRITE_TOKEN/
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
