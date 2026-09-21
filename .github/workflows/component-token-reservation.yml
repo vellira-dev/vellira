@@ -77,21 +77,23 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          mkdir -p .artifacts/component-token-reservation
+          RESULT_DIR="$RUNNER_TEMP/component-token-reservation"
+          RESULT_PATH="$RESULT_DIR/result.json"
+          mkdir -p "$RESULT_DIR"
           arguments=(
             --repo "$GITHUB_REPOSITORY"
             --issue-number "$ISSUE_NUMBER"
             --source-revision "$SOURCE_REVISION"
           )
           if [[ "$DRY_RUN" != true ]]; then arguments+=(--apply); fi
-          pnpm --silent component-token-reservation:json "${arguments[@]}" > .artifacts/component-token-reservation/result.json
-          cat .artifacts/component-token-reservation/result.json
+          pnpm --silent component-token-reservation:json "${arguments[@]}" > "$RESULT_PATH"
+          cat "$RESULT_PATH"
 
       - name: Upload reservation evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: component-token-reservation-${{ inputs.source_sha }}-${{ inputs.issue_number }}-${{ github.run_id }}
-          path: .artifacts/component-token-reservation/result.json
+          path: ${{ runner.temp }}/component-token-reservation/result.json
           if-no-files-found: error
           retention-days: 14
