@@ -14,5 +14,10 @@
     "reduced-motion"
   ],
   "componentTokens": "standard",
+  "workItem": {
+    "provider": "github",
+    "repository": "vellira-dev/vellira",
+    "issue": "#564"
+  },
   "parts": ["Root", "Viewport"]
 }
