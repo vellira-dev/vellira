@@ -233,10 +233,10 @@ it('documents props from every branch of a discriminated union type', async () =
 
   const result = fs.readFileSync(apiFile, 'utf8');
 
-  expect(result).toContain("`'single' \\| 'multiple'`");
+  expect(result).toContain("`'multiple' \\| 'single'`");
   expect(result).toContain('`string \\| string[]`');
   expect(result).toContain(
-    '`(value: string) => void \\| (value: string[]) => void`'
+    '`((value: string) => void) \\| ((value: string[]) => void)`'
   );
   expect(result).toContain('`collapsible`');
 });
@@ -424,7 +424,7 @@ export type ChoiceProps =
     expect(result).toContain("`'multiple' \\| 'single'`");
     expect(result).toContain("`'off' \\| 'polite' \\| number[]`");
     expect(result).toContain(
-      "`(value: 'assertive' \\| 'off') => void \\| (value: 'off' \\| 'polite') => void`"
+      "`((value: 'assertive' \\| 'off') => void) \\| ((value: 'off' \\| 'polite') => void)`"
     );
     expect(result).toContain(
       "`Promise<'assertive' \\| 'off'> \\| Promise<'off' \\| 'polite'>`"
