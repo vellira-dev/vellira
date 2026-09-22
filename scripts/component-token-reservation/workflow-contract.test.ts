@@ -18,7 +18,7 @@ it('keeps the reservation workflow bounded to exact trusted default-branch autho
     /pull_request_target|workflow_run|issue_comment:/
   );
   expect(normalized(workflow)).toContain(
-    'permissions: contents: write issues: read pull-requests: write'
+    'permissions: contents: read issues: read pull-requests: read'
   );
   expect(workflow.match(/issues: write/g)).toBeNull();
   expect(workflow).toContain('test "$SOURCE_REVISION" = "$WORKFLOW_REVISION"');
@@ -29,6 +29,18 @@ it('keeps the reservation workflow bounded to exact trusted default-branch autho
   expect(workflow).toContain('ref: ${{ github.sha }}');
   expect(workflow).toContain('persist-credentials: false');
   expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
+  expect(workflow).toContain('if: inputs.dry_run == false');
+  expect(workflow).toContain(
+    'uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3'
+  );
+  expect(workflow).toContain('permission-contents: write');
+  expect(workflow).toContain('permission-pull-requests: write');
+  expect(workflow).toContain(
+    'GITHUB_WRITE_TOKEN: ${{ steps.reservation-mutation-token.outputs.token }}'
+  );
+  expect(workflow).not.toMatch(
+    /^\s+(?:actions|contents|pull-requests): write$/gm
+  );
   expect(workflow).toContain('--issue-number "$ISSUE_NUMBER"');
   expect(workflow).toContain('--source-revision "$SOURCE_REVISION"');
   expect(workflow).not.toMatch(
@@ -99,8 +111,10 @@ it('keeps supersession bounded to source-scoped PR identity and pull-request wri
   expect(github).toContain('closePullRequest(number: number)');
   expect(github).toContain("method: 'PATCH'");
   expect(github).toContain("body: JSON.stringify({ state: 'closed' })");
+  expect(github).toContain('writeToken?: string;');
+  expect(github).toContain('requireWriteToken()');
   expect(normalized(workflow)).toContain(
-    'permissions: contents: write issues: read pull-requests: write'
+    'permissions: contents: read issues: read pull-requests: read'
   );
   expect(workflow).not.toContain('issues: write');
   expect(workflow).not.toMatch(/git push|force|main mutation/);
