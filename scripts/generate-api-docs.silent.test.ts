@@ -10,7 +10,10 @@ import type { ApiSection } from './generate-api-docs';
 
 const roots: string[] = [];
 
-function createApiFixture(files: Record<string, string>, sections: ApiSection[]) {
+function createApiFixture(
+  files: Record<string, string>,
+  sections: ApiSection[]
+) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'vellira-api-docs-determinism-')
   );
@@ -331,12 +334,8 @@ describe('deterministic API-doc Program isolation', () => {
       targetOnly
     );
     expect(readGeneratedBlock(laterFirstRoot, targetSection)).toBe(targetOnly);
-    expect(targetOnly).toContain(
-      "`(mode: 'off' \\| 'polite') => void`"
-    );
-    expect(targetOnly).toContain(
-      "`Promise<'off' \\| 'assertive'>`"
-    );
+    expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
+    expect(targetOnly).toContain("`Promise<'off' \\| 'assertive'>`");
     expect(targetOnly).toContain(
       "`readonly ['off' \\| 'polite', number \\| null]`"
     );
@@ -387,4 +386,3 @@ describe('deterministic API-doc Program isolation', () => {
     );
   });
 });
-
