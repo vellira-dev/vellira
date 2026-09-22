@@ -1184,15 +1184,27 @@ All interactive components support:
 
 <!-- api-docgen:start web.ToastProps.ToastProps -->
 
-| Prop                  | Type                      | Required | Description                                             |
-| --------------------- | ------------------------- | -------- | ------------------------------------------------------- |
-| `open`                | `boolean`                 | No       | Controlled open state.                                  |
-| `defaultOpen`         | `boolean`                 | No       | Initial uncontrolled open state.                        |
-| `onOpenChange`        | `(open: boolean) => void` | No       | Called when the open state changes.                     |
-| `children`            | `ReactNode`               | No       | Content rendered inside the component.                  |
-| `closeOnEscape`       | `boolean`                 | No       | Allows Escape to close a toast whose control has focus. |
-| `closeOnOutsidePress` | `boolean`                 | No       | —                                                       |
-| `restoreFocus`        | `boolean`                 | No       | —                                                       |
+| Prop            | Type                                                        | Required | Description                                                      |
+| --------------- | ----------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `open`          | `boolean`                                                   | No       | Controlled open state.                                           |
+| `defaultOpen`   | `boolean`                                                   | No       | Initial uncontrolled open state.                                 |
+| `onOpenChange`  | `(open: boolean, details?: ToastOpenChangeDetails) => void` | No       | Called when the open state changes.                              |
+| `children`      | `ReactNode`                                                 | No       | Content rendered inside the component.                           |
+| `closeOnEscape` | `boolean`                                                   | No       | Allows Escape to close a toast whose control has focus.          |
+| `id`            | `string`                                                    | No       | —                                                                |
+| `title`         | `ReactNode`                                                 | No       | Short message heading.                                           |
+| `description`   | `ReactNode`                                                 | No       | Optional supporting detail.                                      |
+| `icon`          | `ReactNode`                                                 | No       | Optional custom icon; semantic tones provide canonical defaults. |
+| `tone`          | `ToastTone`                                                 | No       | Semantic visual tone and announcement priority.                  |
+| `duration`      | `number`                                                    | No       | Auto-dismiss duration in milliseconds. Zero disables timeout.    |
+| `dismissible`   | `boolean`                                                   | No       | Renders an explicit dismiss control.                             |
+| `dismissLabel`  | `string`                                                    | No       | Accessible label for the dismiss control.                        |
+| `action`        | `ToastAction`                                               | No       | Optional labelled action with deterministic close behavior.      |
+| `pauseOnHover`  | `boolean`                                                   | No       | Pauses the remaining timeout during pointer interaction.         |
+| `pauseOnFocus`  | `boolean`                                                   | No       | Pauses the remaining timeout while a control has focus.          |
+| `ariaLive`      | `'off' \| 'polite' \| 'assertive'`                          | No       | Overrides the tone-derived live-region priority.                 |
+| `className`     | `string`                                                    | No       | Extra CSS class for the root element.                            |
+| `style`         | `CSSProperties`                                             | No       | Extra root style.                                                |
 
 <!-- api-docgen:end web.ToastProps.ToastProps -->
 
@@ -1213,8 +1225,14 @@ All interactive components support:
 
 <!-- api-docgen:start web.ToastViewportProps.ToastViewportProps -->
 
-| Prop       | Type        | Required | Description                            |
-| ---------- | ----------- | -------- | -------------------------------------- |
-| `children` | `ReactNode` | No       | Content rendered inside the component. |
+| Prop        | Type                                                                                            | Required | Description                            |
+| ----------- | ----------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode`                                                                                     | No       | Content rendered inside the component. |
+| `portal`    | `boolean`                                                                                       | No       | —                                      |
+| `container` | `Element \| DocumentFragment \| null`                                                           | No       | —                                      |
+| `position`  | `'top-start' \| 'top-end' \| 'bottom-start' \| 'bottom-end' \| 'top-center' \| 'bottom-center'` | No       | —                                      |
+| `label`     | `string`                                                                                        | No       | Visible label.                         |
+| `className` | `string`                                                                                        | No       | Extra CSS class for the root element.  |
+| `style`     | `CSSProperties`                                                                                 | No       | Extra root style.                      |
 
 <!-- api-docgen:end web.ToastViewportProps.ToastViewportProps -->

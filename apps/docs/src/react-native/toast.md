@@ -31,24 +31,53 @@ API details are generated from `packages/react-native/API.md`.
 
 <!-- api-docgen:start native.ToastProps.ToastProps -->
 
-| Prop                  | Type                      | Required | Description                            |
-| --------------------- | ------------------------- | -------- | -------------------------------------- |
-| `open`                | `boolean`                 | No       | Controlled open state.                 |
-| `defaultOpen`         | `boolean`                 | No       | Initial uncontrolled open state.       |
-| `onOpenChange`        | `(open: boolean) => void` | No       | Called when the open state changes.    |
-| `children`            | `ReactNode`               | No       | Content rendered inside the component. |
-| `closeOnOutsidePress` | `boolean`                 | No       | —                                      |
-| `restoreFocus`        | `boolean`                 | No       | —                                      |
+| Prop                 | Type                                                        | Required | Description                                                      |
+| -------------------- | ----------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `open`               | `boolean`                                                   | No       | Controlled open state.                                           |
+| `defaultOpen`        | `boolean`                                                   | No       | Initial uncontrolled open state.                                 |
+| `onOpenChange`       | `(open: boolean, details?: ToastOpenChangeDetails) => void` | No       | Called when the open state changes.                              |
+| `children`           | `ReactNode`                                                 | No       | Content rendered inside the component.                           |
+| `id`                 | `string`                                                    | No       | —                                                                |
+| `title`              | `ReactNode`                                                 | No       | Short message heading.                                           |
+| `description`        | `ReactNode`                                                 | No       | Optional supporting detail.                                      |
+| `icon`               | `ReactNode`                                                 | No       | Optional custom icon; semantic tones provide canonical defaults. |
+| `announcement`       | `string`                                                    | No       | Explicit text announced by native assistive technology.          |
+| `tone`               | `ToastTone`                                                 | No       | Semantic visual tone and announcement priority.                  |
+| `duration`           | `number`                                                    | No       | Auto-dismiss duration in milliseconds. Zero disables timeout.    |
+| `dismissible`        | `boolean`                                                   | No       | Renders an explicit dismiss control.                             |
+| `dismissLabel`       | `string`                                                    | No       | Accessible label for the dismiss control.                        |
+| `action`             | `ToastAction`                                               | No       | Optional labelled action with deterministic close behavior.      |
+| `accessibilityLabel` | `string`                                                    | No       | Accessible label for screen readers.                             |
+| `style`              | `StyleProp<ViewStyle>`                                      | No       | Extra root style.                                                |
+| `testID`             | `string`                                                    | No       | —                                                                |
 
 <!-- api-docgen:end native.ToastProps.ToastProps -->
+
+### Toast.Provider Props
+
+<!-- api-docgen:start native.ToastProviderProps.ToastProviderProps -->
+
+| Prop         | Type         | Required | Description                                                         |
+| ------------ | ------------ | -------- | ------------------------------------------------------------------- |
+| `children`   | `ReactNode`  | No       | Content rendered inside the component.                              |
+| `store`      | `ToastStore` | No       | Externally owned store used for independent testing or integration. |
+| `duration`   | `number`     | No       | Default auto-dismiss duration for messages in this provider.        |
+| `maxVisible` | `number`     | No       | Maximum visible messages before oldest-first overflow.              |
+
+<!-- api-docgen:end native.ToastProviderProps.ToastProviderProps -->
 
 ### Toast.Viewport Props
 
 <!-- api-docgen:start native.ToastViewportProps.ToastViewportProps -->
 
-| Prop       | Type        | Required | Description                            |
-| ---------- | ----------- | -------- | -------------------------------------- |
-| `children` | `ReactNode` | No       | Content rendered inside the component. |
+| Prop                 | Type                                                                                            | Required | Description                            |
+| -------------------- | ----------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children`           | `ReactNode`                                                                                     | No       | Content rendered inside the component. |
+| `portal`             | `boolean`                                                                                       | No       | —                                      |
+| `position`           | `'top-start' \| 'top-end' \| 'bottom-start' \| 'bottom-end' \| 'top-center' \| 'bottom-center'` | No       | —                                      |
+| `accessibilityLabel` | `string`                                                                                        | No       | Accessible label for screen readers.   |
+| `style`              | `StyleProp<ViewStyle>`                                                                          | No       | Extra root style.                      |
+| `testID`             | `string`                                                                                        | No       | —                                      |
 
 <!-- api-docgen:end native.ToastViewportProps.ToastViewportProps -->
 
