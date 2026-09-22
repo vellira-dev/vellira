@@ -68,12 +68,6 @@ export function ToastRoot({
     [setOpen]
   );
 
-  // Presentation and callback updates must not restart the active duration.
-  const requestCloseRef = useRef(requestClose);
-  useEffect(() => {
-    requestCloseRef.current = requestClose;
-  }, [requestClose]);
-
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled?.().then(setReduceMotion);
     const subscription = AccessibilityInfo.addEventListener?.(
@@ -101,15 +95,12 @@ export function ToastRoot({
 
   useEffect(() => {
     if (!open || duration <= 0) return;
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      requestCloseRef.current('timeout');
-    }, duration);
+    timerRef.current = setTimeout(() => requestClose('timeout'), duration);
     return () => {
       if (timerRef.current !== null) clearTimeout(timerRef.current);
       timerRef.current = null;
     };
-  }, [duration, open]);
+  }, [duration, open, requestClose]);
 
   useEffect(() => {
     if (!open) return;

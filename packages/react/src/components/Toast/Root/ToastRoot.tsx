@@ -44,9 +44,6 @@ export function ToastRoot({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedAtRef = useRef(0);
   const remainingRef = useRef(duration);
-  const timeoutRequestedRef = useRef(false);
-  const interactionRef = useRef({ pointer: false, focus: false });
-  const pausePolicyRef = useRef({ pointer: pauseOnHover, focus: pauseOnFocus });
   const [open, setOpen] = useControllableState({
     value: openProp,
     defaultValue: defaultOpen,
@@ -63,12 +60,6 @@ export function ToastRoot({
     [setOpen]
   );
 
-  // Callback changes must not restart the active duration or lose a pause.
-  const requestCloseRef = useRef(requestClose);
-  useEffect(() => {
-    requestCloseRef.current = requestClose;
-  }, [requestClose]);
-
   const clearTimer = useCallback((preserveRemaining: boolean) => {
     if (timerRef.current === null) return;
     clearTimeout(timerRef.current);
@@ -82,55 +73,18 @@ export function ToastRoot({
   }, []);
 
   const startTimer = useCallback(() => {
-    if (
-      !open ||
-      duration <= 0 ||
-      timeoutRequestedRef.current ||
-      timerRef.current !== null
-    ) {
-      return;
-    }
-
-    const interaction = interactionRef.current;
-    const policy = pausePolicyRef.current;
-    if (
-      (policy.pointer && interaction.pointer) ||
-      (policy.focus && interaction.focus)
-    ) {
-      return;
-    }
-
+    if (!open || duration <= 0 || remainingRef.current <= 0) return;
+    clearTimer(false);
     startedAtRef.current = Date.now();
     timerRef.current = setTimeout(
-      () => {
-        timerRef.current = null;
-        remainingRef.current = 0;
-        timeoutRequestedRef.current = true;
-        requestCloseRef.current('timeout');
-      },
-      Math.max(0, remainingRef.current)
+      () => requestClose('timeout'),
+      remainingRef.current
     );
-  }, [duration, open]);
+  }, [clearTimer, duration, open, requestClose]);
 
   useEffect(() => {
-    pausePolicyRef.current = { pointer: pauseOnHover, focus: pauseOnFocus };
-    const interaction = interactionRef.current;
-    if (
-      (pauseOnHover && interaction.pointer) ||
-      (pauseOnFocus && interaction.focus)
-    ) {
-      clearTimer(true);
-    } else {
-      startTimer();
-    }
-  }, [clearTimer, pauseOnFocus, pauseOnHover, startTimer]);
-
-  useEffect(() => {
-    clearTimer(false);
     remainingRef.current = duration;
-    timeoutRequestedRef.current = false;
-    if (!open) interactionRef.current = { pointer: false, focus: false };
-    startTimer();
+    if (open) startTimer();
     return () => clearTimer(false);
   }, [clearTimer, duration, open, startTimer]);
 
@@ -174,24 +128,17 @@ export function ToastRoot({
       data-state='open'
       data-tone={tone}
       style={style}
-      onPointerEnter={() => {
-        interactionRef.current.pointer = true;
-        if (pauseOnHover) clearTimer(true);
-      }}
-      onPointerLeave={() => {
-        interactionRef.current.pointer = false;
-        startTimer();
-      }}
-      onFocusCapture={() => {
-        interactionRef.current.focus = true;
-        if (pauseOnFocus) clearTimer(true);
-      }}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          interactionRef.current.focus = false;
-          startTimer();
-        }
-      }}
+      onPointerEnter={pauseOnHover ? () => clearTimer(true) : undefined}
+      onPointerLeave={pauseOnHover ? startTimer : undefined}
+      onFocusCapture={pauseOnFocus ? () => clearTimer(true) : undefined}
+      onBlurCapture={
+        pauseOnFocus
+          ? (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                startTimer();
+            }
+          : undefined
+      }
     >
       <span className={styles.icon} data-toast-icon aria-hidden='true'>
         {icon ?? semanticIcon}
