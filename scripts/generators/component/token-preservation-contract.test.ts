@@ -47,9 +47,9 @@ function createRoot(): string {
     ),
     path.join(preservation, 'token-preservation-baseline.v1.json')
   );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
-    path.join(preservation, 'token-migrations.ts')
+  fs.writeFileSync(
+    path.join(preservation, 'token-migrations.ts'),
+    'export const generatedComponentTokenAdditionMigrationsV1 = [] as const;\n'
   );
   fs.copyFileSync(
     path.resolve('packages/tokens/package.json'),

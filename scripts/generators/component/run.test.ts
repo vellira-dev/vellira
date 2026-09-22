@@ -125,17 +125,15 @@ function createRequiredRepositoryStructure(
     ),
     path.join(preservationDir, 'token-preservation-baseline.v1.json')
   );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
-    path.join(preservationDir, 'token-migrations.ts')
+  fs.writeFileSync(
+    path.join(preservationDir, 'token-migrations.ts'),
+    'export const generatedComponentTokenAdditionMigrationsV1 = [] as const;\n'
   );
   const architectureRegistrationFile =
     getComponentTokenArchitectureRegistrationFile(root);
-  fs.copyFileSync(
-    path.resolve(
-      'packages/tokens/src/generated-component-factory-architecture.ts'
-    ),
-    architectureRegistrationFile
+  fs.writeFileSync(
+    architectureRegistrationFile,
+    'export const generatedComponentFactoryArchitectureV1 = [] as const;\n'
   );
   fs.copyFileSync(
     path.resolve('packages/tokens/package.json'),
