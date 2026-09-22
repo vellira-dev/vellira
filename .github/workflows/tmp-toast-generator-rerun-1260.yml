@@ -1,0 +1,80 @@
+name: Temporary Toast Generator V2 rerun 1260
+
+on:
+  push:
+    branches:
+      - tmp/toast-generator-rerun-1260
+
+permissions:
+  contents: read
+
+jobs:
+  rerun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.2
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Rerun canonical Generator V2
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          node --import tsx --input-type=module <<'NODE' > artifacts/result.json
+          import fs from 'node:fs';
+          import {
+            parseComponentProductionInput,
+            createComponentProductionGeneratorOptions,
+          } from './scripts/component-production/contracts.ts';
+          import { runComponentGenerator } from './scripts/generators/component/run.ts';
+
+          const input = parseComponentProductionInput(
+            JSON.parse(
+              fs.readFileSync(
+                'scripts/component-production/specs/Toast.json',
+                'utf8'
+              )
+            )
+          );
+          const options = {
+            ...createComponentProductionGeneratorOptions(input),
+            force: true,
+          };
+          const result = await runComponentGenerator({
+            root: process.cwd(),
+            options,
+          });
+          console.log(
+            JSON.stringify(
+              {
+                createdFiles: result.createdFiles,
+                updatedFiles: result.updatedFiles,
+              },
+              null,
+              2
+            )
+          );
+          NODE
+
+      - name: Capture generator diff
+        shell: bash
+        run: |
+          git diff --binary > artifacts/generator.patch
+          git status --short > artifacts/status.txt
+          git diff --name-only > artifacts/changed-files.txt
+          cat artifacts/result.json
+          cat artifacts/status.txt
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: toast-generator-rerun-1260
+          path: artifacts
+          if-no-files-found: error
