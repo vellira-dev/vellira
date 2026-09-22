@@ -26,6 +26,10 @@ work, but does not prevent a workflow card from being created for each push.
 - Chromatic, Lighthouse and title concurrency groups are distinct and PR-scoped.
   Non-PR runs use independent run IDs rather than replacing pending main/manual
   evidence.
+- Draft-to-ready transitions do not rerun CI, CI Performance Budget or PR Title
+  for an unchanged SHA. Those checks already run on draft opening and synchronize;
+  reopened PRs still rerun. Dependabot metadata retains `ready_for_review` because
+  a draft Dependabot PR is intentionally skipped until it becomes reviewable.
 - Production candidate qualification, approval, deployment and verification remain
   unchanged. IndexNow runs in a separate read-only job after deploy success, using
   the verified candidate SHA and the existing submission script. Notification

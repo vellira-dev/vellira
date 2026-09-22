@@ -94,13 +94,26 @@ for (const [name, group] of [
 
 test('required title check stays on synchronize and retains canonical commitlint', () => {
   const source = workflow('pr-title');
-  for (const event of ['opened', 'edited', 'reopened', 'synchronize', 'ready_for_review']) {
+  for (const event of ['opened', 'edited', 'reopened', 'synchronize']) {
     assert.ok(section(source, 'on').includes(event));
   }
   assert.match(source, /name: Validate PR title/);
   assert.match(source, /pnpm install --frozen-lockfile/);
   assert.match(source, /pnpm exec commitlint/);
   assert.doesNotMatch(source, /pull_request_target:|continue-on-error:/);
+});
+
+test('ready transition does not rerun unchanged-SHA validation', () => {
+  for (const name of ['ci', 'ci-performance-budget', 'pr-title']) {
+    const triggers = section(workflow(name), 'on');
+    assert.doesNotMatch(triggers, /ready_for_review/);
+    assert.match(triggers, /opened/);
+    assert.match(triggers, /synchronize/);
+    assert.match(triggers, /reopened/);
+  }
+
+  const dependabot = section(workflow('dependabot-auto-merge-metadata'), 'on');
+  assert.match(dependabot, /ready_for_review/);
 });
 
 test('token report is manual only and retains its artifact and test paths', () => {
