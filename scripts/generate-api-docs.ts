@@ -20,10 +20,6 @@ type PropRow = {
   description: string;
 };
 
-type FormattedTypePart = {
-  text: string;
-};
-
 const fallbackDescriptions: Record<string, string> = {
   accessibilityLabel: 'Accessible label for screen readers.',
   accessibilityHint: 'Additional accessibility hint for screen readers.',
@@ -593,9 +589,11 @@ export async function generateApiDocs(
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
     const descriptions = readExistingDescriptions(currentDoc, item);
+    const existingTypes = readExistingTypes(currentDoc, item);
     const rows = sortRows(
       readInterfaceRows(item, context).map((row) => ({
         ...row,
+        type: stabilizeTypeDisplay(row.type, existingTypes.get(row.name)),
         description: getDescription(row.name, descriptions, item),
       })),
       descriptions
@@ -710,16 +708,12 @@ function readInterfaceRows(
 
   const type = context.checker.getTypeAtLocation(declaration.name);
 
-  return readPropRows(type, declaration, context.checker);
+  return readPropRows(type, context.checker);
 }
 
-function readPropRows(
-  type: ts.Type,
-  declaration: ts.Declaration,
-  checker: ts.TypeChecker
-): PropRow[] {
+function readPropRows(type: ts.Type, checker: ts.TypeChecker): PropRow[] {
   if (type.isUnion()) {
-    return readUnionPropRows(type, declaration, checker);
+    return readUnionPropRows(type, checker);
   }
 
   return checker
@@ -727,24 +721,18 @@ function readPropRows(
     .flatMap((property) => readSymbolPropRow(property, checker) ?? []);
 }
 
-function readUnionPropRows(
-  type: ts.UnionType,
-  declaration: ts.Declaration,
-  checker: ts.TypeChecker
-) {
+function readUnionPropRows(type: ts.UnionType, checker: ts.TypeChecker) {
   const propertiesByName = new Map<
     string,
     {
       declarations: ts.Declaration[];
       optionalBranches: number;
       presentBranches: number;
-      typeParts: FormattedTypePart[];
+      typeStrings: string[];
     }
   >();
 
-  const branches = getUnionBranches(type, declaration, checker);
-
-  for (const branch of branches) {
+  for (const branch of type.types) {
     const branchProperties = checker.getPropertiesOfType(branch);
 
     for (const property of branchProperties) {
@@ -768,10 +756,10 @@ function readUnionPropRows(
         declarations: [],
         optionalBranches: 0,
         presentBranches: 0,
-        typeParts: [],
+        typeStrings: [],
       };
       const optional = (property.flags & ts.SymbolFlags.Optional) !== 0;
-      const formattedTypeParts = formatTypeParts(
+      const formattedType = formatType(
         propertyType,
         declaration,
         optional,
@@ -785,10 +773,8 @@ function readUnionPropRows(
         entry.optionalBranches += 1;
       }
 
-      for (const typePart of formattedTypeParts) {
-        if (!entry.typeParts.some((part) => part.text === typePart.text)) {
-          entry.typeParts.push(typePart);
-        }
+      if (!entry.typeStrings.includes(formattedType)) {
+        entry.typeStrings.push(formattedType);
       }
 
       propertiesByName.set(property.name, entry);
@@ -797,9 +783,9 @@ function readUnionPropRows(
 
   return Array.from(propertiesByName, ([name, entry]) => ({
     name,
-    type: renderUnionTypeParts(entry.typeParts),
+    type: normalizeUnionTypeStrings(entry.typeStrings),
     required:
-      entry.presentBranches === branches.length &&
+      entry.presentBranches === type.types.length &&
       entry.optionalBranches === 0,
     description: '',
   }));
@@ -824,6 +810,15 @@ function readSymbolPropRow(
     required: !optional,
     description: '',
   };
+}
+
+function normalizeUnionTypeStrings(types: string[]) {
+  const members = types
+    .flatMap(splitTopLevelUnionType)
+    .filter((type) => type !== 'undefined')
+    .filter((type, index, allTypes) => allTypes.indexOf(type) === index);
+
+  return members.length === 1 ? members[0]! : members.join(' | ');
 }
 
 function findTypeDeclaration(sourceFile: ts.SourceFile, interfaceName: string) {
@@ -852,75 +847,58 @@ function formatType(
   optional: boolean,
   checker: ts.TypeChecker
 ) {
-  return renderUnionTypeParts(
-    formatTypeParts(type, declaration, optional, checker)
+  const formatted = normalizeType(
+    checker.typeToString(
+      type,
+      declaration,
+      ts.TypeFormatFlags.NoTruncation |
+        ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
+    )
+  );
+
+  return optional ? removeTopLevelUndefined(formatted) : formatted;
+}
+
+function removeTopLevelUndefined(type: string) {
+  const members = splitTopLevelUnionType(type).filter(
+    (member) => member !== 'undefined'
+  );
+
+  return members.length === 1 ? members[0]! : members.join(' | ');
+}
+
+function splitTopLevelUnionType(type: string) {
+  const typeNode = parseFormattedTypeNode(type);
+  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
+
+  if (!ts.isUnionTypeNode(unwrapped)) {
+    return [type];
+  }
+
+  return unwrapped.types.map((member) =>
+    normalizeType(member.getText(typeNode.getSourceFile()))
   );
 }
 
-function formatTypeParts(
-  type: ts.Type,
-  declaration: ts.Declaration,
-  optional: boolean,
-  checker: ts.TypeChecker
-): FormattedTypePart[] {
-  const formattedTypeNode = parseFormattedTypeNode(
-    normalizeType(
-      checker.typeToString(
-        type,
-        declaration,
-        ts.TypeFormatFlags.NoTruncation |
-          ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
-      )
-    )
-  );
-  const declaredTypeNode = getDeclarationTypeNode(declaration);
-  const canonicalTypeNode = canonicalizeGeneratedUnionOrder(
-    formattedTypeNode,
-    formattedTypeNode.getSourceFile()
-  );
-  const formattedMembers = getDeclaredTopLevelTypeNodes(
-    canonicalTypeNode,
-    optional
-  );
-
-  if (formattedMembers.length === 0) {
-    return [];
-  }
+function stabilizeTypeDisplay(type: string, existingType: string | undefined) {
+  const canonical = canonicalizeTypeDisplay(type);
 
   if (
-    declaredTypeNode &&
-    containsUnionTypeNode(declaredTypeNode) &&
-    !ts.isUnionTypeNode(unwrapParenthesizedTypeNode(declaredTypeNode))
+    existingType !== undefined &&
+    canonicalizeTypeDisplay(existingType) === canonical
   ) {
-    return [
-      createSourceTypePart(declaredTypeNode, declaration.getSourceFile()),
-    ];
+    return existingType;
   }
 
-  if (formattedMembers.length === 1) {
-    return [
-      createPrintedTypePart(
-        formattedMembers[0]!,
-        formattedTypeNode.getSourceFile()
-      ),
-    ];
-  }
+  return canonical;
+}
 
-  const declaredUnionMembers = declaredTypeNode
-    ? getDeclaredTopLevelUnionMemberNodes(declaredTypeNode).filter(
-        (node) => !optional || !isUndefinedTypeNode(node)
-      )
-    : [];
+function canonicalizeTypeDisplay(type: string) {
+  const typeNode = parseFormattedTypeNode(type);
+  const sourceFile = typeNode.getSourceFile();
+  const canonical = canonicalizeUnionOrder(typeNode, sourceFile);
 
-  if (declaredUnionMembers.length > 0) {
-    return declaredUnionMembers.map((node) =>
-      createSourceTypePart(node, declaration.getSourceFile())
-    );
-  }
-
-  return formattedMembers.map((member) =>
-    createPrintedTypePart(member, formattedTypeNode.getSourceFile())
-  );
+  return printTypeNode(canonical, sourceFile);
 }
 
 function parseFormattedTypeNode(type: string) {
@@ -940,77 +918,6 @@ function parseFormattedTypeNode(type: string) {
   return declaration.type;
 }
 
-function getDeclaredTopLevelUnionMemberNodes(
-  typeNode: ts.TypeNode
-): readonly ts.TypeNode[] {
-  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
-
-  return ts.isUnionTypeNode(unwrapped) ? unwrapped.types : [];
-}
-
-function getUnionBranches(
-  type: ts.UnionType,
-  declaration: ts.Declaration,
-  checker: ts.TypeChecker
-) {
-  const declaredTypeNode = getDeclarationTypeNode(declaration);
-  const unwrappedTypeNode = declaredTypeNode
-    ? unwrapParenthesizedTypeNode(declaredTypeNode)
-    : undefined;
-
-  if (unwrappedTypeNode && ts.isUnionTypeNode(unwrappedTypeNode)) {
-    return unwrappedTypeNode.types.map((node) =>
-      checker.getTypeFromTypeNode(node)
-    );
-  }
-
-  return type.types.toSorted((left, right) =>
-    compareFormattedTypeParts(
-      createSemanticTypePart(left, declaration, checker),
-      createSemanticTypePart(right, declaration, checker)
-    )
-  );
-}
-
-function getDeclarationTypeNode(
-  declaration: ts.Declaration
-): ts.TypeNode | undefined {
-  if (
-    ts.isPropertySignature(declaration) ||
-    ts.isPropertyDeclaration(declaration) ||
-    ts.isParameter(declaration) ||
-    ts.isVariableDeclaration(declaration) ||
-    ts.isTypeAliasDeclaration(declaration) ||
-    ts.isGetAccessorDeclaration(declaration)
-  ) {
-    return declaration.type;
-  }
-
-  if (
-    (ts.isMethodSignature(declaration) ||
-      ts.isMethodDeclaration(declaration)) &&
-    declaration.type
-  ) {
-    return ts.factory.createFunctionTypeNode(
-      declaration.typeParameters,
-      declaration.parameters,
-      declaration.type
-    );
-  }
-
-  return undefined;
-}
-
-function getDeclaredTopLevelTypeNodes(
-  typeNode: ts.TypeNode,
-  optional: boolean
-) {
-  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
-  const nodes = ts.isUnionTypeNode(unwrapped) ? unwrapped.types : [typeNode];
-
-  return nodes.filter((node) => !optional || !isUndefinedTypeNode(node));
-}
-
 function unwrapParenthesizedTypeNode(typeNode: ts.TypeNode): ts.TypeNode {
   let current = typeNode;
 
@@ -1021,85 +928,7 @@ function unwrapParenthesizedTypeNode(typeNode: ts.TypeNode): ts.TypeNode {
   return current;
 }
 
-function isUndefinedTypeNode(typeNode: ts.TypeNode) {
-  return (
-    unwrapParenthesizedTypeNode(typeNode).kind ===
-    ts.SyntaxKind.UndefinedKeyword
-  );
-}
-
-function containsUnionTypeNode(typeNode: ts.TypeNode) {
-  let result = false;
-
-  const visit = (node: ts.Node) => {
-    if (ts.isUnionTypeNode(node)) {
-      result = true;
-      return;
-    }
-
-    ts.forEachChild(node, visit);
-  };
-
-  visit(typeNode);
-
-  return result;
-}
-
-function createSourceTypePart(
-  typeNode: ts.TypeNode,
-  sourceFile: ts.SourceFile
-): FormattedTypePart {
-  return {
-    text: printTypeNode(typeNode, sourceFile),
-  };
-}
-
-function createSemanticTypePart(
-  type: ts.Type,
-  declaration: ts.Declaration,
-  checker: ts.TypeChecker
-): FormattedTypePart {
-  const typeNode = checker.typeToTypeNode(
-    type,
-    declaration,
-    ts.NodeBuilderFlags.NoTruncation |
-      ts.NodeBuilderFlags.UseAliasDefinedOutsideCurrentScope |
-      ts.NodeBuilderFlags.UseSingleQuotesForStringLiteralType
-  );
-
-  if (typeNode) {
-    const canonicalTypeNode = canonicalizeGeneratedUnionOrder(
-      typeNode,
-      declaration.getSourceFile()
-    );
-
-    return {
-      text: printTypeNode(canonicalTypeNode, declaration.getSourceFile()),
-    };
-  }
-
-  return {
-    text: normalizeType(
-      checker.typeToString(
-        type,
-        declaration,
-        ts.TypeFormatFlags.NoTruncation |
-          ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
-      )
-    ),
-  };
-}
-
-function createPrintedTypePart(
-  typeNode: ts.TypeNode,
-  sourceFile: ts.SourceFile
-): FormattedTypePart {
-  return {
-    text: printTypeNode(typeNode, sourceFile),
-  };
-}
-
-function canonicalizeGeneratedUnionOrder(
+function canonicalizeUnionOrder(
   typeNode: ts.TypeNode,
   sourceFile: ts.SourceFile
 ) {
@@ -1150,30 +979,6 @@ function printTypeNode(typeNode: ts.TypeNode, sourceFile: ts.SourceFile) {
   );
 }
 
-function renderUnionTypeParts(parts: readonly FormattedTypePart[]) {
-  const uniqueParts = parts.filter(
-    (part, index) =>
-      parts.findIndex((candidate) => candidate.text === part.text) === index
-  );
-
-  if (uniqueParts.length === 1) {
-    return uniqueParts[0]!.text;
-  }
-
-  return uniqueParts.map((part) => part.text).join(' | ');
-}
-
-function compareFormattedTypeParts(
-  left: FormattedTypePart,
-  right: FormattedTypePart
-) {
-  return compareCanonicalText(left.text, right.text);
-}
-
-/**
- * When declaration order is unavailable, generated union members use Unicode
- * code-point order of their normalized rendered form as the stable fallback.
- */
 function compareCanonicalText(left: string, right: string) {
   if (left === right) {
     return 0;
@@ -1219,6 +1024,8 @@ function normalizeType(type: string) {
     .replace(/\bBaseSelectOption\[\]/g, 'SelectOption[]')
     .replace(/Readonly<(.+)>/g, '$1')
     .replace(/\s+/g, ' ')
+    .replace(/\[\s+/g, '[')
+    .replace(/\s+\]/g, ']')
     .trim();
 
   if (
@@ -1255,6 +1062,32 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   }
 
   return descriptions;
+}
+
+function readExistingTypes(doc: string, item: ApiSection) {
+  const types = new Map<string, string>();
+  const block = findTableBlock(doc, item);
+
+  if (!block) {
+    return types;
+  }
+
+  const rows = block.table
+    .split('\n')
+    .filter((line) => line.trim().startsWith('|'))
+    .slice(2);
+
+  for (const row of rows) {
+    const cells = splitMarkdownRow(row);
+    const prop = cells[0]?.replace(/`/g, '').trim();
+    const type = cells[1]?.replace(/`/g, '').trim();
+
+    if (prop && type) {
+      types.set(prop, unescapeTableCell(type));
+    }
+  }
+
+  return types;
 }
 
 function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
@@ -1360,6 +1193,10 @@ function splitMarkdownRow(row: string) {
 
 function escapeTableCell(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+}
+
+function unescapeTableCell(value: string) {
+  return value.replace(/\\\|/g, '|').replace(/\\\\/g, '\\');
 }
 
 function normalizePath(filePath: string) {
