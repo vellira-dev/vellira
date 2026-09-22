@@ -40,6 +40,12 @@ import {
   getPlannedComponentTokenPreservationArtifacts,
   synchronizeComponentTokenPreservationContract,
 } from './token-preservation-contract';
+import {
+  analyzeComponentTokenArchitectureRegistration,
+  checkComponentTokenArchitectureRegistration,
+  getComponentTokenArchitectureRegistrationFile,
+  synchronizeComponentTokenArchitectureRegistration,
+} from './token-architecture-registration-contract';
 
 import type { ComponentGeneratorOptions } from './cli';
 
@@ -109,7 +115,8 @@ function getPlannedCreatedFiles(
 }
 
 function getPlannedUpdatedFiles(
-  plan: ReturnType<typeof createComponentGenerationPlan>
+  plan: ReturnType<typeof createComponentGenerationPlan>,
+  architectureRegistrationRequired: boolean
 ) {
   const files = [
     ...plan.targets.flatMap((target) => [
@@ -135,6 +142,10 @@ function getPlannedUpdatedFiles(
     }
 
     files.push(...getPlannedComponentTokenPreservationArtifacts(plan));
+
+    if (architectureRegistrationRequired) {
+      files.push(getComponentTokenArchitectureRegistrationFile(plan.root));
+    }
   }
 
   if (generatesSharedTypes(plan)) {
@@ -163,12 +174,16 @@ export async function runComponentGenerator(params: {
     throw new Error(preflight.errors.join('\n'));
   }
 
+  const architectureRegistration =
+    await analyzeComponentTokenArchitectureRegistration(plan);
+
   if (params.options.check) {
     const driftedFiles = [
       ...checkPublicApiContractSynchronization(plan),
       ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
       ...checkComponentTokenPreservationContract(plan),
+      ...(await checkComponentTokenArchitectureRegistration(plan)),
       ...(await checkComponentTokenContract(plan)),
       ...checkSharedTypesContract(plan),
       ...(await checkGeneratedPlanContract(plan)),
@@ -205,7 +220,10 @@ export async function runComponentGenerator(params: {
       ],
       updatedFiles: [
         ...new Set([
-          ...getPlannedUpdatedFiles(plan),
+          ...getPlannedUpdatedFiles(
+            plan,
+            architectureRegistration.mutationRequired
+          ),
           ...websitePlan.updatedFiles,
         ]),
       ],
@@ -218,6 +236,12 @@ export async function runComponentGenerator(params: {
 
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
+
+  const architectureResult = { updatedFiles: [] as string[] };
+  await synchronizeComponentTokenArchitectureRegistration({
+    plan,
+    result: architectureResult,
+  });
 
   const preservationResult = { updatedFiles: [] as string[] };
   await synchronizeComponentTokenPreservationContract({
@@ -270,6 +294,7 @@ export async function runComponentGenerator(params: {
   const updatedFiles = [
     ...new Set([
       ...lifecycleResult.updatedFiles,
+      ...architectureResult.updatedFiles,
       ...preservationResult.updatedFiles,
       ...sharedTypesResult.updatedFiles,
       ...result.updatedFiles,

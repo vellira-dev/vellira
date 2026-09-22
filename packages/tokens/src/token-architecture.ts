@@ -5,6 +5,11 @@
  * without changing any resolved token value.
  */
 
+import {
+  generatedComponentFactoryArchitectureV1,
+  projectGeneratedMaintainedComponentFactories,
+} from './generated-component-factory-architecture.js';
+
 export const tokenArchitectureLayers = [
   'primitive',
   'semantic',
@@ -723,6 +728,9 @@ export const maintainedComponentFactories = [
     semanticAdapter: 'createTooltipTokensFromTheme',
     stateKeys: ['default'],
   },
+  ...projectGeneratedMaintainedComponentFactories(
+    generatedComponentFactoryArchitectureV1
+  ),
 ] as const;
 
 export const tokenArchitectureAuditFindings = [
