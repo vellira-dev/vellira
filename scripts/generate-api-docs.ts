@@ -829,7 +829,19 @@ function normalizeUnionTypeStrings(types: string[]) {
     .filter((type) => type !== 'undefined')
     .filter((type, index, allTypes) => allTypes.indexOf(type) === index);
 
-  return members.length === 1 ? members[0]! : members.join(' | ');
+  return members.length === 1
+    ? members[0]!
+    : members.map(groupUnionMemberForDisplay).join(' | ');
+}
+
+function groupUnionMemberForDisplay(type: string) {
+  const typeNode = unwrapParenthesizedTypeNode(parseFormattedTypeNode(type));
+
+  return ts.isFunctionTypeNode(typeNode) ||
+    ts.isConstructorTypeNode(typeNode) ||
+    ts.isConditionalTypeNode(typeNode)
+    ? `(${type})`
+    : type;
 }
 
 function splitTopLevelUnionType(type: string) {
