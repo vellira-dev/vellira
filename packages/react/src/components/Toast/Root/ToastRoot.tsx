@@ -101,12 +101,15 @@ export function ToastRoot({
     }
 
     startedAtRef.current = Date.now();
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      remainingRef.current = 0;
-      timeoutRequestedRef.current = true;
-      requestCloseRef.current('timeout');
-    }, Math.max(0, remainingRef.current));
+    timerRef.current = setTimeout(
+      () => {
+        timerRef.current = null;
+        remainingRef.current = 0;
+        timeoutRequestedRef.current = true;
+        requestCloseRef.current('timeout');
+      },
+      Math.max(0, remainingRef.current)
+    );
   }, [duration, open]);
 
   useEffect(() => {
