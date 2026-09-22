@@ -773,7 +773,10 @@ function readUnionPropRows(type: ts.UnionType, checker: ts.TypeChecker) {
         entry.optionalBranches += 1;
       }
 
-      if (!entry.typeStrings.includes(formattedType)) {
+      if (
+        formattedType !== '' &&
+        !entry.typeStrings.includes(formattedType)
+      ) {
         entry.typeStrings.push(formattedType);
       }
 
@@ -781,14 +784,22 @@ function readUnionPropRows(type: ts.UnionType, checker: ts.TypeChecker) {
     }
   }
 
-  return Array.from(propertiesByName, ([name, entry]) => ({
-    name,
-    type: normalizeUnionTypeStrings(entry.typeStrings),
-    required:
-      entry.presentBranches === type.types.length &&
-      entry.optionalBranches === 0,
-    description: '',
-  }));
+  return Array.from(propertiesByName).flatMap(([name, entry]) => {
+    const propertyType = normalizeUnionTypeStrings(entry.typeStrings);
+
+    return propertyType
+      ? [
+          {
+            name,
+            type: propertyType,
+            required:
+              entry.presentBranches === type.types.length &&
+              entry.optionalBranches === 0,
+            description: '',
+          },
+        ]
+      : [];
+  });
 }
 
 function readSymbolPropRow(
@@ -815,10 +826,24 @@ function readSymbolPropRow(
 function normalizeUnionTypeStrings(types: string[]) {
   const members = types
     .flatMap(splitTopLevelUnionType)
-    .filter((type) => type !== 'undefined')
+    .filter((type) => type !== '' && type !== 'undefined')
     .filter((type, index, allTypes) => allTypes.indexOf(type) === index);
 
-  return members.length === 1 ? members[0]! : members.join(' | ');
+  if (members.length <= 1) {
+    return members[0] ?? '';
+  }
+
+  return members.map(groupUnionMemberForDisplay).join(' | ');
+}
+
+function groupUnionMemberForDisplay(type: string) {
+  const typeNode = unwrapParenthesizedTypeNode(parseFormattedTypeNode(type));
+
+  return ts.isFunctionTypeNode(typeNode) ||
+    ts.isConstructorTypeNode(typeNode) ||
+    ts.isConditionalTypeNode(typeNode)
+    ? `(${type})`
+    : type;
 }
 
 function findTypeDeclaration(sourceFile: ts.SourceFile, interfaceName: string) {
