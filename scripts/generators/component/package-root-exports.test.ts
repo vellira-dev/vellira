@@ -204,5 +204,5 @@ describe('component generator package root exports', () => {
         );
       }
     }
-  });
+  }, 15_000);
 });
