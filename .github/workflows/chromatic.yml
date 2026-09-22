@@ -10,6 +10,11 @@ permissions:
   contents: read
   pull-requests: read
 
+# Only supersede attempts for the same PR; preserve non-PR runs.
+concurrency:
+  group: chromatic-pr-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   chromatic:
     runs-on: ubuntu-latest

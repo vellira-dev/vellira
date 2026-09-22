@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PROMOTION_TITLE_PATTERN = /^Promote staging ([0-9a-f]{40})$/;
-const PROTECTED_DEPLOY_STATUSES = new Set(['queued', 'in_progress']);
+const PROTECTED_DEPLOY_STATUSES = new Set(['queued', 'in_progress', 'completed']);
 
 function assertSha(value, label) {
   if (!SHA_PATTERN.test(value ?? '')) {

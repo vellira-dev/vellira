@@ -91,6 +91,24 @@ test('queued post-approval deploy is preserved and duplicate waiting run is canc
   );
 });
 
+test('completed deploy stays protected while post-deploy follow-up is active', () => {
+  assert.deepEqual(
+    planProductionPromotionSupersession({
+      currentMainSha: B,
+      runs: [
+        run({
+          id: 1,
+          candidateSha: A,
+          runNumber: 10,
+          status: 'in_progress',
+          deployStatus: 'completed',
+        }),
+      ],
+    }),
+    { keep: [1], cancel: [] }
+  );
+});
+
 test('completed runs do not participate in supersession', () => {
   assert.deepEqual(
     planProductionPromotionSupersession({
