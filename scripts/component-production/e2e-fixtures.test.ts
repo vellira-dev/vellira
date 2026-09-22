@@ -8,10 +8,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { runComponentGenerator } from '../generators/component/run';
 import { createComponentGenerationPlan } from '../generators/component/plan';
-import {
-  createComponentMetadataFromPlan,
-  generateComponentDocumentation,
-} from '../generators/component/docs';
+import { generateComponentDocumentation } from '../generators/component/docs';
+import { createComponentMetadataFromPlan } from '../generators/component/metadata';
 import { generateComponentWebsitePage } from '../generators/component/website';
 import { reserveTokenLifecycleFixture } from '../token-lifecycle/fixtures/lifecycle';
 import { formatGeneratedContent } from '../generators/format-generated-files';

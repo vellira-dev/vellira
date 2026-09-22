@@ -1,3 +1,8 @@
+import {
+  generatedComponentFactoryArchitectureV1,
+  projectGeneratedComponentTokenDependencyAudits,
+} from './generated-component-factory-architecture.js';
+
 export const componentTokenDependencyPolicyV1 = {
   semanticRoles: {
     default: 'required',
@@ -172,6 +177,9 @@ export const componentTokenDependencyAuditV1 = [
     primitiveColorUsage: ['none'],
     unresolved: [],
   },
+  ...projectGeneratedComponentTokenDependencyAudits(
+    generatedComponentFactoryArchitectureV1
+  ),
 ] as const;
 
 export const semanticDependencyRepairsV1 = [

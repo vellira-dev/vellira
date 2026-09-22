@@ -621,43 +621,15 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
-  const sourceFiles = Array.from(
-    new Set(sections.map((item) => item.sourceFile))
-  ).map((sourceFile) => path.join(rootDir, sourceFile));
-
-  const program = ts.createProgram(sourceFiles, {
-    baseUrl: rootDir,
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    jsx: ts.JsxEmit.ReactJSX,
-    skipLibCheck: true,
-    strict: true,
-    esModuleInterop: true,
-    allowSyntheticDefaultImports: true,
-    paths: {
-      '@vellira-ui/core': ['packages/core/src/index.ts'],
-      '@vellira-ui/icons': ['packages/icons/src/web.ts'],
-      '@vellira-ui/icons/native': ['packages/icons/src/native.ts'],
-      '@vellira-ui/icons/web': ['packages/icons/src/web.ts'],
-      '@vellira-ui/react': ['packages/react/src/index.ts'],
-      '@vellira-ui/react-native': ['packages/react-native/src/index.ts'],
-      '@vellira-ui/tokens': ['packages/tokens/src/index.ts'],
-      '@vellira-ui/types': ['packages/types/src/index.ts'],
-    },
-  });
-  const context: ApiDocsContext = {
-    rootDir,
-    checker: program.getTypeChecker(),
-    sourceFileByName: new Map(
-      program
-        .getSourceFiles()
-        .map((sourceFile) => [normalizePath(sourceFile.fileName), sourceFile])
-    ),
-  };
+  const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
 
   for (const item of sections) {
+    const context =
+      contexts.get(item.sourceFile) ??
+      createApiDocsContext(rootDir, item.sourceFile);
+
+    contexts.set(item.sourceFile, context);
     const docPath = path.join(rootDir, item.docPath);
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
@@ -713,6 +685,47 @@ export async function generateApiDocs(
     status:
       changedFiles.length === 0 ? 'up-to-date' : check ? 'stale' : 'updated',
     changedFiles: changedFiles.sort(),
+  };
+}
+
+function createApiDocsContext(
+  rootDir: string,
+  sourceFile: string
+): ApiDocsContext {
+  const sourcePath = path.join(rootDir, sourceFile);
+  const program = ts.createProgram([sourcePath], {
+    baseUrl: rootDir,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    jsx: ts.JsxEmit.ReactJSX,
+    skipLibCheck: true,
+    strict: true,
+    esModuleInterop: true,
+    allowSyntheticDefaultImports: true,
+    paths: {
+      '@vellira-ui/core': ['packages/core/src/index.ts'],
+      '@vellira-ui/icons': ['packages/icons/src/web.ts'],
+      '@vellira-ui/icons/native': ['packages/icons/src/native.ts'],
+      '@vellira-ui/icons/web': ['packages/icons/src/web.ts'],
+      '@vellira-ui/react': ['packages/react/src/index.ts'],
+      '@vellira-ui/react-native': ['packages/react-native/src/index.ts'],
+      '@vellira-ui/tokens': ['packages/tokens/src/index.ts'],
+      '@vellira-ui/types': ['packages/types/src/index.ts'],
+    },
+  });
+
+  return {
+    rootDir,
+    checker: program.getTypeChecker(),
+    sourceFileByName: new Map(
+      program
+        .getSourceFiles()
+        .map((programSourceFile) => [
+          normalizePath(programSourceFile.fileName),
+          programSourceFile,
+        ])
+    ),
   };
 }
 
@@ -884,15 +897,64 @@ function readSymbolPropRow(
 }
 
 function normalizeUnionTypeStrings(types: string[]) {
-  if (types.length === 1) {
-    return types[0];
+  const members = types
+    .flatMap(splitTopLevelUnionType)
+    .filter((type) => type !== 'undefined')
+    .filter((type, index, allTypes) => allTypes.indexOf(type) === index);
+
+  return members.length === 1
+    ? members[0]!
+    : members.map(groupUnionMemberForDisplay).join(' | ');
+}
+
+function groupUnionMemberForDisplay(type: string) {
+  const typeNode = unwrapParenthesizedTypeNode(parseFormattedTypeNode(type));
+
+  return ts.isFunctionTypeNode(typeNode) ||
+    ts.isConstructorTypeNode(typeNode) ||
+    ts.isConditionalTypeNode(typeNode)
+    ? `(${type})`
+    : type;
+}
+
+function splitTopLevelUnionType(type: string) {
+  const typeNode = parseFormattedTypeNode(type);
+  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
+
+  if (!ts.isUnionTypeNode(unwrapped)) {
+    return [type];
   }
 
-  return types
-    .flatMap((type) => type.split(' | '))
-    .filter((type) => type !== 'undefined')
-    .filter((type, index, allTypes) => allTypes.indexOf(type) === index)
-    .join(' | ');
+  return unwrapped.types.map((member) =>
+    normalizeType(member.getText(typeNode.getSourceFile()))
+  );
+}
+
+function parseFormattedTypeNode(type: string) {
+  const sourceFile = ts.createSourceFile(
+    '__vellira_api_type__.ts',
+    `type __VelliraApiType = ${type};`,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const declaration = sourceFile.statements.find(ts.isTypeAliasDeclaration);
+
+  if (!declaration) {
+    throw new Error(`Unable to parse API documentation type: ${type}`);
+  }
+
+  return declaration.type;
+}
+
+function unwrapParenthesizedTypeNode(typeNode: ts.TypeNode): ts.TypeNode {
+  let current = typeNode;
+
+  while (ts.isParenthesizedTypeNode(current)) {
+    current = current.type;
+  }
+
+  return current;
 }
 
 function findTypeDeclaration(sourceFile: ts.SourceFile, interfaceName: string) {
@@ -921,18 +983,45 @@ function formatType(
   optional: boolean,
   checker: ts.TypeChecker
 ) {
-  const formatted = checker.typeToString(
-    type,
-    declaration,
-    ts.TypeFormatFlags.NoTruncation |
-      ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
+  const formatted = normalizeType(
+    checker.typeToString(
+      type,
+      declaration,
+      ts.TypeFormatFlags.NoTruncation |
+        ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
+    )
   );
 
-  return normalizeType(optional ? removeUndefined(formatted) : formatted);
+  return optional ? removeTopLevelUndefined(formatted) : formatted;
 }
 
-function removeUndefined(type: string) {
-  return type.replace(/ \| undefined/g, '').replace(/undefined \| /g, '');
+function removeTopLevelUndefined(type: string) {
+  const typeNode = parseFormattedTypeNode(type);
+  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
+
+  if (!ts.isUnionTypeNode(unwrapped)) {
+    return type;
+  }
+
+  const members = unwrapped.types.filter(
+    (member) =>
+      unwrapParenthesizedTypeNode(member).kind !==
+      ts.SyntaxKind.UndefinedKeyword
+  );
+
+  if (members.length === unwrapped.types.length) {
+    return type;
+  }
+
+  if (members.length === 1) {
+    const member = unwrapParenthesizedTypeNode(members[0]!);
+
+    return normalizeType(member.getText(typeNode.getSourceFile()));
+  }
+
+  return members
+    .map((member) => normalizeType(member.getText(typeNode.getSourceFile())))
+    .join(' | ');
 }
 
 function isDocumentedPropDeclaration(declaration: ts.Declaration) {

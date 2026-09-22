@@ -1,5 +1,7 @@
 import type { ComponentTokenContract } from '@vellira-ui/metadata';
 
+import { canonicalTokenVocabulary } from '../../../packages/tokens/src/token-architecture';
+
 const componentTokenLeafSuffixes = {
   standard: [
     'default.bg',
@@ -92,4 +94,31 @@ export function getGeneratedComponentTokenLeafSuffixes(
   componentTokens: ComponentTokenContract
 ): readonly string[] {
   return componentTokenLeafSuffixes[componentTokens];
+}
+
+/**
+ * Derive factory state evidence from the exact generated token shape. Intent
+ * and status branches are accepted by the canonical architecture contract as
+ * default-state variants, while disclosure's `expanded` branch is the
+ * established selected-state spelling.
+ */
+export function getGeneratedComponentTokenFactoryStateKeys(
+  componentTokens: ComponentTokenContract
+): string[] {
+  const stateSegments = new Set<string>([
+    ...canonicalTokenVocabulary.state,
+    ...canonicalTokenVocabulary.intent,
+    ...canonicalTokenVocabulary.status,
+    'expanded',
+  ]);
+  const stateKeys: string[] = [];
+
+  for (const suffix of componentTokenLeafSuffixes[componentTokens]) {
+    for (const segment of suffix.split('.').slice(0, -1)) {
+      if (!stateSegments.has(segment) || stateKeys.includes(segment)) continue;
+      stateKeys.push(segment);
+    }
+  }
+
+  return stateKeys;
 }

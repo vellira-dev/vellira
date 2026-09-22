@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createComponentDocsContractFromPlan,
-  createComponentMetadataFromPlan,
   getComponentDocsTargets,
 } from './docs';
+import { createComponentMetadataFromPlan } from './metadata';
 import { runComponentGenerator as runComponentGeneratorImplementation } from './run';
 import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
 import { generateComponentWebsitePage } from './website';
@@ -68,6 +68,10 @@ import {
   getTokenMigrationManifestFile,
   synchronizeComponentTokenPreservationContract,
 } from './token-preservation-contract';
+import {
+  getComponentTokenArchitectureRegistrationFile,
+  readGeneratedComponentFactoryArchitectureRegistrations,
+} from './token-architecture-registration-contract';
 
 const tempRoots: string[] = [];
 const testWorkItem = {
@@ -124,6 +128,14 @@ function createRequiredRepositoryStructure(
   fs.copyFileSync(
     path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
     path.join(preservationDir, 'token-migrations.ts')
+  );
+  const architectureRegistrationFile =
+    getComponentTokenArchitectureRegistrationFile(root);
+  fs.copyFileSync(
+    path.resolve(
+      'packages/tokens/src/generated-component-factory-architecture.ts'
+    ),
+    architectureRegistrationFile
   );
   fs.copyFileSync(
     path.resolve('packages/tokens/package.json'),
@@ -351,6 +363,22 @@ describe('component generator', () => {
     expect(result.createdFiles).toHaveLength(23);
     expect(result.createdFiles).toContain(websiteCreatedFile);
     expect(result.updatedFiles).toContain(websiteUpdatedFile);
+    expect(result.updatedFiles).toContain(
+      getComponentTokenArchitectureRegistrationFile(root)
+    );
+    expect(
+      readGeneratedComponentFactoryArchitectureRegistrations(root)
+    ).toEqual([
+      expect.objectContaining({
+        factory: expect.objectContaining({ name: 'createAvatarTokens' }),
+        dependencyAudit: expect.objectContaining({
+          factory: 'createAvatarTokens',
+          component: 'avatar',
+          primitiveColorUsage: ['none'],
+          unresolved: [],
+        }),
+      }),
+    ]);
 
     expect(generateComponentWebsitePage).toHaveBeenCalledTimes(1);
     expect(generateComponentWebsitePage).toHaveBeenCalledWith({
@@ -918,6 +946,9 @@ export { switchDocs };
     expect(result.updatedFiles).toContain(result.plan.docsContractRegistryFile);
     expect(result.updatedFiles).toContain(result.plan.tokenFactoryBarrelFile);
     expect(result.updatedFiles).toContain(
+      getComponentTokenArchitectureRegistrationFile(root)
+    );
+    expect(result.updatedFiles).toContain(
       path.join(root, 'packages/react/API.md')
     );
     expect(result.updatedFiles).toContain(
@@ -933,6 +964,9 @@ export { switchDocs };
     expect(fs.existsSync(result.plan.metadataFile)).toBe(false);
     expect(fs.existsSync(result.plan.docsContractFile)).toBe(false);
     expect(fs.existsSync(result.plan.tokenFactoryFile)).toBe(false);
+    expect(
+      readGeneratedComponentFactoryArchitectureRegistrations(root)
+    ).toEqual([]);
     expect(
       fs.existsSync(path.join(root, 'apps/docs/src/react/avatar.md'))
     ).toBe(false);
@@ -1478,6 +1512,35 @@ describe('component generator check mode', () => {
     expect(generateComponentWebsitePage).toHaveBeenCalledTimes(1);
   });
 
+  it('accepts generated shared and platform semantic metadata without mutation', async () => {
+    const root = createTempRoot();
+
+    createRequiredRepositoryStructure(root);
+
+    const semanticOptions = {
+      ...options,
+      semanticCapabilities: ['dismissible', 'reduced-motion'],
+      platformSemanticCapabilities: {
+        react: ['auto-dismiss'],
+        'react-native': ['announcement'],
+      },
+    } as const;
+    const written = await runComponentGenerator({
+      root,
+      options: semanticOptions,
+    });
+    const before = readFile(written.plan.metadataFile);
+    const checked = await runComponentGenerator({
+      root,
+      options: { ...semanticOptions, check: true },
+    });
+
+    expect(checked.check).toBe(true);
+    expect(checked.createdFiles).toEqual([]);
+    expect(checked.updatedFiles).toEqual([]);
+    expect(readFile(written.plan.metadataFile)).toBe(before);
+  });
+
   it('detects a missing public API contract entry without mutation', async () => {
     const root = createTempRoot();
 
@@ -1699,6 +1762,9 @@ describe('component-token run intent', () => {
 
     expect(dryRun.createdFiles).not.toContain(dryRun.plan.tokenFactoryFile);
     expect(dryRun.updatedFiles).not.toContain(getGeneratedTokenTypesFile(root));
+    expect(dryRun.updatedFiles).not.toContain(
+      getComponentTokenArchitectureRegistrationFile(root)
+    );
 
     for (const target of dryRun.plan.tokenThemeTargets) {
       expect(dryRun.createdFiles).not.toContain(target.componentFile);
@@ -1708,6 +1774,9 @@ describe('component-token run intent', () => {
     const result = await runComponentGenerator({ root, options });
 
     expect(fs.existsSync(result.plan.tokenFactoryFile)).toBe(false);
+    expect(
+      readGeneratedComponentFactoryArchitectureRegistrations(root)
+    ).toEqual([]);
 
     for (const target of result.plan.tokenThemeTargets) {
       expect(fs.existsSync(target.componentFile)).toBe(false);

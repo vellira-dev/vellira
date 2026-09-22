@@ -73,6 +73,15 @@ function createRequiredRepositoryStructure(
     path.join(preservationDir, 'token-migrations.ts')
   );
   fs.copyFileSync(
+    path.resolve(
+      'packages/tokens/src/generated-component-factory-architecture.ts'
+    ),
+    path.join(
+      root,
+      'packages/tokens/src/generated-component-factory-architecture.ts'
+    )
+  );
+  fs.copyFileSync(
     path.resolve('packages/tokens/package.json'),
     path.join(root, 'packages/tokens/package.json')
   );

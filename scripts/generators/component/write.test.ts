@@ -6,6 +6,7 @@ import prettier from 'prettier';
 import { describe, expect, it } from 'vitest';
 
 import { createComponentGenerationPlan } from './plan';
+import { checkGeneratedPlanContract } from './plan-contract';
 import { writeComponentGenerationPlan } from './write';
 
 const tempRoots: string[] = [];
@@ -340,6 +341,54 @@ describe('component generator writer', () => {
       barrel.match(/import \{ avatarMetadata \} from '\.\/Avatar\.metadata';/g)
     ).toHaveLength(1);
     expect(barrel.match(/ {2}avatarMetadata,/g)).toHaveLength(1);
+  });
+
+  it('writes semantic metadata that is byte-identical to the generated-plan contract', async () => {
+    const root = createTempRoot();
+    createLayerBarrels(root, 'components');
+
+    const plan = createComponentGenerationPlan({
+      root,
+      options: {
+        componentName: 'SemanticProbe',
+        platform: 'both',
+        layer: 'components',
+        category: 'feedback',
+        profile: 'base',
+        semanticCapabilities: ['dismissible', 'reduced-motion'],
+        platformSemanticCapabilities: {
+          'react-native': ['announcement'],
+          react: ['auto-dismiss'],
+        },
+        componentTokens: false,
+        parts: [],
+        force: true,
+      },
+    });
+
+    await writeComponentGenerationPlan(plan);
+    const firstMetadata = fs.readFileSync(plan.metadataFile, 'utf8');
+
+    expect(firstMetadata).toContain(
+      "semanticCapabilities: ['dismissible', 'reduced-motion']"
+    );
+    expect(firstMetadata).toContain(`platformSemanticCapabilities: {
+    react: ['auto-dismiss'],
+    'react-native': ['announcement'],
+  }`);
+    expect(await checkGeneratedPlanContract(plan)).toEqual([]);
+
+    await writeComponentGenerationPlan(plan);
+
+    expect(fs.readFileSync(plan.metadataFile, 'utf8')).toBe(firstMetadata);
+    expect(await checkGeneratedPlanContract(plan)).toEqual([]);
+
+    fs.writeFileSync(
+      plan.metadataFile,
+      firstMetadata.replace("'dismissible'", "'fallback'")
+    );
+
+    expect(await checkGeneratedPlanContract(plan)).toContain(plan.metadataFile);
   });
 
   it('generates capabilities from the selected profile', async () => {

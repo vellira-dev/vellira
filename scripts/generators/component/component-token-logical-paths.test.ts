@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { ComponentTokenContract } from '@vellira-ui/metadata';
 
 import {
+  getGeneratedComponentTokenFactoryStateKeys,
   getGeneratedComponentTokenLeafSuffixes,
   getGeneratedComponentTokenLogicalPaths,
 } from './component-token-logical-paths';
@@ -121,4 +122,17 @@ describe('generated component-token logical paths', () => {
       })
     ).toEqual(authority.map((suffix) => `components.evidenceProbe.${suffix}`));
   });
+
+  it.each([
+    ['standard', ['default', 'hover', 'pressed', 'error', 'disabled']],
+    ['boolean-control', ['default', 'hover', 'pressed', 'disabled']],
+    ['disclosure', ['default', 'expanded', 'hover', 'pressed', 'disabled']],
+  ] as const)(
+    'derives deterministic %s factory state evidence from the generated shape',
+    (contract, expected) => {
+      expect(getGeneratedComponentTokenFactoryStateKeys(contract)).toEqual(
+        expected
+      );
+    }
+  );
 });

@@ -23,12 +23,15 @@ import {
   restoreManualComponentTests,
 } from './manual-test-ownership';
 import {
-  createComponentMetadataFromPlan,
   generateComponentDocumentation,
   registerComponentDocsContract,
   renderComponentDocsContract,
-  resolvePlanCapabilities,
 } from './docs';
+import {
+  createComponentMetadataFromPlan,
+  createMetadataTemplateParamsFromPlan,
+  resolvePlanCapabilities,
+} from './metadata';
 import { resolveComponentTemplates } from './resolve-templates';
 import { resolvePartTemplates } from './resolve-part-templates';
 import { renderSynchronizedPublicApiContract } from './public-api-contract';
@@ -589,30 +592,9 @@ function writeMetadata(params: {
 }) {
   const { plan, result } = params;
 
-  const platforms = plan.targets.map((target) =>
-    target.packageName === 'react'
-      ? ('react' as const)
-      : ('react-native' as const)
-  );
-
-  const capabilities = resolvePlanCapabilities(plan);
-
   writeFile({
     filePath: plan.metadataFile,
-    content: renderMetadataTemplate({
-      componentName: plan.componentName,
-      layer: plan.layer,
-      category: plan.category,
-      platforms,
-      profile: plan.profile,
-      capabilities,
-      typeOwnership: plan.typeOwnership,
-      dependencies: plan.dependencies,
-      icons: plan.icons,
-      tokens: plan.tokens,
-      assets: plan.assets,
-      componentTokens: plan.componentTokens,
-    }),
+    content: renderMetadataTemplate(createMetadataTemplateParamsFromPlan(plan)),
     createdFiles: result.createdFiles,
   });
 

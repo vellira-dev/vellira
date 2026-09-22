@@ -293,7 +293,7 @@ root exposes disabled state when `disabled` is set.
 | `labelInfo`        | `ReactNode`                  | No       | —                                 |
 | `optionalText`     | `ReactNode`                  | No       | —                                 |
 | `size`             | `'sm' \| 'md' \| 'lg'`       | No       | Input size.                       |
-| `labelPosition`    | `'start' \| 'top'`           | No       | —                                 |
+| `labelPosition`    | `'top' \| 'start'`           | No       | —                                 |
 | `invalid`          | `boolean`                    | No       | —                                 |
 | `orientation`      | `'vertical' \| 'horizontal'` | No       | —                                 |
 | `message`          | `ReactNode`                  | No       | —                                 |
@@ -475,59 +475,59 @@ only the values that still fit are added.
 
 <!-- api-docgen:start native.SelectProps.SelectProps -->
 
-| Prop                     | Type                                                           | Required | Description                                                           |
-| ------------------------ | -------------------------------------------------------------- | -------- | --------------------------------------------------------------------- |
-| `label`                  | `string`                                                       | No       | Visible field label.                                                  |
-| `description`            | `string`                                                       | No       | Additional descriptive text.                                          |
-| `error`                  | `ReactNode`                                                    | No       | Error message or custom error content.                                |
-| `children`               | `ReactNode`                                                    | No       | `Select.Item`, `Select.Group`, and related compound slots.            |
-| `options`                | `SelectOption[]`                                               | No       | Simple option array alternative to compound items.                    |
-| `value`                  | `string \| null \| string[]`                                   | No       | Controlled selected value.                                            |
-| `defaultValue`           | `string \| null \| string[]`                                   | No       | Initial selected value for uncontrolled usage.                        |
-| `onValueChange`          | `(value: string \| null) => void \| (value: string[]) => void` | No       | Called when the selected value changes.                               |
-| `color`                  | `SelectColor`                                                  | No       | Trigger and option color palette.                                     |
-| `variant`                | `SelectVariant`                                                | No       | Trigger and option variant.                                           |
-| `size`                   | `SelectSize`                                                   | No       | Select size.                                                          |
-| `placeholder`            | `string`                                                       | No       | Text shown when no value is selected.                                 |
-| `required`               | `boolean`                                                      | No       | Marks the field as required.                                          |
-| `disabled`               | `boolean`                                                      | No       | Disables interaction.                                                 |
-| `invalid`                | `boolean`                                                      | No       | Shows invalid styling without error text.                             |
-| `open`                   | `boolean`                                                      | No       | Controlled open state.                                                |
-| `defaultOpen`            | `boolean`                                                      | No       | Initial uncontrolled open state.                                      |
-| `onOpenChange`           | `(open: boolean) => void`                                      | No       | Called when open state changes.                                       |
-| `clearable`              | `boolean`                                                      | No       | Shows a clear action when the select has a value.                     |
-| `searchable`             | `boolean`                                                      | No       | Renders a TextInput search field in content.                          |
-| `searchPlaceholder`      | `string`                                                       | No       | Search input placeholder.                                             |
-| `onSearch`               | `(value: string) => void`                                      | No       | Called when search text changes for async flows.                      |
-| `filterOptions`          | `boolean`                                                      | No       | Controls built-in local filtering. Defaults to false with `onSearch`. |
-| `empty`                  | `ReactNode`                                                    | No       | Empty state content.                                                  |
-| `loading`                | `boolean`                                                      | No       | Shows trigger spinner and content loading state when empty.           |
-| `loadingText`            | `string`                                                       | No       | Loading state text.                                                   |
-| `multiple`               | `false \| true`                                                | No       | Enables string array selection mode.                                  |
-| `maxSelected`            | `number`                                                       | No       | Maximum selected values in multiple mode.                             |
-| `closeOnSelect`          | `boolean`                                                      | No       | Controls whether content closes after item selection.                 |
-| `presentation`           | `SelectPresentation`                                           | No       | Native content presentation.                                          |
-| `placement`              | `FloatingPlacement`                                            | No       | Preferred popover placement relative to the trigger.                  |
-| `matchTriggerWidth`      | `boolean`                                                      | No       | Matches popover width to trigger width.                               |
-| `dismissOnBackdropPress` | `boolean`                                                      | No       | Enables backdrop dismissal.                                           |
-| `virtual`                | `boolean \| SelectVirtualConfig`                               | No       | FlatList virtualization settings.                                     |
-| `renderValue`            | `SelectRenderValue`                                            | No       | Custom trigger value renderer.                                        |
-| `renderOption`           | `SelectRenderOption`                                           | No       | Custom option renderer.                                               |
-| `accessibilityLabel`     | `string`                                                       | No       | Accessible label for screen readers.                                  |
-| `accessibilityHint`      | `string`                                                       | No       | Additional accessibility hint for screen readers.                     |
-| `filter`                 | `(option: SelectOption, query: string) => boolean`             | No       | —                                                                     |
-| `startIcon`              | `SelectIconElement`                                            | No       | —                                                                     |
-| `endIcon`                | `SelectIconElement`                                            | No       | —                                                                     |
-| `prefix`                 | `ReactNode`                                                    | No       | —                                                                     |
-| `suffix`                 | `ReactNode`                                                    | No       | —                                                                     |
-| `style`                  | `StyleProp<ViewStyle>`                                         | No       | Extra root style.                                                     |
-| `triggerStyle`           | `StyleProp<ViewStyle>`                                         | No       | Extra trigger style.                                                  |
-| `textStyle`              | `StyleProp<TextStyle>`                                         | No       | Extra text style.                                                     |
-| `contentStyle`           | `StyleProp<ViewStyle>`                                         | No       | Extra content style.                                                  |
-| `optionStyle`            | `StyleProp<ViewStyle>`                                         | No       | Extra option style.                                                   |
-| `searchStyle`            | `StyleProp<TextStyle>`                                         | No       | —                                                                     |
-| `testID`                 | `string`                                                       | No       | —                                                                     |
-| `offset`                 | `number`                                                       | No       | Distance between the trigger and popover content in pixels.           |
+| Prop                     | Type                                                               | Required | Description                                                           |
+| ------------------------ | ------------------------------------------------------------------ | -------- | --------------------------------------------------------------------- |
+| `label`                  | `string`                                                           | No       | Visible field label.                                                  |
+| `description`            | `string`                                                           | No       | Additional descriptive text.                                          |
+| `error`                  | `ReactNode`                                                        | No       | Error message or custom error content.                                |
+| `children`               | `ReactNode`                                                        | No       | `Select.Item`, `Select.Group`, and related compound slots.            |
+| `options`                | `SelectOption[]`                                                   | No       | Simple option array alternative to compound items.                    |
+| `value`                  | `string \| null \| string[]`                                       | No       | Controlled selected value.                                            |
+| `defaultValue`           | `string \| null \| string[]`                                       | No       | Initial selected value for uncontrolled usage.                        |
+| `onValueChange`          | `((value: string \| null) => void) \| ((value: string[]) => void)` | No       | Called when the selected value changes.                               |
+| `color`                  | `SelectColor`                                                      | No       | Trigger and option color palette.                                     |
+| `variant`                | `SelectVariant`                                                    | No       | Trigger and option variant.                                           |
+| `size`                   | `SelectSize`                                                       | No       | Select size.                                                          |
+| `placeholder`            | `string`                                                           | No       | Text shown when no value is selected.                                 |
+| `required`               | `boolean`                                                          | No       | Marks the field as required.                                          |
+| `disabled`               | `boolean`                                                          | No       | Disables interaction.                                                 |
+| `invalid`                | `boolean`                                                          | No       | Shows invalid styling without error text.                             |
+| `open`                   | `boolean`                                                          | No       | Controlled open state.                                                |
+| `defaultOpen`            | `boolean`                                                          | No       | Initial uncontrolled open state.                                      |
+| `onOpenChange`           | `(open: boolean) => void`                                          | No       | Called when open state changes.                                       |
+| `clearable`              | `boolean`                                                          | No       | Shows a clear action when the select has a value.                     |
+| `searchable`             | `boolean`                                                          | No       | Renders a TextInput search field in content.                          |
+| `searchPlaceholder`      | `string`                                                           | No       | Search input placeholder.                                             |
+| `onSearch`               | `(value: string) => void`                                          | No       | Called when search text changes for async flows.                      |
+| `filterOptions`          | `boolean`                                                          | No       | Controls built-in local filtering. Defaults to false with `onSearch`. |
+| `empty`                  | `ReactNode`                                                        | No       | Empty state content.                                                  |
+| `loading`                | `boolean`                                                          | No       | Shows trigger spinner and content loading state when empty.           |
+| `loadingText`            | `string`                                                           | No       | Loading state text.                                                   |
+| `multiple`               | `false \| true`                                                    | No       | Enables string array selection mode.                                  |
+| `maxSelected`            | `number`                                                           | No       | Maximum selected values in multiple mode.                             |
+| `closeOnSelect`          | `boolean`                                                          | No       | Controls whether content closes after item selection.                 |
+| `presentation`           | `SelectPresentation`                                               | No       | Native content presentation.                                          |
+| `placement`              | `FloatingPlacement`                                                | No       | Preferred popover placement relative to the trigger.                  |
+| `matchTriggerWidth`      | `boolean`                                                          | No       | Matches popover width to trigger width.                               |
+| `dismissOnBackdropPress` | `boolean`                                                          | No       | Enables backdrop dismissal.                                           |
+| `virtual`                | `boolean \| SelectVirtualConfig`                                   | No       | FlatList virtualization settings.                                     |
+| `renderValue`            | `SelectRenderValue`                                                | No       | Custom trigger value renderer.                                        |
+| `renderOption`           | `SelectRenderOption`                                               | No       | Custom option renderer.                                               |
+| `accessibilityLabel`     | `string`                                                           | No       | Accessible label for screen readers.                                  |
+| `accessibilityHint`      | `string`                                                           | No       | Additional accessibility hint for screen readers.                     |
+| `filter`                 | `(option: SelectOption, query: string) => boolean`                 | No       | —                                                                     |
+| `startIcon`              | `SelectIconElement`                                                | No       | —                                                                     |
+| `endIcon`                | `SelectIconElement`                                                | No       | —                                                                     |
+| `prefix`                 | `ReactNode`                                                        | No       | —                                                                     |
+| `suffix`                 | `ReactNode`                                                        | No       | —                                                                     |
+| `style`                  | `StyleProp<ViewStyle>`                                             | No       | Extra root style.                                                     |
+| `triggerStyle`           | `StyleProp<ViewStyle>`                                             | No       | Extra trigger style.                                                  |
+| `textStyle`              | `StyleProp<TextStyle>`                                             | No       | Extra text style.                                                     |
+| `contentStyle`           | `StyleProp<ViewStyle>`                                             | No       | Extra content style.                                                  |
+| `optionStyle`            | `StyleProp<ViewStyle>`                                             | No       | Extra option style.                                                   |
+| `searchStyle`            | `StyleProp<TextStyle>`                                             | No       | —                                                                     |
+| `testID`                 | `string`                                                           | No       | —                                                                     |
+| `offset`                 | `number`                                                           | No       | Distance between the trigger and popover content in pixels.           |
 
 <!-- api-docgen:end native.SelectProps.SelectProps -->
 
@@ -884,6 +884,62 @@ import { Button, Modal, Portal } from '@vellira-ui/react-native';
 
 Provide a clear title and body copy for screen reader users. The native implementation exposes modal structure and close behavior, while the consuming app remains responsible for meaningful labels and actions.
 
+## Toast
+
+### Toast Props
+
+<!-- api-docgen:start native.ToastProps.ToastProps -->
+
+| Prop                 | Type                                                        | Required | Description                                                      |
+| -------------------- | ----------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `open`               | `boolean`                                                   | No       | Controlled open state.                                           |
+| `defaultOpen`        | `boolean`                                                   | No       | Initial uncontrolled open state.                                 |
+| `onOpenChange`       | `(open: boolean, details?: ToastOpenChangeDetails) => void` | No       | Called when the open state changes.                              |
+| `children`           | `ReactNode`                                                 | No       | Content rendered inside the component.                           |
+| `id`                 | `string`                                                    | No       | —                                                                |
+| `title`              | `ReactNode`                                                 | No       | Short message heading.                                           |
+| `description`        | `ReactNode`                                                 | No       | Optional supporting detail.                                      |
+| `icon`               | `ReactNode`                                                 | No       | Optional custom icon; semantic tones provide canonical defaults. |
+| `announcement`       | `string`                                                    | No       | Explicit text announced by native assistive technology.          |
+| `tone`               | `ToastTone`                                                 | No       | Semantic visual tone and announcement priority.                  |
+| `duration`           | `number`                                                    | No       | Auto-dismiss duration in milliseconds. Zero disables timeout.    |
+| `dismissible`        | `boolean`                                                   | No       | Renders an explicit dismiss control.                             |
+| `dismissLabel`       | `string`                                                    | No       | Accessible label for the dismiss control.                        |
+| `action`             | `ToastAction`                                               | No       | Optional labelled action with deterministic close behavior.      |
+| `accessibilityLabel` | `string`                                                    | No       | Accessible label for screen readers.                             |
+| `style`              | `StyleProp<ViewStyle>`                                      | No       | Extra root style.                                                |
+| `testID`             | `string`                                                    | No       | —                                                                |
+
+<!-- api-docgen:end native.ToastProps.ToastProps -->
+
+### Toast.Provider Props
+
+<!-- api-docgen:start native.ToastProviderProps.ToastProviderProps -->
+
+| Prop         | Type         | Required | Description                                                         |
+| ------------ | ------------ | -------- | ------------------------------------------------------------------- |
+| `children`   | `ReactNode`  | No       | Content rendered inside the component.                              |
+| `store`      | `ToastStore` | No       | Externally owned store used for independent testing or integration. |
+| `duration`   | `number`     | No       | Default auto-dismiss duration for messages in this provider.        |
+| `maxVisible` | `number`     | No       | Maximum visible messages before oldest-first overflow.              |
+
+<!-- api-docgen:end native.ToastProviderProps.ToastProviderProps -->
+
+### Toast.Viewport Props
+
+<!-- api-docgen:start native.ToastViewportProps.ToastViewportProps -->
+
+| Prop                 | Type                                                                                            | Required | Description                            |
+| -------------------- | ----------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children`           | `ReactNode`                                                                                     | No       | Content rendered inside the component. |
+| `portal`             | `boolean`                                                                                       | No       | —                                      |
+| `position`           | `'top-start' \| 'top-end' \| 'bottom-start' \| 'bottom-end' \| 'top-center' \| 'bottom-center'` | No       | —                                      |
+| `accessibilityLabel` | `string`                                                                                        | No       | Accessible label for screen readers.   |
+| `style`              | `StyleProp<ViewStyle>`                                                                          | No       | Extra root style.                      |
+| `testID`             | `string`                                                                                        | No       | —                                      |
+
+<!-- api-docgen:end native.ToastViewportProps.ToastViewportProps -->
+
 ## ThemeProvider
 
 Provides theme context for native components.
@@ -948,15 +1004,15 @@ function ThemeReader() {
 
 <!-- api-docgen:start native.AccordionProps.AccordionProps -->
 
-| Prop            | Type                                                   | Required | Description                                                                 |
-| --------------- | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------- |
-| `children`      | `ReactNode`                                            | No       | Content rendered inside the component.                                      |
-| `type`          | `'single' \| 'multiple'`                               | No       | Selection mode: single allows one item, multiple allows several open items. |
-| `value`         | `string \| string[]`                                   | No       | Controlled expanded value.                                                  |
-| `defaultValue`  | `string \| string[]`                                   | No       | Initial expanded value for uncontrolled usage.                              |
-| `onValueChange` | `(value: string) => void \| (value: string[]) => void` | No       | Called when the expanded value changes.                                     |
-| `collapsible`   | `boolean`                                              | No       | Allows the open item to collapse in single mode.                            |
-| `disabled`      | `boolean`                                              | No       | Disables every accordion item.                                              |
+| Prop            | Type                                                       | Required | Description                                                                 |
+| --------------- | ---------------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `children`      | `ReactNode`                                                | No       | Content rendered inside the component.                                      |
+| `type`          | `'single' \| 'multiple'`                                   | No       | Selection mode: single allows one item, multiple allows several open items. |
+| `value`         | `string \| string[]`                                       | No       | Controlled expanded value.                                                  |
+| `defaultValue`  | `string \| string[]`                                       | No       | Initial expanded value for uncontrolled usage.                              |
+| `onValueChange` | `((value: string) => void) \| ((value: string[]) => void)` | No       | Called when the expanded value changes.                                     |
+| `collapsible`   | `boolean`                                                  | No       | Allows the open item to collapse in single mode.                            |
+| `disabled`      | `boolean`                                                  | No       | Disables every accordion item.                                              |
 
 <!-- api-docgen:end native.AccordionProps.AccordionProps -->
 
@@ -1017,59 +1073,3 @@ function ThemeReader() {
 | `onValueChange`  | `(value: string) => void` | No       | Called when the value changes.            |
 
 <!-- api-docgen:end native.TextareaProps.Textarea -->
-
-## Toast
-
-### Toast Props
-
-<!-- api-docgen:start native.ToastProps.ToastProps -->
-
-| Prop                 | Type                                                        | Required | Description                                                      |
-| -------------------- | ----------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
-| `open`               | `boolean`                                                   | No       | Controlled open state.                                           |
-| `defaultOpen`        | `boolean`                                                   | No       | Initial uncontrolled open state.                                 |
-| `onOpenChange`       | `(open: boolean, details?: ToastOpenChangeDetails) => void` | No       | Called when the open state changes.                              |
-| `children`           | `ReactNode`                                                 | No       | Content rendered inside the component.                           |
-| `id`                 | `string`                                                    | No       | —                                                                |
-| `title`              | `ReactNode`                                                 | No       | Short message heading.                                           |
-| `description`        | `ReactNode`                                                 | No       | Optional supporting detail.                                      |
-| `icon`               | `ReactNode`                                                 | No       | Optional custom icon; semantic tones provide canonical defaults. |
-| `announcement`       | `string`                                                    | No       | Explicit text announced by native assistive technology.          |
-| `tone`               | `ToastTone`                                                 | No       | Semantic visual tone and announcement priority.                  |
-| `duration`           | `number`                                                    | No       | Auto-dismiss duration in milliseconds. Zero disables timeout.    |
-| `dismissible`        | `boolean`                                                   | No       | Renders an explicit dismiss control.                             |
-| `dismissLabel`       | `string`                                                    | No       | Accessible label for the dismiss control.                        |
-| `action`             | `ToastAction`                                               | No       | Optional labelled action with deterministic close behavior.      |
-| `accessibilityLabel` | `string`                                                    | No       | Accessible label for screen readers.                             |
-| `style`              | `StyleProp<ViewStyle>`                                      | No       | Extra root style.                                                |
-| `testID`             | `string`                                                    | No       | —                                                                |
-
-<!-- api-docgen:end native.ToastProps.ToastProps -->
-
-### Toast.Provider Props
-
-<!-- api-docgen:start native.ToastProviderProps.ToastProviderProps -->
-
-| Prop         | Type         | Required | Description                                                         |
-| ------------ | ------------ | -------- | ------------------------------------------------------------------- |
-| `children`   | `ReactNode`  | No       | Content rendered inside the component.                              |
-| `store`      | `ToastStore` | No       | Externally owned store used for independent testing or integration. |
-| `duration`   | `number`     | No       | Default auto-dismiss duration for messages in this provider.        |
-| `maxVisible` | `number`     | No       | Maximum visible messages before oldest-first overflow.              |
-
-<!-- api-docgen:end native.ToastProviderProps.ToastProviderProps -->
-
-### Toast.Viewport Props
-
-<!-- api-docgen:start native.ToastViewportProps.ToastViewportProps -->
-
-| Prop                 | Type                                                                                            | Required | Description                            |
-| -------------------- | ----------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
-| `children`           | `ReactNode`                                                                                     | No       | Content rendered inside the component. |
-| `portal`             | `boolean`                                                                                       | No       | —                                      |
-| `position`           | `'top-start' \| 'top-end' \| 'bottom-start' \| 'bottom-end' \| 'top-center' \| 'bottom-center'` | No       | —                                      |
-| `accessibilityLabel` | `string`                                                                                        | No       | Accessible label for screen readers.   |
-| `style`              | `StyleProp<ViewStyle>`                                                                          | No       | Extra root style.                      |
-| `testID`             | `string`                                                                                        | No       | —                                      |
-
-<!-- api-docgen:end native.ToastViewportProps.ToastViewportProps -->
