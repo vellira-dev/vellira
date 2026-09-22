@@ -272,6 +272,8 @@ describe('deterministic API-doc Program isolation', () => {
     'packages/react/src/Target/types.ts': `export interface TargetProps {
   announcement?: 'off' | 'polite' | 'assertive';
   callback?: (mode: 'off' | 'polite') => void;
+  callbackWithUndefined?: (value: string | undefined) => void;
+  genericWithUndefined?: Promise<string | undefined>;
   nested: Promise<'off' | 'assertive'>;
   tuple: readonly ['off' | 'polite', number | null];
 }
@@ -335,6 +337,10 @@ describe('deterministic API-doc Program isolation', () => {
     );
     expect(readGeneratedBlock(laterFirstRoot, targetSection)).toBe(targetOnly);
     expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
+    expect(targetOnly).toContain(
+      "`(value: string \\| undefined) => void`"
+    );
+    expect(targetOnly).toContain("`Promise<string \\| undefined>`");
     expect(targetOnly).toContain("`Promise<'off' \\| 'assertive'>`");
     expect(targetOnly).toContain(
       "`readonly ['off' \\| 'polite', number \\| null]`"
