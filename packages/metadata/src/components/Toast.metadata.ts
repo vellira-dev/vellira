@@ -6,7 +6,7 @@ export const toastMetadata = defineComponentMetadata({
   category: 'feedback',
   platforms: ['react', 'react-native'],
   profile: 'overlay',
-  status: 'beta',
+  status: 'experimental',
   capabilities: [
     'controlled',
     'uncontrolled',
@@ -15,15 +15,8 @@ export const toastMetadata = defineComponentMetadata({
     'compound-api',
     'portal',
   ],
-  semanticCapabilities: [
-    'announcement',
-    'auto-dismiss',
-    'dismissible',
-    'reduced-motion',
-    'stacking',
-  ],
   dependencies: {
-    packages: ['@vellira-ui/icons', '@vellira-ui/types'],
+    packages: ['@vellira-ui/types'],
   },
   requirements: {
     tests: true,
@@ -31,11 +24,5 @@ export const toastMetadata = defineComponentMetadata({
     docs: true,
     accessibility: true,
     componentTokens: 'standard',
-    icons: [
-      { name: 'Info', purpose: 'Neutral and informational feedback.' },
-      { name: 'Success', purpose: 'Successful action feedback.' },
-      { name: 'Warning', purpose: 'Attention-required feedback.' },
-      { name: 'Error', purpose: 'Recoverable error feedback.' },
-    ],
   },
 });

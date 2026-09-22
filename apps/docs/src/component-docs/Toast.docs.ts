@@ -4,27 +4,17 @@ export const toastDocs = defineComponentDocs({
   component: 'Toast',
   platforms: {
     react: {
-      title: 'Toast - React feedback',
+      title: 'Toast - React',
       description:
-        'Show transient, non-blocking feedback in React with deterministic timing, bounded stacking, semantic tones, actions, and accessible announcements.',
+        'Toast for React and React Native with controlled and uncontrolled state, keyboard interaction, focus management, compound composition, and portal rendering.',
       summary:
-        'Toast reports the outcome of an event without interrupting the current task or moving focus.',
+        'Use Toast in React feedback interfaces when you need the canonical Vellira behavior and styling for this component.',
       whenToUse: [
-        'Confirm a completed background action such as saving or copying.',
-        'Report a short-lived warning or error that is not tied to one form field.',
-        'Use FormField or inline content when feedback must remain beside the affected control.',
-        'Use persistent application content instead of Toast for history, unread state, or notification-center behavior.',
-      ],
-      accessibility: [
-        'Neutral, info, success, and warning messages use a polite live region; error and danger messages are assertive.',
-        'Ordinary toasts do not move focus. Action and dismiss controls remain keyboard accessible.',
-        'Keep messages concise and do not rely on color alone to communicate tone.',
-        'Motion is removed when the user requests reduced motion.',
+        'Use it when the interface needs to communicate status, progress, or feedback.',
+        'Keep open state, focus, dismissal, and rendering behavior inside the documented overlay contract.',
       ],
       notes: [
-        'Mount one Toast.Provider and Toast.Viewport near the application root. The viewport portals to the canonical overlay layer by default.',
-        'The default store keeps at most three visible messages, removes the oldest on overflow, and replaces matching dedupeKey entries in place.',
-        'Pointer hover and focused controls pause the remaining timeout. A toast action closes by default unless closeOnAction is false.',
+        'The React package uses web platform semantics; keep DOM, keyboard, and ARIA guidance scoped to behavior verified by the web implementation.',
       ],
       storybook: {
         story: 'Default',
@@ -32,27 +22,17 @@ export const toastDocs = defineComponentDocs({
       },
     },
     'react-native': {
-      title: 'Toast - React Native feedback',
+      title: 'Toast - React Native',
       description:
-        'Show transient, non-blocking feedback in React Native with deterministic timing, bounded stacking, semantic tones, actions, and native announcements.',
+        'Toast for React and React Native with controlled and uncontrolled state, keyboard interaction, focus management, compound composition, and portal rendering.',
       summary:
-        'Toast reports an event outcome without replacing the current screen or becoming a notification inbox.',
+        'Use Toast in React Native feedback interfaces when you need the canonical Vellira behavior and styling for this component.',
       whenToUse: [
-        'Confirm a completed background action such as saving or copying.',
-        'Report brief application-level warnings or errors.',
-        'Use inline feedback when the message belongs to a specific field or must remain visible.',
-        'Use persistent screen content for history, unread state, or notification-center behavior.',
-      ],
-      accessibility: [
-        'Messages are announced with AccessibilityInfo and expose a native live-region equivalent.',
-        'Action and dismiss controls provide accessibility labels and at least 44-point touch targets.',
-        'The accessibility escape action dismisses the current toast.',
-        'Entrance motion becomes immediate when reduced motion is enabled.',
+        'Use it when the interface needs to communicate status, progress, or feedback.',
+        'Keep open state, focus, dismissal, and rendering behavior inside the documented overlay contract.',
       ],
       notes: [
-        'Mount Toast.Provider and Toast.Viewport near the application root. The native viewport participates in the native overlay manager without DOM portal semantics.',
-        'The default store keeps at most three visible messages, removes the oldest on overflow, and replaces matching dedupeKey entries in place.',
-        'Gesture dismissal is not required; explicit touch and screen-reader dismissal remain available.',
+        'The React Native package uses native rendering and accessibility props; browser-only DOM and keyboard behavior does not automatically apply.',
       ],
       storybook: {
         story: 'Default',
