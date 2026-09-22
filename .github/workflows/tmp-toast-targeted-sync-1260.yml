@@ -6,7 +6,7 @@ on:
       - tmp/toast-targeted-sync-1260
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   sync:
@@ -14,7 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: codex/issue-564-toast-production
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
 
@@ -118,25 +119,29 @@ jobs:
           pnpm component-docs:check
           pnpm check:tokens-semantic:strict
 
-      - name: Capture targeted diff
-        if: always()
+      - name: Verify and push exact generated outputs
         shell: bash
         run: |
-          mkdir -p artifacts/files
-          git diff --binary > artifacts/targeted.patch
-          git status --short > artifacts/status.txt
-          git diff --name-only > artifacts/changed-files.txt
-          while IFS= read -r file; do
-            [ -f "$file" ] || continue
-            mkdir -p "artifacts/files/$(dirname "$file")"
-            cp "$file" "artifacts/files/$file"
-          done < artifacts/changed-files.txt
-          cat artifacts/result.json || true
-          cat artifacts/status.txt || true
+          git diff --name-only | sort > /tmp/actual-files
+          cat > /tmp/expected-files <<'EOF'
+          apps/docs/src/react-native/toast.md
+          apps/docs/src/react/toast.md
+          packages/metadata/src/components/Toast.metadata.ts
+          packages/react-native/API.md
+          packages/react/API.md
+          packages/tokens/src/generated-component-factory-architecture.ts
+          EOF
+          sed -i 's/^          //' /tmp/expected-files
+          diff -u /tmp/expected-files /tmp/actual-files
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        if: always()
-        with:
-          name: toast-targeted-sync-1260
-          path: artifacts
-          if-no-files-found: error
+          git config user.name "Roman Bakurov"
+          git config user.email "160579419+romanbakurov@users.noreply.github.com"
+          git add \
+            apps/docs/src/react-native/toast.md \
+            apps/docs/src/react/toast.md \
+            packages/metadata/src/components/Toast.metadata.ts \
+            packages/react-native/API.md \
+            packages/react/API.md \
+            packages/tokens/src/generated-component-factory-architecture.ts
+          git commit -m "fix(toast): sync canonical generated ownership"
+          git push origin HEAD:codex/issue-564-toast-production
