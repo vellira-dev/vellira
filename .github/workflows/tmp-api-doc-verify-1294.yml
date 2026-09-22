@@ -1,0 +1,63 @@
+name: Temporary API docs verify 1294
+
+on:
+  push:
+    branches:
+      - tmp/api-doc-verify-1294
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.2
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Format changed tooling files
+        run: pnpm exec prettier --write scripts/generate-api-docs.ts scripts/generate-api-docs.silent.test.ts
+
+      - name: Focused deterministic API docs tests
+        run: pnpm exec vitest run --config vitest.tooling.config.ts scripts/generate-api-docs.silent.test.ts
+
+      - name: Check canonical API docs before regeneration
+        shell: bash
+        run: |
+          set +e
+          pnpm docs:api:check
+          status=$?
+          set -e
+          mkdir -p .artifacts/api-doc-verify
+          echo "$status" > .artifacts/api-doc-verify/docs-api-check-status.txt
+
+      - name: Generate canonical API docs for diff evidence
+        run: pnpm docs:api
+
+      - name: Capture outputs
+        shell: bash
+        run: |
+          mkdir -p .artifacts/api-doc-verify/scripts
+          mkdir -p .artifacts/api-doc-verify/packages/react
+          mkdir -p .artifacts/api-doc-verify/packages/react-native
+          cp scripts/generate-api-docs.ts .artifacts/api-doc-verify/scripts/
+          cp scripts/generate-api-docs.silent.test.ts .artifacts/api-doc-verify/scripts/
+          cp packages/react/API.md .artifacts/api-doc-verify/packages/react/
+          cp packages/react-native/API.md .artifacts/api-doc-verify/packages/react-native/
+          git diff --binary > .artifacts/api-doc-verify/generated.patch
+          git status --short > .artifacts/api-doc-verify/status.txt
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: api-doc-verify-1294
+          path: .artifacts/api-doc-verify
+          if-no-files-found: error
