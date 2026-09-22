@@ -773,10 +773,7 @@ function readUnionPropRows(type: ts.UnionType, checker: ts.TypeChecker) {
         entry.optionalBranches += 1;
       }
 
-      if (
-        formattedType !== '' &&
-        !entry.typeStrings.includes(formattedType)
-      ) {
+      if (formattedType !== '' && !entry.typeStrings.includes(formattedType)) {
         entry.typeStrings.push(formattedType);
       }
 
@@ -894,7 +891,8 @@ function removeTopLevelUndefined(type: string) {
 
   const members = unwrapped.types.filter(
     (member) =>
-      unwrapParenthesizedTypeNode(member).kind !== ts.SyntaxKind.UndefinedKeyword
+      unwrapParenthesizedTypeNode(member).kind !==
+      ts.SyntaxKind.UndefinedKeyword
   );
 
   if (members.length === 1) {

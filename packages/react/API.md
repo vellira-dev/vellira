@@ -557,58 +557,58 @@ shows the first 10 labels and a `+N` overflow count.
 
 <!-- api-docgen:start web.SelectProps.SelectProps -->
 
-| Prop                | Type                                                                      | Required | Description                                      |
-| ------------------- | ------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
-| `label`             | `ReactNode`                                                               | No       | Visible field label.                             |
-| `id`                | `string`                                                                  | No       | Trigger id.                                      |
-| `name`              | `string`                                                                  | No       | Field name.                                      |
-| `placeholder`       | `string`                                                                  | No       | Text shown when no value is selected.            |
-| `error`             | `ReactNode`                                                               | No       | Error message.                                   |
-| `className`         | `string`                                                                  | No       | Extra CSS class for the root element.            |
-| `value`             | `string \| null \| SelectMultipleValue`                                   | No       | Controlled selected value.                       |
-| `defaultValue`      | `string \| null \| SelectMultipleValue`                                   | No       | Initial selected value for uncontrolled usage.   |
-| `required`          | `boolean`                                                                 | No       | Marks the field as required.                     |
-| `disabled`          | `boolean`                                                                 | No       | Disables interaction.                            |
-| `description`       | `ReactNode`                                                               | No       | Additional descriptive text.                     |
-| `placement`         | `'top' \| 'right' \| 'bottom' \| 'left'`                                  | No       | Preferred dropdown placement.                    |
-| `matchTriggerWidth` | `boolean`                                                                 | No       | Matches the dropdown width to the trigger width. |
-| `open`              | `boolean`                                                                 | No       | Controlled open state.                           |
-| `defaultOpen`       | `boolean`                                                                 | No       | Initial uncontrolled open state.                 |
-| `onOpenChange`      | `(open: boolean) => void`                                                 | No       | Called when the open state changes.              |
-| `triggerClassName`  | `string`                                                                  | No       | Extra CSS class for the trigger element.         |
-| `dropdownClassName` | `string`                                                                  | No       | Extra CSS class for the dropdown element.        |
-| `size`              | `SelectSize`                                                              | No       | Select size.                                     |
-| `aria-label`        | `string`                                                                  | No       | Accessible trigger label.                        |
-| `onBlur`            | `FocusEventHandler<HTMLButtonElement>`                                    | No       | Called when the trigger loses focus.             |
-| `onFocus`           | `FocusEventHandler<HTMLButtonElement>`                                    | No       | Called when the trigger receives focus.          |
-| `aria-describedby`  | `string`                                                                  | No       | —                                                |
-| `aria-labelledby`   | `string`                                                                  | No       | —                                                |
-| `empty`             | `ReactNode`                                                               | No       | —                                                |
-| `loadingText`       | `ReactNode`                                                               | No       | —                                                |
-| `portal`            | `boolean`                                                                 | No       | —                                                |
-| `onSearch`          | `(value: string) => void`                                                 | No       | —                                                |
-| `onClear`           | `() => void`                                                              | No       | Called when the clear action is pressed.         |
-| `startIcon`         | `ReactNode`                                                               | No       | —                                                |
-| `endIcon`           | `ReactNode`                                                               | No       | —                                                |
-| `prefix`            | `ReactNode`                                                               | No       | —                                                |
-| `suffix`            | `ReactNode`                                                               | No       | —                                                |
-| `renderValue`       | `(context: SelectRenderValueContext) => ReactNode`                        | No       | —                                                |
-| `renderOption`      | `(context: SelectRenderOptionContext) => ReactNode`                       | No       | —                                                |
-| `color`             | `SelectColor`                                                             | No       | —                                                |
-| `invalid`           | `boolean`                                                                 | No       | —                                                |
-| `onValueChange`     | `(value: string \| null) => void \| (value: SelectMultipleValue) => void` | No       | Called when the selected value changes.          |
-| `variant`           | `SelectVariant`                                                           | No       | —                                                |
-| `loading`           | `boolean`                                                                 | No       | —                                                |
-| `clearable`         | `boolean`                                                                 | No       | Shows a clear action when the input has a value. |
-| `searchable`        | `boolean`                                                                 | No       | —                                                |
-| `multiple`          | `false \| true`                                                           | No       | —                                                |
-| `maxSelected`       | `number`                                                                  | No       | —                                                |
-| `closeOnSelect`     | `boolean`                                                                 | No       | —                                                |
-| `children`          | `ReactNode`                                                               | No       | Content rendered inside the component.           |
-| `virtual`           | `boolean \| SelectVirtualConfig`                                          | No       | —                                                |
-| `avoidCollisions`   | `boolean`                                                                 | No       | —                                                |
-| `modal`             | `boolean`                                                                 | No       | —                                                |
-| `command`           | `boolean`                                                                 | No       | —                                                |
+| Prop                | Type                                                                          | Required | Description                                      |
+| ------------------- | ----------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
+| `label`             | `ReactNode`                                                                   | No       | Visible field label.                             |
+| `id`                | `string`                                                                      | No       | Trigger id.                                      |
+| `name`              | `string`                                                                      | No       | Field name.                                      |
+| `placeholder`       | `string`                                                                      | No       | Text shown when no value is selected.            |
+| `error`             | `ReactNode`                                                                   | No       | Error message.                                   |
+| `className`         | `string`                                                                      | No       | Extra CSS class for the root element.            |
+| `value`             | `string \| null \| SelectMultipleValue`                                       | No       | Controlled selected value.                       |
+| `defaultValue`      | `string \| null \| SelectMultipleValue`                                       | No       | Initial selected value for uncontrolled usage.   |
+| `required`          | `boolean`                                                                     | No       | Marks the field as required.                     |
+| `disabled`          | `boolean`                                                                     | No       | Disables interaction.                            |
+| `description`       | `ReactNode`                                                                   | No       | Additional descriptive text.                     |
+| `placement`         | `'top' \| 'right' \| 'bottom' \| 'left'`                                      | No       | Preferred dropdown placement.                    |
+| `matchTriggerWidth` | `boolean`                                                                     | No       | Matches the dropdown width to the trigger width. |
+| `open`              | `boolean`                                                                     | No       | Controlled open state.                           |
+| `defaultOpen`       | `boolean`                                                                     | No       | Initial uncontrolled open state.                 |
+| `onOpenChange`      | `(open: boolean) => void`                                                     | No       | Called when the open state changes.              |
+| `triggerClassName`  | `string`                                                                      | No       | Extra CSS class for the trigger element.         |
+| `dropdownClassName` | `string`                                                                      | No       | Extra CSS class for the dropdown element.        |
+| `size`              | `SelectSize`                                                                  | No       | Select size.                                     |
+| `aria-label`        | `string`                                                                      | No       | Accessible trigger label.                        |
+| `onBlur`            | `FocusEventHandler<HTMLButtonElement>`                                        | No       | Called when the trigger loses focus.             |
+| `onFocus`           | `FocusEventHandler<HTMLButtonElement>`                                        | No       | Called when the trigger receives focus.          |
+| `aria-describedby`  | `string`                                                                      | No       | —                                                |
+| `aria-labelledby`   | `string`                                                                      | No       | —                                                |
+| `empty`             | `ReactNode`                                                                   | No       | —                                                |
+| `loadingText`       | `ReactNode`                                                                   | No       | —                                                |
+| `portal`            | `boolean`                                                                     | No       | —                                                |
+| `onSearch`          | `(value: string) => void`                                                     | No       | —                                                |
+| `onClear`           | `() => void`                                                                  | No       | Called when the clear action is pressed.         |
+| `startIcon`         | `ReactNode`                                                                   | No       | —                                                |
+| `endIcon`           | `ReactNode`                                                                   | No       | —                                                |
+| `prefix`            | `ReactNode`                                                                   | No       | —                                                |
+| `suffix`            | `ReactNode`                                                                   | No       | —                                                |
+| `renderValue`       | `(context: SelectRenderValueContext) => ReactNode`                            | No       | —                                                |
+| `renderOption`      | `(context: SelectRenderOptionContext) => ReactNode`                           | No       | —                                                |
+| `color`             | `SelectColor`                                                                 | No       | —                                                |
+| `invalid`           | `boolean`                                                                     | No       | —                                                |
+| `onValueChange`     | `((value: SelectMultipleValue) => void) \| ((value: null \| string) => void)` | No       | Called when the selected value changes.          |
+| `variant`           | `SelectVariant`                                                               | No       | —                                                |
+| `loading`           | `boolean`                                                                     | No       | —                                                |
+| `clearable`         | `boolean`                                                                     | No       | Shows a clear action when the input has a value. |
+| `searchable`        | `boolean`                                                                     | No       | —                                                |
+| `multiple`          | `false \| true`                                                               | No       | —                                                |
+| `maxSelected`       | `number`                                                                      | No       | —                                                |
+| `closeOnSelect`     | `boolean`                                                                     | No       | —                                                |
+| `children`          | `ReactNode`                                                                   | No       | Content rendered inside the component.           |
+| `virtual`           | `boolean \| SelectVirtualConfig`                                              | No       | —                                                |
+| `avoidCollisions`   | `boolean`                                                                     | No       | —                                                |
+| `modal`             | `boolean`                                                                     | No       | —                                                |
+| `command`           | `boolean`                                                                     | No       | —                                                |
 
 <!-- api-docgen:end web.SelectProps.SelectProps -->
 
@@ -841,21 +841,21 @@ import { Button, Portal, Tooltip } from '@vellira-ui/react';
 
 <!-- api-docgen:start web.TooltipProps.Tooltip -->
 
-| Prop                | Type                                                          | Required | Description                                                      |
-| ------------------- | ------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
-| `children`          | `ReactNode`                                                   | Yes      | Content rendered inside the component.                           |
-| `open`              | `boolean`                                                     | No       | Controlled open state.                                           |
-| `defaultOpen`       | `boolean`                                                     | No       | Initial uncontrolled open state.                                 |
-| `onOpenChange`      | `(open: boolean) => void`                                     | No       | Called when the open state changes.                              |
-| `delay`             | `number \| Partial<import("@vellira-ui/types").TooltipDelay>` | No       | Open delay in milliseconds, or explicit open/close delays.       |
-| `skipDelay`         | `number`                                                      | No       | Delay window for future sibling tooltip delay skipping.          |
-| `offset`            | `number`                                                      | No       | Distance between trigger and content in pixels.                  |
-| `interactive`       | `boolean`                                                     | No       | Allows pointer interaction inside tooltip content.               |
-| `portal`            | `boolean`                                                     | No       | Reserved for automatic portal rendering in higher-level helpers. |
-| `avoidCollisions`   | `boolean`                                                     | No       | Allows the tooltip to flip or shift to stay in viewport.         |
-| `matchTriggerWidth` | `boolean`                                                     | No       | Matches tooltip content width to the trigger width.              |
-| `disabled`          | `boolean`                                                     | No       | Disables interaction.                                            |
-| `placement`         | `FloatingPlacement`                                           | No       | Preferred tooltip placement.                                     |
+| Prop                | Type                                                                       | Required | Description                                                      |
+| ------------------- | -------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `children`          | `ReactNode`                                                                | Yes      | Content rendered inside the component.                           |
+| `open`              | `boolean`                                                                  | No       | Controlled open state.                                           |
+| `defaultOpen`       | `boolean`                                                                  | No       | Initial uncontrolled open state.                                 |
+| `onOpenChange`      | `(open: boolean) => void`                                                  | No       | Called when the open state changes.                              |
+| `delay`             | `Partial<import("@vellira-ui/types").TooltipDelay \| undefined> \| number` | No       | Open delay in milliseconds, or explicit open/close delays.       |
+| `skipDelay`         | `number`                                                                   | No       | Delay window for future sibling tooltip delay skipping.          |
+| `offset`            | `number`                                                                   | No       | Distance between trigger and content in pixels.                  |
+| `interactive`       | `boolean`                                                                  | No       | Allows pointer interaction inside tooltip content.               |
+| `portal`            | `boolean`                                                                  | No       | Reserved for automatic portal rendering in higher-level helpers. |
+| `avoidCollisions`   | `boolean`                                                                  | No       | Allows the tooltip to flip or shift to stay in viewport.         |
+| `matchTriggerWidth` | `boolean`                                                                  | No       | Matches tooltip content width to the trigger width.              |
+| `disabled`          | `boolean`                                                                  | No       | Disables interaction.                                            |
+| `placement`         | `FloatingPlacement`                                                        | No       | Preferred tooltip placement.                                     |
 
 <!-- api-docgen:end web.TooltipProps.Tooltip -->
 
@@ -1109,15 +1109,15 @@ All interactive components support:
 
 <!-- api-docgen:start web.AccordionProps.AccordionProps -->
 
-| Prop            | Type                                                   | Required | Description                                                                 |
-| --------------- | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------- |
-| `children`      | `ReactNode`                                            | No       | Content rendered inside the component.                                      |
-| `type`          | `'single' \| 'multiple'`                               | No       | Selection mode: single allows one item, multiple allows several open items. |
-| `value`         | `string \| string[]`                                   | No       | Controlled expanded value.                                                  |
-| `defaultValue`  | `string \| string[]`                                   | No       | Initial expanded value for uncontrolled usage.                              |
-| `onValueChange` | `(value: string) => void \| (value: string[]) => void` | No       | Called when the expanded value changes.                                     |
-| `collapsible`   | `boolean`                                              | No       | Allows the open item to collapse in single mode.                            |
-| `disabled`      | `boolean`                                              | No       | Disables every accordion item.                                              |
+| Prop            | Type                                                       | Required | Description                                                                 |
+| --------------- | ---------------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `children`      | `ReactNode`                                                | No       | Content rendered inside the component.                                      |
+| `type`          | `'single' \| 'multiple'`                                   | No       | Selection mode: single allows one item, multiple allows several open items. |
+| `value`         | `string \| string[]`                                       | No       | Controlled expanded value.                                                  |
+| `defaultValue`  | `string \| string[]`                                       | No       | Initial expanded value for uncontrolled usage.                              |
+| `onValueChange` | `((value: string) => void) \| ((value: string[]) => void)` | No       | Called when the expanded value changes.                                     |
+| `collapsible`   | `boolean`                                                  | No       | Allows the open item to collapse in single mode.                            |
+| `disabled`      | `boolean`                                                  | No       | Disables every accordion item.                                              |
 
 <!-- api-docgen:end web.AccordionProps.AccordionProps -->
 

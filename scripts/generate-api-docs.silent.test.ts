@@ -354,9 +354,7 @@ export type ChoiceProps =
     expect(targetOnly).toContain("`'disabled' \\| 'enabled'`");
     expect(targetOnly).not.toContain("'disabled' \\| undefined");
     expect(targetOnly).toContain('`SharedState`');
-    expect(targetOnly).toContain(
-      "`Maybe<'disabled' \\| 'enabled'>`"
-    );
+    expect(targetOnly).toContain("`Maybe<'disabled' \\| 'enabled'>`");
     expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
     expect(targetOnly).toContain(
       "`(mode: 'off' \\| 'polite') => 'no' \\| 'yes'`"
