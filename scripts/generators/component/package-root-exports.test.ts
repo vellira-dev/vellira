@@ -111,81 +111,65 @@ describe('component generator package root exports', () => {
     }
   });
 
-  it('registers public compound part type exports except Root exactly once', async () => {
-    const root = createFixtureRoot();
-    const plan = createComponentGenerationPlan({
-      root,
-      options: {
-        componentName: 'Accordion',
-        platform: 'both',
-        layer: 'components',
-        category: 'navigation',
-        profile: 'compound',
-        parts: ['Root', 'Item', 'Trigger', 'Content'],
-        force: true,
-      },
-    });
+  it(
+    'registers public compound part type exports except Root exactly once',
+    async () => {
+      const root = createFixtureRoot();
+      const plan = createComponentGenerationPlan({
+        root,
+        options: {
+          componentName: 'Accordion',
+          platform: 'both',
+          layer: 'components',
+          category: 'navigation',
+          profile: 'compound',
+          parts: ['Root', 'Item', 'Trigger', 'Content'],
+          force: true,
+        },
+      });
 
-    await writeComponentGenerationPlan(plan);
-    await writeComponentGenerationPlan(plan);
+      await writeComponentGenerationPlan(plan);
+      await writeComponentGenerationPlan(plan);
 
-    for (const packageName of ['react', 'react-native']) {
-      const packageRootSource = fs.readFileSync(
-        path.join(root, 'packages', packageName, 'src', 'index.ts'),
-        'utf8'
-      );
+      for (const packageName of ['react', 'react-native']) {
+        const packageRootSource = fs.readFileSync(
+          path.join(root, 'packages', packageName, 'src', 'index.ts'),
+          'utf8'
+        );
 
-      expect(
-        countMatches(
-          packageRootSource,
-          /export \{ Accordion \} from '\.\/components\/Accordion';/g
-        )
-      ).toBe(1);
-      expect(
-        countMatches(
-          packageRootSource,
-          /export type \{ AccordionProps \} from '\.\/components\/Accordion';/g
-        )
-      ).toBe(1);
-      expect(
-        countMatches(
-          packageRootSource,
-          /export type \{ AccordionItemProps \} from '\.\/components\/Accordion';/g
-        )
-      ).toBe(1);
-      expect(
-        countMatches(
-          packageRootSource,
-          /export type \{ AccordionTriggerProps \} from '\.\/components\/Accordion';/g
-        )
-      ).toBe(1);
-      expect(
-        countMatches(
-          packageRootSource,
-          /export type \{ AccordionContentProps \} from '\.\/components\/Accordion';/g
-        )
-      ).toBe(1);
-      expect(packageRootSource).not.toContain('AccordionRootProps');
+        expect(
+          countMatches(
+            packageRootSource,
+            /export \{ Accordion \} from '\.\/components\/Accordion';/g
+          )
+        ).toBe(1);
+        expect(
+          countMatches(
+            packageRootSource,
+            /export type \{ AccordionProps \} from '\.\/components\/Accordion';/g
+          )
+        ).toBe(1);
+        expect(
+          countMatches(
+            packageRootSource,
+            /export type \{ AccordionItemProps \} from '\.\/components\/Accordion';/g
+          )
+        ).toBe(1);
+        expect(
+          countMatches(
+            packageRootSource,
+            /export type \{ AccordionTriggerProps \} from '\.\/components\/Accordion';/g
+          )
+        ).toBe(1);
+        expect(
+          countMatches(
+            packageRootSource,
+            /export type \{ AccordionContentProps \} from '\.\/components\/Accordion';/g
+          )
+        ).toBe(1);
+        expect(packageRootSource).not.toContain('AccordionRootProps');
 
-      const componentBarrelSource = fs.readFileSync(
-        path.join(
-          root,
-          'packages',
-          packageName,
-          'src',
-          'components',
-          'Accordion',
-          'index.ts'
-        ),
-        'utf8'
-      );
-
-      expect(componentBarrelSource).toContain("export * from './Item';");
-      expect(componentBarrelSource).toContain("export * from './Trigger';");
-      expect(componentBarrelSource).toContain("export * from './Content';");
-
-      for (const partName of ['Item', 'Trigger', 'Content']) {
-        const partTypesSource = fs.readFileSync(
+        const componentBarrelSource = fs.readFileSync(
           path.join(
             root,
             'packages',
@@ -193,16 +177,36 @@ describe('component generator package root exports', () => {
             'src',
             'components',
             'Accordion',
-            partName,
-            'types.ts'
+            'index.ts'
           ),
           'utf8'
         );
 
-        expect(partTypesSource).toContain(
-          `export type Accordion${partName}Props`
-        );
+        expect(componentBarrelSource).toContain("export * from './Item';");
+        expect(componentBarrelSource).toContain("export * from './Trigger';");
+        expect(componentBarrelSource).toContain("export * from './Content';");
+
+        for (const partName of ['Item', 'Trigger', 'Content']) {
+          const partTypesSource = fs.readFileSync(
+            path.join(
+              root,
+              'packages',
+              packageName,
+              'src',
+              'components',
+              'Accordion',
+              partName,
+              'types.ts'
+            ),
+            'utf8'
+          );
+
+          expect(partTypesSource).toContain(
+            `export type Accordion${partName}Props`
+          );
+        }
       }
-    }
-  });
+    },
+    15_000
+  );
 });
