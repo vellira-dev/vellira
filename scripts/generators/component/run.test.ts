@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createComponentDocsContractFromPlan,
-  createComponentMetadataFromPlan,
   getComponentDocsTargets,
 } from './docs';
+import { createComponentMetadataFromPlan } from './metadata';
 import { runComponentGenerator as runComponentGeneratorImplementation } from './run';
 import { readTokenLifecycleAuthority } from '../../token-lifecycle/authority';
 import { generateComponentWebsitePage } from './website';
@@ -1510,6 +1510,35 @@ describe('component generator check mode', () => {
     expect(readFile(nativeContract)).toBe(nativeBefore);
 
     expect(generateComponentWebsitePage).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts generated shared and platform semantic metadata without mutation', async () => {
+    const root = createTempRoot();
+
+    createRequiredRepositoryStructure(root);
+
+    const semanticOptions = {
+      ...options,
+      semanticCapabilities: ['dismissible', 'reduced-motion'],
+      platformSemanticCapabilities: {
+        react: ['auto-dismiss'],
+        'react-native': ['announcement'],
+      },
+    } as const;
+    const written = await runComponentGenerator({
+      root,
+      options: semanticOptions,
+    });
+    const before = readFile(written.plan.metadataFile);
+    const checked = await runComponentGenerator({
+      root,
+      options: { ...semanticOptions, check: true },
+    });
+
+    expect(checked.check).toBe(true);
+    expect(checked.createdFiles).toEqual([]);
+    expect(checked.updatedFiles).toEqual([]);
+    expect(readFile(written.plan.metadataFile)).toBe(before);
   });
 
   it('detects a missing public API contract entry without mutation', async () => {

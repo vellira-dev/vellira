@@ -11,8 +11,8 @@ import {
   getComponentDocsContractVariable,
   getComponentDocsTargets,
   renderComponentDocsContract,
-  resolvePlanCapabilities,
 } from './docs';
+import { createMetadataTemplateParamsFromPlan } from './metadata';
 import { createComponentGenerationPlan } from './plan';
 import { checkGeneratedPlanContract } from './plan-contract';
 import { checkComponentDocumentationContract } from './documentation-contract';
@@ -65,25 +65,9 @@ function plan(
 }
 
 async function writeCanonicalPlanArtifacts(plan: ComponentGenerationPlan) {
-  const platforms = plan.targets.map((target) => target.packageName);
   const metadata = await formatGeneratedContent(
     plan.metadataFile,
-    renderMetadataTemplate({
-      componentName: plan.componentName,
-      layer: plan.layer,
-      category: plan.category,
-      platforms,
-      profile: plan.profile,
-      capabilities: resolvePlanCapabilities(plan),
-      semanticCapabilities: plan.semanticCapabilities,
-      platformSemanticCapabilities: plan.platformSemanticCapabilities,
-      typeOwnership: plan.typeOwnership,
-      dependencies: plan.dependencies,
-      icons: plan.icons,
-      tokens: plan.tokens,
-      assets: plan.assets,
-      componentTokens: plan.componentTokens,
-    })
+    renderMetadataTemplate(createMetadataTemplateParamsFromPlan(plan))
   );
 
   fs.mkdirSync(path.dirname(plan.metadataFile), { recursive: true });

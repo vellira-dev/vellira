@@ -12,9 +12,14 @@ import { generateApiDocs, section } from '../../generate-api-docs';
 import { generateComponentDocs } from '../component-docs/generate-component-docs';
 
 import { deriveComponentDiscoveryContent } from './discovery-content';
+import { resolvePlanCapabilities } from './metadata';
 import type { ComponentGenerationPlan } from './plan';
-import { getComponentProfile } from './profiles';
 import { getGeneratedPublicPartPropTypeNames } from './public-api';
+
+export {
+  createComponentMetadataFromPlan,
+  resolvePlanCapabilities,
+} from './metadata';
 
 export type ComponentDocsGenerationTarget = {
   platform: ComponentPlatform;
@@ -75,12 +80,6 @@ export function getComponentApiDocsTargets(
       'API.md'
     ),
   }));
-}
-
-export function resolvePlanCapabilities(plan: ComponentGenerationPlan) {
-  const profile = getComponentProfile(plan.profile);
-
-  return [...new Set([...profile.capabilities, ...plan.capabilities])];
 }
 
 function getPlanDiscoveryContent(plan: ComponentGenerationPlan) {
@@ -347,45 +346,6 @@ export function getGeneratedApiDocSections(plan: ComponentGenerationPlan) {
       )
     )
   );
-}
-
-export function createComponentMetadataFromPlan(
-  plan: ComponentGenerationPlan
-): ComponentMetadata {
-  const resourceRequirements = {
-    ...(plan.tokens.length > 0 ? { tokens: plan.tokens } : {}),
-    ...(plan.icons.length > 0 ? { icons: plan.icons } : {}),
-    ...(plan.assets.length > 0 ? { assets: plan.assets } : {}),
-  };
-
-  return {
-    name: plan.componentName,
-    layer: plan.layer,
-    category: plan.category,
-    platforms: plan.targets.map((target) => target.packageName),
-    profile: plan.profile,
-    status: 'experimental',
-    capabilities: resolvePlanCapabilities(plan),
-    ...(plan.semanticCapabilities.length > 0
-      ? { semanticCapabilities: plan.semanticCapabilities }
-      : {}),
-    ...(Object.keys(plan.platformSemanticCapabilities).length > 0
-      ? {
-          platformSemanticCapabilities: plan.platformSemanticCapabilities,
-        }
-      : {}),
-    ...(Object.keys(plan.dependencies).length > 0
-      ? { dependencies: plan.dependencies }
-      : {}),
-    requirements: {
-      tests: true,
-      storybook: true,
-      docs: true,
-      accessibility: true,
-      componentTokens: plan.componentTokens,
-      ...resourceRequirements,
-    },
-  };
 }
 
 function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
