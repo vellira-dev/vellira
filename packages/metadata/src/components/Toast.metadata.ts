@@ -15,6 +15,13 @@ export const toastMetadata = defineComponentMetadata({
     'compound-api',
     'portal',
   ],
+  semanticCapabilities: [
+    'dismissible',
+    'auto-dismiss',
+    'stacking',
+    'announcement',
+    'reduced-motion',
+  ],
   dependencies: {
     packages: ['@vellira-ui/types'],
   },

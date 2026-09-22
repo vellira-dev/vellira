@@ -1021,7 +1021,7 @@ Use `Modal.Title` for a visible title or pass `ariaLabel` to `Modal.Content`. Us
 | `action`        | `ToastAction`                                               | No       | Optional labelled action with deterministic close behavior.      |
 | `pauseOnHover`  | `boolean`                                                   | No       | Pauses the remaining timeout during pointer interaction.         |
 | `pauseOnFocus`  | `boolean`                                                   | No       | Pauses the remaining timeout while a control has focus.          |
-| `ariaLive`      | `'off' \| 'polite' \| 'assertive'`                          | No       | Overrides the tone-derived live-region priority.                 |
+| `ariaLive`      | `'assertive' \| 'off' \| 'polite'`                          | No       | Overrides the tone-derived live-region priority.                 |
 | `className`     | `string`                                                    | No       | Extra CSS class for the root element.                            |
 | `style`         | `CSSProperties`                                             | No       | Extra root style.                                                |
 
@@ -1049,7 +1049,7 @@ Use `Modal.Title` for a visible title or pass `ariaLabel` to `Modal.Content`. Us
 | `children`  | `ReactNode`                                                                                     | No       | Content rendered inside the component. |
 | `portal`    | `boolean`                                                                                       | No       | —                                      |
 | `container` | `Element \| DocumentFragment \| null`                                                           | No       | —                                      |
-| `position`  | `'top-start' \| 'top-end' \| 'bottom-start' \| 'bottom-end' \| 'top-center' \| 'bottom-center'` | No       | —                                      |
+| `position`  | `'top-start' \| 'top-center' \| 'top-end' \| 'bottom-start' \| 'bottom-center' \| 'bottom-end'` | No       | —                                      |
 | `label`     | `string`                                                                                        | No       | Visible label.                         |
 | `className` | `string`                                                                                        | No       | Extra CSS class for the root element.  |
 | `style`     | `CSSProperties`                                                                                 | No       | Extra root style.                      |

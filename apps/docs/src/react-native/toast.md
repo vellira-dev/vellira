@@ -74,7 +74,7 @@ API details are generated from `packages/react-native/API.md`.
 | -------------------- | ----------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
 | `children`           | `ReactNode`                                                                                     | No       | Content rendered inside the component. |
 | `portal`             | `boolean`                                                                                       | No       | —                                      |
-| `position`           | `'top-start' \| 'top-end' \| 'bottom-start' \| 'bottom-end' \| 'top-center' \| 'bottom-center'` | No       | —                                      |
+| `position`           | `'top-start' \| 'top-center' \| 'top-end' \| 'bottom-start' \| 'bottom-center' \| 'bottom-end'` | No       | —                                      |
 | `accessibilityLabel` | `string`                                                                                        | No       | Accessible label for screen readers.   |
 | `style`              | `StyleProp<ViewStyle>`                                                                          | No       | Extra root style.                      |
 | `testID`             | `string`                                                                                        | No       | —                                      |
