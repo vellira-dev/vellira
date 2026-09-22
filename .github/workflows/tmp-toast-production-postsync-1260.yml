@@ -1,0 +1,32 @@
+name: Temporary Toast post-sync production validation 1260
+
+on:
+  push:
+    branches:
+      - tmp/toast-production-postsync-1260
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.2
+      - run: pnpm install --frozen-lockfile
+      - name: Run canonical Toast validation
+        shell: bash
+        run: |
+          set +e
+          pnpm component-production:validate:json             --spec scripts/component-production/specs/Toast.json             > /tmp/toast-validation.json             2> /tmp/toast-validation.stderr
+          status=$?
+          set -e
+          cat /tmp/toast-validation.json
+          cat /tmp/toast-validation.stderr >&2 || true
+          echo "validation-exit=$status"
