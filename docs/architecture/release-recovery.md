@@ -57,6 +57,19 @@ special approval semantics and are not suitable for unattended required-check
 and auto-merge flow. A GitHub App installation token keeps the automation
 identity non-personal while allowing the normal PR validation workflows to run.
 
+Machine-generated version-sync commits intentionally bypass Husky hooks. The
+release workflow has already completed its quality, build, typecheck, test,
+coverage, and smoke gates before creating the sync commit, and the sync step is
+bounded to release-managed manifest and lockfile paths. This prevents
+`create-pull-request` from re-entering repository hooks after publication and
+holding the serialized release queue indefinitely.
+
+The normal release job is bounded to 45 minutes. A timeout after immutable
+external state was created is treated as a partial-release incident and must use
+this recovery path. Merges whose head commit starts with
+`chore(release): sync package versions` do not run the publication job again;
+their normal PR validation remains authoritative.
+
 ## Algorithm
 
 1. Read npm metadata and attestations for all six public packages. An existing
