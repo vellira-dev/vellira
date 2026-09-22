@@ -337,10 +337,8 @@ describe('deterministic API-doc Program isolation', () => {
     );
     expect(readGeneratedBlock(laterFirstRoot, targetSection)).toBe(targetOnly);
     expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
-    expect(targetOnly).toContain(
-      "`(value: string \\| undefined) => void`"
-    );
-    expect(targetOnly).toContain("`Promise<string \\| undefined>`");
+    expect(targetOnly).toContain('`(value: string \\| undefined) => void`');
+    expect(targetOnly).toContain('`Promise<string \\| undefined>`');
     expect(targetOnly).toContain("`Promise<'off' \\| 'assertive'>`");
     expect(targetOnly).toContain(
       "`readonly ['off' \\| 'polite', number \\| null]`"
