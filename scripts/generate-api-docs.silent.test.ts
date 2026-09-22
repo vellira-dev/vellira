@@ -237,7 +237,7 @@ it('documents props from every branch of a discriminated union type', async () =
   expect(result).toContain("`'single' \\| 'multiple'`");
   expect(result).toContain('`string \\| string[]`');
   expect(result).toContain(
-    '`(value: string) => void \\| (value: string[]) => void`'
+    '`((value: string) => void) \\| ((value: string[]) => void)`'
   );
   expect(result).toContain('`collapsible`');
 });
