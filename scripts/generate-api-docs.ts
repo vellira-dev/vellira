@@ -743,7 +743,9 @@ function readUnionPropRows(
     }
   >();
 
-  for (const branch of getUnionBranches(type, declaration, checker)) {
+  const branches = getUnionBranches(type, declaration, checker);
+
+  for (const branch of branches) {
     const branchProperties = checker.getPropertiesOfType(branch);
 
     for (const property of branchProperties) {
@@ -798,7 +800,7 @@ function readUnionPropRows(
     name,
     type: renderUnionTypeParts(entry.typeParts),
     required:
-      entry.presentBranches === type.types.length &&
+      entry.presentBranches === branches.length &&
       entry.optionalBranches === 0,
     description: '',
   }));
