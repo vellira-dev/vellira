@@ -395,3 +395,55 @@ jobs:
             apps/website/.next/BUILD_ID
             apps/website/.next/server/**/*manifest*
             apps/website/.next/static/chunks/webpack-*.js
+
+  indexnow:
+    name: IndexNow after verified production
+    needs: [candidate, deploy]
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # A notification outage must not require redeploying a healthy production.
+    # The failed job and its summary remain visible; retry indexnow.yml manually.
+    continue-on-error: true
+    permissions:
+      contents: read
+    env:
+      CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+
+    steps:
+      - name: Checkout verified production revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify notification revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Submit production URLs
+        id: submit
+        run: node scripts/submit-indexnow.mjs
+
+      - name: Record IndexNow outcome
+        if: always()
+        shell: bash
+        env:
+          INDEXNOW_OUTCOME: ${{ steps.submit.outcome }}
+        run: |
+          set -euo pipefail
+          printf '### IndexNow notification\n\nRevision: `%s`\n\nOutcome: **%s**\n' \
+            "$CANDIDATE_SHA" "${INDEXNOW_OUTCOME:-not-run}" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$INDEXNOW_OUTCOME" != "success" ]]; then
+            echo '::warning::IndexNow notification did not succeed. Retry Submit URLs to IndexNow manually; do not redeploy production.'
+            printf '\nRetry the manual **Submit URLs to IndexNow** workflow. No production redeploy is needed.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi

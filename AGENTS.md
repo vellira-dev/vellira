@@ -35,3 +35,9 @@ for a visual change.
 
 When working in `packages/react-native`, always read and follow
 `packages/react-native/AGENTS.md` before making changes.
+
+## Actions evidence and change delivery
+
+Follow `.github/ACTIONS.md` when changing workflows or publishing patches.
+Publish coherent multi-file changes atomically, validate before pushing, and use
+the permanent diagnostics workflow instead of component-specific temporary files.
