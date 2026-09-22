@@ -6,6 +6,11 @@ on:
 
 permissions: read-all
 
+# Only supersede attempts for the same PR; preserve non-PR runs.
+concurrency:
+  group: lighthouse-pr-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   docs:
     name: Lighthouse / Docs
@@ -30,11 +35,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm build
+      # Exercise the deployment build on a fresh runner, without restored dist.
+      - name: Verify clean-checkout regression precondition
+        run: |
+          existing_dist="$(find apps packages -type d -name node_modules -prune -o -type d -name dist -print)"
+          if [ -n "$existing_dist" ]; then
+            printf 'Unexpected pre-existing workspace dist directories:\n%s\n' "$existing_dist"
+            exit 1
+          fi
+
+      - name: Build docs workspace dependencies
+        run: pnpm exec turbo run build --filter='@vellira-ui/docs^...'
 
       - name: Build documentation
-        run: pnpm --filter @vellira-ui/docs build
+        run: pnpm docs:build
+
+      - name: Verify docs artifact
+        run: test -f apps/docs/src/.vitepress/dist/index.html
 
       - name: Run Lighthouse for documentation
         run: pnpm lighthouse:docs

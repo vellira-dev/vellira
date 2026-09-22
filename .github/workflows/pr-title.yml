@@ -2,12 +2,17 @@ name: PR Title
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize, ready_for_review]
+    types: [opened, edited, reopened, synchronize]
     branches: [main]
 
 permissions:
   contents: read
   pull-requests: read
+
+# Only supersede attempts for the same PR; preserve non-PR runs.
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate-title:
