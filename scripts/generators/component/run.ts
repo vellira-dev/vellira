@@ -8,6 +8,11 @@ import {
 } from './metadata-export-contract';
 import { createComponentGenerationPlan } from './plan';
 import { checkGeneratedPlanContract } from './plan-contract';
+import {
+  checkReadmeInventoryContract,
+  getReadmeInventoryFile,
+  synchronizeReadmeInventoryContract,
+} from './readme-inventory-contract';
 import { validateComponentGenerationPlan } from './preflight';
 import { writeComponentGenerationPlan } from './write';
 import { generateComponentWebsitePage } from './website';
@@ -125,6 +130,7 @@ function getPlannedUpdatedFiles(
       target.publicApiTestFile,
     ]),
     getPublicSymbolContractFile(plan.root),
+    getReadmeInventoryFile(plan.root),
     plan.metadataBarrelFile,
     plan.docsContractRegistryFile,
     ...getComponentApiDocsTargets(plan).map((target) => target.apiFile),
@@ -180,6 +186,7 @@ export async function runComponentGenerator(params: {
   if (params.options.check) {
     const driftedFiles = [
       ...checkPublicApiContractSynchronization(plan),
+      ...checkReadmeInventoryContract(plan),
       ...checkMetadataExportContract(plan.metadataBarrelFile),
       ...checkComponentTokenLifecycleContract(plan),
       ...checkComponentTokenPreservationContract(plan),
@@ -236,6 +243,8 @@ export async function runComponentGenerator(params: {
 
   const sharedTypesResult = writeSharedTypesContract(plan);
   const result = await writeComponentGenerationPlan(plan);
+
+  synchronizeReadmeInventoryContract({ plan, result });
 
   const architectureResult = { updatedFiles: [] as string[] };
   await synchronizeComponentTokenArchitectureRegistration({

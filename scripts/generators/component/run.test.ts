@@ -141,6 +141,24 @@ function createRequiredRepositoryStructure(
     path.resolve('packages/tokens/package.json'),
     path.join(root, 'packages', 'tokens', 'package.json')
   );
+  fs.writeFileSync(
+    path.join(root, 'README.md'),
+    [
+      '# Fixture',
+      '',
+      '<!-- vellira:component-inventory:start -->',
+      '',
+      'Platform availability is generated.',
+      '',
+      '> `Portal` and `PortalProvider` are support primitives used by overlay components.',
+      '',
+      '| Component | React | React Native |',
+      '| --------- | :---: | :----------: |',
+      '',
+      '<!-- vellira:component-inventory:end -->',
+      '',
+    ].join('\n')
+  );
 
   for (const packageName of ['react', 'react-native']) {
     const sourceRoot = path.join(root, 'packages', packageName, 'src');
