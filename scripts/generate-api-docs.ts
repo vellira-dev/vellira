@@ -910,18 +910,44 @@ function formatType(
   optional: boolean,
   checker: ts.TypeChecker
 ) {
-  const formatted = checker.typeToString(
-    type,
-    declaration,
-    ts.TypeFormatFlags.NoTruncation |
-      ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
+  const formatted = normalizeType(
+    checker.typeToString(
+      type,
+      declaration,
+      ts.TypeFormatFlags.NoTruncation |
+        ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
+    )
   );
 
-  return normalizeType(optional ? removeUndefined(formatted) : formatted);
+  return optional ? removeTopLevelUndefined(formatted) : formatted;
 }
 
-function removeUndefined(type: string) {
-  return type.replace(/ \| undefined/g, '').replace(/undefined \| /g, '');
+function removeTopLevelUndefined(type: string) {
+  const typeNode = parseFormattedTypeNode(type);
+  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
+
+  if (!ts.isUnionTypeNode(unwrapped)) {
+    return type;
+  }
+
+  const members = unwrapped.types.filter(
+    (member) =>
+      unwrapParenthesizedTypeNode(member).kind !== ts.SyntaxKind.UndefinedKeyword
+  );
+
+  if (members.length === unwrapped.types.length) {
+    return type;
+  }
+
+  if (members.length === 1) {
+    const member = unwrapParenthesizedTypeNode(members[0]!);
+
+    return normalizeType(member.getText(typeNode.getSourceFile()));
+  }
+
+  return members
+    .map((member) => normalizeType(member.getText(typeNode.getSourceFile())))
+    .join(' | ');
 }
 
 function isDocumentedPropDeclaration(declaration: ts.Declaration) {
