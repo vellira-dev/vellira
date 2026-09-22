@@ -271,6 +271,8 @@ describe('deterministic semantic type serialization', () => {
   | 'shared-z'
   | 'shared-a';
 
+export type Maybe<T> = T | null;
+
 export interface InheritedProps {
   inherited: 'inherited-z' | 'inherited-a';
 }
@@ -280,10 +282,12 @@ export interface TargetProps extends InheritedProps {
   mixed: 2 | 'two' | 1 | 'one';
   optional?: 'enabled' | 'disabled' | undefined;
   shared: SharedState;
+  genericAlias: Maybe<'enabled' | 'disabled'>;
   callback?: (mode: 'off' | 'polite') => void;
   nested: Promise<'off' | 'assertive'>;
   tuple: readonly ['off' | 'polite', number | null];
   nullable: null | 'value';
+  method(mode: 'off' | 'polite'): 'yes' | 'no';
 }
 
 export type ChoiceProps =
@@ -350,7 +354,13 @@ export type ChoiceProps =
     expect(targetOnly).toContain("`'enabled' \\| 'disabled'`");
     expect(targetOnly).not.toContain("'disabled' \\| undefined");
     expect(targetOnly).toContain('`SharedState`');
+    expect(targetOnly).toContain(
+      "`Maybe<'enabled' \\| 'disabled'>`"
+    );
     expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
+    expect(targetOnly).toContain(
+      "`(mode: 'off' \\| 'polite') => 'yes' \\| 'no'`"
+    );
     expect(targetOnly).toContain("`Promise<'off' \\| 'assertive'>`");
     expect(targetOnly).toContain(
       "`readonly ['off' \\| 'polite', number \\| null]`"
