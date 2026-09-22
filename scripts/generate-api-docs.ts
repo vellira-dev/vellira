@@ -885,11 +885,43 @@ function formatType(
 }
 
 function removeTopLevelUndefined(type: string) {
-  const members = splitTopLevelUnionType(type).filter(
-    (member) => member !== 'undefined'
+  const typeNode = parseFormattedTypeNode(type);
+  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
+
+  if (!ts.isUnionTypeNode(unwrapped)) {
+    return type;
+  }
+
+  const members = unwrapped.types.filter(
+    (member) =>
+      unwrapParenthesizedTypeNode(member).kind !== ts.SyntaxKind.UndefinedKeyword
   );
 
-  return members.length === 1 ? members[0]! : members.join(' | ');
+  if (members.length === 1) {
+    return renderStandaloneUnionMember(members[0]!, typeNode.getSourceFile());
+  }
+
+  return members
+    .map((member) => normalizeType(member.getText(typeNode.getSourceFile())))
+    .join(' | ');
+}
+
+function renderStandaloneUnionMember(
+  typeNode: ts.TypeNode,
+  sourceFile: ts.SourceFile
+) {
+  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
+
+  if (
+    unwrapped !== typeNode &&
+    (ts.isFunctionTypeNode(unwrapped) ||
+      ts.isConstructorTypeNode(unwrapped) ||
+      ts.isConditionalTypeNode(unwrapped))
+  ) {
+    return normalizeType(unwrapped.getText(sourceFile));
+  }
+
+  return normalizeType(typeNode.getText(sourceFile));
 }
 
 function splitTopLevelUnionType(type: string) {
@@ -922,6 +954,13 @@ function canonicalizeTypeDisplay(type: string) {
   const typeNode = parseFormattedTypeNode(type);
   const sourceFile = typeNode.getSourceFile();
   const canonical = canonicalizeUnionOrder(typeNode, sourceFile);
+  const unwrapped = unwrapParenthesizedTypeNode(canonical);
+
+  if (ts.isUnionTypeNode(unwrapped)) {
+    return unwrapped.types
+      .map((member) => printTypeNode(member, sourceFile))
+      .join(' | ');
+  }
 
   return printTypeNode(canonical, sourceFile);
 }
