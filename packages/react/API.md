@@ -276,7 +276,7 @@ and addon props for built-in input affordances.
 | `endIconTone`      | `InputAdornmentTone`                    | No       | Color tone for the end icon.                                                |
 | `wrapperClassName` | `string`                                | No       | —                                                                           |
 | `color`            | `InputColor`                            | No       | —                                                                           |
-| `variant`          | `'bare' \| InputVariant`                | No       | Visual style: outline, filled, soft, or the web-only bare composition mode. |
+| `variant`          | `InputVariant \| 'bare'`                | No       | Visual style: outline, filled, soft, or the web-only bare composition mode. |
 | `invalid`          | `boolean`                               | No       | —                                                                           |
 | `loading`          | `boolean`                               | No       | —                                                                           |
 | `revealPassword`   | `boolean`                               | No       | —                                                                           |
@@ -342,7 +342,7 @@ and `disabled` to that control when needed. The root wrapper does not receive th
 | `optionalText`         | `ReactNode`                  | No       | —                                                   |
 | `bindControl`          | `boolean`                    | No       | —                                                   |
 | `size`                 | `'sm' \| 'md' \| 'lg'`       | No       | Input size.                                         |
-| `labelPosition`        | `'start' \| 'top'`           | No       | —                                                   |
+| `labelPosition`        | `'top' \| 'start'`           | No       | —                                                   |
 | `invalid`              | `boolean`                    | No       | —                                                   |
 | `orientation`          | `'vertical' \| 'horizontal'` | No       | —                                                   |
 | `message`              | `ReactNode`                  | No       | —                                                   |
@@ -854,8 +854,8 @@ import { Button, Portal, Tooltip } from '@vellira-ui/react';
 | `portal`            | `boolean`                                                     | No       | Reserved for automatic portal rendering in higher-level helpers. |
 | `avoidCollisions`   | `boolean`                                                     | No       | Allows the tooltip to flip or shift to stay in viewport.         |
 | `matchTriggerWidth` | `boolean`                                                     | No       | Matches tooltip content width to the trigger width.              |
-| `disabled`          | `boolean`                                                     | No       | Disables interaction.                                            |
 | `placement`         | `FloatingPlacement`                                           | No       | Preferred tooltip placement.                                     |
+| `disabled`          | `boolean`                                                     | No       | Disables interaction.                                            |
 
 <!-- api-docgen:end web.TooltipProps.Tooltip -->
 
