@@ -23,7 +23,7 @@ function fixture(): ComponentFactoryInventoryInput {
 }
 
 describe('component factory inventory validation', () => {
-  it('accepts the historical baseline with an empty generated authority', () => {
+  it('accepts historical factories with an empty generated authority', () => {
     const input = fixture();
     expect(
       validateComponentFactoryInventory({
@@ -35,7 +35,7 @@ describe('component factory inventory validation', () => {
     ).toEqual([]);
   });
 
-  it('accepts a new generated factory without a per-component allowlist', () => {
+  it('accepts generated factories without a per-component allowlist', () => {
     expect(validateComponentFactoryInventory(fixture())).toEqual([]);
   });
 
@@ -69,7 +69,10 @@ describe('component factory inventory validation', () => {
     },
     {
       name: 'missing generated maintained entry',
-      change: (input) => ({ ...input, maintained: input.maintained.slice(0, 1) }),
+      change: (input) => ({
+        ...input,
+        maintained: input.maintained.slice(0, 1),
+      }),
       finding: 'maintained inventory differs from authority',
     },
     {
@@ -196,7 +199,7 @@ describe('component factory inventory validation', () => {
     );
   });
 
-  it('does not permit laundering a historical deletion through both observations', () => {
+  it('rejects a historical deletion from both observations', () => {
     const input = fixture();
     const findings = validateComponentFactoryInventory({
       ...input,
