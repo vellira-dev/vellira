@@ -914,13 +914,7 @@ function formatTypeParts(
 
   if (declaredUnionMembers.length > 0) {
     return declaredUnionMembers.map((node) =>
-      containsUnionTypeNode(node)
-        ? createSourceTypePart(node, declaration.getSourceFile())
-        : createSemanticTypePart(
-            checker.getTypeFromTypeNode(node),
-            declaration,
-            checker
-          )
+      createSourceTypePart(node, declaration.getSourceFile())
     );
   }
 
