@@ -1,3 +1,4 @@
+import { appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
@@ -55,6 +56,50 @@ export function planProductionPromotionSupersession({ currentMainSha, runs }) {
   return {
     keep: [...keep],
     cancel,
+  };
+}
+
+function assertRunId(value, label) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive integer run ID`);
+  }
+
+  return value;
+}
+
+export function planCurrentProductionAdmission({
+  currentMainSha,
+  currentRunId,
+  runs,
+}) {
+  assertSha(currentMainSha, 'currentMainSha');
+  assertRunId(currentRunId, 'currentRunId');
+
+  const plan = planProductionPromotionSupersession({
+    currentMainSha,
+    runs,
+  });
+  const currentRun = runs.find((run) => run.id === currentRunId);
+  const currentCandidateSha = currentRun
+    ? promotionCandidateSha(currentRun.displayTitle)
+    : null;
+  const currentIsActive =
+    currentRun !== undefined &&
+    currentRun.status !== 'completed' &&
+    currentCandidateSha !== null;
+  const admitted = currentIsActive && plan.keep.includes(currentRunId);
+
+  return {
+    keep: plan.keep,
+    cancel: plan.cancel.filter((runId) => runId !== currentRunId),
+    admitCurrent: admitted,
+    reason: admitted
+      ? 'admitted'
+      : currentCandidateSha && currentCandidateSha !== currentMainSha
+        ? 'stale_candidate'
+        : currentIsActive
+          ? 'superseded_or_protected'
+          : 'current_run_missing',
   };
 }
 
@@ -119,7 +164,13 @@ async function cancelRun(repository, runId) {
   });
 }
 
-export async function supersedeStaleProductionPromotions() {
+export async function supersedeStaleProductionPromotions({
+  currentRunId = process.env.CURRENT_PRODUCTION_RUN_ID
+    ? Number(process.env.CURRENT_PRODUCTION_RUN_ID)
+    : null,
+  expectedCandidateSha = process.env.EXPECTED_CANDIDATE_SHA || null,
+  githubOutput = process.env.GITHUB_OUTPUT || null,
+} = {}) {
   const repository = process.env.GITHUB_REPOSITORY;
 
   if (!repository || !repository.includes('/')) {
@@ -140,18 +191,59 @@ export async function supersedeStaleProductionPromotions() {
       runNumber: run.run_number,
       status: run.status,
       displayTitle: run.display_title,
-      deployStatus: await deployJobStatus(repository, run.id),
+      deployStatus:
+        currentRunId !== null && run.id === currentRunId
+          ? null
+          : await deployJobStatus(repository, run.id),
     });
   }
 
-  const plan = planProductionPromotionSupersession({
-    currentMainSha: mainSha,
-    runs,
-  });
+  if (currentRunId !== null) {
+    assertRunId(currentRunId, 'currentRunId');
+    if (expectedCandidateSha !== null) {
+      assertSha(expectedCandidateSha, 'expectedCandidateSha');
+    }
+  }
+
+  const plan =
+    currentRunId === null
+      ? planProductionPromotionSupersession({
+          currentMainSha: mainSha,
+          runs,
+        })
+      : planCurrentProductionAdmission({
+          currentMainSha: mainSha,
+          currentRunId,
+          runs,
+        });
+
+  if (currentRunId !== null && expectedCandidateSha !== null) {
+    const currentRun = runs.find((run) => run.id === currentRunId);
+    const observedCandidateSha = currentRun
+      ? promotionCandidateSha(currentRun.displayTitle)
+      : null;
+
+    if (observedCandidateSha !== expectedCandidateSha) {
+      throw new Error(
+        `Current production run candidate mismatch: expected ${expectedCandidateSha}, observed ${observedCandidateSha ?? 'missing'}`
+      );
+    }
+  }
 
   for (const runId of plan.cancel) {
     console.log(`Cancelling superseded production promotion run ${runId}`);
     await cancelRun(repository, runId);
+  }
+
+  if (currentRunId !== null) {
+    if (!githubOutput) {
+      throw new Error('GITHUB_OUTPUT is required for production admission');
+    }
+
+    await appendFile(
+      githubOutput,
+      `admitted=${plan.admitCurrent ? 'true' : 'false'}\nreason=${plan.reason}\n`
+    );
   }
 
   console.log(

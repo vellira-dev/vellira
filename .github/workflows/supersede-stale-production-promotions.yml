@@ -3,9 +3,6 @@ name: Supersede Stale Production Promotions
 on:
   push:
     branches: [main]
-  workflow_run:
-    workflows: ['Deploy Website Cloudflare Production']
-    types: [requested, in_progress]
 
 permissions:
   contents: read

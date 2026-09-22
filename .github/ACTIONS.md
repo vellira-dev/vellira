@@ -36,11 +36,15 @@ work, but does not prevent a workflow card from being created for each push.
   failure is visible in that job and its summary but does not invalidate an
   already verified deployment. Retry `Submit URLs to IndexNow` manually, without
   redeploying production. The manual retry remains failure-reporting.
-- Supersession retains both `requested` and `in_progress`: queue admission and
-  reruns must both remain covered. Removing either event requires a lifecycle
-  regression proving pending duplicate promotions cannot get stuck. A promotion
-  whose deploy job is already `completed` remains protected while post-deploy
-  follow-up jobs such as IndexNow finish.
+- Main-push supersession remains a separate trusted cleanup because any main
+  advancement must invalidate stale waiting approvals, even when no new website
+  staging run is produced. Production-run admission now happens inside the
+  production workflow itself: candidate runs are not blocked by workflow-level
+  concurrency, stale/duplicate candidates are rejected before environment
+  approval, and only the deploy job uses the non-cancelling global concurrency
+  group. This covers normal queue admission and reruns without separate
+  `workflow_run` Supersede cards. A deploy already queued, in progress or
+  completed remains protected.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.

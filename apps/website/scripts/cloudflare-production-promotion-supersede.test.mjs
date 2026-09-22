@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import test from 'node:test';
 
 import {
+  planCurrentProductionAdmission,
   planProductionPromotionSupersession,
   promotionCandidateSha,
 } from './cloudflare-production-promotion-supersede.mjs';
@@ -127,6 +128,100 @@ test('completed runs do not participate in supersession', () => {
   );
 });
 
+test('newest current-main run is admitted and supersedes older waiting duplicate', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 2,
+      runs: [
+        run({ id: 1, candidateSha: B, runNumber: 10 }),
+        run({ id: 2, candidateSha: B, runNumber: 11 }),
+      ],
+    }),
+    {
+      keep: [2],
+      cancel: [1],
+      admitCurrent: true,
+      reason: 'admitted',
+    }
+  );
+});
+
+test('older duplicate is rejected without cancelling itself', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 1,
+      runs: [
+        run({ id: 1, candidateSha: B, runNumber: 10 }),
+        run({ id: 2, candidateSha: B, runNumber: 11 }),
+      ],
+    }),
+    {
+      keep: [2],
+      cancel: [],
+      admitCurrent: false,
+      reason: 'superseded_or_protected',
+    }
+  );
+});
+
+test('stale current run is rejected without self-cancellation', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 1,
+      runs: [run({ id: 1, candidateSha: A, runNumber: 10 })],
+    }),
+    {
+      keep: [],
+      cancel: [],
+      admitCurrent: false,
+      reason: 'stale_candidate',
+    }
+  );
+});
+
+test('protected current-main deploy prevents a new duplicate from admission', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 2,
+      runs: [
+        run({
+          id: 1,
+          candidateSha: B,
+          runNumber: 10,
+          deployStatus: 'in_progress',
+        }),
+        run({ id: 2, candidateSha: B, runNumber: 11 }),
+      ],
+    }),
+    {
+      keep: [1],
+      cancel: [],
+      admitCurrent: false,
+      reason: 'superseded_or_protected',
+    }
+  );
+});
+
+test('missing current run fails closed without cancelling unrelated promotions', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 99,
+      runs: [run({ id: 1, candidateSha: B, runNumber: 10 })],
+    }),
+    {
+      keep: [1],
+      cancel: [],
+      admitCurrent: false,
+      reason: 'current_run_missing',
+    }
+  );
+});
+
 test('invalid main identity fails closed', () => {
   assert.throws(() =>
     planProductionPromotionSupersession({
@@ -136,18 +231,14 @@ test('invalid main identity fails closed', () => {
   );
 });
 
-test('supersession workflow is write-capable, automatic and independently self-cancelling', async () => {
+test('supersession workflow is push-only, write-capable and independently self-cancelling', async () => {
   const workflow = await fs.readFile(
     '.github/workflows/supersede-stale-production-promotions.yml',
     'utf8'
   );
 
   assert.match(workflow, /push:\n {4}branches: \[main\]/);
-  assert.match(
-    workflow,
-    /workflows: \['Deploy Website Cloudflare Production'\]/
-  );
-  assert.match(workflow, /types: \[requested, in_progress\]/);
+  assert.doesNotMatch(workflow, /workflow_run:/);
   assert.match(workflow, /actions: write/);
   assert.match(
     workflow,

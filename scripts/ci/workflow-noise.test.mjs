@@ -165,10 +165,22 @@ shellTest('clean-checkout probe rejects workspace dist but ignores dependency di
   assert.equal(shell(probe, cwd).status, 1);
 });
 
-test('supersession preserves queue-admission and rerun coverage until deduplication is proven', () => {
-  const triggers = section(workflow('supersede-stale-production-promotions'), 'on');
+test('production owns queue and rerun admission without duplicate workflow-run cleanup cards', () => {
+  const supersede = workflow('supersede-stale-production-promotions');
+  const triggers = section(supersede, 'on');
   assert.match(triggers, /push:\n {4}branches: \[main\]/);
-  assert.match(triggers, /types: \[requested, in_progress\]/);
+  assert.doesNotMatch(triggers, /workflow_run:/);
+
+  const production = workflow('deploy-website-cloudflare-production');
+  const header = production.split('\njobs:\n')[0];
+  assert.doesNotMatch(header, /\nconcurrency:\n/);
+  assert.match(production, /\n  admission:\n/);
+  assert.match(production, /CURRENT_PRODUCTION_RUN_ID:/);
+  assert.match(production, /EXPECTED_CANDIDATE_SHA:/);
+  assert.match(
+    production,
+    /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
+  );
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {

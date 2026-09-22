@@ -44,7 +44,7 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(productionWorkflow, /types: \[completed\]/);
   assert.match(productionWorkflow, /branches: \[main\]/);
 
-  const candidate = jobBlock(productionWorkflow, 'candidate', 'deploy');
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
@@ -54,13 +54,42 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
 
-test('production mutation is approval-gated and pinned to the eligible SHA', () => {
-  assert.match(
-    productionWorkflow,
-    /group: deploy-worker-vellira-website\n {2}cancel-in-progress: false/
-  );
+test('production admission owns duplicate/stale cleanup before serialized deploy', () => {
+  const workflowHeader = productionWorkflow.split('\njobs:\n')[0];
+  assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
 
-  const deploy = jobBlock(productionWorkflow, 'deploy');
+  const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
+  assert.match(admission, /actions: write/);
+  assert.match(admission, /cache-mode: none/);
+  assert.match(admission, /ref: main/);
+  assert.match(
+    admission,
+    /CURRENT_PRODUCTION_RUN_ID: \$\{\{ github\.run_id \}\}/
+  );
+  assert.match(
+    admission,
+    /EXPECTED_CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/
+  );
+  assert.match(
+    admission,
+    /cloudflare-production-promotion-supersede\.mjs/
+  );
+});
+
+test('production mutation is approval-gated and pinned to the eligible SHA', () => {
+  const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+  assert.match(
+    deploy,
+    /needs: \[candidate, admission\]/
+  );
+  assert.match(
+    deploy,
+    /needs\.admission\.outputs\.admitted == 'true'/
+  );
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
+  );
   assert.match(deploy, /environment:\n {6}name: production/);
   assert.match(
     deploy,
@@ -70,6 +99,13 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
   assert.match(deploy, /Verify exact production candidate checkout/);
   assert.match(deploy, /Verify immutable production candidate before mutation/);
   assert.match(deploy, /Deploy production website to Cloudflare Workers/);
+});
+
+test('manual recovery bypasses normal admission but keeps serialized deployment', () => {
+  const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
+  const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+  assert.match(admission, /github\.event_name == 'workflow_run'/);
+  assert.match(deploy, /github\.event_name == 'workflow_dispatch'/);
 });
 
 test('manual dispatch is an explicit break-glass recovery path', () => {

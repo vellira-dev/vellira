@@ -26,10 +26,6 @@ permissions:
   actions: read
   contents: read
 
-concurrency:
-  group: deploy-worker-vellira-website
-  cancel-in-progress: false
-
 env:
   NODE_VERSION: 22.22.2
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
@@ -128,11 +124,54 @@ jobs:
             echo "staging_run_attempt=" >> "$GITHUB_OUTPUT"
           fi
 
+  admission:
+    name: Admit latest safe production candidate
+    needs: candidate
+    if: github.event_name == 'workflow_run' && needs.candidate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    cache-mode: none
+    permissions:
+      actions: write
+      contents: read
+    outputs:
+      admitted: ${{ steps.admit.outputs.admitted }}
+      reason: ${{ steps.admit.outputs.reason }}
+
+    steps:
+      - name: Checkout current main admission controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Node.js without dependency cache
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Admit candidate and supersede stale promotions
+        id: admit
+        run: node apps/website/scripts/cloudflare-production-promotion-supersede.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CURRENT_PRODUCTION_RUN_ID: ${{ github.run_id }}
+          EXPECTED_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+
   deploy:
     name: Approve, deploy, and verify production candidate
-    needs: candidate
-    if: needs.candidate.result == 'success'
+    needs: [candidate, admission]
+    if: >-
+      always() &&
+      needs.candidate.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (needs.admission.result == 'success' &&
+        needs.admission.outputs.admitted == 'true'))
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-worker-vellira-website
+      cancel-in-progress: false
     environment:
       name: production
       url: https://vellira.dev
