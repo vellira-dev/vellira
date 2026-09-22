@@ -548,52 +548,22 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
-  const sourceFiles = Array.from(
-    new Set(sections.map((item) => item.sourceFile))
-  ).map((sourceFile) => path.join(rootDir, sourceFile));
-
-  const program = ts.createProgram(sourceFiles, {
-    baseUrl: rootDir,
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    jsx: ts.JsxEmit.ReactJSX,
-    skipLibCheck: true,
-    strict: true,
-    esModuleInterop: true,
-    allowSyntheticDefaultImports: true,
-    paths: {
-      '@vellira-ui/core': ['packages/core/src/index.ts'],
-      '@vellira-ui/icons': ['packages/icons/src/web.ts'],
-      '@vellira-ui/icons/native': ['packages/icons/src/native.ts'],
-      '@vellira-ui/icons/web': ['packages/icons/src/web.ts'],
-      '@vellira-ui/react': ['packages/react/src/index.ts'],
-      '@vellira-ui/react-native': ['packages/react-native/src/index.ts'],
-      '@vellira-ui/tokens': ['packages/tokens/src/index.ts'],
-      '@vellira-ui/types': ['packages/types/src/index.ts'],
-    },
-  });
-  const context: ApiDocsContext = {
-    rootDir,
-    checker: program.getTypeChecker(),
-    sourceFileByName: new Map(
-      program
-        .getSourceFiles()
-        .map((sourceFile) => [normalizePath(sourceFile.fileName), sourceFile])
-    ),
-  };
+  const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
 
   for (const item of sections) {
+    const context =
+      contexts.get(item.sourceFile) ??
+      createApiDocsContext(rootDir, item.sourceFile);
+
+    contexts.set(item.sourceFile, context);
     const docPath = path.join(rootDir, item.docPath);
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
     const descriptions = readExistingDescriptions(currentDoc, item);
-    const existingTypes = readExistingTypes(currentDoc, item);
     const rows = sortRows(
       readInterfaceRows(item, context).map((row) => ({
         ...row,
-        type: stabilizeTypeDisplay(row.type, existingTypes.get(row.name)),
         description: getDescription(row.name, descriptions, item),
       })),
       descriptions
@@ -642,6 +612,47 @@ export async function generateApiDocs(
     status:
       changedFiles.length === 0 ? 'up-to-date' : check ? 'stale' : 'updated',
     changedFiles: changedFiles.sort(),
+  };
+}
+
+function createApiDocsContext(
+  rootDir: string,
+  sourceFile: string
+): ApiDocsContext {
+  const sourcePath = path.join(rootDir, sourceFile);
+  const program = ts.createProgram([sourcePath], {
+    baseUrl: rootDir,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    jsx: ts.JsxEmit.ReactJSX,
+    skipLibCheck: true,
+    strict: true,
+    esModuleInterop: true,
+    allowSyntheticDefaultImports: true,
+    paths: {
+      '@vellira-ui/core': ['packages/core/src/index.ts'],
+      '@vellira-ui/icons': ['packages/icons/src/web.ts'],
+      '@vellira-ui/icons/native': ['packages/icons/src/native.ts'],
+      '@vellira-ui/icons/web': ['packages/icons/src/web.ts'],
+      '@vellira-ui/react': ['packages/react/src/index.ts'],
+      '@vellira-ui/react-native': ['packages/react-native/src/index.ts'],
+      '@vellira-ui/tokens': ['packages/tokens/src/index.ts'],
+      '@vellira-ui/types': ['packages/types/src/index.ts'],
+    },
+  });
+
+  return {
+    rootDir,
+    checker: program.getTypeChecker(),
+    sourceFileByName: new Map(
+      program
+        .getSourceFiles()
+        .map((programSourceFile) => [
+          normalizePath(programSourceFile.fileName),
+          programSourceFile,
+        ])
+    ),
   };
 }
 
@@ -773,10 +784,7 @@ function readUnionPropRows(type: ts.UnionType, checker: ts.TypeChecker) {
         entry.optionalBranches += 1;
       }
 
-      if (
-        formattedType !== '' &&
-        !entry.typeStrings.includes(formattedType)
-      ) {
+      if (!entry.typeStrings.includes(formattedType)) {
         entry.typeStrings.push(formattedType);
       }
 
@@ -784,22 +792,14 @@ function readUnionPropRows(type: ts.UnionType, checker: ts.TypeChecker) {
     }
   }
 
-  return Array.from(propertiesByName).flatMap(([name, entry]) => {
-    const propertyType = normalizeUnionTypeStrings(entry.typeStrings);
-
-    return propertyType
-      ? [
-          {
-            name,
-            type: propertyType,
-            required:
-              entry.presentBranches === type.types.length &&
-              entry.optionalBranches === 0,
-            description: '',
-          },
-        ]
-      : [];
-  });
+  return Array.from(propertiesByName, ([name, entry]) => ({
+    name,
+    type: normalizeUnionTypeStrings(entry.typeStrings),
+    required:
+      entry.presentBranches === type.types.length &&
+      entry.optionalBranches === 0,
+    description: '',
+  }));
 }
 
 function readSymbolPropRow(
@@ -826,102 +826,10 @@ function readSymbolPropRow(
 function normalizeUnionTypeStrings(types: string[]) {
   const members = types
     .flatMap(splitTopLevelUnionType)
-    .filter((type) => type !== '' && type !== 'undefined')
+    .filter((type) => type !== 'undefined')
     .filter((type, index, allTypes) => allTypes.indexOf(type) === index);
 
-  if (members.length <= 1) {
-    return members[0] ?? '';
-  }
-
-  return members.map(groupUnionMemberForDisplay).join(' | ');
-}
-
-function groupUnionMemberForDisplay(type: string) {
-  const typeNode = unwrapParenthesizedTypeNode(parseFormattedTypeNode(type));
-
-  return ts.isFunctionTypeNode(typeNode) ||
-    ts.isConstructorTypeNode(typeNode) ||
-    ts.isConditionalTypeNode(typeNode)
-    ? `(${type})`
-    : type;
-}
-
-function findTypeDeclaration(sourceFile: ts.SourceFile, interfaceName: string) {
-  let result: ts.InterfaceDeclaration | ts.TypeAliasDeclaration | undefined;
-
-  const visit = (node: ts.Node) => {
-    if (
-      (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) &&
-      node.name.text === interfaceName
-    ) {
-      result = node;
-      return;
-    }
-
-    ts.forEachChild(node, visit);
-  };
-
-  visit(sourceFile);
-
-  return result;
-}
-
-function formatType(
-  type: ts.Type,
-  declaration: ts.Declaration,
-  optional: boolean,
-  checker: ts.TypeChecker
-) {
-  const formatted = normalizeType(
-    checker.typeToString(
-      type,
-      declaration,
-      ts.TypeFormatFlags.NoTruncation |
-        ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
-    )
-  );
-
-  return optional ? removeTopLevelUndefined(formatted) : formatted;
-}
-
-function removeTopLevelUndefined(type: string) {
-  const typeNode = parseFormattedTypeNode(type);
-  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
-
-  if (!ts.isUnionTypeNode(unwrapped)) {
-    return type;
-  }
-
-  const members = unwrapped.types.filter(
-    (member) =>
-      unwrapParenthesizedTypeNode(member).kind !== ts.SyntaxKind.UndefinedKeyword
-  );
-
-  if (members.length === 1) {
-    return renderStandaloneUnionMember(members[0]!, typeNode.getSourceFile());
-  }
-
-  return members
-    .map((member) => normalizeType(member.getText(typeNode.getSourceFile())))
-    .join(' | ');
-}
-
-function renderStandaloneUnionMember(
-  typeNode: ts.TypeNode,
-  sourceFile: ts.SourceFile
-) {
-  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
-
-  if (
-    unwrapped !== typeNode &&
-    (ts.isFunctionTypeNode(unwrapped) ||
-      ts.isConstructorTypeNode(unwrapped) ||
-      ts.isConditionalTypeNode(unwrapped))
-  ) {
-    return normalizeType(unwrapped.getText(sourceFile));
-  }
-
-  return normalizeType(typeNode.getText(sourceFile));
+  return members.length === 1 ? members[0]! : members.join(' | ');
 }
 
 function splitTopLevelUnionType(type: string) {
@@ -935,34 +843,6 @@ function splitTopLevelUnionType(type: string) {
   return unwrapped.types.map((member) =>
     normalizeType(member.getText(typeNode.getSourceFile()))
   );
-}
-
-function stabilizeTypeDisplay(type: string, existingType: string | undefined) {
-  const canonical = canonicalizeTypeDisplay(type);
-
-  if (
-    existingType !== undefined &&
-    canonicalizeTypeDisplay(existingType) === canonical
-  ) {
-    return existingType;
-  }
-
-  return canonical;
-}
-
-function canonicalizeTypeDisplay(type: string) {
-  const typeNode = parseFormattedTypeNode(type);
-  const sourceFile = typeNode.getSourceFile();
-  const canonical = canonicalizeUnionOrder(typeNode, sourceFile);
-  const unwrapped = unwrapParenthesizedTypeNode(canonical);
-
-  if (ts.isUnionTypeNode(unwrapped)) {
-    return unwrapped.types
-      .map((member) => printTypeNode(member, sourceFile))
-      .join(' | ');
-  }
-
-  return printTypeNode(canonical, sourceFile);
 }
 
 function parseFormattedTypeNode(type: string) {
@@ -992,63 +872,44 @@ function unwrapParenthesizedTypeNode(typeNode: ts.TypeNode): ts.TypeNode {
   return current;
 }
 
-function canonicalizeUnionOrder(
-  typeNode: ts.TypeNode,
-  sourceFile: ts.SourceFile
-) {
-  const transformer: ts.TransformerFactory<ts.TypeNode> = (context) => {
-    const visit = (node: ts.Node): ts.VisitResult<ts.Node> => {
-      const visited = ts.visitEachChild(node, visit, context);
+function findTypeDeclaration(sourceFile: ts.SourceFile, interfaceName: string) {
+  let result: ts.InterfaceDeclaration | ts.TypeAliasDeclaration | undefined;
 
-      if (!ts.isUnionTypeNode(visited)) {
-        return visited;
-      }
+  const visit = (node: ts.Node) => {
+    if (
+      (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) &&
+      node.name.text === interfaceName
+    ) {
+      result = node;
+      return;
+    }
 
-      const members = [...visited.types]
-        .toSorted((left, right) =>
-          compareCanonicalText(
-            printTypeNode(left, sourceFile),
-            printTypeNode(right, sourceFile)
-          )
-        )
-        .filter(
-          (member, index, allMembers) =>
-            index === 0 ||
-            printTypeNode(allMembers[index - 1]!, sourceFile) !==
-              printTypeNode(member, sourceFile)
-        );
-
-      return ts.factory.updateUnionTypeNode(
-        visited,
-        ts.factory.createNodeArray(members)
-      );
-    };
-
-    return (rootNode) => ts.visitNode(rootNode, visit) as ts.TypeNode;
+    ts.forEachChild(node, visit);
   };
-  const transformed = ts.transform(typeNode, [transformer]);
 
-  try {
-    return transformed.transformed[0] as ts.TypeNode;
-  } finally {
-    transformed.dispose();
-  }
+  visit(sourceFile);
+
+  return result;
 }
 
-function printTypeNode(typeNode: ts.TypeNode, sourceFile: ts.SourceFile) {
-  return normalizeType(
-    ts
-      .createPrinter({ removeComments: true })
-      .printNode(ts.EmitHint.Unspecified, typeNode, sourceFile)
+function formatType(
+  type: ts.Type,
+  declaration: ts.Declaration,
+  optional: boolean,
+  checker: ts.TypeChecker
+) {
+  const formatted = checker.typeToString(
+    type,
+    declaration,
+    ts.TypeFormatFlags.NoTruncation |
+      ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
   );
+
+  return normalizeType(optional ? removeUndefined(formatted) : formatted);
 }
 
-function compareCanonicalText(left: string, right: string) {
-  if (left === right) {
-    return 0;
-  }
-
-  return left < right ? -1 : 1;
+function removeUndefined(type: string) {
+  return type.replace(/ \| undefined/g, '').replace(/undefined \| /g, '');
 }
 
 function isDocumentedPropDeclaration(declaration: ts.Declaration) {
@@ -1088,9 +949,14 @@ function normalizeType(type: string) {
     .replace(/\bBaseSelectOption\[\]/g, 'SelectOption[]')
     .replace(/Readonly<(.+)>/g, '$1')
     .replace(/\s+/g, ' ')
-    .replace(/\[\s+/g, '[')
-    .replace(/\s+\]/g, ']')
     .trim();
+
+  if (
+    (normalized.startsWith('((') || normalized.startsWith('(()')) &&
+    normalized.endsWith(')')
+  ) {
+    return normalized.slice(1, -1);
+  }
 
   return normalized;
 }
@@ -1119,32 +985,6 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   }
 
   return descriptions;
-}
-
-function readExistingTypes(doc: string, item: ApiSection) {
-  const types = new Map<string, string>();
-  const block = findTableBlock(doc, item);
-
-  if (!block) {
-    return types;
-  }
-
-  const rows = block.table
-    .split('\n')
-    .filter((line) => line.trim().startsWith('|'))
-    .slice(2);
-
-  for (const row of rows) {
-    const cells = splitMarkdownRow(row);
-    const prop = cells[0]?.replace(/`/g, '').trim();
-    const type = cells[1]?.replace(/`/g, '').trim();
-
-    if (prop && type) {
-      types.set(prop, unescapeTableCell(type));
-    }
-  }
-
-  return types;
 }
 
 function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
@@ -1250,10 +1090,6 @@ function splitMarkdownRow(row: string) {
 
 function escapeTableCell(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-}
-
-function unescapeTableCell(value: string) {
-  return value.replace(/\\\|/g, '|').replace(/\\\\/g, '\\');
 }
 
 function normalizePath(filePath: string) {
