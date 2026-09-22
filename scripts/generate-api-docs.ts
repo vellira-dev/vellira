@@ -250,6 +250,43 @@ const descriptionOverrides: Record<string, Record<string, string>> = {
   'native.AccordionContentProps.AccordionContentProps': {
     forceMount: 'Keeps this content mounted even when its item is collapsed.',
   },
+  'web.ToastProps.ToastProps': {
+    title: 'Short message heading.',
+    description: 'Optional supporting detail.',
+    icon: 'Optional custom icon; semantic tones provide canonical defaults.',
+    tone: 'Semantic visual tone and announcement priority.',
+    duration: 'Auto-dismiss duration in milliseconds. Zero disables timeout.',
+    dismissible: 'Renders an explicit dismiss control.',
+    dismissLabel: 'Accessible label for the dismiss control.',
+    action: 'Optional labelled action with deterministic close behavior.',
+    pauseOnHover: 'Pauses the remaining timeout during pointer interaction.',
+    pauseOnFocus: 'Pauses the remaining timeout while a control has focus.',
+    closeOnEscape: 'Allows Escape to close a toast whose control has focus.',
+    ariaLive: 'Overrides the tone-derived live-region priority.',
+  },
+  'native.ToastProps.ToastProps': {
+    title: 'Short message heading.',
+    description: 'Optional supporting detail.',
+    icon: 'Optional custom icon; semantic tones provide canonical defaults.',
+    announcement: 'Explicit text announced by native assistive technology.',
+    tone: 'Semantic visual tone and announcement priority.',
+    duration: 'Auto-dismiss duration in milliseconds. Zero disables timeout.',
+    dismissible: 'Renders an explicit dismiss control.',
+    dismissLabel: 'Accessible label for the dismiss control.',
+    action: 'Optional labelled action with deterministic close behavior.',
+  },
+  'web.ToastProviderProps.ToastProviderProps': {
+    store:
+      'Externally owned store used for independent testing or integration.',
+    duration: 'Default auto-dismiss duration for messages in this provider.',
+    maxVisible: 'Maximum visible messages before oldest-first overflow.',
+  },
+  'native.ToastProviderProps.ToastProviderProps': {
+    store:
+      'Externally owned store used for independent testing or integration.',
+    duration: 'Default auto-dismiss duration for messages in this provider.',
+    maxVisible: 'Maximum visible messages before oldest-first overflow.',
+  },
 };
 
 const defaultSections: ApiSection[] = [
@@ -375,6 +412,24 @@ const defaultSections: ApiSection[] = [
     '### Modal Props',
     'ModalProps',
     'src/components/Modal/types.ts'
+  ),
+  section(
+    'web',
+    '### Toast Props',
+    'ToastProps',
+    'src/components/Toast/types.ts'
+  ),
+  section(
+    'web',
+    '### Toast.Provider Props',
+    'ToastProviderProps',
+    'src/components/Toast/Provider/types.ts'
+  ),
+  section(
+    'web',
+    '### Toast.Viewport Props',
+    'ToastViewportProps',
+    'src/components/Toast/Viewport/types.ts'
   ),
   section(
     'web',
@@ -514,6 +569,24 @@ const defaultSections: ApiSection[] = [
     '### Modal Props',
     'ModalProps',
     'src/components/Modal/types.ts'
+  ),
+  section(
+    'native',
+    '### Toast Props',
+    'ToastProps',
+    'src/components/Toast/types.ts'
+  ),
+  section(
+    'native',
+    '### Toast.Provider Props',
+    'ToastProviderProps',
+    'src/components/Toast/Provider/types.ts'
+  ),
+  section(
+    'native',
+    '### Toast.Viewport Props',
+    'ToastViewportProps',
+    'src/components/Toast/Viewport/types.ts'
   ),
   section(
     'native',

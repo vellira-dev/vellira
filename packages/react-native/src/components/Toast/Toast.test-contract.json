@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "component": "Toast",
+  "platform": "native",
+  "profile": "overlay",
+  "control": "value",
+  "parts": ["Root", "Viewport"],
+  "baseline": {
+    "ownership": "generated",
+    "requirements": [
+      "render",
+      "accessibility",
+      "controlled",
+      "uncontrolled",
+      "compound-api"
+    ]
+  },
+  "componentSpecific": {
+    "ownership": "manual",
+    "required": true,
+    "requirements": ["focus-management", "portal"]
+  }
+}

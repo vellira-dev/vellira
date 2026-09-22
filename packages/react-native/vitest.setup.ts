@@ -11,7 +11,11 @@ vi.mock('@vellira-ui/icons', () => ({
   ChevronDown: () => React.createElement(Text, null, '⌄'),
   Check: () => React.createElement(Text, null, '✓'),
   Close: () => React.createElement(Text, null, '×'),
+  Error: () => React.createElement(Text, null, '!'),
+  Info: () => React.createElement(Text, null, 'ⓘ'),
   Search: () => React.createElement(Text, null, '⌕'),
+  Success: () => React.createElement(Text, null, '✓'),
+  Warning: () => React.createElement(Text, null, '⚠'),
 }));
 
 vi.mock('react-native-svg', () => {

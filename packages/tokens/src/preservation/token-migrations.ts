@@ -641,8 +641,136 @@ const textareaComponentTokenAdditionMigrationsV1 =
  * Generator V2 owns this array. It contains only deterministic first-
  * materialization addition evidence for governed component-token families.
  */
-const generatedComponentTokenAdditionMigrationsV1 =
-  [] as const satisfies readonly TokenMigrationEntry[];
+const generatedComponentTokenAdditionMigrationsV1 = [
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-default-bg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.default.bg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-default-border',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.default.border',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-default-fg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.default.fg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-disabled-bg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.disabled.bg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-disabled-border',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.disabled.border',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-disabled-fg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.disabled.fg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-error-border',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.error.border',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-error-fg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.error.fg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-error-ring',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.error.ring',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-focusRing',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.focusRing',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-hover-bg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.hover.bg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-hover-border',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.hover.border',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-hover-fg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.hover.fg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-pressed-bg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.pressed.bg',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-pressed-border',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.pressed.border',
+  },
+  {
+    id: '564-generator-v2-component-token-addition-components-toast-pressed-fg',
+    kind: 'addition',
+    issue: '#564',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.toast.pressed.fg',
+  },
+] as const satisfies readonly TokenMigrationEntry[];
 
 const boldFontWeightAdditionV1 = {
   id: '927-font-weight-bold-addition',

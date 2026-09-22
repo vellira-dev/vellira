@@ -6,9 +6,11 @@ import type { ComponentType } from 'react';
 import { AccordionCatalogPreview } from '../components/Accordion/AccordionCatalogPreview';
 import { SwitchCatalogPreview } from '../components/Switch/SwitchCatalogPreview';
 import { TextareaCatalogPreview } from '../components/Textarea/TextareaCatalogPreview';
+import { ToastCatalogPreview } from '../components/Toast/ToastCatalogPreview';
 
 export const generatedCatalogPreviews = {
   accordion: AccordionCatalogPreview,
   switch: SwitchCatalogPreview,
   textarea: TextareaCatalogPreview,
+  toast: ToastCatalogPreview,
 } as const satisfies Record<string, ComponentType>;

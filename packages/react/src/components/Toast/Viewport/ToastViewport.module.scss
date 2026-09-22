@@ -1,0 +1,38 @@
+.viewport {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  padding: var(--space-4);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.viewport > * {
+  pointer-events: auto;
+}
+
+.viewport[data-position^='top'] {
+  top: 0;
+}
+
+.viewport[data-position^='bottom'] {
+  bottom: 0;
+  flex-direction: column-reverse;
+}
+
+.viewport[data-position$='start'] {
+  left: 0;
+}
+
+.viewport[data-position$='center'] {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.viewport[data-position$='end'] {
+  right: 0;
+}

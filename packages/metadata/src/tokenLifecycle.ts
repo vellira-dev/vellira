@@ -27,7 +27,7 @@ export type SemanticTokenLifecycleEntry = {
  */
 export const componentTokenLifecycle = {
   Toast: {
-    status: 'reserved',
+    status: 'current',
     public: true,
     owner: 'Toast',
     purpose: 'Reserved for the canonical Toast component token contract.',

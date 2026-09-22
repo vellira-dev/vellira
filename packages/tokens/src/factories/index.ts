@@ -13,4 +13,5 @@ export * from './components/createSelectTokens.js';
 export * from './components/createSwitchTokens.js';
 export * from './components/createTabsTokens.js';
 export * from './components/createTextareaTokens.js';
+export * from './components/createToastTokens.js';
 export * from './components/createTooltipTokens.js';

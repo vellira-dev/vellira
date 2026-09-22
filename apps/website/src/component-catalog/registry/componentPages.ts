@@ -9,6 +9,14 @@ import type { ComponentPlatform } from '../types';
 
 // component-page-imports
 import {
+  ToastAccessibility,
+  ToastDemo,
+  ToastExamples,
+  ToastUsage,
+  NativeToastDemo,
+  toastApi,
+} from '../components/Toast';
+import {
   TextareaAccessibility,
   TextareaDemo,
   TextareaExamples,
@@ -162,6 +170,60 @@ type ComponentPageConfig = {
 
 export const componentPages = {
   // component-page-entries
+  toast: {
+    name: 'Toast',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Toast for transient, non-blocking application feedback on React and React Native.',
+      description:
+        'Toast provides deterministic timing, manual dismissal, bounded stacking, semantic tones, optional actions, announcements, and reduced-motion behavior.',
+      whenToUse: [
+        'Confirm a completed background action without interrupting the current task.',
+        'Report a brief application-level warning or error that is not tied to one field.',
+        'Use FormField or inline feedback when the message must remain beside a control.',
+        'Use persistent application content for history, unread state, or notification-center behavior.',
+      ],
+      patterns: [
+        {
+          id: 'semantic-tones',
+          title: 'Semantic tones',
+          description:
+            'Choose neutral, info, success, warning, error, or danger based on message meaning.',
+        },
+        {
+          id: 'application-host',
+          title: 'Application host',
+          description:
+            'Compose one provider and viewport near the app root, then publish through useToast.',
+        },
+        {
+          id: 'action',
+          title: 'Optional action',
+          description:
+            'Offer one concise action when the result can be immediately reversed or inspected.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'The viewport portals into the canonical overlay layer and pauses timing while pointer or focus interaction is active.',
+        ],
+        'react-native': [
+          'The viewport stays native-oriented, uses the native overlay manager, and announces messages with AccessibilityInfo.',
+        ],
+      },
+      missingEvidence: [],
+    },
+    demos: {
+      react: ToastDemo,
+      'react-native': NativeToastDemo,
+    },
+    Usage: ToastUsage,
+    Examples: ToastExamples,
+    Accessibility: ToastAccessibility,
+    api: toastApi,
+    related: ['form-field', 'modal', 'popover'],
+  },
   textarea: {
     name: 'Textarea',
     discovery: {

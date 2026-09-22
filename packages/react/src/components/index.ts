@@ -5,4 +5,5 @@ export * from './Popover';
 export * from './RadioGroup';
 export * from './Select';
 export * from './Tabs';
+export * from './Toast';
 export * from './Tooltip';

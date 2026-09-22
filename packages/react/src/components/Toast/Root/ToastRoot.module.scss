@@ -1,0 +1,112 @@
+.root {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  box-sizing: border-box;
+  width: min(24rem, calc(100vw - 2rem));
+  padding: var(--space-4);
+  color: var(--toast-default-fg);
+  background: var(--toast-default-bg);
+  border: 1px solid var(--toast-default-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: toast-enter 180ms ease-out;
+}
+
+.icon {
+  display: flex;
+  align-self: start;
+  margin-top: var(--space-1);
+}
+
+.root[data-tone='info'] {
+  color: var(--status-info-fg);
+  background: var(--status-info-bg);
+  border-color: var(--status-info-border);
+}
+
+.root[data-tone='success'] {
+  color: var(--status-success-fg);
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
+}
+
+.root[data-tone='warning'] {
+  color: var(--status-warning-fg);
+  background: var(--status-warning-bg);
+  border-color: var(--status-warning-border);
+}
+
+.root[data-tone='error'],
+.root[data-tone='danger'] {
+  color: var(--status-error-fg);
+  background: var(--status-error-bg);
+  border-color: var(--toast-error-border);
+}
+
+.content {
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--font-weight-semibold);
+}
+
+.description,
+.body {
+  margin-top: var(--space-1);
+  color: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.action,
+.dismiss {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.action {
+  padding-inline: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.dismiss {
+  font-size: var(--font-size-lg);
+}
+
+.action:hover,
+.dismiss:hover {
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+}
+
+.action:focus-visible,
+.dismiss:focus-visible {
+  outline: 2px solid var(--toast-focus-ring);
+  outline-offset: 2px;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+}

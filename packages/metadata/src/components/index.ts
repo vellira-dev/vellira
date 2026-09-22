@@ -12,6 +12,7 @@ import { selectMetadata } from './Select.metadata';
 import { switchMetadata } from './Switch.metadata';
 import { tabsMetadata } from './Tabs.metadata';
 import { textareaMetadata } from './Textarea.metadata';
+import { toastMetadata } from './Toast.metadata';
 import { tooltipMetadata } from './Tooltip.metadata';
 
 export {
@@ -29,6 +30,7 @@ export {
   switchMetadata,
   tabsMetadata,
   textareaMetadata,
+  toastMetadata,
   tooltipMetadata,
 };
 
@@ -48,4 +50,5 @@ export const componentMetadata = [
   switchMetadata,
   accordionMetadata,
   textareaMetadata,
+  toastMetadata,
 ] as const;

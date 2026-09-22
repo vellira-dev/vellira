@@ -196,4 +196,17 @@ export const componentCatalogPresentation = [
       'react-native': 'https://docs.vellira.dev/react-native/textarea',
     },
   },
+  {
+    component: 'Toast',
+    slug: 'toast',
+    name: 'Toast',
+    description:
+      'Toast provides deterministic timing, manual dismissal, bounded stacking, semantic tones, optional actions, announcements, and reduced-motion behavior.',
+    category: 'feedback',
+    order: 999,
+    docs: {
+      react: 'https://docs.vellira.dev/react/toast',
+      'react-native': 'https://docs.vellira.dev/react-native/toast',
+    },
+  },
 ] as const satisfies readonly ComponentCatalogPresentationEntry[];

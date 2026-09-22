@@ -63,9 +63,12 @@ describe('public API', () => {
       'Tabs',
       'Textarea',
       'ThemeProvider',
+      'Toast',
       'Tooltip',
+      'createToastStore',
       'nativeThemes',
       'useTheme',
+      'useToast',
     ]);
   });
 
