@@ -847,7 +847,7 @@ import { Button, Portal, Tooltip } from '@vellira-ui/react';
 | `open`              | `boolean`                                                                  | No       | Controlled open state.                                           |
 | `defaultOpen`       | `boolean`                                                                  | No       | Initial uncontrolled open state.                                 |
 | `onOpenChange`      | `(open: boolean) => void`                                                  | No       | Called when the open state changes.                              |
-| `delay`             | `number \\| Partial<import("@vellira-ui/types").TooltipDelay \\| undefined>` | No       | Open delay in milliseconds, or explicit open/close delays.       |
+| `delay`             | `number \| Partial<import("@vellira-ui/types").TooltipDelay \| undefined>` | No       | Open delay in milliseconds, or explicit open/close delays.       |
 | `skipDelay`         | `number`                                                                   | No       | Delay window for future sibling tooltip delay skipping.          |
 | `offset`            | `number`                                                                   | No       | Distance between trigger and content in pixels.                  |
 | `interactive`       | `boolean`                                                                  | No       | Allows pointer interaction inside tooltip content.               |
