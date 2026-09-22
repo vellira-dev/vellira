@@ -6,7 +6,7 @@ import {
   Info as InfoIcon,
   Success as SuccessIcon,
   Warning as WarningIcon,
-} from '@vellira-ui/icons/web';
+} from '@vellira-ui/icons';
 import type { ToastCloseReason } from '@vellira-ui/types';
 
 import type { ToastProps } from '../types';
