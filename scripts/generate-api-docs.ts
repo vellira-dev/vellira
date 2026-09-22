@@ -1053,13 +1053,6 @@ function normalizeType(type: string) {
     .replace(/\s+\]/g, ']')
     .trim();
 
-  if (
-    (normalized.startsWith('((') || normalized.startsWith('(()')) &&
-    normalized.endsWith(')')
-  ) {
-    return normalized.slice(1, -1);
-  }
-
   return normalized;
 }
 
