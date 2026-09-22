@@ -20,6 +20,10 @@ if (splitProductionFixtures) {
 
 const tasks = [
   {
+    name: 'Actions workflow contracts',
+    args: ['exec', 'node', '--test', 'scripts/ci/workflow-noise.test.mjs'],
+  },
+  {
     name: 'tooling suite',
     args: baseArgs,
   },

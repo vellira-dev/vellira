@@ -3,7 +3,7 @@ name: CI Performance Budget
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
 
 permissions:
   actions: read
