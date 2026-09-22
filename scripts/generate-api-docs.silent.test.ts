@@ -349,24 +349,24 @@ export type ChoiceProps =
       targetOnly
     );
     expect(readGeneratedBlock(laterFirstRoot, targetSection)).toBe(targetOnly);
-    expect(targetOnly).toContain("`'off' \\| 'polite' \\| 'assertive'`");
-    expect(targetOnly).toContain("`2 \\| 'two' \\| 1 \\| 'one'`");
-    expect(targetOnly).toContain("`'enabled' \\| 'disabled'`");
+    expect(targetOnly).toContain("`'assertive' \\| 'off' \\| 'polite'`");
+    expect(targetOnly).toContain("`'one' \\| 'two' \\| 1 \\| 2`");
+    expect(targetOnly).toContain("`'disabled' \\| 'enabled'`");
     expect(targetOnly).not.toContain("'disabled' \\| undefined");
     expect(targetOnly).toContain('`SharedState`');
     expect(targetOnly).toContain(
-      "`Maybe<'enabled' \\| 'disabled'>`"
+      "`Maybe<'disabled' \\| 'enabled'>`"
     );
     expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
     expect(targetOnly).toContain(
-      "`(mode: 'off' \\| 'polite') => 'yes' \\| 'no'`"
+      "`(mode: 'off' \\| 'polite') => 'no' \\| 'yes'`"
     );
-    expect(targetOnly).toContain("`Promise<'off' \\| 'assertive'>`");
+    expect(targetOnly).toContain("`Promise<'assertive' \\| 'off'>`");
     expect(targetOnly).toContain(
-      "`readonly ['off' \\| 'polite', number \\| null]`"
+      "`readonly ['off' \\| 'polite', null \\| number]`"
     );
-    expect(targetOnly).toContain("`null \\| 'value'`");
-    expect(targetOnly).toContain("`'inherited-z' \\| 'inherited-a'`");
+    expect(targetOnly).toContain("`'value' \\| null`");
+    expect(targetOnly).toContain("`'inherited-a' \\| 'inherited-z'`");
   });
 
   it('keeps global generation and plan-scoped checks byte-identical in both directions', async () => {
@@ -421,13 +421,13 @@ export type ChoiceProps =
 
     const result = readGeneratedBlock(root, choiceSection);
 
-    expect(result).toContain("`'single' \\| 'multiple'`");
+    expect(result).toContain("`'multiple' \\| 'single'`");
     expect(result).toContain("`'off' \\| 'polite' \\| number[]`");
     expect(result).toContain(
-      "`(value: 'off' \\| 'polite') => void \\| (value: 'off' \\| 'assertive') => void`"
+      "`(value: 'assertive' \\| 'off') => void \\| (value: 'off' \\| 'polite') => void`"
     );
     expect(result).toContain(
-      "`Promise<'off' \\| 'polite'> \\| Promise<'off' \\| 'assertive'>`"
+      "`Promise<'assertive' \\| 'off'> \\| Promise<'off' \\| 'polite'>`"
     );
   });
 });
