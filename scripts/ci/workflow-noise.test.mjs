@@ -17,6 +17,39 @@ function section(source, key) {
   return match[1];
 }
 
+function effectiveJobCacheMode(source, jobName) {
+  const lines = source.split('\n');
+  let workflowMode = null;
+  let inJobs = false;
+  let inJob = false;
+
+  for (const line of lines) {
+    if (!inJobs) {
+      if (line === 'jobs:') {
+        inJobs = true;
+        continue;
+      }
+
+      const workflowMatch = line.match(/^cache-mode:\s*(\S+)\s*$/);
+      if (workflowMatch) workflowMode = workflowMatch[1];
+      continue;
+    }
+
+    const jobMatch = line.match(/^  ([a-zA-Z0-9_-]+):\s*$/);
+    if (jobMatch) {
+      inJob = jobMatch[1] === jobName;
+      continue;
+    }
+
+    if (!inJob) continue;
+
+    const jobModeMatch = line.match(/^    cache-mode:\s*(\S+)\s*$/);
+    if (jobModeMatch) return jobModeMatch[1];
+  }
+
+  return workflowMode;
+}
+
 function script(source, name) {
   const step = source.split(`      - name: ${name}\n`)[1];
   assert.ok(step, `Missing step: ${name}`);
@@ -159,6 +192,43 @@ shellTest('notification failure is reported explicitly without another deploymen
     assert.equal(result.status, 0, result.stderr);
     assert.ok(readFileSync(summary, 'utf8').includes(`**${outcome}**`));
     assert.equal(result.stdout.includes('::warning::'), outcome !== 'success');
+  }
+});
+
+test('diagnostics deny Actions cache access to selected candidate code', () => {
+  const source = workflow('component-diagnostics');
+  assert.equal(effectiveJobCacheMode(source, 'diagnose'), 'none');
+
+  const variants = [
+    ['omitted', source.replace('    cache-mode: none\n', ''), null],
+    ['read', source.replace('    cache-mode: none\n', '    cache-mode: read\n'), 'read'],
+    ['write', source.replace('    cache-mode: none\n', '    cache-mode: write\n'), 'write'],
+    [
+      'write-only',
+      source.replace('    cache-mode: none\n', '    cache-mode: write-only\n'),
+      'write-only',
+    ],
+    [
+      'permissive job override',
+      `cache-mode: none\n${source.replace(
+        '    cache-mode: none\n',
+        '    cache-mode: write\n'
+      )}`,
+      'write',
+    ],
+  ];
+
+  for (const [label, variant, expected] of variants) {
+    assert.equal(
+      effectiveJobCacheMode(variant, 'diagnose'),
+      expected,
+      `Unexpected effective cache mode for ${label}`
+    );
+    assert.notEqual(
+      effectiveJobCacheMode(variant, 'diagnose'),
+      'none',
+      `Unsafe cache variant unexpectedly remained isolated: ${label}`
+    );
   }
 });
 

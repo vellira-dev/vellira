@@ -34,7 +34,9 @@ work, but does not prevent a workflow card from being created for each push.
   redeploying production. The manual retry remains failure-reporting.
 - Supersession retains both `requested` and `in_progress`: queue admission and
   reruns must both remain covered. Removing either event requires a lifecycle
-  regression proving pending duplicate promotions cannot get stuck.
+  regression proving pending duplicate promotions cannot get stuck. A promotion
+  whose deploy job is already `completed` remains protected while post-deploy
+  follow-up jobs such as IndexNow finish.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
@@ -45,7 +47,9 @@ Use `Component Diagnostics` from the `main` workflow definition. Supply an exact
 40-character lowercase commit SHA from this repository and one fixed profile:
 `component-production`, `component-quality`, `token-semantic`, or `tooling`.
 Mutable refs and arbitrary shell commands are rejected. No deployment environment,
-repository secrets, write permissions, or restored dependency cache are provided.
+repository secrets or repository write permissions are provided. The diagnostic
+job declares `cache-mode: none`, so selected candidate code cannot restore or save
+GitHub Actions caches.
 
 The workflow verifies the checked-out SHA and publishes revision, profile, run
 identity, diagnostic output and outcome evidence with a 14-day retention window.
