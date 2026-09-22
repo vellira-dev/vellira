@@ -293,7 +293,7 @@ root exposes disabled state when `disabled` is set.
 | `labelInfo`        | `ReactNode`                  | No       | —                                 |
 | `optionalText`     | `ReactNode`                  | No       | —                                 |
 | `size`             | `'sm' \| 'md' \| 'lg'`       | No       | Input size.                       |
-| `labelPosition`    | `'start' \| 'top'`           | No       | —                                 |
+| `labelPosition`    | `'top' \| 'start'`           | No       | —                                 |
 | `invalid`          | `boolean`                    | No       | —                                 |
 | `orientation`      | `'vertical' \| 'horizontal'` | No       | —                                 |
 | `message`          | `ReactNode`                  | No       | —                                 |
