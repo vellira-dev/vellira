@@ -932,7 +932,8 @@ function removeTopLevelUndefined(type: string) {
 
   const members = unwrapped.types.filter(
     (member) =>
-      unwrapParenthesizedTypeNode(member).kind !== ts.SyntaxKind.UndefinedKeyword
+      unwrapParenthesizedTypeNode(member).kind !==
+      ts.SyntaxKind.UndefinedKeyword
   );
 
   if (members.length === unwrapped.types.length) {
