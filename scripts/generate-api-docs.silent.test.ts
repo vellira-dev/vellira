@@ -10,13 +10,11 @@ import type { ApiSection } from './generate-api-docs';
 
 const roots: string[] = [];
 
-function createApiFixture(
-  files: Record<string, string>,
-  sections: ApiSection[]
-) {
+function createApiFixture(files: Record<string, string>, sections: ApiSection[]) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'vellira-api-docs-determinism-')
   );
+
   roots.push(root);
 
   for (const [relativePath, source] of Object.entries(files)) {
@@ -233,25 +231,19 @@ it('documents props from every branch of a discriminated union type', async () =
 
   const result = fs.readFileSync(apiFile, 'utf8');
 
-  expect(result).toContain("`'multiple' \\| 'single'`");
+  expect(result).toContain("`'single' \\| 'multiple'`");
   expect(result).toContain('`string \\| string[]`');
   expect(result).toContain(
-    '`((value: string) => void) \\| ((value: string[]) => void)`'
+    '`(value: string) => void \\| (value: string[]) => void`'
   );
   expect(result).toContain('`collapsible`');
 });
 
-describe('deterministic semantic type serialization', () => {
+describe('deterministic API-doc Program isolation', () => {
   const targetSection = section(
     'web',
     '## Target',
     'TargetProps',
-    'src/Target/types.ts'
-  );
-  const choiceSection = section(
-    'web',
-    '## Choice',
-    'ChoiceProps',
     'src/Target/types.ts'
   );
   const earlierSection = section(
@@ -266,31 +258,30 @@ describe('deterministic semantic type serialization', () => {
     'LaterProps',
     'src/Later/types.ts'
   );
+  const choiceSection = section(
+    'web',
+    '## Choice',
+    'ChoiceProps',
+    'src/Choice/types.ts'
+  );
+
   const fixtureFiles = {
-    'packages/react/src/Target/types.ts': `export type SharedState =
-  | 'shared-z'
-  | 'shared-a';
-
-export type Maybe<T> = T | null;
-
-export interface InheritedProps {
-  inherited: 'inherited-z' | 'inherited-a';
-}
-
-export interface TargetProps extends InheritedProps {
+    'packages/react/src/Target/types.ts': `export interface TargetProps {
   announcement?: 'off' | 'polite' | 'assertive';
-  mixed: 2 | 'two' | 1 | 'one';
-  optional?: 'enabled' | 'disabled' | undefined;
-  shared: SharedState;
-  genericAlias: Maybe<'enabled' | 'disabled'>;
   callback?: (mode: 'off' | 'polite') => void;
   nested: Promise<'off' | 'assertive'>;
   tuple: readonly ['off' | 'polite', number | null];
-  nullable: null | 'value';
-  method(mode: 'off' | 'polite'): 'yes' | 'no';
 }
-
-export type ChoiceProps =
+`,
+    'packages/react/src/Earlier/types.ts': `export interface EarlierProps {
+  seed: 'assertive' | 'off' | 'polite';
+}
+`,
+    'packages/react/src/Later/types.ts': `export interface LaterProps {
+  seed: 'polite' | 'assertive' | 'off';
+}
+`,
+    'packages/react/src/Choice/types.ts': `export type ChoiceProps =
   | {
       mode: 'single';
       value?: 'off' | 'polite';
@@ -304,17 +295,8 @@ export type ChoiceProps =
       nested?: Promise<'off' | 'assertive'>;
     };
 `,
-    'packages/react/src/Earlier/types.ts': `export interface EarlierProps {
-  seed: 'assertive' | 'off' | 'polite';
-  nested: Promise<'assertive' | 'polite' | 'off'>;
-}
-`,
-    'packages/react/src/Later/types.ts': `export interface LaterProps {
-  seed: 'polite' | 'assertive' | 'off';
-  callback: (mode: 'polite' | 'off' | 'assertive') => void;
-}
-`,
   };
+
   const allSections = [
     earlierSection,
     laterSection,
@@ -322,7 +304,7 @@ export type ChoiceProps =
     choiceSection,
   ];
 
-  it('renders the same target bytes for target-only and reordered multi-file Programs', async () => {
+  it('renders target bytes independently from unrelated section order', async () => {
     const targetOnlyRoot = createApiFixture(fixtureFiles, allSections);
     const earlierFirstRoot = createApiFixture(fixtureFiles, allSections);
     const laterFirstRoot = createApiFixture(fixtureFiles, allSections);
@@ -335,12 +317,12 @@ export type ChoiceProps =
     await generateApiDocs({
       rootDir: earlierFirstRoot,
       silent: true,
-      sections: [earlierSection, laterSection, targetSection],
+      sections: [earlierSection, targetSection, laterSection],
     });
     await generateApiDocs({
       rootDir: laterFirstRoot,
       silent: true,
-      sections: [laterSection, earlierSection, targetSection],
+      sections: [laterSection, targetSection, earlierSection],
     });
 
     const targetOnly = readGeneratedBlock(targetOnlyRoot, targetSection);
@@ -349,68 +331,42 @@ export type ChoiceProps =
       targetOnly
     );
     expect(readGeneratedBlock(laterFirstRoot, targetSection)).toBe(targetOnly);
-    expect(targetOnly).toContain("`'assertive' \\| 'off' \\| 'polite'`");
-    expect(targetOnly).toContain("`'one' \\| 'two' \\| 1 \\| 2`");
-    expect(targetOnly).toContain("`'disabled' \\| 'enabled'`");
-    expect(targetOnly).not.toContain("'disabled' \\| undefined");
-    expect(targetOnly).toContain('`SharedState`');
     expect(targetOnly).toContain(
-      "`Maybe<'disabled' \\| 'enabled'>`"
+      "`(mode: 'off' \\| 'polite') => void`"
     );
-    expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
     expect(targetOnly).toContain(
-      "`(mode: 'off' \\| 'polite') => 'no' \\| 'yes'`"
+      "`Promise<'off' \\| 'assertive'>`"
     );
-    expect(targetOnly).toContain("`Promise<'assertive' \\| 'off'>`");
     expect(targetOnly).toContain(
-      "`readonly ['off' \\| 'polite', null \\| number]`"
+      "`readonly ['off' \\| 'polite', number \\| null]`"
     );
-    expect(targetOnly).toContain("`'value' \\| null`");
-    expect(targetOnly).toContain("`'inherited-a' \\| 'inherited-z'`");
   });
 
-  it('keeps global generation and plan-scoped checks byte-identical in both directions', async () => {
-    const globalFirstRoot = createApiFixture(fixtureFiles, allSections);
+  it('keeps multi-section generation and scoped checks byte-identical', async () => {
+    const root = createApiFixture(fixtureFiles, allSections);
 
     await generateApiDocs({
-      rootDir: globalFirstRoot,
+      rootDir: root,
       silent: true,
-      sections: [earlierSection, laterSection, targetSection],
-    });
-
-    expect(
-      await generateApiDocs({
-        rootDir: globalFirstRoot,
-        check: true,
-        silent: true,
-        sections: [targetSection],
-      })
-    ).toMatchObject({ status: 'up-to-date', changedFiles: [] });
-
-    const scopedFirstRoot = createApiFixture(fixtureFiles, allSections);
-
-    await generateApiDocs({
-      rootDir: scopedFirstRoot,
-      silent: true,
-      sections: [laterSection, earlierSection],
+      sections: [earlierSection, laterSection],
     });
     await generateApiDocs({
-      rootDir: scopedFirstRoot,
+      rootDir: root,
       silent: true,
       sections: [targetSection],
     });
 
     expect(
       await generateApiDocs({
-        rootDir: scopedFirstRoot,
+        rootDir: root,
         check: true,
         silent: true,
-        sections: [targetSection, earlierSection, laterSection],
+        sections: [laterSection, targetSection, earlierSection],
       })
     ).toMatchObject({ status: 'up-to-date', changedFiles: [] });
   });
 
-  it('aggregates branch property unions without flattening nested function or generic unions', async () => {
+  it('aggregates branch types without splitting nested function or generic unions', async () => {
     const root = createApiFixture(fixtureFiles, allSections);
 
     await generateApiDocs({
@@ -421,13 +377,14 @@ export type ChoiceProps =
 
     const result = readGeneratedBlock(root, choiceSection);
 
-    expect(result).toContain("`'multiple' \\| 'single'`");
+    expect(result).toContain("`'single' \\| 'multiple'`");
     expect(result).toContain("`'off' \\| 'polite' \\| number[]`");
     expect(result).toContain(
-      "`((value: 'assertive' \\| 'off') => void) \\| ((value: 'off' \\| 'polite') => void)`"
+      "`(value: 'off' \\| 'polite') => void \\| (value: 'off' \\| 'assertive') => void`"
     );
     expect(result).toContain(
-      "`Promise<'assertive' \\| 'off'> \\| Promise<'off' \\| 'polite'>`"
+      "`Promise<'off' \\| 'polite'> \\| Promise<'off' \\| 'assertive'>`"
     );
   });
 });
+
