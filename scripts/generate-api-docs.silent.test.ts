@@ -6,7 +6,60 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { generateApiDocs, section } from './generate-api-docs';
 
+import type { ApiSection } from './generate-api-docs';
+
 const roots: string[] = [];
+
+function createApiFixture(
+  files: Record<string, string>,
+  sections: ApiSection[]
+) {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-api-docs-determinism-')
+  );
+  roots.push(root);
+
+  for (const [relativePath, source] of Object.entries(files)) {
+    const filePath = path.join(root, relativePath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, source);
+  }
+
+  const sectionsByDoc = new Map<string, ApiSection[]>();
+
+  for (const item of sections) {
+    sectionsByDoc.set(item.docPath, [
+      ...(sectionsByDoc.get(item.docPath) ?? []),
+      item,
+    ]);
+  }
+
+  for (const [docPath, docSections] of sectionsByDoc) {
+    const filePath = path.join(root, docPath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(
+      filePath,
+      `# API\n\n${docSections
+        .map(
+          (item) =>
+            `${item.heading}\n\n<!-- api-docgen:start ${item.id} -->\n| Prop | Type | Required | Description |\n| ---- | ---- | -------- | ----------- |\n| \`placeholder\` | \`never\` | No | — |\n<!-- api-docgen:end ${item.id} -->`
+        )
+        .join('\n\n')}\n`
+    );
+  }
+
+  return root;
+}
+
+function readGeneratedBlock(root: string, item: ApiSection) {
+  const source = fs.readFileSync(path.join(root, item.docPath), 'utf8');
+  const startMarker = `<!-- api-docgen:start ${item.id} -->`;
+  const endMarker = `<!-- api-docgen:end ${item.id} -->`;
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start);
+
+  return source.slice(start, end + endMarker.length);
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -183,7 +236,188 @@ it('documents props from every branch of a discriminated union type', async () =
   expect(result).toContain("`'single' \\| 'multiple'`");
   expect(result).toContain('`string \\| string[]`');
   expect(result).toContain(
-    '`(value: string) => void \\| (value: string[]) => void`'
+    '`((value: string) => void) \\| ((value: string[]) => void)`'
   );
   expect(result).toContain('`collapsible`');
+});
+
+describe('deterministic semantic type serialization', () => {
+  const targetSection = section(
+    'web',
+    '## Target',
+    'TargetProps',
+    'src/Target/types.ts'
+  );
+  const choiceSection = section(
+    'web',
+    '## Choice',
+    'ChoiceProps',
+    'src/Target/types.ts'
+  );
+  const earlierSection = section(
+    'web',
+    '## Earlier',
+    'EarlierProps',
+    'src/Earlier/types.ts'
+  );
+  const laterSection = section(
+    'web',
+    '## Later',
+    'LaterProps',
+    'src/Later/types.ts'
+  );
+  const fixtureFiles = {
+    'packages/react/src/Target/types.ts': `export type SharedState =
+  | 'shared-z'
+  | 'shared-a';
+
+export interface InheritedProps {
+  inherited: 'inherited-z' | 'inherited-a';
+}
+
+export interface TargetProps extends InheritedProps {
+  announcement?: 'off' | 'polite' | 'assertive';
+  mixed: 2 | 'two' | 1 | 'one';
+  optional?: 'enabled' | 'disabled' | undefined;
+  shared: SharedState;
+  callback?: (mode: 'off' | 'polite') => void;
+  nested: Promise<'off' | 'assertive'>;
+  tuple: readonly ['off' | 'polite', number | null];
+  nullable: null | 'value';
+}
+
+export type ChoiceProps =
+  | {
+      mode: 'single';
+      value?: 'off' | 'polite';
+      onChange?: (value: 'off' | 'polite') => void;
+      nested?: Promise<'off' | 'polite'>;
+    }
+  | {
+      mode: 'multiple';
+      value?: number[];
+      onChange?: (value: 'off' | 'assertive') => void;
+      nested?: Promise<'off' | 'assertive'>;
+    };
+`,
+    'packages/react/src/Earlier/types.ts': `export interface EarlierProps {
+  seed: 'assertive' | 'off' | 'polite';
+  nested: Promise<'assertive' | 'polite' | 'off'>;
+}
+`,
+    'packages/react/src/Later/types.ts': `export interface LaterProps {
+  seed: 'polite' | 'assertive' | 'off';
+  callback: (mode: 'polite' | 'off' | 'assertive') => void;
+}
+`,
+  };
+  const allSections = [
+    earlierSection,
+    laterSection,
+    targetSection,
+    choiceSection,
+  ];
+
+  it('renders the same target bytes for target-only and reordered multi-file Programs', async () => {
+    const targetOnlyRoot = createApiFixture(fixtureFiles, allSections);
+    const earlierFirstRoot = createApiFixture(fixtureFiles, allSections);
+    const laterFirstRoot = createApiFixture(fixtureFiles, allSections);
+
+    await generateApiDocs({
+      rootDir: targetOnlyRoot,
+      silent: true,
+      sections: [targetSection],
+    });
+    await generateApiDocs({
+      rootDir: earlierFirstRoot,
+      silent: true,
+      sections: [earlierSection, laterSection, targetSection],
+    });
+    await generateApiDocs({
+      rootDir: laterFirstRoot,
+      silent: true,
+      sections: [laterSection, earlierSection, targetSection],
+    });
+
+    const targetOnly = readGeneratedBlock(targetOnlyRoot, targetSection);
+
+    expect(readGeneratedBlock(earlierFirstRoot, targetSection)).toBe(
+      targetOnly
+    );
+    expect(readGeneratedBlock(laterFirstRoot, targetSection)).toBe(targetOnly);
+    expect(targetOnly).toContain("`'off' \\| 'polite' \\| 'assertive'`");
+    expect(targetOnly).toContain("`2 \\| 'two' \\| 1 \\| 'one'`");
+    expect(targetOnly).toContain("`'enabled' \\| 'disabled'`");
+    expect(targetOnly).not.toContain("'disabled' \\| undefined");
+    expect(targetOnly).toContain('`SharedState`');
+    expect(targetOnly).toContain("`(mode: 'off' \\| 'polite') => void`");
+    expect(targetOnly).toContain("`Promise<'off' \\| 'assertive'>`");
+    expect(targetOnly).toContain(
+      "`readonly ['off' \\| 'polite', number \\| null]`"
+    );
+    expect(targetOnly).toContain("`null \\| 'value'`");
+    expect(targetOnly).toContain("`'inherited-z' \\| 'inherited-a'`");
+  });
+
+  it('keeps global generation and plan-scoped checks byte-identical in both directions', async () => {
+    const globalFirstRoot = createApiFixture(fixtureFiles, allSections);
+
+    await generateApiDocs({
+      rootDir: globalFirstRoot,
+      silent: true,
+      sections: [earlierSection, laterSection, targetSection],
+    });
+
+    expect(
+      await generateApiDocs({
+        rootDir: globalFirstRoot,
+        check: true,
+        silent: true,
+        sections: [targetSection],
+      })
+    ).toMatchObject({ status: 'up-to-date', changedFiles: [] });
+
+    const scopedFirstRoot = createApiFixture(fixtureFiles, allSections);
+
+    await generateApiDocs({
+      rootDir: scopedFirstRoot,
+      silent: true,
+      sections: [laterSection, earlierSection],
+    });
+    await generateApiDocs({
+      rootDir: scopedFirstRoot,
+      silent: true,
+      sections: [targetSection],
+    });
+
+    expect(
+      await generateApiDocs({
+        rootDir: scopedFirstRoot,
+        check: true,
+        silent: true,
+        sections: [targetSection, earlierSection, laterSection],
+      })
+    ).toMatchObject({ status: 'up-to-date', changedFiles: [] });
+  });
+
+  it('aggregates branch property unions without flattening nested function or generic unions', async () => {
+    const root = createApiFixture(fixtureFiles, allSections);
+
+    await generateApiDocs({
+      rootDir: root,
+      silent: true,
+      sections: [choiceSection],
+    });
+
+    const result = readGeneratedBlock(root, choiceSection);
+
+    expect(result).toContain("`'single' \\| 'multiple'`");
+    expect(result).toContain("`'off' \\| 'polite' \\| number[]`");
+    expect(result).toContain(
+      "`((value: 'off' \\| 'polite') => void) \\| ((value: 'off' \\| 'assertive') => void)`"
+    );
+    expect(result).toContain(
+      "`Promise<'off' \\| 'polite'> \\| Promise<'off' \\| 'assertive'>`"
+    );
+  });
 });
