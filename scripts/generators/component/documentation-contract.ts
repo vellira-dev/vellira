@@ -6,11 +6,11 @@ import { generateComponentDocs } from '../component-docs/generate-component-docs
 
 import {
   createComponentDocsContractFromPlan,
-  createComponentMetadataFromPlan,
   getComponentApiDocsTargets,
   getComponentDocsTargets,
   getGeneratedApiDocSections,
 } from './docs';
+import { createComponentMetadataFromPlan } from './metadata';
 
 import type { ComponentGenerationPlan } from './plan';
 

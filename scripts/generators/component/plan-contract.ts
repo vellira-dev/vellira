@@ -5,9 +5,9 @@ import { formatGeneratedContent } from '../format-generated-files';
 import {
   getComponentDocsContractVariable,
   renderComponentDocsContract,
-  resolvePlanCapabilities,
 } from './docs';
 import { checkComponentDocumentationContract } from './documentation-contract';
+import { createMetadataTemplateParamsFromPlan } from './metadata';
 import { renderMetadataTemplate } from './templates';
 
 import type { ComponentGenerationPlan } from './plan';
@@ -16,27 +16,9 @@ export async function checkGeneratedPlanContract(
   plan: ComponentGenerationPlan
 ): Promise<string[]> {
   const driftedFiles: string[] = [];
-  const platforms = plan.targets.map((target) => target.packageName);
-  const capabilities = resolvePlanCapabilities(plan);
-
   const expectedMetadata = await formatGeneratedContent(
     plan.metadataFile,
-    renderMetadataTemplate({
-      componentName: plan.componentName,
-      layer: plan.layer,
-      category: plan.category,
-      platforms,
-      profile: plan.profile,
-      capabilities,
-      semanticCapabilities: plan.semanticCapabilities,
-      platformSemanticCapabilities: plan.platformSemanticCapabilities,
-      typeOwnership: plan.typeOwnership,
-      dependencies: plan.dependencies,
-      icons: plan.icons,
-      tokens: plan.tokens,
-      assets: plan.assets,
-      componentTokens: plan.componentTokens,
-    })
+    renderMetadataTemplate(createMetadataTemplateParamsFromPlan(plan))
   );
 
   if (!fileMatches(plan.metadataFile, expectedMetadata)) {
