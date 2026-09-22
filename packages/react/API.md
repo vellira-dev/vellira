@@ -1109,15 +1109,15 @@ All interactive components support:
 
 <!-- api-docgen:start web.AccordionProps.AccordionProps -->
 
-| Prop            | Type                                                   | Required | Description                                                                 |
-| --------------- | ------------------------------------------------------ | -------- | --------------------------------------------------------------------------- |
-| `children`      | `ReactNode`                                            | No       | Content rendered inside the component.                                      |
-| `type`          | `'single' \| 'multiple'`                               | No       | Selection mode: single allows one item, multiple allows several open items. |
-| `value`         | `string \| string[]`                                   | No       | Controlled expanded value.                                                  |
-| `defaultValue`  | `string \| string[]`                                   | No       | Initial expanded value for uncontrolled usage.                              |
-| `onValueChange` | `(value: string) => void \| (value: string[]) => void` | No       | Called when the expanded value changes.                                     |
-| `collapsible`   | `boolean`                                              | No       | Allows the open item to collapse in single mode.                            |
-| `disabled`      | `boolean`                                              | No       | Disables every accordion item.                                              |
+| Prop            | Type                                                       | Required | Description                                                                 |
+| --------------- | ---------------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `children`      | `ReactNode`                                                | No       | Content rendered inside the component.                                      |
+| `type`          | `'single' \| 'multiple'`                                   | No       | Selection mode: single allows one item, multiple allows several open items. |
+| `value`         | `string \| string[]`                                       | No       | Controlled expanded value.                                                  |
+| `defaultValue`  | `string \| string[]`                                       | No       | Initial expanded value for uncontrolled usage.                              |
+| `onValueChange` | `((value: string) => void) \| ((value: string[]) => void)` | No       | Called when the expanded value changes.                                     |
+| `collapsible`   | `boolean`                                                  | No       | Allows the open item to collapse in single mode.                            |
+| `disabled`      | `boolean`                                                  | No       | Disables every accordion item.                                              |
 
 <!-- api-docgen:end web.AccordionProps.AccordionProps -->
 
