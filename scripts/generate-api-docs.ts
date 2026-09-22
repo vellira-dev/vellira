@@ -886,15 +886,17 @@ function formatTypeParts(
     return [];
   }
 
-  if (formattedMembers.length === 1) {
-    if (
-      declaredTypeNode &&
-      containsUnionTypeNode(declaredTypeNode) &&
-      !ts.isUnionTypeNode(unwrapParenthesizedTypeNode(declaredTypeNode))
-    ) {
-      return [createSourceTypePart(declaredTypeNode)];
-    }
+  if (
+    declaredTypeNode &&
+    containsUnionTypeNode(declaredTypeNode) &&
+    !ts.isUnionTypeNode(unwrapParenthesizedTypeNode(declaredTypeNode))
+  ) {
+    return [
+      createSourceTypePart(declaredTypeNode, declaration.getSourceFile()),
+    ];
+  }
 
+  if (formattedMembers.length === 1) {
     return [
       createPrintedTypePart(
         formattedMembers[0]!,
@@ -904,7 +906,7 @@ function formatTypeParts(
   }
 
   const declaredUnionMembers = declaredTypeNode
-    ? getDeclaredUnionMemberNodes(declaredTypeNode, checker).filter(
+    ? getDeclaredTopLevelUnionMemberNodes(declaredTypeNode).filter(
         (node) => !optional || !isUndefinedTypeNode(node)
       )
     : [];
@@ -912,7 +914,7 @@ function formatTypeParts(
   if (declaredUnionMembers.length > 0) {
     return declaredUnionMembers.map((node) =>
       containsUnionTypeNode(node)
-        ? createSourceTypePart(node)
+        ? createSourceTypePart(node, declaration.getSourceFile())
         : createSemanticTypePart(
             checker.getTypeFromTypeNode(node),
             declaration,
@@ -943,46 +945,12 @@ function parseFormattedTypeNode(type: string) {
   return declaration.type;
 }
 
-function getDeclaredUnionMemberNodes(
-  typeNode: ts.TypeNode,
-  checker: ts.TypeChecker,
-  visitedSymbols = new Set<ts.Symbol>()
+function getDeclaredTopLevelUnionMemberNodes(
+  typeNode: ts.TypeNode
 ): readonly ts.TypeNode[] {
   const unwrapped = unwrapParenthesizedTypeNode(typeNode);
 
-  if (ts.isUnionTypeNode(unwrapped)) {
-    return unwrapped.types;
-  }
-
-  if (!ts.isTypeReferenceNode(unwrapped)) {
-    return [];
-  }
-
-  let symbol = checker.getSymbolAtLocation(unwrapped.typeName);
-
-  if (!symbol) {
-    return [];
-  }
-
-  if ((symbol.flags & ts.SymbolFlags.Alias) !== 0) {
-    symbol = checker.getAliasedSymbol(symbol);
-  }
-
-  if (visitedSymbols.has(symbol)) {
-    return [];
-  }
-
-  visitedSymbols.add(symbol);
-
-  const aliasDeclaration = symbol.declarations?.find(ts.isTypeAliasDeclaration);
-
-  return aliasDeclaration
-    ? getDeclaredUnionMemberNodes(
-        aliasDeclaration.type,
-        checker,
-        visitedSymbols
-      )
-    : [];
+  return ts.isUnionTypeNode(unwrapped) ? unwrapped.types : [];
 }
 
 function getUnionBranches(
@@ -1082,9 +1050,12 @@ function containsUnionTypeNode(typeNode: ts.TypeNode) {
   return result;
 }
 
-function createSourceTypePart(typeNode: ts.TypeNode): FormattedTypePart {
+function createSourceTypePart(
+  typeNode: ts.TypeNode,
+  sourceFile: ts.SourceFile
+): FormattedTypePart {
   return {
-    text: normalizeType(typeNode.getText(typeNode.getSourceFile())),
+    text: printTypeNode(typeNode, sourceFile),
     requiresUnionGrouping: requiresUnionGrouping(typeNode),
   };
 }
