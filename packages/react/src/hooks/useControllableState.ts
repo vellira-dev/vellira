@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 // Provides a shared API for controlled and uncontrolled state.
 interface UseControllableStateProps<T> {
@@ -13,6 +13,12 @@ export const useControllableState = <T>({
   onChange,
 }: UseControllableStateProps<T>) => {
   const [internalValue, setInternalValue] = useState<T>(defaultValue);
+  const onChangeRef = useRef(onChange);
+
+  // Publish only committed callbacks, without changing the setter identity.
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const isControlled = value !== undefined;
 
@@ -23,9 +29,9 @@ export const useControllableState = <T>({
       if (!isControlled) {
         setInternalValue(next);
       }
-      onChange?.(next);
+      onChangeRef.current?.(next);
     },
-    [isControlled, onChange]
+    [isControlled]
   );
 
   return [currentValue, setValue] as const;
