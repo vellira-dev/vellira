@@ -379,7 +379,7 @@ describe('deterministic API-doc Program isolation', () => {
     expect(result).toContain("`'single' \\| 'multiple'`");
     expect(result).toContain("`'off' \\| 'polite' \\| number[]`");
     expect(result).toContain(
-      "`(value: 'off' \\| 'polite') => void \\| (value: 'off' \\| 'assertive') => void`"
+      "`((value: 'off' \\| 'polite') => void) \\| ((value: 'off' \\| 'assertive') => void)`"
     );
     expect(result).toContain(
       "`Promise<'off' \\| 'polite'> \\| Promise<'off' \\| 'assertive'>`"
