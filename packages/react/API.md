@@ -841,21 +841,21 @@ import { Button, Portal, Tooltip } from '@vellira-ui/react';
 
 <!-- api-docgen:start web.TooltipProps.Tooltip -->
 
-| Prop                | Type                                                          | Required | Description                                                      |
-| ------------------- | ------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
-| `children`          | `ReactNode`                                                   | Yes      | Content rendered inside the component.                           |
-| `open`              | `boolean`                                                     | No       | Controlled open state.                                           |
-| `defaultOpen`       | `boolean`                                                     | No       | Initial uncontrolled open state.                                 |
-| `onOpenChange`      | `(open: boolean) => void`                                     | No       | Called when the open state changes.                              |
-| `delay`             | `number \| Partial<import("@vellira-ui/types").TooltipDelay>` | No       | Open delay in milliseconds, or explicit open/close delays.       |
-| `skipDelay`         | `number`                                                      | No       | Delay window for future sibling tooltip delay skipping.          |
-| `offset`            | `number`                                                      | No       | Distance between trigger and content in pixels.                  |
-| `interactive`       | `boolean`                                                     | No       | Allows pointer interaction inside tooltip content.               |
-| `portal`            | `boolean`                                                     | No       | Reserved for automatic portal rendering in higher-level helpers. |
-| `avoidCollisions`   | `boolean`                                                     | No       | Allows the tooltip to flip or shift to stay in viewport.         |
-| `matchTriggerWidth` | `boolean`                                                     | No       | Matches tooltip content width to the trigger width.              |
-| `placement`         | `FloatingPlacement`                                           | No       | Preferred tooltip placement.                                     |
-| `disabled`          | `boolean`                                                     | No       | Disables interaction.                                            |
+| Prop                | Type                                                                       | Required | Description                                                      |
+| ------------------- | -------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `children`          | `ReactNode`                                                                | Yes      | Content rendered inside the component.                           |
+| `open`              | `boolean`                                                                  | No       | Controlled open state.                                           |
+| `defaultOpen`       | `boolean`                                                                  | No       | Initial uncontrolled open state.                                 |
+| `onOpenChange`      | `(open: boolean) => void`                                                  | No       | Called when the open state changes.                              |
+| `delay`             | `number \\| Partial<import("@vellira-ui/types").TooltipDelay \\| undefined>` | No       | Open delay in milliseconds, or explicit open/close delays.       |
+| `skipDelay`         | `number`                                                                   | No       | Delay window for future sibling tooltip delay skipping.          |
+| `offset`            | `number`                                                                   | No       | Distance between trigger and content in pixels.                  |
+| `interactive`       | `boolean`                                                                  | No       | Allows pointer interaction inside tooltip content.               |
+| `portal`            | `boolean`                                                                  | No       | Reserved for automatic portal rendering in higher-level helpers. |
+| `avoidCollisions`   | `boolean`                                                                  | No       | Allows the tooltip to flip or shift to stay in viewport.         |
+| `matchTriggerWidth` | `boolean`                                                                  | No       | Matches tooltip content width to the trigger width.              |
+| `placement`         | `FloatingPlacement`                                                        | No       | Preferred tooltip placement.                                     |
+| `disabled`          | `boolean`                                                                  | No       | Disables interaction.                                            |
 
 <!-- api-docgen:end web.TooltipProps.Tooltip -->
 
