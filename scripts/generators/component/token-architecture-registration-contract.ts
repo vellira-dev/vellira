@@ -11,6 +11,8 @@ import { formatGeneratedContent } from '../format-generated-files';
 
 import { getGeneratedComponentTokenFactoryStateKeys } from './component-token-logical-paths';
 import type { ComponentGenerationPlan } from './plan';
+import { renderThemeComponentTokensTemplate } from './templates';
+import { generatedThemeTokenDependencyAudit } from './token-dependency-contract';
 
 export type GeneratedRegistration = {
   componentTokens: 'standard' | 'boolean-control' | 'disclosure';
@@ -73,6 +75,25 @@ export function createGeneratedComponentFactoryArchitectureRegistration(
 
   const component = lowerCamel(plan.componentName);
   const factory = `create${plan.componentName}Tokens`;
+  const generatedThemeSource = renderThemeComponentTokensTemplate({
+    componentName: plan.componentName,
+    componentTokens: plan.componentTokens,
+  });
+  const dependencyFindings =
+    generatedThemeTokenDependencyAudit(generatedThemeSource);
+  const externalFactories = [
+    ...generatedThemeSource.matchAll(
+      /factories\/components\/(create[A-Z][A-Za-z0-9]*Tokens)\.js/g
+    ),
+  ]
+    .map((match) => match[1]!)
+    .filter((importedFactory) => importedFactory !== factory);
+
+  if (dependencyFindings.length > 0 || externalFactories.length > 0) {
+    throw new Error(
+      `component-token-architecture-dependency-unresolved: ${factory}`
+    );
+  }
 
   return {
     componentTokens: plan.componentTokens,

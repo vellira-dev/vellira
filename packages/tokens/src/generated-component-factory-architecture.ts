@@ -10,10 +10,8 @@ export type GeneratedComponentFactoryArchitectureRegistration = {
     factory: string;
     component: string;
     file: string;
-    primitiveColorUsage: readonly (
-      'none' | 'intent-palette-construction' | 'component-owned-presentation'
-    )[];
-    unresolved: readonly string[];
+    primitiveColorUsage: readonly ['none'];
+    unresolved: readonly [];
   };
 };
 
