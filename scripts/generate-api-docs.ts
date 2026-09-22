@@ -22,7 +22,6 @@ type PropRow = {
 
 type FormattedTypePart = {
   text: string;
-  requiresUnionGrouping: boolean;
 };
 
 const fallbackDescriptions: Record<string, string> = {
@@ -1058,7 +1057,6 @@ function createSourceTypePart(
 ): FormattedTypePart {
   return {
     text: printTypeNode(typeNode, sourceFile),
-    requiresUnionGrouping: requiresUnionGrouping(typeNode),
   };
 }
 
@@ -1083,7 +1081,6 @@ function createSemanticTypePart(
 
     return {
       text: printTypeNode(canonicalTypeNode, declaration.getSourceFile()),
-      requiresUnionGrouping: requiresUnionGrouping(canonicalTypeNode),
     };
   }
 
@@ -1096,7 +1093,6 @@ function createSemanticTypePart(
           ts.TypeFormatFlags.UseSingleQuotesForStringLiteralType
       )
     ),
-    requiresUnionGrouping: false,
   };
 }
 
@@ -1106,7 +1102,6 @@ function createPrintedTypePart(
 ): FormattedTypePart {
   return {
     text: printTypeNode(typeNode, sourceFile),
-    requiresUnionGrouping: requiresUnionGrouping(typeNode),
   };
 }
 
@@ -1161,20 +1156,6 @@ function printTypeNode(typeNode: ts.TypeNode, sourceFile: ts.SourceFile) {
   );
 }
 
-function requiresUnionGrouping(typeNode: ts.TypeNode) {
-  const unwrapped = unwrapParenthesizedTypeNode(typeNode);
-
-  if (unwrapped !== typeNode) {
-    return false;
-  }
-
-  return (
-    ts.isFunctionTypeNode(typeNode) ||
-    ts.isConstructorTypeNode(typeNode) ||
-    ts.isConditionalTypeNode(typeNode)
-  );
-}
-
 function renderUnionTypeParts(parts: readonly FormattedTypePart[]) {
   const uniqueParts = parts.filter(
     (part, index) =>
@@ -1185,9 +1166,7 @@ function renderUnionTypeParts(parts: readonly FormattedTypePart[]) {
     return uniqueParts[0]!.text;
   }
 
-  return uniqueParts
-    .map((part) => (part.requiresUnionGrouping ? `(${part.text})` : part.text))
-    .join(' | ');
+  return uniqueParts.map((part) => part.text).join(' | ');
 }
 
 function compareFormattedTypeParts(
