@@ -200,14 +200,37 @@ test('minimal title validator reuses canonical config and locked root resolution
     assert.ok(rootPackage.devDependencies[dependency].endsWith(exact));
   }
 
+  const rootImporter = lock
+    .split('\n  .:\n')[1]
+    ?.split('\n  apps/docs:\n')[0];
   const validatorImporter = lock
     .split('\n  tools/pr-title-validator:\n')[1]
     ?.split('\n  packages/react:\n')[0];
+  assert.ok(rootImporter, 'Missing root lock importer');
   assert.ok(validatorImporter, 'Missing locked PR-title validator importer');
-  assert.match(
-    validatorImporter,
-    /version: 21\.2\.2\(@types\/node@26\.2\.0\)\(conventional-commits-parser@7\.1\.2\)\(typescript@6\.0\.3\)/
+
+  function resolvedVersion(importer, dependency) {
+    const marker = `      '${dependency}':\n`;
+    const section = importer.split(marker)[1];
+    assert.ok(section, `Missing locked dependency: ${dependency}`);
+    const versionLine = section
+      .split('\n')
+      .find((line) => line.trim().startsWith('version: '));
+    assert.ok(versionLine, `Missing locked resolution: ${dependency}`);
+    return versionLine.trim().slice('version: '.length);
+  }
+
+  assert.equal(
+    resolvedVersion(validatorImporter, '@commitlint/cli'),
+    resolvedVersion(rootImporter, '@commitlint/cli'),
+    'Validator CLI resolution must equal root canonical resolution'
   );
+  assert.equal(
+    resolvedVersion(validatorImporter, '@commitlint/config-conventional'),
+    resolvedVersion(rootImporter, '@commitlint/config-conventional'),
+    'Validator conventional config resolution must equal root canonical resolution'
+  );
+
   assert.match(validatorImporter, /specifier: 21\.2\.2/);
   assert.match(validatorImporter, /specifier: 26\.2\.0/);
   assert.match(validatorImporter, /specifier: 7\.1\.2/);
