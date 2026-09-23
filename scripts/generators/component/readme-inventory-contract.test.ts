@@ -31,6 +31,19 @@ function plan(
   } as never;
 }
 
+function inventoryRow(readme: string, name: string) {
+  const line = readme
+    .split('\n')
+    .find((candidate) => candidate.startsWith(`| ${name}`));
+
+  if (!line) return undefined;
+
+  return line
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim());
+}
+
 describe('Generator V2 README inventory contract', () => {
   it('adds the next component in canonical name order', () => {
     const result = renderSynchronizedReadmeInventory(
@@ -38,8 +51,8 @@ describe('Generator V2 README inventory contract', () => {
       plan('Notice', ['react', 'react-native'])
     );
 
-    expect(result).toMatch(/^\| Notice\s+\|\s+✅\s+\|\s+✅\s+\|$/m);
-    expect(result).not.toMatch(/^completely wrong$/m);
+    expect(inventoryRow(result, 'Notice')).toEqual(['Notice', '✅', '✅']);
+    expect(inventoryRow(result, 'completely wrong')).toBeUndefined();
     expect(result.indexOf('| Button')).toBeLessThan(result.indexOf('| Notice'));
     expect(result.indexOf('| Notice')).toBeLessThan(
       result.indexOf('| Tooltip')
@@ -52,8 +65,7 @@ describe('Generator V2 README inventory contract', () => {
       plan('WebOnly', ['react'])
     );
 
-    expect(result).toMatch(/^\| WebOnly\s+\|\s+✅\s+\|\s+—\s+\|$/m);
-    expect(result).not.toMatch(/^\| WebOnly\s+\|\s+✅\s+\|\s+✅\s+\|$/m);
+    expect(inventoryRow(result, 'WebOnly')).toEqual(['WebOnly', '✅', '—']);
   });
 
   it('updates an existing row instead of duplicating it', () => {
@@ -68,7 +80,7 @@ describe('Generator V2 README inventory contract', () => {
 
     expect(first).toBe(second);
     expect(first.match(/^\| Button/mg)).toHaveLength(1);
-    expect(first).toMatch(/^\| Button\s+\|\s+✅\s+\|\s+—\s+\|$/m);
+    expect(inventoryRow(first, 'Button')).toEqual(['Button', '✅', '—']);
   });
 
   it('fails closed when generated inventory markers are unavailable', () => {
