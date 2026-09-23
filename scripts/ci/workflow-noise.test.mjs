@@ -123,9 +123,14 @@ test('required title check keeps exact-head metadata semantics with trusted auth
     /pnpm --filter @vellira-ci\/pr-title-validator run validate/
   );
   assert.match(source, /pnpm exec commitlint --config commitlint\.config\.js/);
+  assert.equal(
+    source.match(/pnpm install --frozen-lockfile/g)?.length,
+    2,
+    'Only isolated and bootstrap filtered installs are allowed'
+  );
   assert.doesNotMatch(
     source,
-    /pnpm install --frozen-lockfile(?:\s+--ignore-scripts)?\s*$|pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
+    /pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
   );
   assert.equal(
     section(source, 'permissions').trim(),
@@ -178,7 +183,7 @@ test('minimal title validator reuses canonical config and locked root resolution
   assert.equal(validator.private, true);
   assert.equal(
     validator.scripts.validate,
-    'commitlint --config ../../commitlint.config.js'
+    'commitlint --config commitlint.config.js'
   );
   assert.match(
     wrapper,

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "validate": "commitlint --config ../../commitlint.config.js"
+    "validate": "commitlint --config commitlint.config.js"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.2",
