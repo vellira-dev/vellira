@@ -67,6 +67,17 @@ function createLayerBarrels(
     path.join(root, 'packages/tokens/package.json')
   );
 
+  fs.writeFileSync(
+    path.join(root, 'README.md'),
+    [
+      '<!-- vellira:component-inventory:start -->',
+      '| Component | React | React Native |',
+      '| --------- | :---: | :----------: |',
+      '<!-- vellira:component-inventory:end -->',
+      '',
+    ].join('\n')
+  );
+
   for (const packageName of ['react', 'react-native']) {
     const layerDir = path.join(root, 'packages', packageName, 'src', layer);
 

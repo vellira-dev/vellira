@@ -18,22 +18,30 @@ describe('web overlay templates', () => {
     expect(result).not.toContain('onOpenChange?: (open: boolean) => void');
   });
 
-  it('keeps browser-specific overlay behavior props in the web adapter', () => {
+  it('keeps platform-specific overlay behavior props in the adapter', () => {
     const result = renderWebOverlayTypesTemplate({
       componentName: 'Dialog',
     });
 
-    expect(result).toContain('closeOnEscape?: boolean');
     expect(result).toContain('closeOnOutsidePress?: boolean');
     expect(result).toContain('restoreFocus?: boolean');
+    expect(result).toContain('closeOnEscape?: boolean');
   });
 
-  it('renders a web overlay root scaffold', () => {
+  it('renders an overlay scaffold using the canonical state hook', () => {
     const result = renderWebOverlayComponentTemplate({
       componentName: 'Dialog',
     });
 
-    expect(result).toContain("import { useState } from 'react'");
+    expect(result).toContain("import { useControllableState } from '#hooks'");
+    expect(result).toContain(
+      'const [resolvedOpen, setOpen] = useControllableState('
+    );
+    expect(result).not.toContain('useState');
+    expect(result).not.toContain('const setOpen =');
+    expect(result).toContain('value: open');
+    expect(result).toContain('defaultValue: defaultOpen');
+    expect(result).toContain('onChange: onOpenChange');
     expect(result).toContain('<div');
     expect(result).toContain("data-state={resolvedOpen ? 'open' : 'closed'}");
     expect(result).toContain('closeOnEscape = true');

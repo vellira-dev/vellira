@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { withRemoteArchive } from './cloudflare-archive-client.mjs';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
+import { assertFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
 import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
 import {
   archiveAssets,
@@ -18,6 +19,12 @@ const root = path.resolve(import.meta.dirname, '..');
 await fs.rm(path.join(root, '.open-next/vellira-build.json'), { force: true });
 const configPath = path.resolve(root, process.argv[2] ?? 'wrangler.jsonc');
 const config = readDeploymentConfig(configPath);
+const freshnessContext = {
+  configPath,
+  candidateSource: process.env.CANDIDATE_SOURCE,
+  candidateSha: process.env.CANDIDATE_SHA,
+  cwd: root,
+};
 
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, { cwd: root, env, stdio: 'inherit' });
@@ -54,6 +61,7 @@ assert.equal(
   'Cannot identify the active deployment; activation is blocked'
 );
 const previousBuildId = (await previous.text()).trim();
+assertFreshProductionCandidate(freshnessContext);
 await withRemoteArchive(config, async (bucket, bucketName) => {
   // Adoption must not orphan the current live graph. Historical backfill is an
   // explicit archive-only operation, not a silent best-effort migration.
@@ -80,6 +88,7 @@ run(
   ['exec', 'wrangler', 'deploy', '--dry-run', `--config=${configPath}`],
   { ...process.env, OPEN_NEXT_DEPLOY: 'true' }
 );
+assertFreshProductionCandidate(freshnessContext);
 run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
   ...process.env,
   OPEN_NEXT_DEPLOY: 'true',
