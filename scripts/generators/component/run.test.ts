@@ -1484,9 +1484,7 @@ describe('component generator README lifecycle ownership', () => {
     ).rejects.toThrow('component-readme-inventory-file-missing: README.md');
 
     expect(
-      fs.existsSync(
-        path.join(root, 'packages/react/src/primitives/Avatar')
-      )
+      fs.existsSync(path.join(root, 'packages/react/src/primitives/Avatar'))
     ).toBe(false);
     expect(
       fs.existsSync(
@@ -1529,9 +1527,7 @@ describe('component generator README lifecycle ownership', () => {
     ).rejects.toThrow('component-readme-inventory-table-invalid');
 
     expect(
-      fs.existsSync(
-        path.join(root, 'packages/react/src/primitives/Avatar')
-      )
+      fs.existsSync(path.join(root, 'packages/react/src/primitives/Avatar'))
     ).toBe(false);
     expect(
       fs.existsSync(
