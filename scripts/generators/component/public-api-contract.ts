@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-// @ts-expect-error Shared public-API authority is a native ESM module.
 import {
   parseRuntimeExportExpectation,
   runtimeExportExpectationPattern,
