@@ -36,11 +36,19 @@ work, but does not prevent a workflow card from being created for each push.
   failure is visible in that job and its summary but does not invalidate an
   already verified deployment. Retry `Submit URLs to IndexNow` manually, without
   redeploying production. The manual retry remains failure-reporting.
-- Supersession retains both `requested` and `in_progress`: queue admission and
-  reruns must both remain covered. Removing either event requires a lifecycle
-  regression proving pending duplicate promotions cannot get stuck. A promotion
-  whose deploy job is already `completed` remains protected while post-deploy
-  follow-up jobs such as IndexNow finish.
+- Production admission is read-only. The oldest active current-main candidate owns
+  the approval path; same-SHA reruns and stale candidates fail closed before
+  environment approval. Vellira does not automatically cancel or reject a
+  production environment review: GitHub environment review is a human reviewer
+  boundary and the default workflow token is not treated as reviewer authority.
+  If `main` advances while an older production approval is waiting, the reviewer
+  should reject that stale approval. If it is accidentally approved, the deploy
+  job rechecks current `main` after approval. The deployment script also checks
+  authoritative remote `main` before remote archive mutation and again after
+  the Wrangler dry-run immediately before the real activation. A staging-derived
+  stale SHA therefore cannot reach production after script entry. Emergency
+  recovery is an explicit bypass. Admission and deploy jobs retain separate
+  non-cancelling concurrency groups.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.

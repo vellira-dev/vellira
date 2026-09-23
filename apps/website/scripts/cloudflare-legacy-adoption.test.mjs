@@ -448,7 +448,8 @@ test('dedicated workflow keeps every normal build/browser gate and target serial
     );
   const normal = await workflow('deploy-website-cloudflare-production.yml');
   const adoption = await workflow('adopt-website-cloudflare-legacy.yml');
-  assert.deepEqual(adoption.concurrency, normal.concurrency);
+  assert.equal(normal.concurrency, undefined);
+  assert.deepEqual(adoption.concurrency, normal.jobs.deploy.concurrency);
   assert.deepEqual(Object.keys(adoption.on), ['workflow_dispatch']);
   assert.match(adoption.jobs.deploy.if, /refs\/heads\/main/);
   assert.match(
