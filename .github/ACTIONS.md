@@ -43,9 +43,12 @@ work, but does not prevent a workflow card from being created for each push.
   boundary and the default workflow token is not treated as reviewer authority.
   If `main` advances while an older production approval is waiting, the reviewer
   should reject that stale approval. If it is accidentally approved, the deploy
-  job rechecks current `main` after approval and again immediately before
-  `cloudflare-deploy.mjs`, so a stale staging SHA cannot mutate production.
-  Admission and deploy jobs retain separate non-cancelling concurrency groups.
+  job rechecks current `main` after approval. The deployment script also checks
+  authoritative remote `main` before remote archive mutation and again after
+  the Wrangler dry-run immediately before the real activation. A staging-derived
+  stale SHA therefore cannot reach production after script entry. Emergency
+  recovery is an explicit bypass. Admission and deploy jobs retain separate
+  non-cancelling concurrency groups.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
