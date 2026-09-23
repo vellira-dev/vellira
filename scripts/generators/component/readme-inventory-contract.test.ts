@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  renderSynchronizedReadmeInventory,
-} from './readme-inventory-contract';
+import { renderSynchronizedReadmeInventory } from './readme-inventory-contract';
 
 const fixture = `# Fixture
 

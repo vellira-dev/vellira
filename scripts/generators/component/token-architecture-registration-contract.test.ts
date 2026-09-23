@@ -165,10 +165,7 @@ describe('Generator V2 component token architecture registration', () => {
       file,
       fs
         .readFileSync(file, 'utf8')
-        .replace(
-          '[] as const',
-          `${JSON.stringify([generated])} as const`
-        )
+        .replace('[] as const', `${JSON.stringify([generated])} as const`)
     );
 
     await expect(

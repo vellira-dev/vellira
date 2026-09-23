@@ -107,7 +107,11 @@ export function renderSynchronizedReadmeInventory(
   lines.splice(headerIndex, rowEnd - headerIndex, ...table);
   const nextBlock = lines.join('\n');
 
-  return readme.slice(0, start) + nextBlock + readme.slice(end + END_MARKER.length);
+  return (
+    readme.slice(0, start) +
+    nextBlock +
+    readme.slice(end + END_MARKER.length)
+  );
 }
 
 export function checkReadmeInventoryContract(

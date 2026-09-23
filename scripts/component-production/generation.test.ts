@@ -68,18 +68,16 @@ function createRequiredRepositoryStructure(
     ),
     path.join(preservationDir, 'token-preservation-baseline.v1.json')
   );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
-    path.join(preservationDir, 'token-migrations.ts')
+  fs.writeFileSync(
+    path.join(preservationDir, 'token-migrations.ts'),
+    'export const generatedComponentTokenAdditionMigrationsV1 = [] as const;\n'
   );
-  fs.copyFileSync(
-    path.resolve(
-      'packages/tokens/src/generated-component-factory-architecture.ts'
-    ),
+  fs.writeFileSync(
     path.join(
       root,
       'packages/tokens/src/generated-component-factory-architecture.ts'
-    )
+    ),
+    'export const generatedComponentFactoryArchitectureV1 = [] as const;\n'
   );
   fs.copyFileSync(
     path.resolve('packages/tokens/package.json'),
@@ -153,6 +151,24 @@ describe('public API', () => {
   fs.writeFileSync(
     path.join(root, 'apps', 'docs', 'src', '.vitepress', 'config.ts'),
     '// vitepress config sentinel\n'
+  );
+  fs.writeFileSync(
+    path.join(root, 'README.md'),
+    [
+      '# Fixture',
+      '',
+      '<!-- vellira:component-inventory:start -->',
+      '',
+      'Platform availability is generated.',
+      '',
+      '> `Portal` and `PortalProvider` are support primitives used by overlay components.',
+      '',
+      '| Component | React | React Native |',
+      '| --------- | :---: | :----------: |',
+      '',
+      '<!-- vellira:component-inventory:end -->',
+      '',
+    ].join('\n')
   );
 }
 
