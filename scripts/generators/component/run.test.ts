@@ -1448,6 +1448,92 @@ export { switchDocs };
   });
 });
 
+describe('component generator README lifecycle ownership', () => {
+  const options = {
+    componentName: 'Avatar',
+    platform: 'both',
+    layer: 'primitives',
+    category: 'data-display',
+    profile: 'base',
+    parts: [],
+    force: false,
+  } as const;
+
+  it('writes README inventory and reports it as an updated artifact', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+
+    const result = await runComponentGenerator({
+      root,
+      options,
+    });
+
+    const row = readFile(readmeFile)
+      .split('\n')
+      .find((line) => line.startsWith('| Avatar'));
+
+    expect(result.updatedFiles).toContain(readmeFile);
+    expect(row).toBeDefined();
+    expect(
+      row
+        ?.split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim())
+    ).toEqual(['Avatar', '✅', '✅']);
+  });
+
+  it('owns README in dry-run without mutating repository bytes', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+    const before = readFile(readmeFile);
+
+    const result = await runComponentGenerator({
+      root,
+      options: {
+        ...options,
+        dryRun: true,
+      },
+    });
+
+    expect(result.dryRun).toBe(true);
+    expect(result.check).toBe(false);
+    expect(result.updatedFiles).toContain(readmeFile);
+    expect(readFile(readmeFile)).toBe(before);
+  });
+
+  it('detects README drift in check mode without repairing it', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+
+    await runComponentGenerator({
+      root,
+      options,
+    });
+
+    const drifted = readFile(readmeFile)
+      .split('\n')
+      .filter((line) => !line.startsWith('| Avatar'))
+      .join('\n');
+
+    fs.writeFileSync(readmeFile, drifted);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          ...options,
+          check: true,
+        },
+      })
+    ).rejects.toThrow('README.md');
+
+    expect(readFile(readmeFile)).toBe(drifted);
+  });
+});
+
 describe('component generator check mode', () => {
   it('remains fail-closed when required repository structure is missing', async () => {
     const root = createTempRoot();
