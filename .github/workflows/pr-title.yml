@@ -27,6 +27,15 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
+      - name: Require adopted title-validator authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f tools/pr-title-validator/package.json
+          test -f tools/pr-title-validator/commitlint.config.js
+          test -f commitlint.config.js
+          test -f pnpm-lock.yaml
+
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -36,40 +45,36 @@ jobs:
           node-version: 22.22.2
           package-manager-cache: false
 
-      - name: Detect title-validator authority in trusted base
-        id: validator
+      - name: Install standalone locked PR-title validator
+        working-directory: tools/pr-title-validator
+        run: >-
+          pnpm install --ignore-workspace --frozen-lockfile --ignore-scripts
+          --lockfile-dir=../.. --config.node-linker=isolated
+
+      - name: Verify standalone install stayed bounded
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f tools/pr-title-validator/package.json ]]; then
-            echo "mode=isolated" >> "$GITHUB_OUTPUT"
-          else
-            echo "mode=bootstrap" >> "$GITHUB_OUTPUT"
+          test -x tools/pr-title-validator/node_modules/.bin/commitlint
+          test -d node_modules/.pnpm
+
+          package_snapshots="$(
+            find node_modules/.pnpm -mindepth 1 -maxdepth 1 -type d |
+              wc -l |
+              tr -d '[:space:]'
+          )"
+          echo "PR-title validator package snapshots: $package_snapshots"
+
+          if (( package_snapshots > 300 )); then
+            echo "::error::Standalone PR-title install expanded to $package_snapshots snapshots; expected <= 300."
+            exit 1
           fi
-
-      - name: Install locked PR-title validator only
-        if: steps.validator.outputs.mode == 'isolated'
-        run: >-
-          pnpm install --frozen-lockfile --ignore-scripts
-          --filter @vellira-ci/pr-title-validator
-
-      - name: Bootstrap canonical title dependencies
-        if: steps.validator.outputs.mode == 'bootstrap'
-        run: >-
-          pnpm install --frozen-lockfile --ignore-scripts
-          --filter vellira
 
       - name: Validate PR title
+        working-directory: tools/pr-title-validator
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-          VALIDATOR_MODE: ${{ steps.validator.outputs.mode }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$VALIDATOR_MODE" == "isolated" ]]; then
-            printf "%s\n" "$PR_TITLE" |
-              pnpm --filter @vellira-ci/pr-title-validator run validate
-          else
-            printf "%s\n" "$PR_TITLE" |
-              pnpm exec commitlint --config commitlint.config.js
-          fi
+          printf "%s\n" "$PR_TITLE" | pnpm run validate
