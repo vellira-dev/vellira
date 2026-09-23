@@ -47,7 +47,6 @@ work, but does not prevent a workflow card from being created for each push.
   `cloudflare-deploy.mjs`, so a stale staging SHA cannot mutate production.
   Admission and deploy jobs retain separate non-cancelling concurrency groups.
 
-
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
 
