@@ -1459,6 +1459,103 @@ describe('component generator README lifecycle ownership', () => {
     force: false,
   } as const;
 
+  it('blocks a missing README before normal generation mutates output', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+    const metadataRegistry = path.join(
+      root,
+      'packages/metadata/src/components/index.ts'
+    );
+    const docsRegistry = path.join(
+      root,
+      'apps/docs/src/component-docs/index.ts'
+    );
+    const metadataBefore = readFile(metadataRegistry);
+    const docsBefore = readFile(docsRegistry);
+
+    fs.rmSync(readmeFile);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options,
+      })
+    ).rejects.toThrow('component-readme-inventory-file-missing: README.md');
+
+    expect(
+      fs.existsSync(
+        path.join(root, 'packages/react/src/primitives/Avatar')
+      )
+    ).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(root, 'packages/react-native/src/primitives/Avatar')
+      )
+    ).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(
+          root,
+          'packages/metadata/src/components/Avatar.metadata.ts'
+        )
+      )
+    ).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(root, 'apps/docs/src/component-docs/Avatar.docs.ts')
+      )
+    ).toBe(false);
+    expect(readFile(metadataRegistry)).toBe(metadataBefore);
+    expect(readFile(docsRegistry)).toBe(docsBefore);
+  });
+
+  it('blocks malformed README before write and dry-run planning', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+    const malformed = readFile(readmeFile).replace(
+      '| --------- | :---: | :----------: |',
+      '| broken |'
+    );
+
+    fs.writeFileSync(readmeFile, malformed);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options,
+      })
+    ).rejects.toThrow('component-readme-inventory-table-invalid');
+
+    expect(
+      fs.existsSync(
+        path.join(root, 'packages/react/src/primitives/Avatar')
+      )
+    ).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(
+          root,
+          'packages/metadata/src/components/Avatar.metadata.ts'
+        )
+      )
+    ).toBe(false);
+    expect(readFile(readmeFile)).toBe(malformed);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          ...options,
+          dryRun: true,
+        },
+      })
+    ).rejects.toThrow('component-readme-inventory-table-invalid');
+
+    expect(readFile(readmeFile)).toBe(malformed);
+  });
+
   it('writes README inventory and reports it as an updated artifact', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);

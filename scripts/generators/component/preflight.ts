@@ -5,6 +5,7 @@ import ts from 'typescript';
 
 import type { ComponentGenerationPlan } from './plan';
 import { getComponentProfile } from './profiles';
+import { validateReadmeInventoryMaterialization } from './readme-inventory-contract';
 import { assertComponentTokenLifecycleCanMaterialize } from './token-lifecycle-contract';
 import { assertComponentTokenPreservationCanMaterialize } from './token-preservation-contract';
 import {
@@ -356,6 +357,7 @@ export function validateComponentGenerationPlan(
   const existingTargets: string[] = [];
   const profile = getComponentProfile(plan.profile);
   errors.push(...validateComponentGenerationAuthorities(plan));
+  errors.push(...validateReadmeInventoryMaterialization(plan));
   if (plan.componentTokens !== false) {
     try {
       assertComponentTokenLifecycleCanMaterialize(

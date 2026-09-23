@@ -117,9 +117,15 @@ export function renderSynchronizedReadmeInventory(
   return `${prefix}${nextBlock}${suffix}`;
 }
 
-export function checkReadmeInventoryContract(
+type ReadmeInventoryMaterialization = {
+  file: string;
+  current: string;
+  expected: string;
+};
+
+function materializeReadmeInventoryContract(
   plan: ReadmeInventoryPlan
-): string[] {
+): ReadmeInventoryMaterialization {
   const file = getReadmeInventoryFile(plan.root);
 
   if (!fs.existsSync(file)) {
@@ -127,7 +133,29 @@ export function checkReadmeInventoryContract(
   }
 
   const current = fs.readFileSync(file, 'utf8');
-  const expected = renderSynchronizedReadmeInventory(current, plan);
+
+  return {
+    file,
+    current,
+    expected: renderSynchronizedReadmeInventory(current, plan),
+  };
+}
+
+export function validateReadmeInventoryMaterialization(
+  plan: ReadmeInventoryPlan
+): string[] {
+  try {
+    materializeReadmeInventoryContract(plan);
+    return [];
+  } catch (error) {
+    return [error instanceof Error ? error.message : String(error)];
+  }
+}
+
+export function checkReadmeInventoryContract(
+  plan: ReadmeInventoryPlan
+): string[] {
+  const { file, current, expected } = materializeReadmeInventoryContract(plan);
 
   return current === expected ? [] : [path.relative(plan.root, file)];
 }
@@ -136,14 +164,9 @@ export function synchronizeReadmeInventoryContract(params: {
   plan: ReadmeInventoryPlan;
   result: ReadmeInventoryMutationResult;
 }): void {
-  const file = getReadmeInventoryFile(params.plan.root);
-
-  if (!fs.existsSync(file)) {
-    throw new Error('component-readme-inventory-file-missing: README.md');
-  }
-
-  const current = fs.readFileSync(file, 'utf8');
-  const expected = renderSynchronizedReadmeInventory(current, params.plan);
+  const { file, current, expected } = materializeReadmeInventoryContract(
+    params.plan
+  );
 
   if (current === expected) return;
 
