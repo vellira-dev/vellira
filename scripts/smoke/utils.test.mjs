@@ -3,6 +3,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+
+import prettier from 'prettier';
+import prettierConfig from '../../.prettierrc.js';
 import { fileURLToPath } from 'node:url';
 
 import { readRuntimeExportExpectation } from './utils.mjs';
@@ -72,4 +75,23 @@ test('both package smoke scripts consume the shared public API authority', () =>
   assert.match(web, /packages\/react\/src\/public-api\.test\.ts/);
   assert.match(native, /readRuntimeExportExpectation/);
   assert.match(native, /packages\/react-native\/src\/public-api\.test\.ts/);
+});
+
+
+test('diagnostic: README regression is repository-Prettier clean', async () => {
+  const source = path.join(
+    dirname,
+    '../generators/component/readme-inventory-contract.test.ts'
+  );
+  const current = readFileSync(source, 'utf8');
+  const formatted = await prettier.format(current, {
+    ...prettierConfig,
+    parser: 'typescript',
+  });
+
+  if (current !== formatted) {
+    throw new Error(
+      `README_PRETTIER_EXPECTED_START\n${formatted}README_PRETTIER_EXPECTED_END`
+    );
+  }
 });
