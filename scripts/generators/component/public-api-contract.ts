@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// @ts-expect-error Shared public-API authority is a native ESM module.
+import {
+  parseRuntimeExportExpectation,
+  runtimeExportExpectationPattern,
+} from '../../public-api/runtime-export-authority.mjs';
+
 import { getGeneratedPublicPropTypeNames } from './public-api';
 
 import type {
@@ -8,36 +14,16 @@ import type {
   ComponentGenerationTarget,
 } from './plan';
 
-const runtimeExportExpectationPattern =
-  /expect\(Object\.keys\(api\)\.sort\(\)\)\.toEqual\(\[\n([\s\S]*?)\n {4}\]\);/;
-
 function readRuntimeExportExpectation(publicApiTestFile: string) {
   if (!fs.existsSync(publicApiTestFile)) {
     throw new Error(`Missing public API contract test: ${publicApiTestFile}`);
   }
 
   const content = fs.readFileSync(publicApiTestFile, 'utf8');
-  const match = runtimeExportExpectationPattern.exec(content);
-
-  if (!match) {
-    throw new Error(
-      `Unable to locate runtime export expectation in ${publicApiTestFile}`
-    );
-  }
-
-  const entries = [...match[1].matchAll(/ {6}'([^']+)',/g)].map(
-    (entry) => entry[1]
-  );
-
-  if (entries.length === 0) {
-    throw new Error(
-      `Runtime export expectation is empty or invalid in ${publicApiTestFile}`
-    );
-  }
 
   return {
     content,
-    entries,
+    entries: parseRuntimeExportExpectation(content, publicApiTestFile),
   };
 }
 

@@ -3,6 +3,8 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { parseRuntimeExportExpectation } from '../public-api/runtime-export-authority.mjs';
+
 export function shouldBuild() {
   return !process.argv.includes('--skip-build');
 }
@@ -129,28 +131,9 @@ export function writeWorkspaceFile(tempDir, dependencies) {
 }
 
 
-const runtimeExportExpectationPattern =
-  /expect\(Object\.keys\(api\)\.sort\(\)\)\.toEqual\(\[\n([\s\S]*?) {4}\]\);/;
-
 export function readRuntimeExportExpectation(publicApiTestFile) {
-  const content = readFileSync(publicApiTestFile, 'utf8');
-  const match = runtimeExportExpectationPattern.exec(content);
-
-  if (!match) {
-    throw new Error(
-      `Unable to locate runtime export expectation in ${publicApiTestFile}`
-    );
-  }
-
-  const entries = [...match[1].matchAll(/ {6}'([^']+)',/g)].map(
-    (entry) => entry[1]
+  return parseRuntimeExportExpectation(
+    readFileSync(publicApiTestFile, 'utf8'),
+    publicApiTestFile
   );
-
-  if (entries.length === 0) {
-    throw new Error(
-      `Runtime export expectation is empty or invalid in ${publicApiTestFile}`
-    );
-  }
-
-  return entries.sort();
 }
