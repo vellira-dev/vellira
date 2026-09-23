@@ -108,19 +108,49 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   );
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /package-manager-cache: false/);
+  assert.match(source, /mode=isolated/);
+  assert.match(source, /mode=bootstrap/);
   assert.match(
     source,
     /pnpm install --frozen-lockfile --ignore-scripts\s+--filter @vellira-ci\/pr-title-validator/
   );
   assert.match(
     source,
+    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter vellira/
+  );
+  assert.match(
+    source,
     /pnpm --filter @vellira-ci\/pr-title-validator run validate/
   );
+  assert.match(source, /pnpm exec commitlint --config commitlint\.config\.js/);
   assert.doesNotMatch(
     source,
-    /pnpm install --frozen-lockfile\s*$|pnpm exec commitlint|pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
+    /pnpm install --frozen-lockfile(?:\s+--ignore-scripts)?\s*$|pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
   );
-  assert.equal(section(source, 'permissions').trim(), 'contents: read\n  pull-requests: read');
+  assert.equal(
+    section(source, 'permissions').trim(),
+    'contents: read\n  pull-requests: read'
+  );
+});
+
+test('bootstrap fallback is bounded to trusted base before validator adoption', () => {
+  const source = workflow('pr-title');
+  const detect = script(source, 'Detect title-validator authority in trusted base');
+  assert.match(detect, /tools\/pr-title-validator\/package\.json/);
+  assert.match(detect, /mode=isolated/);
+  assert.match(detect, /mode=bootstrap/);
+
+  const isolatedInstall = source.split(
+    '      - name: Install locked PR-title validator only\n'
+  )[1].split('      - name: Bootstrap canonical title dependencies\n')[0];
+  const bootstrapInstall = source.split(
+    '      - name: Bootstrap canonical title dependencies\n'
+  )[1].split('      - name: Validate PR title\n')[0];
+
+  assert.match(isolatedInstall, /if: steps\.validator\.outputs\.mode == 'isolated'/);
+  assert.match(bootstrapInstall, /if: steps\.validator\.outputs\.mode == 'bootstrap'/);
+  assert.match(bootstrapInstall, /--filter vellira/);
+  assert.doesNotMatch(bootstrapInstall, /@vellira-ci\/pr-title-validator|pnpm dlx|npx /);
 });
 
 test('minimal title validator reuses canonical config and locked root resolution', () => {

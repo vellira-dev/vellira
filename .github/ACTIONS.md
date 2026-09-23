@@ -22,7 +22,11 @@ work, but does not prevent a workflow card from being created for each push.
   dependency caching disabled, and executes the repository's canonical root
   `commitlint.config.js`. The validator pins the same commitlint resolution as
   the root lockfile; no regex policy, floating `dlx` dependency or second
-  independently maintained commitlint policy is used.
+  independently maintained commitlint policy is used. The one bootstrap PR that
+  introduces the validator cannot find it on its trusted base SHA, so that case
+  falls back to a root-project-only frozen install (`--filter vellira`) and the
+  same canonical config. Once adopted on main, normal PRs use only the isolated
+  validator path.
 - The strict token semantic audit remains in `ci:quality`; the separate detailed
   report is available through its manual workflow.
 - `Lighthouse / Docs` owns the fresh-checkout docs deployment-build regression:
