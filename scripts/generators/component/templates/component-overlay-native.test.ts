@@ -18,7 +18,7 @@ describe('native overlay templates', () => {
     expect(result).not.toContain('onOpenChange?: (open: boolean) => void');
   });
 
-  it('keeps native-specific overlay behavior in the native adapter', () => {
+  it('keeps platform-specific overlay behavior props in the adapter', () => {
     const result = renderNativeOverlayTypesTemplate({
       componentName: 'Dialog',
     });
@@ -28,11 +28,22 @@ describe('native overlay templates', () => {
     expect(result).not.toContain('closeOnEscape?: boolean');
   });
 
-  it('renders a native overlay root scaffold', () => {
+  it('renders an overlay scaffold using the canonical state hook', () => {
     const result = renderNativeOverlayComponentTemplate({
       componentName: 'Dialog',
     });
 
+    expect(result).toContain(
+      "import { useControllableState } from '../../hooks'"
+    );
+    expect(result).toContain(
+      'const [resolvedOpen, setOpen] = useControllableState('
+    );
+    expect(result).not.toContain('useState');
+    expect(result).not.toContain('const setOpen =');
+    expect(result).toContain('value: open');
+    expect(result).toContain('defaultValue: defaultOpen');
+    expect(result).toContain('onChange: onOpenChange');
     expect(result).toContain("import { View } from 'react-native'");
     expect(result).toContain('resolvedOpen ? children : null');
     expect(result).toContain('closeOnOutsidePress = true');

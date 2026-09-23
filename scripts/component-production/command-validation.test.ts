@@ -30,6 +30,7 @@ describe('componentProductionValidationCommands', () => {
       'lint',
       'core-tests',
       'metadata-tests',
+      'token-tests',
       'react-tests',
       'react-typecheck',
       'react-build',
@@ -51,6 +52,7 @@ describe('componentProductionValidationCommands', () => {
       'lint',
       'core-tests',
       'metadata-tests',
+      'token-tests',
       'react-tests',
       'react-typecheck',
       'react-build',
@@ -62,6 +64,15 @@ describe('componentProductionValidationCommands', () => {
       'component-page-check',
       'component-page-audit',
     ]);
+  });
+
+  it('skips token validation only for explicit tokenless production', () => {
+    const ids = componentProductionValidationCommands({
+      ...WEB_INPUT,
+      componentTokens: false,
+    }).map((command) => command.id);
+
+    expect(ids).not.toContain('token-tests');
   });
 
   it('builds platform packages with their workspace dependency closure', () => {
@@ -120,6 +131,7 @@ describe('runComponentProductionCommandValidation', () => {
       'lint',
       'core-tests',
       'metadata-tests',
+      'token-tests',
       'react-tests',
       'react-typecheck',
       'react-build',

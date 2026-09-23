@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { componentTokenFactoryConventionV1 } from './component-token-factory-conventions.js';
+import { validateComponentFactoryInventory } from './component-token-factory-inventory.js';
+import { generatedComponentFactoryArchitectureV1 } from './generated-component-factory-architecture.js';
 import { maintainedComponentFactories } from './token-architecture.js';
 
 const srcDir = dirname(fileURLToPath(import.meta.url));
@@ -14,7 +16,9 @@ const palettesDir = join(factoriesDir, 'palettes');
 const sharedDir = join(factoriesDir, 'shared');
 const themes = ['light', 'dark', 'highContrast'] as const;
 
-const expectedCanonicalFactories = [
+// This is an independent regression oracle for the historical baseline only.
+// Generator-owned additions come from their existing canonical authority.
+const expectedHistoricalFactories = [
   'createAccordionTokens',
   'createButtonTokens',
   'createCheckboxTokens',
@@ -35,9 +39,18 @@ const expectedCanonicalFactories = [
 
 describe('component token factory conventions', () => {
   it('keeps maintained full-component factories on create<Component>Tokens', () => {
-    expect(maintainedComponentFactories.map(({ name }) => name)).toEqual(
-      expectedCanonicalFactories
-    );
+    expect(
+      validateComponentFactoryInventory({
+        historicalNames: expectedHistoricalFactories,
+        generated: generatedComponentFactoryArchitectureV1.map(
+          ({ factory }) => factory
+        ),
+        maintained: maintainedComponentFactories,
+        files: readdirSync(componentsDir, { withFileTypes: true }).map(
+          (entry) => ({ name: entry.name, regularFile: entry.isFile() })
+        ),
+      })
+    ).toEqual([]);
 
     for (const factory of maintainedComponentFactories) {
       expect(factory.name).toMatch(/^create[A-Z][A-Za-z0-9]*Tokens$/);
@@ -46,12 +59,6 @@ describe('component token factory conventions', () => {
         `packages/tokens/src/factories/components/${factory.name}.ts`
       );
     }
-
-    expect(
-      readdirSync(componentsDir)
-        .filter((name) => name.endsWith('.ts'))
-        .sort()
-    ).toEqual(expectedCanonicalFactories.map((name) => `${name}.ts`).sort());
   });
 
   it('keeps factory responsibilities in the canonical shared inventory', () => {

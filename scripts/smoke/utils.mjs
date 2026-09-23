@@ -3,6 +3,8 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { parseRuntimeExportExpectation } from '../public-api/runtime-export-authority.mjs';
+
 export function shouldBuild() {
   return !process.argv.includes('--skip-build');
 }
@@ -125,5 +127,13 @@ export function writeWorkspaceFile(tempDir, dependencies) {
       ),
       '',
     ].join('\n')
+  );
+}
+
+
+export function readRuntimeExportExpectation(publicApiTestFile) {
+  return parseRuntimeExportExpectation(
+    readFileSync(publicApiTestFile, 'utf8'),
+    publicApiTestFile
   );
 }

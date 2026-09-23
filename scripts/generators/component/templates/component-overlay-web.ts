@@ -18,7 +18,7 @@ export type ${componentName}Props = Base${componentName}Props & {
 export function renderWebOverlayComponentTemplate({
   componentName,
 }: ComponentTemplateParams) {
-  return `import { useState } from 'react';
+  return `import { useControllableState } from '#hooks';
 
 import type { ${componentName}Props } from './types';
 
@@ -31,18 +31,11 @@ export function ${componentName}({
   closeOnOutsidePress = true,
   restoreFocus = true,
 }: ${componentName}Props) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-
-  const isControlled = open !== undefined;
-  const resolvedOpen = isControlled ? open : uncontrolledOpen;
-
-  const setOpen = (nextOpen: boolean) => {
-    if (!isControlled) {
-      setUncontrolledOpen(nextOpen);
-    }
-
-    onOpenChange?.(nextOpen);
-  };
+  const [resolvedOpen, setOpen] = useControllableState({
+    value: open,
+    defaultValue: defaultOpen,
+    onChange: onOpenChange,
+  });
 
   void closeOnEscape;
   void closeOnOutsidePress;

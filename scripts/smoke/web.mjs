@@ -4,6 +4,7 @@ import {
   linkWorkspaceDependencies,
   packPackages,
   run,
+  readRuntimeExportExpectation,
   runPnpmInstall,
   shouldBuild,
   writePackageJson,
@@ -11,6 +12,9 @@ import {
 } from './utils.mjs';
 
 const root = process.cwd();
+const expectedWebApi = readRuntimeExportExpectation(
+  path.join(root, 'packages/react/src/public-api.test.ts')
+);
 const tempDir = path.join(root, '.tmp-package-smoke-web');
 
 const packageNames = [
@@ -95,27 +99,7 @@ function isComponentExport(value) {
   );
 }
 
-const expectedWebApi = [
-  'Accordion',
-  'Button',
-  'Checkbox',
-  'Dropdown',
-  'FormField',
-  'Input',
-  'Modal',
-  'Popover',
-  'Portal',
-  'PortalProvider',
-  'Radio',
-  'RadioGroup',
-  'Select',
-  'Switch',
-  'Tabs',
-  'Textarea',
-  'ThemeProvider',
-  'Tooltip',
-  'useTheme',
-];
+const expectedWebApi = ${JSON.stringify(expectedWebApi)};
 
 const actualWebApi = Object.keys(web).sort();
 
