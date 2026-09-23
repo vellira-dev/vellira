@@ -137,7 +137,6 @@ jobs:
     permissions:
       actions: read
       contents: read
-      deployments: write
     outputs:
       admitted: ${{ steps.admit.outputs.admitted }}
       reason: ${{ steps.admit.outputs.reason }}
@@ -157,7 +156,7 @@ jobs:
 
       - name: Admit candidate and supersede stale promotions
         id: admit
-        run: node apps/website/scripts/cloudflare-production-promotion-supersede.mjs
+        run: node apps/website/scripts/cloudflare-production-admission.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CURRENT_PRODUCTION_RUN_ID: ${{ github.run_id }}

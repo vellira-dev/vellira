@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -165,16 +165,16 @@ shellTest('clean-checkout probe rejects workspace dist but ignores dependency di
   assert.equal(shell(probe, cwd).status, 1);
 });
 
-test('production owns queue and rerun admission without duplicate workflow-run cleanup cards', () => {
-  const supersede = workflow('supersede-stale-production-promotions');
-  const triggers = section(supersede, 'on');
-  assert.match(triggers, /push:\n {4}branches: \[main\]/);
-  assert.doesNotMatch(triggers, /workflow_run:/);
-  assert.doesNotMatch(
-    supersede,
-    /\/actions\/runs\/\$\{runId\}\/cancel/
+test('production admission is read-only and standalone supersede workflow is removed', () => {
+  assert.equal(
+    existsSync(
+      new URL(
+        '../../.github/workflows/supersede-stale-production-promotions.yml',
+        import.meta.url
+      )
+    ),
+    false
   );
-  assert.match(supersede, /deployments: write/);
 
   const production = workflow('deploy-website-cloudflare-production');
   const header = production.split('\njobs:\n')[0];
@@ -182,6 +182,7 @@ test('production owns queue and rerun admission without duplicate workflow-run c
   assert.match(production, /\n  admission:\n/);
   assert.match(production, /CURRENT_PRODUCTION_RUN_ID:/);
   assert.match(production, /EXPECTED_CANDIDATE_SHA:/);
+  assert.match(production, /cloudflare-production-admission\.mjs/);
   assert.match(
     production,
     /group: deploy-worker-vellira-website-admission\n {6}cancel-in-progress: false/
@@ -190,6 +191,9 @@ test('production owns queue and rerun admission without duplicate workflow-run c
     production,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
+  const admission = production.split('\n  admission:\n')[1].split('\n  deploy:\n')[0];
+  assert.match(admission, /actions: read/);
+  assert.doesNotMatch(admission, /actions: write|deployments: write|secrets\./);
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {

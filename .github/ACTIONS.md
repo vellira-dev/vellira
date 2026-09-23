@@ -36,23 +36,17 @@ work, but does not prevent a workflow card from being created for each push.
   failure is visible in that job and its summary but does not invalidate an
   already verified deployment. Retry `Submit URLs to IndexNow` manually, without
   redeploying production. The manual retry remains failure-reporting.
-- Main-push supersession remains a separate trusted cleanup because any main
-  advancement must invalidate stale waiting approvals, even when no new website
-  staging run is produced. Production-run admission now happens inside the
-  production workflow itself: candidate runs are not blocked by workflow-level
-  concurrency, stale/duplicate candidates are rejected before environment
-  approval, and only the deploy job uses the non-cancelling global concurrency
-  group. This covers normal queue admission and reruns without separate
-  `workflow_run` Supersede cards. Production cleanup never uses the generic
-  workflow-cancel endpoint. For stale runs it may reject only environments that
-  GitHub still reports as pending deployment reviews; if approval has already
-  crossed that boundary, automation leaves the run alone. A successful rejection
-  must still settle to a completed workflow run. Same-SHA duplicate/rerun admission
-  never rejects the existing pending owner: the oldest active current-main
-  candidate remains authoritative and newer duplicates fail closed. Admission
-  jobs are independently serialized. A deploy already queued, in progress or
-  completed remains protected. The deploy path also rechecks current `main`
-  immediately before production mutation for normal staging-derived candidates.
+- Production admission is read-only. The oldest active current-main candidate owns
+  the approval path; same-SHA reruns and stale candidates fail closed before
+  environment approval. Vellira does not automatically cancel or reject a
+  production environment review: GitHub environment review is a human reviewer
+  boundary and the default workflow token is not treated as reviewer authority.
+  If `main` advances while an older production approval is waiting, the reviewer
+  should reject that stale approval. If it is accidentally approved, the deploy
+  job rechecks current `main` after approval and again immediately before
+  `cloudflare-deploy.mjs`, so a stale staging SHA cannot mutate production.
+  Admission and deploy jobs retain separate non-cancelling concurrency groups.
+
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.

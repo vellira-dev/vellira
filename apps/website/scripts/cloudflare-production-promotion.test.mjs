@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import test from 'node:test';
-import './cloudflare-production-promotion-supersede.test.mjs';
+import './cloudflare-production-admission.test.mjs';
 
 const stagingWorkflow = await fs.readFile(
   '.github/workflows/deploy-website-cloudflare-staging.yml',
@@ -60,8 +60,7 @@ test('production admission owns duplicate/stale cleanup before serialized deploy
 
   const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
   assert.match(admission, /actions: read/);
-  assert.match(admission, /deployments: write/);
-  assert.doesNotMatch(admission, /actions: write/);
+  assert.doesNotMatch(admission, /actions: write|deployments: write/);
   assert.match(admission, /cache-mode: none/);
   assert.match(
     admission,
@@ -78,7 +77,7 @@ test('production admission owns duplicate/stale cleanup before serialized deploy
   );
   assert.match(
     admission,
-    /cloudflare-production-promotion-supersede\.mjs/
+    /cloudflare-production-admission\.mjs/
   );
 });
 
