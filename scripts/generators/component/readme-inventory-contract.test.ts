@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  renderSynchronizedReadmeInventory,
-} from './readme-inventory-contract';
+import { renderSynchronizedReadmeInventory } from './readme-inventory-contract';
 
 const fixture = `# Fixture
 
@@ -40,7 +38,10 @@ function inventoryRow(readme: string, name: string) {
 
   if (!line) return undefined;
 
-  return line.split('|').slice(1, -1).map((cell) => cell.trim());
+  return line
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim());
 }
 
 describe('Generator V2 README inventory contract', () => {
@@ -52,9 +53,7 @@ describe('Generator V2 README inventory contract', () => {
 
     expect(inventoryRow(result, 'Notice')).toEqual(['Notice', '✅', '✅']);
     expect(inventoryRow(result, 'completely wrong')).toBeUndefined();
-    expect(result.indexOf('| Button')).toBeLessThan(
-      result.indexOf('| Notice')
-    );
+    expect(result.indexOf('| Button')).toBeLessThan(result.indexOf('| Notice'));
     expect(result.indexOf('| Notice')).toBeLessThan(
       result.indexOf('| Tooltip')
     );
@@ -80,7 +79,7 @@ describe('Generator V2 README inventory contract', () => {
     );
 
     expect(first).toBe(second);
-    expect(first.match(/^\| Button/mg)).toHaveLength(1);
+    expect(first.match(/^\| Button/gm)).toHaveLength(1);
     expect(inventoryRow(first, 'Button')).toEqual(['Button', '✅', '—']);
   });
 
