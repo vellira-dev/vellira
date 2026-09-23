@@ -69,6 +69,16 @@ export function componentProductionValidationCommands(
       command: ['pnpm', 'test:metadata'],
       timeoutMs: 180_000,
     },
+    ...(input.componentTokens !== false
+      ? [
+          {
+            id: 'token-tests',
+            stage: 'tests' as const,
+            command: ['pnpm', 'test:tokens'],
+            timeoutMs: 180_000,
+          },
+        ]
+      : []),
     ...platformCommands(input),
     {
       id: 'component-docs',

@@ -4,6 +4,7 @@ import {
   linkWorkspaceDependencies,
   packPackages,
   run,
+  readRuntimeExportExpectation,
   runPnpmInstall,
   shouldBuild,
   writePackageJson,
@@ -11,6 +12,9 @@ import {
 } from './utils.mjs';
 
 const root = process.cwd();
+const expectedNativeApi = readRuntimeExportExpectation(
+  path.join(root, 'packages/react-native/src/public-api.test.ts')
+);
 const tempDir = path.join(root, '.tmp-package-smoke-native');
 
 const packageNames = [
@@ -286,28 +290,7 @@ function isComponentExport(value) {
   );
 }
 
-const expectedNativeApi = [
-  'Accordion',
-  'Button',
-  'Checkbox',
-  'Dropdown',
-  'FormField',
-  'Input',
-  'Modal',
-  'Popover',
-  'Portal',
-  'PortalProvider',
-  'Radio',
-  'RadioGroup',
-  'Select',
-  'Switch',
-  'Tabs',
-  'Textarea',
-  'ThemeProvider',
-  'Tooltip',
-  'nativeThemes',
-  'useTheme',
-];
+const expectedNativeApi = ${JSON.stringify(expectedNativeApi)};
 
 const actualNativeApi = Object.keys(native).sort();
 

@@ -125,21 +125,37 @@ function createRequiredRepositoryStructure(
     ),
     path.join(preservationDir, 'token-preservation-baseline.v1.json')
   );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
-    path.join(preservationDir, 'token-migrations.ts')
+  fs.writeFileSync(
+    path.join(preservationDir, 'token-migrations.ts'),
+    'export const generatedComponentTokenAdditionMigrationsV1 = [] as const;\n'
   );
   const architectureRegistrationFile =
     getComponentTokenArchitectureRegistrationFile(root);
-  fs.copyFileSync(
-    path.resolve(
-      'packages/tokens/src/generated-component-factory-architecture.ts'
-    ),
-    architectureRegistrationFile
+  fs.writeFileSync(
+    architectureRegistrationFile,
+    'export const generatedComponentFactoryArchitectureV1 = [] as const;\n'
   );
   fs.copyFileSync(
     path.resolve('packages/tokens/package.json'),
     path.join(root, 'packages', 'tokens', 'package.json')
+  );
+  fs.writeFileSync(
+    path.join(root, 'README.md'),
+    [
+      '# Fixture',
+      '',
+      '<!-- vellira:component-inventory:start -->',
+      '',
+      'Platform availability is generated.',
+      '',
+      '> `Portal` and `PortalProvider` are support primitives used by overlay components.',
+      '',
+      '| Component | React | React Native |',
+      '| --------- | :---: | :----------: |',
+      '',
+      '<!-- vellira:component-inventory:end -->',
+      '',
+    ].join('\n')
   );
 
   for (const packageName of ['react', 'react-native']) {
@@ -1429,6 +1445,177 @@ export { switchDocs };
     });
 
     expect(completeness.ready).toBe(true);
+  });
+});
+
+describe('component generator README lifecycle ownership', () => {
+  const options = {
+    componentName: 'Avatar',
+    platform: 'both',
+    layer: 'primitives',
+    category: 'data-display',
+    profile: 'base',
+    parts: [],
+    force: false,
+  } as const;
+
+  it('blocks missing README before generation mutates output', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+    const webDir = path.join(root, 'packages/react/src/primitives/Avatar');
+    const nativeDir = path.join(
+      root,
+      'packages/react-native/src/primitives/Avatar'
+    );
+    const metadataFile = path.join(
+      root,
+      'packages/metadata/src/components/Avatar.metadata.ts'
+    );
+    const docsFile = path.join(
+      root,
+      'apps/docs/src/component-docs/Avatar.docs.ts'
+    );
+    const metadataRegistry = path.join(
+      root,
+      'packages/metadata/src/components/index.ts'
+    );
+    const docsRegistry = path.join(
+      root,
+      'apps/docs/src/component-docs/index.ts'
+    );
+    const metadataBefore = readFile(metadataRegistry);
+    const docsBefore = readFile(docsRegistry);
+
+    fs.rmSync(readmeFile);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options,
+      })
+    ).rejects.toThrow('component-readme-inventory-file-missing: README.md');
+
+    expect(fs.existsSync(webDir)).toBe(false);
+    expect(fs.existsSync(nativeDir)).toBe(false);
+    expect(fs.existsSync(metadataFile)).toBe(false);
+    expect(fs.existsSync(docsFile)).toBe(false);
+    expect(readFile(metadataRegistry)).toBe(metadataBefore);
+    expect(readFile(docsRegistry)).toBe(docsBefore);
+  });
+
+  it('blocks malformed README before write and dry-run', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+    const webDir = path.join(root, 'packages/react/src/primitives/Avatar');
+    const metadataFile = path.join(
+      root,
+      'packages/metadata/src/components/Avatar.metadata.ts'
+    );
+    const malformed = readFile(readmeFile).replace(
+      '| --------- | :---: | :----------: |',
+      '| broken |'
+    );
+
+    fs.writeFileSync(readmeFile, malformed);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options,
+      })
+    ).rejects.toThrow('component-readme-inventory-table-invalid');
+
+    expect(fs.existsSync(webDir)).toBe(false);
+    expect(fs.existsSync(metadataFile)).toBe(false);
+    expect(readFile(readmeFile)).toBe(malformed);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          ...options,
+          dryRun: true,
+        },
+      })
+    ).rejects.toThrow('component-readme-inventory-table-invalid');
+
+    expect(readFile(readmeFile)).toBe(malformed);
+  });
+
+  it('writes README inventory and reports the updated file', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+
+    const result = await runComponentGenerator({
+      root,
+      options,
+    });
+
+    const row = readFile(readmeFile)
+      .split('\n')
+      .find((line) => line.startsWith('| Avatar'));
+
+    expect(result.updatedFiles).toContain(readmeFile);
+    expect(row).toBeDefined();
+    expect(
+      row
+        ?.split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim())
+    ).toEqual(['Avatar', '✅', '✅']);
+  });
+
+  it('owns README in dry-run without mutating repository bytes', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+    const before = readFile(readmeFile);
+
+    const result = await runComponentGenerator({
+      root,
+      options: {
+        ...options,
+        dryRun: true,
+      },
+    });
+
+    expect(result.dryRun).toBe(true);
+    expect(result.check).toBe(false);
+    expect(result.updatedFiles).toContain(readmeFile);
+    expect(readFile(readmeFile)).toBe(before);
+  });
+
+  it('detects README drift in check mode without repairing it', async () => {
+    const root = createTempRoot();
+    createRequiredRepositoryStructure(root);
+    const readmeFile = path.join(root, 'README.md');
+
+    await runComponentGenerator({
+      root,
+      options,
+    });
+
+    const drifted = readFile(readmeFile)
+      .split('\n')
+      .filter((line) => !line.startsWith('| Avatar'))
+      .join('\n');
+
+    fs.writeFileSync(readmeFile, drifted);
+
+    await expect(
+      runComponentGenerator({
+        root,
+        options: {
+          ...options,
+          check: true,
+        },
+      })
+    ).rejects.toThrow('README.md');
+
+    expect(readFile(readmeFile)).toBe(drifted);
   });
 });
 

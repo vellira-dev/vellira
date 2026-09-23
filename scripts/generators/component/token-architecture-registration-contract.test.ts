@@ -26,11 +26,9 @@ function fixtureRoot() {
   roots.push(root);
   const target = getComponentTokenArchitectureRegistrationFile(root);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(
-    path.resolve(
-      'packages/tokens/src/generated-component-factory-architecture.ts'
-    ),
-    target
+  fs.writeFileSync(
+    target,
+    'export const generatedComponentFactoryArchitectureV1 = [] as const;\n'
   );
   return root;
 }
@@ -167,10 +165,7 @@ describe('Generator V2 component token architecture registration', () => {
       file,
       fs
         .readFileSync(file, 'utf8')
-        .replace(
-          '[] as const satisfies',
-          `${JSON.stringify([generated])} as const satisfies`
-        )
+        .replace('[] as const', `${JSON.stringify([generated])} as const`)
     );
 
     await expect(
