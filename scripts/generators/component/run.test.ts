@@ -1510,7 +1510,7 @@ describe('component generator README lifecycle ownership', () => {
     expect(readFile(docsRegistry)).toBe(docsBefore);
   });
 
-  it('blocks malformed README before write and dry-run planning', async () => {
+  it('blocks malformed README before write and dry-run', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
     const readmeFile = path.join(root, 'README.md');
