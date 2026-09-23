@@ -240,7 +240,7 @@ test('missing current run fails closed without cancelling unrelated promotions',
       runs: [run({ id: 1, candidateSha: B, runNumber: 10 })],
     }),
     {
-      keep: [1],
+      keep: [],
       cancel: [],
       admitCurrent: false,
       reason: 'current_run_missing',
