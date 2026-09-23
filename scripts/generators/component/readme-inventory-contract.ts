@@ -57,6 +57,11 @@ function compareRows(left: Row, right: Row): number {
   return 0;
 }
 
+function renderRow(row: Row, width: number): string {
+  const name = row.name.padEnd(width);
+  return `| ${name} |  ${row.react}   |      ${row.reactNative}      |`;
+}
+
 export function renderSynchronizedReadmeInventory(
   readme: string,
   plan: ReadmeInventoryPlan
@@ -82,6 +87,7 @@ export function renderSynchronizedReadmeInventory(
 
   let rowEnd = headerIndex + 2;
   const rows: Row[] = [];
+
   while (rowEnd < lines.length && lines[rowEnd]!.startsWith('|')) {
     rows.push(parseRow(lines[rowEnd]!));
     rowEnd += 1;
@@ -90,6 +96,7 @@ export function renderSynchronizedReadmeInventory(
   const nextRow = componentRow(plan);
   const byName = new Map(rows.map((row) => [row.name, row]));
   byName.set(nextRow.name, nextRow);
+
   const nextRows = [...byName.values()].sort(compareRows);
   const width = Math.max(
     'Component'.length,
@@ -98,26 +105,23 @@ export function renderSynchronizedReadmeInventory(
   const table = [
     `| ${'Component'.padEnd(width)} | React | React Native |`,
     `| ${'-'.repeat(width)} | :---: | :----------: |`,
-    ...nextRows.map(
-      (row) =>
-        `| ${row.name.padEnd(width)} |  ${row.react}   |      ${row.reactNative}      |`
-    ),
+    ...nextRows.map((row) => renderRow(row, width)),
   ];
 
   lines.splice(headerIndex, rowEnd - headerIndex, ...table);
-  const nextBlock = lines.join('\n');
 
-  return (
-    readme.slice(0, start) +
-    nextBlock +
-    readme.slice(end + END_MARKER.length)
-  );
+  const nextBlock = lines.join('\n');
+  const prefix = readme.slice(0, start);
+  const suffix = readme.slice(end + END_MARKER.length);
+
+  return `${prefix}${nextBlock}${suffix}`;
 }
 
 export function checkReadmeInventoryContract(
   plan: ReadmeInventoryPlan
 ): string[] {
   const file = getReadmeInventoryFile(plan.root);
+
   if (!fs.existsSync(file)) {
     throw new Error('component-readme-inventory-file-missing: README.md');
   }
@@ -133,15 +137,18 @@ export function synchronizeReadmeInventoryContract(params: {
   result: ReadmeInventoryMutationResult;
 }): void {
   const file = getReadmeInventoryFile(params.plan.root);
+
   if (!fs.existsSync(file)) {
     throw new Error('component-readme-inventory-file-missing: README.md');
   }
 
   const current = fs.readFileSync(file, 'utf8');
   const expected = renderSynchronizedReadmeInventory(current, params.plan);
+
   if (current === expected) return;
 
   fs.writeFileSync(file, expected);
+
   if (!params.result.updatedFiles.includes(file)) {
     params.result.updatedFiles.push(file);
   }

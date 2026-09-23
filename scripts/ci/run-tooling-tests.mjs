@@ -24,6 +24,10 @@ const tasks = [
     args: ['exec', 'node', '--test', 'scripts/ci/workflow-noise.test.mjs'],
   },
   {
+    name: 'package smoke authority contracts',
+    args: ['exec', 'node', '--test', 'scripts/smoke/utils.test.mjs'],
+  },
+  {
     name: 'tooling suite',
     args: baseArgs,
   },

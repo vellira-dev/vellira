@@ -38,9 +38,12 @@ describe('Generator V2 README inventory contract', () => {
       plan('Notice', ['react', 'react-native'])
     );
 
-    expect(result).toMatch(/^\\| Notice\\s+\\|\\s+✅\\s+\\|\\s+✅\\s+\\|$/m);
+    expect(result).toMatch(/^\| Notice\s+\|\s+✅\s+\|\s+✅\s+\|$/m);
+    expect(result).not.toMatch(/^completely wrong$/m);
     expect(result.indexOf('| Button')).toBeLessThan(result.indexOf('| Notice'));
-    expect(result.indexOf('| Notice')).toBeLessThan(result.indexOf('| Tooltip'));
+    expect(result.indexOf('| Notice')).toBeLessThan(
+      result.indexOf('| Tooltip')
+    );
   });
 
   it('records platform support from generation targets', () => {
@@ -49,7 +52,10 @@ describe('Generator V2 README inventory contract', () => {
       plan('WebOnly', ['react'])
     );
 
-    expect(result).toMatch(/^\\| WebOnly\\s+\\|\\s+✅\\s+\\|\\s+—\\s+\\|$/m);
+    expect(result).toMatch(/^\| WebOnly\s+\|\s+✅\s+\|\s+—\s+\|$/m);
+    expect(result).not.toMatch(
+      /^\| WebOnly\s+\|\s+✅\s+\|\s+✅\s+\|$/m
+    );
   });
 
   it('updates an existing row instead of duplicating it', () => {
@@ -64,7 +70,7 @@ describe('Generator V2 README inventory contract', () => {
 
     expect(first).toBe(second);
     expect(first.match(/^\| Button/mg)).toHaveLength(1);
-    expect(first).toMatch(/^\\| Button\\s+\\|\\s+✅\\s+\\|\\s+—\\s+\\|$/m);
+    expect(first).toMatch(/^\| Button\s+\|\s+✅\s+\|\s+—\s+\|$/m);
   });
 
   it('fails closed when generated inventory markers are unavailable', () => {
