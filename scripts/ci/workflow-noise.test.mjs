@@ -179,6 +179,10 @@ test('production owns queue and rerun admission without duplicate workflow-run c
   assert.match(production, /EXPECTED_CANDIDATE_SHA:/);
   assert.match(
     production,
+    /group: deploy-worker-vellira-website-admission\n {6}cancel-in-progress: false/
+  );
+  assert.match(
+    production,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
 });

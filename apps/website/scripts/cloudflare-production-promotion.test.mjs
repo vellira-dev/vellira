@@ -61,6 +61,10 @@ test('production admission owns duplicate/stale cleanup before serialized deploy
   const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
   assert.match(admission, /actions: write/);
   assert.match(admission, /cache-mode: none/);
+  assert.match(
+    admission,
+    /group: deploy-worker-vellira-website-admission\n {6}cancel-in-progress: false/
+  );
   assert.match(admission, /ref: main/);
   assert.match(
     admission,
@@ -98,6 +102,8 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
   assert.match(deploy, /ref: \$\{\{ env\.CANDIDATE_SHA \}\}/);
   assert.match(deploy, /Verify exact production candidate checkout/);
   assert.match(deploy, /Verify immutable production candidate before mutation/);
+  assert.match(deploy, /git ls-remote origin refs\/heads\/main/);
+  assert.match(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
   assert.match(deploy, /Deploy production website to Cloudflare Workers/);
 });
 

@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   planCurrentProductionAdmission,
   planProductionPromotionSupersession,
+  settleCancellationTargets,
   promotionCandidateSha,
 } from './cloudflare-production-promotion-supersede.mjs';
 
@@ -220,6 +221,103 @@ test('missing current run fails closed without cancelling unrelated promotions',
       reason: 'current_run_missing',
     }
   );
+});
+
+test('revalidation blocks waiting-to-queued target before cancellation', async () => {
+  let cancelCalls = 0;
+  const result = await settleCancellationTargets({
+    runIds: [1],
+    inspectTarget: async () => ({
+      runStatus: 'in_progress',
+      deployStatus: 'queued',
+    }),
+    cancelTarget: async () => {
+      cancelCalls += 1;
+    },
+    waitForCompletion: async () => ({ status: 'completed' }),
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    reason: 'target_became_protected',
+    targetRunId: 1,
+    cancelled: [],
+  });
+  assert.equal(cancelCalls, 0);
+});
+
+test('revalidation blocks waiting-to-in-progress target before cancellation', async () => {
+  let cancelCalls = 0;
+  const result = await settleCancellationTargets({
+    runIds: [1],
+    inspectTarget: async () => ({
+      runStatus: 'in_progress',
+      deployStatus: 'in_progress',
+    }),
+    cancelTarget: async () => {
+      cancelCalls += 1;
+    },
+    waitForCompletion: async () => ({ status: 'completed' }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'target_became_protected');
+  assert.equal(cancelCalls, 0);
+});
+
+test('accepted cancellation does not count as settled while target remains active', async () => {
+  let cancelCalls = 0;
+  const result = await settleCancellationTargets({
+    runIds: [1],
+    inspectTarget: async () => ({
+      runStatus: 'in_progress',
+      deployStatus: 'waiting',
+    }),
+    cancelTarget: async () => {
+      cancelCalls += 1;
+    },
+    waitForCompletion: async () => null,
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    reason: 'cancellation_not_settled',
+    targetRunId: 1,
+    cancelled: [],
+  });
+  assert.equal(cancelCalls, 1);
+});
+
+test('settled cancellation is confirmed before admission can continue', async () => {
+  const events = [];
+  const result = await settleCancellationTargets({
+    runIds: [1],
+    inspectTarget: async () => {
+      events.push('revalidate');
+      return {
+        runStatus: 'in_progress',
+        deployStatus: 'waiting',
+      };
+    },
+    cancelTarget: async () => {
+      events.push('cancel');
+    },
+    waitForCompletion: async () => {
+      events.push('settled');
+      return {
+        status: 'completed',
+        conclusion: 'cancelled',
+      };
+    },
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    reason: 'settled',
+    targetRunId: null,
+    cancelled: [1],
+  });
+  assert.deepEqual(events, ['revalidate', 'cancel', 'settled']);
 });
 
 test('invalid main identity fails closed', () => {

@@ -131,6 +131,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     cache-mode: none
+    concurrency:
+      group: deploy-worker-vellira-website-admission
+      cancel-in-progress: false
     permissions:
       actions: write
       contents: read
@@ -267,6 +270,13 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$CANDIDATE_SHA"
           test "$VELLIRA_BUILD_ID" = "$CANDIDATE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+
+          if [[ "$CANDIDATE_SOURCE" == "staging" ]]; then
+            current_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+            [[ "$current_main" =~ ^[0-9a-f]{40}$ ]]
+            test "$current_main" = "$CANDIDATE_SHA"
+          fi
+
           echo "Production mutation remains pinned to $CANDIDATE_SHA"
 
       - name: Record production promotion provenance

@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url';
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PROMOTION_TITLE_PATTERN = /^Promote staging ([0-9a-f]{40})$/;
 const PROTECTED_DEPLOY_STATUSES = new Set(['queued', 'in_progress', 'completed']);
+const ADMISSION_STABILITY_ATTEMPTS = 4;
+const CANCELLATION_SETTLE_ATTEMPTS = 12;
+const CANCELLATION_SETTLE_DELAY_MS = 1000;
 
 function assertSha(value, label) {
   if (!SHA_PATTERN.test(value ?? '')) {
@@ -158,26 +161,99 @@ async function currentMainSha(repository) {
   return assertSha(data.object?.sha, 'main ref SHA');
 }
 
+async function workflowRunState(repository, runId) {
+  const data = await githubRequest(
+    `/repos/${repository}/actions/runs/${runId}`
+  );
+
+  return {
+    status: data.status ?? null,
+    conclusion: data.conclusion ?? null,
+  };
+}
+
+async function sleep(milliseconds) {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function waitForRunCompletion(
+  repository,
+  runId,
+  {
+    attempts = CANCELLATION_SETTLE_ATTEMPTS,
+    delayMs = CANCELLATION_SETTLE_DELAY_MS,
+  } = {}
+) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const state = await workflowRunState(repository, runId);
+    if (state.status === 'completed') {
+      return state;
+    }
+
+    if (attempt < attempts) {
+      await sleep(delayMs);
+    }
+  }
+
+  return null;
+}
+
 async function cancelRun(repository, runId) {
   await githubRequest(`/repos/${repository}/actions/runs/${runId}/cancel`, {
     method: 'POST',
   });
 }
 
-export async function supersedeStaleProductionPromotions({
-  currentRunId = process.env.CURRENT_PRODUCTION_RUN_ID
-    ? Number(process.env.CURRENT_PRODUCTION_RUN_ID)
-    : null,
-  expectedCandidateSha = process.env.EXPECTED_CANDIDATE_SHA || null,
-  githubOutput = process.env.GITHUB_OUTPUT || null,
-} = {}) {
-  const repository = process.env.GITHUB_REPOSITORY;
+export async function settleCancellationTargets({
+  runIds,
+  currentRunId = null,
+  inspectTarget,
+  cancelTarget,
+  waitForCompletion,
+}) {
+  const cancelled = [];
 
-  if (!repository || !repository.includes('/')) {
-    throw new Error('GITHUB_REPOSITORY must be owner/name');
+  for (const runId of runIds) {
+    if (runId === currentRunId) continue;
+
+    const before = await inspectTarget(runId);
+    if (before.runStatus === 'completed') {
+      continue;
+    }
+
+    if (PROTECTED_DEPLOY_STATUSES.has(before.deployStatus)) {
+      return {
+        ok: false,
+        reason: 'target_became_protected',
+        targetRunId: runId,
+        cancelled,
+      };
+    }
+
+    await cancelTarget(runId);
+
+    const settled = await waitForCompletion(runId);
+    if (!settled || settled.status !== 'completed') {
+      return {
+        ok: false,
+        reason: 'cancellation_not_settled',
+        targetRunId: runId,
+        cancelled,
+      };
+    }
+
+    cancelled.push(runId);
   }
 
-  const mainSha = await currentMainSha(repository);
+  return {
+    ok: true,
+    reason: 'settled',
+    targetRunId: null,
+    cancelled,
+  };
+}
+
+async function collectActiveProductionRuns(repository, currentRunId) {
   const rawRuns = await listProductionRuns(repository);
   const activePromotionRuns = rawRuns.filter(
     (run) =>
@@ -198,59 +274,196 @@ export async function supersedeStaleProductionPromotions({
     });
   }
 
+  return runs;
+}
+
+function assertExpectedCurrentCandidate(runs, currentRunId, expectedCandidateSha) {
+  if (expectedCandidateSha === null) return;
+
+  const currentRun = runs.find((run) => run.id === currentRunId);
+  const observedCandidateSha = currentRun
+    ? promotionCandidateSha(currentRun.displayTitle)
+    : null;
+
+  if (observedCandidateSha !== expectedCandidateSha) {
+    throw new Error(
+      `Current production run candidate mismatch: expected ${expectedCandidateSha}, observed ${observedCandidateSha ?? 'missing'}`
+    );
+  }
+}
+
+async function writeAdmissionOutput(githubOutput, admitted, reason) {
+  if (!githubOutput) {
+    throw new Error('GITHUB_OUTPUT is required for production admission');
+  }
+
+  await appendFile(
+    githubOutput,
+    `admitted=${admitted ? 'true' : 'false'}\nreason=${reason}\n`
+  );
+}
+
+async function settlePlan(repository, plan, currentRunId) {
+  return settleCancellationTargets({
+    runIds: plan.cancel,
+    currentRunId,
+    inspectTarget: async (runId) => {
+      const [runState, latestDeployStatus] = await Promise.all([
+        workflowRunState(repository, runId),
+        deployJobStatus(repository, runId),
+      ]);
+
+      return {
+        runStatus: runState.status,
+        deployStatus: latestDeployStatus,
+      };
+    },
+    cancelTarget: async (runId) => {
+      console.log(
+        `Cancelling revalidated superseded production promotion run ${runId}`
+      );
+      await cancelRun(repository, runId);
+    },
+    waitForCompletion: (runId) => waitForRunCompletion(repository, runId),
+  });
+}
+
+export async function supersedeStaleProductionPromotions({
+  currentRunId = process.env.CURRENT_PRODUCTION_RUN_ID
+    ? Number(process.env.CURRENT_PRODUCTION_RUN_ID)
+    : null,
+  expectedCandidateSha = process.env.EXPECTED_CANDIDATE_SHA || null,
+  githubOutput = process.env.GITHUB_OUTPUT || null,
+} = {}) {
+  const repository = process.env.GITHUB_REPOSITORY;
+
+  if (!repository || !repository.includes('/')) {
+    throw new Error('GITHUB_REPOSITORY must be owner/name');
+  }
+
   if (currentRunId !== null) {
     assertRunId(currentRunId, 'currentRunId');
     if (expectedCandidateSha !== null) {
       assertSha(expectedCandidateSha, 'expectedCandidateSha');
     }
-  }
 
-  const plan =
-    currentRunId === null
-      ? planProductionPromotionSupersession({
-          currentMainSha: mainSha,
-          runs,
-        })
-      : planCurrentProductionAdmission({
-          currentMainSha: mainSha,
-          currentRunId,
-          runs,
-        });
-
-  if (currentRunId !== null && expectedCandidateSha !== null) {
-    const currentRun = runs.find((run) => run.id === currentRunId);
-    const observedCandidateSha = currentRun
-      ? promotionCandidateSha(currentRun.displayTitle)
-      : null;
-
-    if (observedCandidateSha !== expectedCandidateSha) {
-      throw new Error(
-        `Current production run candidate mismatch: expected ${expectedCandidateSha}, observed ${observedCandidateSha ?? 'missing'}`
+    for (
+      let attempt = 1;
+      attempt <= ADMISSION_STABILITY_ATTEMPTS;
+      attempt += 1
+    ) {
+      const mainSha = await currentMainSha(repository);
+      const runs = await collectActiveProductionRuns(repository, currentRunId);
+      assertExpectedCurrentCandidate(
+        runs,
+        currentRunId,
+        expectedCandidateSha
       );
+
+      const plan = planCurrentProductionAdmission({
+        currentMainSha: mainSha,
+        currentRunId,
+        runs,
+      });
+
+      if (!plan.admitCurrent) {
+        await writeAdmissionOutput(githubOutput, false, plan.reason);
+        console.log(
+          JSON.stringify({
+            currentMainSha: mainSha,
+            activePromotionRuns: runs,
+            admissionAttempt: attempt,
+            ...plan,
+          })
+        );
+        return;
+      }
+
+      const settlement = await settlePlan(repository, plan, currentRunId);
+      if (!settlement.ok) {
+        await writeAdmissionOutput(githubOutput, false, settlement.reason);
+        console.log(
+          JSON.stringify({
+            currentMainSha: mainSha,
+            activePromotionRuns: runs,
+            admissionAttempt: attempt,
+            ...plan,
+            settlement,
+          })
+        );
+        return;
+      }
+
+      const finalMainSha = await currentMainSha(repository);
+      const finalRuns = await collectActiveProductionRuns(
+        repository,
+        currentRunId
+      );
+      assertExpectedCurrentCandidate(
+        finalRuns,
+        currentRunId,
+        expectedCandidateSha
+      );
+      const finalPlan = planCurrentProductionAdmission({
+        currentMainSha: finalMainSha,
+        currentRunId,
+        runs: finalRuns,
+      });
+
+      if (finalPlan.admitCurrent && finalPlan.cancel.length === 0) {
+        await writeAdmissionOutput(githubOutput, true, 'admitted');
+        console.log(
+          JSON.stringify({
+            currentMainSha: finalMainSha,
+            activePromotionRuns: finalRuns,
+            admissionAttempt: attempt,
+            ...finalPlan,
+            settlement,
+          })
+        );
+        return;
+      }
+
+      if (!finalPlan.admitCurrent) {
+        await writeAdmissionOutput(githubOutput, false, finalPlan.reason);
+        console.log(
+          JSON.stringify({
+            currentMainSha: finalMainSha,
+            activePromotionRuns: finalRuns,
+            admissionAttempt: attempt,
+            ...finalPlan,
+            settlement,
+          })
+        );
+        return;
+      }
     }
-  }
 
-  for (const runId of plan.cancel) {
-    console.log(`Cancelling superseded production promotion run ${runId}`);
-    await cancelRun(repository, runId);
-  }
-
-  if (currentRunId !== null) {
-    if (!githubOutput) {
-      throw new Error('GITHUB_OUTPUT is required for production admission');
-    }
-
-    await appendFile(
-      githubOutput,
-      `admitted=${plan.admitCurrent ? 'true' : 'false'}\nreason=${plan.reason}\n`
+    await writeAdmissionOutput(githubOutput, false, 'admission_unstable');
+    console.log(
+      JSON.stringify({
+        currentRunId,
+        expectedCandidateSha,
+        reason: 'admission_unstable',
+      })
     );
+    return;
   }
+
+  const mainSha = await currentMainSha(repository);
+  const runs = await collectActiveProductionRuns(repository, null);
+  const plan = planProductionPromotionSupersession({
+    currentMainSha: mainSha,
+    runs,
+  });
+  const settlement = await settlePlan(repository, plan, null);
 
   console.log(
     JSON.stringify({
       currentMainSha: mainSha,
       activePromotionRuns: runs,
       ...plan,
+      settlement,
     })
   );
 }
