@@ -92,15 +92,184 @@ for (const [name, group] of [
   });
 }
 
-test('required title check stays on synchronize and retains canonical commitlint', () => {
+test('required title check keeps exact-head metadata semantics with trusted authority', () => {
   const source = workflow('pr-title');
+  const triggers = section(source, 'on');
+
   for (const event of ['opened', 'edited', 'reopened', 'synchronize']) {
-    assert.ok(section(source, 'on').includes(event));
+    assert.ok(triggers.includes(event));
   }
+
+  assert.doesNotMatch(triggers, /ready_for_review/);
   assert.match(source, /name: Validate PR title/);
-  assert.match(source, /pnpm install --frozen-lockfile/);
-  assert.match(source, /pnpm exec commitlint/);
-  assert.doesNotMatch(source, /pull_request_target:|continue-on-error:/);
+  assert.match(
+    source,
+    /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/
+  );
+  assert.match(source, /persist-credentials: false/);
+  assert.match(source, /package-manager-cache: false/);
+  assert.match(source, /mode=isolated/);
+  assert.match(source, /mode=bootstrap/);
+  assert.match(
+    source,
+    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter @vellira-ci\/pr-title-validator/
+  );
+  assert.match(
+    source,
+    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter vellira/
+  );
+  assert.match(
+    source,
+    /pnpm --filter @vellira-ci\/pr-title-validator run validate/
+  );
+  assert.match(source, /pnpm exec commitlint --config commitlint\.config\.js/);
+  assert.equal(
+    source.match(/pnpm install --frozen-lockfile/g)?.length,
+    2,
+    'Only isolated and bootstrap filtered installs are allowed'
+  );
+  assert.doesNotMatch(
+    source,
+    /pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
+  );
+  assert.equal(
+    section(source, 'permissions').trim(),
+    'contents: read\n  pull-requests: read'
+  );
+});
+
+test('bootstrap fallback is bounded to trusted base before validator adoption', () => {
+  const source = workflow('pr-title');
+  const detect = script(source, 'Detect title-validator authority in trusted base');
+  assert.match(detect, /tools\/pr-title-validator\/package\.json/);
+  assert.match(detect, /mode=isolated/);
+  assert.match(detect, /mode=bootstrap/);
+
+  const isolatedInstall = source.split(
+    '      - name: Install locked PR-title validator only\n'
+  )[1].split('      - name: Bootstrap canonical title dependencies\n')[0];
+  const bootstrapInstall = source.split(
+    '      - name: Bootstrap canonical title dependencies\n'
+  )[1].split('      - name: Validate PR title\n')[0];
+
+  assert.match(isolatedInstall, /if: steps\.validator\.outputs\.mode == 'isolated'/);
+  assert.match(bootstrapInstall, /if: steps\.validator\.outputs\.mode == 'bootstrap'/);
+  assert.match(bootstrapInstall, /--filter vellira/);
+  assert.doesNotMatch(bootstrapInstall, /@vellira-ci\/pr-title-validator|pnpm dlx|npx /);
+});
+
+test('minimal title validator reuses canonical config and locked root resolution', () => {
+  const validator = JSON.parse(
+    readFileSync(
+      new URL('../../tools/pr-title-validator/package.json', import.meta.url),
+      'utf8'
+    )
+  );
+  const rootPackage = JSON.parse(
+    readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+  );
+  const wrapper = readFileSync(
+    new URL(
+      '../../tools/pr-title-validator/commitlint.config.js',
+      import.meta.url
+    ),
+    'utf8'
+  );
+  const lock = readFileSync(
+    new URL('../../pnpm-lock.yaml', import.meta.url),
+    'utf8'
+  );
+
+  assert.equal(validator.private, true);
+  assert.equal(
+    validator.scripts.validate,
+    'commitlint --config commitlint.config.js'
+  );
+  assert.match(
+    wrapper,
+    /import canonicalConfig from '\.\.\/\.\.\/commitlint\.config\.js';/
+  );
+  assert.match(wrapper, /export default canonicalConfig;/);
+  assert.doesNotMatch(wrapper, /extends:|rules:/);
+
+  for (const dependency of [
+    '@commitlint/cli',
+    '@commitlint/config-conventional',
+  ]) {
+    const exact = validator.devDependencies[dependency];
+    assert.ok(rootPackage.devDependencies[dependency].endsWith(exact));
+  }
+
+  const rootImporter = lock
+    .split('\n  .:\n')[1]
+    ?.split('\n  apps/docs:\n')[0];
+  const validatorImporter = lock
+    .split('\n  tools/pr-title-validator:\n')[1]
+    ?.split('\n  packages/react:\n')[0];
+  assert.ok(rootImporter, 'Missing root lock importer');
+  assert.ok(validatorImporter, 'Missing locked PR-title validator importer');
+
+  function resolvedVersion(importer, dependency) {
+    const marker = `      '${dependency}':\n`;
+    const section = importer.split(marker)[1];
+    assert.ok(section, `Missing locked dependency: ${dependency}`);
+    const versionLine = section
+      .split('\n')
+      .find((line) => line.trim().startsWith('version: '));
+    assert.ok(versionLine, `Missing locked resolution: ${dependency}`);
+    return versionLine.trim().slice('version: '.length);
+  }
+
+  assert.equal(
+    resolvedVersion(validatorImporter, '@commitlint/cli'),
+    resolvedVersion(rootImporter, '@commitlint/cli'),
+    'Validator CLI resolution must equal root canonical resolution'
+  );
+  assert.equal(
+    resolvedVersion(validatorImporter, '@commitlint/config-conventional'),
+    resolvedVersion(rootImporter, '@commitlint/config-conventional'),
+    'Validator conventional config resolution must equal root canonical resolution'
+  );
+
+  assert.match(validatorImporter, /specifier: 21\.2\.2/);
+  assert.match(validatorImporter, /specifier: 26\.2\.0/);
+  assert.match(validatorImporter, /specifier: 7\.1\.2/);
+  assert.match(validatorImporter, /specifier: 6\.0\.3/);
+});
+
+test('minimal validator preserves canonical valid and invalid title outcomes', () => {
+  const args = [
+    '--filter',
+    '@vellira-ci/pr-title-validator',
+    'run',
+    'validate',
+  ];
+
+  for (const title of [
+    'ci: isolate pull request title dependencies',
+    'fix(ci): preserve exact head title validation',
+  ]) {
+    const result = spawnSync('pnpm', args, {
+      cwd: process.cwd(),
+      input: title + '\n',
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  }
+
+  for (const title of [
+    'Update pull request title validation',
+    'feat(ci) missing conventional separator',
+  ]) {
+    const result = spawnSync('pnpm', args, {
+      cwd: process.cwd(),
+      input: title + '\n',
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.notEqual(result.status, 0, 'Invalid title unexpectedly passed: ' + title);
+  }
 });
 
 test('ready transition does not rerun unchanged-SHA validation', () => {
