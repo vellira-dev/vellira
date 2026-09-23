@@ -59,7 +59,9 @@ test('production admission owns duplicate/stale cleanup before serialized deploy
   assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
 
   const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
-  assert.match(admission, /actions: write/);
+  assert.match(admission, /actions: read/);
+  assert.match(admission, /deployments: write/);
+  assert.doesNotMatch(admission, /actions: write/);
   assert.match(admission, /cache-mode: none/);
   assert.match(
     admission,

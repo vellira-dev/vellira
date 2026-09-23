@@ -170,6 +170,11 @@ test('production owns queue and rerun admission without duplicate workflow-run c
   const triggers = section(supersede, 'on');
   assert.match(triggers, /push:\n {4}branches: \[main\]/);
   assert.doesNotMatch(triggers, /workflow_run:/);
+  assert.doesNotMatch(
+    supersede,
+    /\/actions\/runs\/\$\{runId\}\/cancel/
+  );
+  assert.match(supersede, /deployments: write/);
 
   const production = workflow('deploy-website-cloudflare-production');
   const header = production.split('\njobs:\n')[0];

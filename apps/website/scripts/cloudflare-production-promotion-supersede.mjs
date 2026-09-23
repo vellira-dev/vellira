@@ -32,33 +32,19 @@ export function planProductionPromotionSupersession({ currentMainSha, runs }) {
     }))
     .filter((run) => run.candidateSha && run.status !== 'completed');
 
-  const keep = new Set();
-
-  for (const run of promotions) {
-    if (run.protectedDeploy) {
-      keep.add(run.id);
-    }
-  }
-
-  const currentMainPromotions = promotions
-    .filter((run) => run.candidateSha === currentMainSha && !run.protectedDeploy)
-    .sort((left, right) => right.runNumber - left.runNumber);
-
-  const hasApprovedCurrentMain = promotions.some(
-    (run) => run.candidateSha === currentMainSha && run.protectedDeploy
-  );
-
-  if (!hasApprovedCurrentMain && currentMainPromotions[0]) {
-    keep.add(currentMainPromotions[0].id);
-  }
-
-  const cancel = promotions
-    .filter((run) => !keep.has(run.id) && !run.protectedDeploy)
-    .map((run) => run.id);
-
   return {
-    keep: [...keep],
-    cancel,
+    keep: promotions
+      .filter(
+        (run) =>
+          run.protectedDeploy || run.candidateSha === currentMainSha
+      )
+      .map((run) => run.id),
+    cancel: promotions
+      .filter(
+        (run) =>
+          run.candidateSha !== currentMainSha && !run.protectedDeploy
+      )
+      .map((run) => run.id),
   };
 }
 
@@ -251,20 +237,42 @@ async function waitForRunCompletion(
   return null;
 }
 
-async function cancelRun(repository, runId) {
-  await githubRequest(`/repos/${repository}/actions/runs/${runId}/cancel`, {
-    method: 'POST',
-  });
+async function pendingDeploymentEnvironmentIds(repository, runId) {
+  const pending = await githubRequest(
+    `/repos/${repository}/actions/runs/${runId}/pending_deployments`
+  );
+
+  return (Array.isArray(pending) ? pending : [])
+    .map((deployment) => deployment.environment?.id)
+    .filter((environmentId) => Number.isInteger(environmentId));
 }
 
-export async function settleCancellationTargets({
+async function rejectPendingDeployments(repository, runId, environmentIds) {
+  await githubRequest(
+    `/repos/${repository}/actions/runs/${runId}/pending_deployments`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        environment_ids: environmentIds,
+        state: 'rejected',
+        comment: 'Superseded by a newer Vellira main revision.',
+      }),
+    }
+  );
+}
+
+export async function settlePendingApprovalTargets({
   runIds,
   currentRunId = null,
   inspectTarget,
-  cancelTarget,
+  rejectPendingTarget,
   waitForCompletion,
 }) {
-  const cancelled = [];
+  const rejected = [];
+  const skipped = [];
 
   for (const runId of runIds) {
     if (runId === currentRunId) continue;
@@ -274,35 +282,33 @@ export async function settleCancellationTargets({
       continue;
     }
 
-    if (PROTECTED_DEPLOY_STATUSES.has(before.deployStatus)) {
-      return {
-        ok: false,
-        reason: 'target_became_protected',
-        targetRunId: runId,
-        cancelled,
-      };
+    if (before.pendingEnvironmentIds.length === 0) {
+      skipped.push(runId);
+      continue;
     }
 
-    await cancelTarget(runId);
+    await rejectPendingTarget(runId, before.pendingEnvironmentIds);
 
     const settled = await waitForCompletion(runId);
     if (!settled || settled.status !== 'completed') {
       return {
         ok: false,
-        reason: 'cancellation_not_settled',
+        reason: 'rejection_not_settled',
         targetRunId: runId,
-        cancelled,
+        rejected,
+        skipped,
       };
     }
 
-    cancelled.push(runId);
+    rejected.push(runId);
   }
 
   return {
     ok: true,
     reason: 'settled',
     targetRunId: null,
-    cancelled,
+    rejected,
+    skipped,
   };
 }
 
@@ -357,25 +363,25 @@ async function writeAdmissionOutput(githubOutput, admitted, reason) {
 }
 
 async function settlePlan(repository, plan, currentRunId) {
-  return settleCancellationTargets({
+  return settlePendingApprovalTargets({
     runIds: plan.cancel,
     currentRunId,
     inspectTarget: async (runId) => {
-      const [runState, latestDeployStatus] = await Promise.all([
+      const [runState, pendingEnvironmentIds] = await Promise.all([
         workflowRunState(repository, runId),
-        deployJobStatus(repository, runId),
+        pendingDeploymentEnvironmentIds(repository, runId),
       ]);
 
       return {
         runStatus: runState.status,
-        deployStatus: latestDeployStatus,
+        pendingEnvironmentIds,
       };
     },
-    cancelTarget: async (runId) => {
+    rejectPendingTarget: async (runId, environmentIds) => {
       console.log(
-        `Cancelling revalidated superseded production promotion run ${runId}`
+        `Rejecting pending production environments for stale run ${runId}`
       );
-      await cancelRun(repository, runId);
+      await rejectPendingDeployments(repository, runId, environmentIds);
     },
     waitForCompletion: (runId) => waitForRunCompletion(repository, runId),
   });
@@ -463,7 +469,7 @@ export async function supersedeStaleProductionPromotions({
         runs: finalRuns,
       });
 
-      if (finalPlan.admitCurrent && finalPlan.cancel.length === 0) {
+      if (finalPlan.admitCurrent) {
         await writeAdmissionOutput(githubOutput, true, 'admitted');
         console.log(
           JSON.stringify({

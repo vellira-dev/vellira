@@ -16,8 +16,9 @@ jobs:
     name: Keep only the latest safe production approval
     runs-on: ubuntu-latest
     permissions:
-      actions: write
+      actions: read
       contents: read
+      deployments: write
     steps:
       - name: Checkout current main controls
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

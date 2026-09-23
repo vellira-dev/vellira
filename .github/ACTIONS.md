@@ -43,16 +43,16 @@ work, but does not prevent a workflow card from being created for each push.
   concurrency, stale/duplicate candidates are rejected before environment
   approval, and only the deploy job uses the non-cancelling global concurrency
   group. This covers normal queue admission and reruns without separate
-  `workflow_run` Supersede cards. Admission revalidates every cancellation
-  target immediately before mutation, waits for GitHub's asynchronous cancellation
-  to reach a completed run, then re-reads main and active promotions before
-  publishing `admitted=true`. Same-SHA duplicate/rerun admission never cancels
-  the existing pending owner: the oldest active current-main candidate remains
-  authoritative and newer duplicates fail closed. Admission jobs are independently
-  serialized. A
-  deploy already queued, in progress or completed remains protected. The deploy
-  path also rechecks current `main` immediately before production mutation for
-  normal staging-derived candidates.
+  `workflow_run` Supersede cards. Production cleanup never uses the generic
+  workflow-cancel endpoint. For stale runs it may reject only environments that
+  GitHub still reports as pending deployment reviews; if approval has already
+  crossed that boundary, automation leaves the run alone. A successful rejection
+  must still settle to a completed workflow run. Same-SHA duplicate/rerun admission
+  never rejects the existing pending owner: the oldest active current-main
+  candidate remains authoritative and newer duplicates fail closed. Admission
+  jobs are independently serialized. A deploy already queued, in progress or
+  completed remains protected. The deploy path also rechecks current `main`
+  immediately before production mutation for normal staging-derived candidates.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.

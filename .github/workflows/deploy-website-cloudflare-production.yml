@@ -135,8 +135,9 @@ jobs:
       group: deploy-worker-vellira-website-admission
       cancel-in-progress: false
     permissions:
-      actions: write
+      actions: read
       contents: read
+      deployments: write
     outputs:
       admitted: ${{ steps.admit.outputs.admitted }}
       reason: ${{ steps.admit.outputs.reason }}

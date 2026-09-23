@@ -5,7 +5,7 @@ import test from 'node:test';
 import {
   planCurrentProductionAdmission,
   planProductionPromotionSupersession,
-  settleCancellationTargets,
+  settlePendingApprovalTargets,
   promotionCandidateSha,
 } from './cloudflare-production-promotion-supersede.mjs';
 
@@ -44,7 +44,7 @@ test('stale waiting approvals are cancelled when main advances', () => {
   );
 });
 
-test('only the newest safe promotion for current main is kept', () => {
+test('standalone cleanup never supersedes current-main duplicate approvals', () => {
   assert.deepEqual(
     planProductionPromotionSupersession({
       currentMainSha: B,
@@ -53,7 +53,7 @@ test('only the newest safe promotion for current main is kept', () => {
         run({ id: 2, candidateSha: B, runNumber: 11 }),
       ],
     }),
-    { keep: [2], cancel: [1] }
+    { keep: [1, 2], cancel: [] }
   );
 });
 
@@ -248,90 +248,25 @@ test('missing current run fails closed without cancelling unrelated promotions',
   );
 });
 
-test('revalidation blocks waiting-to-queued target before cancellation', async () => {
-  let cancelCalls = 0;
-  const result = await settleCancellationTargets({
-    runIds: [1],
-    inspectTarget: async () => ({
-      runStatus: 'in_progress',
-      deployStatus: 'queued',
-    }),
-    cancelTarget: async () => {
-      cancelCalls += 1;
-    },
-    waitForCompletion: async () => ({ status: 'completed' }),
-  });
-
-  assert.deepEqual(result, {
-    ok: false,
-    reason: 'target_became_protected',
-    targetRunId: 1,
-    cancelled: [],
-  });
-  assert.equal(cancelCalls, 0);
-});
-
-test('revalidation blocks waiting-to-in-progress target before cancellation', async () => {
-  let cancelCalls = 0;
-  const result = await settleCancellationTargets({
-    runIds: [1],
-    inspectTarget: async () => ({
-      runStatus: 'in_progress',
-      deployStatus: 'in_progress',
-    }),
-    cancelTarget: async () => {
-      cancelCalls += 1;
-    },
-    waitForCompletion: async () => ({ status: 'completed' }),
-  });
-
-  assert.equal(result.ok, false);
-  assert.equal(result.reason, 'target_became_protected');
-  assert.equal(cancelCalls, 0);
-});
-
-test('accepted cancellation does not count as settled while target remains active', async () => {
-  let cancelCalls = 0;
-  const result = await settleCancellationTargets({
-    runIds: [1],
-    inspectTarget: async () => ({
-      runStatus: 'in_progress',
-      deployStatus: 'waiting',
-    }),
-    cancelTarget: async () => {
-      cancelCalls += 1;
-    },
-    waitForCompletion: async () => null,
-  });
-
-  assert.deepEqual(result, {
-    ok: false,
-    reason: 'cancellation_not_settled',
-    targetRunId: 1,
-    cancelled: [],
-  });
-  assert.equal(cancelCalls, 1);
-});
-
-test('settled cancellation is confirmed before admission can continue', async () => {
+test('pending environment is rejected and must settle before cleanup succeeds', async () => {
   const events = [];
-  const result = await settleCancellationTargets({
+  const result = await settlePendingApprovalTargets({
     runIds: [1],
     inspectTarget: async () => {
-      events.push('revalidate');
+      events.push('inspect');
       return {
         runStatus: 'in_progress',
-        deployStatus: 'waiting',
+        pendingEnvironmentIds: [101],
       };
     },
-    cancelTarget: async () => {
-      events.push('cancel');
+    rejectPendingTarget: async (runId, environmentIds) => {
+      events.push(`reject:${runId}:${environmentIds.join(',')}`);
     },
     waitForCompletion: async () => {
       events.push('settled');
       return {
         status: 'completed',
-        conclusion: 'cancelled',
+        conclusion: 'failure',
       };
     },
   });
@@ -340,9 +275,71 @@ test('settled cancellation is confirmed before admission can continue', async ()
     ok: true,
     reason: 'settled',
     targetRunId: null,
-    cancelled: [1],
+    rejected: [1],
+    skipped: [],
   });
-  assert.deepEqual(events, ['revalidate', 'cancel', 'settled']);
+  assert.deepEqual(events, ['inspect', 'reject:1:101', 'settled']);
+});
+
+test('approval that already crossed the pending boundary is never workflow-cancelled', async () => {
+  let rejectionCalls = 0;
+  const result = await settlePendingApprovalTargets({
+    runIds: [1],
+    inspectTarget: async () => ({
+      runStatus: 'in_progress',
+      pendingEnvironmentIds: [],
+    }),
+    rejectPendingTarget: async () => {
+      rejectionCalls += 1;
+    },
+    waitForCompletion: async () => ({ status: 'completed' }),
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    reason: 'settled',
+    targetRunId: null,
+    rejected: [],
+    skipped: [1],
+  });
+  assert.equal(rejectionCalls, 0);
+});
+
+test('pending review rejection race fails closed instead of falling back to cancel', async () => {
+  await assert.rejects(
+    settlePendingApprovalTargets({
+      runIds: [1],
+      inspectTarget: async () => ({
+        runStatus: 'in_progress',
+        pendingEnvironmentIds: [101],
+      }),
+      rejectPendingTarget: async () => {
+        throw new Error('pending deployment is no longer reviewable');
+      },
+      waitForCompletion: async () => ({ status: 'completed' }),
+    }),
+    /no longer reviewable/
+  );
+});
+
+test('accepted pending rejection does not settle while target remains active', async () => {
+  const result = await settlePendingApprovalTargets({
+    runIds: [1],
+    inspectTarget: async () => ({
+      runStatus: 'in_progress',
+      pendingEnvironmentIds: [101],
+    }),
+    rejectPendingTarget: async () => {},
+    waitForCompletion: async () => null,
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    reason: 'rejection_not_settled',
+    targetRunId: 1,
+    rejected: [],
+    skipped: [],
+  });
 });
 
 test('invalid main identity fails closed', () => {
