@@ -1459,7 +1459,7 @@ describe('component generator README lifecycle ownership', () => {
     force: false,
   } as const;
 
-  it('blocks a missing README before normal generation mutates output', async () => {
+  it('blocks missing README before generation mutates output', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
     const readmeFile = path.join(root, 'README.md');
@@ -1556,7 +1556,7 @@ describe('component generator README lifecycle ownership', () => {
     expect(readFile(readmeFile)).toBe(malformed);
   });
 
-  it('writes README inventory and reports it as an updated artifact', async () => {
+  it('writes README inventory and reports the updated file', async () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
     const readmeFile = path.join(root, 'README.md');
