@@ -3,6 +3,7 @@ import path from 'node:path';
 import test from 'node:test';
 import './cloudflare-archive-client.test.mjs';
 import './cloudflare-production-promotion.test.mjs';
+import './cloudflare-production-freshness.test.mjs';
 import './cloudflare-staging-evidence.test.mjs';
 import {
   CANONICAL_REDIRECT_CACHE_CONTROL,

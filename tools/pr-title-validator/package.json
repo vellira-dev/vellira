@@ -1,0 +1,16 @@
+{
+  "name": "@vellira-ci/pr-title-validator",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "validate": "commitlint --config commitlint.config.js"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.2",
+    "@commitlint/config-conventional": "21.2.2",
+    "@types/node": "26.2.0",
+    "conventional-commits-parser": "7.1.2",
+    "typescript": "6.0.3"
+  }
+}

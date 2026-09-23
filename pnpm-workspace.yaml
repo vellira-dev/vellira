@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+  - 'tools/pr-title-validator'
 allowBuilds:
   '@parcel/watcher': true
   deasync: true

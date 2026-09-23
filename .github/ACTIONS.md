@@ -17,7 +17,16 @@ work, but does not prevent a workflow card from being created for each push.
 
 - `Validate PR title` remains required and runs on `synchronize` as well as title
   edits. Removing that event without an equivalent exact-head check can strand
-  new PR revisions. The locked canonical commitlint configuration is unchanged.
+  new PR revisions. The job checks out the trusted PR base SHA, installs only the
+  locked `@vellira-ci/pr-title-validator` workspace with lifecycle scripts and
+  dependency caching disabled, and executes the repository's canonical root
+  `commitlint.config.js`. The validator pins the same commitlint resolution as
+  the root lockfile; no regex policy, floating `dlx` dependency or second
+  independently maintained commitlint policy is used. The one bootstrap PR that
+  introduces the validator cannot find it on its trusted base SHA, so that case
+  falls back to a root-project-only frozen install (`--filter vellira`) and the
+  same canonical config. Once adopted on main, normal PRs use only the isolated
+  validator path.
 - The strict token semantic audit remains in `ci:quality`; the separate detailed
   report is available through its manual workflow.
 - `Lighthouse / Docs` owns the fresh-checkout docs deployment-build regression:
@@ -36,11 +45,19 @@ work, but does not prevent a workflow card from being created for each push.
   failure is visible in that job and its summary but does not invalidate an
   already verified deployment. Retry `Submit URLs to IndexNow` manually, without
   redeploying production. The manual retry remains failure-reporting.
-- Supersession retains both `requested` and `in_progress`: queue admission and
-  reruns must both remain covered. Removing either event requires a lifecycle
-  regression proving pending duplicate promotions cannot get stuck. A promotion
-  whose deploy job is already `completed` remains protected while post-deploy
-  follow-up jobs such as IndexNow finish.
+- Production admission is read-only. The oldest active current-main candidate owns
+  the approval path; same-SHA reruns and stale candidates fail closed before
+  environment approval. Vellira does not automatically cancel or reject a
+  production environment review: GitHub environment review is a human reviewer
+  boundary and the default workflow token is not treated as reviewer authority.
+  If `main` advances while an older production approval is waiting, the reviewer
+  should reject that stale approval. If it is accidentally approved, the deploy
+  job rechecks current `main` after approval. The deployment script also checks
+  authoritative remote `main` before remote archive mutation and again after
+  the Wrangler dry-run immediately before the real activation. A staging-derived
+  stale SHA therefore cannot reach production after script entry. Emergency
+  recovery is an explicit bypass. Admission and deploy jobs retain separate
+  non-cancelling concurrency groups.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
