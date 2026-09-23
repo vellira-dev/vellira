@@ -1463,6 +1463,19 @@ describe('component generator README lifecycle ownership', () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
     const readmeFile = path.join(root, 'README.md');
+    const webDir = path.join(root, 'packages/react/src/primitives/Avatar');
+    const nativeDir = path.join(
+      root,
+      'packages/react-native/src/primitives/Avatar'
+    );
+    const metadataFile = path.join(
+      root,
+      'packages/metadata/src/components/Avatar.metadata.ts'
+    );
+    const docsFile = path.join(
+      root,
+      'apps/docs/src/component-docs/Avatar.docs.ts'
+    );
     const metadataRegistry = path.join(
       root,
       'packages/metadata/src/components/index.ts'
@@ -1483,27 +1496,10 @@ describe('component generator README lifecycle ownership', () => {
       })
     ).rejects.toThrow('component-readme-inventory-file-missing: README.md');
 
-    expect(
-      fs.existsSync(path.join(root, 'packages/react/src/primitives/Avatar'))
-    ).toBe(false);
-    expect(
-      fs.existsSync(
-        path.join(root, 'packages/react-native/src/primitives/Avatar')
-      )
-    ).toBe(false);
-    expect(
-      fs.existsSync(
-        path.join(
-          root,
-          'packages/metadata/src/components/Avatar.metadata.ts'
-        )
-      )
-    ).toBe(false);
-    expect(
-      fs.existsSync(
-        path.join(root, 'apps/docs/src/component-docs/Avatar.docs.ts')
-      )
-    ).toBe(false);
+    expect(fs.existsSync(webDir)).toBe(false);
+    expect(fs.existsSync(nativeDir)).toBe(false);
+    expect(fs.existsSync(metadataFile)).toBe(false);
+    expect(fs.existsSync(docsFile)).toBe(false);
     expect(readFile(metadataRegistry)).toBe(metadataBefore);
     expect(readFile(docsRegistry)).toBe(docsBefore);
   });
@@ -1512,6 +1508,11 @@ describe('component generator README lifecycle ownership', () => {
     const root = createTempRoot();
     createRequiredRepositoryStructure(root);
     const readmeFile = path.join(root, 'README.md');
+    const webDir = path.join(root, 'packages/react/src/primitives/Avatar');
+    const metadataFile = path.join(
+      root,
+      'packages/metadata/src/components/Avatar.metadata.ts'
+    );
     const malformed = readFile(readmeFile).replace(
       '| --------- | :---: | :----------: |',
       '| broken |'
@@ -1526,17 +1527,8 @@ describe('component generator README lifecycle ownership', () => {
       })
     ).rejects.toThrow('component-readme-inventory-table-invalid');
 
-    expect(
-      fs.existsSync(path.join(root, 'packages/react/src/primitives/Avatar'))
-    ).toBe(false);
-    expect(
-      fs.existsSync(
-        path.join(
-          root,
-          'packages/metadata/src/components/Avatar.metadata.ts'
-        )
-      )
-    ).toBe(false);
+    expect(fs.existsSync(webDir)).toBe(false);
+    expect(fs.existsSync(metadataFile)).toBe(false);
     expect(readFile(readmeFile)).toBe(malformed);
 
     await expect(
