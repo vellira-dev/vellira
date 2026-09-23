@@ -1,0 +1,9 @@
+{
+  "title": "Repository engineering review in Vellira",
+  "description": "How Vellira keeps repository tooling reviewable through repository-owned checker wiring, with focused coverage as supporting evidence.",
+  "slug": "pr-1114-add-canonical-component-lifecycle-and-stable-graduation-gate",
+  "publishedAt": "2026-09-14",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}

@@ -6,6 +6,7 @@ import componentMetadataSourceOfTruthMetadata from '../../content/blog/component
 import controlledUncontrolledReactNativeMetadata from '../../content/blog/controlled-uncontrolled-react-native/metadata.json';
 import crossPlatformFormVelliraMetadata from '../../content/blog/cross-platform-form-vellira/metadata.json';
 import designSystemComponentGeneratorMetadata from '../../content/blog/design-system-component-generator/metadata.json';
+import pr1114AddCanonicalComponentLifecycleAndStableGraduationGateMetadata from '../../content/blog/pr-1114-add-canonical-component-lifecycle-and-stable-graduation-gate/metadata.json';
 import productionReadyCrossPlatformComponentMetadata from '../../content/blog/production-ready-cross-platform-component/metadata.json';
 import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/quality-gates-before-component-growth/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
@@ -51,6 +52,11 @@ const blogArticleMetadataRegistryEntries = [
     metadata: designSystemComponentGeneratorMetadata,
   },
   {
+    slug: 'pr-1114-add-canonical-component-lifecycle-and-stable-graduation-gate',
+    metadata:
+      pr1114AddCanonicalComponentLifecycleAndStableGraduationGateMetadata,
+  },
+  {
     slug: 'production-ready-cross-platform-component',
     metadata: productionReadyCrossPlatformComponentMetadata,
   },
@@ -79,6 +85,9 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
       import('../../content/blog/cross-platform-form-vellira/article.mdx'),
     'design-system-component-generator': () =>
       import('../../content/blog/design-system-component-generator/article.mdx'),
+    'pr-1114-add-canonical-component-lifecycle-and-stable-graduation-gate':
+      () =>
+        import('../../content/blog/pr-1114-add-canonical-component-lifecycle-and-stable-graduation-gate/article.mdx'),
     'production-ready-cross-platform-component': () =>
       import('../../content/blog/production-ready-cross-platform-component/article.mdx'),
     'quality-gates-before-component-growth': () =>
