@@ -11,10 +11,7 @@
       "@vellira-ui/metadata": ["packages/metadata/src/index.ts"]
     }
   },
-  "include": [
-    "scripts/**/*.ts",
-    "scripts/public-api/**/*.d.mts"
-  ],
+  "include": ["scripts/**/*.ts", "scripts/public-api/**/*.d.mts"],
   "exclude": [
     "node_modules",
     "dist",
