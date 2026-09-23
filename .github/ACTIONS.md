@@ -46,7 +46,10 @@ work, but does not prevent a workflow card from being created for each push.
   `workflow_run` Supersede cards. Admission revalidates every cancellation
   target immediately before mutation, waits for GitHub's asynchronous cancellation
   to reach a completed run, then re-reads main and active promotions before
-  publishing `admitted=true`. Admission jobs are independently serialized. A
+  publishing `admitted=true`. Same-SHA duplicate/rerun admission never cancels
+  the existing pending owner: the oldest active current-main candidate remains
+  authoritative and newer duplicates fail closed. Admission jobs are independently
+  serialized. A
   deploy already queued, in progress or completed remains protected. The deploy
   path also rechecks current `main` immediately before production mutation for
   normal staging-derived candidates.

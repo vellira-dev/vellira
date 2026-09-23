@@ -311,7 +311,16 @@ jobs:
 
       - name: Deploy production website to Cloudflare Workers
         id: worker-deploy
-        run: >-
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$CANDIDATE_SOURCE" == "staging" ]]; then
+            current_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+            [[ "$current_main" =~ ^[0-9a-f]{40}$ ]]
+            test "$current_main" = "$CANDIDATE_SHA"
+          fi
+
           node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}

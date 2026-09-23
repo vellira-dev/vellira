@@ -78,31 +78,84 @@ export function planCurrentProductionAdmission({
   assertSha(currentMainSha, 'currentMainSha');
   assertRunId(currentRunId, 'currentRunId');
 
-  const plan = planProductionPromotionSupersession({
-    currentMainSha,
-    runs,
-  });
-  const currentRun = runs.find((run) => run.id === currentRunId);
-  const currentCandidateSha = currentRun
-    ? promotionCandidateSha(currentRun.displayTitle)
-    : null;
-  const currentIsActive =
-    currentRun !== undefined &&
-    currentRun.status !== 'completed' &&
-    currentCandidateSha !== null;
-  const admitted = currentIsActive && plan.keep.includes(currentRunId);
+  const promotions = runs
+    .map((run) => ({
+      ...run,
+      candidateSha: promotionCandidateSha(run.displayTitle),
+      protectedDeploy: PROTECTED_DEPLOY_STATUSES.has(run.deployStatus),
+    }))
+    .filter((run) => run.candidateSha && run.status !== 'completed');
+  const currentRun = promotions.find((run) => run.id === currentRunId);
+
+  if (!currentRun) {
+    return {
+      keep: promotions.filter((run) => run.protectedDeploy).map((run) => run.id),
+      cancel: [],
+      admitCurrent: false,
+      reason: 'current_run_missing',
+    };
+  }
+
+  if (currentRun.candidateSha !== currentMainSha) {
+    return {
+      keep: promotions.filter((run) => run.protectedDeploy).map((run) => run.id),
+      cancel: [],
+      admitCurrent: false,
+      reason: 'stale_candidate',
+    };
+  }
+
+  const currentMainPromotions = promotions
+    .filter((run) => run.candidateSha === currentMainSha)
+    .sort((left, right) => left.runNumber - right.runNumber);
+  const protectedCurrentMain = currentMainPromotions.find(
+    (run) => run.id !== currentRunId && run.protectedDeploy
+  );
+  const existingOwner = currentMainPromotions[0];
+
+  if (
+    protectedCurrentMain ||
+    (existingOwner && existingOwner.id !== currentRunId)
+  ) {
+    return {
+      keep: [
+        ...new Set(
+          promotions
+            .filter(
+              (run) =>
+                run.protectedDeploy ||
+                (existingOwner && run.id === existingOwner.id)
+            )
+            .map((run) => run.id)
+        ),
+      ],
+      cancel: [],
+      admitCurrent: false,
+      reason: 'existing_current_candidate',
+    };
+  }
+
+  const staleCancellable = promotions
+    .filter(
+      (run) =>
+        run.candidateSha !== currentMainSha &&
+        !run.protectedDeploy &&
+        run.id !== currentRunId
+    )
+    .map((run) => run.id);
 
   return {
-    keep: plan.keep,
-    cancel: plan.cancel.filter((runId) => runId !== currentRunId),
-    admitCurrent: admitted,
-    reason: admitted
-      ? 'admitted'
-      : currentCandidateSha && currentCandidateSha !== currentMainSha
-        ? 'stale_candidate'
-        : currentIsActive
-          ? 'superseded_or_protected'
-          : 'current_run_missing',
+    keep: [
+      ...new Set([
+        currentRunId,
+        ...promotions
+          .filter((run) => run.protectedDeploy)
+          .map((run) => run.id),
+      ]),
+    ],
+    cancel: staleCancellable,
+    admitCurrent: true,
+    reason: 'admitted',
   };
 }
 

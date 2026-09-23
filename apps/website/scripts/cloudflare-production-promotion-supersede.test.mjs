@@ -129,26 +129,7 @@ test('completed runs do not participate in supersession', () => {
   );
 });
 
-test('newest current-main run is admitted and supersedes older waiting duplicate', () => {
-  assert.deepEqual(
-    planCurrentProductionAdmission({
-      currentMainSha: B,
-      currentRunId: 2,
-      runs: [
-        run({ id: 1, candidateSha: B, runNumber: 10 }),
-        run({ id: 2, candidateSha: B, runNumber: 11 }),
-      ],
-    }),
-    {
-      keep: [2],
-      cancel: [1],
-      admitCurrent: true,
-      reason: 'admitted',
-    }
-  );
-});
-
-test('older duplicate is rejected without cancelling itself', () => {
+test('oldest current-main candidate owns admission without cancelling a rerun', () => {
   assert.deepEqual(
     planCurrentProductionAdmission({
       currentMainSha: B,
@@ -159,10 +140,54 @@ test('older duplicate is rejected without cancelling itself', () => {
       ],
     }),
     {
-      keep: [2],
+      keep: [1],
+      cancel: [],
+      admitCurrent: true,
+      reason: 'admitted',
+    }
+  );
+});
+
+test('newer same-SHA rerun is rejected without cancelling the pending owner', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 2,
+      runs: [
+        run({ id: 1, candidateSha: B, runNumber: 10 }),
+        run({ id: 2, candidateSha: B, runNumber: 11 }),
+      ],
+    }),
+    {
+      keep: [1],
       cancel: [],
       admitCurrent: false,
-      reason: 'superseded_or_protected',
+      reason: 'existing_current_candidate',
+    }
+  );
+});
+
+test('admitted current candidate cancels only stale unprotected SHAs', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 2,
+      runs: [
+        run({ id: 1, candidateSha: A, runNumber: 10 }),
+        run({ id: 2, candidateSha: B, runNumber: 11 }),
+        run({
+          id: 3,
+          candidateSha: A,
+          runNumber: 12,
+          deployStatus: 'in_progress',
+        }),
+      ],
+    }),
+    {
+      keep: [2, 3],
+      cancel: [1],
+      admitCurrent: true,
+      reason: 'admitted',
     }
   );
 });
@@ -202,7 +227,7 @@ test('protected current-main deploy prevents a new duplicate from admission', ()
       keep: [1],
       cancel: [],
       admitCurrent: false,
-      reason: 'superseded_or_protected',
+      reason: 'existing_current_candidate',
     }
   );
 });

@@ -105,6 +105,14 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
   assert.match(deploy, /git ls-remote origin refs\/heads\/main/);
   assert.match(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
   assert.match(deploy, /Deploy production website to Cloudflare Workers/);
+  assert.match(
+    deploy,
+    /node apps\/website\/scripts\/cloudflare-deploy\.mjs wrangler\.production\.jsonc/
+  );
+  assert.ok(
+    deploy.lastIndexOf('git ls-remote origin refs/heads/main') <
+      deploy.lastIndexOf('cloudflare-deploy.mjs wrangler.production.jsonc')
+  );
 });
 
 test('manual recovery bypasses normal admission but keeps serialized deployment', () => {
