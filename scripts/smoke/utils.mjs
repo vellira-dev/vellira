@@ -130,7 +130,7 @@ export function writeWorkspaceFile(tempDir, dependencies) {
 
 
 const runtimeExportExpectationPattern =
-  /expect\(Object\.keys\(api\)\.sort\(\)\)\.toEqual\(\[\n([\s\S]*?)\n {4}\]\);/;
+  /expect\(Object\.keys\(api\)\.sort\(\)\)\.toEqual\(\[\n([\s\S]*?) {4}\]\);/;
 
 export function readRuntimeExportExpectation(publicApiTestFile) {
   const content = readFileSync(publicApiTestFile, 'utf8');

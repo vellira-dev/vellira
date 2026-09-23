@@ -53,9 +53,7 @@ describe('Generator V2 README inventory contract', () => {
     );
 
     expect(result).toMatch(/^\| WebOnly\s+\|\s+✅\s+\|\s+—\s+\|$/m);
-    expect(result).not.toMatch(
-      /^\| WebOnly\s+\|\s+✅\s+\|\s+✅\s+\|$/m
-    );
+    expect(result).not.toMatch(/^\| WebOnly\s+\|\s+✅\s+\|\s+✅\s+\|$/m);
   });
 
   it('updates an existing row instead of duplicating it', () => {
