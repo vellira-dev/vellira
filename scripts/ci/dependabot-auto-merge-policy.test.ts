@@ -7,9 +7,14 @@ const workflowPath = resolve(
   process.cwd(),
   '.github/workflows/dependabot-auto-merge.yml'
 );
+const dependabotConfigPath = resolve(process.cwd(), '.github/dependabot.yml');
 
 async function workflowSource() {
   return readFile(workflowPath, 'utf8');
+}
+
+async function dependabotConfigSource() {
+  return readFile(dependabotConfigPath, 'utf8');
 }
 
 describe('Dependabot auto-merge workflow policy', () => {
@@ -78,5 +83,90 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('statuses: read');
     expect(source).toContain('permission-contents: write');
     expect(source).toContain('permission-pull-requests: write');
+  });
+});
+
+describe('Dependabot version-update policy', () => {
+  it('batches routine updates monthly and bounds PR fan-out', async () => {
+    const source = await dependabotConfigSource();
+    const monthlyIntervals = source.match(/^\s+interval: monthly$/gm) ?? [];
+
+    expect(monthlyIntervals).toHaveLength(2);
+    expect(source).not.toMatch(/^\s+interval: weekly$/m);
+    expect(source).toMatch(
+      /package-ecosystem: npm[\s\S]*?open-pull-requests-limit: 4/
+    );
+    expect(source).toMatch(
+      /package-ecosystem: github-actions[\s\S]*?open-pull-requests-limit: 2/
+    );
+  });
+
+  it('groups routine linting and dev-tooling updates', async () => {
+    const source = await dependabotConfigSource();
+    const groups = source.split('\n    ignore:\n')[0];
+
+    for (const dependency of [
+      "'@typescript-eslint/*'",
+      'typescript-eslint',
+      "'eslint-*'",
+      "'stylelint-*'",
+      'turbo',
+      'esbuild',
+      'jsdom',
+      'tsx',
+      'fast-check',
+      'wrangler',
+    ]) {
+      expect(groups).toContain(`          - ${dependency}`);
+    }
+
+    expect(groups).not.toMatch(/^\s+- major$/m);
+  });
+
+  it('enforces migration boundaries with ignore rules, not group comments', async () => {
+    const source = await dependabotConfigSource();
+    const ignore = source.split('\n    ignore:\n')[1];
+
+    expect(ignore).toBeDefined();
+
+    for (const dependency of [
+      'react',
+      'react-dom',
+      'storybook',
+      'vite',
+      'vitest',
+      'next',
+      'typescript',
+      'eslint',
+      'prettier',
+      'stylelint',
+      'turbo',
+      'jsdom',
+      'tsx',
+      'fast-check',
+      'wrangler',
+    ]) {
+      expect(ignore).toContain(
+        `      - dependency-name: ${dependency}\n        update-types:\n          - version-update:semver-major`
+      );
+    }
+
+    expect(ignore).toContain(
+      "      - dependency-name: react-native\n" +
+        '        update-types:\n' +
+        '          - version-update:semver-minor\n' +
+        '          - version-update:semver-major'
+    );
+    expect(ignore).toContain(
+      "      - dependency-name: '@babel/core'\n" +
+        '        update-types:\n' +
+        '          - version-update:semver-major'
+    );
+    expect(ignore).toContain(
+      '      - dependency-name: esbuild\n' +
+        '        update-types:\n' +
+        '          - version-update:semver-minor\n' +
+        '          - version-update:semver-major'
+    );
   });
 });
