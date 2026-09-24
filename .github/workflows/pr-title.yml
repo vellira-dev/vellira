@@ -59,14 +59,7 @@ jobs:
           test -f tools/pr-title-validator-deploy/commitlint.config.js
           test -d tools/pr-title-validator-deploy/node_modules/.pnpm
 
-          package_snapshots="$(
-            find tools/pr-title-validator-deploy/node_modules/.pnpm \\
-              -mindepth 1 -maxdepth 1 \
-              ! -name 'lock.yaml' ! -name 'node_modules' \
-              -printf '.' |
-              wc -c |
-              tr -d '[:space:]'
-          )"
+          package_snapshots="$(find tools/pr-title-validator-deploy/node_modules/.pnpm -mindepth 1 -maxdepth 1 ! -name 'lock.yaml' ! -name 'node_modules' | wc -l | tr -d '[:space:]')"
           echo "PR-title validator deployed package snapshots: $package_snapshots"
 
           if (( package_snapshots < 1 || package_snapshots > 300 )); then
