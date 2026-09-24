@@ -19,11 +19,12 @@ work, but does not prevent a workflow card from being created for each push.
   edits. Removing that event without an equivalent exact-head check can strand
   new PR revisions. The job checks out the trusted PR base SHA and requires the
   already-adopted `tools/pr-title-validator` authority to exist there. It then
-  performs a filtered frozen workspace install while overriding only the linker to
-  `node-linker=isolated`. This keeps the root lockfile and workspace overrides as
-  the single resolution authority without using the normal hoisted layout, which
-  otherwise materializes the full monorepo even for a filtered install. A hosted
-  guard fails if the isolated virtual store expands beyond 300 package snapshots.
+  deploys only that package from the trusted workspace into an isolated temporary
+  directory using pnpm's workspace-aware deploy path. The root lockfile and
+  workspace overrides remain the single resolution authority, while the deployed
+  package receives its own isolated node_modules instead of the monorepo's hoisted
+  tree. A hosted guard fails if that deployed virtual store expands beyond 300
+  package snapshots.
   Validation still
   executes the repository's canonical root `commitlint.config.js`; no regex
   policy, floating `dlx` dependency or second independently maintained policy is

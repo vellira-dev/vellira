@@ -45,36 +45,36 @@ jobs:
           node-version: 22.22.2
           package-manager-cache: false
 
-      - name: Install isolated locked PR-title validator
+      - name: Deploy isolated locked PR-title validator
         run: >-
-          pnpm install --frozen-lockfile --ignore-scripts
-          --filter @vellira-ci/pr-title-validator
-          --config.node-linker=isolated
+          pnpm --filter @vellira-ci/pr-title-validator
+          deploy --legacy tools/pr-title-validator-deploy
 
-      - name: Verify isolated install stayed bounded
+      - name: Verify deployed validator stayed bounded
         shell: bash
         run: |
           set -euo pipefail
-          test -x tools/pr-title-validator/node_modules/.bin/commitlint
-          test -d node_modules/.pnpm
+          test -x tools/pr-title-validator-deploy/node_modules/.bin/commitlint
+          test -f tools/pr-title-validator-deploy/commitlint.config.js
+          test -d tools/pr-title-validator-deploy/node_modules/.pnpm
 
           package_snapshots="$(
-            find node_modules/.pnpm -mindepth 1 -maxdepth 1 -type d |
+            find tools/pr-title-validator-deploy/node_modules/.pnpm               -mindepth 1 -maxdepth 1 -type d |
               wc -l |
               tr -d '[:space:]'
           )"
-          echo "PR-title validator package snapshots: $package_snapshots"
+          echo "PR-title validator deployed package snapshots: $package_snapshots"
 
           if (( package_snapshots > 300 )); then
-            echo "::error::Standalone PR-title install expanded to $package_snapshots snapshots; expected <= 300."
+            echo "::error::Deployed PR-title validator expanded to $package_snapshots snapshots; expected <= 300."
             exit 1
           fi
 
       - name: Validate PR title
+        working-directory: tools/pr-title-validator-deploy
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         shell: bash
         run: |
           set -euo pipefail
-          printf "%s\n" "$PR_TITLE" |
-            pnpm --filter @vellira-ci/pr-title-validator run validate
+          printf "%s\n" "$PR_TITLE" | pnpm run validate

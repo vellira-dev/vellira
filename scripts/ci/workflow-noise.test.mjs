@@ -111,12 +111,10 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   assert.match(source, /Require adopted title-validator authority/);
   assert.match(
     source,
-    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter @vellira-ci\/pr-title-validator\s+--config\.node-linker=isolated/
+    /pnpm --filter @vellira-ci\/pr-title-validator\s+deploy --legacy tools\/pr-title-validator-deploy/
   );
-  assert.match(
-    source,
-    /pnpm --filter @vellira-ci\/pr-title-validator run validate/
-  );
+  assert.match(source, /working-directory: tools\/pr-title-validator-deploy/);
+  assert.match(source, /pnpm run validate/);
   assert.match(source, /package_snapshots > 300/);
   assert.doesNotMatch(
     source,
@@ -128,10 +126,10 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   );
 });
 
-test('title validator isolated install fails closed and bounds dependency expansion', () => {
+test('title validator deploy fails closed and bounds dependency expansion', () => {
   const source = workflow('pr-title');
   const authority = script(source, 'Require adopted title-validator authority');
-  const bounded = script(source, 'Verify isolated install stayed bounded');
+  const bounded = script(source, 'Verify deployed validator stayed bounded');
 
   for (const file of [
     'tools/pr-title-validator/package.json',
@@ -144,13 +142,16 @@ test('title validator isolated install fails closed and bounds dependency expans
 
   assert.match(
     bounded,
-    /test -x tools\/pr-title-validator\/node_modules\/\.bin\/commitlint/
+    /test -x tools\/pr-title-validator-deploy\/node_modules\/\.bin\/commitlint/
   );
-  assert.match(bounded, /find node_modules\/\.pnpm/);
+  assert.match(
+    bounded,
+    /find tools\/pr-title-validator-deploy\/node_modules\/\.pnpm/
+  );
   assert.match(bounded, /package_snapshots > 300/);
   assert.match(bounded, /exit 1/);
-  assert.match(source, /--config\.node-linker=isolated/);
-  assert.doesNotMatch(source, /--ignore-workspace|--lockfile-dir/);
+  assert.match(source, /deploy --legacy tools\/pr-title-validator-deploy/);
+  assert.doesNotMatch(source, /pnpm install|--ignore-workspace|--lockfile-dir|--config\.node-linker/);
 });
 
 test('minimal title validator reuses canonical config and locked root resolution', () => {
