@@ -130,7 +130,7 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^26.1.1",
     "@typescript-eslint/eslint-plugin": "^8.63.0",
-    "@typescript-eslint/parser": "^8.64.0",
+    "@typescript-eslint/parser": "^8.70.1",
     "@vellira-ui/metadata": "workspace:*",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
