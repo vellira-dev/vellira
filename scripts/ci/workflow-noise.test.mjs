@@ -111,7 +111,7 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   assert.match(source, /Require adopted title-validator authority/);
   assert.match(
     source,
-    /pnpm --filter @vellira-ci\/pr-title-validator\s+deploy --legacy tools\/pr-title-validator-deploy/
+    /pnpm --filter @vellira-ci\/pr-title-validator\s+--config\.inject-workspace-packages=true\s+deploy --dev tools\/pr-title-validator-deploy/
   );
   assert.match(source, /working-directory: tools\/pr-title-validator-deploy/);
   assert.match(source, /pnpm run validate/);
@@ -150,8 +150,14 @@ test('title validator deploy fails closed and bounds dependency expansion', () =
   );
   assert.match(bounded, /package_snapshots > 300/);
   assert.match(bounded, /exit 1/);
-  assert.match(source, /deploy --legacy tools\/pr-title-validator-deploy/);
-  assert.doesNotMatch(source, /pnpm install|--ignore-workspace|--lockfile-dir|--config\.node-linker/);
+  assert.match(
+    source,
+    /--config\.inject-workspace-packages=true\s+deploy --dev tools\/pr-title-validator-deploy/
+  );
+  assert.doesNotMatch(
+    source,
+    /pnpm install|deploy --legacy|--ignore-workspace|--lockfile-dir|--config\.node-linker/
+  );
 });
 
 test('minimal title validator reuses canonical config and locked root resolution', () => {

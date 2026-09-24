@@ -48,7 +48,8 @@ jobs:
       - name: Deploy isolated locked PR-title validator
         run: >-
           pnpm --filter @vellira-ci/pr-title-validator
-          deploy --legacy tools/pr-title-validator-deploy
+          --config.inject-workspace-packages=true
+          deploy --dev tools/pr-title-validator-deploy
 
       - name: Verify deployed validator stayed bounded
         shell: bash
