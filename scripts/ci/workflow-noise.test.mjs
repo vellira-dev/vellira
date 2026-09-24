@@ -144,10 +144,9 @@ test('title validator deploy fails closed and bounds dependency expansion', () =
     bounded,
     /test -x tools\/pr-title-validator-deploy\/node_modules\/\.bin\/commitlint/
   );
-  assert.match(
-    bounded,
-    /find tools\/pr-title-validator-deploy\/node_modules\/\.pnpm/
-  );
+  assert.match(bounded, /tools\/pr-title-validator-deploy\/pnpm-lock\.yaml/);
+  assert.match(bounded, /\^packages:\$/);
+  assert.match(bounded, /\^snapshots:\$/);
   assert.match(bounded, /package_snapshots < 1 \\|\\| package_snapshots > 300/);
   assert.match(bounded, /exit 1/);
   assert.match(

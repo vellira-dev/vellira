@@ -57,9 +57,15 @@ jobs:
           set -euo pipefail
           test -x tools/pr-title-validator-deploy/node_modules/.bin/commitlint
           test -f tools/pr-title-validator-deploy/commitlint.config.js
+          test -f tools/pr-title-validator-deploy/pnpm-lock.yaml
           test -d tools/pr-title-validator-deploy/node_modules/.pnpm
 
-          package_snapshots="$(find tools/pr-title-validator-deploy/node_modules/.pnpm -mindepth 1 -maxdepth 1 ! -name 'lock.yaml' ! -name 'node_modules' | wc -l | tr -d '[:space:]')"
+          package_snapshots="$(awk '
+            /^packages:$/ { in_packages=1; next }
+            /^snapshots:$/ { in_packages=0 }
+            in_packages && /^  [^ ]/ { count++ }
+            END { print count + 0 }
+          ' tools/pr-title-validator-deploy/pnpm-lock.yaml)"
           echo "PR-title validator deployed package snapshots: $package_snapshots"
 
           if (( package_snapshots < 1 || package_snapshots > 300 )); then
