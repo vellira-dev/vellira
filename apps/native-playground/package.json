@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.29.7",
-    "@expo/metro-runtime": "~57.0.15",
+    "@expo/metro-runtime": "~57.0.16",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "^9.2.1",

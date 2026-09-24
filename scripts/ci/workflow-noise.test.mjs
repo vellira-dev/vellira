@@ -232,10 +232,35 @@ test('minimal title validator reuses canonical config and locked root resolution
     'Validator conventional config resolution must equal root canonical resolution'
   );
 
-  assert.match(validatorImporter, /specifier: 21\.2\.2/);
-  assert.match(validatorImporter, /specifier: 26\.2\.0/);
-  assert.match(validatorImporter, /specifier: 7\.1\.2/);
-  assert.match(validatorImporter, /specifier: 6\.0\.3/);
+  function lockedSpecifier(importer, dependency) {
+    const markers = [
+      `      '${dependency}':\n`,
+      `      ${dependency}:\n`,
+    ];
+    const section = markers
+      .map((marker) => importer.split(marker)[1])
+      .find(Boolean);
+    assert.ok(section, `Missing locked dependency: ${dependency}`);
+    const specifierLine = section
+      .split('\n')
+      .find((line) => line.trim().startsWith('specifier: '));
+    assert.ok(specifierLine, `Missing locked specifier: ${dependency}`);
+    return specifierLine.trim().slice('specifier: '.length);
+  }
+
+  for (const dependency of [
+    '@commitlint/cli',
+    '@commitlint/config-conventional',
+    '@types/node',
+    'conventional-commits-parser',
+    'typescript',
+  ]) {
+    assert.equal(
+      lockedSpecifier(validatorImporter, dependency),
+      validator.devDependencies[dependency],
+      `Validator lock importer must preserve exact ${dependency} specifier`
+    );
+  }
 });
 
 test('minimal validator preserves canonical valid and invalid title outcomes', () => {
