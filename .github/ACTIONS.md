@@ -19,11 +19,12 @@ work, but does not prevent a workflow card from being created for each push.
   edits. Removing that event without an equivalent exact-head check can strand
   new PR revisions. The job checks out the trusted PR base SHA and requires the
   already-adopted `tools/pr-title-validator` authority to exist there. It then
-  installs that package from its own directory with `--ignore-workspace`, the
-  root frozen lockfile, lifecycle scripts disabled and `node-linker=isolated`.
-  This avoids the workspace's normal hoisted linker, which otherwise materializes
-  the full monorepo even for a filtered install. A hosted guard fails if the
-  standalone virtual store expands beyond 300 package snapshots. Validation still
+  performs a filtered frozen workspace install while overriding only the linker to
+  `node-linker=isolated`. This keeps the root lockfile and workspace overrides as
+  the single resolution authority without using the normal hoisted layout, which
+  otherwise materializes the full monorepo even for a filtered install. A hosted
+  guard fails if the isolated virtual store expands beyond 300 package snapshots.
+  Validation still
   executes the repository's canonical root `commitlint.config.js`; no regex
   policy, floating `dlx` dependency or second independently maintained policy is
   introduced.

@@ -109,16 +109,18 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /package-manager-cache: false/);
   assert.match(source, /Require adopted title-validator authority/);
-  assert.match(source, /working-directory: tools\/pr-title-validator/);
   assert.match(
     source,
-    /pnpm install --ignore-workspace --frozen-lockfile --ignore-scripts\s+--lockfile-dir=\.\.\/\.\. --config\.node-linker=isolated/
+    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter @vellira-ci\/pr-title-validator\s+--config\.node-linker=isolated/
   );
-  assert.match(source, /pnpm run validate/);
+  assert.match(
+    source,
+    /pnpm --filter @vellira-ci\/pr-title-validator run validate/
+  );
   assert.match(source, /package_snapshots > 300/);
   assert.doesNotMatch(
     source,
-    /--filter |mode=bootstrap|mode=isolated|pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
+    /--ignore-workspace|--lockfile-dir|mode=bootstrap|mode=isolated|pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
   );
   assert.equal(
     section(source, 'permissions').trim(),
@@ -126,10 +128,10 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   );
 });
 
-test('title validator standalone install fails closed and bounds dependency expansion', () => {
+test('title validator isolated install fails closed and bounds dependency expansion', () => {
   const source = workflow('pr-title');
   const authority = script(source, 'Require adopted title-validator authority');
-  const bounded = script(source, 'Verify standalone install stayed bounded');
+  const bounded = script(source, 'Verify isolated install stayed bounded');
 
   for (const file of [
     'tools/pr-title-validator/package.json',
@@ -147,6 +149,8 @@ test('title validator standalone install fails closed and bounds dependency expa
   assert.match(bounded, /find node_modules\/\.pnpm/);
   assert.match(bounded, /package_snapshots > 300/);
   assert.match(bounded, /exit 1/);
+  assert.match(source, /--config\.node-linker=isolated/);
+  assert.doesNotMatch(source, /--ignore-workspace|--lockfile-dir/);
 });
 
 test('minimal title validator reuses canonical config and locked root resolution', () => {

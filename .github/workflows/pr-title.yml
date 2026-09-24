@@ -45,13 +45,13 @@ jobs:
           node-version: 22.22.2
           package-manager-cache: false
 
-      - name: Install standalone locked PR-title validator
-        working-directory: tools/pr-title-validator
+      - name: Install isolated locked PR-title validator
         run: >-
-          pnpm install --ignore-workspace --frozen-lockfile --ignore-scripts
-          --lockfile-dir=../.. --config.node-linker=isolated
+          pnpm install --frozen-lockfile --ignore-scripts
+          --filter @vellira-ci/pr-title-validator
+          --config.node-linker=isolated
 
-      - name: Verify standalone install stayed bounded
+      - name: Verify isolated install stayed bounded
         shell: bash
         run: |
           set -euo pipefail
@@ -71,10 +71,10 @@ jobs:
           fi
 
       - name: Validate PR title
-        working-directory: tools/pr-title-validator
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         shell: bash
         run: |
           set -euo pipefail
-          printf "%s\n" "$PR_TITLE" | pnpm run validate
+          printf "%s\n" "$PR_TITLE" |
+            pnpm --filter @vellira-ci/pr-title-validator run validate
