@@ -108,29 +108,17 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   );
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /package-manager-cache: false/);
-  assert.match(source, /mode=isolated/);
-  assert.match(source, /mode=bootstrap/);
+  assert.match(source, /Require adopted title-validator authority/);
   assert.match(
     source,
-    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter @vellira-ci\/pr-title-validator/
+    /pnpm --filter @vellira-ci\/pr-title-validator\s+--config\.inject-workspace-packages=true\s+deploy --dev tools\/pr-title-validator-deploy/
   );
-  assert.match(
-    source,
-    /pnpm install --frozen-lockfile --ignore-scripts\s+--filter vellira/
-  );
-  assert.match(
-    source,
-    /pnpm --filter @vellira-ci\/pr-title-validator run validate/
-  );
-  assert.match(source, /pnpm exec commitlint --config commitlint\.config\.js/);
-  assert.equal(
-    source.match(/pnpm install --frozen-lockfile/g)?.length,
-    2,
-    'Only isolated and bootstrap filtered installs are allowed'
-  );
+  assert.match(source, /working-directory: tools\/pr-title-validator-deploy/);
+  assert.match(source, /pnpm run validate/);
+  assert.match(source, /package_snapshots > 300/);
   assert.doesNotMatch(
     source,
-    /pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
+    /--ignore-workspace|--lockfile-dir|mode=bootstrap|mode=isolated|pnpm dlx|npx |cache: pnpm|pull_request_target:|continue-on-error:|: write|secrets\./m
   );
   assert.equal(
     section(source, 'permissions').trim(),
@@ -138,24 +126,37 @@ test('required title check keeps exact-head metadata semantics with trusted auth
   );
 });
 
-test('bootstrap fallback is bounded to trusted base before validator adoption', () => {
+test('title validator deploy fails closed and bounds dependency expansion', () => {
   const source = workflow('pr-title');
-  const detect = script(source, 'Detect title-validator authority in trusted base');
-  assert.match(detect, /tools\/pr-title-validator\/package\.json/);
-  assert.match(detect, /mode=isolated/);
-  assert.match(detect, /mode=bootstrap/);
+  const authority = script(source, 'Require adopted title-validator authority');
+  const bounded = script(source, 'Verify deployed validator stayed bounded');
 
-  const isolatedInstall = source.split(
-    '      - name: Install locked PR-title validator only\n'
-  )[1].split('      - name: Bootstrap canonical title dependencies\n')[0];
-  const bootstrapInstall = source.split(
-    '      - name: Bootstrap canonical title dependencies\n'
-  )[1].split('      - name: Validate PR title\n')[0];
+  for (const file of [
+    'tools/pr-title-validator/package.json',
+    'tools/pr-title-validator/commitlint.config.js',
+    'commitlint.config.js',
+    'pnpm-lock.yaml',
+  ]) {
+    assert.ok(authority.includes(`test -f ${file}`));
+  }
 
-  assert.match(isolatedInstall, /if: steps\.validator\.outputs\.mode == 'isolated'/);
-  assert.match(bootstrapInstall, /if: steps\.validator\.outputs\.mode == 'bootstrap'/);
-  assert.match(bootstrapInstall, /--filter vellira/);
-  assert.doesNotMatch(bootstrapInstall, /@vellira-ci\/pr-title-validator|pnpm dlx|npx /);
+  assert.match(
+    bounded,
+    /test -x tools\/pr-title-validator-deploy\/node_modules\/\.bin\/commitlint/
+  );
+  assert.match(bounded, /tools\/pr-title-validator-deploy\/pnpm-lock\.yaml/);
+  assert.match(bounded, /\^packages:\$/);
+  assert.match(bounded, /\^snapshots:\$/);
+  assert.match(bounded, /package_snapshots < 1 \\|\\| package_snapshots > 300/);
+  assert.match(bounded, /exit 1/);
+  assert.match(
+    source,
+    /--config\.inject-workspace-packages=true\s+deploy --dev tools\/pr-title-validator-deploy/
+  );
+  assert.doesNotMatch(
+    source,
+    /pnpm install|deploy --legacy|--ignore-workspace|--lockfile-dir|--config\.node-linker/
+  );
 });
 
 test('minimal title validator reuses canonical config and locked root resolution', () => {

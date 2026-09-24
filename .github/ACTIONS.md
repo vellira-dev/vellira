@@ -17,16 +17,20 @@ work, but does not prevent a workflow card from being created for each push.
 
 - `Validate PR title` remains required and runs on `synchronize` as well as title
   edits. Removing that event without an equivalent exact-head check can strand
-  new PR revisions. The job checks out the trusted PR base SHA, installs only the
-  locked `@vellira-ci/pr-title-validator` workspace with lifecycle scripts and
-  dependency caching disabled, and executes the repository's canonical root
-  `commitlint.config.js`. The validator pins the same commitlint resolution as
-  the root lockfile; no regex policy, floating `dlx` dependency or second
-  independently maintained commitlint policy is used. The one bootstrap PR that
-  introduces the validator cannot find it on its trusted base SHA, so that case
-  falls back to a root-project-only frozen install (`--filter vellira`) and the
-  same canonical config. Once adopted on main, normal PRs use only the isolated
-  validator path.
+  new PR revisions. The job checks out the trusted PR base SHA and requires the
+  already-adopted `tools/pr-title-validator` authority to exist there. It then
+  deploys only that package from the trusted workspace into an isolated temporary
+  directory using pnpm's dedicated-lock deploy path. The command enables injected
+  workspace packaging only for deploy so pnpm can derive a pruned lock from the
+  trusted shared root lockfile; no workspace dependency is added to the validator.
+  The root lockfile and workspace overrides remain the single resolution authority,
+  while the deployed package receives its own isolated node_modules instead of the
+  monorepo's hoisted tree. A hosted guard fails if that deployed virtual store
+  expands beyond 300 package snapshots.
+  Validation still
+  executes the repository's canonical root `commitlint.config.js`; no regex
+  policy, floating `dlx` dependency or second independently maintained policy is
+  introduced.
 - The strict token semantic audit remains in `ci:quality`; the separate detailed
   report is available through its manual workflow.
 - `Lighthouse / Docs` owns the fresh-checkout docs deployment-build regression:
