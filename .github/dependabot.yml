@@ -3,10 +3,10 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
-    # Routine version updates are intentionally batched. Security updates use
-    # GitHub's separate security-update path and are not delayed by this cadence.
+    # Review routine version updates weekly so public dependencies stay fresh.
+    # Grouping below limits PR noise without delaying normal patch/minor updates.
     schedule:
-      interval: monthly
+      interval: weekly
     # Bound routine update fan-out so dependency maintenance cannot dominate CI.
     open-pull-requests-limit: 4
     groups:
@@ -223,7 +223,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
-    # Action version bumps are routine maintenance too; batch them monthly.
+    # Keep GitHub Actions dependencies fresh on the same weekly cadence.
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 2
