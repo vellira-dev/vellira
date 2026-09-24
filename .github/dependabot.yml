@@ -27,10 +27,12 @@ updates:
         patterns:
           - expo
           - 'expo-*'
+          - '@expo/*'
           - react-native
-          - react-native-*
-        # Expo SDKs target a specific React Native line. Keep the grouped
-        # ecosystem on patch updates so Dependabot cannot cross that boundary.
+          - 'react-native-*'
+        # Keep compatible patch updates together. The ignore rules below are
+        # the actual boundary enforcement; group update-types only controls
+        # which updates are grouped, not which updates Dependabot may create.
         update-types:
           - patch
       next:
@@ -52,6 +54,35 @@ updates:
           - '@commitlint/*'
           - lint-staged
           - husky
+
+    # Native framework/toolchain line changes are intentional migrations.
+    # Keep routine Dependabot version PRs on the current Expo-compatible line.
+    # update-types under ignore applies to version updates; security updates
+    # remain eligible for Dependabot security update PRs.
+    ignore:
+      - dependency-name: expo
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+      - dependency-name: 'expo-*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+      - dependency-name: '@expo/*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+      - dependency-name: react-native
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+      - dependency-name: 'react-native-*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+      - dependency-name: '@babel/core'
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
