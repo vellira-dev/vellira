@@ -3,9 +3,12 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    # Routine version updates are intentionally batched. Security updates use
+    # GitHub's separate security-update path and are not delayed by this cadence.
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 8
+      interval: monthly
+    # Bound routine update fan-out so dependency maintenance cannot dominate CI.
+    open-pull-requests-limit: 4
     groups:
       react:
         patterns:
@@ -13,16 +16,25 @@ updates:
           - react-dom
           - '@types/react'
           - '@types/react-dom'
+        update-types:
+          - minor
+          - patch
       storybook:
         patterns:
           - '@storybook/*'
           - storybook
+        update-types:
+          - minor
+          - patch
       vite:
         patterns:
           - vite
           - vitest
           - '@vitejs/*'
           - '@vitest/*'
+        update-types:
+          - minor
+          - patch
       expo:
         patterns:
           - expo
@@ -30,9 +42,8 @@ updates:
           - '@expo/*'
           - react-native
           - 'react-native-*'
-        # Keep compatible patch updates together. The ignore rules below are
-        # the actual boundary enforcement; group update-types only controls
-        # which updates are grouped, not which updates Dependabot may create.
+        # Expo SDKs target a specific native line. Only compatible patch
+        # updates are routine; minor/major moves require an intentional migration.
         update-types:
           - patch
       next:
@@ -40,8 +51,14 @@ updates:
           - next
           - '@next/*'
           - eslint-config-next
-        # Keep the framework, MDX adapter, and lint config on the same 16.x
+        # Keep the framework, MDX adapter, and lint config on the same major
         # line while requiring an intentional migration for the next major.
+        update-types:
+          - minor
+          - patch
+      typescript:
+        patterns:
+          - typescript
         update-types:
           - minor
           - patch
@@ -49,17 +66,36 @@ updates:
         patterns:
           - eslint
           - '@eslint/*'
+          - 'eslint-*'
+          - '@typescript-eslint/*'
+          - typescript-eslint
           - prettier
           - stylelint
+          - 'stylelint-*'
           - '@commitlint/*'
           - lint-staged
           - husky
+        update-types:
+          - minor
+          - patch
+      tooling:
+        patterns:
+          - turbo
+          - esbuild
+          - jsdom
+          - tsx
+          - fast-check
+          - wrangler
+        update-types:
+          - minor
+          - patch
 
-    # Native framework/toolchain line changes are intentional migrations.
-    # Keep routine Dependabot version PRs on the current Expo-compatible line.
-    # update-types under ignore applies to version updates; security updates
-    # remain eligible for Dependabot security update PRs.
+    # Framework/toolchain line changes are intentional migrations. Group
+    # update-types controls grouping only; ignore rules enforce the boundary.
+    # These rules apply to routine version updates. Dependabot security updates
+    # remain eligible through GitHub's security-update path.
     ignore:
+      # Expo / React Native compatibility boundary.
       - dependency-name: expo
         update-types:
           - version-update:semver-minor
@@ -84,8 +120,110 @@ updates:
         update-types:
           - version-update:semver-major
 
+      # Public framework/toolchain major migrations.
+      - dependency-name: react
+        update-types:
+          - version-update:semver-major
+      - dependency-name: react-dom
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@types/react'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@types/react-dom'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: storybook
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@storybook/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: vite
+        update-types:
+          - version-update:semver-major
+      - dependency-name: vitest
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@vitejs/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@vitest/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: next
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@next/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: eslint-config-next
+        update-types:
+          - version-update:semver-major
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+
+      # Lint/release tooling majors are reviewed as migrations, not routine churn.
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@eslint/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: 'eslint-*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@typescript-eslint/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: typescript-eslint
+        update-types:
+          - version-update:semver-major
+      - dependency-name: prettier
+        update-types:
+          - version-update:semver-major
+      - dependency-name: stylelint
+        update-types:
+          - version-update:semver-major
+      - dependency-name: 'stylelint-*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@commitlint/*'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: lint-staged
+        update-types:
+          - version-update:semver-major
+      - dependency-name: husky
+        update-types:
+          - version-update:semver-major
+
+      # Routine dev tooling stays on the current major. esbuild is pre-1.0, so
+      # a semver-minor move is treated as a migration boundary too.
+      - dependency-name: turbo
+        update-types:
+          - version-update:semver-major
+      - dependency-name: esbuild
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+      - dependency-name: jsdom
+        update-types:
+          - version-update:semver-major
+      - dependency-name: tsx
+        update-types:
+          - version-update:semver-major
+      - dependency-name: fast-check
+        update-types:
+          - version-update:semver-major
+      - dependency-name: wrangler
+        update-types:
+          - version-update:semver-major
+
   - package-ecosystem: github-actions
     directory: /
+    # Action version bumps are routine maintenance too; batch them monthly.
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 2
