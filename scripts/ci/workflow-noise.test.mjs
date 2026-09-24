@@ -148,7 +148,8 @@ test('title validator deploy fails closed and bounds dependency expansion', () =
     bounded,
     /find tools\/pr-title-validator-deploy\/node_modules\/\.pnpm/
   );
-  assert.match(bounded, /package_snapshots > 300/);
+  assert.match(bounded, /package_snapshots < 1 \\|\\| package_snapshots > 300/);
+  assert.match(bounded, /-printf '\\.'/);
   assert.match(bounded, /exit 1/);
   assert.match(
     source,
