@@ -65,6 +65,7 @@ updates:
       testing:
         patterns:
           - '@testing-library/*'
+          - jsdom
         update-types:
           - minor
           - patch
@@ -88,7 +89,6 @@ updates:
         patterns:
           - turbo
           - esbuild
-          - jsdom
           - tsx
           - fast-check
           - wrangler
@@ -174,6 +174,9 @@ updates:
       - dependency-name: '@testing-library/*'
         update-types:
           - version-update:semver-major
+      - dependency-name: jsdom
+        update-types:
+          - version-update:semver-major
 
       # Lint/release tooling majors are reviewed as migrations, not routine churn.
       - dependency-name: eslint
@@ -218,9 +221,6 @@ updates:
       - dependency-name: esbuild
         update-types:
           - version-update:semver-minor
-          - version-update:semver-major
-      - dependency-name: jsdom
-        update-types:
           - version-update:semver-major
       - dependency-name: tsx
         update-types:
