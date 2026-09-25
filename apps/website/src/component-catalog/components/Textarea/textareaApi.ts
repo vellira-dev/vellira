@@ -2148,7 +2148,7 @@ const inheritedNativeTextareaApi: readonly ComponentApiProp[] = [
     name: 'aria-label',
     type: 'string',
     description:
-      'Alias for accessibilityLabel  https://reactnative.dev/docs/view#accessibilitylabel\nhttps://github.com/facebook/react-native/issues/34424',
+      'Alias for accessibilityLabel  https://reactnative.dev/docs/view#accessibilitylabel\nhttps://github.com/react/react-native/issues/34424',
   },
   {
     name: 'accessibilityRole',
