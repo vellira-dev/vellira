@@ -9,7 +9,7 @@
   "devDependencies": {
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
-    "@types/node": "26.2.0",
+    "@types/node": "26.6.2",
     "conventional-commits-parser": "7.1.2",
     "typescript": "6.0.3"
   }
