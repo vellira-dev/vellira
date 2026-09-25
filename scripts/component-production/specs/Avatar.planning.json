@@ -7,79 +7,55 @@
     "image-source",
     "size-variants"
   ],
-  "platformScope": [
-    "react",
-    "react-native"
-  ],
+  "platformScope": ["react", "react-native"],
   "obligations": [
     {
       "id": "avatar-image-source-contract",
       "kind": "api",
       "capability": "image-source",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Use the approved platform-appropriate image source contract without public load or error callbacks."
     },
     {
       "id": "avatar-image-success-transition",
       "kind": "behavior",
       "capability": "image-source",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Render the image after the supplied source loads successfully."
     },
     {
       "id": "avatar-source-change-reset",
       "kind": "behavior",
       "capability": "image-source",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Reset image lifecycle state when source changes and begin again from fallback and loading."
     },
     {
       "id": "avatar-deterministic-fallback",
       "kind": "behavior",
       "capability": "fallback",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Render the explicit fallback when source is absent, while loading, or after image load failure."
     },
     {
       "id": "avatar-size-contract",
       "kind": "api",
       "capability": "size-variants",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Expose only sm, md, and lg with md as the implementation default."
     },
     {
       "id": "avatar-size-token-contract",
       "kind": "visual-token",
       "capability": "size-variants",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Back Avatar geometry with the standard component-token contract on both platforms."
     },
     {
       "id": "avatar-accessible-name",
       "kind": "accessibility",
       "capability": "accessible-name",
-      "platformScope": [
-        "react",
-        "react-native"
-      ],
+      "platformScope": ["react", "react-native"],
       "consequence": "Expose exactly one human-readable identity from name through platform-appropriate accessibility semantics."
     }
   ],
@@ -89,9 +65,7 @@
       "type": "string",
       "required": true,
       "scope": "shared",
-      "capabilities": [
-        "accessible-name"
-      ],
+      "capabilities": ["accessible-name"],
       "owner": "root"
     },
     {
@@ -99,9 +73,7 @@
       "type": "string",
       "required": true,
       "scope": "shared",
-      "capabilities": [
-        "fallback"
-      ],
+      "capabilities": ["fallback"],
       "owner": "root"
     },
     {
@@ -109,9 +81,7 @@
       "type": "'sm' | 'md' | 'lg'",
       "required": false,
       "scope": "shared",
-      "capabilities": [
-        "size-variants"
-      ],
+      "capabilities": ["size-variants"],
       "owner": "root"
     },
     {
@@ -119,9 +89,7 @@
       "type": "string",
       "required": false,
       "scope": "react",
-      "capabilities": [
-        "image-source"
-      ],
+      "capabilities": ["image-source"],
       "owner": "root"
     },
     {
@@ -129,9 +97,7 @@
       "type": "string | number",
       "required": false,
       "scope": "react-native",
-      "capabilities": [
-        "image-source"
-      ],
+      "capabilities": ["image-source"],
       "owner": "root"
     }
   ],
