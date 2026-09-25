@@ -1,0 +1,59 @@
+name: Temporary refresh tooling lockfile
+
+on:
+  push:
+    branches:
+      - chore/tooling-updates-without-jsdom
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          ref: chore/tooling-updates-without-jsdom
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Refresh lockfile
+        run: pnpm install --lockfile-only
+
+      - name: Keep jsdom on the reviewed baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "jsdom@30.0.1" pnpm-lock.yaml
+          if grep -q "jsdom@30.1.1" pnpm-lock.yaml; then
+            echo "::error::jsdom 30.1.1 leaked into the tooling-only lockfile"
+            exit 1
+          fi
+
+      - name: Validate generated diff scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(git status --short | awk '{print $2}' | grep -v '^pnpm-lock.yaml$' | grep -v '^.github/workflows/temp-refresh-tooling-lockfile.yml$' || true)"
+          if [[ -n "$unexpected" ]]; then
+            echo "::error::Lockfile refresh changed unexpected paths:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit lockfile and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/temp-refresh-tooling-lockfile.yml
+          git add pnpm-lock.yaml .github/workflows/temp-refresh-tooling-lockfile.yml
+          git commit -m "chore(deps-dev): refresh tooling lockfile"
+          git push origin HEAD:chore/tooling-updates-without-jsdom
