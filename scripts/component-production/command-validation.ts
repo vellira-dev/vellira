@@ -6,6 +6,7 @@ import type {
   ComponentProductionInputV1,
   ComponentProductionStageResult,
 } from './contracts';
+import { invokeValidationCommand } from './validation-command';
 import { summarizeValidationCommandOutput } from './validation-output';
 
 export type ComponentProductionCommand = {
@@ -240,23 +241,25 @@ function runStage(params: {
   let runtimeFailed = false;
 
   for (const command of params.commands) {
-    let execution: ComponentProductionCommandExecution;
+    const invocation = invokeValidationCommand(
+      params.runner,
+      command,
+      params.root
+    );
 
-    try {
-      execution = params.runner(command, params.root);
-    } catch (error) {
+    if (invocation.status === 'threw') {
       runtimeFailed = true;
-
       findings.push({
         id: `${params.stageId}:${command.id}:runtime`,
         stage: params.stageId,
         severity: 'blocking',
-        message: error instanceof Error ? error.message : String(error),
+        message: invocation.message,
         ...(command.platform ? { platform: command.platform } : {}),
       });
-
       continue;
     }
+
+    const execution: ComponentProductionCommandExecution = invocation.execution;
 
     if (
       execution.timedOut ||
