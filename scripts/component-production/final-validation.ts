@@ -9,6 +9,7 @@ import type {
 } from './contracts';
 
 const OUTPUT_SUMMARY_LIMIT = 4_000;
+const OUTPUT_TRUNCATION_MARKER = '\n… output truncated …\n';
 
 const FINAL_STAGE_IDS = [
   'public-api',
@@ -363,5 +364,14 @@ function summarizeOutput(value: string): string {
   if (normalized.length <= OUTPUT_SUMMARY_LIMIT) {
     return normalized;
   }
-  return `${normalized.slice(0, OUTPUT_SUMMARY_LIMIT)}\n… output truncated`;
+
+  const retainedLimit = OUTPUT_SUMMARY_LIMIT - OUTPUT_TRUNCATION_MARKER.length;
+  const headLimit = Math.ceil(retainedLimit / 2);
+  const tailLimit = retainedLimit - headLimit;
+
+  return [
+    normalized.slice(0, headLimit),
+    OUTPUT_TRUNCATION_MARKER,
+    normalized.slice(-tailLimit),
+  ].join('');
 }
