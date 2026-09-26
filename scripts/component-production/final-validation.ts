@@ -7,7 +7,7 @@ import type {
   ComponentProductionStageId,
   ComponentProductionStageResult,
 } from './contracts';
-import { summarizeValidationOutput } from './validation-output';
+import { summarizeValidationCommandOutput } from './validation-output';
 
 const FINAL_STAGE_IDS = [
   'public-api',
@@ -327,7 +327,7 @@ function validationFailureMessage(
   command: ComponentProductionFinalCommand,
   execution: ComponentProductionFinalCommandExecution
 ): string {
-  const detail = summarizeExecutionOutput(execution);
+  const detail = summarizeValidationCommandOutput(execution);
   return detail
     ? `${command.id} exited with code ${execution.exitCode}: ${detail}`
     : `${command.id} exited with code ${execution.exitCode}.`;
@@ -346,13 +346,3 @@ function runtimeFailureMessage(
   return `${command.id} did not produce a deterministic exit code.`;
 }
 
-function summarizeExecutionOutput(
-  execution: ComponentProductionFinalCommandExecution
-): string {
-  return summarizeValidationOutput(
-    [execution.stdout, execution.stderr]
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0)
-      .join('\n')
-  );
-}
