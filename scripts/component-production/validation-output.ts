@@ -18,3 +18,15 @@ export function summarizeValidationOutput(value: string): string {
     normalized.slice(-tailLimit),
   ].join('');
 }
+
+export function summarizeValidationCommandOutput(execution: {
+  stdout: string;
+  stderr: string;
+}): string {
+  return summarizeValidationOutput(
+    [execution.stdout, execution.stderr]
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .join('\n')
+  );
+}
