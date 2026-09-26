@@ -108,15 +108,13 @@ export function runValidationStage<
     return {
       id: params.stageId,
       status: 'failed',
-      summary:
-        `${params.stageId} validation could not resolve a required command.`,
+      summary: `${params.stageId} validation could not resolve a required command.`,
       findings: [
         {
           id: `${params.stageId}:missing-command`,
           stage: params.stageId,
           severity: 'blocking',
-          message:
-            `No canonical command was resolved for required ${params.stageId} validation.`,
+          message: `No canonical command was resolved for required ${params.stageId} validation.`,
         },
       ],
       artifacts: [],
@@ -206,15 +204,15 @@ export function runValidationStage<
   };
 }
 
-function validationFinding<TCommand extends ValidationCommandDescriptor>(
-  params: {
-    stageId: ComponentProductionStageId;
-    command: TCommand;
-    message: string;
-    runtime?: boolean;
-    ruleId?: string;
-  }
-): ComponentProductionFinding {
+function validationFinding<
+  TCommand extends ValidationCommandDescriptor,
+>(params: {
+  stageId: ComponentProductionStageId;
+  command: TCommand;
+  message: string;
+  runtime?: boolean;
+  ruleId?: string;
+}): ComponentProductionFinding {
   return {
     id: `${params.stageId}:${params.command.id}${
       params.runtime ? ':runtime' : ''
