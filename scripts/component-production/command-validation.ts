@@ -6,7 +6,7 @@ import type {
   ComponentProductionInputV1,
   ComponentProductionStageResult,
 } from './contracts';
-import { summarizeValidationOutput } from './validation-output';
+import { summarizeValidationCommandOutput } from './validation-output';
 
 export type ComponentProductionCommand = {
   id: string;
@@ -387,7 +387,7 @@ function validationFailureMessage(
   command: ComponentProductionCommand,
   execution: ComponentProductionCommandExecution
 ): string {
-  const detail = summarizeExecutionOutput(execution);
+  const detail = summarizeValidationCommandOutput(execution);
 
   return detail
     ? `${command.id} exited with code ${execution.exitCode}: ${detail}`
@@ -409,12 +409,3 @@ function runtimeFailureMessage(
   return `${command.id} did not produce a deterministic exit code.`;
 }
 
-function summarizeExecutionOutput(
-  execution: ComponentProductionCommandExecution
-): string {
-  const streams = [execution.stdout, execution.stderr]
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  return summarizeValidationOutput(streams.join('\n'));
-}
