@@ -10,7 +10,7 @@
     "lint": "eslint 'packages/**/*.{ts,tsx}' 'apps/**/*.{ts,tsx}'",
     "lint:fix": "eslint 'packages/**/*.{ts,tsx}' 'apps/**/*.{ts,tsx}' --fix",
     "format": "prettier '**/*.{ts,tsx,json,md,css,scss}' --write",
-    "format:check": "prettier '**/*.{ts,tsx,json,md,css,scss}' --check",
+    "format:check": "prettier '**/*.{ts,tsx,json,md,css,scss}' --check || (prettier scripts/component-production/validation-command.ts && exit 1)",
     "check:playwright-version": "node scripts/check-playwright-version.mjs",
     "check:source-hygiene": "node scripts/check-source-hygiene.mjs",
     "check:source-hygiene:json": "node scripts/check-source-hygiene.mjs --json",
