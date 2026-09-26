@@ -8,6 +8,7 @@ import type {
 } from './contracts';
 
 const OUTPUT_SUMMARY_LIMIT = 4_000;
+const OUTPUT_TRUNCATION_MARKER = '\n… output truncated …\n';
 
 export type ComponentProductionCommand = {
   id: string;
@@ -22,6 +23,7 @@ export type ComponentProductionCommand = {
     | 'website';
   command: readonly string[];
   timeoutMs: number;
+  platform?: 'react' | 'react-native';
 };
 
 export type ComponentProductionCommandExecution = {
@@ -252,6 +254,7 @@ function runStage(params: {
         stage: params.stageId,
         severity: 'blocking',
         message: error instanceof Error ? error.message : String(error),
+        ...(command.platform ? { platform: command.platform } : {}),
       });
 
       continue;
@@ -269,6 +272,7 @@ function runStage(params: {
         stage: params.stageId,
         severity: 'blocking',
         message: runtimeFailureMessage(command, execution),
+        ...(command.platform ? { platform: command.platform } : {}),
       });
 
       continue;
@@ -280,6 +284,7 @@ function runStage(params: {
         stage: params.stageId,
         severity: 'blocking',
         message: validationFailureMessage(command, execution),
+        ...(command.platform ? { platform: command.platform } : {}),
       });
     }
   }
@@ -325,24 +330,28 @@ function platformCommands(
         stage: 'tests',
         command: ['pnpm', '--filter', '@vellira-ui/react', 'test'],
         timeoutMs: 180_000,
+        platform: 'react',
       },
       {
         id: 'react-typecheck',
         stage: 'typecheck',
         command: ['pnpm', '--filter', '@vellira-ui/react', 'typecheck'],
         timeoutMs: 180_000,
+        platform: 'react',
       },
       {
         id: 'react-build',
         stage: 'build',
         command: ['pnpm', '--filter', '@vellira-ui/react...', 'build'],
         timeoutMs: 300_000,
+        platform: 'react',
       },
       {
         id: 'react-storybook-build',
         stage: 'storybook',
         command: ['pnpm', 'build:storybook'],
         timeoutMs: 300_000,
+        platform: 'react',
       }
     );
   }
@@ -354,18 +363,21 @@ function platformCommands(
         stage: 'tests',
         command: ['pnpm', '--filter', '@vellira-ui/react-native', 'test'],
         timeoutMs: 180_000,
+        platform: 'react-native',
       },
       {
         id: 'react-native-typecheck',
         stage: 'typecheck',
         command: ['pnpm', '--filter', '@vellira-ui/react-native', 'typecheck'],
         timeoutMs: 180_000,
+        platform: 'react-native',
       },
       {
         id: 'react-native-build',
         stage: 'build',
         command: ['pnpm', '--filter', '@vellira-ui/react-native...', 'build'],
         timeoutMs: 300_000,
+        platform: 'react-native',
       }
     );
   }
@@ -416,5 +428,13 @@ function summarizeOutput(value: string): string {
     return normalized;
   }
 
-  return `${normalized.slice(0, OUTPUT_SUMMARY_LIMIT)}\n… output truncated`;
+  const retainedLimit = OUTPUT_SUMMARY_LIMIT - OUTPUT_TRUNCATION_MARKER.length;
+  const headLimit = Math.ceil(retainedLimit / 2);
+  const tailLimit = retainedLimit - headLimit;
+
+  return [
+    normalized.slice(0, headLimit),
+    OUTPUT_TRUNCATION_MARKER,
+    normalized.slice(-tailLimit),
+  ].join('');
 }
