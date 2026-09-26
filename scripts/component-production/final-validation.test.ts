@@ -125,6 +125,33 @@ describe('runComponentProductionFinalValidation', () => {
     });
   });
 
+  it('preserves the tail of long final validation diagnostics', () => {
+    const tailDiagnostic =
+      'packages/react/src/primitives/Avatar/Avatar.tsx: final smoke failure';
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/vellira-production',
+      input: WEB_INPUT,
+      runner: (command) =>
+        command.id === 'public-api'
+          ? {
+              exitCode: 1,
+              stdout: `public-api start\n${'x'.repeat(
+                5_000
+              )}\n${tailDiagnostic}`,
+              stderr: '',
+              timedOut: false,
+            }
+          : success(),
+    });
+
+    const finding = result.stages[0]?.findings[0];
+
+    expect(finding?.message).toContain('public-api start');
+    expect(finding?.message).toContain('… output truncated …');
+    expect(finding?.message).toContain(tailDiagnostic);
+    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
+  });
+
   it('blocks readiness when public API integrity fails', () => {
     const result = runComponentProductionFinalValidation({
       root: '/tmp/vellira-production',

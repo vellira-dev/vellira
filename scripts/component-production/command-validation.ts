@@ -1,41 +1,34 @@
-import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 import type {
-  ComponentProductionFinding,
   ComponentProductionInputV1,
   ComponentProductionStageResult,
 } from './contracts';
+import {
+  runValidationCommandProcess,
+  runValidationStage,
+  type ValidationCommandDescriptor,
+  type ValidationCommandExecution,
+  type ValidationCommandRunner,
+} from './validation-command';
 
-const OUTPUT_SUMMARY_LIMIT = 4_000;
+type ComponentProductionCommandStage =
+  | 'format'
+  | 'lint'
+  | 'tests'
+  | 'typecheck'
+  | 'build'
+  | 'storybook'
+  | 'docs'
+  | 'website';
 
-export type ComponentProductionCommand = {
-  id: string;
-  stage:
-    | 'format'
-    | 'lint'
-    | 'tests'
-    | 'typecheck'
-    | 'build'
-    | 'storybook'
-    | 'docs'
-    | 'website';
-  command: readonly string[];
-  timeoutMs: number;
-};
+export type ComponentProductionCommand =
+  ValidationCommandDescriptor<ComponentProductionCommandStage>;
 
-export type ComponentProductionCommandExecution = {
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-  timedOut: boolean;
-  error?: string;
-};
+export type ComponentProductionCommandExecution = ValidationCommandExecution;
 
-export type ComponentProductionCommandRunner = (
-  command: ComponentProductionCommand,
-  root: string
-) => ComponentProductionCommandExecution;
+export type ComponentProductionCommandRunner =
+  ValidationCommandRunner<ComponentProductionCommand>;
 
 export type ComponentProductionCommandValidationResult = {
   stages: readonly ComponentProductionStageResult[];
@@ -170,43 +163,11 @@ export function runComponentProductionCommand(
   command: ComponentProductionCommand,
   root: string
 ): ComponentProductionCommandExecution {
-  const [executable, ...args] = command.command;
-
-  if (!executable) {
-    return {
-      exitCode: null,
-      stdout: '',
-      stderr: '',
-      timedOut: false,
-      error: 'Component production command is empty.',
-    };
-  }
-
-  const result = spawnSync(executable, args, {
-    cwd: root,
-    encoding: 'utf8',
-    timeout: command.timeoutMs,
-    shell: false,
-  });
-
-  const errorCode =
-    result.error &&
-    'code' in result.error &&
-    typeof result.error.code === 'string'
-      ? result.error.code
-      : undefined;
-
-  return {
-    exitCode: result.status,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-    timedOut: errorCode === 'ETIMEDOUT',
-    ...(result.error
-      ? {
-          error: result.error.message,
-        }
-      : {}),
-  };
+  return runValidationCommandProcess(
+    command,
+    root,
+    'Component production command is empty.'
+  );
 }
 
 function skippedStage(
@@ -224,93 +185,11 @@ function skippedStage(
 
 function runStage(params: {
   root: string;
-  stageId:
-    | 'format'
-    | 'lint'
-    | 'tests'
-    | 'typecheck'
-    | 'build'
-    | 'storybook'
-    | 'docs'
-    | 'website';
+  stageId: ComponentProductionCommandStage;
   commands: readonly ComponentProductionCommand[];
   runner: ComponentProductionCommandRunner;
 }): ComponentProductionStageResult {
-  const findings: ComponentProductionFinding[] = [];
-  let runtimeFailed = false;
-
-  for (const command of params.commands) {
-    let execution: ComponentProductionCommandExecution;
-
-    try {
-      execution = params.runner(command, params.root);
-    } catch (error) {
-      runtimeFailed = true;
-
-      findings.push({
-        id: `${params.stageId}:${command.id}:runtime`,
-        stage: params.stageId,
-        severity: 'blocking',
-        message: error instanceof Error ? error.message : String(error),
-      });
-
-      continue;
-    }
-
-    if (
-      execution.timedOut ||
-      execution.error !== undefined ||
-      execution.exitCode === null
-    ) {
-      runtimeFailed = true;
-
-      findings.push({
-        id: `${params.stageId}:${command.id}:runtime`,
-        stage: params.stageId,
-        severity: 'blocking',
-        message: runtimeFailureMessage(command, execution),
-      });
-
-      continue;
-    }
-
-    if (execution.exitCode !== 0) {
-      findings.push({
-        id: `${params.stageId}:${command.id}`,
-        stage: params.stageId,
-        severity: 'blocking',
-        message: validationFailureMessage(command, execution),
-      });
-    }
-  }
-
-  if (runtimeFailed) {
-    return {
-      id: params.stageId,
-      status: 'failed',
-      summary: `${params.stageId} validation could not complete reliably.`,
-      findings,
-      artifacts: [],
-    };
-  }
-
-  if (findings.length > 0) {
-    return {
-      id: params.stageId,
-      status: 'blocked',
-      summary: `${params.stageId} validation detected blocking findings.`,
-      findings,
-      artifacts: [],
-    };
-  }
-
-  return {
-    id: params.stageId,
-    status: 'passed',
-    summary: `${params.stageId} validation passed.`,
-    findings: [],
-    artifacts: [],
-  };
+  return runValidationStage(params);
 }
 
 function platformCommands(
@@ -325,24 +204,28 @@ function platformCommands(
         stage: 'tests',
         command: ['pnpm', '--filter', '@vellira-ui/react', 'test'],
         timeoutMs: 180_000,
+        platform: 'react',
       },
       {
         id: 'react-typecheck',
         stage: 'typecheck',
         command: ['pnpm', '--filter', '@vellira-ui/react', 'typecheck'],
         timeoutMs: 180_000,
+        platform: 'react',
       },
       {
         id: 'react-build',
         stage: 'build',
         command: ['pnpm', '--filter', '@vellira-ui/react...', 'build'],
         timeoutMs: 300_000,
+        platform: 'react',
       },
       {
         id: 'react-storybook-build',
         stage: 'storybook',
         command: ['pnpm', 'build:storybook'],
         timeoutMs: 300_000,
+        platform: 'react',
       }
     );
   }
@@ -354,67 +237,24 @@ function platformCommands(
         stage: 'tests',
         command: ['pnpm', '--filter', '@vellira-ui/react-native', 'test'],
         timeoutMs: 180_000,
+        platform: 'react-native',
       },
       {
         id: 'react-native-typecheck',
         stage: 'typecheck',
         command: ['pnpm', '--filter', '@vellira-ui/react-native', 'typecheck'],
         timeoutMs: 180_000,
+        platform: 'react-native',
       },
       {
         id: 'react-native-build',
         stage: 'build',
         command: ['pnpm', '--filter', '@vellira-ui/react-native...', 'build'],
         timeoutMs: 300_000,
+        platform: 'react-native',
       }
     );
   }
 
   return commands;
-}
-
-function validationFailureMessage(
-  command: ComponentProductionCommand,
-  execution: ComponentProductionCommandExecution
-): string {
-  const detail = summarizeExecutionOutput(execution);
-
-  return detail
-    ? `${command.id} exited with code ${execution.exitCode}: ${detail}`
-    : `${command.id} exited with code ${execution.exitCode}.`;
-}
-
-function runtimeFailureMessage(
-  command: ComponentProductionCommand,
-  execution: ComponentProductionCommandExecution
-): string {
-  if (execution.timedOut) {
-    return `${command.id} timed out after ${command.timeoutMs}ms.`;
-  }
-
-  if (execution.error) {
-    return `${command.id} could not run: ${execution.error}`;
-  }
-
-  return `${command.id} did not produce a deterministic exit code.`;
-}
-
-function summarizeExecutionOutput(
-  execution: ComponentProductionCommandExecution
-): string {
-  const streams = [execution.stdout, execution.stderr]
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  return summarizeOutput(streams.join('\n'));
-}
-
-function summarizeOutput(value: string): string {
-  const normalized = value.trim();
-
-  if (normalized.length <= OUTPUT_SUMMARY_LIMIT) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, OUTPUT_SUMMARY_LIMIT)}\n… output truncated`;
 }

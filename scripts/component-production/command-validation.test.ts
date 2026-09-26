@@ -153,6 +153,27 @@ describe('runComponentProductionCommandValidation', () => {
     ]);
   });
 
+  it('marks platform-scoped commands with deterministic platform identity', () => {
+    const commands = componentProductionValidationCommands({
+      ...WEB_INPUT,
+      platform: 'both',
+    });
+
+    expect(
+      commands
+        .filter((command) => command.id.startsWith('react-'))
+        .map((command) => [command.id, command.platform])
+    ).toEqual([
+      ['react-tests', 'react'],
+      ['react-typecheck', 'react'],
+      ['react-build', 'react'],
+      ['react-storybook-build', 'react'],
+      ['react-native-tests', 'react-native'],
+      ['react-native-typecheck', 'react-native'],
+      ['react-native-build', 'react-native'],
+    ]);
+  });
+
   it('does not run React Storybook for a native-only component', () => {
     const calls: string[] = [];
 
@@ -209,8 +230,43 @@ describe('runComponentProductionCommandValidation', () => {
         stage: 'tests',
         severity: 'blocking',
         message: 'react-tests exited with code 1: Avatar test failed.',
+        platform: 'react',
       },
     ]);
+  });
+
+  it('preserves both failure head and tail within the bounded diagnostic summary', () => {
+    const tailDiagnostic =
+      'src/primitives/Avatar/Avatar.test.tsx:42: expected fallback after image error';
+    const result = runComponentProductionCommandValidation({
+      root: '/tmp/vellira-production',
+      input: WEB_INPUT,
+      runner: (command) => {
+        if (command.id === 'react-tests') {
+          return {
+            exitCode: 1,
+            stdout: `RUN /tmp/vellira-production/packages/react\n${'x'.repeat(
+              5_000
+            )}\n${tailDiagnostic}`,
+            stderr: '',
+            timedOut: false,
+          };
+        }
+
+        return success();
+      },
+    });
+
+    const tests = result.stages.find((stage) => stage.id === 'tests');
+    const finding = tests?.findings[0];
+
+    expect(finding?.message).toContain(
+      'RUN /tmp/vellira-production/packages/react'
+    );
+    expect(finding?.message).toContain('… output truncated …');
+    expect(finding?.message).toContain(tailDiagnostic);
+    expect(finding).toMatchObject({ platform: 'react' });
+    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
   });
 
   it('preserves stdout diagnostics when stderr also contains command output', () => {
