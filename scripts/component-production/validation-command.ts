@@ -57,7 +57,6 @@ export function invokeValidationCommand<TCommand, TExecution>(
 export function runValidationCommandProcess(
   command: Pick<ValidationCommandDescriptor, 'command' | 'timeoutMs'>,
   root: string,
-  *,
   emptyCommandError: string
 ): ValidationCommandExecution {
   const [executable, ...args] = command.command;
