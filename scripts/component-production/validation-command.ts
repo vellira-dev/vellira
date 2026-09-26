@@ -27,10 +27,7 @@ export type ValidationCommandExecution = {
 
 export type ValidationCommandRunner<
   TCommand extends ValidationCommandDescriptor = ValidationCommandDescriptor,
-> = (
-  command: TCommand,
-  root: string
-) => ValidationCommandExecution;
+> = (command: TCommand, root: string) => ValidationCommandExecution;
 
 export type ValidationCommandInvocation<TExecution> =
   | { status: 'completed'; execution: TExecution }
@@ -219,9 +216,7 @@ function validationFinding<TCommand extends ValidationCommandDescriptor>(params:
     stage: params.stageId,
     severity: 'blocking',
     message: params.message,
-    ...(params.command.platform
-      ? { platform: params.command.platform }
-      : {}),
+    ...(params.command.platform ? { platform: params.command.platform } : {}),
     ...(params.ruleId ? { ruleId: params.ruleId } : {}),
   };
 }
