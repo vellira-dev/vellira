@@ -1,42 +1,34 @@
-import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 import type {
-  ComponentProductionFinding,
   ComponentProductionInputV1,
   ComponentProductionStageResult,
 } from './contracts';
-import { invokeValidationCommand } from './validation-command';
-import { summarizeValidationCommandOutput } from './validation-output';
+import {
+  runValidationCommandProcess,
+  runValidationStage,
+  type ValidationCommandDescriptor,
+  type ValidationCommandExecution,
+  type ValidationCommandRunner,
+} from './validation-command';
 
-export type ComponentProductionCommand = {
-  id: string;
-  stage:
-    | 'format'
-    | 'lint'
-    | 'tests'
-    | 'typecheck'
-    | 'build'
-    | 'storybook'
-    | 'docs'
-    | 'website';
-  command: readonly string[];
-  timeoutMs: number;
-  platform?: 'react' | 'react-native';
-};
+type ComponentProductionCommandStage =
+  | 'format'
+  | 'lint'
+  | 'tests'
+  | 'typecheck'
+  | 'build'
+  | 'storybook'
+  | 'docs'
+  | 'website';
 
-export type ComponentProductionCommandExecution = {
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-  timedOut: boolean;
-  error?: string;
-};
+export type ComponentProductionCommand =
+  ValidationCommandDescriptor<ComponentProductionCommandStage>;
 
-export type ComponentProductionCommandRunner = (
-  command: ComponentProductionCommand,
-  root: string
-) => ComponentProductionCommandExecution;
+export type ComponentProductionCommandExecution = ValidationCommandExecution;
+
+export type ComponentProductionCommandRunner =
+  ValidationCommandRunner<ComponentProductionCommand>;
 
 export type ComponentProductionCommandValidationResult = {
   stages: readonly ComponentProductionStageResult[];
@@ -171,43 +163,11 @@ export function runComponentProductionCommand(
   command: ComponentProductionCommand,
   root: string
 ): ComponentProductionCommandExecution {
-  const [executable, ...args] = command.command;
-
-  if (!executable) {
-    return {
-      exitCode: null,
-      stdout: '',
-      stderr: '',
-      timedOut: false,
-      error: 'Component production command is empty.',
-    };
-  }
-
-  const result = spawnSync(executable, args, {
-    cwd: root,
-    encoding: 'utf8',
-    timeout: command.timeoutMs,
-    shell: false,
-  });
-
-  const errorCode =
-    result.error &&
-    'code' in result.error &&
-    typeof result.error.code === 'string'
-      ? result.error.code
-      : undefined;
-
-  return {
-    exitCode: result.status,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-    timedOut: errorCode === 'ETIMEDOUT',
-    ...(result.error
-      ? {
-          error: result.error.message,
-        }
-      : {}),
-  };
+  return runValidationCommandProcess(
+    command,
+    root,
+    'Component production command is empty.'
+  );
 }
 
 function skippedStage(
@@ -225,98 +185,11 @@ function skippedStage(
 
 function runStage(params: {
   root: string;
-  stageId:
-    | 'format'
-    | 'lint'
-    | 'tests'
-    | 'typecheck'
-    | 'build'
-    | 'storybook'
-    | 'docs'
-    | 'website';
+  stageId: ComponentProductionCommandStage;
   commands: readonly ComponentProductionCommand[];
   runner: ComponentProductionCommandRunner;
 }): ComponentProductionStageResult {
-  const findings: ComponentProductionFinding[] = [];
-  let runtimeFailed = false;
-
-  for (const command of params.commands) {
-    const invocation = invokeValidationCommand(
-      params.runner,
-      command,
-      params.root
-    );
-
-    if (invocation.status === 'threw') {
-      runtimeFailed = true;
-      findings.push({
-        id: `${params.stageId}:${command.id}:runtime`,
-        stage: params.stageId,
-        severity: 'blocking',
-        message: invocation.message,
-        ...(command.platform ? { platform: command.platform } : {}),
-      });
-      continue;
-    }
-
-    const execution: ComponentProductionCommandExecution = invocation.execution;
-
-    if (
-      execution.timedOut ||
-      execution.error !== undefined ||
-      execution.exitCode === null
-    ) {
-      runtimeFailed = true;
-
-      findings.push({
-        id: `${params.stageId}:${command.id}:runtime`,
-        stage: params.stageId,
-        severity: 'blocking',
-        message: runtimeFailureMessage(command, execution),
-        ...(command.platform ? { platform: command.platform } : {}),
-      });
-
-      continue;
-    }
-
-    if (execution.exitCode !== 0) {
-      findings.push({
-        id: `${params.stageId}:${command.id}`,
-        stage: params.stageId,
-        severity: 'blocking',
-        message: validationFailureMessage(command, execution),
-        ...(command.platform ? { platform: command.platform } : {}),
-      });
-    }
-  }
-
-  if (runtimeFailed) {
-    return {
-      id: params.stageId,
-      status: 'failed',
-      summary: `${params.stageId} validation could not complete reliably.`,
-      findings,
-      artifacts: [],
-    };
-  }
-
-  if (findings.length > 0) {
-    return {
-      id: params.stageId,
-      status: 'blocked',
-      summary: `${params.stageId} validation detected blocking findings.`,
-      findings,
-      artifacts: [],
-    };
-  }
-
-  return {
-    id: params.stageId,
-    status: 'passed',
-    summary: `${params.stageId} validation passed.`,
-    findings: [],
-    artifacts: [],
-  };
+  return runValidationStage(params);
 }
 
 function platformCommands(
@@ -385,30 +258,3 @@ function platformCommands(
 
   return commands;
 }
-
-function validationFailureMessage(
-  command: ComponentProductionCommand,
-  execution: ComponentProductionCommandExecution
-): string {
-  const detail = summarizeValidationCommandOutput(execution);
-
-  return detail
-    ? `${command.id} exited with code ${execution.exitCode}: ${detail}`
-    : `${command.id} exited with code ${execution.exitCode}.`;
-}
-
-function runtimeFailureMessage(
-  command: ComponentProductionCommand,
-  execution: ComponentProductionCommandExecution
-): string {
-  if (execution.timedOut) {
-    return `${command.id} timed out after ${command.timeoutMs}ms.`;
-  }
-
-  if (execution.error) {
-    return `${command.id} could not run: ${execution.error}`;
-  }
-
-  return `${command.id} did not produce a deterministic exit code.`;
-}
-
