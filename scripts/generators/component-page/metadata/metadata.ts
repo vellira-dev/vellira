@@ -1040,13 +1040,47 @@ function safelyAnalyzableMetadata(
   const apiDescriptionMetadata = { ...safeMetadata };
   if (isRecord(apiDescriptionMetadata.api)) {
     const safeApi = { ...apiDescriptionMetadata.api };
-    if (isRecord(metadata.api) && Array.isArray(metadata.api.sections)) {
-      safeApi.sections = metadata.api.sections.filter(
-        (section) =>
-          collectComponentMetadataRuntimeShapeFindings({
-            api: { sections: [section] },
-          }).length === 0
+    if (Array.isArray(safeApi.sections)) {
+      const usedSectionNames = new Set(
+        safeApi.sections.flatMap((section) =>
+          isRecord(section) && typeof section.name === 'string'
+            ? [section.name]
+            : []
+        )
       );
+      safeApi.sections = safeApi.sections.flatMap((section, index) => {
+        if (!isRecord(section)) return [];
+
+        const authoredExportName = section.exportName;
+        let exportName: string | Record<string, string>;
+        if (isRecord(authoredExportName)) {
+          const platformExportNames = Object.fromEntries(
+            Object.entries(authoredExportName).filter(
+              (entry): entry is [string, string] => typeof entry[1] === 'string'
+            )
+          );
+          if (Object.keys(platformExportNames).length === 0) return [];
+          exportName = platformExportNames;
+        } else if (typeof authoredExportName === 'string') {
+          exportName = authoredExportName;
+        } else {
+          return [];
+        }
+
+        let name: string;
+        if (typeof section.name === 'string') {
+          name = section.name;
+        } else {
+          let suffix = index;
+          do {
+            name = `__vellira_partial_api_section_${suffix}`;
+            suffix += 1;
+          } while (usedSectionNames.has(name));
+          usedSectionNames.add(name);
+        }
+
+        return [{ name, exportName }];
+      });
     } else {
       delete safeApi.sections;
     }
@@ -1165,16 +1199,19 @@ function mergeObject<T extends Record<string, unknown>>(
 
 function mergePlatformMetadata(
   base: ComponentPageMetadata['react'],
-  override: ComponentPageMetadata['react']
+  override: ComponentPageMetadata['react'],
+  options: { preserveOverrideArrayIdentity?: boolean } = {}
 ) {
   const overrideImports = override?.imports ?? [];
   const overrideSetup = override?.setup ?? [];
-  const imports = overrideImports.some((entry) => entry === undefined)
-    ? overrideImports
-    : Array.from(new Set([...(base?.imports ?? []), ...overrideImports]));
-  const setup = overrideSetup.some((entry) => entry === undefined)
-    ? overrideSetup
-    : Array.from(new Set([...(base?.setup ?? []), ...overrideSetup]));
+  const imports =
+    options.preserveOverrideArrayIdentity && override?.imports !== undefined
+      ? overrideImports
+      : Array.from(new Set([...(base?.imports ?? []), ...overrideImports]));
+  const setup =
+    options.preserveOverrideArrayIdentity && override?.setup !== undefined
+      ? overrideSetup
+      : Array.from(new Set([...(base?.setup ?? []), ...overrideSetup]));
 
   return {
     ...(base ?? {}),
@@ -1186,13 +1223,20 @@ function mergePlatformMetadata(
 
 export function mergeComponentMetadata(
   base: ComponentPageMetadata,
-  override: ComponentPageMetadata
+  override: ComponentPageMetadata,
+  options: { preservePlatformOverrideArrayIdentity?: boolean } = {}
 ): ComponentPageMetadata {
   return {
     ...base,
     ...override,
-    react: mergePlatformMetadata(base.react, override.react),
-    native: mergePlatformMetadata(base.native, override.native),
+    react: mergePlatformMetadata(base.react, override.react, {
+      preserveOverrideArrayIdentity:
+        options.preservePlatformOverrideArrayIdentity,
+    }),
+    native: mergePlatformMetadata(base.native, override.native, {
+      preserveOverrideArrayIdentity:
+        options.preservePlatformOverrideArrayIdentity,
+    }),
     demo: {
       ...(base.demo ?? {}),
       ...(override.demo ?? {}),

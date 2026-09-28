@@ -107,6 +107,10 @@ it('separates partial semantic evidence from API rendering metadata', async () =
     sections: [
       { name: 42, exportName: 'Button' },
       { name: 'Valid', exportName: 'Button' },
+      {
+        name: 'React only',
+        exportName: { react: 'Button', 'react-native': 42 },
+      },
     ],
     descriptions: { source: 'A meaningful source description.' },
   },
@@ -119,14 +123,27 @@ it('separates partial semantic evidence from API rendering metadata', async () =
   });
 
   expect(analysis.blockedPaths).toEqual(
-    new Set(['api.sections[0]', 'api.sections[0].name'])
+    new Set([
+      'api.sections[0]',
+      'api.sections[0].name',
+      'api.sections[2]',
+      'api.sections[2].exportName.react-native',
+    ])
   );
   expect(analysis.metadata.api?.sections).toEqual([
     { exportName: 'Button' },
     { name: 'Valid', exportName: 'Button' },
+    { name: 'React only', exportName: { react: 'Button' } },
   ]);
   expect(analysis.apiDescriptionMetadata.api).toEqual({
-    sections: [{ name: 'Valid', exportName: 'Button' }],
+    sections: [
+      {
+        name: '__vellira_partial_api_section_0',
+        exportName: 'Button',
+      },
+      { name: 'Valid', exportName: 'Button' },
+      { name: 'React only', exportName: { react: 'Button' } },
+    ],
     descriptions: { source: 'A meaningful source description.' },
   });
 });

@@ -936,6 +936,40 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     );
   }, 60_000);
 
+  it('preserves authored import indexes when valid entries repeat', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: {
+    imports: [
+      "import { Plus } from '@vellira-ui/icons';",
+      "import { Plus } from '@vellira-ui/icons';",
+      'import {',
+    ],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([expect.stringContaining('react.imports[2]')])
+    );
+  }, 60_000);
+
   it('returns a structured semantic finding for metadata syntax failure', () => {
     const metadataFile = path.join(
       fixture,

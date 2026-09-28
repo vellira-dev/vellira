@@ -567,15 +567,21 @@ export async function resolvePageInput(params: {
     ),
   });
 
+  const generatedBaseConfig = mergeComponentMetadata(
+    getProfileMetadata(inferredComponentProfile, {
+      reactApiProps,
+      nativeApiProps,
+    }),
+    generatedComposition
+  );
   const componentConfig = mergeComponentMetadata(
-    mergeComponentMetadata(
-      getProfileMetadata(inferredComponentProfile, {
-        reactApiProps,
-        nativeApiProps,
-      }),
-      generatedComposition
-    ),
+    generatedBaseConfig,
     componentMetadata
+  );
+  const semanticComponentConfig = mergeComponentMetadata(
+    generatedBaseConfig,
+    componentMetadata,
+    { preservePlatformOverrideArrayIdentity: true }
   );
 
   const componentProfile = componentConfig.profile ?? inferredComponentProfile;
@@ -593,12 +599,12 @@ export async function resolvePageInput(params: {
       ...metadataAnalysis.decisionFindings,
       ...collectComponentMetadataFindings({
         componentName,
-        metadata: componentConfig,
+        metadata: semanticComponentConfig,
         blockedPaths: metadataAnalysis.blockedPaths,
       }),
       ...collectComponentMetadataAgainstApiFindings({
         componentName,
-        metadata: componentConfig,
+        metadata: semanticComponentConfig,
         blockedPaths: metadataAnalysis.blockedPaths,
         platforms,
         reactApiProps,
