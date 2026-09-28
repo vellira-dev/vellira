@@ -10,8 +10,12 @@ import {
 } from '../../../apps/website/src/component-catalog/registry/canonicalComponentSlugs';
 import { componentCatalogPresentation } from '../../../apps/website/src/component-catalog/registry/componentPresentation';
 import { slugify } from './helpers/format';
+import {
+  buildSemanticMetadataDecisionAuthority,
+  type SemanticMetadataDecisionAuthority,
+} from './semantic-metadata-authority';
 
-export const SEMANTIC_METADATA_CONTRACT_SCHEMA_VERSION = '1' as const;
+export const SEMANTIC_METADATA_CONTRACT_SCHEMA_VERSION = '2' as const;
 export const METADATA_SCHEMA_PATH =
   'apps/website/src/component-catalog/metadata.ts';
 export const COMPONENT_REGISTRY_PATH =
@@ -45,6 +49,7 @@ export type SemanticMetadataContract = {
     isCanonical: boolean;
   };
   constraints: typeof CANONICAL_RELATED_COMPONENT_CONSTRAINTS;
+  semanticDecisionAuthority: SemanticMetadataDecisionAuthority;
 };
 
 export function buildSemanticMetadataContract(params: {
@@ -90,6 +95,10 @@ export function buildSemanticMetadataContract(params: {
       isCanonical: slugs.includes(sourceSlug),
     },
     constraints: CANONICAL_RELATED_COMPONENT_CONSTRAINTS,
+    semanticDecisionAuthority: buildSemanticMetadataDecisionAuthority({
+      root,
+      componentName: params.componentName,
+    }),
   };
 }
 

@@ -267,7 +267,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.status).toBe(0);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Button',
       status: 'up-to-date',
       staleFiles: [],
@@ -292,7 +292,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.stderr).toBe('');
     const payload = JSON.parse(result.stdout);
     expect(payload).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Button',
       status: 'stale',
       staleFiles: [
@@ -407,5 +407,595 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.stderr).toMatch(
       /Textarea: effective generator input invalid:[\s\S]*catalogPreview must be explicitly defined/
     );
+  }, 60_000);
+
+  it('returns all canonical semantic findings together in JSON check mode', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Textarea/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    fs.writeFileSync(
+      metadataFile,
+      source
+        .replace(/ {2}catalogPreview: \{[\s\S]*?\n {2}\},\n/, '')
+        .replace(/ {2}related: \[[\s\S]*?\n {2}\],\n/, '')
+    );
+
+    const result = runGenerator(fixture, [
+      'Textarea',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: '2',
+      componentName: 'Textarea',
+      status: 'semantic-invalid',
+      metadataPath:
+        'apps/website/src/component-catalog/components/Textarea/metadata.ts',
+      analysisComplete: true,
+      apiDescriptionAnalysis: 'available',
+      findings: expect.arrayContaining([
+        expect.stringContaining('related must be explicitly defined'),
+        expect.stringContaining('catalogPreview must be explicitly defined'),
+      ]),
+    });
+  }, 60_000);
+
+  it('returns a structured semantic finding for invalid metadata runtime shape', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { examples: {} } as any;\n`);
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: '2',
+      componentName: 'Button',
+      status: 'semantic-invalid',
+      metadataPath:
+        'apps/website/src/component-catalog/components/Button/metadata.ts',
+      analysisComplete: false,
+      apiDescriptionAnalysis: 'available',
+      findings: expect.arrayContaining([
+        'examples must be an array',
+        expect.stringContaining('related must be explicitly defined'),
+      ]),
+    });
+  }, 60_000);
+
+  it('aggregates malformed examples with every independent required decision', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Textarea/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { examples: {} } as any;\n`);
+
+    const result = runGenerator(fixture, [
+      'Textarea',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples must be an array',
+        expect.stringContaining('related must be explicitly defined'),
+        expect.stringContaining('catalogPreview must be explicitly defined'),
+      ])
+    );
+  }, 60_000);
+
+  it('blocks only API-dependent analysis when the API subtree is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { api: 42 } as any;\n`);
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('blocked');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'api must be an object',
+        expect.stringContaining('related must be explicitly defined'),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps semantic analysis for valid siblings in a partially malformed examples array', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    { title: 'Valid sibling', description: 'Still analyzed.', props: ['missingProp={true}'] },
+    42,
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[1] must be an object',
+        expect.stringContaining(
+          'examples[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('preserves original array indexes when an earlier example is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    42,
+    { title: 'Later sibling', description: 'Still analyzed.', props: ['missingProp={true}'] },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[0] must be an object',
+        expect.stringContaining(
+          'examples[1].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+    expect(payload.findings).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('examples[0].props prop fragment'),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps platform sibling semantics when another platform field is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: { imports: 42, demoProps: 'missingProp={true}' },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'react.imports must be an array',
+        expect.stringContaining(
+          'react.demoProps prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps example prop semantics when an independent required field is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    { title: 42, description: 'Still analyzed.', props: ['missingProp={true}'] },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[0].title must be a string',
+        expect.stringContaining(
+          'examples[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps API descriptions analyzable when only API sections are malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  api: { sections: 42, descriptions: { unknown: 'Still inspectable.' } },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toContain('api.sections must be an array');
+  }, 60_000);
+
+  it('keeps child binding props analyzable when the binding target is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: {
+    childPropBindings: [{ target: 42, props: ['missingProp={true}'] }],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'react.childPropBindings[0].target must be a string',
+        expect.stringContaining(
+          'react.childPropBindings[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps duplicate API section names analyzable when an export is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  api: {
+    sections: [
+      { name: 'Duplicate', exportName: 42 },
+      { name: 'Duplicate', exportName: 'Button' },
+    ],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'api.sections[0].exportName must be a string or platform object',
+        'duplicate API section "Duplicate"',
+      ])
+    );
+  }, 60_000);
+
+  it('does not let analysis placeholders invent API section findings', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  api: {
+    sections: [
+      { name: 42, exportName: 'Button' },
+      { name: '__invalid_section_0', exportName: 'Button' },
+    ],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toContain('api.sections[0].name must be a string');
+    expect(payload.findings).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('duplicate API section "__invalid_section_0"'),
+      ])
+    );
+  }, 60_000);
+
+  it('uses known target platforms without inferring from malformed siblings', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    {
+      title: 'Unknown target',
+      description: 'Target authority is malformed.',
+      props: ['missingProp={true}'],
+      platforms: [42, 'react'],
+    },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toContain(
+      'examples[0].platforms[0] must be a string'
+    );
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          'examples[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('retains unsupported known platforms beside malformed platform entries', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    {
+      title: 'Mixed target evidence',
+      description: 'One entry is malformed and one is known-invalid.',
+      props: [],
+      platforms: [42, 'web'],
+    },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[0].platforms[0] must be a string',
+        'examples[0] has unsupported platform "web"',
+      ])
+    );
+  }, 60_000);
+
+  it('preserves import indexes through partial platform metadata merging', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: { imports: [42, 43, 'import {'] },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'react.imports[0] must be a string',
+        'react.imports[1] must be a string',
+        expect.stringContaining('react.imports[2]'),
+      ])
+    );
+  }, 60_000);
+
+  it('preserves authored import indexes when valid entries repeat', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: {
+    imports: [
+      "import { Plus } from '@vellira-ui/icons';",
+      "import { Plus } from '@vellira-ui/icons';",
+      'import {',
+    ],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([expect.stringContaining('react.imports[2]')])
+    );
+  }, 60_000);
+
+  it('returns a structured semantic finding for metadata syntax failure', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { examples: [ };\n`);
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: '2',
+      componentName: 'Button',
+      status: 'semantic-invalid',
+      metadataPath:
+        'apps/website/src/component-catalog/components/Button/metadata.ts',
+      analysisComplete: false,
+      apiDescriptionAnalysis: 'blocked',
+      findings: ['metadata.ts could not be loaded as a TypeScript module'],
+    });
   }, 60_000);
 });

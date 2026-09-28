@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 
 import ts from 'typescript';
 
@@ -17,6 +18,118 @@ export type { ComponentPageMetadata };
 export type ComponentPageProfile = NonNullable<
   ComponentPageMetadata['profile']
 >;
+
+export type ApiDescriptionAnalysis = 'available' | 'blocked';
+
+const MAX_SEMANTIC_FINDINGS = 128;
+const MAX_SEMANTIC_FINDING_LENGTH = 2_000;
+const MAX_SEMANTIC_FINDINGS_LENGTH = 8_000;
+const RESERVED_SEMANTIC_FINDINGS_LENGTH = 7_800;
+
+function boundSemanticFinding(finding: string) {
+  if (finding.length <= MAX_SEMANTIC_FINDING_LENGTH) return finding;
+
+  const digest = createHash('sha256')
+    .update(finding, 'utf8')
+    .digest('hex')
+    .slice(0, 16);
+  const suffix = `… [sha256:${digest}]`;
+  return `${finding.slice(0, MAX_SEMANTIC_FINDING_LENGTH - suffix.length)}${suffix}`;
+}
+
+function boundSemanticFindings(findings: readonly string[]) {
+  const uniqueOriginalFindings = [...new Set(findings)];
+  const orderedFindings: string[] = [];
+  const emittedFindings = new Set<string>();
+  let totalLength = 0;
+
+  for (const finding of uniqueOriginalFindings) {
+    const boundedFinding = boundSemanticFinding(finding);
+
+    if (emittedFindings.has(boundedFinding)) continue;
+    if (
+      orderedFindings.length >= MAX_SEMANTIC_FINDINGS - 1 ||
+      totalLength + boundedFinding.length > RESERVED_SEMANTIC_FINDINGS_LENGTH
+    ) {
+      continue;
+    }
+
+    emittedFindings.add(boundedFinding);
+    orderedFindings.push(boundedFinding);
+    totalLength += boundedFinding.length;
+  }
+
+  let omittedCount = uniqueOriginalFindings.length - orderedFindings.length;
+  while (omittedCount > 0) {
+    const sentinel = `${omittedCount} additional metadata finding(s) omitted by the bounded semantic protocol`;
+    const collisionIndex = orderedFindings.indexOf(sentinel);
+    if (collisionIndex >= 0) {
+      totalLength -= orderedFindings[collisionIndex].length;
+      orderedFindings.splice(collisionIndex, 1);
+      omittedCount += 1;
+      continue;
+    }
+    if (
+      sentinel.length > MAX_SEMANTIC_FINDING_LENGTH ||
+      totalLength + sentinel.length > MAX_SEMANTIC_FINDINGS_LENGTH
+    ) {
+      throw new Error(
+        'Bounded semantic finding sentinel exceeds its protocol limits.'
+      );
+    }
+    orderedFindings.push(sentinel);
+    break;
+  }
+
+  return orderedFindings;
+}
+
+export class ComponentMetadataValidationError extends Error {
+  readonly componentName: string;
+  readonly findings: readonly string[];
+  readonly analysisComplete: boolean;
+  readonly apiDescriptionAnalysis: ApiDescriptionAnalysis;
+
+  constructor(
+    componentName: string,
+    findings: readonly string[],
+    options: {
+      analysisComplete?: boolean;
+      apiDescriptionAnalysis?: ApiDescriptionAnalysis;
+    } = {}
+  ) {
+    const orderedFindings = boundSemanticFindings(findings);
+
+    super(
+      `Invalid component page metadata for ${componentName}:\n${orderedFindings
+        .map((finding) => `  - ${finding}`)
+        .join('\n')}`
+    );
+    this.name = 'ComponentMetadataValidationError';
+    this.componentName = componentName;
+    this.findings = orderedFindings;
+    this.analysisComplete = options.analysisComplete ?? true;
+    this.apiDescriptionAnalysis = options.apiDescriptionAnalysis ?? 'available';
+  }
+}
+
+export function assertValidComponentMetadataFindings(params: {
+  componentName: string;
+  findings: readonly string[];
+  analysisComplete?: boolean;
+  apiDescriptionAnalysis?: ApiDescriptionAnalysis;
+}) {
+  if (params.findings.length > 0) {
+    throw new ComponentMetadataValidationError(
+      params.componentName,
+      params.findings,
+      {
+        analysisComplete: params.analysisComplete,
+        apiDescriptionAnalysis: params.apiDescriptionAnalysis,
+      }
+    );
+  }
+}
 
 export function loadGeneratedComponentProfile(params: {
   root: string;
@@ -98,22 +211,980 @@ export function getComponentMetadataFile(params: {
   return path.join(getComponentCatalogDir(params), 'metadata.ts');
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function collectUnknownKeys(params: {
+  value: Record<string, unknown>;
+  path: string;
+  allowed: readonly string[];
+}) {
+  const allowed = new Set(params.allowed);
+
+  return Object.keys(params.value)
+    .filter((key) => !allowed.has(key))
+    .map((key) => `${params.path}.${key} is not a supported metadata field`);
+}
+
+function collectStringArrayShape(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    return [`${field} must be an array`];
+  }
+
+  return value.flatMap((item, index) =>
+    typeof item === 'string' ? [] : [`${field}[${index}] must be a string`]
+  );
+}
+
+function collectPrimitiveRecordShape(params: {
+  value: unknown;
+  field: string;
+  allowedTypes: readonly ('string' | 'boolean' | 'number')[];
+}) {
+  if (!isRecord(params.value)) {
+    return [`${params.field} must be an object`];
+  }
+
+  return Object.entries(params.value).flatMap(([key, value]) =>
+    params.allowedTypes.includes(
+      typeof value as 'string' | 'boolean' | 'number'
+    )
+      ? []
+      : [`${params.field}.${key} must be ${params.allowedTypes.join(', ')}`]
+  );
+}
+
+function collectOptionalStringArray(
+  value: Record<string, unknown>,
+  key: string,
+  path: string
+) {
+  return value[key] === undefined
+    ? []
+    : collectStringArrayShape(value[key], `${path}.${key}`);
+}
+
+function collectPlatformMetadataShape(value: unknown, path: string) {
+  if (!isRecord(value)) {
+    return [`${path} must be an object`];
+  }
+
+  const findings = collectUnknownKeys({
+    value,
+    path,
+    allowed: [
+      'demoProps',
+      'children',
+      'childPropBindings',
+      'imports',
+      'setup',
+      'responsivePresentation',
+    ],
+  });
+
+  for (const key of ['demoProps', 'children'] as const) {
+    if (value[key] !== undefined && typeof value[key] !== 'string') {
+      findings.push(`${path}.${key} must be a string`);
+    }
+  }
+
+  for (const key of ['imports', 'setup'] as const) {
+    findings.push(...collectOptionalStringArray(value, key, path));
+  }
+
+  if (
+    value.responsivePresentation !== undefined &&
+    typeof value.responsivePresentation !== 'boolean'
+  ) {
+    findings.push(`${path}.responsivePresentation must be a boolean`);
+  }
+
+  if (value.childPropBindings !== undefined) {
+    if (!Array.isArray(value.childPropBindings)) {
+      findings.push(`${path}.childPropBindings must be an array`);
+    } else {
+      for (const [index, binding] of value.childPropBindings.entries()) {
+        const bindingPath = `${path}.childPropBindings[${index}]`;
+
+        if (!isRecord(binding)) {
+          findings.push(`${bindingPath} must be an object`);
+          continue;
+        }
+
+        findings.push(
+          ...collectUnknownKeys({
+            value: binding,
+            path: bindingPath,
+            allowed: ['target', 'props'],
+          })
+        );
+
+        if (typeof binding.target !== 'string') {
+          findings.push(`${bindingPath}.target must be a string`);
+        }
+
+        findings.push(
+          ...collectStringArrayShape(binding.props, `${bindingPath}.props`)
+        );
+      }
+    }
+  }
+
+  return findings;
+}
+
+function collectExampleShape(value: unknown, path: string) {
+  if (!isRecord(value)) {
+    return [`${path} must be an object`];
+  }
+
+  const findings = collectUnknownKeys({
+    value,
+    path,
+    allowed: [
+      'title',
+      'description',
+      'props',
+      'inheritDemoProps',
+      'imports',
+      'reactImports',
+      'nativeImports',
+      'setup',
+      'reactSetup',
+      'nativeSetup',
+      'reactProps',
+      'nativeProps',
+      'reactChildren',
+      'nativeChildren',
+      'platforms',
+    ],
+  });
+
+  for (const key of ['title', 'description'] as const) {
+    if (typeof value[key] !== 'string') {
+      findings.push(`${path}.${key} must be a string`);
+    }
+  }
+
+  for (const key of [
+    'props',
+    'imports',
+    'reactImports',
+    'nativeImports',
+    'setup',
+    'reactSetup',
+    'nativeSetup',
+    'reactProps',
+    'nativeProps',
+    'platforms',
+  ] as const) {
+    if (key === 'props' || value[key] !== undefined) {
+      findings.push(...collectStringArrayShape(value[key], `${path}.${key}`));
+    }
+  }
+
+  for (const key of ['reactChildren', 'nativeChildren'] as const) {
+    if (value[key] !== undefined && typeof value[key] !== 'string') {
+      findings.push(`${path}.${key} must be a string`);
+    }
+  }
+
+  if (
+    value.inheritDemoProps !== undefined &&
+    typeof value.inheritDemoProps !== 'boolean'
+  ) {
+    findings.push(`${path}.inheritDemoProps must be a boolean`);
+  }
+
+  return findings;
+}
+
+function collectAccessibilityEntriesShape(value: unknown, path: string) {
+  if (!Array.isArray(value)) {
+    return [`${path} must be an array`];
+  }
+
+  return value.flatMap((item, index) => {
+    const itemPath = `${path}[${index}]`;
+
+    if (!isRecord(item)) {
+      return [`${itemPath} must be an object`];
+    }
+
+    const findings = collectUnknownKeys({
+      value: item,
+      path: itemPath,
+      allowed: ['title', 'description', 'props'],
+    });
+
+    for (const key of ['title', 'description'] as const) {
+      if (typeof item[key] !== 'string') {
+        findings.push(`${itemPath}.${key} must be a string`);
+      }
+    }
+
+    findings.push(...collectOptionalStringArray(item, 'props', itemPath));
+    return findings;
+  });
+}
+
+const COMPONENT_METADATA_KEYS = [
+  'profile',
+  'react',
+  'native',
+  'demo',
+  'catalogPreview',
+  'defaults',
+  'discovery',
+  'examples',
+  'api',
+  'accessibility',
+  'related',
+] as const;
+
+export function collectComponentMetadataRuntimeShapeFindings(
+  metadata: unknown
+) {
+  if (!isRecord(metadata)) {
+    return ['metadata.ts must export a metadata object'];
+  }
+
+  const findings = collectUnknownKeys({
+    value: metadata,
+    path: 'metadata',
+    allowed: COMPONENT_METADATA_KEYS,
+  });
+
+  if (
+    metadata.profile !== undefined &&
+    ![
+      'primitive',
+      'form-control',
+      'selection-control',
+      'compound',
+      'overlay',
+      'navigation',
+    ].includes(metadata.profile as string)
+  ) {
+    findings.push('metadata.profile has an unsupported value');
+  }
+
+  for (const key of ['react', 'native'] as const) {
+    if (metadata[key] !== undefined) {
+      findings.push(...collectPlatformMetadataShape(metadata[key], key));
+    }
+  }
+
+  if (metadata.demo !== undefined) {
+    if (!isRecord(metadata.demo)) {
+      findings.push('demo must be an object');
+    } else {
+      const demo = metadata.demo;
+      findings.push(
+        ...collectUnknownKeys({
+          value: demo,
+          path: 'demo',
+          allowed: [
+            'label',
+            'description',
+            'excludeControls',
+            'initialValues',
+            'staticProps',
+            'satisfiedRequiredProps',
+            'previewWidth',
+          ],
+        })
+      );
+
+      for (const key of ['label', 'description'] as const) {
+        if (demo[key] !== undefined && typeof demo[key] !== 'string') {
+          findings.push(`demo.${key} must be a string`);
+        }
+      }
+
+      for (const key of [
+        'excludeControls',
+        'satisfiedRequiredProps',
+      ] as const) {
+        findings.push(...collectOptionalStringArray(demo, key, 'demo'));
+      }
+
+      if (demo.initialValues !== undefined) {
+        findings.push(
+          ...collectPrimitiveRecordShape({
+            value: demo.initialValues,
+            field: 'demo.initialValues',
+            allowedTypes: ['string', 'boolean', 'number'],
+          })
+        );
+      }
+
+      if (demo.staticProps !== undefined) {
+        findings.push(
+          ...collectPrimitiveRecordShape({
+            value: demo.staticProps,
+            field: 'demo.staticProps',
+            allowedTypes: ['string'],
+          })
+        );
+      }
+
+      if (
+        demo.previewWidth !== undefined &&
+        !['auto', 'field', 'full'].includes(demo.previewWidth as string)
+      ) {
+        findings.push('demo.previewWidth has an unsupported value');
+      }
+    }
+  }
+
+  if (metadata.catalogPreview !== undefined) {
+    if (!isRecord(metadata.catalogPreview)) {
+      findings.push('catalogPreview must be an object');
+    } else {
+      const preview = metadata.catalogPreview;
+      findings.push(
+        ...collectUnknownKeys({
+          value: preview,
+          path: 'catalogPreview',
+          allowed: ['layout', 'props', 'children'],
+        })
+      );
+
+      if (
+        preview.layout !== undefined &&
+        !['auto', 'field', 'column', 'stack'].includes(preview.layout as string)
+      ) {
+        findings.push('catalogPreview.layout has an unsupported value');
+      }
+
+      findings.push(
+        ...collectOptionalStringArray(preview, 'props', 'catalogPreview')
+      );
+      if (
+        preview.children !== undefined &&
+        typeof preview.children !== 'string'
+      ) {
+        findings.push('catalogPreview.children must be a string');
+      }
+    }
+  }
+
+  if (metadata.defaults !== undefined) {
+    if (!isRecord(metadata.defaults)) {
+      findings.push('defaults must be an object');
+    } else {
+      findings.push(
+        ...collectUnknownKeys({
+          value: metadata.defaults,
+          path: 'defaults',
+          allowed: ['shared', 'react', 'native'],
+        })
+      );
+      for (const key of ['shared', 'react', 'native'] as const) {
+        if (metadata.defaults[key] !== undefined) {
+          findings.push(
+            ...collectPrimitiveRecordShape({
+              value: metadata.defaults[key],
+              field: `defaults.${key}`,
+              allowedTypes: ['string', 'boolean', 'number'],
+            })
+          );
+        }
+      }
+    }
+  }
+
+  if (metadata.discovery !== undefined) {
+    if (!isRecord(metadata.discovery)) {
+      findings.push('discovery must be an object');
+    } else {
+      const discovery = metadata.discovery;
+      findings.push(
+        ...collectUnknownKeys({
+          value: discovery,
+          path: 'discovery',
+          allowed: [
+            'status',
+            'summary',
+            'description',
+            'whenToUse',
+            'patterns',
+            'platformNotes',
+            'missingEvidence',
+          ],
+        })
+      );
+      if (
+        discovery.status !== undefined &&
+        !['complete', 'needs-authored-intent'].includes(
+          discovery.status as string
+        )
+      ) {
+        findings.push('discovery.status has an unsupported value');
+      }
+      for (const key of ['summary', 'description'] as const) {
+        if (
+          discovery[key] !== undefined &&
+          typeof discovery[key] !== 'string'
+        ) {
+          findings.push(`discovery.${key} must be a string`);
+        }
+      }
+      for (const key of ['whenToUse', 'missingEvidence'] as const) {
+        findings.push(
+          ...collectOptionalStringArray(discovery, key, 'discovery')
+        );
+      }
+      if (discovery.patterns !== undefined) {
+        if (!Array.isArray(discovery.patterns)) {
+          findings.push('discovery.patterns must be an array');
+        } else {
+          for (const [index, pattern] of discovery.patterns.entries()) {
+            const patternPath = `discovery.patterns[${index}]`;
+            if (!isRecord(pattern)) {
+              findings.push(`${patternPath} must be an object`);
+              continue;
+            }
+            findings.push(
+              ...collectUnknownKeys({
+                value: pattern,
+                path: patternPath,
+                allowed: ['id', 'title', 'description'],
+              })
+            );
+            for (const key of ['id', 'title', 'description'] as const) {
+              if (typeof pattern[key] !== 'string') {
+                findings.push(`${patternPath}.${key} must be a string`);
+              }
+            }
+          }
+        }
+      }
+      if (discovery.platformNotes !== undefined) {
+        if (!isRecord(discovery.platformNotes)) {
+          findings.push('discovery.platformNotes must be an object');
+        } else {
+          findings.push(
+            ...collectUnknownKeys({
+              value: discovery.platformNotes,
+              path: 'discovery.platformNotes',
+              allowed: ['react', 'react-native'],
+            })
+          );
+          for (const key of ['react', 'react-native'] as const) {
+            findings.push(
+              ...collectOptionalStringArray(
+                discovery.platformNotes,
+                key,
+                'discovery.platformNotes'
+              )
+            );
+          }
+        }
+      }
+    }
+  }
+
+  if (metadata.examples !== undefined) {
+    if (!Array.isArray(metadata.examples)) {
+      findings.push('examples must be an array');
+    } else {
+      for (const [index, example] of metadata.examples.entries()) {
+        findings.push(...collectExampleShape(example, `examples[${index}]`));
+      }
+    }
+  }
+
+  if (metadata.api !== undefined) {
+    if (!isRecord(metadata.api)) {
+      findings.push('api must be an object');
+    } else {
+      const api = metadata.api;
+      findings.push(
+        ...collectUnknownKeys({
+          value: api,
+          path: 'api',
+          allowed: ['sections', 'descriptions'],
+        })
+      );
+      if (api.descriptions !== undefined) {
+        findings.push(
+          ...collectPrimitiveRecordShape({
+            value: api.descriptions,
+            field: 'api.descriptions',
+            allowedTypes: ['string'],
+          })
+        );
+      }
+      if (api.sections !== undefined) {
+        if (!Array.isArray(api.sections)) {
+          findings.push('api.sections must be an array');
+        } else {
+          for (const [index, section] of api.sections.entries()) {
+            const sectionPath = `api.sections[${index}]`;
+            if (!isRecord(section)) {
+              findings.push(`${sectionPath} must be an object`);
+              continue;
+            }
+            findings.push(
+              ...collectUnknownKeys({
+                value: section,
+                path: sectionPath,
+                allowed: ['name', 'exportName'],
+              })
+            );
+            if (typeof section.name !== 'string') {
+              findings.push(`${sectionPath}.name must be a string`);
+            }
+            if (typeof section.exportName === 'string') {
+              continue;
+            }
+            if (!isRecord(section.exportName)) {
+              findings.push(
+                `${sectionPath}.exportName must be a string or platform object`
+              );
+              continue;
+            }
+            findings.push(
+              ...collectUnknownKeys({
+                value: section.exportName,
+                path: `${sectionPath}.exportName`,
+                allowed: ['react', 'react-native'],
+              })
+            );
+            for (const [platform, exportName] of Object.entries(
+              section.exportName
+            )) {
+              if (typeof exportName !== 'string') {
+                findings.push(
+                  `${sectionPath}.exportName.${platform} must be a string`
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (metadata.accessibility !== undefined) {
+    if (!isRecord(metadata.accessibility)) {
+      findings.push('accessibility must be an object');
+    } else {
+      findings.push(
+        ...collectUnknownKeys({
+          value: metadata.accessibility,
+          path: 'accessibility',
+          allowed: ['react', 'native'],
+        })
+      );
+      for (const key of ['react', 'native'] as const) {
+        if (metadata.accessibility[key] !== undefined) {
+          findings.push(
+            ...collectAccessibilityEntriesShape(
+              metadata.accessibility[key],
+              `accessibility.${key}`
+            )
+          );
+        }
+      }
+    }
+  }
+
+  if (metadata.related !== undefined) {
+    findings.push(...collectStringArrayShape(metadata.related, 'related'));
+  }
+
+  return findings;
+}
+
+export function collectComponentMetadataDecisionFindings(params: {
+  metadata: Readonly<Record<string, unknown>>;
+  requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
+}) {
+  const findings: string[] = [];
+
+  if (params.requireRelatedDecision && params.metadata.related === undefined) {
+    findings.push(
+      'related must be explicitly defined; use related: [] when no related components are intended'
+    );
+  }
+
+  if (
+    params.requireCatalogPreviewDecision &&
+    params.metadata.catalogPreview === undefined
+  ) {
+    findings.push(
+      'catalogPreview must be explicitly defined; provide catalogPreview: {} or a hand-authored CatalogPreview'
+    );
+  }
+
+  return findings;
+}
+
+export type ComponentMetadataAnalysis = {
+  metadata: ComponentPageMetadata;
+  apiDescriptionMetadata: ComponentPageMetadata;
+  findings: readonly string[];
+  decisionFindings: readonly string[];
+  blockedPaths: ReadonlySet<string>;
+  analysisComplete: boolean;
+  apiDescriptionAnalysis: ApiDescriptionAnalysis;
+};
+
+function safelyAnalyzableMetadata(
+  metadata: Readonly<Record<string, unknown>>
+): {
+  metadata: ComponentPageMetadata;
+  apiDescriptionMetadata: ComponentPageMetadata;
+  blockedKeys: ReadonlySet<(typeof COMPONENT_METADATA_KEYS)[number]>;
+  blockedPaths: ReadonlySet<string>;
+} {
+  const safeMetadata: Record<string, unknown> = {};
+  const blockedKeys = new Set<(typeof COMPONENT_METADATA_KEYS)[number]>();
+  const blockedPaths = new Set<string>();
+
+  function sanitizeValue(
+    value: unknown,
+    validate: (candidate: unknown) => boolean,
+    valuePath: string
+  ): unknown {
+    if (validate(value)) return value;
+
+    if (Array.isArray(value)) {
+      if (!validate([])) {
+        blockedPaths.add(valuePath);
+        return undefined;
+      }
+      return value.map((item, index) =>
+        sanitizeValue(
+          item,
+          (candidate) => validate([candidate]),
+          `${valuePath}[${index}]`
+        )
+      );
+    }
+
+    if (isRecord(value)) {
+      if (!validate({})) {
+        blockedPaths.add(valuePath);
+        return undefined;
+      }
+      const safeRecord: Record<string, unknown> = {};
+      for (const [childKey, childValue] of Object.entries(value)) {
+        const safeChild = sanitizeValue(
+          childValue,
+          (candidate) => validate({ [childKey]: candidate }),
+          `${valuePath}.${childKey}`
+        );
+        if (safeChild !== undefined) safeRecord[childKey] = safeChild;
+      }
+      return safeRecord;
+    }
+
+    blockedPaths.add(valuePath);
+    return undefined;
+  }
+
+  function sanitizeExample(value: unknown, index: number) {
+    if (!isRecord(value)) return undefined;
+
+    const path = `examples[${index}]`;
+    const baseline: Record<string, unknown> = {
+      title: '',
+      description: '',
+      props: [],
+    };
+    const safeExample: Record<string, unknown> = {};
+
+    for (const [key, childValue] of Object.entries(value)) {
+      const safeChild = sanitizeValue(
+        childValue,
+        (candidate) =>
+          collectExampleShape({ ...baseline, [key]: candidate }, path)
+            .length === 0,
+        `${path}.${key}`
+      );
+      if (safeChild !== undefined) safeExample[key] = safeChild;
+    }
+
+    return safeExample;
+  }
+
+  function sanitizeChildPropBinding(
+    value: unknown,
+    platform: 'react' | 'native',
+    index: number
+  ) {
+    if (!isRecord(value)) return undefined;
+
+    const baseline: Record<string, unknown> = {
+      target: '',
+      props: [],
+    };
+    const safeBinding: Record<string, unknown> = {};
+
+    for (const [key, childValue] of Object.entries(value)) {
+      const safeChild = sanitizeValue(
+        childValue,
+        (candidate) =>
+          collectPlatformMetadataShape(
+            {
+              childPropBindings: [{ ...baseline, [key]: candidate }],
+            },
+            platform
+          ).length === 0,
+        `${platform}.childPropBindings[${index}].${key}`
+      );
+      if (safeChild !== undefined) safeBinding[key] = safeChild;
+    }
+
+    return safeBinding;
+  }
+
+  function sanitizeApiSection(value: unknown, index: number) {
+    if (!isRecord(value)) return undefined;
+
+    const baseline: Record<string, unknown> = {
+      name: '',
+      exportName: '',
+    };
+    const safeSection: Record<string, unknown> = {};
+
+    for (const [key, childValue] of Object.entries(value)) {
+      const safeChild = sanitizeValue(
+        childValue,
+        (candidate) =>
+          collectComponentMetadataRuntimeShapeFindings({
+            api: { sections: [{ ...baseline, [key]: candidate }] },
+          }).length === 0,
+        `api.sections[${index}].${key}`
+      );
+      if (safeChild !== undefined) safeSection[key] = safeChild;
+    }
+
+    return safeSection;
+  }
+
+  for (const key of COMPONENT_METADATA_KEYS) {
+    const value = metadata[key];
+    if (value === undefined) continue;
+
+    const keyFindings = collectComponentMetadataRuntimeShapeFindings({
+      [key]: value,
+    });
+    if (keyFindings.length === 0) {
+      safeMetadata[key] = value;
+      continue;
+    }
+
+    blockedKeys.add(key);
+
+    // A local shape failure cannot hide independent semantics in safe sibling
+    // fields. The canonical shape collector defines which partial values can
+    // be analyzed; no diagnostic strings or duplicate dependency map are used.
+    if (key === 'examples' && Array.isArray(value)) {
+      safeMetadata.examples = value.map((example, index) => {
+        const safeExample = sanitizeExample(example, index);
+        if (safeExample === undefined) blockedPaths.add(`examples[${index}]`);
+        return safeExample;
+      });
+      continue;
+    }
+
+    let safeValue = sanitizeValue(
+      value,
+      (candidate) =>
+        collectComponentMetadataRuntimeShapeFindings({
+          [key]: candidate,
+        }).length === 0,
+      key
+    );
+
+    if (
+      (key === 'react' || key === 'native') &&
+      isRecord(value) &&
+      Array.isArray(value.childPropBindings)
+    ) {
+      const safePlatform = isRecord(safeValue) ? safeValue : {};
+      safePlatform.childPropBindings = value.childPropBindings.map(
+        (binding, index) => {
+          const safeBinding = sanitizeChildPropBinding(binding, key, index);
+          if (safeBinding === undefined) {
+            blockedPaths.add(`${key}.childPropBindings[${index}]`);
+          }
+          return safeBinding;
+        }
+      );
+      safeValue = safePlatform;
+    }
+
+    if (key === 'api' && isRecord(value) && Array.isArray(value.sections)) {
+      const safeApi = isRecord(safeValue) ? safeValue : {};
+      safeApi.sections = value.sections.map((section, index) => {
+        const safeSection = sanitizeApiSection(section, index);
+        if (safeSection === undefined) {
+          blockedPaths.add(`api.sections[${index}]`);
+        }
+        return safeSection;
+      });
+      safeValue = safeApi;
+    }
+
+    if (safeValue !== undefined) safeMetadata[key] = safeValue;
+  }
+
+  const apiDescriptionMetadata = { ...safeMetadata };
+  if (isRecord(apiDescriptionMetadata.api)) {
+    const safeApi = { ...apiDescriptionMetadata.api };
+    if (Array.isArray(safeApi.sections)) {
+      const usedSectionNames = new Set(
+        safeApi.sections.flatMap((section) =>
+          isRecord(section) && typeof section.name === 'string'
+            ? [section.name]
+            : []
+        )
+      );
+      safeApi.sections = safeApi.sections.flatMap((section, index) => {
+        if (!isRecord(section)) return [];
+
+        const authoredExportName = section.exportName;
+        let exportName: string | Record<string, string>;
+        if (isRecord(authoredExportName)) {
+          const platformExportNames = Object.fromEntries(
+            Object.entries(authoredExportName).filter(
+              (entry): entry is [string, string] => typeof entry[1] === 'string'
+            )
+          );
+          if (Object.keys(platformExportNames).length === 0) return [];
+          exportName = platformExportNames;
+        } else if (typeof authoredExportName === 'string') {
+          exportName = authoredExportName;
+        } else {
+          return [];
+        }
+
+        let name: string;
+        if (typeof section.name === 'string') {
+          name = section.name;
+        } else {
+          let suffix = index;
+          do {
+            name = `__vellira_partial_api_section_${suffix}`;
+            suffix += 1;
+          } while (usedSectionNames.has(name));
+          usedSectionNames.add(name);
+        }
+
+        return [{ name, exportName }];
+      });
+    } else {
+      delete safeApi.sections;
+    }
+    apiDescriptionMetadata.api = safeApi;
+  }
+
+  return {
+    metadata: safeMetadata as ComponentPageMetadata,
+    apiDescriptionMetadata: apiDescriptionMetadata as ComponentPageMetadata,
+    blockedKeys,
+    blockedPaths,
+  };
+}
+
+export async function loadComponentMetadataAnalysis(params: {
+  catalogComponentsRoot: string;
+  componentName: string;
+  requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
+}): Promise<ComponentMetadataAnalysis> {
+  const metadataFile = getComponentMetadataFile(params);
+
+  if (!fs.existsSync(metadataFile)) {
+    const metadata = {};
+    return {
+      metadata,
+      apiDescriptionMetadata: metadata,
+      findings: [],
+      decisionFindings: collectComponentMetadataDecisionFindings({
+        metadata,
+        requireRelatedDecision: params.requireRelatedDecision,
+        requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
+      }),
+      blockedPaths: new Set<string>(),
+      analysisComplete: true,
+      apiDescriptionAnalysis: 'available',
+    };
+  }
+
+  let metadataModule: { default?: unknown; metadata?: unknown };
+
+  try {
+    metadataModule = (await import(pathToFileURL(metadataFile).href)) as {
+      default?: unknown;
+      metadata?: unknown;
+    };
+  } catch {
+    throw new ComponentMetadataValidationError(
+      params.componentName,
+      ['metadata.ts could not be loaded as a TypeScript module'],
+      { analysisComplete: false, apiDescriptionAnalysis: 'blocked' }
+    );
+  }
+
+  const rawMetadata = metadataModule.default ?? metadataModule.metadata ?? {};
+  const findings = collectComponentMetadataRuntimeShapeFindings(rawMetadata);
+  if (!isRecord(rawMetadata)) {
+    return {
+      metadata: {},
+      apiDescriptionMetadata: {},
+      findings,
+      decisionFindings: [],
+      blockedPaths: new Set<string>(),
+      analysisComplete: false,
+      apiDescriptionAnalysis: 'blocked',
+    };
+  }
+
+  const safe = safelyAnalyzableMetadata(rawMetadata);
+  return {
+    metadata: safe.metadata,
+    apiDescriptionMetadata: safe.apiDescriptionMetadata,
+    findings,
+    decisionFindings: collectComponentMetadataDecisionFindings({
+      metadata: rawMetadata,
+      requireRelatedDecision: params.requireRelatedDecision,
+      requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
+    }),
+    blockedPaths: safe.blockedPaths,
+    analysisComplete: safe.blockedKeys.size === 0,
+    apiDescriptionAnalysis:
+      rawMetadata.api !== undefined && safe.metadata.api === undefined
+        ? 'blocked'
+        : 'available',
+  };
+}
+
 export async function loadComponentMetadata(params: {
   catalogComponentsRoot: string;
   componentName: string;
 }): Promise<ComponentPageMetadata> {
-  const metadataFile = getComponentMetadataFile(params);
-
-  if (!fs.existsSync(metadataFile)) {
-    return {};
+  const analysis = await loadComponentMetadataAnalysis(params);
+  if (analysis.findings.length > 0) {
+    throw new ComponentMetadataValidationError(
+      params.componentName,
+      analysis.findings,
+      {
+        analysisComplete: analysis.analysisComplete,
+        apiDescriptionAnalysis: analysis.apiDescriptionAnalysis,
+      }
+    );
   }
 
-  const metadataModule = (await import(pathToFileURL(metadataFile).href)) as {
-    default?: ComponentPageMetadata;
-    metadata?: ComponentPageMetadata;
-  };
-
-  return metadataModule.default ?? metadataModule.metadata ?? {};
+  return analysis.metadata;
 }
 
 function mergeObject<T extends Record<string, unknown>>(
@@ -128,14 +1199,19 @@ function mergeObject<T extends Record<string, unknown>>(
 
 function mergePlatformMetadata(
   base: ComponentPageMetadata['react'],
-  override: ComponentPageMetadata['react']
+  override: ComponentPageMetadata['react'],
+  options: { preserveOverrideArrayIdentity?: boolean } = {}
 ) {
-  const imports = Array.from(
-    new Set([...(base?.imports ?? []), ...(override?.imports ?? [])])
-  );
-  const setup = Array.from(
-    new Set([...(base?.setup ?? []), ...(override?.setup ?? [])])
-  );
+  const overrideImports = override?.imports ?? [];
+  const overrideSetup = override?.setup ?? [];
+  const imports =
+    options.preserveOverrideArrayIdentity && override?.imports !== undefined
+      ? overrideImports
+      : Array.from(new Set([...(base?.imports ?? []), ...overrideImports]));
+  const setup =
+    options.preserveOverrideArrayIdentity && override?.setup !== undefined
+      ? overrideSetup
+      : Array.from(new Set([...(base?.setup ?? []), ...overrideSetup]));
 
   return {
     ...(base ?? {}),
@@ -147,13 +1223,20 @@ function mergePlatformMetadata(
 
 export function mergeComponentMetadata(
   base: ComponentPageMetadata,
-  override: ComponentPageMetadata
+  override: ComponentPageMetadata,
+  options: { preservePlatformOverrideArrayIdentity?: boolean } = {}
 ): ComponentPageMetadata {
   return {
     ...base,
     ...override,
-    react: mergePlatformMetadata(base.react, override.react),
-    native: mergePlatformMetadata(base.native, override.native),
+    react: mergePlatformMetadata(base.react, override.react, {
+      preserveOverrideArrayIdentity:
+        options.preservePlatformOverrideArrayIdentity,
+    }),
+    native: mergePlatformMetadata(base.native, override.native, {
+      preserveOverrideArrayIdentity:
+        options.preservePlatformOverrideArrayIdentity,
+    }),
     demo: {
       ...(base.demo ?? {}),
       ...(override.demo ?? {}),
@@ -321,18 +1404,20 @@ function getJsxAttributeNames(source: string) {
   return { error: null, names };
 }
 
-function normalizePropFragments(props: readonly string[]) {
+function normalizePropFragments(props: readonly (string | undefined)[]) {
   return props.flatMap((prop) =>
-    prop
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
+    typeof prop === 'string'
+      ? prop
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+      : []
   );
 }
 
 function validatePropFragments(params: {
   field: string;
-  fragments: readonly string[];
+  fragments: readonly (string | undefined)[];
   allowEmpty?: boolean;
 }) {
   const errors: string[] = [];
@@ -340,7 +1425,7 @@ function validatePropFragments(params: {
 
   if (!params.allowEmpty) {
     params.fragments.forEach((fragment, index) => {
-      if (!fragment.trim()) {
+      if (typeof fragment === 'string' && !fragment.trim()) {
         errors.push(`${params.field}[${index}] must not be empty`);
       }
     });
@@ -459,7 +1544,7 @@ const canonicalSlugSemantics =
 
 export function validateRelatedComponentSlugs(params: {
   componentName: string;
-  related: readonly string[] | undefined;
+  related: readonly (string | undefined)[] | undefined;
 }) {
   const errors: string[] = [];
   const related = params.related ?? [];
@@ -468,6 +1553,8 @@ export function validateRelatedComponentSlugs(params: {
   const canonicalComponentSlugSet = new Set(canonicalComponentSlugs);
 
   for (const [index, relatedSlug] of related.entries()) {
+    if (relatedSlug === undefined) continue;
+
     const field = `related[${index}]`;
     const prefix = `${params.componentName} ${field} "${relatedSlug}"`;
 
@@ -504,33 +1591,38 @@ export function validateRelatedComponentSlugs(params: {
   return errors;
 }
 
-export function validateComponentMetadata(params: {
+export function collectComponentMetadataFindings(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
+  blockedPaths?: ReadonlySet<string>;
   requireRelatedDecision?: boolean;
   requireCatalogPreviewDecision?: boolean;
 }) {
   const {
     componentName,
     metadata,
+    blockedPaths = new Set<string>(),
     requireRelatedDecision = false,
     requireCatalogPreviewDecision = false,
   } = params;
   const errors: string[] = [];
   const exampleTitles = new Set<string>();
   const apiSections = new Set<string>();
-
-  if (requireRelatedDecision && metadata.related === undefined) {
-    errors.push(
-      'related must be explicitly defined; use related: [] when no related components are intended'
+  const isPathBlocked = (field: string) =>
+    [...blockedPaths].some(
+      (blockedPath) =>
+        blockedPath === field ||
+        blockedPath.startsWith(`${field}.`) ||
+        blockedPath.startsWith(`${field}[`)
     );
-  }
 
-  if (requireCatalogPreviewDecision && metadata.catalogPreview === undefined) {
-    errors.push(
-      'catalogPreview must be explicitly defined; provide catalogPreview: {} or a hand-authored CatalogPreview'
-    );
-  }
+  errors.push(
+    ...collectComponentMetadataDecisionFindings({
+      metadata: metadata as Readonly<Record<string, unknown>>,
+      requireRelatedDecision,
+      requireCatalogPreviewDecision,
+    })
+  );
 
   const catalogPreview = metadata.catalogPreview;
 
@@ -578,6 +1670,8 @@ export function validateComponentMetadata(params: {
     ['react-native', metadata.native],
   ] as const) {
     for (const [index, source] of (platformMetadata?.imports ?? []).entries()) {
+      if (typeof source !== 'string') continue;
+
       const importError = validateImportDeclaration(source);
 
       if (importError) {
@@ -592,13 +1686,17 @@ export function validateComponentMetadata(params: {
     }
 
     for (const [index, source] of (platformMetadata?.setup ?? []).entries()) {
+      if (typeof source !== 'string') continue;
+
       if (!source.trim()) {
         errors.push(`${platform}.setup[${index}] must not be empty`);
       }
     }
 
     const platformSetup = (platformMetadata?.setup ?? [])
-      .map((statement) => statement.trim())
+      .flatMap((statement) =>
+        typeof statement === 'string' ? [statement.trim()] : []
+      )
       .filter(Boolean);
 
     if (platformSetup.length > 0) {
@@ -636,7 +1734,12 @@ export function validateComponentMetadata(params: {
     for (const [bindingIndex, binding] of (
       platformMetadata?.childPropBindings ?? []
     ).entries()) {
-      if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(binding.target)) {
+      if (binding === undefined) continue;
+
+      if (
+        typeof binding.target === 'string' &&
+        !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(binding.target)
+      ) {
         errors.push(
           `${platform}.childPropBindings[${bindingIndex}].target must be a JSX component name`
         );
@@ -645,7 +1748,7 @@ export function validateComponentMetadata(params: {
       errors.push(
         ...validatePropFragments({
           field: `${platform}.childPropBindings[${bindingIndex}].props`,
-          fragments: binding.props,
+          fragments: binding.props ?? [],
         })
       );
     }
@@ -665,13 +1768,21 @@ export function validateComponentMetadata(params: {
   }
 
   for (const [index, example] of (metadata.examples ?? []).entries()) {
-    if (exampleTitles.has(example.title)) {
+    if (example === undefined) continue;
+
+    if (typeof example.title === 'string' && exampleTitles.has(example.title)) {
       errors.push(`duplicate example title "${example.title}"`);
     }
 
-    exampleTitles.add(example.title);
+    if (typeof example.title === 'string') exampleTitles.add(example.title);
 
-    for (const platform of example.platforms ?? []) {
+    const platformsBlocked = isPathBlocked(`examples[${index}].platforms`);
+
+    const knownPlatforms = (example.platforms ?? []).filter(
+      (platform): platform is Platform => typeof platform === 'string'
+    );
+
+    for (const platform of knownPlatforms) {
       if (platform !== 'react' && platform !== 'react-native') {
         errors.push(
           `examples[${index}] has unsupported platform "${platform}"`
@@ -679,9 +1790,13 @@ export function validateComponentMetadata(params: {
       }
     }
 
-    const platforms = new Set(example.platforms ?? ['react', 'react-native']);
+    const platforms = new Set(
+      platformsBlocked
+        ? knownPlatforms
+        : (example.platforms ?? ['react', 'react-native'])
+    );
 
-    if (!platforms.has('react')) {
+    if (!platformsBlocked && !platforms.has('react')) {
       for (const field of [
         'reactImports',
         'reactSetup',
@@ -696,7 +1811,7 @@ export function validateComponentMetadata(params: {
       }
     }
 
-    if (!platforms.has('react-native')) {
+    if (!platformsBlocked && !platforms.has('react-native')) {
       for (const field of [
         'nativeImports',
         'nativeSetup',
@@ -717,6 +1832,8 @@ export function validateComponentMetadata(params: {
       ['nativeImports', example.nativeImports],
     ] as const) {
       for (const [importIndex, source] of (imports ?? []).entries()) {
+        if (typeof source !== 'string') continue;
+
         const importError = validateImportDeclaration(source);
 
         if (importError) {
@@ -730,7 +1847,7 @@ export function validateComponentMetadata(params: {
     errors.push(
       ...validatePropFragments({
         field: `examples[${index}].props`,
-        fragments: example.props,
+        fragments: example.props ?? [],
       }),
       ...validatePropFragments({
         field: `examples[${index}].reactProps`,
@@ -743,7 +1860,7 @@ export function validateComponentMetadata(params: {
     );
 
     const sharedPropNames = getJsxAttributeNames(
-      normalizePropFragments(example.props).join('\n')
+      normalizePropFragments(example.props ?? []).join('\n')
     ).names;
 
     for (const [field, platformProps] of [
@@ -787,7 +1904,9 @@ export function validateComponentMetadata(params: {
       ['react-native', example.nativeSetup],
     ] as const) {
       const setup = [...(example.setup ?? []), ...(platformSetup ?? [])]
-        .map((statement) => statement.trim())
+        .flatMap((statement) =>
+          typeof statement === 'string' ? [statement.trim()] : []
+        )
         .filter(Boolean);
 
       if (setup.length === 0) {
@@ -805,6 +1924,8 @@ export function validateComponentMetadata(params: {
   }
 
   for (const section of metadata.api?.sections ?? []) {
+    if (section === undefined || typeof section.name !== 'string') continue;
+
     if (apiSections.has(section.name)) {
       errors.push(`duplicate API section "${section.name}"`);
     }
@@ -812,24 +1933,43 @@ export function validateComponentMetadata(params: {
     apiSections.add(section.name);
   }
 
-  if (errors.length > 0) {
-    throw new Error(
-      `Invalid component page metadata for ${componentName}:\n${errors
-        .map((error) => `  - ${error}`)
-        .join('\n')}`
-    );
-  }
+  return errors;
 }
 
-export function validateComponentMetadataAgainstApi(params: {
+export function validateComponentMetadata(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
+  requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
+}) {
+  assertValidComponentMetadataFindings({
+    componentName: params.componentName,
+    findings: collectComponentMetadataFindings(params),
+  });
+}
+
+export function collectComponentMetadataAgainstApiFindings(params: {
+  componentName: string;
+  metadata: ComponentPageMetadata;
+  blockedPaths?: ReadonlySet<string>;
   platforms: readonly Platform[];
   reactApiProps: readonly ExtractedProp[];
   nativeApiProps: readonly ExtractedProp[];
 }) {
-  const { componentName, metadata, platforms } = params;
+  const {
+    componentName,
+    metadata,
+    blockedPaths = new Set<string>(),
+    platforms,
+  } = params;
   const errors: string[] = [];
+  const isPathBlocked = (field: string) =>
+    [...blockedPaths].some(
+      (blockedPath) =>
+        blockedPath === field ||
+        blockedPath.startsWith(`${field}.`) ||
+        blockedPath.startsWith(`${field}[`)
+    );
 
   function getApiProps(platform: Platform) {
     return platform === 'react' ? params.reactApiProps : params.nativeApiProps;
@@ -847,9 +1987,11 @@ export function validateComponentMetadataAgainstApi(params: {
 
   function validateAnyPlatformPropNames(params: {
     field: string;
-    names: readonly string[];
+    names: readonly (string | undefined)[];
   }) {
     for (const name of params.names) {
+      if (typeof name !== 'string') continue;
+
       if (!hasAnyApiProp(name)) {
         errors.push(`${params.field}.${name} is not present in any target API`);
       }
@@ -964,16 +2106,24 @@ export function validateComponentMetadataAgainstApi(params: {
     for (const [bindingIndex, binding] of (
       platformMetadata?.childPropBindings ?? []
     ).entries()) {
+      if (binding === undefined) continue;
+
       validatePropNames({
         platform,
         field: `${platform}.childPropBindings[${bindingIndex}].props`,
-        fragments: binding.props,
+        fragments: binding.props ?? [],
       });
     }
   }
 
   for (const [index, example] of (metadata.examples ?? []).entries()) {
-    const targetPlatforms = example.platforms ?? platforms;
+    if (example === undefined) continue;
+    const platformsBlocked = isPathBlocked(`examples[${index}].platforms`);
+    const targetPlatforms = platformsBlocked
+      ? (example.platforms ?? []).filter(
+          (platform): platform is Platform => typeof platform === 'string'
+        )
+      : (example.platforms ?? platforms);
 
     for (const platform of targetPlatforms) {
       if (!platforms.includes(platform)) {
@@ -986,7 +2136,7 @@ export function validateComponentMetadataAgainstApi(params: {
       validatePropNames({
         platform,
         field: `examples[${index}].props`,
-        fragments: example.props,
+        fragments: example.props ?? [],
       });
 
       validatePropNames({
@@ -1003,11 +2153,18 @@ export function validateComponentMetadataAgainstApi(params: {
     }
   }
 
-  if (errors.length > 0) {
-    throw new Error(
-      `Invalid component page metadata for ${componentName}:\n${errors
-        .map((error) => `  - ${error}`)
-        .join('\n')}`
-    );
-  }
+  return errors;
+}
+
+export function validateComponentMetadataAgainstApi(params: {
+  componentName: string;
+  metadata: ComponentPageMetadata;
+  platforms: readonly Platform[];
+  reactApiProps: readonly ExtractedProp[];
+  nativeApiProps: readonly ExtractedProp[];
+}) {
+  assertValidComponentMetadataFindings({
+    componentName: params.componentName,
+    findings: collectComponentMetadataAgainstApiFindings(params),
+  });
 }

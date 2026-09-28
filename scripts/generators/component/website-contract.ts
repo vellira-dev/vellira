@@ -13,7 +13,7 @@ export type PlannedComponentWebsiteArtifacts = {
 };
 
 type ComponentPageCheckPayload = {
-  schemaVersion: '1';
+  schemaVersion: '2';
   componentName: string;
   status: 'up-to-date' | 'stale';
   staleFiles: string[];
@@ -157,7 +157,7 @@ export function checkComponentWebsiteContract(
   }
 
   if (
-    payload.schemaVersion !== '1' ||
+    payload.schemaVersion !== '2' ||
     payload.componentName !== plan.componentName ||
     !Array.isArray(payload.staleFiles)
   ) {

@@ -9,6 +9,7 @@ import {
   getVelliraApiSourceRoots,
 } from './helpers/paths';
 import { createFileWriter } from './helpers/writer';
+import { ComponentMetadataValidationError } from './metadata/metadata';
 import { buildGeneratedPageModel } from './model/build-page-model';
 import { resolvePageInput } from './model/resolve-page-input';
 import {
@@ -27,8 +28,11 @@ import {
 } from './profiles/profiles';
 import { buildPlaygroundArtifacts } from './renderers/playground';
 import { updateComponentRegistry } from './renderers/registry';
-import { requiresGeneratedCatalogPreview } from './renderers/catalog-preview-registry';
 import { renderUsage } from './renderers/usage';
+import {
+  buildSemanticMetadataDecisionAuthority,
+  semanticMetadataDecisionRequired,
+} from './semantic-metadata-authority';
 
 const [, , componentName, ...args] = process.argv;
 
@@ -123,7 +127,7 @@ const writeJsonResult = (result: {
   process.stdout.write(
     `${JSON.stringify(
       {
-        schemaVersion: '1',
+        schemaVersion: '2',
         ...result,
       },
       null,
@@ -150,17 +154,51 @@ const velliraApiSourceRoots = getVelliraApiSourceRoots(root);
 
 const fileWriter = createFileWriter({ root, force, check });
 const { checkFailures, writeIfMissing } = fileWriter;
-const catalogPreviewFile = path.join(
-  componentCatalogDir,
-  `${componentName}CatalogPreview.tsx`
-);
-const hasHandAuthoredCatalogPreview =
-  fs.existsSync(catalogPreviewFile) &&
-  !fs.readFileSync(catalogPreviewFile, 'utf8').startsWith(generatedFileHeader);
-const generatedCatalogPreviewRequired = requiresGeneratedCatalogPreview({
-  componentPresentationRegistryFile,
-  model: { componentName, slug },
+const semanticDecisionAuthority = buildSemanticMetadataDecisionAuthority({
+  root,
+  componentName,
 });
+let resolvedPageInput;
+
+try {
+  resolvedPageInput = await resolvePageInput({
+    root,
+    catalogComponentsRoot,
+    componentName,
+    requireRelatedDecision:
+      check &&
+      semanticMetadataDecisionRequired(semanticDecisionAuthority, 'related'),
+    requireCatalogPreviewDecision:
+      check &&
+      semanticMetadataDecisionRequired(
+        semanticDecisionAuthority,
+        'catalogPreview'
+      ),
+    requestedProfile,
+    requestedCategory,
+  });
+} catch (error) {
+  if (json && error instanceof ComponentMetadataValidationError) {
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          schemaVersion: '2',
+          componentName,
+          status: 'semantic-invalid',
+          metadataPath: `apps/website/src/component-catalog/components/${componentName}/metadata.ts`,
+          analysisComplete: error.analysisComplete,
+          apiDescriptionAnalysis: error.apiDescriptionAnalysis,
+          findings: error.findings,
+        },
+        null,
+        2
+      )}\n`
+    );
+    process.exit(2);
+  }
+
+  throw error;
+}
 
 const {
   componentConfig,
@@ -175,16 +213,7 @@ const {
   nativePlaygroundApiProps,
   getDemoProps,
   getChangeHandlerName,
-} = await resolvePageInput({
-  root,
-  catalogComponentsRoot,
-  componentName,
-  requireRelatedDecision: check,
-  requireCatalogPreviewDecision:
-    check && generatedCatalogPreviewRequired && !hasHandAuthoredCatalogPreview,
-  requestedProfile,
-  requestedCategory,
-});
+} = resolvedPageInput;
 
 if (platforms.length === 0) {
   console.error(
