@@ -72,6 +72,7 @@
     "component-docs:check": "pnpm component-docs:generate --check",
     "component-pages:generate": "node --import tsx scripts/generators/component-page/generate-component-pages.ts",
     "component-page:semantic-metadata:json": "node --import tsx scripts/generators/component-page/semantic-metadata-contract.ts",
+    "global-token-authority:json": "node --import tsx scripts/token-authority/global-token-authority.ts",
     "component-pages:check": "node --import tsx scripts/generators/component-page/check-component-pages.ts",
     "component-pages:audit": "tsx scripts/generators/component-page/audit-component-pages.ts",
     "test:component-pages": "tsx scripts/generators/component-page/component-page-contract.ts",
