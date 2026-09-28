@@ -21,8 +21,13 @@ export type ComponentPageProfile = NonNullable<
 export class ComponentMetadataValidationError extends Error {
   readonly componentName: string;
   readonly findings: readonly string[];
+  readonly analysisComplete: boolean;
 
-  constructor(componentName: string, findings: readonly string[]) {
+  constructor(
+    componentName: string,
+    findings: readonly string[],
+    options: { analysisComplete?: boolean } = {}
+  ) {
     const uniqueFindings = [...new Set(findings)];
     const orderedFindings: string[] = [];
     let totalLength = 0;
@@ -56,6 +61,7 @@ export class ComponentMetadataValidationError extends Error {
     this.name = 'ComponentMetadataValidationError';
     this.componentName = componentName;
     this.findings = orderedFindings;
+    this.analysisComplete = options.analysisComplete ?? true;
   }
 }
 
@@ -756,16 +762,23 @@ export async function loadComponentMetadata(params: {
       metadata?: unknown;
     };
   } catch {
-    throw new ComponentMetadataValidationError(params.componentName, [
-      'metadata.ts could not be loaded as a TypeScript module',
-    ]);
+    throw new ComponentMetadataValidationError(
+      params.componentName,
+      ['metadata.ts could not be loaded as a TypeScript module'],
+      { analysisComplete: false }
+    );
   }
 
   const metadata = metadataModule.default ?? metadataModule.metadata ?? {};
-  assertValidComponentMetadataFindings({
-    componentName: params.componentName,
-    findings: collectComponentMetadataRuntimeShapeFindings(metadata),
-  });
+  const runtimeShapeFindings =
+    collectComponentMetadataRuntimeShapeFindings(metadata);
+  if (runtimeShapeFindings.length > 0) {
+    throw new ComponentMetadataValidationError(
+      params.componentName,
+      runtimeShapeFindings,
+      { analysisComplete: false }
+    );
+  }
 
   return metadata as ComponentPageMetadata;
 }

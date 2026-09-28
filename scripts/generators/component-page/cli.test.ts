@@ -267,7 +267,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.status).toBe(0);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Button',
       status: 'up-to-date',
       staleFiles: [],
@@ -292,7 +292,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.stderr).toBe('');
     const payload = JSON.parse(result.stdout);
     expect(payload).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Button',
       status: 'stale',
       staleFiles: [
@@ -433,11 +433,12 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Textarea',
       status: 'semantic-invalid',
       metadataPath:
         'apps/website/src/component-catalog/components/Textarea/metadata.ts',
+      analysisComplete: true,
       findings: expect.arrayContaining([
         expect.stringContaining('related must be explicitly defined'),
         expect.stringContaining('catalogPreview must be explicitly defined'),
@@ -463,11 +464,12 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Button',
       status: 'semantic-invalid',
       metadataPath:
         'apps/website/src/component-catalog/components/Button/metadata.ts',
+      analysisComplete: false,
       findings: ['examples must be an array'],
     });
   }, 60_000);
@@ -490,11 +492,12 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual({
-      schemaVersion: '1',
+      schemaVersion: '2',
       componentName: 'Button',
       status: 'semantic-invalid',
       metadataPath:
         'apps/website/src/component-catalog/components/Button/metadata.ts',
+      analysisComplete: false,
       findings: ['metadata.ts could not be loaded as a TypeScript module'],
     });
   }, 60_000);

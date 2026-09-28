@@ -127,7 +127,7 @@ const writeJsonResult = (result: {
   process.stdout.write(
     `${JSON.stringify(
       {
-        schemaVersion: '1',
+        schemaVersion: '2',
         ...result,
       },
       null,
@@ -182,10 +182,11 @@ try {
     process.stdout.write(
       `${JSON.stringify(
         {
-          schemaVersion: '1',
+          schemaVersion: '2',
           componentName,
           status: 'semantic-invalid',
           metadataPath: `apps/website/src/component-catalog/components/${componentName}/metadata.ts`,
+          analysisComplete: error.analysisComplete,
           findings: error.findings,
         },
         null,
