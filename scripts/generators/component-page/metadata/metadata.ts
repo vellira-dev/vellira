@@ -827,8 +827,10 @@ export function collectComponentMetadataDecisionFindings(params: {
 
 export type ComponentMetadataAnalysis = {
   metadata: ComponentPageMetadata;
+  apiDescriptionMetadata: ComponentPageMetadata;
   findings: readonly string[];
   decisionFindings: readonly string[];
+  blockedPaths: ReadonlySet<string>;
   analysisComplete: boolean;
   apiDescriptionAnalysis: ApiDescriptionAnalysis;
 };
@@ -837,38 +839,53 @@ function safelyAnalyzableMetadata(
   metadata: Readonly<Record<string, unknown>>
 ): {
   metadata: ComponentPageMetadata;
+  apiDescriptionMetadata: ComponentPageMetadata;
   blockedKeys: ReadonlySet<(typeof COMPONENT_METADATA_KEYS)[number]>;
+  blockedPaths: ReadonlySet<string>;
 } {
   const safeMetadata: Record<string, unknown> = {};
   const blockedKeys = new Set<(typeof COMPONENT_METADATA_KEYS)[number]>();
+  const blockedPaths = new Set<string>();
 
   function sanitizeValue(
     value: unknown,
-    validate: (candidate: unknown) => boolean
+    validate: (candidate: unknown) => boolean,
+    valuePath: string
   ): unknown {
     if (validate(value)) return value;
 
     if (Array.isArray(value)) {
-      const safeItems = value.flatMap((item) => {
-        const safeItem = sanitizeValue(item, (candidate) =>
-          validate([candidate])
-        );
-        return safeItem === undefined ? [] : [safeItem];
-      });
-      return validate(safeItems) ? safeItems : undefined;
+      if (!validate([])) {
+        blockedPaths.add(valuePath);
+        return undefined;
+      }
+      return value.map((item, index) =>
+        sanitizeValue(
+          item,
+          (candidate) => validate([candidate]),
+          `${valuePath}[${index}]`
+        )
+      );
     }
 
     if (isRecord(value)) {
+      if (!validate({})) {
+        blockedPaths.add(valuePath);
+        return undefined;
+      }
       const safeRecord: Record<string, unknown> = {};
       for (const [childKey, childValue] of Object.entries(value)) {
-        const safeChild = sanitizeValue(childValue, (candidate) =>
-          validate({ [childKey]: candidate })
+        const safeChild = sanitizeValue(
+          childValue,
+          (candidate) => validate({ [childKey]: candidate }),
+          `${valuePath}.${childKey}`
         );
         if (safeChild !== undefined) safeRecord[childKey] = safeChild;
       }
-      return validate(safeRecord) ? safeRecord : undefined;
+      return safeRecord;
     }
 
+    blockedPaths.add(valuePath);
     return undefined;
   }
 
@@ -877,25 +894,24 @@ function safelyAnalyzableMetadata(
 
     const path = `examples[${index}]`;
     const baseline: Record<string, unknown> = {
-      title: `__invalid_example_${index}`,
+      title: '',
       description: '',
       props: [],
     };
-    const safeExample = { ...baseline };
+    const safeExample: Record<string, unknown> = {};
 
     for (const [key, childValue] of Object.entries(value)) {
       const safeChild = sanitizeValue(
         childValue,
         (candidate) =>
           collectExampleShape({ ...baseline, [key]: candidate }, path)
-            .length === 0
+            .length === 0,
+        `${path}.${key}`
       );
       if (safeChild !== undefined) safeExample[key] = safeChild;
     }
 
-    return collectExampleShape(safeExample, path).length === 0
-      ? safeExample
-      : undefined;
+    return safeExample;
   }
 
   function sanitizeChildPropBinding(
@@ -906,10 +922,10 @@ function safelyAnalyzableMetadata(
     if (!isRecord(value)) return undefined;
 
     const baseline: Record<string, unknown> = {
-      target: `__invalid_binding_${index}`,
+      target: '',
       props: [],
     };
-    const safeBinding = { ...baseline };
+    const safeBinding: Record<string, unknown> = {};
 
     for (const [key, childValue] of Object.entries(value)) {
       const safeChild = sanitizeValue(
@@ -920,27 +936,23 @@ function safelyAnalyzableMetadata(
               childPropBindings: [{ ...baseline, [key]: candidate }],
             },
             platform
-          ).length === 0
+          ).length === 0,
+        `${platform}.childPropBindings[${index}].${key}`
       );
       if (safeChild !== undefined) safeBinding[key] = safeChild;
     }
 
-    return collectPlatformMetadataShape(
-      { childPropBindings: [safeBinding] },
-      platform
-    ).length === 0
-      ? safeBinding
-      : undefined;
+    return safeBinding;
   }
 
   function sanitizeApiSection(value: unknown, index: number) {
     if (!isRecord(value)) return undefined;
 
     const baseline: Record<string, unknown> = {
-      name: `__invalid_section_${index}`,
-      exportName: `__invalid_export_${index}`,
+      name: '',
+      exportName: '',
     };
-    const safeSection = { ...baseline };
+    const safeSection: Record<string, unknown> = {};
 
     for (const [key, childValue] of Object.entries(value)) {
       const safeChild = sanitizeValue(
@@ -948,16 +960,13 @@ function safelyAnalyzableMetadata(
         (candidate) =>
           collectComponentMetadataRuntimeShapeFindings({
             api: { sections: [{ ...baseline, [key]: candidate }] },
-          }).length === 0
+          }).length === 0,
+        `api.sections[${index}].${key}`
       );
       if (safeChild !== undefined) safeSection[key] = safeChild;
     }
 
-    return collectComponentMetadataRuntimeShapeFindings({
-      api: { sections: [safeSection] },
-    }).length === 0
-      ? safeSection
-      : undefined;
+    return safeSection;
   }
 
   for (const key of COMPONENT_METADATA_KEYS) {
@@ -978,9 +987,10 @@ function safelyAnalyzableMetadata(
     // fields. The canonical shape collector defines which partial values can
     // be analyzed; no diagnostic strings or duplicate dependency map are used.
     if (key === 'examples' && Array.isArray(value)) {
-      safeMetadata.examples = value.flatMap((example, index) => {
+      safeMetadata.examples = value.map((example, index) => {
         const safeExample = sanitizeExample(example, index);
-        return safeExample === undefined ? [] : [safeExample];
+        if (safeExample === undefined) blockedPaths.add(`examples[${index}]`);
+        return safeExample;
       });
       continue;
     }
@@ -990,7 +1000,8 @@ function safelyAnalyzableMetadata(
       (candidate) =>
         collectComponentMetadataRuntimeShapeFindings({
           [key]: candidate,
-        }).length === 0
+        }).length === 0,
+      key
     );
 
     if (
@@ -999,10 +1010,13 @@ function safelyAnalyzableMetadata(
       Array.isArray(value.childPropBindings)
     ) {
       const safePlatform = isRecord(safeValue) ? safeValue : {};
-      safePlatform.childPropBindings = value.childPropBindings.flatMap(
+      safePlatform.childPropBindings = value.childPropBindings.map(
         (binding, index) => {
           const safeBinding = sanitizeChildPropBinding(binding, key, index);
-          return safeBinding === undefined ? [] : [safeBinding];
+          if (safeBinding === undefined) {
+            blockedPaths.add(`${key}.childPropBindings[${index}]`);
+          }
+          return safeBinding;
         }
       );
       safeValue = safePlatform;
@@ -1010,9 +1024,12 @@ function safelyAnalyzableMetadata(
 
     if (key === 'api' && isRecord(value) && Array.isArray(value.sections)) {
       const safeApi = isRecord(safeValue) ? safeValue : {};
-      safeApi.sections = value.sections.flatMap((section, index) => {
+      safeApi.sections = value.sections.map((section, index) => {
         const safeSection = sanitizeApiSection(section, index);
-        return safeSection === undefined ? [] : [safeSection];
+        if (safeSection === undefined) {
+          blockedPaths.add(`api.sections[${index}]`);
+        }
+        return safeSection;
       });
       safeValue = safeApi;
     }
@@ -1020,9 +1037,27 @@ function safelyAnalyzableMetadata(
     if (safeValue !== undefined) safeMetadata[key] = safeValue;
   }
 
+  const apiDescriptionMetadata = { ...safeMetadata };
+  if (isRecord(apiDescriptionMetadata.api)) {
+    const safeApi = { ...apiDescriptionMetadata.api };
+    if (isRecord(metadata.api) && Array.isArray(metadata.api.sections)) {
+      safeApi.sections = metadata.api.sections.filter(
+        (section) =>
+          collectComponentMetadataRuntimeShapeFindings({
+            api: { sections: [section] },
+          }).length === 0
+      );
+    } else {
+      delete safeApi.sections;
+    }
+    apiDescriptionMetadata.api = safeApi;
+  }
+
   return {
     metadata: safeMetadata as ComponentPageMetadata,
+    apiDescriptionMetadata: apiDescriptionMetadata as ComponentPageMetadata,
     blockedKeys,
+    blockedPaths,
   };
 }
 
@@ -1038,12 +1073,14 @@ export async function loadComponentMetadataAnalysis(params: {
     const metadata = {};
     return {
       metadata,
+      apiDescriptionMetadata: metadata,
       findings: [],
       decisionFindings: collectComponentMetadataDecisionFindings({
         metadata,
         requireRelatedDecision: params.requireRelatedDecision,
         requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
       }),
+      blockedPaths: new Set<string>(),
       analysisComplete: true,
       apiDescriptionAnalysis: 'available',
     };
@@ -1069,8 +1106,10 @@ export async function loadComponentMetadataAnalysis(params: {
   if (!isRecord(rawMetadata)) {
     return {
       metadata: {},
+      apiDescriptionMetadata: {},
       findings,
       decisionFindings: [],
+      blockedPaths: new Set<string>(),
       analysisComplete: false,
       apiDescriptionAnalysis: 'blocked',
     };
@@ -1079,12 +1118,14 @@ export async function loadComponentMetadataAnalysis(params: {
   const safe = safelyAnalyzableMetadata(rawMetadata);
   return {
     metadata: safe.metadata,
+    apiDescriptionMetadata: safe.apiDescriptionMetadata,
     findings,
     decisionFindings: collectComponentMetadataDecisionFindings({
       metadata: rawMetadata,
       requireRelatedDecision: params.requireRelatedDecision,
       requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
     }),
+    blockedPaths: safe.blockedPaths,
     analysisComplete: safe.blockedKeys.size === 0,
     apiDescriptionAnalysis:
       rawMetadata.api !== undefined && safe.metadata.api === undefined
@@ -1317,18 +1358,20 @@ function getJsxAttributeNames(source: string) {
   return { error: null, names };
 }
 
-function normalizePropFragments(props: readonly string[]) {
+function normalizePropFragments(props: readonly (string | undefined)[]) {
   return props.flatMap((prop) =>
-    prop
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
+    typeof prop === 'string'
+      ? prop
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+      : []
   );
 }
 
 function validatePropFragments(params: {
   field: string;
-  fragments: readonly string[];
+  fragments: readonly (string | undefined)[];
   allowEmpty?: boolean;
 }) {
   const errors: string[] = [];
@@ -1336,7 +1379,7 @@ function validatePropFragments(params: {
 
   if (!params.allowEmpty) {
     params.fragments.forEach((fragment, index) => {
-      if (!fragment.trim()) {
+      if (typeof fragment === 'string' && !fragment.trim()) {
         errors.push(`${params.field}[${index}] must not be empty`);
       }
     });
@@ -1455,7 +1498,7 @@ const canonicalSlugSemantics =
 
 export function validateRelatedComponentSlugs(params: {
   componentName: string;
-  related: readonly string[] | undefined;
+  related: readonly (string | undefined)[] | undefined;
 }) {
   const errors: string[] = [];
   const related = params.related ?? [];
@@ -1464,6 +1507,8 @@ export function validateRelatedComponentSlugs(params: {
   const canonicalComponentSlugSet = new Set(canonicalComponentSlugs);
 
   for (const [index, relatedSlug] of related.entries()) {
+    if (relatedSlug === undefined) continue;
+
     const field = `related[${index}]`;
     const prefix = `${params.componentName} ${field} "${relatedSlug}"`;
 
@@ -1503,18 +1548,27 @@ export function validateRelatedComponentSlugs(params: {
 export function collectComponentMetadataFindings(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
+  blockedPaths?: ReadonlySet<string>;
   requireRelatedDecision?: boolean;
   requireCatalogPreviewDecision?: boolean;
 }) {
   const {
     componentName,
     metadata,
+    blockedPaths = new Set<string>(),
     requireRelatedDecision = false,
     requireCatalogPreviewDecision = false,
   } = params;
   const errors: string[] = [];
   const exampleTitles = new Set<string>();
   const apiSections = new Set<string>();
+  const isPathBlocked = (field: string) =>
+    [...blockedPaths].some(
+      (blockedPath) =>
+        blockedPath === field ||
+        blockedPath.startsWith(`${field}.`) ||
+        blockedPath.startsWith(`${field}[`)
+    );
 
   errors.push(
     ...collectComponentMetadataDecisionFindings({
@@ -1570,6 +1624,8 @@ export function collectComponentMetadataFindings(params: {
     ['react-native', metadata.native],
   ] as const) {
     for (const [index, source] of (platformMetadata?.imports ?? []).entries()) {
+      if (typeof source !== 'string') continue;
+
       const importError = validateImportDeclaration(source);
 
       if (importError) {
@@ -1584,13 +1640,17 @@ export function collectComponentMetadataFindings(params: {
     }
 
     for (const [index, source] of (platformMetadata?.setup ?? []).entries()) {
+      if (typeof source !== 'string') continue;
+
       if (!source.trim()) {
         errors.push(`${platform}.setup[${index}] must not be empty`);
       }
     }
 
     const platformSetup = (platformMetadata?.setup ?? [])
-      .map((statement) => statement.trim())
+      .flatMap((statement) =>
+        typeof statement === 'string' ? [statement.trim()] : []
+      )
       .filter(Boolean);
 
     if (platformSetup.length > 0) {
@@ -1628,7 +1688,12 @@ export function collectComponentMetadataFindings(params: {
     for (const [bindingIndex, binding] of (
       platformMetadata?.childPropBindings ?? []
     ).entries()) {
-      if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(binding.target)) {
+      if (binding === undefined) continue;
+
+      if (
+        typeof binding.target === 'string' &&
+        !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(binding.target)
+      ) {
         errors.push(
           `${platform}.childPropBindings[${bindingIndex}].target must be a JSX component name`
         );
@@ -1637,7 +1702,7 @@ export function collectComponentMetadataFindings(params: {
       errors.push(
         ...validatePropFragments({
           field: `${platform}.childPropBindings[${bindingIndex}].props`,
-          fragments: binding.props,
+          fragments: binding.props ?? [],
         })
       );
     }
@@ -1657,13 +1722,17 @@ export function collectComponentMetadataFindings(params: {
   }
 
   for (const [index, example] of (metadata.examples ?? []).entries()) {
-    if (exampleTitles.has(example.title)) {
+    if (example === undefined) continue;
+
+    if (typeof example.title === 'string' && exampleTitles.has(example.title)) {
       errors.push(`duplicate example title "${example.title}"`);
     }
 
-    exampleTitles.add(example.title);
+    if (typeof example.title === 'string') exampleTitles.add(example.title);
 
-    for (const platform of example.platforms ?? []) {
+    const platformsBlocked = isPathBlocked(`examples[${index}].platforms`);
+
+    for (const platform of platformsBlocked ? [] : (example.platforms ?? [])) {
       if (platform !== 'react' && platform !== 'react-native') {
         errors.push(
           `examples[${index}] has unsupported platform "${platform}"`
@@ -1671,9 +1740,11 @@ export function collectComponentMetadataFindings(params: {
       }
     }
 
-    const platforms = new Set(example.platforms ?? ['react', 'react-native']);
+    const platforms = new Set(
+      platformsBlocked ? [] : (example.platforms ?? ['react', 'react-native'])
+    );
 
-    if (!platforms.has('react')) {
+    if (!platformsBlocked && !platforms.has('react')) {
       for (const field of [
         'reactImports',
         'reactSetup',
@@ -1688,7 +1759,7 @@ export function collectComponentMetadataFindings(params: {
       }
     }
 
-    if (!platforms.has('react-native')) {
+    if (!platformsBlocked && !platforms.has('react-native')) {
       for (const field of [
         'nativeImports',
         'nativeSetup',
@@ -1709,6 +1780,8 @@ export function collectComponentMetadataFindings(params: {
       ['nativeImports', example.nativeImports],
     ] as const) {
       for (const [importIndex, source] of (imports ?? []).entries()) {
+        if (typeof source !== 'string') continue;
+
         const importError = validateImportDeclaration(source);
 
         if (importError) {
@@ -1722,7 +1795,7 @@ export function collectComponentMetadataFindings(params: {
     errors.push(
       ...validatePropFragments({
         field: `examples[${index}].props`,
-        fragments: example.props,
+        fragments: example.props ?? [],
       }),
       ...validatePropFragments({
         field: `examples[${index}].reactProps`,
@@ -1735,7 +1808,7 @@ export function collectComponentMetadataFindings(params: {
     );
 
     const sharedPropNames = getJsxAttributeNames(
-      normalizePropFragments(example.props).join('\n')
+      normalizePropFragments(example.props ?? []).join('\n')
     ).names;
 
     for (const [field, platformProps] of [
@@ -1779,7 +1852,9 @@ export function collectComponentMetadataFindings(params: {
       ['react-native', example.nativeSetup],
     ] as const) {
       const setup = [...(example.setup ?? []), ...(platformSetup ?? [])]
-        .map((statement) => statement.trim())
+        .flatMap((statement) =>
+          typeof statement === 'string' ? [statement.trim()] : []
+        )
         .filter(Boolean);
 
       if (setup.length === 0) {
@@ -1797,6 +1872,8 @@ export function collectComponentMetadataFindings(params: {
   }
 
   for (const section of metadata.api?.sections ?? []) {
+    if (section === undefined || typeof section.name !== 'string') continue;
+
     if (apiSections.has(section.name)) {
       errors.push(`duplicate API section "${section.name}"`);
     }
@@ -1822,12 +1899,25 @@ export function validateComponentMetadata(params: {
 export function collectComponentMetadataAgainstApiFindings(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
+  blockedPaths?: ReadonlySet<string>;
   platforms: readonly Platform[];
   reactApiProps: readonly ExtractedProp[];
   nativeApiProps: readonly ExtractedProp[];
 }) {
-  const { componentName, metadata, platforms } = params;
+  const {
+    componentName,
+    metadata,
+    blockedPaths = new Set<string>(),
+    platforms,
+  } = params;
   const errors: string[] = [];
+  const isPathBlocked = (field: string) =>
+    [...blockedPaths].some(
+      (blockedPath) =>
+        blockedPath === field ||
+        blockedPath.startsWith(`${field}.`) ||
+        blockedPath.startsWith(`${field}[`)
+    );
 
   function getApiProps(platform: Platform) {
     return platform === 'react' ? params.reactApiProps : params.nativeApiProps;
@@ -1845,9 +1935,11 @@ export function collectComponentMetadataAgainstApiFindings(params: {
 
   function validateAnyPlatformPropNames(params: {
     field: string;
-    names: readonly string[];
+    names: readonly (string | undefined)[];
   }) {
     for (const name of params.names) {
+      if (typeof name !== 'string') continue;
+
       if (!hasAnyApiProp(name)) {
         errors.push(`${params.field}.${name} is not present in any target API`);
       }
@@ -1962,15 +2054,20 @@ export function collectComponentMetadataAgainstApiFindings(params: {
     for (const [bindingIndex, binding] of (
       platformMetadata?.childPropBindings ?? []
     ).entries()) {
+      if (binding === undefined) continue;
+
       validatePropNames({
         platform,
         field: `${platform}.childPropBindings[${bindingIndex}].props`,
-        fragments: binding.props,
+        fragments: binding.props ?? [],
       });
     }
   }
 
   for (const [index, example] of (metadata.examples ?? []).entries()) {
+    if (example === undefined) continue;
+    if (isPathBlocked(`examples[${index}].platforms`)) continue;
+
     const targetPlatforms = example.platforms ?? platforms;
 
     for (const platform of targetPlatforms) {
@@ -1984,7 +2081,7 @@ export function collectComponentMetadataAgainstApiFindings(params: {
       validatePropNames({
         platform,
         field: `examples[${index}].props`,
-        fragments: example.props,
+        fragments: example.props ?? [],
       });
 
       validatePropNames({

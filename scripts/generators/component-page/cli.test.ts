@@ -574,6 +574,47 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     );
   }, 60_000);
 
+  it('preserves original array indexes when an earlier example is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    42,
+    { title: 'Later sibling', description: 'Still analyzed.', props: ['missingProp={true}'] },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[0] must be an object',
+        expect.stringContaining(
+          'examples[1].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+    expect(payload.findings).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('examples[0].props prop fragment'),
+      ])
+    );
+  }, 60_000);
+
   it('keeps platform sibling semantics when another platform field is malformed', () => {
     const metadataFile = path.join(
       fixture,
@@ -743,6 +784,81 @@ describe('component page CLI check modes', { concurrent: false }, () => {
         'api.sections[0].exportName must be a string or platform object',
         'duplicate API section "Duplicate"',
       ])
+    );
+  }, 60_000);
+
+  it('does not let analysis placeholders invent API section findings', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  api: {
+    sections: [
+      { name: 42, exportName: 'Button' },
+      { name: '__invalid_section_0', exportName: 'Button' },
+    ],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toContain('api.sections[0].name must be a string');
+    expect(payload.findings).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('duplicate API section "__invalid_section_0"'),
+      ])
+    );
+  }, 60_000);
+
+  it('does not infer target platforms when the authored platform field is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    {
+      title: 'Unknown target',
+      description: 'Target authority is malformed.',
+      props: ['missingProp={true}'],
+      platforms: [42, 'react'],
+    },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toContain(
+      'examples[0].platforms[0] must be a string'
+    );
+    expect(payload.findings).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('missingProp')])
     );
   }, 60_000);
 

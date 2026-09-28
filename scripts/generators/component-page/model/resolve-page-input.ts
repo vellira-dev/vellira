@@ -594,10 +594,12 @@ export async function resolvePageInput(params: {
       ...collectComponentMetadataFindings({
         componentName,
         metadata: componentConfig,
+        blockedPaths: metadataAnalysis.blockedPaths,
       }),
       ...collectComponentMetadataAgainstApiFindings({
         componentName,
         metadata: componentConfig,
+        blockedPaths: metadataAnalysis.blockedPaths,
         platforms,
         reactApiProps,
         nativeApiProps,

@@ -10,6 +10,7 @@ import {
   collectComponentMetadataAgainstApiFindings,
   collectComponentMetadataFindings,
   collectComponentMetadataRuntimeShapeFindings,
+  loadComponentMetadataAnalysis,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
   validateComponentMetadataAgainstApi,
@@ -90,6 +91,44 @@ afterEach(() => {
   for (const root of roots.splice(0)) {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+it('separates partial semantic evidence from API rendering metadata', async () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-component-partial-metadata-')
+  );
+  roots.push(root);
+  const componentDir = path.join(root, 'Button');
+  fs.mkdirSync(componentDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(componentDir, 'metadata.ts'),
+    `export default {
+  api: {
+    sections: [
+      { name: 42, exportName: 'Button' },
+      { name: 'Valid', exportName: 'Button' },
+    ],
+    descriptions: { source: 'A meaningful source description.' },
+  },
+};\n`
+  );
+
+  const analysis = await loadComponentMetadataAnalysis({
+    catalogComponentsRoot: root,
+    componentName: 'Button',
+  });
+
+  expect(analysis.blockedPaths).toEqual(
+    new Set(['api.sections[0]', 'api.sections[0].name'])
+  );
+  expect(analysis.metadata.api?.sections).toEqual([
+    { exportName: 'Button' },
+    { name: 'Valid', exportName: 'Button' },
+  ]);
+  expect(analysis.apiDescriptionMetadata.api).toEqual({
+    sections: [{ name: 'Valid', exportName: 'Button' }],
+    descriptions: { source: 'A meaningful source description.' },
+  });
 });
 
 describe('loadGeneratedComponentProfile', () => {
