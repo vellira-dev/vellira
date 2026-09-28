@@ -672,6 +672,80 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(payload.findings).toContain('api.sections must be an array');
   }, 60_000);
 
+  it('keeps child binding props analyzable when the binding target is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: {
+    childPropBindings: [{ target: 42, props: ['missingProp={true}'] }],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'react.childPropBindings[0].target must be a string',
+        expect.stringContaining(
+          'react.childPropBindings[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps duplicate API section names analyzable when an export is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  api: {
+    sections: [
+      { name: 'Duplicate', exportName: 42 },
+      { name: 'Duplicate', exportName: 'Button' },
+    ],
+  },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'api.sections[0].exportName must be a string or platform object',
+        'duplicate API section "Duplicate"',
+      ])
+    );
+  }, 60_000);
+
   it('returns a structured semantic finding for metadata syntax failure', () => {
     const metadataFile = path.join(
       fixture,

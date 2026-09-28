@@ -898,6 +898,68 @@ function safelyAnalyzableMetadata(
       : undefined;
   }
 
+  function sanitizeChildPropBinding(
+    value: unknown,
+    platform: 'react' | 'native',
+    index: number
+  ) {
+    if (!isRecord(value)) return undefined;
+
+    const baseline: Record<string, unknown> = {
+      target: `__invalid_binding_${index}`,
+      props: [],
+    };
+    const safeBinding = { ...baseline };
+
+    for (const [key, childValue] of Object.entries(value)) {
+      const safeChild = sanitizeValue(
+        childValue,
+        (candidate) =>
+          collectPlatformMetadataShape(
+            {
+              childPropBindings: [{ ...baseline, [key]: candidate }],
+            },
+            platform
+          ).length === 0
+      );
+      if (safeChild !== undefined) safeBinding[key] = safeChild;
+    }
+
+    return collectPlatformMetadataShape(
+      { childPropBindings: [safeBinding] },
+      platform
+    ).length === 0
+      ? safeBinding
+      : undefined;
+  }
+
+  function sanitizeApiSection(value: unknown, index: number) {
+    if (!isRecord(value)) return undefined;
+
+    const baseline: Record<string, unknown> = {
+      name: `__invalid_section_${index}`,
+      exportName: `__invalid_export_${index}`,
+    };
+    const safeSection = { ...baseline };
+
+    for (const [key, childValue] of Object.entries(value)) {
+      const safeChild = sanitizeValue(
+        childValue,
+        (candidate) =>
+          collectComponentMetadataRuntimeShapeFindings({
+            api: { sections: [{ ...baseline, [key]: candidate }] },
+          }).length === 0
+      );
+      if (safeChild !== undefined) safeSection[key] = safeChild;
+    }
+
+    return collectComponentMetadataRuntimeShapeFindings({
+      api: { sections: [safeSection] },
+    }).length === 0
+      ? safeSection
+      : undefined;
+  }
+
   for (const key of COMPONENT_METADATA_KEYS) {
     const value = metadata[key];
     if (value === undefined) continue;
@@ -923,13 +985,38 @@ function safelyAnalyzableMetadata(
       continue;
     }
 
-    const safeValue = sanitizeValue(
+    let safeValue = sanitizeValue(
       value,
       (candidate) =>
         collectComponentMetadataRuntimeShapeFindings({
           [key]: candidate,
         }).length === 0
     );
+
+    if (
+      (key === 'react' || key === 'native') &&
+      isRecord(value) &&
+      Array.isArray(value.childPropBindings)
+    ) {
+      const safePlatform = isRecord(safeValue) ? safeValue : {};
+      safePlatform.childPropBindings = value.childPropBindings.flatMap(
+        (binding, index) => {
+          const safeBinding = sanitizeChildPropBinding(binding, key, index);
+          return safeBinding === undefined ? [] : [safeBinding];
+        }
+      );
+      safeValue = safePlatform;
+    }
+
+    if (key === 'api' && isRecord(value) && Array.isArray(value.sections)) {
+      const safeApi = isRecord(safeValue) ? safeValue : {};
+      safeApi.sections = value.sections.flatMap((section, index) => {
+        const safeSection = sanitizeApiSection(section, index);
+        return safeSection === undefined ? [] : [safeSection];
+      });
+      safeValue = safeApi;
+    }
+
     if (safeValue !== undefined) safeMetadata[key] = safeValue;
   }
 
