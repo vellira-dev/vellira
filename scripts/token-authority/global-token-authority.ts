@@ -109,7 +109,9 @@ export function runGlobalTokenAuthorityCli(
       throw new Error(`Unknown global-token authority option "${args[0]}".`);
     }
 
-    const contract = (dependencies.build ?? buildGlobalTokenAuthorityContract)();
+    const contract = (
+      dependencies.build ?? buildGlobalTokenAuthorityContract
+    )();
 
     write(JSON.stringify(contract));
     return 0;
