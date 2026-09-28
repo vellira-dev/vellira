@@ -6,12 +6,15 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  collectComponentMetadataAgainstApiFindings,
+  collectComponentMetadataFindings,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
   validateComponentMetadataAgainstApi,
   validateComponentMetadata,
   validateRelatedComponentSlugs,
 } from './metadata';
+import { buildSemanticMetadataDecisionAuthority } from '../semantic-metadata-authority';
 import {
   canonicalComponentSlugs,
   canonicalComponentSlugsFromEntries,
@@ -159,6 +162,62 @@ describe('mergeComponentMetadata', () => {
 });
 
 describe('validateComponentMetadata', () => {
+  it('collects simultaneous decision, vocabulary, and API-reference failures', () => {
+    const metadata = {
+      related: ['Badge', 'Badge'],
+      demo: { initialValues: { missingProp: true } },
+    };
+    const findings = [
+      ...collectComponentMetadataFindings({
+        componentName: 'Avatar',
+        metadata,
+        requireCatalogPreviewDecision: true,
+      }),
+      ...collectComponentMetadataAgainstApiFindings({
+        componentName: 'Avatar',
+        metadata,
+        platforms: ['react'],
+        reactApiProps: [],
+        nativeApiProps: [],
+      }),
+    ];
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('catalogPreview must be explicitly defined'),
+        expect.stringContaining('related[0] "Badge"'),
+        expect.stringContaining('duplicate related component slug "Badge"'),
+        expect.stringContaining(
+          'demo.initialValues.missingProp is not present in any target API'
+        ),
+      ])
+    );
+  });
+
+  it('derives conditional production decisions from canonical public state', () => {
+    const avatar = buildSemanticMetadataDecisionAuthority({
+      root: process.cwd(),
+      componentName: 'Avatar',
+    });
+    const matureButton = buildSemanticMetadataDecisionAuthority({
+      root: process.cwd(),
+      componentName: 'Button',
+    });
+
+    expect(avatar.requiredDecisions.map((decision) => decision.path)).toEqual([
+      'related',
+      'catalogPreview',
+    ]);
+    expect(
+      matureButton.requiredDecisions.map((decision) => decision.path)
+    ).toEqual(['related']);
+    expect(avatar.validationSources.length).toBeGreaterThan(5);
+    expect(
+      avatar.validationSources.every((source) =>
+        /^[0-9a-f]{64}$/.test(source.sha256)
+      )
+    ).toBe(true);
+  });
   it('accepts canonical related component slugs, including kebab-case slugs', () => {
     expect(
       validateRelatedComponentSlugs({
@@ -573,6 +632,7 @@ describe('semantic metadata contract', () => {
     );
 
     expect(contract.schemaPath).toBe(METADATA_SCHEMA_PATH);
+    expect(contract.schemaVersion).toBe('2');
     expect(contract.metadataSchemaPath).toBe(METADATA_SCHEMA_PATH);
     expect(contract.relatedComponentRegistry.path).toBe(
       COMPONENT_REGISTRY_PATH
@@ -597,6 +657,11 @@ describe('semantic metadata contract', () => {
       relatedMustUseExactCase: true,
       relatedSlugFormat: 'lowercase-kebab-case',
     });
+    expect(
+      contract.semanticDecisionAuthority.requiredDecisions.map(
+        (decision) => decision.path
+      )
+    ).toEqual(['related', 'catalogPreview']);
   });
 
   it('keeps exported vocabulary and validator acceptance in parity', () => {

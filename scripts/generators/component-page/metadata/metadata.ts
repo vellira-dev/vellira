@@ -18,6 +18,36 @@ export type ComponentPageProfile = NonNullable<
   ComponentPageMetadata['profile']
 >;
 
+export class ComponentMetadataValidationError extends Error {
+  readonly componentName: string;
+  readonly findings: readonly string[];
+
+  constructor(componentName: string, findings: readonly string[]) {
+    const orderedFindings = [...new Set(findings)];
+
+    super(
+      `Invalid component page metadata for ${componentName}:\n${orderedFindings
+        .map((finding) => `  - ${finding}`)
+        .join('\n')}`
+    );
+    this.name = 'ComponentMetadataValidationError';
+    this.componentName = componentName;
+    this.findings = orderedFindings;
+  }
+}
+
+export function assertValidComponentMetadataFindings(params: {
+  componentName: string;
+  findings: readonly string[];
+}) {
+  if (params.findings.length > 0) {
+    throw new ComponentMetadataValidationError(
+      params.componentName,
+      params.findings
+    );
+  }
+}
+
 export function loadGeneratedComponentProfile(params: {
   root: string;
   componentName: string;
@@ -504,7 +534,7 @@ export function validateRelatedComponentSlugs(params: {
   return errors;
 }
 
-export function validateComponentMetadata(params: {
+export function collectComponentMetadataFindings(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
   requireRelatedDecision?: boolean;
@@ -812,16 +842,22 @@ export function validateComponentMetadata(params: {
     apiSections.add(section.name);
   }
 
-  if (errors.length > 0) {
-    throw new Error(
-      `Invalid component page metadata for ${componentName}:\n${errors
-        .map((error) => `  - ${error}`)
-        .join('\n')}`
-    );
-  }
+  return errors;
 }
 
-export function validateComponentMetadataAgainstApi(params: {
+export function validateComponentMetadata(params: {
+  componentName: string;
+  metadata: ComponentPageMetadata;
+  requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
+}) {
+  assertValidComponentMetadataFindings({
+    componentName: params.componentName,
+    findings: collectComponentMetadataFindings(params),
+  });
+}
+
+export function collectComponentMetadataAgainstApiFindings(params: {
   componentName: string;
   metadata: ComponentPageMetadata;
   platforms: readonly Platform[];
@@ -1003,11 +1039,18 @@ export function validateComponentMetadataAgainstApi(params: {
     }
   }
 
-  if (errors.length > 0) {
-    throw new Error(
-      `Invalid component page metadata for ${componentName}:\n${errors
-        .map((error) => `  - ${error}`)
-        .join('\n')}`
-    );
-  }
+  return errors;
+}
+
+export function validateComponentMetadataAgainstApi(params: {
+  componentName: string;
+  metadata: ComponentPageMetadata;
+  platforms: readonly Platform[];
+  reactApiProps: readonly ExtractedProp[];
+  nativeApiProps: readonly ExtractedProp[];
+}) {
+  assertValidComponentMetadataFindings({
+    componentName: params.componentName,
+    findings: collectComponentMetadataAgainstApiFindings(params),
+  });
 }

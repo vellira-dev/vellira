@@ -10,12 +10,13 @@ import {
 import { capitalize } from '../helpers/format';
 import type { ComponentPageMetadata } from '../metadata/metadata';
 import {
+  assertValidComponentMetadataFindings,
+  collectComponentMetadataAgainstApiFindings,
+  collectComponentMetadataFindings,
   loadComponentMetadata,
   loadGeneratedComponentCategory,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
-  validateComponentMetadataAgainstApi,
-  validateComponentMetadata,
 } from '../metadata/metadata';
 import type { ExtractedProp, Platform } from './types';
 import {
@@ -574,13 +575,6 @@ export async function resolvePageInput(params: {
     componentMetadata
   );
 
-  validateComponentMetadata({
-    componentName,
-    metadata: componentConfig,
-    requireRelatedDecision: params.requireRelatedDecision,
-    requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
-  });
-
   const componentProfile = componentConfig.profile ?? inferredComponentProfile;
 
   const catalogCategory = resolveCatalogCategory({
@@ -589,12 +583,23 @@ export async function resolvePageInput(params: {
     generatedCategory: generatedComponentCategory,
   });
 
-  validateComponentMetadataAgainstApi({
+  assertValidComponentMetadataFindings({
     componentName,
-    metadata: componentConfig,
-    platforms,
-    reactApiProps,
-    nativeApiProps,
+    findings: [
+      ...collectComponentMetadataFindings({
+        componentName,
+        metadata: componentConfig,
+        requireRelatedDecision: params.requireRelatedDecision,
+        requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
+      }),
+      ...collectComponentMetadataAgainstApiFindings({
+        componentName,
+        metadata: componentConfig,
+        platforms,
+        reactApiProps,
+        nativeApiProps,
+      }),
+    ],
   });
 
   const reactProgram = platforms.includes('react')

@@ -408,4 +408,40 @@ describe('component page CLI check modes', { concurrent: false }, () => {
       /Textarea: effective generator input invalid:[\s\S]*catalogPreview must be explicitly defined/
     );
   }, 60_000);
+
+  it('returns all canonical semantic findings together in JSON check mode', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Textarea/metadata.ts'
+    );
+    const source = fs.readFileSync(metadataFile, 'utf8');
+
+    fs.writeFileSync(
+      metadataFile,
+      source
+        .replace(/ {2}catalogPreview: \{[\s\S]*?\n {2}\},\n/, '')
+        .replace(/ {2}related: \[[\s\S]*?\n {2}\],\n/, '')
+    );
+
+    const result = runGenerator(fixture, [
+      'Textarea',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: '1',
+      componentName: 'Textarea',
+      status: 'semantic-invalid',
+      metadataPath:
+        'apps/website/src/component-catalog/components/Textarea/metadata.ts',
+      findings: expect.arrayContaining([
+        expect.stringContaining('related must be explicitly defined'),
+        expect.stringContaining('catalogPreview must be explicitly defined'),
+      ]),
+    });
+  }, 60_000);
 });
