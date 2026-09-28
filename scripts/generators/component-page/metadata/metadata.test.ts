@@ -6,8 +6,10 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  ComponentMetadataValidationError,
   collectComponentMetadataAgainstApiFindings,
   collectComponentMetadataFindings,
+  collectComponentMetadataRuntimeShapeFindings,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
   validateComponentMetadataAgainstApi,
@@ -162,6 +164,41 @@ describe('mergeComponentMetadata', () => {
 });
 
 describe('validateComponentMetadata', () => {
+  it('bounds structured semantic findings without losing omission evidence', () => {
+    const error = new ComponentMetadataValidationError(
+      'Avatar',
+      Array.from(
+        { length: 200 },
+        (_, index) => `${index}: ${'x'.repeat(2_100)}`
+      )
+    );
+
+    expect(error.findings.length).toBeLessThanOrEqual(128);
+    expect(error.findings.every((finding) => finding.length <= 2_000)).toBe(
+      true
+    );
+    expect(
+      error.findings.reduce((total, finding) => total + finding.length, 0)
+    ).toBeLessThanOrEqual(8_000);
+    expect(error.findings.at(-1)).toContain(
+      'omitted by the bounded semantic protocol'
+    );
+  });
+
+  it('collects invalid runtime shapes before semantic consumers execute', () => {
+    expect(
+      collectComponentMetadataRuntimeShapeFindings({
+        examples: {},
+        react: { imports: 'not-an-array' },
+        demo: { staticProps: { disabled: true } },
+      })
+    ).toEqual([
+      'react.imports must be an array',
+      'demo.staticProps.disabled must be string',
+      'examples must be an array',
+    ]);
+  });
+
   it('collects simultaneous decision, vocabulary, and API-reference failures', () => {
     const metadata = {
       related: ['Badge', 'Badge'],

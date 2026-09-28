@@ -444,4 +444,58 @@ describe('component page CLI check modes', { concurrent: false }, () => {
       ]),
     });
   }, 60_000);
+
+  it('returns a structured semantic finding for invalid metadata runtime shape', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { examples: {} } as any;\n`);
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: '1',
+      componentName: 'Button',
+      status: 'semantic-invalid',
+      metadataPath:
+        'apps/website/src/component-catalog/components/Button/metadata.ts',
+      findings: ['examples must be an array'],
+    });
+  }, 60_000);
+
+  it('returns a structured semantic finding for metadata syntax failure', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { examples: [ };\n`);
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
+      schemaVersion: '1',
+      componentName: 'Button',
+      status: 'semantic-invalid',
+      metadataPath:
+        'apps/website/src/component-catalog/components/Button/metadata.ts',
+      findings: ['metadata.ts could not be loaded as a TypeScript module'],
+    });
+  }, 60_000);
 });

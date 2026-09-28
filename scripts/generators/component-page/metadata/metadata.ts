@@ -23,7 +23,30 @@ export class ComponentMetadataValidationError extends Error {
   readonly findings: readonly string[];
 
   constructor(componentName: string, findings: readonly string[]) {
-    const orderedFindings = [...new Set(findings)];
+    const uniqueFindings = [...new Set(findings)];
+    const orderedFindings: string[] = [];
+    let totalLength = 0;
+
+    for (const finding of uniqueFindings) {
+      const boundedFinding =
+        finding.length <= 2_000 ? finding : `${finding.slice(0, 1_999)}…`;
+
+      if (
+        orderedFindings.length >= 127 ||
+        totalLength + boundedFinding.length > 7_800
+      ) {
+        break;
+      }
+
+      orderedFindings.push(boundedFinding);
+      totalLength += boundedFinding.length;
+    }
+
+    if (orderedFindings.length < uniqueFindings.length) {
+      orderedFindings.push(
+        `${uniqueFindings.length - orderedFindings.length} additional metadata finding(s) omitted by the bounded semantic protocol`
+      );
+    }
 
     super(
       `Invalid component page metadata for ${componentName}:\n${orderedFindings
@@ -128,6 +151,593 @@ export function getComponentMetadataFile(params: {
   return path.join(getComponentCatalogDir(params), 'metadata.ts');
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function collectUnknownKeys(params: {
+  value: Record<string, unknown>;
+  path: string;
+  allowed: readonly string[];
+}) {
+  const allowed = new Set(params.allowed);
+
+  return Object.keys(params.value)
+    .filter((key) => !allowed.has(key))
+    .map((key) => `${params.path}.${key} is not a supported metadata field`);
+}
+
+function collectStringArrayShape(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    return [`${field} must be an array`];
+  }
+
+  return value.flatMap((item, index) =>
+    typeof item === 'string' ? [] : [`${field}[${index}] must be a string`]
+  );
+}
+
+function collectPrimitiveRecordShape(params: {
+  value: unknown;
+  field: string;
+  allowedTypes: readonly ('string' | 'boolean' | 'number')[];
+}) {
+  if (!isRecord(params.value)) {
+    return [`${params.field} must be an object`];
+  }
+
+  return Object.entries(params.value).flatMap(([key, value]) =>
+    params.allowedTypes.includes(
+      typeof value as 'string' | 'boolean' | 'number'
+    )
+      ? []
+      : [`${params.field}.${key} must be ${params.allowedTypes.join(', ')}`]
+  );
+}
+
+function collectOptionalStringArray(
+  value: Record<string, unknown>,
+  key: string,
+  path: string
+) {
+  return value[key] === undefined
+    ? []
+    : collectStringArrayShape(value[key], `${path}.${key}`);
+}
+
+function collectPlatformMetadataShape(value: unknown, path: string) {
+  if (!isRecord(value)) {
+    return [`${path} must be an object`];
+  }
+
+  const findings = collectUnknownKeys({
+    value,
+    path,
+    allowed: [
+      'demoProps',
+      'children',
+      'childPropBindings',
+      'imports',
+      'setup',
+      'responsivePresentation',
+    ],
+  });
+
+  for (const key of ['demoProps', 'children'] as const) {
+    if (value[key] !== undefined && typeof value[key] !== 'string') {
+      findings.push(`${path}.${key} must be a string`);
+    }
+  }
+
+  for (const key of ['imports', 'setup'] as const) {
+    findings.push(...collectOptionalStringArray(value, key, path));
+  }
+
+  if (
+    value.responsivePresentation !== undefined &&
+    typeof value.responsivePresentation !== 'boolean'
+  ) {
+    findings.push(`${path}.responsivePresentation must be a boolean`);
+  }
+
+  if (value.childPropBindings !== undefined) {
+    if (!Array.isArray(value.childPropBindings)) {
+      findings.push(`${path}.childPropBindings must be an array`);
+    } else {
+      for (const [index, binding] of value.childPropBindings.entries()) {
+        const bindingPath = `${path}.childPropBindings[${index}]`;
+
+        if (!isRecord(binding)) {
+          findings.push(`${bindingPath} must be an object`);
+          continue;
+        }
+
+        findings.push(
+          ...collectUnknownKeys({
+            value: binding,
+            path: bindingPath,
+            allowed: ['target', 'props'],
+          })
+        );
+
+        if (typeof binding.target !== 'string') {
+          findings.push(`${bindingPath}.target must be a string`);
+        }
+
+        findings.push(
+          ...collectStringArrayShape(binding.props, `${bindingPath}.props`)
+        );
+      }
+    }
+  }
+
+  return findings;
+}
+
+function collectExampleShape(value: unknown, path: string) {
+  if (!isRecord(value)) {
+    return [`${path} must be an object`];
+  }
+
+  const findings = collectUnknownKeys({
+    value,
+    path,
+    allowed: [
+      'title',
+      'description',
+      'props',
+      'inheritDemoProps',
+      'imports',
+      'reactImports',
+      'nativeImports',
+      'setup',
+      'reactSetup',
+      'nativeSetup',
+      'reactProps',
+      'nativeProps',
+      'reactChildren',
+      'nativeChildren',
+      'platforms',
+    ],
+  });
+
+  for (const key of ['title', 'description'] as const) {
+    if (typeof value[key] !== 'string') {
+      findings.push(`${path}.${key} must be a string`);
+    }
+  }
+
+  for (const key of [
+    'props',
+    'imports',
+    'reactImports',
+    'nativeImports',
+    'setup',
+    'reactSetup',
+    'nativeSetup',
+    'reactProps',
+    'nativeProps',
+    'platforms',
+  ] as const) {
+    if (key === 'props' || value[key] !== undefined) {
+      findings.push(...collectStringArrayShape(value[key], `${path}.${key}`));
+    }
+  }
+
+  for (const key of ['reactChildren', 'nativeChildren'] as const) {
+    if (value[key] !== undefined && typeof value[key] !== 'string') {
+      findings.push(`${path}.${key} must be a string`);
+    }
+  }
+
+  if (
+    value.inheritDemoProps !== undefined &&
+    typeof value.inheritDemoProps !== 'boolean'
+  ) {
+    findings.push(`${path}.inheritDemoProps must be a boolean`);
+  }
+
+  return findings;
+}
+
+function collectAccessibilityEntriesShape(value: unknown, path: string) {
+  if (!Array.isArray(value)) {
+    return [`${path} must be an array`];
+  }
+
+  return value.flatMap((item, index) => {
+    const itemPath = `${path}[${index}]`;
+
+    if (!isRecord(item)) {
+      return [`${itemPath} must be an object`];
+    }
+
+    const findings = collectUnknownKeys({
+      value: item,
+      path: itemPath,
+      allowed: ['title', 'description', 'props'],
+    });
+
+    for (const key of ['title', 'description'] as const) {
+      if (typeof item[key] !== 'string') {
+        findings.push(`${itemPath}.${key} must be a string`);
+      }
+    }
+
+    findings.push(...collectOptionalStringArray(item, 'props', itemPath));
+    return findings;
+  });
+}
+
+export function collectComponentMetadataRuntimeShapeFindings(
+  metadata: unknown
+) {
+  if (!isRecord(metadata)) {
+    return ['metadata.ts must export a metadata object'];
+  }
+
+  const findings = collectUnknownKeys({
+    value: metadata,
+    path: 'metadata',
+    allowed: [
+      'profile',
+      'react',
+      'native',
+      'demo',
+      'catalogPreview',
+      'defaults',
+      'discovery',
+      'examples',
+      'api',
+      'accessibility',
+      'related',
+    ],
+  });
+
+  if (
+    metadata.profile !== undefined &&
+    ![
+      'primitive',
+      'form-control',
+      'selection-control',
+      'compound',
+      'overlay',
+      'navigation',
+    ].includes(metadata.profile as string)
+  ) {
+    findings.push('metadata.profile has an unsupported value');
+  }
+
+  for (const key of ['react', 'native'] as const) {
+    if (metadata[key] !== undefined) {
+      findings.push(...collectPlatformMetadataShape(metadata[key], key));
+    }
+  }
+
+  if (metadata.demo !== undefined) {
+    if (!isRecord(metadata.demo)) {
+      findings.push('demo must be an object');
+    } else {
+      const demo = metadata.demo;
+      findings.push(
+        ...collectUnknownKeys({
+          value: demo,
+          path: 'demo',
+          allowed: [
+            'label',
+            'description',
+            'excludeControls',
+            'initialValues',
+            'staticProps',
+            'satisfiedRequiredProps',
+            'previewWidth',
+          ],
+        })
+      );
+
+      for (const key of ['label', 'description'] as const) {
+        if (demo[key] !== undefined && typeof demo[key] !== 'string') {
+          findings.push(`demo.${key} must be a string`);
+        }
+      }
+
+      for (const key of [
+        'excludeControls',
+        'satisfiedRequiredProps',
+      ] as const) {
+        findings.push(...collectOptionalStringArray(demo, key, 'demo'));
+      }
+
+      if (demo.initialValues !== undefined) {
+        findings.push(
+          ...collectPrimitiveRecordShape({
+            value: demo.initialValues,
+            field: 'demo.initialValues',
+            allowedTypes: ['string', 'boolean', 'number'],
+          })
+        );
+      }
+
+      if (demo.staticProps !== undefined) {
+        findings.push(
+          ...collectPrimitiveRecordShape({
+            value: demo.staticProps,
+            field: 'demo.staticProps',
+            allowedTypes: ['string'],
+          })
+        );
+      }
+
+      if (
+        demo.previewWidth !== undefined &&
+        !['auto', 'field', 'full'].includes(demo.previewWidth as string)
+      ) {
+        findings.push('demo.previewWidth has an unsupported value');
+      }
+    }
+  }
+
+  if (metadata.catalogPreview !== undefined) {
+    if (!isRecord(metadata.catalogPreview)) {
+      findings.push('catalogPreview must be an object');
+    } else {
+      const preview = metadata.catalogPreview;
+      findings.push(
+        ...collectUnknownKeys({
+          value: preview,
+          path: 'catalogPreview',
+          allowed: ['layout', 'props', 'children'],
+        })
+      );
+
+      if (
+        preview.layout !== undefined &&
+        !['auto', 'field', 'column', 'stack'].includes(preview.layout as string)
+      ) {
+        findings.push('catalogPreview.layout has an unsupported value');
+      }
+
+      findings.push(
+        ...collectOptionalStringArray(preview, 'props', 'catalogPreview')
+      );
+      if (
+        preview.children !== undefined &&
+        typeof preview.children !== 'string'
+      ) {
+        findings.push('catalogPreview.children must be a string');
+      }
+    }
+  }
+
+  if (metadata.defaults !== undefined) {
+    if (!isRecord(metadata.defaults)) {
+      findings.push('defaults must be an object');
+    } else {
+      findings.push(
+        ...collectUnknownKeys({
+          value: metadata.defaults,
+          path: 'defaults',
+          allowed: ['shared', 'react', 'native'],
+        })
+      );
+      for (const key of ['shared', 'react', 'native'] as const) {
+        if (metadata.defaults[key] !== undefined) {
+          findings.push(
+            ...collectPrimitiveRecordShape({
+              value: metadata.defaults[key],
+              field: `defaults.${key}`,
+              allowedTypes: ['string', 'boolean', 'number'],
+            })
+          );
+        }
+      }
+    }
+  }
+
+  if (metadata.discovery !== undefined) {
+    if (!isRecord(metadata.discovery)) {
+      findings.push('discovery must be an object');
+    } else {
+      const discovery = metadata.discovery;
+      findings.push(
+        ...collectUnknownKeys({
+          value: discovery,
+          path: 'discovery',
+          allowed: [
+            'status',
+            'summary',
+            'description',
+            'whenToUse',
+            'patterns',
+            'platformNotes',
+            'missingEvidence',
+          ],
+        })
+      );
+      if (
+        discovery.status !== undefined &&
+        !['complete', 'needs-authored-intent'].includes(
+          discovery.status as string
+        )
+      ) {
+        findings.push('discovery.status has an unsupported value');
+      }
+      for (const key of ['summary', 'description'] as const) {
+        if (
+          discovery[key] !== undefined &&
+          typeof discovery[key] !== 'string'
+        ) {
+          findings.push(`discovery.${key} must be a string`);
+        }
+      }
+      for (const key of ['whenToUse', 'missingEvidence'] as const) {
+        findings.push(
+          ...collectOptionalStringArray(discovery, key, 'discovery')
+        );
+      }
+      if (discovery.patterns !== undefined) {
+        if (!Array.isArray(discovery.patterns)) {
+          findings.push('discovery.patterns must be an array');
+        } else {
+          for (const [index, pattern] of discovery.patterns.entries()) {
+            const patternPath = `discovery.patterns[${index}]`;
+            if (!isRecord(pattern)) {
+              findings.push(`${patternPath} must be an object`);
+              continue;
+            }
+            findings.push(
+              ...collectUnknownKeys({
+                value: pattern,
+                path: patternPath,
+                allowed: ['id', 'title', 'description'],
+              })
+            );
+            for (const key of ['id', 'title', 'description'] as const) {
+              if (typeof pattern[key] !== 'string') {
+                findings.push(`${patternPath}.${key} must be a string`);
+              }
+            }
+          }
+        }
+      }
+      if (discovery.platformNotes !== undefined) {
+        if (!isRecord(discovery.platformNotes)) {
+          findings.push('discovery.platformNotes must be an object');
+        } else {
+          findings.push(
+            ...collectUnknownKeys({
+              value: discovery.platformNotes,
+              path: 'discovery.platformNotes',
+              allowed: ['react', 'react-native'],
+            })
+          );
+          for (const key of ['react', 'react-native'] as const) {
+            findings.push(
+              ...collectOptionalStringArray(
+                discovery.platformNotes,
+                key,
+                'discovery.platformNotes'
+              )
+            );
+          }
+        }
+      }
+    }
+  }
+
+  if (metadata.examples !== undefined) {
+    if (!Array.isArray(metadata.examples)) {
+      findings.push('examples must be an array');
+    } else {
+      for (const [index, example] of metadata.examples.entries()) {
+        findings.push(...collectExampleShape(example, `examples[${index}]`));
+      }
+    }
+  }
+
+  if (metadata.api !== undefined) {
+    if (!isRecord(metadata.api)) {
+      findings.push('api must be an object');
+    } else {
+      const api = metadata.api;
+      findings.push(
+        ...collectUnknownKeys({
+          value: api,
+          path: 'api',
+          allowed: ['sections', 'descriptions'],
+        })
+      );
+      if (api.descriptions !== undefined) {
+        findings.push(
+          ...collectPrimitiveRecordShape({
+            value: api.descriptions,
+            field: 'api.descriptions',
+            allowedTypes: ['string'],
+          })
+        );
+      }
+      if (api.sections !== undefined) {
+        if (!Array.isArray(api.sections)) {
+          findings.push('api.sections must be an array');
+        } else {
+          for (const [index, section] of api.sections.entries()) {
+            const sectionPath = `api.sections[${index}]`;
+            if (!isRecord(section)) {
+              findings.push(`${sectionPath} must be an object`);
+              continue;
+            }
+            findings.push(
+              ...collectUnknownKeys({
+                value: section,
+                path: sectionPath,
+                allowed: ['name', 'exportName'],
+              })
+            );
+            if (typeof section.name !== 'string') {
+              findings.push(`${sectionPath}.name must be a string`);
+            }
+            if (typeof section.exportName === 'string') {
+              continue;
+            }
+            if (!isRecord(section.exportName)) {
+              findings.push(
+                `${sectionPath}.exportName must be a string or platform object`
+              );
+              continue;
+            }
+            findings.push(
+              ...collectUnknownKeys({
+                value: section.exportName,
+                path: `${sectionPath}.exportName`,
+                allowed: ['react', 'react-native'],
+              })
+            );
+            for (const [platform, exportName] of Object.entries(
+              section.exportName
+            )) {
+              if (typeof exportName !== 'string') {
+                findings.push(
+                  `${sectionPath}.exportName.${platform} must be a string`
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (metadata.accessibility !== undefined) {
+    if (!isRecord(metadata.accessibility)) {
+      findings.push('accessibility must be an object');
+    } else {
+      findings.push(
+        ...collectUnknownKeys({
+          value: metadata.accessibility,
+          path: 'accessibility',
+          allowed: ['react', 'native'],
+        })
+      );
+      for (const key of ['react', 'native'] as const) {
+        if (metadata.accessibility[key] !== undefined) {
+          findings.push(
+            ...collectAccessibilityEntriesShape(
+              metadata.accessibility[key],
+              `accessibility.${key}`
+            )
+          );
+        }
+      }
+    }
+  }
+
+  if (metadata.related !== undefined) {
+    findings.push(...collectStringArrayShape(metadata.related, 'related'));
+  }
+
+  return findings;
+}
+
 export async function loadComponentMetadata(params: {
   catalogComponentsRoot: string;
   componentName: string;
@@ -138,12 +748,26 @@ export async function loadComponentMetadata(params: {
     return {};
   }
 
-  const metadataModule = (await import(pathToFileURL(metadataFile).href)) as {
-    default?: ComponentPageMetadata;
-    metadata?: ComponentPageMetadata;
-  };
+  let metadataModule: { default?: unknown; metadata?: unknown };
 
-  return metadataModule.default ?? metadataModule.metadata ?? {};
+  try {
+    metadataModule = (await import(pathToFileURL(metadataFile).href)) as {
+      default?: unknown;
+      metadata?: unknown;
+    };
+  } catch {
+    throw new ComponentMetadataValidationError(params.componentName, [
+      'metadata.ts could not be loaded as a TypeScript module',
+    ]);
+  }
+
+  const metadata = metadataModule.default ?? metadataModule.metadata ?? {};
+  assertValidComponentMetadataFindings({
+    componentName: params.componentName,
+    findings: collectComponentMetadataRuntimeShapeFindings(metadata),
+  });
+
+  return metadata as ComponentPageMetadata;
 }
 
 function mergeObject<T extends Record<string, unknown>>(
