@@ -10,12 +10,13 @@ import {
 import { capitalize } from '../helpers/format';
 import type { ComponentPageMetadata } from '../metadata/metadata';
 import {
-  loadComponentMetadata,
+  assertValidComponentMetadataFindings,
+  collectComponentMetadataAgainstApiFindings,
+  collectComponentMetadataFindings,
+  loadComponentMetadataAnalysis,
   loadGeneratedComponentCategory,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
-  validateComponentMetadataAgainstApi,
-  validateComponentMetadata,
 } from '../metadata/metadata';
 import type { ExtractedProp, Platform } from './types';
 import {
@@ -472,10 +473,13 @@ export async function resolvePageInput(params: {
 }) {
   const { root, catalogComponentsRoot, componentName } = params;
 
-  const componentMetadata = await loadComponentMetadata({
+  const metadataAnalysis = await loadComponentMetadataAnalysis({
     catalogComponentsRoot,
     componentName,
+    requireRelatedDecision: params.requireRelatedDecision,
+    requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
   });
+  const componentMetadata = metadataAnalysis.metadata;
 
   const platforms: Platform[] = [];
 
@@ -563,23 +567,22 @@ export async function resolvePageInput(params: {
     ),
   });
 
+  const generatedBaseConfig = mergeComponentMetadata(
+    getProfileMetadata(inferredComponentProfile, {
+      reactApiProps,
+      nativeApiProps,
+    }),
+    generatedComposition
+  );
   const componentConfig = mergeComponentMetadata(
-    mergeComponentMetadata(
-      getProfileMetadata(inferredComponentProfile, {
-        reactApiProps,
-        nativeApiProps,
-      }),
-      generatedComposition
-    ),
+    generatedBaseConfig,
     componentMetadata
   );
-
-  validateComponentMetadata({
-    componentName,
-    metadata: componentConfig,
-    requireRelatedDecision: params.requireRelatedDecision,
-    requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
-  });
+  const semanticComponentConfig = mergeComponentMetadata(
+    generatedBaseConfig,
+    componentMetadata,
+    { preservePlatformOverrideArrayIdentity: true }
+  );
 
   const componentProfile = componentConfig.profile ?? inferredComponentProfile;
 
@@ -589,12 +592,27 @@ export async function resolvePageInput(params: {
     generatedCategory: generatedComponentCategory,
   });
 
-  validateComponentMetadataAgainstApi({
+  assertValidComponentMetadataFindings({
     componentName,
-    metadata: componentConfig,
-    platforms,
-    reactApiProps,
-    nativeApiProps,
+    findings: [
+      ...metadataAnalysis.findings,
+      ...metadataAnalysis.decisionFindings,
+      ...collectComponentMetadataFindings({
+        componentName,
+        metadata: semanticComponentConfig,
+        blockedPaths: metadataAnalysis.blockedPaths,
+      }),
+      ...collectComponentMetadataAgainstApiFindings({
+        componentName,
+        metadata: semanticComponentConfig,
+        blockedPaths: metadataAnalysis.blockedPaths,
+        platforms,
+        reactApiProps,
+        nativeApiProps,
+      }),
+    ],
+    analysisComplete: metadataAnalysis.analysisComplete,
+    apiDescriptionAnalysis: metadataAnalysis.apiDescriptionAnalysis,
   });
 
   const reactProgram = platforms.includes('react')

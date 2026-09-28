@@ -457,7 +457,7 @@ describe('component production contract regression matrix', () => {
       output: [],
       pid: 1,
       stdout: JSON.stringify({
-        schemaVersion: '1',
+        schemaVersion: '2',
         componentName: 'ContractProbe',
         status: 'stale',
         staleFiles: [

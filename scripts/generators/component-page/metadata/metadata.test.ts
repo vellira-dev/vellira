@@ -6,12 +6,18 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  ComponentMetadataValidationError,
+  collectComponentMetadataAgainstApiFindings,
+  collectComponentMetadataFindings,
+  collectComponentMetadataRuntimeShapeFindings,
+  loadComponentMetadataAnalysis,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
   validateComponentMetadataAgainstApi,
   validateComponentMetadata,
   validateRelatedComponentSlugs,
 } from './metadata';
+import { buildSemanticMetadataDecisionAuthority } from '../semantic-metadata-authority';
 import {
   canonicalComponentSlugs,
   canonicalComponentSlugsFromEntries,
@@ -87,6 +93,61 @@ afterEach(() => {
   }
 });
 
+it('separates partial semantic evidence from API rendering metadata', async () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-component-partial-metadata-')
+  );
+  roots.push(root);
+  const componentDir = path.join(root, 'Button');
+  fs.mkdirSync(componentDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(componentDir, 'metadata.ts'),
+    `export default {
+  api: {
+    sections: [
+      { name: 42, exportName: 'Button' },
+      { name: 'Valid', exportName: 'Button' },
+      {
+        name: 'React only',
+        exportName: { react: 'Button', 'react-native': 42 },
+      },
+    ],
+    descriptions: { source: 'A meaningful source description.' },
+  },
+};\n`
+  );
+
+  const analysis = await loadComponentMetadataAnalysis({
+    catalogComponentsRoot: root,
+    componentName: 'Button',
+  });
+
+  expect(analysis.blockedPaths).toEqual(
+    new Set([
+      'api.sections[0]',
+      'api.sections[0].name',
+      'api.sections[2]',
+      'api.sections[2].exportName.react-native',
+    ])
+  );
+  expect(analysis.metadata.api?.sections).toEqual([
+    { exportName: 'Button' },
+    { name: 'Valid', exportName: 'Button' },
+    { name: 'React only', exportName: { react: 'Button' } },
+  ]);
+  expect(analysis.apiDescriptionMetadata.api).toEqual({
+    sections: [
+      {
+        name: '__vellira_partial_api_section_0',
+        exportName: 'Button',
+      },
+      { name: 'Valid', exportName: 'Button' },
+      { name: 'React only', exportName: { react: 'Button' } },
+    ],
+    descriptions: { source: 'A meaningful source description.' },
+  });
+});
+
 describe('loadGeneratedComponentProfile', () => {
   it('loads the canonical compound profile', () => {
     const root = createFixture('compound');
@@ -159,6 +220,128 @@ describe('mergeComponentMetadata', () => {
 });
 
 describe('validateComponentMetadata', () => {
+  it('bounds structured semantic findings without losing omission evidence', () => {
+    const error = new ComponentMetadataValidationError(
+      'Avatar',
+      Array.from(
+        { length: 200 },
+        (_, index) => `${index}: ${'x'.repeat(2_100)}`
+      )
+    );
+
+    expect(error.findings.length).toBeLessThanOrEqual(128);
+    expect(error.findings.every((finding) => finding.length <= 2_000)).toBe(
+      true
+    );
+    expect(
+      error.findings.reduce((total, finding) => total + finding.length, 0)
+    ).toBeLessThanOrEqual(8_000);
+    expect(error.findings.at(-1)).toContain(
+      'omitted by the bounded semantic protocol'
+    );
+  });
+
+  it('keeps final bounded findings unique when long originals share a truncation prefix', () => {
+    const sharedPrefix = 'x'.repeat(1_999);
+    const originals = [
+      `${sharedPrefix}AAAA`,
+      `${sharedPrefix}BBBB`,
+      `${sharedPrefix}AAAA`,
+      ...Array.from(
+        { length: 200 },
+        (_, index) => `finding-${index}-${'z'.repeat(2_100)}`
+      ),
+    ];
+    const first = new ComponentMetadataValidationError('Avatar', originals);
+    const second = new ComponentMetadataValidationError('Avatar', originals);
+
+    expect(first.findings).toEqual(second.findings);
+    expect(first.findings).toEqual([...new Set(first.findings)]);
+    expect(first.findings.length).toBeLessThanOrEqual(128);
+    expect(first.findings.every((finding) => finding.length <= 2_000)).toBe(
+      true
+    );
+    expect(
+      first.findings.reduce((total, finding) => total + finding.length, 0)
+    ).toBeLessThanOrEqual(8_000);
+    expect(
+      first.findings.filter((finding) => finding.includes('[sha256:'))
+    ).toHaveLength(3);
+    expect(first.findings.at(-1)).toBe(
+      '199 additional metadata finding(s) omitted by the bounded semantic protocol'
+    );
+  });
+
+  it('collects invalid runtime shapes before semantic consumers execute', () => {
+    expect(
+      collectComponentMetadataRuntimeShapeFindings({
+        examples: {},
+        react: { imports: 'not-an-array' },
+        demo: { staticProps: { disabled: true } },
+      })
+    ).toEqual([
+      'react.imports must be an array',
+      'demo.staticProps.disabled must be string',
+      'examples must be an array',
+    ]);
+  });
+
+  it('collects simultaneous decision, vocabulary, and API-reference failures', () => {
+    const metadata = {
+      related: ['Badge', 'Badge'],
+      demo: { initialValues: { missingProp: true } },
+    };
+    const findings = [
+      ...collectComponentMetadataFindings({
+        componentName: 'Avatar',
+        metadata,
+        requireCatalogPreviewDecision: true,
+      }),
+      ...collectComponentMetadataAgainstApiFindings({
+        componentName: 'Avatar',
+        metadata,
+        platforms: ['react'],
+        reactApiProps: [],
+        nativeApiProps: [],
+      }),
+    ];
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('catalogPreview must be explicitly defined'),
+        expect.stringContaining('related[0] "Badge"'),
+        expect.stringContaining('duplicate related component slug "Badge"'),
+        expect.stringContaining(
+          'demo.initialValues.missingProp is not present in any target API'
+        ),
+      ])
+    );
+  });
+
+  it('derives conditional production decisions from canonical public state', () => {
+    const avatar = buildSemanticMetadataDecisionAuthority({
+      root: process.cwd(),
+      componentName: 'Avatar',
+    });
+    const matureButton = buildSemanticMetadataDecisionAuthority({
+      root: process.cwd(),
+      componentName: 'Button',
+    });
+
+    expect(avatar.requiredDecisions.map((decision) => decision.path)).toEqual([
+      'related',
+      'catalogPreview',
+    ]);
+    expect(
+      matureButton.requiredDecisions.map((decision) => decision.path)
+    ).toEqual(['related']);
+    expect(avatar.validationSources.length).toBeGreaterThan(5);
+    expect(
+      avatar.validationSources.every((source) =>
+        /^[0-9a-f]{64}$/.test(source.sha256)
+      )
+    ).toBe(true);
+  });
   it('accepts canonical related component slugs, including kebab-case slugs', () => {
     expect(
       validateRelatedComponentSlugs({
@@ -573,6 +756,7 @@ describe('semantic metadata contract', () => {
     );
 
     expect(contract.schemaPath).toBe(METADATA_SCHEMA_PATH);
+    expect(contract.schemaVersion).toBe('2');
     expect(contract.metadataSchemaPath).toBe(METADATA_SCHEMA_PATH);
     expect(contract.relatedComponentRegistry.path).toBe(
       COMPONENT_REGISTRY_PATH
@@ -597,6 +781,11 @@ describe('semantic metadata contract', () => {
       relatedMustUseExactCase: true,
       relatedSlugFormat: 'lowercase-kebab-case',
     });
+    expect(
+      contract.semanticDecisionAuthority.requiredDecisions.map(
+        (decision) => decision.path
+      )
+    ).toEqual(['related', 'catalogPreview']);
   });
 
   it('keeps exported vocabulary and validator acceptance in parity', () => {
