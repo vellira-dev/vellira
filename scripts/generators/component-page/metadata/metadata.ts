@@ -842,6 +842,62 @@ function safelyAnalyzableMetadata(
   const safeMetadata: Record<string, unknown> = {};
   const blockedKeys = new Set<(typeof COMPONENT_METADATA_KEYS)[number]>();
 
+  function sanitizeValue(
+    value: unknown,
+    validate: (candidate: unknown) => boolean
+  ): unknown {
+    if (validate(value)) return value;
+
+    if (Array.isArray(value)) {
+      const safeItems = value.flatMap((item) => {
+        const safeItem = sanitizeValue(item, (candidate) =>
+          validate([candidate])
+        );
+        return safeItem === undefined ? [] : [safeItem];
+      });
+      return validate(safeItems) ? safeItems : undefined;
+    }
+
+    if (isRecord(value)) {
+      const safeRecord: Record<string, unknown> = {};
+      for (const [childKey, childValue] of Object.entries(value)) {
+        const safeChild = sanitizeValue(childValue, (candidate) =>
+          validate({ [childKey]: candidate })
+        );
+        if (safeChild !== undefined) safeRecord[childKey] = safeChild;
+      }
+      return validate(safeRecord) ? safeRecord : undefined;
+    }
+
+    return undefined;
+  }
+
+  function sanitizeExample(value: unknown, index: number) {
+    if (!isRecord(value)) return undefined;
+
+    const path = `examples[${index}]`;
+    const baseline: Record<string, unknown> = {
+      title: `__invalid_example_${index}`,
+      description: '',
+      props: [],
+    };
+    const safeExample = { ...baseline };
+
+    for (const [key, childValue] of Object.entries(value)) {
+      const safeChild = sanitizeValue(
+        childValue,
+        (candidate) =>
+          collectExampleShape({ ...baseline, [key]: candidate }, path)
+            .length === 0
+      );
+      if (safeChild !== undefined) safeExample[key] = safeChild;
+    }
+
+    return collectExampleShape(safeExample, path).length === 0
+      ? safeExample
+      : undefined;
+  }
+
   for (const key of COMPONENT_METADATA_KEYS) {
     const value = metadata[key];
     if (value === undefined) continue;
@@ -856,14 +912,25 @@ function safelyAnalyzableMetadata(
 
     blockedKeys.add(key);
 
-    // A malformed example cannot hide semantic defects in structurally valid
-    // sibling examples. Shape findings still retain every invalid entry.
+    // A local shape failure cannot hide independent semantics in safe sibling
+    // fields. The canonical shape collector defines which partial values can
+    // be analyzed; no diagnostic strings or duplicate dependency map are used.
     if (key === 'examples' && Array.isArray(value)) {
-      safeMetadata.examples = value.filter(
-        (example, index) =>
-          collectExampleShape(example, `examples[${index}]`).length === 0
-      );
+      safeMetadata.examples = value.flatMap((example, index) => {
+        const safeExample = sanitizeExample(example, index);
+        return safeExample === undefined ? [] : [safeExample];
+      });
+      continue;
     }
+
+    const safeValue = sanitizeValue(
+      value,
+      (candidate) =>
+        collectComponentMetadataRuntimeShapeFindings({
+          [key]: candidate,
+        }).length === 0
+    );
+    if (safeValue !== undefined) safeMetadata[key] = safeValue;
   }
 
   return {
@@ -932,9 +999,10 @@ export async function loadComponentMetadataAnalysis(params: {
       requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
     }),
     analysisComplete: safe.blockedKeys.size === 0,
-    apiDescriptionAnalysis: safe.blockedKeys.has('api')
-      ? 'blocked'
-      : 'available',
+    apiDescriptionAnalysis:
+      rawMetadata.api !== undefined && safe.metadata.api === undefined
+        ? 'blocked'
+        : 'available',
   };
 }
 

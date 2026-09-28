@@ -574,6 +574,104 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     );
   }, 60_000);
 
+  it('keeps platform sibling semantics when another platform field is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: { imports: 42, demoProps: 'missingProp={true}' },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'react.imports must be an array',
+        expect.stringContaining(
+          'react.demoProps prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps example prop semantics when an independent required field is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    { title: 42, description: 'Still analyzed.', props: ['missingProp={true}'] },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[0].title must be a string',
+        expect.stringContaining(
+          'examples[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps API descriptions analyzable when only API sections are malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  api: { sections: 42, descriptions: { unknown: 'Still inspectable.' } },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toContain('api.sections must be an array');
+  }, 60_000);
+
   it('returns a structured semantic finding for metadata syntax failure', () => {
     const metadataFile = path.join(
       fixture,
