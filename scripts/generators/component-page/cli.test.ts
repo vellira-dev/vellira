@@ -824,7 +824,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     );
   }, 60_000);
 
-  it('does not infer target platforms when the authored platform field is malformed', () => {
+  it('uses known target platforms without inferring from malformed siblings', () => {
     const metadataFile = path.join(
       fixture,
       'apps/website/src/component-catalog/components/Button/metadata.ts'
@@ -857,8 +857,82 @@ describe('component page CLI check modes', { concurrent: false }, () => {
     expect(payload.findings).toContain(
       'examples[0].platforms[0] must be a string'
     );
-    expect(payload.findings).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('missingProp')])
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          'examples[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
+  }, 60_000);
+
+  it('retains unsupported known platforms beside malformed platform entries', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    {
+      title: 'Mixed target evidence',
+      description: 'One entry is malformed and one is known-invalid.',
+      props: [],
+      platforms: [42, 'web'],
+    },
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[0].platforms[0] must be a string',
+        'examples[0] has unsupported platform "web"',
+      ])
+    );
+  }, 60_000);
+
+  it('preserves import indexes through partial platform metadata merging', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  react: { imports: [42, 43, 'import {'] },
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'react.imports[0] must be a string',
+        'react.imports[1] must be a string',
+        expect.stringContaining('react.imports[2]'),
+      ])
     );
   }, 60_000);
 

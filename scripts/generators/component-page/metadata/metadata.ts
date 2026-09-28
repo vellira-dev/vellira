@@ -1167,12 +1167,14 @@ function mergePlatformMetadata(
   base: ComponentPageMetadata['react'],
   override: ComponentPageMetadata['react']
 ) {
-  const imports = Array.from(
-    new Set([...(base?.imports ?? []), ...(override?.imports ?? [])])
-  );
-  const setup = Array.from(
-    new Set([...(base?.setup ?? []), ...(override?.setup ?? [])])
-  );
+  const overrideImports = override?.imports ?? [];
+  const overrideSetup = override?.setup ?? [];
+  const imports = overrideImports.some((entry) => entry === undefined)
+    ? overrideImports
+    : Array.from(new Set([...(base?.imports ?? []), ...overrideImports]));
+  const setup = overrideSetup.some((entry) => entry === undefined)
+    ? overrideSetup
+    : Array.from(new Set([...(base?.setup ?? []), ...overrideSetup]));
 
   return {
     ...(base ?? {}),
@@ -1732,7 +1734,11 @@ export function collectComponentMetadataFindings(params: {
 
     const platformsBlocked = isPathBlocked(`examples[${index}].platforms`);
 
-    for (const platform of platformsBlocked ? [] : (example.platforms ?? [])) {
+    const knownPlatforms = (example.platforms ?? []).filter(
+      (platform): platform is Platform => typeof platform === 'string'
+    );
+
+    for (const platform of knownPlatforms) {
       if (platform !== 'react' && platform !== 'react-native') {
         errors.push(
           `examples[${index}] has unsupported platform "${platform}"`
@@ -1741,7 +1747,9 @@ export function collectComponentMetadataFindings(params: {
     }
 
     const platforms = new Set(
-      platformsBlocked ? [] : (example.platforms ?? ['react', 'react-native'])
+      platformsBlocked
+        ? knownPlatforms
+        : (example.platforms ?? ['react', 'react-native'])
     );
 
     if (!platformsBlocked && !platforms.has('react')) {
@@ -2066,9 +2074,12 @@ export function collectComponentMetadataAgainstApiFindings(params: {
 
   for (const [index, example] of (metadata.examples ?? []).entries()) {
     if (example === undefined) continue;
-    if (isPathBlocked(`examples[${index}].platforms`)) continue;
-
-    const targetPlatforms = example.platforms ?? platforms;
+    const platformsBlocked = isPathBlocked(`examples[${index}].platforms`);
+    const targetPlatforms = platformsBlocked
+      ? (example.platforms ?? []).filter(
+          (platform): platform is Platform => typeof platform === 'string'
+        )
+      : (example.platforms ?? platforms);
 
     for (const platform of targetPlatforms) {
       if (!platforms.includes(platform)) {
