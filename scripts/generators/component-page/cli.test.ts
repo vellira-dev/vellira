@@ -439,6 +439,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
       metadataPath:
         'apps/website/src/component-catalog/components/Textarea/metadata.ts',
       analysisComplete: true,
+      apiDescriptionAnalysis: 'available',
       findings: expect.arrayContaining([
         expect.stringContaining('related must be explicitly defined'),
         expect.stringContaining('catalogPreview must be explicitly defined'),
@@ -470,8 +471,107 @@ describe('component page CLI check modes', { concurrent: false }, () => {
       metadataPath:
         'apps/website/src/component-catalog/components/Button/metadata.ts',
       analysisComplete: false,
-      findings: ['examples must be an array'],
+      apiDescriptionAnalysis: 'available',
+      findings: expect.arrayContaining([
+        'examples must be an array',
+        expect.stringContaining('related must be explicitly defined'),
+      ]),
     });
+  }, 60_000);
+
+  it('aggregates malformed examples with every independent required decision', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Textarea/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { examples: {} } as any;\n`);
+
+    const result = runGenerator(fixture, [
+      'Textarea',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples must be an array',
+        expect.stringContaining('related must be explicitly defined'),
+        expect.stringContaining('catalogPreview must be explicitly defined'),
+      ])
+    );
+  }, 60_000);
+
+  it('blocks only API-dependent analysis when the API subtree is malformed', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(metadataFile, `export default { api: 42 } as any;\n`);
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('blocked');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'api must be an object',
+        expect.stringContaining('related must be explicitly defined'),
+      ])
+    );
+  }, 60_000);
+
+  it('keeps semantic analysis for valid siblings in a partially malformed examples array', () => {
+    const metadataFile = path.join(
+      fixture,
+      'apps/website/src/component-catalog/components/Button/metadata.ts'
+    );
+
+    fs.writeFileSync(
+      metadataFile,
+      `export default {
+  related: [],
+  examples: [
+    { title: 'Valid sibling', description: 'Still analyzed.', props: ['missingProp={true}'] },
+    42,
+  ],
+} as any;\n`
+    );
+
+    const result = runGenerator(fixture, [
+      'Button',
+      '--force',
+      '--check',
+      '--json',
+    ]);
+    const payload = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(2);
+    expect(payload.analysisComplete).toBe(false);
+    expect(payload.apiDescriptionAnalysis).toBe('available');
+    expect(payload.findings).toEqual(
+      expect.arrayContaining([
+        'examples[1] must be an object',
+        expect.stringContaining(
+          'examples[0].props prop fragment "missingProp" is not present in the react API'
+        ),
+      ])
+    );
   }, 60_000);
 
   it('returns a structured semantic finding for metadata syntax failure', () => {
@@ -498,6 +598,7 @@ describe('component page CLI check modes', { concurrent: false }, () => {
       metadataPath:
         'apps/website/src/component-catalog/components/Button/metadata.ts',
       analysisComplete: false,
+      apiDescriptionAnalysis: 'blocked',
       findings: ['metadata.ts could not be loaded as a TypeScript module'],
     });
   }, 60_000);

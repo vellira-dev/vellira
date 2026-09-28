@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 
 import ts from 'typescript';
 
@@ -18,40 +19,86 @@ export type ComponentPageProfile = NonNullable<
   ComponentPageMetadata['profile']
 >;
 
+export type ApiDescriptionAnalysis = 'available' | 'blocked';
+
+const MAX_SEMANTIC_FINDINGS = 128;
+const MAX_SEMANTIC_FINDING_LENGTH = 2_000;
+const MAX_SEMANTIC_FINDINGS_LENGTH = 8_000;
+const RESERVED_SEMANTIC_FINDINGS_LENGTH = 7_800;
+
+function boundSemanticFinding(finding: string) {
+  if (finding.length <= MAX_SEMANTIC_FINDING_LENGTH) return finding;
+
+  const digest = createHash('sha256')
+    .update(finding, 'utf8')
+    .digest('hex')
+    .slice(0, 16);
+  const suffix = `… [sha256:${digest}]`;
+  return `${finding.slice(0, MAX_SEMANTIC_FINDING_LENGTH - suffix.length)}${suffix}`;
+}
+
+function boundSemanticFindings(findings: readonly string[]) {
+  const uniqueOriginalFindings = [...new Set(findings)];
+  const orderedFindings: string[] = [];
+  const emittedFindings = new Set<string>();
+  let totalLength = 0;
+
+  for (const finding of uniqueOriginalFindings) {
+    const boundedFinding = boundSemanticFinding(finding);
+
+    if (emittedFindings.has(boundedFinding)) continue;
+    if (
+      orderedFindings.length >= MAX_SEMANTIC_FINDINGS - 1 ||
+      totalLength + boundedFinding.length > RESERVED_SEMANTIC_FINDINGS_LENGTH
+    ) {
+      continue;
+    }
+
+    emittedFindings.add(boundedFinding);
+    orderedFindings.push(boundedFinding);
+    totalLength += boundedFinding.length;
+  }
+
+  let omittedCount = uniqueOriginalFindings.length - orderedFindings.length;
+  while (omittedCount > 0) {
+    const sentinel = `${omittedCount} additional metadata finding(s) omitted by the bounded semantic protocol`;
+    const collisionIndex = orderedFindings.indexOf(sentinel);
+    if (collisionIndex >= 0) {
+      totalLength -= orderedFindings[collisionIndex].length;
+      orderedFindings.splice(collisionIndex, 1);
+      omittedCount += 1;
+      continue;
+    }
+    if (
+      sentinel.length > MAX_SEMANTIC_FINDING_LENGTH ||
+      totalLength + sentinel.length > MAX_SEMANTIC_FINDINGS_LENGTH
+    ) {
+      throw new Error(
+        'Bounded semantic finding sentinel exceeds its protocol limits.'
+      );
+    }
+    orderedFindings.push(sentinel);
+    break;
+  }
+
+  return orderedFindings;
+}
+
 export class ComponentMetadataValidationError extends Error {
   readonly componentName: string;
   readonly findings: readonly string[];
   readonly analysisComplete: boolean;
+  readonly apiDescriptionAnalysis: ApiDescriptionAnalysis;
 
   constructor(
     componentName: string,
     findings: readonly string[],
-    options: { analysisComplete?: boolean } = {}
+    options: {
+      analysisComplete?: boolean;
+      apiDescriptionAnalysis?: ApiDescriptionAnalysis;
+    } = {}
   ) {
-    const uniqueFindings = [...new Set(findings)];
-    const orderedFindings: string[] = [];
-    let totalLength = 0;
-
-    for (const finding of uniqueFindings) {
-      const boundedFinding =
-        finding.length <= 2_000 ? finding : `${finding.slice(0, 1_999)}…`;
-
-      if (
-        orderedFindings.length >= 127 ||
-        totalLength + boundedFinding.length > 7_800
-      ) {
-        break;
-      }
-
-      orderedFindings.push(boundedFinding);
-      totalLength += boundedFinding.length;
-    }
-
-    if (orderedFindings.length < uniqueFindings.length) {
-      orderedFindings.push(
-        `${uniqueFindings.length - orderedFindings.length} additional metadata finding(s) omitted by the bounded semantic protocol`
-      );
-    }
+    const orderedFindings = boundSemanticFindings(findings);
 
     super(
       `Invalid component page metadata for ${componentName}:\n${orderedFindings
@@ -62,17 +109,24 @@ export class ComponentMetadataValidationError extends Error {
     this.componentName = componentName;
     this.findings = orderedFindings;
     this.analysisComplete = options.analysisComplete ?? true;
+    this.apiDescriptionAnalysis = options.apiDescriptionAnalysis ?? 'available';
   }
 }
 
 export function assertValidComponentMetadataFindings(params: {
   componentName: string;
   findings: readonly string[];
+  analysisComplete?: boolean;
+  apiDescriptionAnalysis?: ApiDescriptionAnalysis;
 }) {
   if (params.findings.length > 0) {
     throw new ComponentMetadataValidationError(
       params.componentName,
-      params.findings
+      params.findings,
+      {
+        analysisComplete: params.analysisComplete,
+        apiDescriptionAnalysis: params.apiDescriptionAnalysis,
+      }
     );
   }
 }
@@ -375,6 +429,20 @@ function collectAccessibilityEntriesShape(value: unknown, path: string) {
   });
 }
 
+const COMPONENT_METADATA_KEYS = [
+  'profile',
+  'react',
+  'native',
+  'demo',
+  'catalogPreview',
+  'defaults',
+  'discovery',
+  'examples',
+  'api',
+  'accessibility',
+  'related',
+] as const;
+
 export function collectComponentMetadataRuntimeShapeFindings(
   metadata: unknown
 ) {
@@ -385,19 +453,7 @@ export function collectComponentMetadataRuntimeShapeFindings(
   const findings = collectUnknownKeys({
     value: metadata,
     path: 'metadata',
-    allowed: [
-      'profile',
-      'react',
-      'native',
-      'demo',
-      'catalogPreview',
-      'defaults',
-      'discovery',
-      'examples',
-      'api',
-      'accessibility',
-      'related',
-    ],
+    allowed: COMPONENT_METADATA_KEYS,
   });
 
   if (
@@ -744,14 +800,99 @@ export function collectComponentMetadataRuntimeShapeFindings(
   return findings;
 }
 
-export async function loadComponentMetadata(params: {
+export function collectComponentMetadataDecisionFindings(params: {
+  metadata: Readonly<Record<string, unknown>>;
+  requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
+}) {
+  const findings: string[] = [];
+
+  if (params.requireRelatedDecision && params.metadata.related === undefined) {
+    findings.push(
+      'related must be explicitly defined; use related: [] when no related components are intended'
+    );
+  }
+
+  if (
+    params.requireCatalogPreviewDecision &&
+    params.metadata.catalogPreview === undefined
+  ) {
+    findings.push(
+      'catalogPreview must be explicitly defined; provide catalogPreview: {} or a hand-authored CatalogPreview'
+    );
+  }
+
+  return findings;
+}
+
+export type ComponentMetadataAnalysis = {
+  metadata: ComponentPageMetadata;
+  findings: readonly string[];
+  decisionFindings: readonly string[];
+  analysisComplete: boolean;
+  apiDescriptionAnalysis: ApiDescriptionAnalysis;
+};
+
+function safelyAnalyzableMetadata(
+  metadata: Readonly<Record<string, unknown>>
+): {
+  metadata: ComponentPageMetadata;
+  blockedKeys: ReadonlySet<(typeof COMPONENT_METADATA_KEYS)[number]>;
+} {
+  const safeMetadata: Record<string, unknown> = {};
+  const blockedKeys = new Set<(typeof COMPONENT_METADATA_KEYS)[number]>();
+
+  for (const key of COMPONENT_METADATA_KEYS) {
+    const value = metadata[key];
+    if (value === undefined) continue;
+
+    const keyFindings = collectComponentMetadataRuntimeShapeFindings({
+      [key]: value,
+    });
+    if (keyFindings.length === 0) {
+      safeMetadata[key] = value;
+      continue;
+    }
+
+    blockedKeys.add(key);
+
+    // A malformed example cannot hide semantic defects in structurally valid
+    // sibling examples. Shape findings still retain every invalid entry.
+    if (key === 'examples' && Array.isArray(value)) {
+      safeMetadata.examples = value.filter(
+        (example, index) =>
+          collectExampleShape(example, `examples[${index}]`).length === 0
+      );
+    }
+  }
+
+  return {
+    metadata: safeMetadata as ComponentPageMetadata,
+    blockedKeys,
+  };
+}
+
+export async function loadComponentMetadataAnalysis(params: {
   catalogComponentsRoot: string;
   componentName: string;
-}): Promise<ComponentPageMetadata> {
+  requireRelatedDecision?: boolean;
+  requireCatalogPreviewDecision?: boolean;
+}): Promise<ComponentMetadataAnalysis> {
   const metadataFile = getComponentMetadataFile(params);
 
   if (!fs.existsSync(metadataFile)) {
-    return {};
+    const metadata = {};
+    return {
+      metadata,
+      findings: [],
+      decisionFindings: collectComponentMetadataDecisionFindings({
+        metadata,
+        requireRelatedDecision: params.requireRelatedDecision,
+        requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
+      }),
+      analysisComplete: true,
+      apiDescriptionAnalysis: 'available',
+    };
   }
 
   let metadataModule: { default?: unknown; metadata?: unknown };
@@ -765,22 +906,55 @@ export async function loadComponentMetadata(params: {
     throw new ComponentMetadataValidationError(
       params.componentName,
       ['metadata.ts could not be loaded as a TypeScript module'],
-      { analysisComplete: false }
+      { analysisComplete: false, apiDescriptionAnalysis: 'blocked' }
     );
   }
 
-  const metadata = metadataModule.default ?? metadataModule.metadata ?? {};
-  const runtimeShapeFindings =
-    collectComponentMetadataRuntimeShapeFindings(metadata);
-  if (runtimeShapeFindings.length > 0) {
+  const rawMetadata = metadataModule.default ?? metadataModule.metadata ?? {};
+  const findings = collectComponentMetadataRuntimeShapeFindings(rawMetadata);
+  if (!isRecord(rawMetadata)) {
+    return {
+      metadata: {},
+      findings,
+      decisionFindings: [],
+      analysisComplete: false,
+      apiDescriptionAnalysis: 'blocked',
+    };
+  }
+
+  const safe = safelyAnalyzableMetadata(rawMetadata);
+  return {
+    metadata: safe.metadata,
+    findings,
+    decisionFindings: collectComponentMetadataDecisionFindings({
+      metadata: rawMetadata,
+      requireRelatedDecision: params.requireRelatedDecision,
+      requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
+    }),
+    analysisComplete: safe.blockedKeys.size === 0,
+    apiDescriptionAnalysis: safe.blockedKeys.has('api')
+      ? 'blocked'
+      : 'available',
+  };
+}
+
+export async function loadComponentMetadata(params: {
+  catalogComponentsRoot: string;
+  componentName: string;
+}): Promise<ComponentPageMetadata> {
+  const analysis = await loadComponentMetadataAnalysis(params);
+  if (analysis.findings.length > 0) {
     throw new ComponentMetadataValidationError(
       params.componentName,
-      runtimeShapeFindings,
-      { analysisComplete: false }
+      analysis.findings,
+      {
+        analysisComplete: analysis.analysisComplete,
+        apiDescriptionAnalysis: analysis.apiDescriptionAnalysis,
+      }
     );
   }
 
-  return metadata as ComponentPageMetadata;
+  return analysis.metadata;
 }
 
 function mergeObject<T extends Record<string, unknown>>(
@@ -1187,17 +1361,13 @@ export function collectComponentMetadataFindings(params: {
   const exampleTitles = new Set<string>();
   const apiSections = new Set<string>();
 
-  if (requireRelatedDecision && metadata.related === undefined) {
-    errors.push(
-      'related must be explicitly defined; use related: [] when no related components are intended'
-    );
-  }
-
-  if (requireCatalogPreviewDecision && metadata.catalogPreview === undefined) {
-    errors.push(
-      'catalogPreview must be explicitly defined; provide catalogPreview: {} or a hand-authored CatalogPreview'
-    );
-  }
+  errors.push(
+    ...collectComponentMetadataDecisionFindings({
+      metadata: metadata as Readonly<Record<string, unknown>>,
+      requireRelatedDecision,
+      requireCatalogPreviewDecision,
+    })
+  );
 
   const catalogPreview = metadata.catalogPreview;
 

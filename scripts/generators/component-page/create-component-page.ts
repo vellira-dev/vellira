@@ -187,6 +187,7 @@ try {
           status: 'semantic-invalid',
           metadataPath: `apps/website/src/component-catalog/components/${componentName}/metadata.ts`,
           analysisComplete: error.analysisComplete,
+          apiDescriptionAnalysis: error.apiDescriptionAnalysis,
           findings: error.findings,
         },
         null,

@@ -185,6 +185,37 @@ describe('validateComponentMetadata', () => {
     );
   });
 
+  it('keeps final bounded findings unique when long originals share a truncation prefix', () => {
+    const sharedPrefix = 'x'.repeat(1_999);
+    const originals = [
+      `${sharedPrefix}AAAA`,
+      `${sharedPrefix}BBBB`,
+      `${sharedPrefix}AAAA`,
+      ...Array.from(
+        { length: 200 },
+        (_, index) => `finding-${index}-${'z'.repeat(2_100)}`
+      ),
+    ];
+    const first = new ComponentMetadataValidationError('Avatar', originals);
+    const second = new ComponentMetadataValidationError('Avatar', originals);
+
+    expect(first.findings).toEqual(second.findings);
+    expect(first.findings).toEqual([...new Set(first.findings)]);
+    expect(first.findings.length).toBeLessThanOrEqual(128);
+    expect(first.findings.every((finding) => finding.length <= 2_000)).toBe(
+      true
+    );
+    expect(
+      first.findings.reduce((total, finding) => total + finding.length, 0)
+    ).toBeLessThanOrEqual(8_000);
+    expect(
+      first.findings.filter((finding) => finding.includes('[sha256:'))
+    ).toHaveLength(3);
+    expect(first.findings.at(-1)).toBe(
+      '199 additional metadata finding(s) omitted by the bounded semantic protocol'
+    );
+  });
+
   it('collects invalid runtime shapes before semantic consumers execute', () => {
     expect(
       collectComponentMetadataRuntimeShapeFindings({

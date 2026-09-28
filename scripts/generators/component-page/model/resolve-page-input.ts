@@ -13,7 +13,7 @@ import {
   assertValidComponentMetadataFindings,
   collectComponentMetadataAgainstApiFindings,
   collectComponentMetadataFindings,
-  loadComponentMetadata,
+  loadComponentMetadataAnalysis,
   loadGeneratedComponentCategory,
   loadGeneratedComponentProfile,
   mergeComponentMetadata,
@@ -473,10 +473,13 @@ export async function resolvePageInput(params: {
 }) {
   const { root, catalogComponentsRoot, componentName } = params;
 
-  const componentMetadata = await loadComponentMetadata({
+  const metadataAnalysis = await loadComponentMetadataAnalysis({
     catalogComponentsRoot,
     componentName,
+    requireRelatedDecision: params.requireRelatedDecision,
+    requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
   });
+  const componentMetadata = metadataAnalysis.metadata;
 
   const platforms: Platform[] = [];
 
@@ -586,11 +589,11 @@ export async function resolvePageInput(params: {
   assertValidComponentMetadataFindings({
     componentName,
     findings: [
+      ...metadataAnalysis.findings,
+      ...metadataAnalysis.decisionFindings,
       ...collectComponentMetadataFindings({
         componentName,
         metadata: componentConfig,
-        requireRelatedDecision: params.requireRelatedDecision,
-        requireCatalogPreviewDecision: params.requireCatalogPreviewDecision,
       }),
       ...collectComponentMetadataAgainstApiFindings({
         componentName,
@@ -600,6 +603,8 @@ export async function resolvePageInput(params: {
         nativeApiProps,
       }),
     ],
+    analysisComplete: metadataAnalysis.analysisComplete,
+    apiDescriptionAnalysis: metadataAnalysis.apiDescriptionAnalysis,
   });
 
   const reactProgram = platforms.includes('react')
