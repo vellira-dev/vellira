@@ -78,9 +78,7 @@ export function buildGlobalTokenAuthorityContract(): GlobalTokenAuthorityContrac
     .map((value) => `theme.${value}`)
     .sort();
 
-  if (
-    reactNativeThemePaths.length !== new Set(reactNativeThemePaths).size
-  ) {
+  if (reactNativeThemePaths.length !== new Set(reactNativeThemePaths).size) {
     throw new Error(
       'Canonical global-token authority contains duplicate React Native theme paths.'
     );
@@ -108,14 +106,10 @@ export function runGlobalTokenAuthorityCli(
 
   try {
     if (args.length > 0) {
-      throw new Error(
-        `Unknown global-token authority option "${args[0]}".`
-      );
+      throw new Error(`Unknown global-token authority option "${args[0]}".`);
     }
 
-    const contract = (
-      dependencies.build ?? buildGlobalTokenAuthorityContract
-    )();
+    const contract = (dependencies.build ?? buildGlobalTokenAuthorityContract)();
 
     write(JSON.stringify(contract));
     return 0;
