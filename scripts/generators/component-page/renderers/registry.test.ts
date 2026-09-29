@@ -78,7 +78,7 @@ describe('component catalog registration', async () => {
     expect(content).toContain("component: 'Switch'");
     expect(content).toContain("category: 'forms'");
     expect(content).toContain(
-      'Switch component for Vellira applications. Explore React and React Native usage examples, accessibility guidance, and API details.'
+      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.'
     );
     expect(content).not.toContain('status:');
     expect(content).not.toContain('platforms:');
@@ -153,7 +153,7 @@ const componentCatalogPresentation = [
     expect(content).toContain("category: 'navigation'");
     expect(content).not.toContain("category: 'general'");
     expect(content).toContain(
-      'Switch component for Vellira applications. Explore React and React Native usage examples, accessibility guidance, and API details.'
+      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.'
     );
   });
 });
