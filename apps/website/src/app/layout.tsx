@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { JsonLd } from '@/components/seo/JsonLd';
+import { SITE_DESCRIPTION } from '@/config/siteSeo';
 
 import '@vellira-ui/assets/styles';
 import '@vellira-ui/react/styles';
@@ -11,22 +12,19 @@ import '../styles/globals.css';
 
 const siteTitle = 'Vellira — React & React Native Design System';
 
-const siteDescription =
-  'Accessible React and React Native design system with shared tokens, theming, TypeScript APIs, and Storybook.';
-
 export const metadata: Metadata = {
   metadataBase: new URL('https://vellira.dev'),
   title: {
     default: siteTitle,
     template: '%s | Vellira',
   },
-  description: siteDescription,
+  description: SITE_DESCRIPTION,
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: siteTitle,
-    description: siteDescription,
+    description: SITE_DESCRIPTION,
     url: '/',
     siteName: 'Vellira',
     images: [
@@ -43,7 +41,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: siteTitle,
-    description: siteDescription,
+    description: SITE_DESCRIPTION,
     images: ['/brand/social/vellira-og-code-to-ui.png'],
   },
 
