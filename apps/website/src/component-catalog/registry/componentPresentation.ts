@@ -163,7 +163,8 @@ export const componentCatalogPresentation = [
     component: 'Switch',
     slug: 'switch',
     name: 'Switch',
-    description: 'Switch component for Vellira applications.',
+    description:
+      'Switch component for Vellira applications. Explore React and React Native usage examples, accessibility guidance, and API details.',
     category: 'forms',
     order: 999,
     docs: {
@@ -175,7 +176,8 @@ export const componentCatalogPresentation = [
     component: 'Accordion',
     slug: 'accordion',
     name: 'Accordion',
-    description: 'Accordion component for Vellira applications.',
+    description:
+      'Accordion component for Vellira applications. Explore React and React Native usage examples, accessibility guidance, and API details.',
     category: 'navigation',
     order: 999,
     docs: {
