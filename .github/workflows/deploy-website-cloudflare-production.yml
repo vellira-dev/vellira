@@ -270,14 +270,10 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$CANDIDATE_SHA"
           test "$VELLIRA_BUILD_ID" = "$CANDIDATE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-
-          if [[ "$CANDIDATE_SOURCE" == "staging" ]]; then
-            current_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-            [[ "$current_main" =~ ^[0-9a-f]{40}$ ]]
-            test "$current_main" = "$CANDIDATE_SHA"
-          fi
-
-          echo "Production mutation remains pinned to $CANDIDATE_SHA"
+          node apps/website/scripts/cloudflare-production-freshness.mjs apps/website/wrangler.production.jsonc
+          echo "Production mutation remains pinned to deployment-equivalent candidate $CANDIDATE_SHA"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Record production promotion provenance
         shell: bash
@@ -314,18 +310,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          if [[ "$CANDIDATE_SOURCE" == "staging" ]]; then
-            current_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-            [[ "$current_main" =~ ^[0-9a-f]{40}$ ]]
-            test "$current_main" = "$CANDIDATE_SHA"
-          fi
-
           node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Audit assets after OpenNext deploy cache population
         run: >-

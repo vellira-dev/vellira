@@ -61,7 +61,7 @@ assert.equal(
   'Cannot identify the active deployment; activation is blocked'
 );
 const previousBuildId = (await previous.text()).trim();
-assertFreshProductionCandidate(freshnessContext);
+await assertFreshProductionCandidate(freshnessContext);
 await withRemoteArchive(config, async (bucket, bucketName) => {
   // Adoption must not orphan the current live graph. Historical backfill is an
   // explicit archive-only operation, not a silent best-effort migration.
@@ -88,7 +88,7 @@ run(
   ['exec', 'wrangler', 'deploy', '--dry-run', `--config=${configPath}`],
   { ...process.env, OPEN_NEXT_DEPLOY: 'true' }
 );
-assertFreshProductionCandidate(freshnessContext);
+await assertFreshProductionCandidate(freshnessContext);
 run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
   ...process.env,
   OPEN_NEXT_DEPLOY: 'true',
