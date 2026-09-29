@@ -51,6 +51,9 @@ function frontmatterDescription(source: string): string | null {
 
   const first =
     lines[descriptionIndex]?.replace(/^description\s*:\s*/, '') ?? '';
+
+  if (/^[|>][+-]?$/.test(first.trim())) return null;
+
   const parts = [first];
 
   for (let index = descriptionIndex + 1; index < lines.length; index += 1) {
