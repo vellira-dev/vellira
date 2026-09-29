@@ -1,6 +1,4 @@
 import type { ComponentCatalogEntry, ComponentPlatform } from '../types';
-import { componentPages } from './componentPages';
-
 /**
  * Internal quality floor for public search descriptions.
  *
@@ -24,33 +22,24 @@ function getPlatformLabel(platforms: readonly ComponentPlatform[]) {
   return 'supported platforms';
 }
 
-function getDiscoveryDescription(slug: string) {
-  const pages = componentPages as Record<
-    string,
-    { discovery?: { description?: string } }
-  >;
-
-  return pages[slug]?.discovery?.description?.trim();
-}
-
 /**
  * Resolve the effective search description for a public component page.
  *
- * Discovery metadata is the stronger semantic authority when the component has
- * adopted Discovery Content V1. Legacy presentation copy remains a fallback
- * until #1136 migrates the whole catalog.
+ * Component presentation is the runtime projection used by the public catalog.
+ * Generator/discovery alignment is enforced statically so this resolver never
+ * imports the heavyweight page registry (and therefore never pulls React Native
+ * runtime modules into metadata-only tooling).
  */
 export function getComponentMetaDescription(
   component: ComponentCatalogEntry
 ): string {
-  const authoritative =
-    getDiscoveryDescription(component.slug) ?? component.description.trim();
+  const description = component.description.trim();
 
-  if (authoritative.length >= MIN_PUBLIC_META_DESCRIPTION_LENGTH) {
-    return authoritative;
+  if (description.length >= MIN_PUBLIC_META_DESCRIPTION_LENGTH) {
+    return description;
   }
 
   return `${component.name} for ${getPlatformLabel(
     component.platforms
-  )} with Vellira. ${authoritative}`;
+  )} with Vellira. ${description}`;
 }
