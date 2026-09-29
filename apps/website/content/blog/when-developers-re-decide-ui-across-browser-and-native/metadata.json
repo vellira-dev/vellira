@@ -1,0 +1,9 @@
+{
+  "title": "When Developers Re-Decide UI Across Browser and Native",
+  "description": "For developers maintaining browser and native interfaces, keeping equivalent UI can mean re-deciding shared design choices, repeated coordination, and a greater risk of accidental inconsistency.",
+  "slug": "when-developers-re-decide-ui-across-browser-and-native",
+  "publishedAt": "2026-09-29",
+  "author": "Roman Bakurov",
+  "tags": ["Design Systems", "React", "React Native"],
+  "draft": true
+}

@@ -1,0 +1,48 @@
+The same product ships browser and native interfaces that need related controls while keeping platform-specific implementations.
+
+Developers maintaining React and React Native applications.
+
+Maintain equivalent product UI across browser and native surfaces without re-deciding the same shared design choices twice.
+
+## What this costs
+
+Equivalent controls can accumulate different APIs, tokens, states, and maintenance work as each platform evolves independently.
+
+Every cross-platform UI change creates repeated coordination and makes accidental product inconsistency easier to introduce.
+
+## Why it keeps repeating
+
+Maintain equivalent product UI across browser and native surfaces without re-deciding the same shared design choices twice.
+
+Every cross-platform UI change creates repeated coordination and makes accidental product inconsistency easier to introduce.
+
+## Where Vellira fits
+
+**cross-platform-button-implementations**
+
+Vellira publishes Button implementations for React and React Native.
+
+**shared-design-tokens**
+
+Vellira publishes shared design tokens for supported UI packages.
+
+## Public proof
+
+**cross-platform-button-implementations**
+
+- `packages/react-native/src/primitives/Button/Button.tsx` — public `vellira-dev/vellira` evidence at `74f5e781f671`
+- `packages/react/src/primitives/Button/Button.tsx` — public `vellira-dev/vellira` evidence at `74f5e781f671`
+
+**shared-design-tokens**
+
+- `packages/tokens/src/index.ts` — public `vellira-dev/vellira` evidence at `74f5e781f671`
+
+## Try it now
+
+Pick one narrow UI surface that matches the problem above. Try the relevant current Vellira capability there first, compare what is publicly available with the equivalent surface you maintain today, and expand only if the fit is useful.
+
+## What this does not promise
+
+- Does not authorize unpublished or non-public future product strategy or capability claims.
+- Does not claim every product UI decision can be shared across platforms.
+- Does not promise identical runtime implementation across React and React Native.
