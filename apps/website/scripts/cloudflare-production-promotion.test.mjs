@@ -103,15 +103,19 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
   assert.match(deploy, /ref: \$\{\{ env\.CANDIDATE_SHA \}\}/);
   assert.match(deploy, /Verify exact production candidate checkout/);
   assert.match(deploy, /Verify immutable production candidate before mutation/);
-  assert.match(deploy, /git ls-remote origin refs\/heads\/main/);
-  assert.match(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
+  assert.match(
+    deploy,
+    /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/
+  );
+  assert.doesNotMatch(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
+  assert.match(deploy, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(deploy, /Deploy production website to Cloudflare Workers/);
   assert.match(
     deploy,
     /node apps\/website\/scripts\/cloudflare-deploy\.mjs wrangler\.production\.jsonc/
   );
   assert.ok(
-    deploy.lastIndexOf('git ls-remote origin refs/heads/main') <
+    deploy.lastIndexOf('cloudflare-production-freshness.mjs') <
       deploy.lastIndexOf('cloudflare-deploy.mjs wrangler.production.jsonc')
   );
 });

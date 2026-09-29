@@ -49,19 +49,24 @@ work, but does not prevent a workflow card from being created for each push.
   failure is visible in that job and its summary but does not invalidate an
   already verified deployment. Retry `Submit URLs to IndexNow` manually, without
   redeploying production. The manual retry remains failure-reporting.
-- Production admission is read-only. The oldest active current-main candidate owns
-  the approval path; same-SHA reruns and stale candidates fail closed before
-  environment approval. Vellira does not automatically cancel or reject a
+- Production admission is read-only. Exact-current-main staging candidates are
+  preferred. A staged ancestor may remain eligible only when every path changed
+  between that candidate and authoritative current `main` is outside the
+  canonical website deployment surface mirrored by the staging workflow path
+  filters, including shared root build configuration such as `tsconfig.base.json`.
+  Any website/package/lockfile/build-config/deploy-workflow drift, divergent history,
+  ambiguous comparison, or unknown candidate state fails closed. Same-SHA reruns
+  retain one admission owner. Vellira does not automatically cancel or reject a
   production environment review: GitHub environment review is a human reviewer
   boundary and the default workflow token is not treated as reviewer authority.
-  If `main` advances while an older production approval is waiting, the reviewer
-  should reject that stale approval. If it is accidentally approved, the deploy
-  job rechecks current `main` after approval. The deployment script also checks
-  authoritative remote `main` before remote archive mutation and again after
-  the Wrangler dry-run immediately before the real activation. A staging-derived
-  stale SHA therefore cannot reach production after script entry. Emergency
-  recovery is an explicit bypass. Admission and deploy jobs retain separate
-  non-cancelling concurrency groups.
+  If `main` advances while an older production approval is waiting, admission
+  and deploy both re-evaluate deployment equivalence. The deployment script checks
+  again before remote archive mutation and after the Wrangler dry-run immediately
+  before real activation. Deployment-irrelevant repository work therefore cannot
+  strand an otherwise valid staged website, while deployment-relevant drift can
+  never ride an older candidate into production. Emergency recovery remains an
+  explicit bypass. Admission and deploy jobs retain separate non-cancelling
+  concurrency groups.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
