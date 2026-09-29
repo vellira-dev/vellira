@@ -34,6 +34,7 @@ test('oldest active current-main candidate owns admission', () => {
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 1,
+      currentCandidateEligible: true,
       runs: [
         run({ id: 1, candidateSha: B, runNumber: 10 }),
         run({ id: 2, candidateSha: B, runNumber: 11 }),
@@ -52,6 +53,7 @@ test('newer same-SHA rerun fails closed without mutating the owner', () => {
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 2,
+      currentCandidateEligible: true,
       runs: [
         run({ id: 1, candidateSha: B, runNumber: 10 }),
         run({ id: 2, candidateSha: B, runNumber: 11 }),
@@ -65,11 +67,12 @@ test('newer same-SHA rerun fails closed without mutating the owner', () => {
   );
 });
 
-test('stale current run fails closed', () => {
+test('deployment-ineligible current run fails closed', () => {
   assert.deepEqual(
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 1,
+      currentCandidateEligible: false,
       runs: [run({ id: 1, candidateSha: A, runNumber: 10 })],
     }),
     {
@@ -80,11 +83,47 @@ test('stale current run fails closed', () => {
   );
 });
 
+test('deployment-equivalent ancestor can own admission when no exact-main promotion exists', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 1,
+      currentCandidateEligible: true,
+      runs: [run({ id: 1, candidateSha: A, runNumber: 10 })],
+    }),
+    {
+      ownerRunId: 1,
+      admitCurrent: true,
+      reason: 'admitted',
+    }
+  );
+});
+
+test('exact-main promotion supersedes an equivalent ancestor promotion', () => {
+  assert.deepEqual(
+    planCurrentProductionAdmission({
+      currentMainSha: B,
+      currentRunId: 1,
+      currentCandidateEligible: true,
+      runs: [
+        run({ id: 1, candidateSha: A, runNumber: 10 }),
+        run({ id: 2, candidateSha: B, runNumber: 11 }),
+      ],
+    }),
+    {
+      ownerRunId: 2,
+      admitCurrent: false,
+      reason: 'existing_current_candidate',
+    }
+  );
+});
+
 test('unrelated stale runs do not block the current-main owner', () => {
   assert.deepEqual(
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 2,
+      currentCandidateEligible: true,
       runs: [
         run({ id: 1, candidateSha: A, runNumber: 10 }),
         run({ id: 2, candidateSha: B, runNumber: 11 }),
@@ -103,6 +142,7 @@ test('completed same-SHA runs do not retain admission ownership', () => {
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 2,
+      currentCandidateEligible: true,
       runs: [
         run({
           id: 1,
@@ -126,6 +166,7 @@ test('missing current run fails closed', () => {
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 99,
+      currentCandidateEligible: true,
       runs: [run({ id: 1, candidateSha: B, runNumber: 10 })],
     }),
     {
@@ -136,11 +177,24 @@ test('missing current run fails closed', () => {
   );
 });
 
+test('missing deployment eligibility decision fails closed', () => {
+  assert.throws(
+    () =>
+      planCurrentProductionAdmission({
+        currentMainSha: B,
+        currentRunId: 1,
+        runs: [run({ id: 1, candidateSha: B, runNumber: 10 })],
+      }),
+    /currentCandidateEligible must be boolean/
+  );
+});
+
 test('invalid identities fail closed', () => {
   assert.throws(() =>
     planCurrentProductionAdmission({
       currentMainSha: 'main',
       currentRunId: 1,
+      currentCandidateEligible: true,
       runs: [],
     })
   );
@@ -148,6 +202,7 @@ test('invalid identities fail closed', () => {
     planCurrentProductionAdmission({
       currentMainSha: B,
       currentRunId: 0,
+      currentCandidateEligible: true,
       runs: [],
     })
   );
