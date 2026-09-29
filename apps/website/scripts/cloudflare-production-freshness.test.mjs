@@ -296,8 +296,13 @@ test('deploy script gates archive mutation and real activation with shared fresh
   );
   assert.doesNotMatch(
     source,
-    /\.\.\.process\.env, OPEN_NEXT_DEPLOY/,
+    /\.\.\.process\.env[\s\S]{0,80}OPEN_NEXT_DEPLOY/,
     'Deployment child processes must not inherit GITHUB_TOKEN through process.env'
+  );
+  assert.equal(
+    (source.match(/\.\.\.childProcessEnv,/g) ?? []).length,
+    2,
+    'Both Wrangler dry-run and real activation must use the sanitized child environment'
   );
 });
 
