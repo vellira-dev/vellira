@@ -4,10 +4,6 @@
   "slug": "when-developers-re-decide-ui-across-browser-and-native",
   "publishedAt": "2026-09-29",
   "author": "Roman Bakurov",
-  "tags": [
-    "Design Systems",
-    "React",
-    "React Native"
-  ],
+  "tags": ["Design Systems", "React", "React Native"],
   "draft": true
 }
