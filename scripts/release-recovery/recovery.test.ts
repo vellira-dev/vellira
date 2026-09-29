@@ -15,6 +15,7 @@ const {
 } = require('./recovery.cjs');
 const {
   recovery: {
+    publishPackage,
     publishPackages,
     verifyPackageCompleteness,
     verifyPublishedPackage,
@@ -254,6 +255,59 @@ describe('release recovery decisions', () => {
     ).toEqual([sha]);
   });
 
+  it('defers normal publish visibility to the all-package completeness gate', async () => {
+    const verify = vi.fn(async () => {
+      throw new Error('per-package verification must be deferred');
+    });
+    const publish = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: '+ @vellira-ui/core@2.124.0\n',
+      stderr: '',
+    }));
+
+    await expect(
+      publishPackage(
+        { name: '@vellira-ui/core', version: '2.124.0' },
+        {
+          verifyAfterPublish: false,
+          publish,
+          verify,
+        }
+      )
+    ).resolves.toMatchObject({
+      status: 'accepted',
+      provenance: 'pending verification',
+    });
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it('keeps recovery publication on strict per-package verification', async () => {
+    const verify = vi.fn(async () => ({
+      integrity: 'sha512-dGVzdA==',
+      tarball: 'https://registry.example/core.tgz',
+      attestations: { url: 'https://registry.example/attestations' },
+    }));
+    const publish = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: '+ @vellira-ui/core@2.124.0\n',
+      stderr: '',
+    }));
+
+    await expect(
+      publishPackage(
+        { name: '@vellira-ui/core', version: '2.124.0' },
+        { publish, verify }
+      )
+    ).resolves.toMatchObject({
+      status: 'published',
+      provenance: 'verified',
+    });
+    expect(verify).toHaveBeenCalledTimes(1);
+  });
+
   it('does not abandon the shared queue when one worker throws', async () => {
     const infos = packages.map((name) => ({ name, version: '2.104.1' }));
     const attempted: string[] = [];
@@ -301,6 +355,31 @@ describe('release recovery decisions', () => {
     ).rejects.toThrow('one exact version');
   });
 
+  it('gives all six completeness checks one absolute deadline', async () => {
+    const infos = packages.map((name) => ({ name, version: '2.124.0' }));
+    let clock = 42_000;
+    const deadlines: number[] = [];
+    const verify = vi.fn(
+      async (
+        info: { name: string; version: string },
+        options: { deadlineAt: number; timeoutMs: number }
+      ) => {
+        deadlines.push(options.deadlineAt);
+        return info;
+      }
+    );
+
+    await expect(
+      verifyPackageCompleteness(infos, verify, {
+        now: () => clock,
+        timeoutMs: 1_200_000,
+      })
+    ).resolves.toEqual(infos);
+
+    expect(new Set(deadlines)).toEqual(new Set([1_242_000]));
+    expect(verify).toHaveBeenCalledTimes(6);
+  });
+
   it('fails the completeness gate if any package verification fails', async () => {
     const infos = packages.map((name) => ({ name, version: '2.104.1' }));
     const verify = vi.fn(async (info: { name: string }) => {
@@ -330,6 +409,21 @@ describe('release recovery decisions', () => {
     expect(warn).toHaveBeenLastCalledWith(
       expect.stringContaining('135000ms remain')
     );
+    warn.mockRestore();
+  });
+
+  it('accepts registry visibility after thirteen minutes inside the normal global budget', async () => {
+    const fake = fakeVisibility(780_000);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      verifyPublishedPackage(
+        { name: '@vellira-ui/core', version: '2.124.0' },
+        { ...fake, timeoutMs: 1_200_000, baseDelayMs: 5_000 }
+      )
+    ).resolves.toMatchObject({ tarball: expect.any(String) });
+    expect(fake.elapsed()).toBeGreaterThanOrEqual(780_000);
+    expect(fake.elapsed()).toBeLessThanOrEqual(1_200_000);
     warn.mockRestore();
   });
 
@@ -438,6 +532,8 @@ describe('release recovery decisions', () => {
     );
     expect(publisher).toContain('VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS');
     expect(publisher).toContain("?? '360000'");
+    expect(publisher).toContain('VELLIRA_RELEASE_COMPLETENESS_TIMEOUT_MS');
+    expect(publisher).toContain("?? '1200000'");
     expect(publisher).not.toContain('VELLIRA_RELEASE_VERIFICATION_ATTEMPTS');
   });
 });
