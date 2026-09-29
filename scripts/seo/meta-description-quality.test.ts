@@ -46,7 +46,8 @@ function frontmatterDescription(source: string): string | null {
 
   if (descriptionIndex === -1) return null;
 
-  const first = lines[descriptionIndex]?.replace(/^description\s*:\s*/, '') ?? '';
+  const first =
+    lines[descriptionIndex]?.replace(/^description\s*:\s*/, '') ?? '';
   const parts = [first];
 
   for (let index = descriptionIndex + 1; index < lines.length; index += 1) {
@@ -111,9 +112,7 @@ function collectBlogDescriptions(root: string): PublicDescription[] {
 
       if (!fs.existsSync(metadataFile)) return [];
 
-      const metadata = JSON.parse(
-        fs.readFileSync(metadataFile, 'utf8')
-      ) as {
+      const metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8')) as {
         slug?: string;
         description?: string;
         draft?: boolean;
