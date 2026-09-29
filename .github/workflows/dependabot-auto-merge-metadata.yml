@@ -9,6 +9,7 @@ on:
       - ready_for_review
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
 
@@ -72,6 +73,327 @@ jobs:
           NODE
 
       - name: Upload auto-merge decision
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependabot-auto-merge-decision
+          path: .dependabot-auto-merge/decision.json
+          if-no-files-found: error
+          retention-days: 1
+
+  inspect-security-remediation:
+    if: >
+      github.event.pull_request.user.login == 'vellira-release-sync[bot]' &&
+      github.event.pull_request.head.ref == 'automation/dependabot-security-remediation' &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate immutable remediation envelope
+        id: envelope
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$PR_TITLE" = 'chore(security): remediate dependency alerts'
+
+          gh api --paginate \
+            "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
+            | jq -s 'add | map(.filename) | sort' \
+            > /tmp/security-remediation-files.json
+
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const files = JSON.parse(
+            fs.readFileSync('/tmp/security-remediation-files.json', 'utf8')
+          );
+          const allowed = new Set(['pnpm-lock.yaml', 'pnpm-workspace.yaml']);
+          const unexpected = files.filter((file) => !allowed.has(file));
+          if (files.length === 0 || unexpected.length > 0) {
+            throw new Error(
+              `Security remediation has forbidden changed files: ${unexpected.join(', ')}`
+            );
+          }
+          const body = process.env.PR_BODY ?? '';
+          const marker =
+            /<!-- vellira-security-remediation-v1 base-sha=([0-9a-f]{40}) head-sha=([0-9a-f]{40}) source-run=([0-9]+) source-attempt=([0-9]+) audit-level=(high|low) scope=(development) -->/.exec(
+              body
+            );
+          if (!marker) {
+            throw new Error(
+              'Security remediation provenance marker is missing or malformed'
+            );
+          }
+          if (marker[1] !== process.env.PR_BASE_SHA) {
+            throw new Error('Security remediation base SHA marker mismatch');
+          }
+          if (marker[2] !== process.env.PR_HEAD_SHA) {
+            throw new Error('Security remediation head SHA marker mismatch');
+          }
+
+          const sourceRunId = Number(marker[3]);
+          const sourceRunAttempt = Number(marker[4]);
+          if (
+            !Number.isSafeInteger(sourceRunId) ||
+            sourceRunId <= 0 ||
+            !Number.isSafeInteger(sourceRunAttempt) ||
+            sourceRunAttempt <= 0
+          ) {
+            throw new Error('Security remediation source run identity is invalid');
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `source_run_id=${sourceRunId}\n` +
+              `source_run_attempt=${sourceRunAttempt}\n` +
+              `audit_level=${marker[5]}\n` +
+              `dependency_scope=${marker[6]}\n`
+          );
+          NODE
+
+      - name: Validate trusted remediation source run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SOURCE_RUN_ID: ${{ steps.envelope.outputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.envelope.outputs.source_run_attempt }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/actions/runs/$SOURCE_RUN_ID" \
+            > /tmp/security-remediation-source-run.json
+
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const run = JSON.parse(
+            fs.readFileSync(
+              '/tmp/security-remediation-source-run.json',
+              'utf8'
+            )
+          );
+          const expectedRunId = Number(process.env.SOURCE_RUN_ID);
+          const expectedAttempt = Number(process.env.SOURCE_RUN_ATTEMPT);
+          const expectedBaseSha = process.env.EXPECTED_BASE_SHA ?? '';
+
+          if (run.id !== expectedRunId) {
+            throw new Error('Security remediation source run ID mismatch');
+          }
+          if (run.run_attempt !== expectedAttempt) {
+            throw new Error('Security remediation source run attempt mismatch');
+          }
+          if (
+            run.path !==
+            '.github/workflows/dependabot-security-remediation.yml'
+          ) {
+            throw new Error('Security remediation source workflow mismatch');
+          }
+          if (run.head_branch !== 'main') {
+            throw new Error('Security remediation source must run from main');
+          }
+          if (
+            !/^[0-9a-f]{40}$/.test(expectedBaseSha) ||
+            run.head_sha !== expectedBaseSha
+          ) {
+            throw new Error(
+              'Security remediation source run does not match the exact candidate base'
+            );
+          }
+          if (run.event !== 'schedule' && run.event !== 'workflow_dispatch') {
+            throw new Error('Security remediation source event is not trusted');
+          }
+          if (run.repository?.full_name !== process.env.REPOSITORY) {
+            throw new Error('Security remediation source repository mismatch');
+          }
+          NODE
+
+      - name: Download immutable remediation candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dependabot-security-remediation-candidate-${{ steps.envelope.outputs.source_run_id }}-${{ steps.envelope.outputs.source_run_attempt }}
+          path: .security-remediation-source
+          run-id: ${{ steps.envelope.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Authenticate immutable remediation candidate
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          AUDIT_LEVEL: ${{ steps.envelope.outputs.audit_level }}
+          DEPENDENCY_SCOPE: ${{ steps.envelope.outputs.dependency_scope }}
+          SOURCE_RUN_ID: ${{ steps.envelope.outputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.envelope.outputs.source_run_attempt }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const candidate = JSON.parse(
+            fs.readFileSync(
+              '.security-remediation-source/candidate.json',
+              'utf8'
+            )
+          );
+
+          const expected = {
+            repository: process.env.REPOSITORY,
+            baseSha: process.env.PR_BASE_SHA,
+            headSha: process.env.PR_HEAD_SHA,
+            branch: process.env.PR_HEAD_REF,
+            auditLevel: process.env.AUDIT_LEVEL,
+            dependencyScope: process.env.DEPENDENCY_SCOPE,
+            sourceRunId: Number(process.env.SOURCE_RUN_ID),
+            sourceRunAttempt: Number(process.env.SOURCE_RUN_ATTEMPT),
+          };
+
+          if (
+            candidate.schemaVersion !== 1 ||
+            candidate.kind !== 'dependabot-security-remediation' ||
+            candidate.workflowPath !==
+              '.github/workflows/dependabot-security-remediation.yml' ||
+            candidate.repository !== expected.repository ||
+            candidate.baseSha !== expected.baseSha ||
+            candidate.headSha !== expected.headSha ||
+            candidate.branch !== expected.branch ||
+            candidate.auditLevel !== expected.auditLevel ||
+            candidate.dependencyScope !== expected.dependencyScope ||
+            expected.dependencyScope !== 'development' ||
+            candidate.sourceRunId !== expected.sourceRunId ||
+            candidate.sourceRunAttempt !== expected.sourceRunAttempt
+          ) {
+            throw new Error(
+              'Security remediation candidate artifact does not authenticate this PR head'
+            );
+          }
+          NODE
+
+      - name: Checkout exact remediation head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          package-manager-cache: false
+
+      - name: Install exact remediated dependency graph
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate dependency-only remediation diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: >-
+          node scripts/ci/dependabot-security-remediation.mjs validate-pr
+          --base "$BASE_SHA"
+
+      - name: Prove in-scope registry advisories are closed by the candidate
+        run: pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }}
+
+      - name: Write immutable security auto-merge decision
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AUDIT_LEVEL: ${{ steps.envelope.outputs.audit_level }}
+          DEPENDENCY_SCOPE: ${{ steps.envelope.outputs.dependency_scope }}
+          SOURCE_RUN_ID: ${{ steps.envelope.outputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.envelope.outputs.source_run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p .dependabot-auto-merge
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const pullRequestNumber = Number(process.env.PR_NUMBER);
+          const headSha = process.env.PR_HEAD_SHA ?? '';
+          const baseSha = process.env.PR_BASE_SHA ?? '';
+          const headRef = process.env.PR_HEAD_REF ?? '';
+          const auditLevel = process.env.AUDIT_LEVEL ?? '';
+          const dependencyScope = process.env.DEPENDENCY_SCOPE ?? '';
+          const sourceRunId = Number(process.env.SOURCE_RUN_ID);
+          const sourceRunAttempt = Number(process.env.SOURCE_RUN_ATTEMPT);
+
+          if (!Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) {
+            throw new Error(
+              'Security remediation PR number must be a positive integer'
+            );
+          }
+          if (
+            !/^[0-9a-f]{40}$/.test(headSha) ||
+            !/^[0-9a-f]{40}$/.test(baseSha)
+          ) {
+            throw new Error(
+              'Security remediation decision requires exact head/base SHAs'
+            );
+          }
+          if (headRef !== 'automation/dependabot-security-remediation') {
+            throw new Error('Security remediation branch authority mismatch');
+          }
+          if (auditLevel !== 'high' && auditLevel !== 'low') {
+            throw new Error('Security remediation audit level is invalid');
+          }
+          if (dependencyScope !== 'development') {
+            throw new Error('Security remediation dependency scope is invalid');
+          }
+          if (
+            !Number.isSafeInteger(sourceRunId) ||
+            sourceRunId <= 0 ||
+            !Number.isSafeInteger(sourceRunAttempt) ||
+            sourceRunAttempt <= 0
+          ) {
+            throw new Error('Security remediation source identity is invalid');
+          }
+
+          const decision = {
+            schemaVersion: 2,
+            kind: 'security-remediation',
+            repository: process.env.REPOSITORY,
+            pullRequestNumber,
+            author: process.env.PR_AUTHOR,
+            headSha,
+            headRef,
+            baseRef: process.env.PR_BASE_REF,
+            baseSha,
+            updateType: 'security-remediation',
+            auditLevel,
+            dependencyScope,
+            sourceRunId,
+            sourceRunAttempt,
+            eligible: true,
+          };
+
+          fs.writeFileSync(
+            '.dependabot-auto-merge/decision.json',
+            `${JSON.stringify(decision, null, 2)}\n`,
+            'utf8'
+          );
+          console.log(JSON.stringify(decision));
+          NODE
+
+      - name: Upload security auto-merge decision
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dependabot-auto-merge-decision

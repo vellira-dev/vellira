@@ -32,7 +32,7 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('run.head_sha === expectedHeadSha');
     expect(source).toContain('decision.headSha !== ciHeadSha');
     expect(source).toContain(
-      'Dependabot auto-merge decision does not match successful CI head'
+      'Dependency auto-merge decision does not match successful CI head'
     );
   });
 
@@ -40,12 +40,14 @@ describe('Dependabot auto-merge workflow policy', () => {
     const source = await workflowSource();
     const waitIndex = source.indexOf('Wait for required pull request checks');
     const revalidateIndex = source.indexOf(
-      'Revalidate Dependabot pull request after checks'
+      'Revalidate dependency pull request after checks'
     );
     const tokenIndex = source.indexOf(
       'Create short-lived merge GitHub App token'
     );
-    const mergeIndex = source.indexOf('Merge patch update after full CI');
+    const mergeIndex = source.indexOf(
+      'Merge eligible dependency update after full CI'
+    );
 
     expect(waitIndex).toBeGreaterThan(-1);
     expect(revalidateIndex).toBeGreaterThan(waitIndex);
@@ -54,6 +56,32 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('--required');
     expect(source).toContain('--watch');
     expect(source).toContain('--fail-fast');
+  });
+
+  it('accepts only bounded security remediation candidates', async () => {
+    const source = await workflowSource();
+
+    expect(source).toContain("decision.kind === 'security-remediation'");
+    expect(source).toContain("expectedAuthor = 'vellira-release-sync[bot]'");
+    expect(source).toContain("'automation/dependabot-security-remediation'");
+    expect(source).toContain("'pnpm-lock.yaml'");
+    expect(source).toContain("'pnpm-workspace.yaml'");
+    expect(source).toContain(
+      'Security remediation changed files outside dependency authority'
+    );
+    expect(source).toContain(
+      'Security remediation decision source identity is invalid'
+    );
+    expect(source).toContain(
+      'Security remediation decision dependency scope is invalid'
+    );
+    expect(source).toContain("decision.dependencyScope !== 'development'");
+    expect(source).toContain(
+      'Security remediation base moved after authenticated generation'
+    );
+    expect(source).toContain(
+      'Security remediation pull request title changed after authentication'
+    );
   });
 
   it('merges immediately with exact head', async () => {
