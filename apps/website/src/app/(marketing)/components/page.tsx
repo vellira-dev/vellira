@@ -1,19 +1,21 @@
 import type { Metadata } from 'next';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 
-import { ComponentsCatalog, ComponentsPageHero } from '@/component-catalog';
+import {
+  COMPONENTS_INDEX_META_DESCRIPTION,
+  ComponentsCatalog,
+  ComponentsPageHero,
+} from '@/component-catalog';
 
 export const metadata: Metadata = {
   title: 'React Components',
-  description:
-    'Explore accessible, production-ready React components built with Vellira.',
+  description: COMPONENTS_INDEX_META_DESCRIPTION,
   alternates: {
     canonical: '/components',
   },
   openGraph: {
     title: 'React Components | Vellira',
-    description:
-      'Explore accessible, production-ready React components built with Vellira.',
+    description: COMPONENTS_INDEX_META_DESCRIPTION,
     url: '/components',
   },
 };
