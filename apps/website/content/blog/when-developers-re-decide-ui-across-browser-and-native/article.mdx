@@ -1,48 +1,145 @@
-The same product ships browser and native interfaces that need related controls while keeping platform-specific implementations.
+A cross-platform product rarely has only one version of a UI decision.
 
-Developers maintaining React and React Native applications.
+A button on the web and a button in React Native may represent the same product action, but they live in different runtimes. The browser has DOM behavior, keyboard interaction, CSS, links, hover states, and ARIA. React Native has press events, native accessibility props, touch-first interaction, and a different styling model.
 
-Maintain equivalent product UI across browser and native surfaces without re-deciding the same shared design choices twice.
+Two implementations are normal.
 
-## What this costs
+The expensive part begins when the **product decision itself gets made twice**.
 
-Equivalent controls can accumulate different APIs, tokens, states, and maintenance work as each platform evolves independently.
+A team decides what `loading` means on the web, then revisits the same question on native. A new visual state lands in one package and has to be rediscovered in the other. Spacing, names, disabled behavior, callbacks, or accessibility intent start close together and slowly move apart.
 
-Every cross-platform UI change creates repeated coordination and makes accidental product inconsistency easier to introduce.
+That is not primarily a code-sharing problem. It is a **decision-sharing problem**.
 
-## Why it keeps repeating
+## The real cost is repeated product work
 
-Maintain equivalent product UI across browser and native surfaces without re-deciding the same shared design choices twice.
+Imagine a component exists on both platforms.
 
-Every cross-platform UI change creates repeated coordination and makes accidental product inconsistency easier to introduce.
+The web team adds a new state. The native team later needs the same state, but the original reasoning is not encoded anywhere both implementations are forced to respect.
 
-## Where Vellira fits
+Now the team has to answer the same questions again:
 
-**cross-platform-button-implementations**
+- What should the state be called?
+- Which visual token should represent it?
+- Should it disable interaction?
+- What should happen while an action is loading?
+- Which part is product semantics, and which part belongs to the runtime?
+- Does accessibility intent stay equivalent even when implementation details differ?
 
-Vellira publishes Button implementations for React and React Native.
+Each question is small. Repeating them across dozens of components is not.
 
-**shared-design-tokens**
+The cost shows up as coordination, review time, documentation drift, inconsistent APIs, and eventually different user expectations between platforms.
 
-Vellira publishes shared design tokens for supported UI packages.
+This is why a cross-platform design system can still become inconsistent even when both codebases are individually well engineered.
 
-## Public proof
+## Drift usually starts with reasonable local decisions
 
-**cross-platform-button-implementations**
+Most cross-platform drift does not begin with a dramatic architectural mistake.
 
-- `packages/react-native/src/primitives/Button/Button.tsx` — public `vellira-dev/vellira` evidence at `74f5e781f671`
-- `packages/react/src/primitives/Button/Button.tsx` — public `vellira-dev/vellira` evidence at `74f5e781f671`
+It begins with a sensible local change.
 
-**shared-design-tokens**
+A web component gains a useful option. A native implementation solves the same need differently. One side adopts a semantic token while the other keeps a literal value. One runtime exposes a product-level callback while the other exposes a platform event directly.
 
-- `packages/tokens/src/index.ts` — public `vellira-dev/vellira` evidence at `74f5e781f671`
+None of those choices is automatically wrong.
 
-## Try it now
+The problem is that the team no longer has one place that says:
 
-Pick one narrow UI surface that matches the problem above. Try the relevant current Vellira capability there first, compare what is publicly available with the equivalent surface you maintain today, and expand only if the fit is useful.
+> This is the product decision we want to preserve across runtimes.
 
-## What this does not promise
+Without that boundary, every implementation becomes another opportunity to reinterpret the product.
 
-- Does not authorize unpublished or non-public future product strategy or capability claims.
-- Does not claim every product UI decision can be shared across platforms.
-- Does not promise identical runtime implementation across React and React Native.
+And once those interpretations diverge, bringing them back together is much harder than keeping them aligned in the first place.
+
+## Share the decision, not necessarily the implementation
+
+The answer is not to force React and React Native through identical component code.
+
+The runtimes are genuinely different, and good APIs should respect that.
+
+A healthier boundary is to share the things developers should be able to learn once:
+
+- semantic states;
+- component intent;
+- naming;
+- design tokens;
+- common behavior where the product meaning is the same.
+
+Then let each platform implement those decisions using the primitives that make sense for its runtime.
+
+That means a web Button can still use browser-native capabilities while a React Native Button uses native press and accessibility behavior. The implementations can diverge without the product vocabulary drifting with them.
+
+I explored that architecture in more detail in [One Design System, Two Runtimes](/blog/two-runtimes). The important distinction here is what happens **before** architecture becomes visible: teams stop spending time reopening the same product decisions.
+
+## Where Vellira fits today
+
+This is one of the problems Vellira is being built around.
+
+The public project currently includes Button implementations for both React and React Native, plus shared design tokens that can carry design decisions across supported UI packages.
+
+The goal is not to claim that every component or every runtime detail should be identical.
+
+The goal is narrower:
+
+**when a UI decision should be shared, give it a stable place to live so each platform does not have to rediscover it independently.**
+
+You can inspect the current public surfaces directly:
+
+- [Button documentation](https://docs.vellira.dev/components/button)
+- [Design tokens](https://docs.vellira.dev/design-system/tokens)
+- [Vellira on GitHub](https://github.com/vellira-dev/vellira)
+
+The public source also shows the separate React and React Native implementations rather than hiding the runtime boundary.
+
+## A useful question for any cross-platform system
+
+When the same component exists on two platforms, ask:
+
+**If we change a product-level decision tomorrow, where is the one place that says both implementations should still mean the same thing?**
+
+If the answer is “we will remember during review,” the decision is not really shared.
+
+If the answer is “the web implementation,” native is downstream of web.
+
+If the answer is “a large shared component implementation,” platform-specific behavior may eventually fight the abstraction.
+
+A stronger answer is usually some combination of shared semantic contracts, shared design resources, explicit platform extensions, and tests around the boundaries that are supposed to stay aligned.
+
+The exact mechanism can vary.
+
+What matters is that the decision has an owner outside either individual runtime implementation.
+
+## Cross-platform consistency is not maximum sameness
+
+There is another failure mode worth avoiding: treating every difference as drift.
+
+Web and React Native should diverge when the platforms require different interaction, accessibility, layout, navigation, or rendering behavior.
+
+Consistency does not mean hiding those differences.
+
+It means being deliberate about **which differences are product decisions and which are runtime decisions**.
+
+That distinction makes a design system easier to evolve because teams can change platform-specific implementation without reopening the product model every time.
+
+The result is not identical code.
+
+It is less repeated reasoning.
+
+## Start with one shared decision
+
+You do not need to migrate an entire interface to find out whether this model helps.
+
+Pick one component that already exists on both platforms and compare the decisions around it:
+
+- public names;
+- states;
+- tokens;
+- callbacks;
+- loading and disabled behavior;
+- accessibility intent.
+
+If the two versions describe the same product concept in different ways, that is a useful place to start.
+
+For Vellira, Button is the simplest public example today. Explore the [Button docs](https://docs.vellira.dev/components/button), compare the implementations on [GitHub](https://github.com/vellira-dev/vellira), and see whether separating shared semantics from runtime implementation fits the way your team builds.
+
+The point is not to make two platforms look artificially identical.
+
+It is to stop paying for the same product decision twice.
