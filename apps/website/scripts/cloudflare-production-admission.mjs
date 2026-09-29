@@ -1,6 +1,8 @@
 import { appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+import { assessFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
+
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PROMOTION_TITLE_PATTERN = /^Promote staging ([0-9a-f]{40})$/;
 
@@ -29,9 +31,13 @@ export function planCurrentProductionAdmission({
   currentMainSha,
   currentRunId,
   runs,
+  currentCandidateEligible,
 }) {
   assertSha(currentMainSha, 'currentMainSha');
   assertRunId(currentRunId, 'currentRunId');
+  if (typeof currentCandidateEligible !== 'boolean') {
+    throw new Error('currentCandidateEligible must be boolean');
+  }
 
   const promotions = runs
     .map((run) => ({
@@ -53,7 +59,7 @@ export function planCurrentProductionAdmission({
     };
   }
 
-  if (currentRun.candidateSha !== currentMainSha) {
+  if (!currentCandidateEligible) {
     return {
       ownerRunId: null,
       admitCurrent: false,
@@ -61,10 +67,13 @@ export function planCurrentProductionAdmission({
     };
   }
 
-  const currentMainPromotions = promotions
+  const exactMainPromotions = promotions
     .filter((run) => run.candidateSha === currentMainSha)
     .sort((left, right) => left.runNumber - right.runNumber);
-  const owner = currentMainPromotions[0];
+  const sameCandidatePromotions = promotions
+    .filter((run) => run.candidateSha === currentRun.candidateSha)
+    .sort((left, right) => left.runNumber - right.runNumber);
+  const owner = exactMainPromotions[0] ?? sameCandidatePromotions[0];
 
   if (!owner || owner.id !== currentRunId) {
     return {
@@ -167,10 +176,19 @@ export async function admitCurrentProductionPromotion({
     );
   }
 
+  const freshness = await assessFreshProductionCandidate({
+    configPath: 'wrangler.production.jsonc',
+    candidateSource: 'staging',
+    candidateSha: expectedCandidateSha,
+    repository,
+    mainSha,
+    githubToken: process.env.GITHUB_TOKEN,
+  });
   const plan = planCurrentProductionAdmission({
     currentMainSha: mainSha,
     currentRunId,
     runs,
+    currentCandidateEligible: freshness.deploymentEquivalent === true,
   });
 
   await writeAdmissionOutput(githubOutput, plan);
@@ -179,6 +197,7 @@ export async function admitCurrentProductionPromotion({
       currentMainSha: mainSha,
       currentRunId,
       expectedCandidateSha,
+      freshness,
       activeProductionRuns: runs.filter((run) => run.status !== 'completed'),
       ...plan,
     })
