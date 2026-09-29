@@ -24,6 +24,10 @@ const verificationTimeoutMs = Number.parseInt(
   process.env.VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS ?? '360000',
   10
 );
+const completenessTimeoutMs = Number.parseInt(
+  process.env.VELLIRA_RELEASE_COMPLETENESS_TIMEOUT_MS ?? '1200000',
+  10
+);
 
 const verificationBaseDelayMs = Number.parseInt(
   process.env.VELLIRA_RELEASE_VERIFICATION_BASE_DELAY_MS ?? '5000',
@@ -367,7 +371,8 @@ async function verifyPublishedPackage(packageInfo, options = {}) {
     throw new Error('Verification base delay must be a positive integer.');
   }
   const startedAt = now();
-  const deadlineAt = startedAt + timeoutMs;
+  const deadlineAt = options.deadlineAt ?? startedAt + timeoutMs;
+  const deadlineBudgetMs = Math.max(0, deadlineAt - startedAt);
   let attempt = 0;
 
   while (true) {
@@ -409,14 +414,14 @@ async function verifyPublishedPackage(packageInfo, options = {}) {
           throw new Error(
             `npm registry metadata for ${packageInfo.name}@` +
               `${packageInfo.version} is missing tarball integrity after ` +
-              `${elapsedMs}ms (deadline ${timeoutMs}ms).`
+              `${elapsedMs}ms (deadline ${deadlineBudgetMs}ms).`
           );
         }
 
         throw new Error(
           `npm registry metadata for ${packageInfo.name}@` +
             `${packageInfo.version} is missing provenance attestations after ` +
-            `${elapsedMs}ms (deadline ${timeoutMs}ms).`
+            `${elapsedMs}ms (deadline ${deadlineBudgetMs}ms).`
         );
       }
 
@@ -452,7 +457,7 @@ async function verifyPublishedPackage(packageInfo, options = {}) {
 
       throw new Error(
         `Failed to verify ${packageInfo.name}@${packageInfo.version} after ` +
-          `${elapsedMs}ms (deadline ${timeoutMs}ms): ${reason}`
+          `${elapsedMs}ms (deadline ${deadlineBudgetMs}ms): ${reason}`
       );
     }
 
@@ -470,9 +475,13 @@ async function verifyPublishedPackage(packageInfo, options = {}) {
   }
 }
 
-async function publishPackage(packageInfo) {
+async function publishPackage(packageInfo, options = {}) {
   const startedAt = Date.now();
   const maxAttempts = publishRetries + 1;
+  const verifyAfterPublish = options.verifyAfterPublish ?? true;
+  const publish = options.publish ?? runNpmPublish;
+  const verify = options.verify ?? verifyPublishedPackage;
+  const sleep = options.sleep ?? wait;
 
   console.log(
     `[release] Publishing ${packageInfo.name}@${packageInfo.version} with npm provenance.`
@@ -482,35 +491,39 @@ async function publishPackage(packageInfo) {
     const attemptPrefix = `[release] ${packageInfo.name} attempt ${attempt}/${maxAttempts}`;
     console.log(`${attemptPrefix} started.`);
 
-    const result = await runNpmPublish(packageInfo);
+    const result = await publish(packageInfo);
     const output = `${result.stdout}\n${result.stderr}`;
 
     if (!result.error && result.status === 0) {
       writeCommandOutput(packageInfo.name, result);
 
-      try {
-        await verifyPublishedPackage(packageInfo);
-      } catch (error) {
-        return {
-          packageName: packageInfo.name,
-          version: packageInfo.version,
-          status: 'failed',
-          provenance: 'not verified',
-          attempts: attempt,
-          duration: formatDuration(startedAt),
-          error,
-        };
+      if (verifyAfterPublish) {
+        try {
+          await verify(packageInfo);
+        } catch (error) {
+          return {
+            packageName: packageInfo.name,
+            version: packageInfo.version,
+            status: 'failed',
+            provenance: 'not verified',
+            attempts: attempt,
+            duration: formatDuration(startedAt),
+            error,
+          };
+        }
       }
 
       console.log(
-        `[release] Published ${packageInfo.name}@${packageInfo.version} in ${formatDuration(startedAt)}.`
+        verifyAfterPublish
+          ? `[release] Published ${packageInfo.name}@${packageInfo.version} in ${formatDuration(startedAt)}.`
+          : `[release] npm accepted ${packageInfo.name}@${packageInfo.version}; registry verification is deferred to the all-package completeness gate.`
       );
 
       return {
         packageName: packageInfo.name,
         version: packageInfo.version,
-        status: 'published',
-        provenance: 'verified',
+        status: verifyAfterPublish ? 'published' : 'accepted',
+        provenance: verifyAfterPublish ? 'verified' : 'pending verification',
         attempts: attempt,
         duration: formatDuration(startedAt),
       };
@@ -519,29 +532,33 @@ async function publishPackage(packageInfo) {
     if (isAlreadyPublishedError(output)) {
       writeCommandOutput(packageInfo.name, result);
 
-      try {
-        await verifyPublishedPackage(packageInfo);
-      } catch (error) {
-        return {
-          packageName: packageInfo.name,
-          version: packageInfo.version,
-          status: 'failed',
-          provenance: 'not verified',
-          attempts: attempt,
-          duration: formatDuration(startedAt),
-          error,
-        };
+      if (verifyAfterPublish) {
+        try {
+          await verify(packageInfo);
+        } catch (error) {
+          return {
+            packageName: packageInfo.name,
+            version: packageInfo.version,
+            status: 'failed',
+            provenance: 'not verified',
+            attempts: attempt,
+            duration: formatDuration(startedAt),
+            error,
+          };
+        }
       }
 
       console.log(
-        `[release] ${packageInfo.name}@${packageInfo.version} is already published; continuing.`
+        verifyAfterPublish
+          ? `[release] ${packageInfo.name}@${packageInfo.version} is already published; continuing.`
+          : `[release] ${packageInfo.name}@${packageInfo.version} already exists; exact registry verification is deferred to the all-package completeness gate.`
       );
 
       return {
         packageName: packageInfo.name,
         version: packageInfo.version,
         status: 'already published',
-        provenance: 'verified',
+        provenance: verifyAfterPublish ? 'verified' : 'pending verification',
         attempts: attempt,
         duration: formatDuration(startedAt),
       };
@@ -569,7 +586,7 @@ async function publishPackage(packageInfo) {
     console.warn(
       `${attemptPrefix} failed with a transient npm error; retrying.`
     );
-    await wait(1000 * attempt);
+    await sleep(1000 * attempt);
   }
 
   throw new Error(`Unexpected publish loop exit for ${packageInfo.name}.`);
@@ -615,7 +632,8 @@ async function publishPackages(packageInfos, publish = publishPackage) {
 
 async function verifyPackageCompleteness(
   packageInfos,
-  verify = verifyPublishedPackage
+  verify = verifyPublishedPackage,
+  options = {}
 ) {
   const expectedNames = [...publicPackages].sort();
   const actualNames = packageInfos.map(({ name }) => name).sort();
@@ -634,9 +652,27 @@ async function verifyPackageCompleteness(
     );
   }
 
-  const verified = await Promise.all(packageInfos.map(verify));
+  const now = options.now ?? Date.now;
+  const timeoutMs = options.timeoutMs ?? completenessTimeoutMs;
+
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error('Completeness timeout must be a positive integer.');
+  }
+
+  const startedAt = now();
+  const deadlineAt = startedAt + timeoutMs;
+  const verifyOptions = {
+    ...options,
+    now,
+    timeoutMs,
+    deadlineAt,
+  };
+  const verified = await Promise.all(
+    packageInfos.map((packageInfo) => verify(packageInfo, verifyOptions))
+  );
+
   console.log(
-    `[release] Completeness gate verified all ${packageInfos.length} public packages at ${packageInfos[0].version}.`
+    `[release] Completeness gate verified all ${packageInfos.length} public packages at ${packageInfos[0].version} within one shared ${timeoutMs}ms registry visibility budget.`
   );
   return verified;
 }
@@ -681,6 +717,12 @@ exports.publish = async () => {
     );
   }
 
+  if (!Number.isInteger(completenessTimeoutMs) || completenessTimeoutMs < 1) {
+    throw new Error(
+      'VELLIRA_RELEASE_COMPLETENESS_TIMEOUT_MS must be a positive integer.'
+    );
+  }
+
   if (
     !Number.isInteger(verificationBaseDelayMs) ||
     verificationBaseDelayMs < 1
@@ -693,12 +735,25 @@ exports.publish = async () => {
   assertTrustedPublishingEnvironment();
 
   const packageInfos = publicPackages.map(createPackageInfo);
-  const summaries = await publishPackages(packageInfos);
+  const summaries = await publishPackages(packageInfos, (packageInfo) =>
+    publishPackage(packageInfo, { verifyAfterPublish: false })
+  );
   printPublishSummary(summaries);
 
-  // A publish command can succeed minutes before npm's read path exposes the
-  // immutable version. Release success is the complete registry state, not an
-  // individual command result or an earlier per-package visibility timeout.
+  const mutationFailures = summaries.filter((summary) => summary.error);
+
+  if (mutationFailures.length > 0) {
+    throw new Error(
+      `Failed to publish ${mutationFailures.length} package(s): ${mutationFailures
+        .map((summary) => summary.packageName)
+        .join(', ')}`
+    );
+  }
+
+  // npm can accept a publish command long before its read path exposes the
+  // immutable version. Normal release therefore performs no per-package
+  // visibility wait. One concurrent all-six gate owns registry/provenance
+  // confirmation under a single absolute deadline.
   await verifyPackageCompleteness(packageInfos);
 };
 
