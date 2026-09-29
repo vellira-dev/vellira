@@ -28,6 +28,15 @@ const tasks = [
     args: ['exec', 'node', '--test', 'scripts/smoke/utils.test.mjs'],
   },
   {
+    name: 'dependency security remediation contracts',
+    args: [
+      'exec',
+      'node',
+      '--test',
+      'scripts/ci/dependabot-security-remediation.test.mjs',
+    ],
+  },
+  {
     name: 'tooling suite',
     args: baseArgs,
   },

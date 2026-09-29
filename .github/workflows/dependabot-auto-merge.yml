@@ -109,55 +109,116 @@ jobs:
           const repository = process.env.REPOSITORY;
           const ciHeadSha = process.env.CI_HEAD_SHA ?? '';
 
-          if (decision.schemaVersion !== 1) {
-            throw new Error('Unsupported Dependabot auto-merge decision schema');
-          }
           if (decision.repository !== repository) {
-            throw new Error('Dependabot auto-merge decision repository mismatch');
+            throw new Error('Dependency auto-merge decision repository mismatch');
           }
           if (
             !Number.isSafeInteger(decision.pullRequestNumber) ||
             decision.pullRequestNumber <= 0
           ) {
-            throw new Error('Dependabot auto-merge decision PR number is invalid');
+            throw new Error('Dependency auto-merge decision PR number is invalid');
           }
           if (!/^[0-9a-f]{40}$/.test(decision.headSha ?? '')) {
-            throw new Error('Dependabot auto-merge decision head SHA is invalid');
+            throw new Error('Dependency auto-merge decision head SHA is invalid');
           }
           if (decision.headSha !== ciHeadSha) {
-            throw new Error('Dependabot auto-merge decision does not match successful CI head');
-          }
-          if (decision.author !== 'dependabot[bot]') {
-            throw new Error('Dependabot auto-merge decision author mismatch');
+            throw new Error(
+              'Dependency auto-merge decision does not match successful CI head'
+            );
           }
           if (decision.baseRef !== 'main') {
-            throw new Error('Dependabot auto-merge decision must target main');
+            throw new Error('Dependency auto-merge decision must target main');
           }
 
-          const eligible =
-            decision.eligible === true &&
-            decision.updateType === 'version-update:semver-patch';
-          if (decision.eligible !== eligible) {
-            throw new Error('Dependabot auto-merge eligibility is inconsistent');
+          let kind;
+          let expectedAuthor;
+          let expectedHeadRef = '';
+          let baseSha = '';
+          let auditLevel = '';
+          let eligible = false;
+
+          if (decision.schemaVersion === 1) {
+            kind = 'dependabot-patch';
+            expectedAuthor = 'dependabot[bot]';
+            eligible =
+              decision.author === expectedAuthor &&
+              decision.eligible === true &&
+              decision.updateType === 'version-update:semver-patch';
+          } else if (
+            decision.schemaVersion === 2 &&
+            decision.kind === 'security-remediation'
+          ) {
+            kind = 'security-remediation';
+            expectedAuthor = 'vellira-release-sync[bot]';
+            expectedHeadRef = decision.headRef ?? '';
+            baseSha = decision.baseSha ?? '';
+            auditLevel = decision.auditLevel ?? '';
+
+            if (decision.dependencyScope !== 'development') {
+              throw new Error(
+                'Security remediation decision dependency scope is invalid'
+              );
+            }
+            if (!/^[0-9a-f]{40}$/.test(baseSha)) {
+              throw new Error('Security remediation decision base SHA is invalid');
+            }
+            if (
+              expectedHeadRef !==
+              'automation/dependabot-security-remediation'
+            ) {
+              throw new Error(
+                'Security remediation decision head ref is outside authority'
+              );
+            }
+            if (auditLevel !== 'high' && auditLevel !== 'low') {
+              throw new Error('Security remediation decision audit level is invalid');
+            }
+            if (
+              !Number.isSafeInteger(decision.sourceRunId) ||
+              decision.sourceRunId <= 0 ||
+              !Number.isSafeInteger(decision.sourceRunAttempt) ||
+              decision.sourceRunAttempt <= 0
+            ) {
+              throw new Error(
+                'Security remediation decision source identity is invalid'
+              );
+            }
+
+            eligible =
+              decision.author === expectedAuthor &&
+              decision.eligible === true &&
+              decision.updateType === 'security-remediation';
+          } else {
+            throw new Error('Unsupported dependency auto-merge decision schema');
+          }
+
+          if (!eligible) {
+            throw new Error('Dependency auto-merge eligibility is inconsistent');
           }
 
           fs.appendFileSync(
             process.env.GITHUB_OUTPUT,
-            `eligible=${eligible}\n` +
-              `pr_number=${decision.pullRequestNumber}\n` +
-              `head_sha=${decision.headSha}\n`
+            'eligible=true\n' +
+              'pr_number=' + decision.pullRequestNumber + '\n' +
+              'head_sha=' + decision.headSha + '\n' +
+              'kind=' + kind + '\n' +
+              'expected_author=' + expectedAuthor + '\n' +
+              'expected_head_ref=' + expectedHeadRef + '\n' +
+              'base_sha=' + baseSha + '\n' +
+              'audit_level=' + auditLevel + '\n'
           );
           console.log(
             JSON.stringify({
               pullRequestNumber: decision.pullRequestNumber,
               headSha: decision.headSha,
               updateType: decision.updateType,
+              kind,
               eligible,
             })
           );
           NODE
 
-      - name: Revalidate current Dependabot pull request
+      - name: Revalidate current dependency pull request
         if: steps.candidate.outputs.eligible == 'true'
         shell: bash
         env:
@@ -165,9 +226,22 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+          EXPECTED_AUTHOR: ${{ steps.candidate.outputs.expected_author }}
+          EXPECTED_HEAD_REF: ${{ steps.candidate.outputs.expected_head_ref }}
+          EXPECTED_BASE_SHA: ${{ steps.candidate.outputs.base_sha }}
+          CANDIDATE_KIND: ${{ steps.candidate.outputs.kind }}
         run: |
           set -euo pipefail
-          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > .dependabot-auto-merge/current-pr.json
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" \
+            > .dependabot-auto-merge/current-pr.json
+
+          if [[ "$CANDIDATE_KIND" == "security-remediation" ]]; then
+            gh api --paginate \
+              "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
+              | jq -s 'add | map(.filename) | sort' \
+              > .dependabot-auto-merge/current-files.json
+          fi
+
           node <<'NODE'
           const fs = require('node:fs');
 
@@ -175,25 +249,67 @@ jobs:
             fs.readFileSync('.dependabot-auto-merge/current-pr.json', 'utf8')
           );
           const expectedHeadSha = process.env.EXPECTED_HEAD_SHA;
+          const expectedAuthor = process.env.EXPECTED_AUTHOR;
+          const expectedHeadRef = process.env.EXPECTED_HEAD_REF ?? '';
+          const expectedBaseSha = process.env.EXPECTED_BASE_SHA ?? '';
+          const kind = process.env.CANDIDATE_KIND;
           const repository = process.env.REPOSITORY;
 
           if (pull.state !== 'open') {
-            throw new Error('Dependabot pull request is no longer open');
+            throw new Error('Dependency pull request is no longer open');
           }
           if (pull.draft !== false) {
-            throw new Error('Dependabot pull request is a draft');
+            throw new Error('Dependency pull request is a draft');
           }
-          if (pull.user?.login !== 'dependabot[bot]') {
-            throw new Error('Dependabot pull request author mismatch');
+          if (pull.user?.login !== expectedAuthor) {
+            throw new Error('Dependency pull request author mismatch');
           }
           if (pull.base?.ref !== 'main') {
-            throw new Error('Dependabot pull request no longer targets main');
+            throw new Error('Dependency pull request no longer targets main');
           }
           if (pull.head?.sha !== expectedHeadSha) {
-            throw new Error('Dependabot pull request head moved after successful CI');
+            throw new Error('Dependency pull request head moved after successful CI');
           }
           if (pull.head?.repo?.full_name !== repository) {
-            throw new Error('Dependabot pull request head repository mismatch');
+            throw new Error('Dependency pull request head repository mismatch');
+          }
+
+          if (kind === 'security-remediation') {
+            if (
+              pull.title !==
+              'chore(security): remediate dependency alerts'
+            ) {
+              throw new Error(
+                'Security remediation pull request title changed after authentication'
+              );
+            }
+            if (pull.base?.sha !== expectedBaseSha) {
+              throw new Error(
+                'Security remediation base moved after authenticated generation'
+              );
+            }
+            if (pull.head?.ref !== expectedHeadRef) {
+              throw new Error('Security remediation branch moved outside authority');
+            }
+            const files = JSON.parse(
+              fs.readFileSync(
+                '.dependabot-auto-merge/current-files.json',
+                'utf8'
+              )
+            );
+            const allowed = new Set([
+              'pnpm-lock.yaml',
+              'pnpm-workspace.yaml',
+            ]);
+            const unexpected = files.filter((file) => !allowed.has(file));
+            if (
+              files.length === 0 ||
+              unexpected.length > 0
+            ) {
+              throw new Error(
+                'Security remediation changed files outside dependency authority'
+              );
+            }
           }
           NODE
 
@@ -213,7 +329,7 @@ jobs:
             --fail-fast \
             --interval 10
 
-      - name: Revalidate Dependabot pull request after checks
+      - name: Revalidate dependency pull request after checks
         if: steps.candidate.outputs.eligible == 'true'
         shell: bash
         env:
@@ -221,9 +337,22 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ steps.candidate.outputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ steps.candidate.outputs.head_sha }}
+          EXPECTED_AUTHOR: ${{ steps.candidate.outputs.expected_author }}
+          EXPECTED_HEAD_REF: ${{ steps.candidate.outputs.expected_head_ref }}
+          EXPECTED_BASE_SHA: ${{ steps.candidate.outputs.base_sha }}
+          CANDIDATE_KIND: ${{ steps.candidate.outputs.kind }}
         run: |
           set -euo pipefail
-          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > .dependabot-auto-merge/current-pr-after-checks.json
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" \
+            > .dependabot-auto-merge/current-pr-after-checks.json
+
+          if [[ "$CANDIDATE_KIND" == "security-remediation" ]]; then
+            gh api --paginate \
+              "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
+              | jq -s 'add | map(.filename) | sort' \
+              > .dependabot-auto-merge/current-files-after-checks.json
+          fi
+
           node <<'NODE'
           const fs = require('node:fs');
 
@@ -234,25 +363,67 @@ jobs:
             )
           );
           const expectedHeadSha = process.env.EXPECTED_HEAD_SHA;
+          const expectedAuthor = process.env.EXPECTED_AUTHOR;
+          const expectedHeadRef = process.env.EXPECTED_HEAD_REF ?? '';
+          const expectedBaseSha = process.env.EXPECTED_BASE_SHA ?? '';
+          const kind = process.env.CANDIDATE_KIND;
           const repository = process.env.REPOSITORY;
 
           if (pull.state !== 'open') {
-            throw new Error('Dependabot pull request closed while checks were running');
+            throw new Error('Dependency pull request closed while checks were running');
           }
           if (pull.draft !== false) {
-            throw new Error('Dependabot pull request became a draft');
+            throw new Error('Dependency pull request became a draft');
           }
-          if (pull.user?.login !== 'dependabot[bot]') {
-            throw new Error('Dependabot pull request author mismatch');
+          if (pull.user?.login !== expectedAuthor) {
+            throw new Error('Dependency pull request author mismatch');
           }
           if (pull.base?.ref !== 'main') {
-            throw new Error('Dependabot pull request no longer targets main');
+            throw new Error('Dependency pull request no longer targets main');
           }
           if (pull.head?.sha !== expectedHeadSha) {
-            throw new Error('Dependabot pull request head moved while checks were running');
+            throw new Error('Dependency pull request head moved while checks were running');
           }
           if (pull.head?.repo?.full_name !== repository) {
-            throw new Error('Dependabot pull request head repository mismatch');
+            throw new Error('Dependency pull request head repository mismatch');
+          }
+
+          if (kind === 'security-remediation') {
+            if (
+              pull.title !==
+              'chore(security): remediate dependency alerts'
+            ) {
+              throw new Error(
+                'Security remediation pull request title changed after authentication'
+              );
+            }
+            if (pull.base?.sha !== expectedBaseSha) {
+              throw new Error(
+                'Security remediation base moved after authenticated generation'
+              );
+            }
+            if (pull.head?.ref !== expectedHeadRef) {
+              throw new Error('Security remediation branch moved outside authority');
+            }
+            const files = JSON.parse(
+              fs.readFileSync(
+                '.dependabot-auto-merge/current-files-after-checks.json',
+                'utf8'
+              )
+            );
+            const allowed = new Set([
+              'pnpm-lock.yaml',
+              'pnpm-workspace.yaml',
+            ]);
+            const unexpected = files.filter((file) => !allowed.has(file));
+            if (
+              files.length === 0 ||
+              unexpected.length > 0
+            ) {
+              throw new Error(
+                'Security remediation changed files outside dependency authority'
+              );
+            }
           }
           NODE
 
@@ -266,7 +437,7 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: Merge patch update after full CI
+      - name: Merge eligible dependency update after full CI
         if: steps.candidate.outputs.eligible == 'true'
         shell: bash
         env:
