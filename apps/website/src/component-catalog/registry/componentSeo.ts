@@ -1,7 +1,4 @@
-import type {
-  ComponentCatalogEntry,
-  ComponentPlatform,
-} from '../types';
+import type { ComponentCatalogEntry, ComponentPlatform } from '../types';
 import { componentPages } from './componentPages';
 
 /**
