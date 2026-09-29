@@ -247,9 +247,9 @@ export function renderCatalogEntry(params: {
     .join('\n');
   const description =
     model.discovery?.description ??
-    `${model.componentName} component for Vellira applications. Explore ${getCatalogPlatformLabel(
+    `Vellira ${model.componentName} for ${getCatalogPlatformLabel(
       model.platforms
-    )} usage examples, accessibility guidance, and API details.`;
+    )} with usage examples, accessibility guidance, and API details.`;
 
   return `  {
     component: '${model.componentName}',
