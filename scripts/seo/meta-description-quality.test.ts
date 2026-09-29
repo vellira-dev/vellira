@@ -150,7 +150,7 @@ function getAdoptedDiscoveryDescriptions(root: string) {
   );
   const entries = [
     ...componentPagesSource.matchAll(
-      /\n {2}(?:([A-Za-z_$][\w$-]*)|'([^']+)'): \{([\s\S]*?)(?=\n {2}(?:[A-Za-z_$][\w$-]*|'[^']+'): \{|\n} satisfies)/
+      /\n {2}(?:([A-Za-z_$][\w$-]*)|'([^']+)'): \{([\s\S]*?)(?=\n {2}(?:[A-Za-z_$][\w$-]*|'[^']+'): \{|\n} satisfies)/g
     ),
   ];
 
