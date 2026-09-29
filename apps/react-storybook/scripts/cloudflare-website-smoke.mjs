@@ -780,7 +780,7 @@ try {
   await navigateByLink(
     '/components',
     '/components/switch',
-    'Switch component for Vellira applications.'
+    'Vellira Switch for React and React Native'
   );
   await navigateWithinComponentSidebar();
   await navigateWithinMobileComponentSidebar();

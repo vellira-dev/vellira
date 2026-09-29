@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { generateApiDocs } from '../../generate-api-docs';
 import { generateComponentDocs } from '../component-docs/generate-component-docs';
+import { createComponentDocsContractFromPlan } from './docs';
 import { checkComponentDocumentationContract } from './documentation-contract';
 import { createComponentGenerationPlan } from './plan';
 
@@ -38,6 +39,16 @@ function plan() {
 }
 
 describe('component documentation contract check', () => {
+  it('derives distinct platform-specific search descriptions', () => {
+    const contract = createComponentDocsContractFromPlan(plan());
+    const react = contract.platforms.react;
+    const native = contract.platforms['react-native'];
+
+    expect(react?.description).toContain('for React with');
+    expect(native?.description).toContain('for React Native with');
+    expect(react?.description).not.toBe(native?.description);
+  });
+
   it('checks dynamic API sections and generated docs without writing them', async () => {
     vi.mocked(generateApiDocs).mockResolvedValue({
       status: 'up-to-date',
