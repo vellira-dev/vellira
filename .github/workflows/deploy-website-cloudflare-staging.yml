@@ -18,6 +18,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'patches/**'
       - 'turbo.json'
+      - 'tsconfig.base.json'
       - '.github/workflows/deploy-website-cloudflare-staging.yml'
       - '.github/workflows/deploy-website-cloudflare-production.yml'
   workflow_dispatch:
