@@ -26,6 +26,37 @@ interface BlogMetricsRequestOptions {
   retries?: number;
 }
 
+class BlogMetricsRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string | null
+  ) {
+    super(`Blog metrics request failed with ${status}`);
+  }
+}
+
+function isArticleNotFound(error: unknown): boolean {
+  return (
+    error instanceof BlogMetricsRequestError &&
+    error.status === 404 &&
+    error.code === 'article_not_found'
+  );
+}
+
+function parseErrorCode(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null || !('error' in value)) {
+    return null;
+  }
+
+  const error = value.error;
+  return typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string'
+    ? error.code
+    : null;
+}
+
 function createBlogMetricsProxyPath(path: string): string {
   return `${BLOG_METRICS_PROXY_BASE_PATH}/${path.replace(/^\/+/, '')}`;
 }
@@ -109,11 +140,20 @@ async function requestBlogMetricsJson(
       const response = await fetch(url, init);
 
       if (!response.ok) {
-        throw new Error(`Blog metrics request failed with ${response.status}`);
+        const payload: unknown = await response.json().catch(() => null);
+        throw new BlogMetricsRequestError(
+          response.status,
+          parseErrorCode(payload)
+        );
       }
 
       return response.json();
     } catch (error) {
+      // Repeating a known catalog miss cannot recover this request. The batch
+      // reader below isolates it without hiding unrelated API failures.
+      if (isArticleNotFound(error)) {
+        throw error;
+      }
       lastError = error;
     }
   }
@@ -151,14 +191,37 @@ export async function fetchBlogMetricsBatch(
   }
 
   const url = `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
-  const json = await requestBlogMetricsJson(
-    url,
-    {
-      credentials: 'include',
-      cache: 'no-store',
-    },
-    { retries: 1 }
-  );
+  let json: unknown;
+
+  try {
+    json = await requestBlogMetricsJson(
+      url,
+      {
+        credentials: 'include',
+        cache: 'no-store',
+      },
+      { retries: 1 }
+    );
+  } catch (error) {
+    if (!isArticleNotFound(error)) {
+      throw error;
+    }
+
+    // Staging can contain a new article before the authoritative backend
+    // catalog does. One unknown slug must not hide all established articles.
+    // Never invent counts for that slug or turn generic 404/5xx into success.
+    if (uniqueSlugs.length === 1) {
+      return {};
+    }
+
+    // Sequential bisection bounds concurrency to one request; a catalog-only
+    // failure needs at most 2N - 1 requests for N unique slugs. Healthy batches
+    // still use one request, and writes never participate in this recovery.
+    const midpoint = Math.ceil(uniqueSlugs.length / 2);
+    const left = await fetchBlogMetricsBatch(uniqueSlugs.slice(0, midpoint));
+    const right = await fetchBlogMetricsBatch(uniqueSlugs.slice(midpoint));
+    return { ...left, ...right };
+  }
 
   if (
     typeof json !== 'object' ||

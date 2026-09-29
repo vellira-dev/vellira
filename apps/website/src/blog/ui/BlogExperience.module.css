@@ -355,9 +355,21 @@
 }
 
 .articleBody a {
-  color: var(--color-primary-400);
+  color: var(--text-interactive);
+  text-decoration-line: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
+  transition: color 160ms ease;
+}
+
+.articleBody a:hover,
+.articleBody a:focus-visible {
+  color: var(--text-interactive-hover);
+  text-decoration-thickness: 2px;
+}
+
+.articleBody a:active {
+  color: var(--text-interactive-pressed);
 }
 
 .articleBody strong {
@@ -482,7 +494,8 @@
 @media (prefers-reduced-motion: reduce) {
   .articleCard,
   .articleCard::before,
-  .cardLink::after {
+  .cardLink::after,
+  .articleBody a {
     transition: none;
   }
 
