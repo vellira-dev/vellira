@@ -135,6 +135,38 @@ function collectBlogDescriptions(root: string): PublicDescription[] {
     });
 }
 
+function getAdoptedDiscoveryDescriptions(root: string) {
+  const componentPagesSource = fs.readFileSync(
+    path.join(
+      root,
+      'apps',
+      'website',
+      'src',
+      'component-catalog',
+      'registry',
+      'componentPages.ts'
+    ),
+    'utf8'
+  );
+  const entries = [
+    ...componentPagesSource.matchAll(
+      /\n {2}(?:([A-Za-z_$][\w$-]*)|'([^']+)'): \{([\s\S]*?)(?=\n {2}(?:[A-Za-z_$][\w$-]*|'[^']+'): \{|\n} satisfies)/
+    ),
+  ];
+
+  return entries.flatMap((entry) => {
+    const slug = entry[1] ?? entry[2];
+    const source = entry[3] ?? '';
+    const match = source.match(
+      /discovery:\s*\{[\s\S]*?description:\s*(?:\n\s*)?'([^']+)'/
+    );
+
+    return slug && match?.[1]
+      ? [{ slug, description: normalizeDescription(match[1]) }]
+      : [];
+  });
+}
+
 function publicDescriptions(): PublicDescription[] {
   const root = process.cwd();
 
@@ -187,15 +219,30 @@ describe('public meta-description quality', () => {
     expect(duplicates).toEqual([]);
   });
 
-  it('uses adopted discovery authority for component search metadata', () => {
-    const checkbox = webComponents.find(
-      (component) => component.slug === 'checkbox'
+  it('keeps adopted discovery descriptions aligned with website presentation', () => {
+    const root = process.cwd();
+    const presentationSource = fs.readFileSync(
+      path.join(
+        root,
+        'apps',
+        'website',
+        'src',
+        'component-catalog',
+        'registry',
+        'componentPresentation.ts'
+      ),
+      'utf8'
     );
+    const adopted = getAdoptedDiscoveryDescriptions(root);
 
-    expect(checkbox).toBeDefined();
-    expect(getComponentMetaDescription(checkbox!)).toContain(
-      'controlled and uncontrolled state'
-    );
+    expect(adopted.length).toBeGreaterThan(0);
+
+    for (const item of adopted) {
+      expect(
+        normalizeDescription(presentationSource),
+        `component presentation drift for ${item.slug}`
+      ).toContain(item.description);
+    }
   });
 
   it('does not expose the old generic generator placeholder as effective metadata', () => {
