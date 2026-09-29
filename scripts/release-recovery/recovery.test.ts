@@ -357,7 +357,7 @@ describe('release recovery decisions', () => {
 
   it('gives all six completeness checks one absolute deadline', async () => {
     const infos = packages.map((name) => ({ name, version: '2.124.0' }));
-    let clock = 42_000;
+    const clock = 42_000;
     const deadlines: number[] = [];
     const verify = vi.fn(
       async (
