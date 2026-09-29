@@ -19,14 +19,16 @@ const root = path.resolve(import.meta.dirname, '..');
 await fs.rm(path.join(root, '.open-next/vellira-build.json'), { force: true });
 const configPath = path.resolve(root, process.argv[2] ?? 'wrangler.jsonc');
 const config = readDeploymentConfig(configPath);
+const { GITHUB_TOKEN: githubToken, ...childProcessEnv } = process.env;
 const freshnessContext = {
   configPath,
   candidateSource: process.env.CANDIDATE_SOURCE,
   candidateSha: process.env.CANDIDATE_SHA,
+  githubToken,
   cwd: root,
 };
 
-function run(command, args, env = process.env) {
+function run(command, args, env = childProcessEnv) {
   const result = spawnSync(command, args, { cwd: root, env, stdio: 'inherit' });
   if (result.error) throw result.error;
   assert.equal(result.status, 0, `${command} ${args.join(' ')} failed`);
@@ -86,7 +88,7 @@ await withRemoteArchive(config, async (bucket, bucketName) => {
 run(
   'pnpm',
   ['exec', 'wrangler', 'deploy', '--dry-run', `--config=${configPath}`],
-  { ...process.env, OPEN_NEXT_DEPLOY: 'true' }
+  { ...childProcessEnv, OPEN_NEXT_DEPLOY: 'true' }
 );
 await assertFreshProductionCandidate(freshnessContext);
 run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
