@@ -67,6 +67,19 @@ Then let each platform implement those decisions using the primitives that make 
 
 That means a web Button can still use browser-native capabilities while a React Native Button uses native press and accessibility behavior. The implementations can diverge without the product vocabulary drifting with them.
 
+A simple way to picture that boundary is:
+
+```text
+Product decision
+      ↓
+Shared semantic contract
+      ↓
+Web implementation          React Native implementation
+DOM + browser APIs           Native primitives + native APIs
+```
+
+The shared layer carries the decision. Each runtime keeps ownership of how that decision is implemented.
+
 I explored that architecture in more detail in [One Design System, Two Runtimes](/blog/two-runtimes). The important distinction here is what happens **before** architecture becomes visible: teams stop spending time reopening the same product decisions.
 
 ## Where Vellira fits today
