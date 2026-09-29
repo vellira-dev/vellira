@@ -6,7 +6,7 @@ export const textareaDocs = defineComponentDocs({
     react: {
       title: 'Textarea - React',
       description:
-        'Textarea for React and React Native with controlled and uncontrolled state, disabled state, required state, and validation state.',
+        'Textarea for React with controlled and uncontrolled state, disabled state, required state, and validation state.',
       summary:
         'Use Textarea in React form interfaces when you need the canonical Vellira behavior and styling for this component.',
       whenToUse: [
@@ -24,7 +24,7 @@ export const textareaDocs = defineComponentDocs({
     'react-native': {
       title: 'Textarea - React Native',
       description:
-        'Textarea for React and React Native with controlled and uncontrolled state, disabled state, required state, and validation state.',
+        'Textarea for React Native with controlled and uncontrolled state, disabled state, required state, and validation state.',
       summary:
         'Use Textarea in React Native form interfaces when you need the canonical Vellira behavior and styling for this component.',
       whenToUse: [

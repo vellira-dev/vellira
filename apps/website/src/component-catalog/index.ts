@@ -30,6 +30,11 @@ export {
 export { componentGroups } from './registry/componentGroups';
 export { webComponents } from './registry/components';
 export { getComponentBySlug } from './registry/getComponentBySlug';
+export {
+  COMPONENTS_INDEX_META_DESCRIPTION,
+  getComponentMetaDescription,
+  MIN_PUBLIC_META_DESCRIPTION_LENGTH,
+} from './registry/componentSeo';
 
 export { ComponentNavigationTrigger } from './shared/ComponentNavigationTrigger';
 

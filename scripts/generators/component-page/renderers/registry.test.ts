@@ -77,6 +77,9 @@ describe('component catalog registration', async () => {
     expect(content.match(/slug: 'switch'/g)).toHaveLength(1);
     expect(content).toContain("component: 'Switch'");
     expect(content).toContain("category: 'forms'");
+    expect(content).toContain(
+      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.'
+    );
     expect(content).not.toContain('status:');
     expect(content).not.toContain('platforms:');
     expect(content).toContain("'react-native'");
@@ -149,6 +152,9 @@ const componentCatalogPresentation = [
     expect(content.match(/slug: 'switch'/g)).toHaveLength(1);
     expect(content).toContain("category: 'navigation'");
     expect(content).not.toContain("category: 'general'");
+    expect(content).toContain(
+      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.'
+    );
   });
 });
 

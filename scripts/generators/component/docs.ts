@@ -82,13 +82,18 @@ export function getComponentApiDocsTargets(
   }));
 }
 
-function getPlanDiscoveryContent(plan: ComponentGenerationPlan) {
+function getPlanDiscoveryContent(
+  plan: ComponentGenerationPlan,
+  platforms: readonly ComponentPlatform[] = plan.targets.map(
+    (target) => target.packageName
+  )
+) {
   return deriveComponentDiscoveryContent({
     componentName: plan.componentName,
     category: plan.category,
     profile: plan.profile,
     capabilities: resolvePlanCapabilities(plan),
-    platforms: plan.targets.map((target) => target.packageName),
+    platforms,
   });
 }
 
@@ -111,6 +116,7 @@ export function createComponentDocsContractFromPlan(
     platforms: Object.fromEntries(
       plan.targets.map((target) => {
         const platform = target.packageName;
+        const platformDiscovery = getPlanDiscoveryContent(plan, [platform]);
 
         return [
           platform,
@@ -119,10 +125,10 @@ export function createComponentDocsContractFromPlan(
               platform === 'react'
                 ? `${plan.componentName} - React`
                 : `${plan.componentName} - React Native`,
-            description: discovery.description,
+            description: platformDiscovery.description,
             summary: getGeneratedDocsSummary(plan, platform),
             whenToUse: discovery.whenToUse,
-            notes: discovery.platformNotes[platform],
+            notes: platformDiscovery.platformNotes[platform],
             storybook: {
               story: 'Default',
               title: storybookTitle(plan),

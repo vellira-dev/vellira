@@ -32,7 +32,8 @@ export const componentCatalogPresentation = [
     component: 'Checkbox',
     slug: 'checkbox',
     name: 'Checkbox',
-    description: 'Accessible binary and indeterminate selection control.',
+    description:
+      'Checkbox for React and React Native with controlled and uncontrolled state, indeterminate state, disabled state, required state, and validation state.',
     category: 'forms',
     order: 20,
     docs: {
@@ -151,7 +152,7 @@ export const componentCatalogPresentation = [
     slug: 'tooltip',
     name: 'Tooltip',
     description:
-      'Contextual labels with managed delay, positioning, and accessibility.',
+      'Accessible Tooltip for React and React Native with managed delay, positioning, controlled state, compound triggers, and platform-appropriate dismissal behavior.',
     category: 'overlays',
     order: 40,
     docs: {
@@ -163,7 +164,8 @@ export const componentCatalogPresentation = [
     component: 'Switch',
     slug: 'switch',
     name: 'Switch',
-    description: 'Switch component for Vellira applications.',
+    description:
+      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.',
     category: 'forms',
     order: 999,
     docs: {
@@ -175,7 +177,8 @@ export const componentCatalogPresentation = [
     component: 'Accordion',
     slug: 'accordion',
     name: 'Accordion',
-    description: 'Accordion component for Vellira applications.',
+    description:
+      'Vellira Accordion for React and React Native with usage examples, accessibility guidance, and API details.',
     category: 'navigation',
     order: 999,
     docs: {

@@ -223,6 +223,17 @@ ${demoEntries}
 `;
 }
 
+function getCatalogPlatformLabel(platforms: readonly string[]) {
+  const hasReact = platforms.includes('react');
+  const hasNative = platforms.includes('react-native');
+
+  if (hasReact && hasNative) return 'React and React Native';
+  if (hasReact) return 'React';
+  if (hasNative) return 'React Native';
+
+  return 'supported-platform';
+}
+
 export function renderCatalogEntry(params: {
   model: GeneratedPageModel;
   catalogCategory: CatalogCategory;
@@ -236,7 +247,9 @@ export function renderCatalogEntry(params: {
     .join('\n');
   const description =
     model.discovery?.description ??
-    `${model.componentName} component for Vellira applications.`;
+    `Vellira ${model.componentName} for ${getCatalogPlatformLabel(
+      model.platforms
+    )} with usage examples, accessibility guidance, and API details.`;
 
   return `  {
     component: '${model.componentName}',

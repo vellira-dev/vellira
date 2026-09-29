@@ -382,7 +382,7 @@ jobs:
           }
 
           check_route '/' 'Vellira'
-          check_route '/components/switch' 'Switch component for Vellira applications.'
+          check_route '/components/switch' 'Vellira Switch for React and React Native'
           check_route '/blog' 'Practical engineering notes on design systems'
           check_route '/blog/two-runtimes' 'One Design System, Two Runtimes' 'data-language="ts"'
           check_route '/blog/rss.xml' '<rss version="2.0"'
