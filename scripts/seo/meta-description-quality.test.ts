@@ -1,15 +1,18 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { BLOG_DESCRIPTION } from '../../apps/website/src/blog/seo';
+import { componentCatalogPresentation } from '../../apps/website/src/component-catalog/registry/componentPresentation';
 import {
   COMPONENTS_INDEX_META_DESCRIPTION,
   getComponentMetaDescription,
   MIN_PUBLIC_META_DESCRIPTION_LENGTH,
 } from '../../apps/website/src/component-catalog/registry/componentSeo';
 import { webComponents } from '../../apps/website/src/component-catalog/registry/components';
+import { SITE_DESCRIPTION } from '../../apps/website/src/config/siteSeo';
 
 type PublicDescription = {
   surface: string;
@@ -83,19 +86,22 @@ function collectMarkdownFiles(directory: string): string[] {
 function collectDocsDescriptions(root: string): PublicDescription[] {
   const docsRoot = path.join(root, 'apps', 'docs', 'src');
 
-  return collectMarkdownFiles(docsRoot).flatMap((filePath) => {
+  return collectMarkdownFiles(docsRoot).map((filePath) => {
+    const surface = path.relative(docsRoot, filePath).replace(/\\/g, '/');
     const description = frontmatterDescription(
       fs.readFileSync(filePath, 'utf8')
     );
 
-    if (!description) return [];
+    if (!description) {
+      throw new Error(
+        `Missing or unsupported docs meta description for ${surface}`
+      );
+    }
 
-    return [
-      {
-        surface: path.relative(docsRoot, filePath).replace(/\\/g, '/'),
-        description,
-      },
-    ];
+    return {
+      surface,
+      description,
+    };
   });
 }
 
@@ -157,13 +163,53 @@ function getAdoptedDiscoveryDescriptions(root: string) {
   return entries.flatMap((entry) => {
     const slug = entry[1] ?? entry[2];
     const source = entry[3] ?? '';
+
+    if (!source.includes('discovery:')) return [];
+
     const match = source.match(
-      /discovery:\s*\{[\s\S]*?description:\s*(?:\n\s*)?'([^']+)'/
+      /discovery:\s*\{[\s\S]*?description:\s*(?:\n\s*)?(['"])((?:\\.|(?!\1)[\s\S])*?)\1/
     );
 
-    return slug && match?.[1]
-      ? [{ slug, description: normalizeDescription(match[1]) }]
-      : [];
+    if (!slug || !match?.[2]) {
+      throw new Error(
+        `Unable to parse adopted discovery description for ${slug ?? 'unknown component'}`
+      );
+    }
+
+    return [
+      {
+        slug,
+        description: normalizeDescription(
+          match[2].replace(/\\(['"\\])/g, '$1')
+        ),
+      },
+    ];
+  });
+}
+
+function getDiscoveryPresentationDrift(
+  adopted: readonly { slug: string; description: string }[],
+  presentation: readonly { slug: string; description: string }[]
+) {
+  const bySlug = new Map(
+    presentation.map((item) => [
+      item.slug,
+      normalizeDescription(item.description),
+    ])
+  );
+
+  return adopted.flatMap((item) => {
+    const actual = bySlug.get(item.slug);
+
+    return actual === item.description
+      ? []
+      : [
+          {
+            slug: item.slug,
+            expected: item.description,
+            actual: actual ?? null,
+          },
+        ];
   });
 }
 
@@ -171,6 +217,10 @@ function publicDescriptions(): PublicDescription[] {
   const root = process.cwd();
 
   return [
+    {
+      surface: '/',
+      description: SITE_DESCRIPTION,
+    },
     {
       surface: '/components',
       description: COMPONENTS_INDEX_META_DESCRIPTION,
@@ -219,30 +269,75 @@ describe('public meta-description quality', () => {
     expect(duplicates).toEqual([]);
   });
 
-  it('keeps adopted discovery descriptions aligned with website presentation', () => {
-    const root = process.cwd();
-    const presentationSource = fs.readFileSync(
-      path.join(
-        root,
-        'apps',
-        'website',
-        'src',
-        'component-catalog',
-        'registry',
-        'componentPresentation.ts'
-      ),
-      'utf8'
-    );
-    const adopted = getAdoptedDiscoveryDescriptions(root);
+  it('keeps adopted discovery descriptions aligned by exact component slug', () => {
+    const adopted = getAdoptedDiscoveryDescriptions(process.cwd());
 
     expect(adopted.length).toBeGreaterThan(0);
+    expect(
+      getDiscoveryPresentationDrift(adopted, componentCatalogPresentation)
+    ).toEqual([]);
+  });
 
-    for (const item of adopted) {
-      expect(
-        normalizeDescription(presentationSource),
-        `component presentation drift for ${item.slug}`
-      ).toContain(item.description);
+  it('fails closed when an indexable docs page has no parseable description', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-seo-docs-'));
+    const docsRoot = path.join(root, 'apps', 'docs', 'src');
+
+    try {
+      fs.mkdirSync(docsRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(docsRoot, 'missing-description.md'),
+        '---\ntitle: Missing description\n---\n\n# Missing description\n'
+      );
+
+      expect(() => collectDocsDescriptions(root)).toThrow(
+        'Missing or unsupported docs meta description for missing-description.md'
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('fails closed for unsupported multiline docs descriptions', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-seo-docs-'));
+    const docsRoot = path.join(root, 'apps', 'docs', 'src');
+
+    try {
+      fs.mkdirSync(docsRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(docsRoot, 'multiline-description.md'),
+        '---\ntitle: Multiline description\ndescription: |\n  This parser must not silently skip unsupported YAML.\n---\n'
+      );
+
+      expect(() => collectDocsDescriptions(root)).toThrow(
+        'Missing or unsupported docs meta description for multiline-description.md'
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('detects swapped discovery descriptions even when both values still exist', () => {
+    const adopted = [
+      { slug: 'checkbox', description: 'Checkbox canonical description.' },
+      { slug: 'textarea', description: 'Textarea canonical description.' },
+    ];
+    const swapped = [
+      { slug: 'checkbox', description: 'Textarea canonical description.' },
+      { slug: 'textarea', description: 'Checkbox canonical description.' },
+    ];
+
+    expect(getDiscoveryPresentationDrift(adopted, swapped)).toEqual([
+      {
+        slug: 'checkbox',
+        expected: 'Checkbox canonical description.',
+        actual: 'Textarea canonical description.',
+      },
+      {
+        slug: 'textarea',
+        expected: 'Textarea canonical description.',
+        actual: 'Checkbox canonical description.',
+      },
+    ]);
   });
 
   it('does not expose the old generic generator placeholder as effective metadata', () => {
