@@ -92,7 +92,7 @@ run(
 );
 await assertFreshProductionCandidate(freshnessContext);
 run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
-  ...process.env,
+  ...childProcessEnv,
   OPEN_NEXT_DEPLOY: 'true',
 });
 // Cloudflare activation can propagate briefly across edges. Do not start strict
