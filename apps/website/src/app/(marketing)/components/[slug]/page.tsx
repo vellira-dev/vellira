@@ -6,6 +6,7 @@ import {
   ComponentExplorer,
   ComponentPlatformView,
   getComponentBySlug,
+  getComponentMetaDescription,
   webComponents,
 } from '@/component-catalog';
 
@@ -32,7 +33,7 @@ export async function generateMetadata({
   }
 
   const title = `${component.name} React Component`;
-  const description = component.description;
+  const description = getComponentMetaDescription(component);
   const url = `/components/${component.slug}`;
 
   return {
