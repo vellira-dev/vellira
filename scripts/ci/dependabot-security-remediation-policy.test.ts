@@ -62,6 +62,40 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).not.toContain('gh pr merge');
   });
 
+  it('rejects non-main sources before any remediation work', async () => {
+    const source = await readFile(remediationWorkflowPath, 'utf8');
+    const jobGuardIndex = source.indexOf("if: github.ref == 'refs/heads/main'");
+    const checkoutIndex = source.indexOf('Checkout exact main baseline');
+
+    expect(jobGuardIndex).toBeGreaterThan(-1);
+    expect(checkoutIndex).toBeGreaterThan(jobGuardIndex);
+  });
+
+  it('revalidates main before write authority', async () => {
+    const source = await readFile(remediationWorkflowPath, 'utf8');
+    const freshnessIndex = source.indexOf(
+      'Revalidate current main before mutation'
+    );
+    const commitIndex = source.indexOf(
+      'Prepare exact dependency-only remediation commit'
+    );
+    const artifactIndex = source.indexOf(
+      'Publish immutable remediation candidate'
+    );
+    const tokenIndex = source.indexOf(
+      'Create short-lived remediation GitHub App token'
+    );
+
+    expect(freshnessIndex).toBeGreaterThan(-1);
+    expect(commitIndex).toBeGreaterThan(freshnessIndex);
+    expect(artifactIndex).toBeGreaterThan(commitIndex);
+    expect(tokenIndex).toBeGreaterThan(artifactIndex);
+    expect(source).toContain('EXPECTED_MAIN_SHA: ${{ github.sha }}');
+    expect(source).toContain(
+      'Security remediation baseline is stale: expected main'
+    );
+  });
+
   it('uses a short-lived app token only for branch and PR writes', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
 

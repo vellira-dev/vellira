@@ -29,6 +29,7 @@ concurrency:
 jobs:
   remediate:
     name: Remediate unresolved dependency alerts
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -308,6 +309,23 @@ jobs:
       - name: Prove no in-scope registry advisory remains
         if: steps.diff.outputs.changed == 'true'
         run: pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }} --json > .security-remediation/audit-after.json
+
+      - name: Revalidate current main before mutation
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_MAIN_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/branches/main" --jq '.commit.sha'
+          )"
+          if [[ "$current_main_sha" != "$EXPECTED_MAIN_SHA" ]]; then
+            echo "::error::Security remediation baseline is stale: expected main $EXPECTED_MAIN_SHA but current main is $current_main_sha."
+            exit 1
+          fi
 
       - name: Prepare exact dependency-only remediation commit
         if: steps.diff.outputs.changed == 'true'
