@@ -65,10 +65,7 @@ describe('Blog metrics catalog isolation', () => {
       second: metric('second', 2),
     };
     const calls = installCatalog(catalog);
-    assert.deepEqual(
-      await fetchBlogMetricsBatch(['first', 'second']),
-      catalog
-    );
+    assert.deepEqual(await fetchBlogMetricsBatch(['first', 'second']), catalog);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]?.url.pathname, '/api/blog-metrics/metrics');
     assert.deepEqual(calls[0]?.init, {
