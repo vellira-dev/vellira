@@ -104,13 +104,33 @@ A Vellira release is complete only when:
 
 The normal publisher performs a final all-six npm completeness gate. Individual
 publish command success, a Git tag, or a GitHub Release is not sufficient.
-Registry visibility is bounded by the explicit
-`VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS` deadline (six minutes by default).
+
+Normal release deliberately separates the npm mutation phase from registry
+visibility. A successful `npm publish` means npm accepted the immutable
+mutation, but it does not block that worker waiting for `npm view`. Once all six
+publish mutations have either been accepted or failed, any true mutation
+failure stops immediately. Otherwise all six exact versions are verified
+concurrently for integrity, tarball metadata, and provenance under one shared
+absolute deadline.
+
+The normal all-six gate is bounded by
+`VELLIRA_RELEASE_COMPLETENESS_TIMEOUT_MS` (20 minutes by default). This is one
+wall-clock visibility budget, not six independent waits and not a second retry
+window after per-package verification. The lower-level
+`VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS` remains six minutes by default for
+strict per-package verification used by partial-release recovery when it must
+publish a genuinely missing package.
+
 Progressive retries log elapsed and remaining time, truncate the final sleep to
-the deadline, and make one final registry attempt there.
+the shared deadline, and make one final registry attempt there. If the shared
+normal-release deadline is exhausted, the release remains fail-closed and the
+existing partial-release recovery path is still authoritative.
 
 ## Incident record
 
 See
 [`2026-09-11-v2.104.1.md`](../release-incidents/2026-09-11-v2.104.1.md)
-for the incident that established this recovery contract.
+for the incident that established this recovery contract and
+[`2026-09-28-v2.124.0.md`](../release-incidents/2026-09-28-v2.124.0.md) for
+the npm visibility incident that established the single global completeness
+budget.
