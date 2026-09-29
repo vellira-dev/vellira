@@ -285,6 +285,20 @@ test('deploy script gates archive mutation and real activation with shared fresh
     /await |fetch\(|withRemoteArchive|prepareDeployment|populateCache/,
     'No async or remote mutation may occur after final freshness check'
   );
+  assert.match(
+    source,
+    /const \{ GITHUB_TOKEN: githubToken, \.\.\.childProcessEnv \} = process\.env;/
+  );
+  assert.match(source, /githubToken,/);
+  assert.match(
+    source,
+    /function run\(command, args, env = childProcessEnv\)/
+  );
+  assert.doesNotMatch(
+    source,
+    /\.\.\.process\.env, OPEN_NEXT_DEPLOY/,
+    'Deployment child processes must not inherit GITHUB_TOKEN through process.env'
+  );
 });
 
 test('production workflow uses shared freshness instead of raw SHA equality', async () => {
