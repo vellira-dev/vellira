@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 
 import { chromium } from '@playwright/test';
 
+import { verifyBlogResilience } from './blog-resilience-website-smoke.mjs';
+
 const baseUrl = process.env.WEBSITE_URL ?? 'http://127.0.0.1:3100';
 
 const isTransparent = (value) =>
@@ -129,6 +131,8 @@ try {
   assert.equal(mobileFilterStyle.paddingRight, '10px');
   assert.equal(mobileFilterStyle.borderTopWidth, '0px');
   assert.equal(mobileFilterStyle.transform, 'none');
+
+  await verifyBlogResilience(browser, baseUrl);
 
   console.log('Blog discovery browser visual contract: OK');
 } finally {
