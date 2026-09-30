@@ -48,8 +48,8 @@ describe('Blog prose link interaction states', () => {
     assert.equal(hover['text-decoration-line'], 'underline');
     assert.equal(focus['text-decoration-line'], 'underline');
     assert.equal(normal['text-decoration-thickness'], '1px');
-    assert.equal(hover['text-decoration-thickness'], '2px');
-    assert.equal(focus['text-decoration-thickness'], '2px');
+    assert.equal(hover['text-decoration-thickness'], '0.5px');
+    assert.equal(focus['text-decoration-thickness'], '0.5px');
     assert.equal(focus.color, hover.color);
     assert.equal(
       focus.outline,
