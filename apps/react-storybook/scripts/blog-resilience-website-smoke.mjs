@@ -81,7 +81,7 @@ async function linkState(link) {
       outline: style.outlineStyle,
       outlineWidth: parseFloat(style.outlineWidth),
       transition: style.transitionDuration,
-      normal: resolveColor('--text-interactive'),
+      normal: resolveColor('--text-brand'),
       hover: resolveColor('--text-interactive-hover'),
       pressed: resolveColor('--text-interactive-pressed'),
     };
@@ -97,7 +97,7 @@ async function verifyLinkStates(page, link, theme) {
       await page.mouse.move(0, 0);
       const normal = await linkState(link);
       await expect.poll(async () => (await linkState(link)).color).toBe(normal.normal);
-      await expect(link).toHaveCSS('text-decoration-line', 'underline');
+      await expect(link).toHaveCSS('text-decoration-line', 'none');
       await expect(link).toHaveCSS('text-decoration-thickness', '1px');
       assert.notEqual(normal.normal, normal.hover, `${theme}: distinct hover color required`);
       assert.notEqual(normal.hover, normal.pressed, `${theme}: distinct pressed color required`);
@@ -105,6 +105,7 @@ async function verifyLinkStates(page, link, theme) {
       await link.hover();
       await expect.poll(async () => (await linkState(link)).hovered, { message: `${theme}: pointer must remain over the prose link` }).toBe(true);
       await expect(link).toHaveCSS('color', normal.hover);
+      await expect(link).toHaveCSS('text-decoration-line', 'underline');
       await expect(link).toHaveCSS('text-decoration-thickness', '2px');
       await page.mouse.down();
       try {
@@ -119,8 +120,14 @@ async function verifyLinkStates(page, link, theme) {
       await page.keyboard.press('Tab');
       await expect(link).toBeFocused();
       await expect(link).toHaveCSS('color', normal.hover);
+      await expect(link).toHaveCSS('text-decoration-line', 'underline');
       const focus = await linkState(link);
       assert.ok(focus.focused && focus.outline !== 'none' && focus.outlineWidth > 0);
+      // Pointer exit and focus exit must restore the undecorated brand state.
+      await link.evaluate((element) => element.blur());
+      await page.mouse.move(0, 0);
+      await expect(link).toHaveCSS('color', normal.normal);
+      await expect(link).toHaveCSS('text-decoration-line', 'none');
       console.log(`Blog prose states: ${theme} / ${reducedMotion}: OK`);
     } catch (error) {
       console.error(`Blog prose failure: ${theme} / ${reducedMotion}`, await linkState(link));
