@@ -21,12 +21,13 @@ nodeLinker: hoisted
 
 overrides:
   '@puppeteer/browsers': 3.0.6
-  'brace-expansion@<2.0.0': 1.1.18
+  'brace-expansion@<2.0.0': 1.1.20
+  'brace-expansion@>=2 <3': 2.1.6
   colord: 2.9.4
-  'minimatch@10>brace-expansion': 5.0.9
+  'minimatch@10>brace-expansion': 5.0.11
 
   'esbuild@<=0.24.2': 0.28.1
-  fast-uri: 3.1.6
+  fast-uri: 3.1.8
 
   '@xmldom/xmldom@0.8.14': 0.8.15
   '@xmldom/xmldom@0.9.11': 0.9.12
@@ -56,7 +57,9 @@ overrides:
   sharp: 0.35.4
 
   'undici@<7': 6.28.1
-  'undici@>=7 <8': 7.29.0
+  'undici@>=7 <8': 7.29.1
+
+  ip-address: 10.5.1
 
   'uuid@<11.1.1': 11.1.1
   'valibot@<=1.4.1': 1.4.2
@@ -67,5 +70,5 @@ patchedDependencies:
   # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
   # Remove when a stable OpenNext release contains the string-shorthand guard.
   '@opennextjs/cloudflare@1.20.6': patches/@opennextjs__cloudflare@1.20.6.patch
-  next@16.3.3: patches/next@16.3.3.patch
+  next@16.3.6: patches/next@16.3.6.patch
 allowUnusedPatches: false

@@ -7,7 +7,7 @@ import ts from 'typescript';
 
 const website = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(path.join(website, 'package.json'));
-export const NEXT_PATCH_VERSION = '16.3.3';
+export const NEXT_PATCH_VERSION = '16.3.6';
 const transport = 'client/components/router-reducer/fetch-server-response.js';
 
 function property(object, name) {
