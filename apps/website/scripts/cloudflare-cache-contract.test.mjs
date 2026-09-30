@@ -35,7 +35,11 @@ import {
   requireArchivedDeployment,
   verifyArchivedAssets,
 } from './cloudflare-static-asset-archive.mjs';
-import { transportOptions, verifyNextPatch } from './next-rsc-patch-check.mjs';
+import {
+  NEXT_PATCH_VERSION,
+  transportOptions,
+  verifyNextPatch,
+} from './next-rsc-patch-check.mjs';
 import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
 import { manualCommand } from './cloudflare-migration-manual.mjs';
 
@@ -385,7 +389,7 @@ test('both deployment workflows run blocking archive preflight before builds and
 });
 
 test('installed CJS/ESM transport and negative cache option contract', () => {
-  assert.equal(verifyNextPatch(), '16.3.3');
+  assert.equal(verifyNextPatch(), NEXT_PATCH_VERSION);
   const declaration =
     "const options = {credentials:'same-origin',headers,priority,signal};";
   assert.deepEqual(transportOptions(declaration), [
