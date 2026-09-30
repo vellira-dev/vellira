@@ -124,7 +124,10 @@ describe('Blog metrics request deadlines', () => {
     vi.useFakeTimers();
     const cancel = vi.fn(() => new Promise<void>(() => undefined));
     const stalled = stalledBody(404, cancel);
-    vi.stubGlobal('fetch', vi.fn(async () => stalled.response));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => stalled.response)
+    );
     const pending = fetchBlogMetricsBatch(['known']);
     const rejected = assert.rejects(pending, /timed out/);
     await vi.advanceTimersByTimeAsync(5_000);

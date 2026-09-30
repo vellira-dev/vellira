@@ -219,7 +219,17 @@ export async function verifyBlogResilience(browser, baseUrl) {
         // real navigation target and visible text without assuming its absence.
         const back = themed.locator('main article header a[href="/blog"]');
         await expect(back).toHaveText('Back to blog');
-        const backColor = await back.evaluate((element) => getComputedStyle(element).color);
+        // Theme hydration can transition from the SSR color. Compare against
+        // the resolved semantic role, not a transient in-flight color sample.
+        const backColor = await back.evaluate((element) => {
+          const probe = document.createElement('span');
+          probe.style.color = 'var(--text-secondary)';
+          element.append(probe);
+          const color = getComputedStyle(probe).color;
+          probe.remove();
+          return color;
+        });
+        await expect(back).toHaveCSS('color', backColor);
         await verifyLinkStates(themed, themed.locator('[class*="articleBody"] a[href]').first(), theme);
         await expect(back).toHaveCSS('color', backColor);
       } finally {
