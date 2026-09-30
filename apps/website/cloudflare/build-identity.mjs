@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
+import { URL } from 'node:url';
 
 function buildSource(env) {
   // Direct builds (including staging and PR runtime checks) retain their
