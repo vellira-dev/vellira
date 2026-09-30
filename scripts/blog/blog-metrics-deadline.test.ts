@@ -122,15 +122,11 @@ describe('Blog metrics request deadlines', () => {
 
   it('does not wait for cancellation acknowledgement', async () => {
     vi.useFakeTimers();
-    const stalled = stalledBody(
-      404,
-      vi.fn(() => new Promise<void>(() => undefined))
-    );
+    const cancel = vi.fn(() => new Promise<void>(() => undefined));
+    const stalled = stalledBody(404, cancel);
     vi.stubGlobal('fetch', vi.fn(async () => stalled.response));
-    const rejected = assert.rejects(
-      fetchBlogMetricsBatch(['known']),
-      /timed out/
-    );
+    const pending = fetchBlogMetricsBatch(['known']);
+    const rejected = assert.rejects(pending, /timed out/);
     await vi.advanceTimersByTimeAsync(5_000);
     await rejected;
     assert.equal(stalled.cancel.mock.calls.length, 1);
@@ -140,17 +136,13 @@ describe('Blog metrics request deadlines', () => {
   it('cancels late responses without accepting them or isolating slugs', async () => {
     vi.useFakeTimers();
     let finish: ((response: Response) => void) | undefined;
-    const fetchMock = vi.fn(
-      () =>
-        new Promise<Response>((resolve) => {
-          finish = resolve;
-        })
-    );
+    const response = new Promise<Response>((resolve) => {
+      finish = resolve;
+    });
+    const fetchMock = vi.fn(() => response);
     vi.stubGlobal('fetch', fetchMock);
-    const rejected = assert.rejects(
-      fetchBlogMetricsBatch(['known', 'new']),
-      /timed out/
-    );
+    const pending = fetchBlogMetricsBatch(['known', 'new']);
+    const rejected = assert.rejects(pending, /timed out/);
     await vi.advanceTimersByTimeAsync(5_000);
     await rejected;
     const stalled = stalledBody(404);
@@ -164,10 +156,9 @@ describe('Blog metrics request deadlines', () => {
   it('clears its deadline after a successful response', async () => {
     vi.useFakeTimers();
     const metrics = { slug: 'known', views: 9, likes: 2 };
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(JSON.stringify(metrics)))
-    );
+    const payload = JSON.stringify(metrics);
+    const fetchMock = vi.fn(async () => new Response(payload));
+    vi.stubGlobal('fetch', fetchMock);
     assert.deepEqual(await fetchBlogMetrics('known'), metrics);
     assert.equal(vi.getTimerCount(), 0);
   });
@@ -175,22 +166,16 @@ describe('Blog metrics request deadlines', () => {
   it('decodes JSON split across UTF-8 byte boundaries', async () => {
     const metrics = { slug: 'known', views: 9, likes: 2, ignored: 'é' };
     const bytes = new TextEncoder().encode(JSON.stringify(metrics));
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          new Response(
-            new ReadableStream({
-              start(controller) {
-                for (const byte of bytes) {
-                  controller.enqueue(new Uint8Array([byte]));
-                }
-                controller.close();
-              },
-            })
-          )
-      )
-    );
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const byte of bytes) {
+          controller.enqueue(new Uint8Array([byte]));
+        }
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(body));
+    vi.stubGlobal('fetch', fetchMock);
     assert.deepEqual(await fetchBlogMetrics('known'), {
       slug: 'known',
       views: 9,

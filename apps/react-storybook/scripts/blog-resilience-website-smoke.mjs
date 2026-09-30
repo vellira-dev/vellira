@@ -4,10 +4,11 @@ import { expect } from '@playwright/test';
 
 // Test-only transport: exercise the built UI without sending views or likes
 // to a live backend. Actual pages, components, styles and theme tokens are used.
-async function openProbePage(browser, catalog, candidate, fault = null) {
+async function openProbePage(browser, catalog, candidate, fault = null, theme = 'light') {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  await page.addInitScript(({ catalog, candidate, fault }) => {
-    localStorage.setItem('vellira-website-theme', 'light');
+  await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
+  await page.addInitScript(({ catalog, candidate, fault, theme }) => {
+    localStorage.setItem('vellira-website-theme', theme);
     const originalFetch = window.fetch.bind(window);
     const probe = { fault, calls: [], aborted: 0, cancelled: 0 };
     window.__blogResilience = probe;
@@ -55,7 +56,7 @@ async function openProbePage(browser, catalog, candidate, fault = null) {
       }
       throw new Error(`Unexpected metrics request: ${method} ${url.pathname}`);
     };
-  }, { catalog, candidate, fault });
+  }, { catalog, candidate, fault, theme });
   return page;
 }
 
@@ -72,6 +73,9 @@ async function linkState(link) {
     };
     return {
       color: style.color,
+      hovered: element.matches(':hover'),
+      focused: element.matches(':focus-visible'),
+      href: element.getAttribute('href'),
       underline: style.textDecorationLine,
       thickness: style.textDecorationThickness,
       outline: style.outlineStyle,
@@ -84,28 +88,27 @@ async function linkState(link) {
   });
 }
 
-async function verifyLinkStates(page, link) {
-  for (const [theme, label] of [['light', 'Light'], ['dark', 'Dark'], ['high-contrast', 'High Contrast']]) {
-    await page.getByRole('button', { name: /^Theme:/ }).first().click();
-    await page.getByRole('menuitemradio', { name: label, exact: true }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-vellira-theme', theme);
-    for (const reducedMotion of ['no-preference', 'reduce']) {
+async function verifyLinkStates(page, link, theme) {
+  await expect(page.locator('html')).toHaveAttribute('data-vellira-theme', theme);
+  for (const reducedMotion of ['no-preference', 'reduce']) {
+    try {
       await page.emulateMedia({ reducedMotion });
       await link.evaluate((element) => element.blur());
       await page.mouse.move(0, 0);
-      await expect.poll(async () => { const s = await linkState(link); return s.color === s.normal; }).toBe(true);
       const normal = await linkState(link);
-      assert.equal(normal.underline, 'underline');
-      assert.equal(normal.thickness, '1px');
+      await expect.poll(async () => (await linkState(link)).color).toBe(normal.normal);
+      await expect(link).toHaveCSS('text-decoration-line', 'underline');
+      await expect(link).toHaveCSS('text-decoration-thickness', '1px');
       assert.notEqual(normal.normal, normal.hover, `${theme}: distinct hover color required`);
       assert.notEqual(normal.hover, normal.pressed, `${theme}: distinct pressed color required`);
-      if (reducedMotion === 'reduce') assert.equal(normal.transition, '0s');
+      if (reducedMotion === 'reduce') await expect(link).toHaveCSS('transition-duration', '0s');
       await link.hover();
-      await expect.poll(async () => { const s = await linkState(link); return s.color === s.hover; }).toBe(true);
-      assert.equal((await linkState(link)).thickness, '2px');
+      await expect.poll(async () => (await linkState(link)).hovered, { message: `${theme}: pointer must remain over the prose link` }).toBe(true);
+      await expect(link).toHaveCSS('color', normal.hover);
+      await expect(link).toHaveCSS('text-decoration-thickness', '2px');
       await page.mouse.down();
       try {
-        await expect.poll(async () => { const s = await linkState(link); return s.color === s.pressed; }).toBe(true);
+        await expect(link).toHaveCSS('color', normal.pressed);
       } finally {
         await page.mouse.move(0, 0);
         await page.mouse.up();
@@ -115,8 +118,13 @@ async function verifyLinkStates(page, link) {
       await page.keyboard.press('Shift+Tab');
       await page.keyboard.press('Tab');
       await expect(link).toBeFocused();
-      await expect.poll(async () => { const s = await linkState(link); return s.color === s.hover && s.outline !== 'none' && s.outlineWidth > 0; }).toBe(true);
+      await expect(link).toHaveCSS('color', normal.hover);
+      const focus = await linkState(link);
+      assert.ok(focus.focused && focus.outline !== 'none' && focus.outlineWidth > 0);
       console.log(`Blog prose states: ${theme} / ${reducedMotion}: OK`);
+    } catch (error) {
+      console.error(`Blog prose failure: ${theme} / ${reducedMotion}`, await linkState(link));
+      throw error;
     }
   }
 }
@@ -200,17 +208,24 @@ export async function verifyBlogResilience(browser, baseUrl) {
     assert.ok(articleSlug, 'A published article with an actual prose link is required');
     const actions = page.getByRole('complementary', { name: 'Article actions' });
     await expect(actions.getByLabel(`${catalog[articleSlug].views} views`, { exact: true })).toBeVisible();
-    // The CSS-generated arrow participates in the accessible name. Scope by
-    // its navigation target and verify the visible text independently.
-    const back = page.locator('main article header a[href="/blog"]');
-    await expect(back).toHaveText('Back to blog');
-    const backColor = await back.evaluate((element) => getComputedStyle(element).color);
-    await verifyLinkStates(page, page.locator('[class*="articleBody"] a[href]').first());
-    // Restore the starting theme before comparing an unrelated link.
-    await page.getByRole('button', { name: /^Theme:/ }).first().click();
-    await page.getByRole('menuitemradio', { name: 'Light', exact: true }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-vellira-theme', 'light');
-    await expect.poll(() => back.evaluate((element) => getComputedStyle(element).color)).toBe(backColor);
+    // Use the same isolated persisted-theme setup as the maintained website
+    // consumer smoke, so menu focus/scroll restoration cannot affect pointer tests.
+    for (const theme of ['light', 'dark', 'high-contrast']) {
+      const themed = await openProbePage(browser, catalog, candidate, null, theme);
+      try {
+        await themed.goto(`${baseUrl}/blog/${articleSlug}`, { waitUntil: 'domcontentloaded' });
+        await expect(themed.locator('html')).toHaveAttribute('data-vellira-theme', theme);
+        // The generated arrow participates in the accessible name: assert the
+        // real navigation target and visible text without assuming its absence.
+        const back = themed.locator('main article header a[href="/blog"]');
+        await expect(back).toHaveText('Back to blog');
+        const backColor = await back.evaluate((element) => getComputedStyle(element).color);
+        await verifyLinkStates(themed, themed.locator('[class*="articleBody"] a[href]').first(), theme);
+        await expect(back).toHaveCSS('color', backColor);
+      } finally {
+        await themed.close();
+      }
+    }
     await verifyMutationRecovery(page, catalog[articleSlug]);
   } finally {
     await page.close();
