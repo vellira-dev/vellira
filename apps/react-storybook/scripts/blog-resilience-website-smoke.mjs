@@ -106,7 +106,7 @@ async function verifyLinkStates(page, link, theme) {
       await expect.poll(async () => (await linkState(link)).hovered, { message: `${theme}: pointer must remain over the prose link` }).toBe(true);
       await expect(link).toHaveCSS('color', normal.hover);
       await expect(link).toHaveCSS('text-decoration-line', 'underline');
-      await expect(link).toHaveCSS('text-decoration-thickness', '2px');
+      await expect(link).toHaveCSS('text-decoration-thickness', '0.5px');
       await page.mouse.down();
       try {
         await expect(link).toHaveCSS('color', normal.pressed);
@@ -121,6 +121,7 @@ async function verifyLinkStates(page, link, theme) {
       await expect(link).toBeFocused();
       await expect(link).toHaveCSS('color', normal.hover);
       await expect(link).toHaveCSS('text-decoration-line', 'underline');
+      await expect(link).toHaveCSS('text-decoration-thickness', '0.5px');
       const focus = await linkState(link);
       assert.ok(focus.focused && focus.outline !== 'none' && focus.outlineWidth > 0);
       // Pointer exit and focus exit must restore the undecorated brand state.

@@ -366,7 +366,7 @@
 .articleBody a:focus-visible {
   color: var(--text-interactive-hover);
   text-decoration-line: underline;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 0.5px;
 }
 
 .articleBody a:active {
