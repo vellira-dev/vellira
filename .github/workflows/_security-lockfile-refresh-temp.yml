@@ -1,0 +1,49 @@
+name: Temporary Security Lockfile Refresh
+
+on:
+  push:
+    branches:
+      - fix/dependency-security-2026-09-30
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout security branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/dependency-security-2026-09-30
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.22.2
+          package-manager-cache: false
+
+      - name: Regenerate exact security lockfile
+        run: |
+          pnpm install --lockfile-only --no-frozen-lockfile
+          pnpm install --frozen-lockfile
+          pnpm check:next-rsc-patch
+
+      - name: Commit generated lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'vellira-release-sync[bot]'
+          git config user.email '328509340+vellira-release-sync[bot]@users.noreply.github.com'
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo 'Lockfile already current.'
+            exit 0
+          fi
+          git commit -m 'chore(security): refresh patched dependency lockfile'
+          git push origin HEAD:fix/dependency-security-2026-09-30
