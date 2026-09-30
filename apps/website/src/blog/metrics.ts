@@ -21,6 +21,7 @@ export interface BlogLikeWriteResponse extends BlogMetricsWriteResponse {
 export type BlogMetricsBySlug = Record<string, BlogMetrics>;
 
 const BLOG_METRICS_PROXY_BASE_PATH = '/api/blog-metrics';
+const BLOG_METRICS_REQUEST_TIMEOUT_MS = 5_000;
 
 interface BlogMetricsRequestOptions {
   retries?: number;
@@ -136,25 +137,93 @@ async function requestBlogMetricsJson(
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= (options.retries ?? 0); attempt += 1) {
-    try {
-      const response = await fetch(url, init);
+    const controller = new AbortController();
+    let response: Response | undefined;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-      if (!response.ok) {
-        const payload: unknown = await response.json().catch(() => null);
-        throw new BlogMetricsRequestError(
-          response.status,
-          parseErrorCode(payload)
-        );
+    function cancelRequest(reason: unknown) {
+      controller.abort(reason);
+      // Cancel the reader too: a custom fetch implementation may return a
+      // stream not connected to the request signal. Never await cancellation.
+      if (reader) {
+        void reader.cancel(reason).catch(() => undefined);
+      } else if (response?.body && !response.bodyUsed) {
+        void response.body.cancel(reason).catch(() => undefined);
+      }
+    }
+
+    async function readJson(current: Response): Promise<unknown> {
+      if (!current.body) {
+        return current.json();
       }
 
-      return response.json();
+      reader = current.body.getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (controller.signal.aborted) {
+            throw controller.signal.reason;
+          }
+          if (done) {
+            return JSON.parse(text + decoder.decode());
+          }
+          text += decoder.decode(value, { stream: true });
+        }
+      } finally {
+        reader.releaseLock();
+        reader = undefined;
+      }
+    }
+
+    try {
+      const deadline = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error('Blog metrics request timed out');
+          // Reject first, so a cancelled partial body cannot become a result.
+          reject(error);
+          cancelRequest(error);
+        }, BLOG_METRICS_REQUEST_TIMEOUT_MS);
+      });
+
+      return await Promise.race([
+        deadline,
+        (async () => {
+          response = await fetch(url, { ...init, signal: controller.signal });
+          if (controller.signal.aborted) {
+            cancelRequest(controller.signal.reason);
+            throw controller.signal.reason;
+          }
+
+          if (!response.ok) {
+            // Only a 404 can carry the code authorizing catalog isolation.
+            // Other failures settle from their status without waiting on a body.
+            const payload =
+              response.status === 404
+                ? await readJson(response).catch(() => null)
+                : null;
+            throw new BlogMetricsRequestError(
+              response.status,
+              parseErrorCode(payload)
+            );
+          }
+
+          return readJson(response);
+        })(),
+      ]);
     } catch (error) {
-      // Repeating a known catalog miss cannot recover this request. The batch
-      // reader below isolates it without hiding unrelated API failures.
-      if (isArticleNotFound(error)) {
+      const timedOut = controller.signal.aborted;
+      cancelRequest(error);
+      // A deadline is terminal, not another timeout window or a catalog miss.
+      // Writes have no retry budget, including ambiguous timeout outcomes.
+      if (timedOut || isArticleNotFound(error)) {
         throw error;
       }
       lastError = error;
+    } finally {
+      clearTimeout(timer);
     }
   }
 

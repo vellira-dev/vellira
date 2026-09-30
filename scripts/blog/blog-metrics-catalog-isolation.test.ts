@@ -68,7 +68,10 @@ describe('Blog metrics catalog isolation', () => {
     assert.deepEqual(await fetchBlogMetricsBatch(['first', 'second']), catalog);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]?.url.pathname, '/api/blog-metrics/metrics');
-    assert.deepEqual(calls[0]?.init, {
+    const { signal, ...request } = calls[0]?.init ?? {};
+    assert.ok(signal instanceof AbortSignal);
+    assert.equal(signal.aborted, false);
+    assert.deepEqual(request, {
       credentials: 'include',
       cache: 'no-store',
     });
