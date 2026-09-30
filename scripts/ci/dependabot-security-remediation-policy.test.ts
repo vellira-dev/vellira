@@ -25,7 +25,7 @@ describe('Dependabot security remediation workflow policy', () => {
   it('keeps mutation bounded to pnpm security authority', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
     const fixIndex = source.indexOf(
-      'pnpm audit --fix --dev --ignore-unfixable --audit-level'
+      'pnpm audit --fix=override --dev --ignore-unfixable --audit-level'
     );
     const diffIndex = source.indexOf('validate-working-tree');
     const auditIndex = source.indexOf(
@@ -53,12 +53,16 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('--undo');
     expect(source).toContain('git add pnpm-workspace.yaml pnpm-lock.yaml');
     expect(source).toContain('.dependency.scope == "development"');
+    expect(source).not.toContain('pnpm audit --fix=update');
+    expect(source).not.toContain('pnpm audit --fix --dev');
     expect(source).toContain(
-      'pnpm audit --fix=update --dev --ignore-unfixable --audit-level'
+      'pnpm audit --fix=override --dev --ignore-unfixable --audit-level'
     );
     expect(source).toContain(
       'Runtime alerts remain outside this bounded fallback.'
     );
+    expect(source).toContain('include-hidden-files: true');
+    expect(source).toContain('if-no-files-found: error');
     expect(source).not.toContain('gh pr merge');
   });
 
@@ -153,5 +157,6 @@ describe('Dependabot security remediation workflow policy', () => {
       'pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }}'
     );
     expect(metadataSource).toContain("kind: 'security-remediation'");
+    expect(metadataSource).toContain('include-hidden-files: true');
   });
 });
