@@ -355,8 +355,8 @@
 }
 
 .articleBody a {
-  color: var(--text-interactive);
-  text-decoration-line: underline;
+  color: var(--text-brand);
+  text-decoration-line: none;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
   transition: color 160ms ease;
@@ -365,6 +365,7 @@
 .articleBody a:hover,
 .articleBody a:focus-visible {
   color: var(--text-interactive-hover);
+  text-decoration-line: underline;
   text-decoration-thickness: 2px;
 }
 

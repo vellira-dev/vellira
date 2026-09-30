@@ -29,10 +29,7 @@ function declarations(selector: string): Record<string, string> {
 
 describe('Blog prose link interaction states', () => {
   it('uses canonical semantic colors instead of a fixed palette color', () => {
-    assert.equal(
-      declarations('.articleBody a').color,
-      'var(--text-interactive)'
-    );
+    assert.equal(declarations('.articleBody a').color, 'var(--text-brand)');
     assert.equal(
       declarations('.articleBody a:hover').color,
       'var(--text-interactive-hover)'
@@ -43,13 +40,16 @@ describe('Blog prose link interaction states', () => {
     );
   });
 
-  it('provides non-color hover feedback and preserves keyboard focus', () => {
+  it('underlines only on hover or keyboard focus', () => {
     const normal = declarations('.articleBody a');
     const hover = declarations('.articleBody a:hover');
     const focus = declarations('.articleBody a:focus-visible');
-    assert.equal(normal['text-decoration-line'], 'underline');
+    assert.equal(normal['text-decoration-line'], 'none');
+    assert.equal(hover['text-decoration-line'], 'underline');
+    assert.equal(focus['text-decoration-line'], 'underline');
     assert.equal(normal['text-decoration-thickness'], '1px');
     assert.equal(hover['text-decoration-thickness'], '2px');
+    assert.equal(focus['text-decoration-thickness'], '2px');
     assert.equal(focus.color, hover.color);
     assert.equal(
       focus.outline,
