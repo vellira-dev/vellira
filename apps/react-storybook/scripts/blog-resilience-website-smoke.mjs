@@ -200,7 +200,10 @@ export async function verifyBlogResilience(browser, baseUrl) {
     assert.ok(articleSlug, 'A published article with an actual prose link is required');
     const actions = page.getByRole('complementary', { name: 'Article actions' });
     await expect(actions.getByLabel(`${catalog[articleSlug].views} views`, { exact: true })).toBeVisible();
-    const back = page.getByRole('link', { name: 'Back to blog', exact: true });
+    // The CSS-generated arrow participates in the accessible name. Scope by
+    // its navigation target and verify the visible text independently.
+    const back = page.locator('main article header a[href="/blog"]');
+    await expect(back).toHaveText('Back to blog');
     const backColor = await back.evaluate((element) => getComputedStyle(element).color);
     await verifyLinkStates(page, page.locator('[class*="articleBody"] a[href]').first());
     // Restore the starting theme before comparing an unrelated link.

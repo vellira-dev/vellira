@@ -16,11 +16,31 @@ const operations = [
     run: () => fetchBlogMetricsBatch(['known', 'new']),
     retries: 1,
   },
-  { name: 'single read', run: () => fetchBlogMetrics('known'), retries: 1 },
-  { name: 'actor read', run: () => fetchBlogArticleLike('known'), retries: 1 },
-  { name: 'like', run: () => likeBlogArticle('known'), retries: 0 },
-  { name: 'unlike', run: () => unlikeBlogArticle('known'), retries: 0 },
-  { name: 'view', run: () => registerBlogArticleView('known'), retries: 0 },
+  {
+    name: 'single read',
+    run: () => fetchBlogMetrics('known'),
+    retries: 1,
+  },
+  {
+    name: 'actor read',
+    run: () => fetchBlogArticleLike('known'),
+    retries: 1,
+  },
+  {
+    name: 'like',
+    run: () => likeBlogArticle('known'),
+    retries: 0,
+  },
+  {
+    name: 'unlike',
+    run: () => unlikeBlogArticle('known'),
+    retries: 0,
+  },
+  {
+    name: 'view',
+    run: () => registerBlogArticleView('known'),
+    retries: 0,
+  },
 ];
 
 function stalledBody(status: number, cancel = vi.fn()) {
@@ -47,16 +67,14 @@ afterEach(() => {
 describe('Blog metrics request deadlines', () => {
   for (const operation of operations) {
     for (const status of [404, 200]) {
-      it(`${operation.name}: cancels stalled ${status}, no retry`, async () => {
+      it(`${operation.name} ${status}: bounded body`, async () => {
         vi.useFakeTimers();
         const stalled = stalledBody(status);
         const signals: AbortSignal[] = [];
-        const fetchMock = vi.fn(
-          async (_url: RequestInfo | URL, init: RequestInit) => {
-            signals.push(init.signal as AbortSignal);
-            return stalled.response;
-          }
-        );
+        const fetchMock = vi.fn(async (_url: unknown, init: RequestInit) => {
+          signals.push(init.signal as AbortSignal);
+          return stalled.response;
+        });
         vi.stubGlobal('fetch', fetchMock);
 
         const rejected = assert.rejects(operation.run(), /timed out/);
@@ -87,7 +105,7 @@ describe('Blog metrics request deadlines', () => {
     it(`${operation.name}: bounds missing headers`, async () => {
       vi.useFakeTimers();
       const signals: AbortSignal[] = [];
-      const fetchMock = vi.fn((_url: RequestInfo | URL, init: RequestInit) => {
+      const fetchMock = vi.fn((_url: unknown, init: RequestInit) => {
         signals.push(init.signal as AbortSignal);
         return new Promise<Response>(() => undefined);
       });
