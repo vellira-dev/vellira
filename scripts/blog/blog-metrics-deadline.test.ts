@@ -167,7 +167,9 @@ describe('Blog metrics request deadlines', () => {
   });
 
   it('decodes JSON split across UTF-8 byte boundaries', async () => {
-    const metrics = { slug: 'known', views: 9, likes: 2, ignored: 'é' };
+    // This mocked transport fixture tests decoding, not catalog slug rules.
+    // Keep 2-, 3- and 4-byte characters in a field retained by the parser.
+    const metrics = { slug: 'known-é-中-🚀', views: 9, likes: 2 };
     const bytes = new TextEncoder().encode(JSON.stringify(metrics));
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -179,10 +181,6 @@ describe('Blog metrics request deadlines', () => {
     });
     const fetchMock = vi.fn(async () => new Response(body));
     vi.stubGlobal('fetch', fetchMock);
-    assert.deepEqual(await fetchBlogMetrics('known'), {
-      slug: 'known',
-      views: 9,
-      likes: 2,
-    });
+    assert.deepEqual(await fetchBlogMetrics(metrics.slug), metrics);
   });
 });
