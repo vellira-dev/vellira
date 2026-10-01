@@ -24,22 +24,29 @@ const gettingStarted = read('apps/docs/src/start/getting-started.md');
 const reactDocs = read('apps/docs/src/react/index.md');
 const nativeDocs = read('apps/docs/src/react-native/index.md');
 
+function expectPeerRanges(
+  source: string,
+  peerDependencies: Record<string, string> | undefined
+) {
+  for (const [peer, range] of Object.entries(peerDependencies ?? {})) {
+    expect(source).toContain(`${peer} ${range}`);
+  }
+}
+
 describe('first-use documentation contract', () => {
   it('keeps React install and stylesheet setup explicit', () => {
     expect(rootReadme).toContain(`pnpm add ${reactPackage.name}`);
     expect(gettingStarted).toContain(`pnpm add ${reactPackage.name}`);
     expect(reactDocs).toContain(`pnpm add ${reactPackage.name}`);
+    expect(rootReadme).toContain("import '@vellira-ui/react/styles';");
     expect(gettingStarted).toContain("import '@vellira-ui/react/styles';");
     expect(reactDocs).toContain("import '@vellira-ui/react/styles';");
   });
 
-  it('keeps published React peer ranges visible in package installation docs', () => {
-    for (const [peer, range] of Object.entries(
-      reactPackage.peerDependencies ?? {}
-    )) {
-      expect(reactReadme).toContain(peer);
-      expect(reactReadme).toContain(range);
-    }
+  it('keeps exact React peer contracts visible in first-use docs', () => {
+    expectPeerRanges(reactReadme, reactPackage.peerDependencies);
+    expectPeerRanges(gettingStarted, reactPackage.peerDependencies);
+    expectPeerRanges(reactDocs, reactPackage.peerDependencies);
   });
 
   it('keeps React Native install docs aligned with declared peers', () => {
@@ -49,12 +56,9 @@ describe('first-use documentation contract', () => {
     expect(gettingStarted).toContain(`pnpm add ${nativePackage.name}`);
     expect(nativeDocs).toContain(`pnpm add ${nativePackage.name}`);
 
-    for (const [peer, range] of Object.entries(peerDependencies)) {
-      expect(nativeReadme).toContain(peer);
-      expect(nativeReadme).toContain(range);
-      expect(nativeDocs).toContain(peer);
-      expect(nativeDocs).toContain(range);
-    }
+    expectPeerRanges(nativeReadme, peerDependencies);
+    expectPeerRanges(gettingStarted, peerDependencies);
+    expectPeerRanges(nativeDocs, peerDependencies);
 
     for (const peer of Object.keys(peerDependencies).filter(
       (name) => name !== 'react' && name !== 'react-native'
