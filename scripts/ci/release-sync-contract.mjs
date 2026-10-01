@@ -145,9 +145,12 @@ export function verifyMergedReleaseSyncDocuments({
     );
   }
 
-  if (commitSubject !== 'chore(release): sync package versions') {
+  if (
+    typeof commitSubject !== 'string' ||
+    !/^chore\(release\): sync package versions \(#\d+\)$/.test(commitSubject)
+  ) {
     throw new Error(
-      'Merged release-sync verification requires the canonical commit subject.'
+      'Merged release-sync verification requires the canonical squash-merge commit subject.'
     );
   }
 
