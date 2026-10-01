@@ -211,9 +211,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(remediationSource).toContain(
       'process.env.SOURCE_BEFORE_SHA || null'
     );
-    expect(remediationSource).toContain(
-      "candidate.sourceEvent === 'push' &&"
-    );
+    expect(remediationSource).toContain("candidate.sourceEvent === 'push' &&");
     expect(remediationSource).toContain("candidate.auditLevel !== 'low'");
 
     expect(metadataSource).toContain("run.event !== 'push'");
@@ -222,9 +220,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain('compare/$before_sha...$BASE_SHA');
     expect(metadataSource).toContain('sourceEvent: candidate.sourceEvent');
     expect(metadataSource).toContain('candidate.sourceBeforeSha');
-    expect(metadataSource).toContain(
-      "candidate.sourceEvent === 'push' &&"
-    );
+    expect(metadataSource).toContain("candidate.sourceEvent === 'push' &&");
     expect(metadataSource).toContain("candidate.auditLevel !== 'low'");
     expect(metadataSource).toContain(
       "candidate.sourceEvent === 'push' && auditLevel !== 'low'"
@@ -233,9 +229,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(autoMergeSource).toContain('run.event !== decision.sourceEvent');
     expect(autoMergeSource).toContain('bounded self-proof push provenance');
     expect(autoMergeSource).toContain('compare/$before_sha...$base_sha');
-    expect(autoMergeSource).toContain(
-      "decision.sourceEvent === 'push' &&"
-    );
+    expect(autoMergeSource).toContain("decision.sourceEvent === 'push' &&");
     expect(autoMergeSource).toContain("decision.auditLevel !== 'low'");
   });
 
