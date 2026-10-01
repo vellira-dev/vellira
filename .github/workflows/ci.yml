@@ -300,6 +300,10 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Trust checked-out repository in container
+        if: needs.impact.outputs.shape == 'release-sync'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Verify canonical release-sync fast path
         if: needs.impact.outputs.shape == 'release-sync'
         env:
@@ -361,6 +365,10 @@ jobs:
         with:
           fetch-depth: 2
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Trust checked-out repository in container
+        if: needs.impact.outputs.shape == 'release-sync'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Verify canonical release-sync fast path
         if: needs.impact.outputs.shape == 'release-sync'
@@ -556,6 +564,10 @@ jobs:
         with:
           fetch-depth: 2
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Trust checked-out repository in container
+        if: needs.impact.outputs.shape == 'release-sync'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Verify canonical release-sync fast path
         if: needs.impact.outputs.shape == 'release-sync'

@@ -382,6 +382,15 @@ test('release-sync keeps required CI contexts while replacing heavy work with se
   );
 
   for (const block of [typecheck, tooling, buildValidate]) {
+    assert.match(block, /Trust checked-out repository in container/);
+    assert.match(
+      block,
+      /git config --global --add safe\.directory "\$GITHUB_WORKSPACE"/
+    );
+    assert.ok(
+      block.indexOf('Trust checked-out repository in container') <
+        block.indexOf('Verify canonical release-sync fast path')
+    );
     assert.match(block, /Verify canonical release-sync fast path/);
     assert.match(block, /release-sync-contract\.mjs/);
     assert.match(block, /--verify/);
