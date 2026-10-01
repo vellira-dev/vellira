@@ -93,7 +93,7 @@ try {
             page.locator('[data-vellira-theme]').first()
           ).toHaveAttribute('data-vellira-theme', colorScheme);
 
-          async function checkSelection(name) {
+          async function checkSelection(name, docsPlatform = 'react') {
             await expect(control(name)).toHaveAttribute('aria-pressed', 'true');
             await expect(picker.locator('[aria-pressed="true"]')).toHaveCount(
               1
@@ -113,7 +113,7 @@ try {
               section.getByRole('link', { name: 'Docs', exact: true })
             ).toHaveAttribute(
               'href',
-              `https://docs.vellira.dev/components/${name.toLowerCase()}`
+              `https://docs.vellira.dev/${docsPlatform}/${name.toLowerCase()}`
             );
             const category = ['Button', 'Input'].includes(name)
               ? 'primitives'
@@ -234,7 +234,7 @@ try {
             })
           ).toBeVisible();
           await control('Dropdown').click();
-          await checkSelection('Dropdown');
+          await checkSelection('Dropdown', 'react-native');
           await expect(code).toContainText("from '@vellira-ui/react-native';");
           await section
             .getByRole('tab', { name: 'React', exact: true })
