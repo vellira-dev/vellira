@@ -47,6 +47,54 @@ Accessibility-minded • Cross-platform • Modular
 
 ---
 
+## React + React Native, one shared foundation
+
+Install the renderer you need:
+
+```bash
+pnpm add @vellira-ui/react @vellira-ui/tokens
+# or
+pnpm add @vellira-ui/react-native @vellira-ui/tokens
+```
+
+The same component intent stays recognizable across runtimes while each platform
+uses its native interaction model.
+
+**React**
+
+```tsx
+import '@vellira-ui/react/styles';
+
+import { Button } from '@vellira-ui/react';
+
+export function ContinueButton() {
+  return (
+    <Button appearance='solid' color='primary' onClick={() => submit()}>
+      Continue
+    </Button>
+  );
+}
+```
+
+**React Native**
+
+```tsx
+import { Button } from '@vellira-ui/react-native';
+
+export function ContinueButton() {
+  return (
+    <Button appearance='solid' color='primary' onPress={() => submit()}>
+      Continue
+    </Button>
+  );
+}
+```
+
+Shared tokens and API concepts provide consistency; DOM events, native press
+handling, accessibility props, and rendering stay platform-appropriate.
+
+---
+
 ## What is Vellira?
 
 Vellira is an open-source cross-platform design system for React and React Native.
