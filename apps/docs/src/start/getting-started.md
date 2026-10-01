@@ -18,10 +18,15 @@ pnpm add @vellira-ui/react
 ```
 
 ```bash [React Native]
-pnpm add @vellira-ui/react-native
+pnpm add @vellira-ui/react-native @react-native-picker/picker
 ```
 
 :::
+
+React Native apps must already satisfy the renderer peer range: React `>=19`
+and React Native `>=0.86`. The current native package also declares
+`@react-native-picker/picker >=2` as a peer, so the install command above keeps
+a clean project free of missing-peer setup.
 
 Add optional packages when you need icons or direct access to design tokens.
 
