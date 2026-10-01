@@ -119,11 +119,20 @@ test('Chromatic gates expensive work on semantic visual impact', () => {
   );
   assert.match(source, /name: Record intentional Chromatic skip/);
 
+  assert.match(source, /timeout-minutes: 15/);
+  assert.match(
+    source,
+    /container:\n {6}image: mcr\.microsoft\.com\/playwright:v1\.61\.1-noble\n {6}options: --ipc=host/
+  );
+  assert.match(source, /name: Setup Node without dependency cache/);
+  assert.doesNotMatch(source, /cache: pnpm/);
+  assert.doesNotMatch(source, /Install Playwright browsers/);
+  assert.doesNotMatch(source, /Disable unrelated Google Chrome apt source/);
+  assert.doesNotMatch(source, /pnpm ci:playwright|playwright install --with-deps/);
+
   for (const name of [
     'Install dependencies',
     'Build packages',
-    'Disable unrelated Google Chrome apt source',
-    'Install Playwright browsers',
     'Test Storybook',
   ]) {
     const marker = `      - name: ${name}\n`;
