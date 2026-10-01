@@ -270,41 +270,24 @@ test('local population uses only the upstream local command and propagates proce
   await assert.rejects(fs.access(generated), { code: 'ENOENT' });
 });
 
-test('installed Wrangler proxy: local cache emits no missing-secret warning; dev still warns', async (t) => {
+test('warning suppression is configuration-scoped, not log-filter based', async (t) => {
+  const { unstable_readConfig: readConfig } = await import('wrangler');
   const { configPath } = await fixture(t);
-  const environment = { ...process.env, WRANGLER_SEND_METRICS: 'false' };
-  for (const name of requiredSecrets) delete environment[name];
-  delete environment.WRANGLER_LOG;
-  const script = `
-    const { getPlatformProxy } = await import(${JSON.stringify(import.meta.resolve('wrangler'))});
-    const proxy = await getPlatformProxy({ configPath: process.argv[1], envFiles: [], persist: false });
-    try {
-      console.log(JSON.stringify({ hasNewsletterKey: Object.hasOwn(proxy.env, 'BUTTONDOWN_API_KEY') }));
-      console.warn('local-tooling-visible-warning');
-    } finally { await proxy.dispose(); }
-    process.exit(0);
-  `;
-  const invoke = (filename) => {
-    const result = spawnSync(
-      process.execPath,
-      ['--input-type=module', '-e', script, filename],
-      {
-        env: environment,
-        encoding: 'utf8',
-        timeout: 30_000,
-      }
-    );
-    assert.equal(result.status, 0, result.error?.message ?? result.stderr);
-    assert.match(result.stdout, /"hasNewsletterKey":false/);
-    assert.match(result.stderr, /local-tooling-visible-warning/);
-    return result.stdout + result.stderr;
-  };
+  const canonical = readConfig({ config: configPath });
+  assert.deepEqual(canonical.secrets.required, requiredSecrets);
+
   await withLocalCacheConfig(configPath, async (localPath) => {
-    assert.doesNotMatch(invoke(localPath), /Missing required secrets/);
+    const local = readConfig({ config: localPath });
+    assert.deepEqual(local.secrets.required, []);
   });
-  assert.match(
-    invoke(configPath),
-    /Missing required secrets: BUTTONDOWN_API_KEY/
+
+  const helper = await fs.readFile(
+    path.join(root, 'scripts/cloudflare-populate-local-cache.mjs'),
+    'utf8'
+  );
+  assert.doesNotMatch(
+    helper,
+    /WRANGLER_LOG|console\.(?:warn|error)\s*=|process\.stderr\.write\s*=/
   );
 });
 
