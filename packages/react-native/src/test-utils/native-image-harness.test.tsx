@@ -168,7 +168,10 @@ describe('native image harness', () => {
 
   it('preserves exact flattened style dimensions', () => {
     const { container } = mount(
-      <Image source={{ uri: 'image' }} style={[{ width: 24 }, { height: 32 }]} />
+      <Image
+        source={{ uri: 'image' }}
+        style={[{ width: 24 }, { height: 32 }]}
+      />
     );
     expect(imageIn(container).style.width).toBe('24px');
     expect(imageIn(container).style.height).toBe('32px');
