@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { withRemoteArchive } from './cloudflare-archive-client.mjs';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
+import { populateLocalCache } from './cloudflare-populate-local-cache.mjs';
 import { assertFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
 import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
 import {
@@ -37,13 +38,7 @@ function run(command, args, env = childProcessEnv) {
 // Populate OpenNext's read-only route assets before auditing the final graph.
 // Activation uses Wrangler directly so no further OpenNext mutation can occur
 // after the archive/closure gate. Experimental skew mapping is intentionally absent.
-run('pnpm', [
-  'exec',
-  'opennextjs-cloudflare',
-  'populateCache',
-  'local',
-  `--config=${configPath}`,
-]);
+await populateLocalCache(configPath, { env: childProcessEnv });
 const identity = prepareDeployment(root);
 const inventory = await assetInventory(
   path.join(root, '.open-next/assets/_next/static')
