@@ -594,12 +594,18 @@ jobs:
             exit 1
           }
 
-          gh api "repos/$REPOSITORY/commits/$base_sha"             > .dependabot-auto-merge/source-commit.json
-          jq -e             --arg before "$before_sha"             '
-              (.parents | length) == 2
-              and .parents[0].sha == $before
-            '             .dependabot-auto-merge/source-commit.json             > /dev/null || {
-              echo "::error::Self-proof source is no longer the expected merge commit."
+          gh api             -H "Accept: application/vnd.github+json"             "repos/$REPOSITORY/commits/$base_sha/pulls?per_page=100"             > .dependabot-auto-merge/source-pulls.json
+          jq -e             --arg sha "$base_sha"             --arg before "$before_sha"             '
+              [
+                .[]
+                | select(.state == "closed")
+                | select(.merged_at != null)
+                | select(.merge_commit_sha == $sha)
+                | select(.base.ref == "main")
+                | select(.base.sha == $before)
+              ] | length == 1
+            '             .dependabot-auto-merge/source-pulls.json             > /dev/null || {
+              echo "::error::Self-proof source is no longer one exact protected pull request merge."
               exit 1
             }
 

@@ -204,8 +204,11 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(remediationSource).toContain('push:');
     expect(remediationSource).toContain('GITHUB_EVENT_NAME');
     expect(remediationSource).toContain('level="low"');
-    expect(remediationSource).toContain('git rev-list --parents -n 1');
-    expect(remediationSource).toContain('one reviewed merge commit');
+    expect(remediationSource).toContain(
+      'commits/$GITHUB_SHA/pulls?per_page=100'
+    );
+    expect(remediationSource).toContain('.merge_commit_sha == $sha');
+    expect(remediationSource).toContain('.base.sha == $before');
     expect(remediationSource).toContain('changed forbidden path: $file');
     expect(remediationSource).toContain('process.env.SOURCE_EVENT');
     expect(remediationSource).toContain(
@@ -217,6 +220,11 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain("run.event !== 'push'");
     expect(metadataSource).toContain('bounded self-proof push provenance');
     expect(metadataSource).toContain('sourceEvent !== expected.sourceEvent');
+    expect(metadataSource).toContain(
+      'commits/$BASE_SHA/pulls?per_page=100'
+    );
+    expect(metadataSource).toContain('.merge_commit_sha == $sha');
+    expect(metadataSource).toContain('.base.sha == $before');
     expect(metadataSource).toContain('compare/$before_sha...$BASE_SHA');
     expect(metadataSource).toContain('sourceEvent: candidate.sourceEvent');
     expect(metadataSource).toContain('candidate.sourceBeforeSha');
@@ -228,6 +236,11 @@ describe('Dependabot security remediation workflow policy', () => {
 
     expect(autoMergeSource).toContain('run.event !== decision.sourceEvent');
     expect(autoMergeSource).toContain('bounded self-proof push provenance');
+    expect(autoMergeSource).toContain(
+      'commits/$base_sha/pulls?per_page=100'
+    );
+    expect(autoMergeSource).toContain('.merge_commit_sha == $sha');
+    expect(autoMergeSource).toContain('.base.sha == $before');
     expect(autoMergeSource).toContain('compare/$before_sha...$base_sha');
     expect(autoMergeSource).toContain("decision.sourceEvent === 'push' &&");
     expect(autoMergeSource).toContain("decision.auditLevel !== 'low'");
