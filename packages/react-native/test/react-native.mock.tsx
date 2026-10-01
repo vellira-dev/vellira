@@ -8,6 +8,8 @@ import React, {
 
 import type { AriaAttributes } from 'react';
 
+import { createNativeImageMock } from './native-image.mock';
+
 type PressableState = { pressed: boolean; hovered: boolean; focused: boolean };
 
 type NativeProps = {
@@ -69,6 +71,7 @@ const flattenStyle = (style: unknown): React.CSSProperties | undefined => {
 };
 
 const roleFromAccessibility = (role?: string) => {
+  if (role === 'image') return 'img';
   if (role === 'button') return 'button';
   if (role === 'checkbox') return 'checkbox';
   if (role === 'radio') return 'radio';
@@ -174,7 +177,7 @@ export const View = forwardRef<HTMLDivElement, NativeProps>(
           },
         },
       });
-    }, [resolvedStyle?.height, resolvedStyle?.maxWidth, resolvedStyle?.width]);
+    }, [resolvedStyle?.height, resolvedStyle?.maxHeight, resolvedStyle?.width]);
 
     return (
       <div
@@ -585,3 +588,13 @@ export const AccessibilityInfo = {
   announceForAccessibility: () => undefined,
   setAccessibilityFocus: () => undefined,
 };
+
+export const Image = createNativeImageMock((props) => ({
+  style: flattenStyle(props.style),
+  role: roleFromAccessibility(props.accessibilityRole ?? 'image'),
+  ...stateProps(props.accessibilityState),
+  ...accessibilityProps(props),
+  ...(props.importantForAccessibility === 'no-hide-descendants'
+    ? { 'aria-hidden': true }
+    : {}),
+}));
