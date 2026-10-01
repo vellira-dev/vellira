@@ -23,10 +23,11 @@ pnpm add @vellira-ui/react-native @react-native-picker/picker
 
 :::
 
-React Native apps must already satisfy the renderer peer range: React `>=19`
-and React Native `>=0.86`. The current native package also declares
-`@react-native-picker/picker >=2` as a peer, so the install command above keeps
-a clean project free of missing-peer setup.
+React web apps must satisfy `react >=18.2 <20` and
+`react-dom >=18.2 <20`. React Native apps must satisfy `react >=19`,
+`react-native >=0.86`, and `@react-native-picker/picker >=2`. The install
+command above includes the non-framework native peer so a clean project does not
+start with missing-peer setup.
 
 Add optional packages when you need icons or direct access to design tokens.
 
