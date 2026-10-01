@@ -11,6 +11,10 @@ const metadataWorkflowPath = resolve(
   process.cwd(),
   '.github/workflows/dependabot-auto-merge-metadata.yml'
 );
+const alertWatchWorkflowPath = resolve(
+  process.cwd(),
+  '.github/workflows/dependabot-alert-watch.yml'
+);
 
 describe('Dependabot security remediation workflow policy', () => {
   it('runs daily for high severity and weekly for all severities', async () => {
@@ -186,5 +190,34 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     expect(metadataSource).toContain("kind: 'security-remediation'");
     expect(metadataSource).toContain('include-hidden-files: true');
+  });
+
+  it('reconciles the alert tracker immediately after dependency authority changes', async () => {
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
+
+    expect(source).toContain('push:');
+    expect(source).toContain('- main');
+    expect(source).toContain("'pnpm-lock.yaml'");
+    expect(source).toContain("'pnpm-workspace.yaml'");
+    expect(source).toContain("'**/package.json'");
+    expect(source).toContain("if: github.ref == 'refs/heads/main'");
+    expect(source).toContain('group: dependabot-alert-watch');
+    expect(source).toContain('cancel-in-progress: false');
+    expect(source).toContain('Exact main SHA: $GITHUB_SHA');
+  });
+
+  it('surfaces alert scope and manifest evidence in the canonical tracker', async () => {
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
+
+    expect(source).toContain(
+      '| Severity | Scope | Package | Manifest | Alert |'
+    );
+    expect(source).toContain('.dependency.scope // "unknown"');
+    expect(source).toContain('.dependency.manifest_path // "unknown"');
+    expect(source).toContain(
+      'Development-scope alerts: $development_count'
+    );
+    expect(source).toContain('Runtime-scope alerts: $runtime_count');
+    expect(source).toContain('against exact main \\`${GITHUB_SHA}\\`');
   });
 });
