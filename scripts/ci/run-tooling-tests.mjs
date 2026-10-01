@@ -1,8 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-const splitProductionFixtures =
-  process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_JOB === 'tooling';
+const splitProductionFixtures = process.env.GITHUB_ACTIONS === 'true';
 
 const baseArgs = [
   'exec',
