@@ -225,6 +225,20 @@ jobs:
                 'Security remediation decision source identity is invalid'
               );
             }
+            if (
+              !['schedule', 'workflow_dispatch', 'push'].includes(
+                decision.sourceEvent
+              ) ||
+              (decision.sourceEvent === 'push'
+                ? !/^[0-9a-f]{40}$/.test(decision.sourceBeforeSha ?? '')
+                : decision.sourceBeforeSha !== null) ||
+              (decision.sourceEvent === 'push' &&
+                decision.auditLevel !== 'low')
+            ) {
+              throw new Error(
+                'Security remediation decision source provenance is invalid'
+              );
+            }
             const validPackageList = (value) =>
               Array.isArray(value) &&
               value.length > 0 &&
@@ -538,7 +552,7 @@ jobs:
               '.github/workflows/dependabot-security-remediation.yml' ||
             run.head_branch !== 'main' ||
             run.head_sha !== decision.baseSha ||
-            (run.event !== 'schedule' && run.event !== 'workflow_dispatch') ||
+            run.event !== decision.sourceEvent ||
             run.repository?.full_name !== decision.repository
           ) {
             throw new Error(
@@ -546,6 +560,68 @@ jobs:
             );
           }
           NODE
+
+      - name: Revalidate bounded self-proof push provenance
+        if: >
+          steps.candidate.outputs.eligible == 'true' &&
+          steps.candidate.outputs.kind == 'security-remediation'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          source_event="$(
+            jq -r '.sourceEvent' .dependabot-auto-merge/decision.json
+          )"
+          if [[ "$source_event" != "push" ]]; then
+            exit 0
+          fi
+
+          before_sha="$(
+            jq -r '.sourceBeforeSha' .dependabot-auto-merge/decision.json
+          )"
+          base_sha="$(
+            jq -r '.baseSha' .dependabot-auto-merge/decision.json
+          )"
+          [[ "$before_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Self-proof decision is missing an exact before SHA."
+            exit 1
+          }
+          [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Self-proof decision is missing an exact base SHA."
+            exit 1
+          }
+
+          gh api "repos/$REPOSITORY/commits/$base_sha"             > .dependabot-auto-merge/source-commit.json
+          jq -e             --arg before "$before_sha"             '
+              (.parents | length) == 2
+              and .parents[0].sha == $before
+            '             .dependabot-auto-merge/source-commit.json             > /dev/null || {
+              echo "::error::Self-proof source is no longer the expected merge commit."
+              exit 1
+            }
+
+          gh api "repos/$REPOSITORY/compare/$before_sha...$base_sha"             > .dependabot-auto-merge/source-compare.json
+          mapfile -t changed_files < <(
+            jq -r '.files[].filename'               .dependabot-auto-merge/source-compare.json
+          )
+          if [[ "${#changed_files[@]}" -eq 0 ]]; then
+            echo "::error::Self-proof source compare contains no authority changes."
+            exit 1
+          fi
+
+          for file in "${changed_files[@]}"; do
+            case "$file" in
+              .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+                ;;
+              *)
+                echo "::error::Self-proof source changed forbidden path: $file"
+                exit 1
+                ;;
+            esac
+          done
 
       - name: Revalidate live runtime dependency scope
         if: >

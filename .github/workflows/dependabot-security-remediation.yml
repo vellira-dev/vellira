@@ -5,6 +5,15 @@ on:
     # Daily launch gate for High/Critical alerts, plus weekly cleanup of all severities.
     - cron: '15 8 * * *'
     - cron: '45 8 * * 0'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/dependabot-security-remediation.yml'
+      - '.github/workflows/dependabot-auto-merge-metadata.yml'
+      - '.github/workflows/dependabot-auto-merge.yml'
+      - 'scripts/ci/dependabot-security-remediation.mjs'
+      - 'scripts/ci/dependabot-security-remediation.test.mjs'
   workflow_dispatch:
     inputs:
       audit_level:
@@ -47,6 +56,70 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
+      - name: Validate trusted remediation source event
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          event="$GITHUB_EVENT_NAME"
+          before_sha=""
+
+          case "$event" in
+            schedule|workflow_dispatch)
+              ;;
+            push)
+              before_sha="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
+              [[ "$before_sha" =~ ^[0-9a-f]{40}$ ]] || {
+                echo "::error::Self-proof push is missing an exact before SHA."
+                exit 1
+              }
+
+              read -r commit parent_one parent_two extra < <(
+                git rev-list --parents -n 1 "$GITHUB_SHA"
+              )
+              test "$commit" = "$GITHUB_SHA"
+              if [[ -z "$parent_one" || -z "$parent_two" || -n "${extra:-}" ]]; then
+                echo "::error::Self-proof push must be one reviewed merge commit on main."
+                exit 1
+              fi
+              if [[ "$parent_one" != "$before_sha" ]]; then
+                echo "::error::Self-proof push before SHA is not the merge first parent."
+                exit 1
+              fi
+
+              mapfile -t changed_files < <(
+                git diff --name-only "$before_sha" "$GITHUB_SHA" --
+              )
+              if [[ "${#changed_files[@]}" -eq 0 ]]; then
+                echo "::error::Self-proof push contains no authority changes."
+                exit 1
+              fi
+
+              for file in "${changed_files[@]}"; do
+                case "$file" in
+                  .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+                    ;;
+                  *)
+                    echo "::error::Self-proof push changed forbidden path: $file"
+                    exit 1
+                    ;;
+                esac
+              done
+              ;;
+            *)
+              echo "::error::Unsupported remediation source event: $event"
+              exit 1
+              ;;
+          esac
+
+          echo "event=$event" >> "$GITHUB_OUTPUT"
+          echo "before_sha=$before_sha" >> "$GITHUB_OUTPUT"
+          echo "Remediation source event: $event" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "$before_sha" ]]; then
+            echo "Self-proof before SHA: $before_sha" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Resolve remediation severity floor
         id: severity
         shell: bash
@@ -58,6 +131,8 @@ jobs:
           level="high"
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             level="${REQUESTED_LEVEL:-high}"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            level="low"
           elif [[ "$SCHEDULE" == "45 8 * * 0" ]]; then
             level="low"
           fi
@@ -416,6 +491,8 @@ jobs:
           BRANCH: ${{ steps.commit.outputs.branch }}
           AUDIT_LEVEL: ${{ steps.severity.outputs.level }}
           REPOSITORY: ${{ github.repository }}
+          SOURCE_EVENT: ${{ steps.source.outputs.event }}
+          SOURCE_BEFORE_SHA: ${{ steps.source.outputs.before_sha }}
         run: |
           set -euo pipefail
           node <<'NODE'
@@ -441,6 +518,8 @@ jobs:
               '.github/workflows/dependabot-security-remediation.yml',
             sourceRunId: Number(process.env.GITHUB_RUN_ID),
             sourceRunAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            sourceEvent: process.env.SOURCE_EVENT,
+            sourceBeforeSha: process.env.SOURCE_BEFORE_SHA || null,
             baseSha: process.env.BASE_SHA,
             headSha: process.env.HEAD_SHA,
             branch: process.env.BRANCH,
@@ -472,10 +551,18 @@ jobs:
             candidate.sourceRunId <= 0 ||
             !Number.isSafeInteger(candidate.sourceRunAttempt) ||
             candidate.sourceRunAttempt <= 0 ||
+            !['schedule', 'workflow_dispatch', 'push'].includes(
+              candidate.sourceEvent
+            ) ||
+            (candidate.sourceEvent === 'push'
+              ? !/^[0-9a-f]{40}$/.test(candidate.sourceBeforeSha ?? '')
+              : candidate.sourceBeforeSha !== null) ||
             !/^[0-9a-f]{40}$/.test(candidate.baseSha ?? '') ||
             !/^[0-9a-f]{40}$/.test(candidate.headSha ?? '') ||
             candidate.branch !== 'automation/dependabot-security-remediation' ||
             (candidate.auditLevel !== 'high' && candidate.auditLevel !== 'low') ||
+            (candidate.sourceEvent === 'push' &&
+              candidate.auditLevel !== 'low') ||
             candidate.dependencyScope !== 'development' ||
             !validPackageList(candidate.authorizedPackages) ||
             !validPackageList(candidate.changedPackages) ||

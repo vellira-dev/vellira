@@ -208,7 +208,11 @@ jobs:
               'Security remediation source run does not match the exact candidate base'
             );
           }
-          if (run.event !== 'schedule' && run.event !== 'workflow_dispatch') {
+          if (
+            run.event !== 'schedule' &&
+            run.event !== 'workflow_dispatch' &&
+            run.event !== 'push'
+          ) {
             throw new Error('Security remediation source event is not trusted');
           }
           if (run.repository?.full_name !== process.env.REPOSITORY) {
@@ -247,6 +251,12 @@ jobs:
             )
           );
 
+          const sourceRun = JSON.parse(
+            fs.readFileSync(
+              '/tmp/security-remediation-source-run.json',
+              'utf8'
+            )
+          );
           const expected = {
             repository: process.env.REPOSITORY,
             baseSha: process.env.PR_BASE_SHA,
@@ -256,6 +266,7 @@ jobs:
             dependencyScope: process.env.DEPENDENCY_SCOPE,
             sourceRunId: Number(process.env.SOURCE_RUN_ID),
             sourceRunAttempt: Number(process.env.SOURCE_RUN_ATTEMPT),
+            sourceEvent: sourceRun.event,
           };
           const validPackageList = (value) =>
             Array.isArray(value) &&
@@ -287,6 +298,15 @@ jobs:
             expected.dependencyScope !== 'development' ||
             candidate.sourceRunId !== expected.sourceRunId ||
             candidate.sourceRunAttempt !== expected.sourceRunAttempt ||
+            candidate.sourceEvent !== expected.sourceEvent ||
+            !['schedule', 'workflow_dispatch', 'push'].includes(
+              candidate.sourceEvent
+            ) ||
+            (candidate.sourceEvent === 'push'
+              ? !/^[0-9a-f]{40}$/.test(candidate.sourceBeforeSha ?? '')
+              : candidate.sourceBeforeSha !== null) ||
+            (candidate.sourceEvent === 'push' &&
+              candidate.auditLevel !== 'low') ||
             !validPackageList(candidate.authorizedPackages) ||
             !validPackageList(candidate.changedPackages) ||
             candidate.changedPackages.some(
@@ -300,6 +320,59 @@ jobs:
             );
           }
           NODE
+
+      - name: Validate bounded self-proof push provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          source_event="$(
+            jq -r '.sourceEvent'               /tmp/security-remediation-source/candidate.json
+          )"
+          if [[ "$source_event" != "push" ]]; then
+            exit 0
+          fi
+
+          before_sha="$(
+            jq -r '.sourceBeforeSha'               /tmp/security-remediation-source/candidate.json
+          )"
+          [[ "$before_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Self-proof candidate is missing an exact before SHA."
+            exit 1
+          }
+
+          gh api "repos/$REPOSITORY/commits/$BASE_SHA"             > /tmp/security-remediation-source-commit.json
+          jq -e             --arg before "$before_sha"             '
+              (.parents | length) == 2
+              and .parents[0].sha == $before
+            '             /tmp/security-remediation-source-commit.json             > /dev/null || {
+              echo "::error::Self-proof source is not the expected reviewed merge commit."
+              exit 1
+            }
+
+          gh api "repos/$REPOSITORY/compare/$before_sha...$BASE_SHA"             > /tmp/security-remediation-source-compare.json
+          mapfile -t changed_files < <(
+            jq -r '.files[].filename'               /tmp/security-remediation-source-compare.json
+          )
+          if [[ "${#changed_files[@]}" -eq 0 ]]; then
+            echo "::error::Self-proof source compare contains no authority changes."
+            exit 1
+          fi
+
+          for file in "${changed_files[@]}"; do
+            case "$file" in
+              .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+                ;;
+              *)
+                echo "::error::Self-proof source changed forbidden path: $file"
+                exit 1
+                ;;
+            esac
+          done
 
       - name: Checkout exact remediation head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -410,6 +483,17 @@ jobs:
           ) {
             throw new Error('Security remediation source identity is invalid');
           }
+          if (
+            !['schedule', 'workflow_dispatch', 'push'].includes(
+              candidate.sourceEvent
+            ) ||
+            (candidate.sourceEvent === 'push'
+              ? !/^[0-9a-f]{40}$/.test(candidate.sourceBeforeSha ?? '')
+              : candidate.sourceBeforeSha !== null) ||
+            (candidate.sourceEvent === 'push' && auditLevel !== 'low')
+          ) {
+            throw new Error('Security remediation source provenance is invalid');
+          }
 
           const decision = {
             schemaVersion: 2,
@@ -426,6 +510,8 @@ jobs:
             dependencyScope,
             sourceRunId,
             sourceRunAttempt,
+            sourceEvent: candidate.sourceEvent,
+            sourceBeforeSha: candidate.sourceBeforeSha,
             authorizedPackages: candidate.authorizedPackages,
             changedPackages: candidate.changedPackages,
             ignoredRuntimeGhsas: candidate.ignoredRuntimeGhsas,
