@@ -11,6 +11,10 @@ const metadataWorkflowPath = resolve(
   process.cwd(),
   '.github/workflows/dependabot-auto-merge-metadata.yml'
 );
+const autoMergeWorkflowPath = resolve(
+  process.cwd(),
+  '.github/workflows/dependabot-auto-merge.yml'
+);
 const alertWatchWorkflowPath = resolve(
   process.cwd(),
   '.github/workflows/dependabot-alert-watch.yml'
@@ -190,6 +194,34 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     expect(metadataSource).toContain("kind: 'security-remediation'");
     expect(metadataSource).toContain('include-hidden-files: true');
+  });
+
+  it('authenticates low self-proof pushes', async () => {
+    const remediationSource = await readFile(remediationWorkflowPath, 'utf8');
+    const metadataSource = await readFile(metadataWorkflowPath, 'utf8');
+    const autoMergeSource = await readFile(autoMergeWorkflowPath, 'utf8');
+
+    expect(remediationSource).toContain('push:');
+    expect(remediationSource).toContain('GITHUB_EVENT_NAME');
+    expect(remediationSource).toContain('level="low"');
+    expect(remediationSource).toContain('git rev-list --parents -n 1');
+    expect(remediationSource).toContain('one reviewed merge commit');
+    expect(remediationSource).toContain('changed forbidden path: $file');
+    expect(remediationSource).toContain('process.env.SOURCE_EVENT');
+    expect(remediationSource).toContain(
+      'process.env.SOURCE_BEFORE_SHA || null'
+    );
+
+    expect(metadataSource).toContain("run.event !== 'push'");
+    expect(metadataSource).toContain('bounded self-proof push provenance');
+    expect(metadataSource).toContain('sourceEvent !== expected.sourceEvent');
+    expect(metadataSource).toContain('compare/$before_sha...$BASE_SHA');
+    expect(metadataSource).toContain('sourceEvent: candidate.sourceEvent');
+    expect(metadataSource).toContain('candidate.sourceBeforeSha');
+
+    expect(autoMergeSource).toContain('run.event !== decision.sourceEvent');
+    expect(autoMergeSource).toContain('bounded self-proof push provenance');
+    expect(autoMergeSource).toContain('compare/$before_sha...$base_sha');
   });
 
   it('reconciles alert tracker after dependency changes', async () => {
