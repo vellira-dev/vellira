@@ -1,0 +1,9 @@
+{
+  "title": "Why React and React Native Teams Keep Re-Deciding the Same UI",
+  "description": "React and React Native teams can end up reopening the same UI decisions across APIs, states, tokens, and behavior. The real cost is repeated coordination and gradual product drift.",
+  "slug": "when-developers-re-decide-ui-across-browser-and-native",
+  "publishedAt": "2026-09-29",
+  "author": "Roman Bakurov",
+  "tags": ["Design Systems", "React", "React Native"],
+  "draft": false
+}

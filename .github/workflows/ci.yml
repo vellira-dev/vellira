@@ -208,7 +208,7 @@ jobs:
           pnpm exec turbo run build --filter='@vellira-ui/website^...'
           pnpm --dir apps/website run sync:brand
           pnpm --dir apps/website run build:opennext
-          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-populate-local-cache.mjs
           node apps/website/scripts/cloudflare-local-runtime.mjs
       - name: Retain exact-head runtime evidence
         if: always()

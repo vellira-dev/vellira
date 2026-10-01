@@ -21,9 +21,41 @@ export interface BlogLikeWriteResponse extends BlogMetricsWriteResponse {
 export type BlogMetricsBySlug = Record<string, BlogMetrics>;
 
 const BLOG_METRICS_PROXY_BASE_PATH = '/api/blog-metrics';
+const BLOG_METRICS_REQUEST_TIMEOUT_MS = 5_000;
 
 interface BlogMetricsRequestOptions {
   retries?: number;
+}
+
+class BlogMetricsRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string | null
+  ) {
+    super(`Blog metrics request failed with ${status}`);
+  }
+}
+
+function isArticleNotFound(error: unknown): boolean {
+  return (
+    error instanceof BlogMetricsRequestError &&
+    error.status === 404 &&
+    error.code === 'article_not_found'
+  );
+}
+
+function parseErrorCode(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null || !('error' in value)) {
+    return null;
+  }
+
+  const error = value.error;
+  return typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string'
+    ? error.code
+    : null;
 }
 
 function createBlogMetricsProxyPath(path: string): string {
@@ -105,16 +137,93 @@ async function requestBlogMetricsJson(
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= (options.retries ?? 0); attempt += 1) {
-    try {
-      const response = await fetch(url, init);
+    const controller = new AbortController();
+    let response: Response | undefined;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-      if (!response.ok) {
-        throw new Error(`Blog metrics request failed with ${response.status}`);
+    function cancelRequest(reason: unknown) {
+      controller.abort(reason);
+      // Cancel the reader too: a custom fetch implementation may return a
+      // stream not connected to the request signal. Never await cancellation.
+      if (reader) {
+        void reader.cancel(reason).catch(() => undefined);
+      } else if (response?.body && !response.bodyUsed) {
+        void response.body.cancel(reason).catch(() => undefined);
+      }
+    }
+
+    async function readJson(current: Response): Promise<unknown> {
+      if (!current.body) {
+        return current.json();
       }
 
-      return response.json();
+      reader = current.body.getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (controller.signal.aborted) {
+            throw controller.signal.reason;
+          }
+          if (done) {
+            return JSON.parse(text + decoder.decode());
+          }
+          text += decoder.decode(value, { stream: true });
+        }
+      } finally {
+        reader.releaseLock();
+        reader = undefined;
+      }
+    }
+
+    try {
+      const deadline = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error('Blog metrics request timed out');
+          // Reject first, so a cancelled partial body cannot become a result.
+          reject(error);
+          cancelRequest(error);
+        }, BLOG_METRICS_REQUEST_TIMEOUT_MS);
+      });
+
+      return await Promise.race([
+        deadline,
+        (async () => {
+          response = await fetch(url, { ...init, signal: controller.signal });
+          if (controller.signal.aborted) {
+            cancelRequest(controller.signal.reason);
+            throw controller.signal.reason;
+          }
+
+          if (!response.ok) {
+            // Only a 404 can carry the code authorizing catalog isolation.
+            // Other failures settle from their status without waiting on a body.
+            const payload =
+              response.status === 404
+                ? await readJson(response).catch(() => null)
+                : null;
+            throw new BlogMetricsRequestError(
+              response.status,
+              parseErrorCode(payload)
+            );
+          }
+
+          return readJson(response);
+        })(),
+      ]);
     } catch (error) {
+      const timedOut = controller.signal.aborted;
+      cancelRequest(error);
+      // A deadline is terminal, not another timeout window or a catalog miss.
+      // Writes have no retry budget, including ambiguous timeout outcomes.
+      if (timedOut || isArticleNotFound(error)) {
+        throw error;
+      }
       lastError = error;
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -151,14 +260,37 @@ export async function fetchBlogMetricsBatch(
   }
 
   const url = `${createBlogMetricsProxyPath('metrics')}?${searchParams.toString()}`;
-  const json = await requestBlogMetricsJson(
-    url,
-    {
-      credentials: 'include',
-      cache: 'no-store',
-    },
-    { retries: 1 }
-  );
+  let json: unknown;
+
+  try {
+    json = await requestBlogMetricsJson(
+      url,
+      {
+        credentials: 'include',
+        cache: 'no-store',
+      },
+      { retries: 1 }
+    );
+  } catch (error) {
+    if (!isArticleNotFound(error)) {
+      throw error;
+    }
+
+    // Staging can contain a new article before the authoritative backend
+    // catalog does. One unknown slug must not hide all established articles.
+    // Never invent counts for that slug or turn generic 404/5xx into success.
+    if (uniqueSlugs.length === 1) {
+      return {};
+    }
+
+    // Sequential bisection bounds concurrency to one request; a catalog-only
+    // failure needs at most 2N - 1 requests for N unique slugs. Healthy batches
+    // still use one request, and writes never participate in this recovery.
+    const midpoint = Math.ceil(uniqueSlugs.length / 2);
+    const left = await fetchBlogMetricsBatch(uniqueSlugs.slice(0, midpoint));
+    const right = await fetchBlogMetricsBatch(uniqueSlugs.slice(midpoint));
+    return { ...left, ...right };
+  }
 
   if (
     typeof json !== 'object' ||

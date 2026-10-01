@@ -1,0 +1,740 @@
+name: Dependabot Security Remediation
+
+on:
+  schedule:
+    # Daily launch gate for High/Critical alerts, plus weekly cleanup of all severities.
+    - cron: '15 8 * * *'
+    - cron: '45 8 * * 0'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/dependabot-security-remediation.yml'
+      - '.github/workflows/dependabot-auto-merge-metadata.yml'
+      - '.github/workflows/dependabot-auto-merge.yml'
+      - 'scripts/ci/dependabot-security-remediation.mjs'
+      - 'scripts/ci/dependabot-security-remediation.test.mjs'
+  workflow_dispatch:
+    inputs:
+      audit_level:
+        description: 'Minimum severity to remediate.'
+        required: true
+        type: choice
+        default: high
+        options:
+          - high
+          - low
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: read
+
+concurrency:
+  group: dependabot-security-remediation
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    name: Remediate unresolved dependency alerts
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact main baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact workflow revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Validate trusted remediation source event
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          event="$GITHUB_EVENT_NAME"
+          before_sha=""
+
+          case "$event" in
+            schedule|workflow_dispatch)
+              ;;
+            push)
+              before_sha="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
+              [[ "$before_sha" =~ ^[0-9a-f]{40}$ ]] || {
+                echo "::error::Self-proof push is missing an exact before SHA."
+                exit 1
+              }
+
+              gh api                 -H "Accept: application/vnd.github+json"                 "repos/$REPOSITORY/commits/$GITHUB_SHA/pulls?per_page=100"                 > /tmp/security-remediation-source-pulls.json
+
+              source_pr_count="$(
+                jq                   --arg sha "$GITHUB_SHA"                   --arg before "$before_sha"                   '[
+                    .[]
+                    | select(.state == "closed")
+                    | select(.merged_at != null)
+                    | select(.merge_commit_sha == $sha)
+                    | select(.base.ref == "main")
+                    | select(.base.sha == $before)
+                  ] | length'                   /tmp/security-remediation-source-pulls.json
+              )"
+              if [[ "$source_pr_count" -ne 1 ]]; then
+                echo "::error::Self-proof push is not one exact protected pull request merge."
+                exit 1
+              fi
+
+              source_pr_number="$(
+                jq -r                   --arg sha "$GITHUB_SHA"                   --arg before "$before_sha"                   '[
+                    .[]
+                    | select(.state == "closed")
+                    | select(.merged_at != null)
+                    | select(.merge_commit_sha == $sha)
+                    | select(.base.ref == "main")
+                    | select(.base.sha == $before)
+                  ][0].number'                   /tmp/security-remediation-source-pulls.json
+              )"
+
+              mapfile -t changed_files < <(
+                git diff --name-only "$before_sha" "$GITHUB_SHA" --
+              )
+              if [[ "${#changed_files[@]}" -eq 0 ]]; then
+                echo "::error::Self-proof push contains no authority changes."
+                exit 1
+              fi
+
+              for file in "${changed_files[@]}"; do
+                case "$file" in
+                  .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+                    ;;
+                  *)
+                    echo "::error::Self-proof push changed forbidden path: $file"
+                    exit 1
+                    ;;
+                esac
+              done
+
+              echo "Self-proof source PR: #$source_pr_number"                 >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "::error::Unsupported remediation source event: $event"
+              exit 1
+              ;;
+          esac
+
+          echo "event=$event" >> "$GITHUB_OUTPUT"
+          echo "before_sha=$before_sha" >> "$GITHUB_OUTPUT"
+          echo "Remediation source event: $event" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "$before_sha" ]]; then
+            echo "Self-proof before SHA: $before_sha" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Resolve remediation severity floor
+        id: severity
+        shell: bash
+        env:
+          REQUESTED_LEVEL: ${{ inputs.audit_level }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          level="high"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            level="${REQUESTED_LEVEL:-high}"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            level="low"
+          elif [[ "$SCHEDULE" == "45 8 * * 0" ]]; then
+            level="low"
+          fi
+          case "$level" in
+            high|low) ;;
+            *) echo "Unsupported remediation audit level: $level" >&2; exit 1 ;;
+          esac
+          echo "level=$level" >> "$GITHUB_OUTPUT"
+          echo "Remediation audit level: $level" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Find canonical remediation state
+        id: existing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p .security-remediation
+          branch="automation/dependabot-security-remediation"
+
+          if gh api "repos/$REPOSITORY/git/ref/heads/$branch" \
+            > .security-remediation/existing-remediation-ref.json 2>/dev/null; then
+            branch_sha="$(
+              jq -r '.object.sha' \
+                .security-remediation/existing-remediation-ref.json
+            )"
+            test -n "$branch_sha"
+            test "$branch_sha" != "null"
+            echo "branch_found=true" >> "$GITHUB_OUTPUT"
+            echo "branch_sha=$branch_sha" >> "$GITHUB_OUTPUT"
+          else
+            rm -f .security-remediation/existing-remediation-ref.json
+            echo "branch_found=false" >> "$GITHUB_OUTPUT"
+            echo "branch_sha=" >> "$GITHUB_OUTPUT"
+          fi
+
+          gh api --paginate \
+            "repos/$REPOSITORY/pulls?state=open&per_page=100" \
+            | jq -s 'add' \
+            > .security-remediation/open-pulls.json
+
+          jq --arg branch "$branch" '
+            map(select((.head.ref // "") == $branch))
+          ' .security-remediation/open-pulls.json \
+            > .security-remediation/existing-remediation-prs.json
+
+          count="$(
+            jq 'length' \
+              .security-remediation/existing-remediation-prs.json
+          )"
+          if [[ "$count" -gt 1 ]]; then
+            echo "Multiple canonical security remediation PRs are open; refusing ambiguous authority." >&2
+            exit 1
+          fi
+
+          if [[ "$count" -eq 1 ]]; then
+            number="$(
+              jq -r '.[0].number' \
+                .security-remediation/existing-remediation-prs.json
+            )"
+            author="$(
+              jq -r '.[0].user.login' \
+                .security-remediation/existing-remediation-prs.json
+            )"
+            base_ref="$(
+              jq -r '.[0].base.ref' \
+                .security-remediation/existing-remediation-prs.json
+            )"
+            head_sha="$(
+              jq -r '.[0].head.sha' \
+                .security-remediation/existing-remediation-prs.json
+            )"
+            draft="$(
+              jq -r '.[0].draft' \
+                .security-remediation/existing-remediation-prs.json
+            )"
+            test "$author" = 'vellira-release-sync[bot]'
+            test "$base_ref" = 'main'
+            test "$head_sha" != "null"
+            if [[ -f .security-remediation/existing-remediation-ref.json ]]; then
+              branch_sha="$(
+                jq -r '.object.sha' \
+                  .security-remediation/existing-remediation-ref.json
+              )"
+              test "$head_sha" = "$branch_sha"
+            else
+              echo "Canonical remediation PR exists without its branch ref." >&2
+              exit 1
+            fi
+
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "number=$number" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+            echo "draft=$draft" >> "$GITHUB_OUTPUT"
+            echo "Refreshing existing security remediation PR #$number from the current main baseline." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "number=" >> "$GITHUB_OUTPUT"
+            echo "head_sha=" >> "$GITHUB_OUTPUT"
+            echo "draft=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read unresolved Dependabot alerts
+        id: alerts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          test -n "${GH_TOKEN:-}"
+          gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${REPOSITORY}/dependabot/alerts?state=open&per_page=100" \
+            | jq -s 'add' \
+            > .security-remediation/alerts.json
+
+          level='${{ steps.severity.outputs.level }}'
+          relevant="$(
+            jq --arg level "$level" '[
+              .[]
+              | select(.state == "open")
+              | select(.dependency.package.ecosystem == "npm")
+              | select(.dependency.scope == "development")
+              | select(
+                  if $level == "low" then
+                    (.security_advisory.severity == "low"
+                     or .security_advisory.severity == "moderate"
+                     or .security_advisory.severity == "high"
+                     or .security_advisory.severity == "critical")
+                  else
+                    (.security_advisory.severity == "high"
+                     or .security_advisory.severity == "critical")
+                  end
+                )
+            ] | length' .security-remediation/alerts.json
+          )"
+          fixable="$(
+            jq --arg level "$level" '[
+              .[]
+              | select(.state == "open")
+              | select(.dependency.package.ecosystem == "npm")
+              | select(.dependency.scope == "development")
+              | select(
+                  if $level == "low" then
+                    (.security_advisory.severity == "low"
+                     or .security_advisory.severity == "moderate"
+                     or .security_advisory.severity == "high"
+                     or .security_advisory.severity == "critical")
+                  else
+                    (.security_advisory.severity == "high"
+                     or .security_advisory.severity == "critical")
+                  end
+                )
+              | select(
+                  (.security_vulnerability.first_patched_version.identifier // "")
+                  | length > 0
+                )
+            ] | length' .security-remediation/alerts.json
+          )"
+
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+          echo "fixable=$fixable" >> "$GITHUB_OUTPUT"
+
+          if [[ "$relevant" -eq 0 ]]; then
+            echo "No unresolved development-scope npm Dependabot alerts at or above $level severity. Runtime alerts remain outside this bounded fallback." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$fixable" -eq 0 ]]; then
+            echo "Found $relevant development-scope npm alert(s) at or above $level severity, but none has a patched version yet; refusing an automated mutation. Runtime alerts remain outside this bounded fallback." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Found $relevant development-scope npm alert(s) at or above $level severity, including $fixable with published patched versions. Runtime alerts remain outside this bounded fallback." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up pnpm
+        if: steps.alerts.outputs.fixable != '0'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        if: steps.alerts.outputs.fixable != '0'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          package-manager-cache: false
+
+      - name: Install exact baseline dependencies
+        if: steps.alerts.outputs.fixable != '0'
+        run: pnpm install --frozen-lockfile
+
+      - name: Record immutable remediation plan
+        if: steps.alerts.outputs.fixable != '0'
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/dependabot-security-remediation.mjs plan .security-remediation/alerts.json --level ${{ steps.severity.outputs.level }} > .security-remediation/plan.json
+
+          fixable_packages="$(
+            jq '.fixablePackages | length' .security-remediation/plan.json
+          )"
+          runtime_blocked="$(
+            jq '.runtimeBlockedPackages | length' .security-remediation/plan.json
+          )"
+          echo "fixable_packages=$fixable_packages" >> "$GITHUB_OUTPUT"
+          echo "runtime_blocked=$runtime_blocked" >> "$GITHUB_OUTPUT"
+          echo "Bounded fixable package count: $fixable_packages" >> "$GITHUB_STEP_SUMMARY"
+          echo "Runtime-blocked package count: $runtime_blocked" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record runtime advisory exclusions
+        if: steps.plan.outputs.fixable_packages != '0'
+        run: >-
+          node scripts/ci/dependabot-security-remediation.mjs runtime-ignores
+          .security-remediation/alerts.json
+          --level ${{ steps.severity.outputs.level }}
+          > .security-remediation/runtime-audit-ignores.json
+
+      - name: Record pre-remediation audit
+        if: steps.plan.outputs.fixable_packages != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ignore_args=()
+          while IFS= read -r ghsa; do
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid runtime GHSA exclusion: $ghsa"
+              exit 1
+            }
+            ignore_args+=(--ignore "$ghsa")
+          done < <(
+            jq -r '.ignoredGhsas[]' .security-remediation/runtime-audit-ignores.json
+          )
+
+          set +e
+          pnpm audit --dev --audit-level ${{ steps.severity.outputs.level }} "${ignore_args[@]}" --json > .security-remediation/audit-before.json
+          status=$?
+          set -e
+          echo "Pre-remediation audit exit code: $status" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate bounded pnpm security override
+        if: steps.plan.outputs.fixable_packages != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ignore_args=()
+          while IFS= read -r ghsa; do
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid runtime GHSA exclusion: $ghsa"
+              exit 1
+            }
+            ignore_args+=(--ignore "$ghsa")
+          done < <(
+            jq -r '.ignoredGhsas[]' .security-remediation/runtime-audit-ignores.json
+          )
+
+          set +e
+          pnpm audit --fix=override --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }} "${ignore_args[@]}"
+          override_status=$?
+          set -e
+          echo "pnpm audit --fix=override (${{ steps.severity.outputs.level }}) exit code: $override_status" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Re-resolve lockfile from generated security fix
+        if: steps.plan.outputs.fixable_packages != '0'
+        run: |
+          pnpm install --lockfile-only
+          pnpm install --frozen-lockfile
+
+      - name: Record generated workspace evidence
+        if: steps.plan.outputs.fixable_packages != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show HEAD:pnpm-workspace.yaml > .security-remediation/workspace-before.yaml
+          cp pnpm-workspace.yaml .security-remediation/workspace-after.yaml
+          git diff -- pnpm-workspace.yaml > .security-remediation/workspace.diff || true
+
+      - name: Detect generated remediation diff
+        if: steps.plan.outputs.fixable_packages != '0'
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet --; then
+            echo "::error::Dependabot reports fixable alerts, but pnpm audit --fix=override produced no bounded repository change."
+            echo "Fixable Dependabot alerts remain without a bounded override remediation." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          node scripts/ci/dependabot-security-remediation.mjs validate-working-tree \
+            --audit .security-remediation/audit-before.json \
+            --plan .security-remediation/plan.json \
+            --level ${{ steps.severity.outputs.level }} \
+            > .security-remediation/diff-validation.json
+
+      - name: Prove no in-scope registry advisory remains
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ignore_args=()
+          while IFS= read -r ghsa; do
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid runtime GHSA exclusion: $ghsa"
+              exit 1
+            }
+            ignore_args+=(--ignore "$ghsa")
+          done < <(
+            jq -r '.ignoredGhsas[]' .security-remediation/runtime-audit-ignores.json
+          )
+
+          pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }} "${ignore_args[@]}" --json > .security-remediation/audit-after.json
+
+      - name: Revalidate current main before mutation
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_MAIN_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/branches/main" --jq '.commit.sha'
+          )"
+          if [[ "$current_main_sha" != "$EXPECTED_MAIN_SHA" ]]; then
+            echo "::error::Security remediation baseline is stale: expected main $EXPECTED_MAIN_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+      - name: Prepare exact dependency-only remediation commit
+        if: steps.diff.outputs.changed == 'true'
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(git rev-parse HEAD)"
+          branch="automation/dependabot-security-remediation"
+
+          git config user.name 'vellira-release-sync[bot]'
+          git config user.email '328509340+vellira-release-sync[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add pnpm-workspace.yaml pnpm-lock.yaml
+          git commit -m 'chore(security): remediate dependency alerts'
+          head_sha="$(git rev-parse HEAD)"
+
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Record immutable remediation candidate
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          BASE_SHA: ${{ steps.commit.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.commit.outputs.head_sha }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+          AUDIT_LEVEL: ${{ steps.severity.outputs.level }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_EVENT: ${{ steps.source.outputs.event }}
+          SOURCE_BEFORE_SHA: ${{ steps.source.outputs.before_sha }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const validation = JSON.parse(
+            fs.readFileSync(
+              '.security-remediation/diff-validation.json',
+              'utf8'
+            )
+          );
+          const runtimeIgnores = JSON.parse(
+            fs.readFileSync(
+              '.security-remediation/runtime-audit-ignores.json',
+              'utf8'
+            )
+          );
+          const candidate = {
+            schemaVersion: 1,
+            kind: 'dependabot-security-remediation',
+            repository: process.env.REPOSITORY,
+            workflowPath:
+              '.github/workflows/dependabot-security-remediation.yml',
+            sourceRunId: Number(process.env.GITHUB_RUN_ID),
+            sourceRunAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            sourceEvent: process.env.SOURCE_EVENT,
+            sourceBeforeSha: process.env.SOURCE_BEFORE_SHA || null,
+            baseSha: process.env.BASE_SHA,
+            headSha: process.env.HEAD_SHA,
+            branch: process.env.BRANCH,
+            auditLevel: process.env.AUDIT_LEVEL,
+            dependencyScope: 'development',
+            authorizedPackages: validation.authorizedPackages,
+            changedPackages: validation.changedPackages,
+            ignoredRuntimeGhsas: runtimeIgnores.ignoredGhsas,
+          };
+
+          const validPackageList = (value) =>
+            Array.isArray(value) &&
+            value.length > 0 &&
+            value.every(
+              (entry) => typeof entry === 'string' && entry.length > 0
+            );
+          const validGhsaList = (value) =>
+            Array.isArray(value) &&
+            value.every(
+              (entry) =>
+                typeof entry === 'string' &&
+                /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/i.test(
+                  entry
+                )
+            );
+
+          if (
+            !Number.isSafeInteger(candidate.sourceRunId) ||
+            candidate.sourceRunId <= 0 ||
+            !Number.isSafeInteger(candidate.sourceRunAttempt) ||
+            candidate.sourceRunAttempt <= 0 ||
+            !['schedule', 'workflow_dispatch', 'push'].includes(
+              candidate.sourceEvent
+            ) ||
+            (candidate.sourceEvent === 'push'
+              ? !/^[0-9a-f]{40}$/.test(candidate.sourceBeforeSha ?? '')
+              : candidate.sourceBeforeSha !== null) ||
+            !/^[0-9a-f]{40}$/.test(candidate.baseSha ?? '') ||
+            !/^[0-9a-f]{40}$/.test(candidate.headSha ?? '') ||
+            candidate.branch !== 'automation/dependabot-security-remediation' ||
+            (candidate.auditLevel !== 'high' && candidate.auditLevel !== 'low') ||
+            (candidate.sourceEvent === 'push' &&
+              candidate.auditLevel !== 'low') ||
+            candidate.dependencyScope !== 'development' ||
+            !validPackageList(candidate.authorizedPackages) ||
+            !validPackageList(candidate.changedPackages) ||
+            candidate.changedPackages.some(
+              (packageName) =>
+                !candidate.authorizedPackages.includes(packageName)
+            ) ||
+            !validGhsaList(candidate.ignoredRuntimeGhsas)
+          ) {
+            throw new Error('Generated remediation candidate identity is invalid');
+          }
+
+          fs.writeFileSync(
+            '.security-remediation/candidate.json',
+            `${JSON.stringify(candidate, null, 2)}\n`,
+            'utf8'
+          );
+          console.log(JSON.stringify(candidate));
+          NODE
+
+      - name: Publish immutable remediation candidate
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dependabot-security-remediation-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .security-remediation/candidate.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Create short-lived remediation GitHub App token
+        if: steps.diff.outputs.changed == 'true'
+        id: write-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Prepare canonical remediation pull request provenance
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.write-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ steps.commit.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.commit.outputs.head_sha }}
+          EXISTING_PR_FOUND: ${{ steps.existing.outputs.found }}
+          EXISTING_PR_NUMBER: ${{ steps.existing.outputs.number }}
+          EXISTING_PR_DRAFT: ${{ steps.existing.outputs.draft }}
+        run: |
+          set -euo pipefail
+          cat > .security-remediation/pr-body.md <<'BODY'
+          Automated dependency security remediation generated by the bounded Vellira security maintenance workflow.
+
+          - Source: open development-scope Dependabot npm alerts plus the exact pre-remediation audit at the same severity floor
+          - Mutation authority: `pnpm audit --fix=override --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }}`
+          - Package authority: exact fixable development-scope Dependabot plan; the registry audit is confirming evidence only
+          - Runtime boundary: packages with any open runtime Dependabot alert are excluded from automatic override remediation
+          - Allowed repository changes: `pnpm-workspace.yaml` and `pnpm-lock.yaml`
+          - Merge authority: existing exact-head dependency auto-merge workflow after full CI
+          BODY
+
+          printf '\n<!-- vellira-security-remediation-v1 base-sha=%s head-sha=%s source-run=%s source-attempt=%s audit-level=%s scope=development -->\n' \
+            "$BASE_SHA" \
+            "$HEAD_SHA" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT" \
+            '${{ steps.severity.outputs.level }}' \
+            >> .security-remediation/pr-body.md
+
+          if [[ "$EXISTING_PR_FOUND" == "true" ]]; then
+            if [[ "$EXISTING_PR_DRAFT" != "true" ]]; then
+              gh pr ready "$EXISTING_PR_NUMBER" \
+                --repo "$REPOSITORY" \
+                --undo
+            fi
+
+            gh pr edit "$EXISTING_PR_NUMBER" \
+              --repo "$REPOSITORY" \
+              --title 'chore(security): remediate dependency alerts' \
+              --body-file .security-remediation/pr-body.md
+          fi
+
+      - name: Publish canonical remediation branch
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          APP_TOKEN: ${{ steps.write-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+          EXISTING_BRANCH_FOUND: ${{ steps.existing.outputs.branch_found }}
+          EXISTING_BRANCH_SHA: ${{ steps.existing.outputs.branch_sha }}
+        run: |
+          set -euo pipefail
+          git remote set-url origin \
+            "https://x-access-token:${APP_TOKEN}@github.com/${REPOSITORY}.git"
+
+          if [[ "$EXISTING_BRANCH_FOUND" == "true" ]]; then
+            test -n "$EXISTING_BRANCH_SHA"
+            git push \
+              --force-with-lease="refs/heads/${BRANCH}:${EXISTING_BRANCH_SHA}" \
+              origin "HEAD:refs/heads/${BRANCH}"
+          else
+            git push origin "HEAD:refs/heads/${BRANCH}"
+          fi
+
+      - name: Open or record canonical security remediation pull request
+        if: steps.diff.outputs.changed == 'true'
+        id: pull
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.write-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+          EXISTING_PR_FOUND: ${{ steps.existing.outputs.found }}
+          EXISTING_PR_NUMBER: ${{ steps.existing.outputs.number }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EXISTING_PR_FOUND" == "true" ]]; then
+            gh pr ready "$EXISTING_PR_NUMBER" --repo "$REPOSITORY"
+            url="$(
+              gh pr view "$EXISTING_PR_NUMBER" \
+                --repo "$REPOSITORY" \
+                --json url \
+                --jq .url
+            )"
+            echo "Refreshed security remediation PR: $url" \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            url="$(
+              gh pr create \
+                --repo "$REPOSITORY" \
+                --base main \
+                --head "$BRANCH" \
+                --title 'chore(security): remediate dependency alerts' \
+                --body-file .security-remediation/pr-body.md
+            )"
+            echo "Opened security remediation PR: $url" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Retain remediation evidence
+        if: always() && steps.alerts.outputs.relevant != '0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dependabot-security-remediation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .security-remediation/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

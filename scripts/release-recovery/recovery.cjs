@@ -141,8 +141,29 @@ function verifyRegistryEvidence(
 function isCanonicalSemanticReleaseBody(body, tagName) {
   if (typeof body !== 'string') return false;
   const version = tagName.startsWith('v') ? tagName.slice(1) : tagName;
-  const prefix = `## [${version}](https://github.com/${REPOSITORY}/compare/`;
-  return body.startsWith(prefix) && body.includes(`...${tagName})`);
+  const comparePrefix = `https://github.com/${REPOSITORY}/compare/`;
+  const firstLine = body.split('\n', 1)[0];
+  const headings = [
+    `# [${version}](${comparePrefix}`,
+    `## [${version}](${comparePrefix}`,
+  ];
+
+  for (const heading of headings) {
+    if (!firstLine.startsWith(heading)) continue;
+    const remainder = firstLine.slice(heading.length);
+    const linkEnd = remainder.indexOf(')');
+    if (linkEnd < 0) return false;
+    const compareRange = remainder.slice(0, linkEnd);
+    const compareRefs = compareRange.split('...');
+    return (
+      !/\s/.test(compareRange) &&
+      compareRefs.length === 2 &&
+      compareRefs[0].length > 0 &&
+      compareRefs[1] === tagName
+    );
+  }
+
+  return false;
 }
 
 function assessGithubRelease(existing, expected) {

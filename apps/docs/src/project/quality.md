@@ -30,6 +30,25 @@ The repository checks npm workspace dependencies and GitHub Actions weekly.
 Related npm updates are grouped for React, Storybook, Vite, Expo, and linting
 tooling.
 
+Security maintenance adds a bounded fallback when a development-scope npm
+advisory has a published patched version but Dependabot has not produced a
+usable update. High and critical development advisories are checked daily;
+lower severities are swept weekly. The fallback may change only pnpm security
+overrides, release-age exclusions, and the lockfile. It opens or refreshes one
+canonical remediation pull request, then reuses the normal full-CI and
+exact-head dependency merge authority.
+
+Runtime dependency alerts are deliberately outside this fallback. They remain
+visible in Dependabot; High and Critical runtime alerts also remain surfaced by
+the automated security alert watcher. The watcher runs daily and immediately
+after dependency manifests, the pnpm lockfile, or dependency authority change
+on `main`. Push-triggered checks give GitHub's asynchronous dependency graph a
+bounded convergence window before publishing the tracker; the final evidence
+records the observed current main SHA plus each alert's dependency scope and
+manifest path. Runtime fixes require a native Dependabot update or a
+manifest/release-aware remediation so a repository-local override cannot be
+mistaken for a downstream consumer fix.
+
 ## Local Commands
 
 Run the full pipeline before opening a significant pull request.

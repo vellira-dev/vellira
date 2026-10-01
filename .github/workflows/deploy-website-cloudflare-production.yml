@@ -254,7 +254,7 @@ jobs:
 
       - name: Verify actual OpenNext runtime before remote archive or activation
         run: |
-          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-populate-local-cache.mjs wrangler.production.jsonc
           node apps/website/scripts/cloudflare-local-runtime.mjs
 
       - name: Install migration regression browsers
