@@ -277,12 +277,9 @@ async function main() {
         bucket,
         checkLegacy,
         prepareCandidate: async () => {
-          command('pnpm', [
-            'exec',
-            'opennextjs-cloudflare',
-            'populateCache',
-            'local',
-            `--config=${configPath}`,
+          command(process.execPath, [
+            'scripts/cloudflare-populate-local-cache.mjs',
+            'wrangler.production.jsonc',
           ]);
           return {
             identity: prepareDeployment(root),
