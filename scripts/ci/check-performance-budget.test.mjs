@@ -178,6 +178,7 @@ test('affected execution classifier stays aligned with the performance budget cl
     ['packages/tokens/src/light.ts'],
     ['packages/react/src/Button.tsx', 'apps/website/src/app/page.tsx'],
     ['.github/workflows/ci.yml'],
+    RELEASE_SYNC_MANIFESTS,
     [],
   ];
 
@@ -363,6 +364,10 @@ test('release-sync keeps required CI contexts while replacing heavy work with se
   const quality = jobBlock('quality', 'cloudflare-runtime-contracts');
   const typecheck = jobBlock('typecheck', 'tooling');
   const tooling = jobBlock('tooling', 'unit-coverage');
+  assert.match(
+    tooling,
+    /shape == 'release-sync' \|\| \(needs\.impact\.outputs\.shape != 'docs-only'/
+  );
   const unitCoverage = jobBlock('unit-coverage', 'generator-blog');
   const buildValidate = jobBlock('ci');
 
