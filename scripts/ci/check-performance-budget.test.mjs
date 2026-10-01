@@ -234,6 +234,28 @@ test('affected workspace runner rejects malformed inputs', () => {
   );
 });
 
+test('docs-only CI builds docs workspace dependencies before VitePress', () => {
+  const buildValidate = jobBlock('ci');
+  const prerequisites =
+    "pnpm exec turbo run build --filter='@vellira-ui/docs^...'";
+  const prerequisitesIndex = buildValidate.indexOf(prerequisites);
+  const docsBuildIndex = buildValidate.indexOf('pnpm docs:build');
+
+  assert.ok(prerequisitesIndex >= 0, 'Missing docs workspace dependency build');
+  assert.ok(
+    docsBuildIndex > prerequisitesIndex,
+    'Docs build must run after workspace dependencies are built'
+  );
+
+  const marker = '      - name: Build docs workspace dependencies\n';
+  const step = buildValidate.split(marker)[1];
+  assert.ok(step, 'Missing docs workspace dependency step');
+  assert.match(
+    step.slice(0, 220),
+    /if: needs\.impact\.outputs\.shape == 'docs-only'/
+  );
+});
+
 test('docs-only affected path does not invoke an empty workspace build', () => {
   const buildValidate = jobBlock('ci');
 
