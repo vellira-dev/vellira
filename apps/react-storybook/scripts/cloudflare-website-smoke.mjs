@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test';
+import { captureBrowserJson } from './cloudflare-browser-json.mjs';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -32,6 +33,7 @@ const metricsApiOrigin = new URL(metricsApiBaseUrl).origin;
 const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
+const observeActorJson = await captureBrowserJson(page, baseUrl);
 const diagnostics = [];
 const criticalDiagnostics = [];
 const vercelRuntimeRequests = [];
@@ -484,34 +486,27 @@ async function verifyHighlightedArticleCode() {
   console.log('OK highlighted MDX code /blog/two-runtimes');
 }
 
-function waitForMetricResponse(url, method) {
-  return page.waitForResponse(
-    (response) =>
-      response.url() === url && response.request().method() === method,
-    { timeout: 15_000 }
-  );
-}
-
 async function loadArticleWithActorMetrics(articlePath, likeUrl, viewUrl) {
-  const likeStatePromise = waitForMetricResponse(likeUrl, 'GET');
-  const viewPromise = waitForMetricResponse(viewUrl, 'POST');
+  const [likeStateResponse, viewResponse] = await observeActorJson(
+    [
+      { url: likeUrl, method: 'GET' },
+      { url: viewUrl, method: 'POST' },
+    ],
+    () => goto(articlePath)
+  );
 
-  await goto(articlePath);
-
-  const [likeStateResponse, viewResponse] = await Promise.all([
-    likeStatePromise,
-    viewPromise,
-  ]);
-
-  if (!likeStateResponse.ok() || !viewResponse.ok()) {
+  if (
+    likeStateResponse.status < 200 || likeStateResponse.status >= 300 ||
+    viewResponse.status < 200 || viewResponse.status >= 300
+  ) {
     throw new Error(
-      `Blog metrics bootstrap failed: like=${likeStateResponse.status()} ` +
-        `view=${viewResponse.status()}`
+      `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
+        `view=${viewResponse.status}`
     );
   }
 
-  const likeState = await likeStateResponse.json();
-  const viewWrite = await viewResponse.json();
+  const likeState = likeStateResponse.payload;
+  const viewWrite = viewResponse.payload;
 
   if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
     throw new Error('Blog metrics bootstrap returned an invalid payload.');
@@ -543,15 +538,16 @@ async function verifyBlogActorContinuity() {
     .getByLabel(`${formatCount(first.viewWrite.metrics.views)} views`)
     .waitFor({ state: 'visible', timeout: 15_000 });
 
-  const firstLikeResponsePromise = waitForMetricResponse(likeUrl, 'PUT');
-  await page.getByRole('button', { name: 'Like this article' }).click();
-  const firstLikeResponse = await firstLikeResponsePromise;
+  const [firstLikeResponse] = await observeActorJson(
+    [{ url: likeUrl, method: 'PUT' }],
+    () => page.getByRole('button', { name: 'Like this article' }).click()
+  );
 
-  if (!firstLikeResponse.ok()) {
-    throw new Error(`Blog like failed with ${firstLikeResponse.status()}.`);
+  if (firstLikeResponse.status < 200 || firstLikeResponse.status >= 300) {
+    throw new Error(`Blog like failed with ${firstLikeResponse.status}.`);
   }
 
-  const firstLikeWrite = await firstLikeResponse.json();
+  const firstLikeWrite = firstLikeResponse.payload;
   if (
     firstLikeWrite?.liked !== true ||
     firstLikeWrite?.changed !== true ||
