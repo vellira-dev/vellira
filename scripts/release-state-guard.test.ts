@@ -149,6 +149,57 @@ describe('release state guard', () => {
     expect(workflow.match(/HUSKY: '0'/g)).toHaveLength(3);
   });
 
+  it('reuses exact merged PR validation instead of rerunning full CI in release', () => {
+    const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
+    const releaseStart = workflow.indexOf('\n  release:');
+    const recoveryStart = workflow.indexOf('\n  recover-existing-release:');
+    const releaseJob = workflow.slice(releaseStart, recoveryStart);
+
+    expect(releaseJob).toContain('checks: read');
+    expect(releaseJob).toContain('pull-requests: read');
+    expect(releaseJob).toContain('- name: Verify merged PR validation');
+    expect(releaseJob).toContain('merge_commit_sha == $sha');
+    expect(releaseJob).toContain('check-runs?per_page=100');
+
+    for (const checkName of [
+      'Build, Test & Validate',
+      'Typecheck & API Contracts',
+      'Tooling & IndexNow Tests',
+      'Quality & Component Quality',
+      'Storybook & Browser Tests',
+      'Unit & Coverage Tests',
+      'CodeQL',
+      'chromatic',
+    ]) {
+      expect(releaseJob).toContain(`"${checkName}"`);
+    }
+
+    for (const duplicatedCommand of [
+      'pnpm ci:quality',
+      'pnpm ci:build',
+      'pnpm ci:typecheck',
+      'pnpm ci:playwright',
+      'pnpm test:unit',
+      'pnpm test:storybook',
+      'pnpm test:coverage',
+    ]) {
+      expect(releaseJob).not.toContain(duplicatedCommand);
+    }
+
+    expect(releaseJob).toContain('- name: Build publishable packages');
+    expect(releaseJob).toContain('run: pnpm build');
+    expect(releaseJob).toContain('run: pnpm ci:smoke');
+  });
+
+  it('keeps semantic-release GitHub publication issue-write free', () => {
+    const config = readFileSync('release.config.cjs', 'utf8');
+
+    expect(config).toContain("['@semantic-release/github'");
+    expect(config).toContain('successComment: false');
+    expect(config).toContain('failComment: false');
+    expect(config).toContain('releasedLabels: false');
+  });
+
   it('enables auto-merge for normal and recovered version-sync PRs', () => {
     const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
     const releaseStart = workflow.indexOf('\n  release:');
