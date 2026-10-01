@@ -9,7 +9,7 @@ interaction behavior inside the web layer.
 
 ## Installation
 
-Requires React and React DOM `>=18.2 <20`.
+Requires `react >=18.2 <20` and `react-dom >=18.2 <20`.
 
 ```bash
 pnpm add @vellira-ui/react
