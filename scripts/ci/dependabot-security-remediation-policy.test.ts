@@ -24,9 +24,7 @@ describe('Dependabot security remediation workflow policy', () => {
 
   it('keeps mutation bounded to pnpm security authority', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
-    const fixIndex = source.indexOf(
-      'pnpm audit --fix=override --dev --ignore-unfixable --audit-level'
-    );
+    const fixIndex = source.indexOf('Generate bounded pnpm security override');
     const diffIndex = source.indexOf('validate-working-tree');
     const auditIndex = source.indexOf(
       'Prove no in-scope registry advisory remains'
@@ -55,12 +53,30 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('.dependency.scope == "development"');
     expect(source).not.toContain('pnpm audit --fix=update');
     expect(source).not.toContain('pnpm audit --fix --dev');
-    expect(source).toContain(
-      'pnpm audit --fix=override --dev --ignore-unfixable --audit-level'
-    );
+    expect(source).toContain('--fix=override');
+    expect(source).toContain('--ignore-unfixable');
     expect(source).toContain(
       'Runtime alerts remain outside this bounded fallback.'
     );
+    expect(source).toContain('--audit .security-remediation/audit-before.json');
+    expect(source).toContain('--plan .security-remediation/plan.json');
+    expect(source).toContain('runtime-ignores');
+    expect(source).toContain('runtime-audit-ignores.json');
+    expect(source).toContain('steps.plan.outputs.fixable_packages');
+    expect(source).toContain(
+      'Package authority: exact fixable development-scope Dependabot plan'
+    );
+    expect(source).toContain('registry audit is confirming evidence only');
+    expect(source).toContain("<<'BODY'");
+    expect(source).not.toContain('<<BODY');
+    expect(source).toContain(
+      "printf '\\n<!-- vellira-security-remediation-v1 base-sha=%s"
+    );
+    expect(source).toContain('Record generated workspace evidence');
+    expect(source).toContain(
+      'authorizedPackages: validation.authorizedPackages'
+    );
+    expect(source).toContain('changedPackages: validation.changedPackages');
     expect(source).toContain('include-hidden-files: true');
     expect(source).toContain('if-no-files-found: error');
     expect(source).not.toContain('gh pr merge');
@@ -154,7 +170,19 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     expect(metadataSource).toContain('validate-pr');
     expect(metadataSource).toContain(
-      'pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }}'
+      '--candidate /tmp/security-remediation-source/candidate.json'
+    );
+    expect(metadataSource).toContain('path: /tmp/security-remediation-source');
+    expect(metadataSource).toContain('candidate.authorizedPackages');
+    expect(metadataSource).toContain('candidate.changedPackages');
+    expect(metadataSource).toContain('candidate.ignoredRuntimeGhsas');
+    expect(metadataSource).toContain("jq -r '.ignoredRuntimeGhsas[]'");
+    expect(metadataSource).toContain(
+      'Prove in-scope registry advisories are closed by the candidate'
+    );
+    expect(metadataSource).toContain('--ignore-unfixable');
+    expect(metadataSource).toContain(
+      '--audit-level ${{ steps.envelope.outputs.audit_level }}'
     );
     expect(metadataSource).toContain("kind: 'security-remediation'");
     expect(metadataSource).toContain('include-hidden-files: true');

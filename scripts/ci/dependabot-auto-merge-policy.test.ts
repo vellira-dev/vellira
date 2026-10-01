@@ -29,7 +29,23 @@ describe('Dependabot auto-merge workflow policy', () => {
     const source = await workflowSource();
 
     expect(source).toContain('head_sha="$EXPECTED_HEAD_SHA"');
-    expect(source).toContain('run.head_sha === expectedHeadSha');
+    expect(source).toContain('commits/$EXPECTED_HEAD_SHA/pulls');
+    expect(source).toContain('deadline=$((SECONDS + 900))');
+    expect(source).toContain('latest_run="$(');
+    expect(source).toContain('sort_by(.id)');
+    expect(source).toContain('last // empty');
+    expect(source).toContain(
+      'Authenticated latest metadata run: $latest_run_id attempt $latest_run_attempt'
+    );
+    expect(source).toContain('run_attempt=$latest_run_attempt');
+    expect(source).toContain(
+      'dependabot-auto-merge-decision-${{ steps.metadata.outputs.run_id }}-${{ steps.metadata.outputs.run_attempt }}'
+    );
+    expect(source).not.toContain('successful_run_id=');
+    expect(source).toContain(
+      'Timed out waiting for successful exact-head dependency metadata.'
+    );
+    expect(source).toContain('Exact CI head is not an eligible dependency PR.');
     expect(source).toContain('decision.headSha !== ciHeadSha');
     expect(source).toContain(
       'Dependency auto-merge decision does not match successful CI head'
@@ -42,6 +58,12 @@ describe('Dependabot auto-merge workflow policy', () => {
     const revalidateIndex = source.indexOf(
       'Revalidate dependency pull request after checks'
     );
+    const sourceRunIndex = source.indexOf(
+      'Revalidate completed remediation source run'
+    );
+    const runtimeScopeIndex = source.indexOf(
+      'Revalidate live runtime dependency scope'
+    );
     const tokenIndex = source.indexOf(
       'Create short-lived merge GitHub App token'
     );
@@ -51,7 +73,9 @@ describe('Dependabot auto-merge workflow policy', () => {
 
     expect(waitIndex).toBeGreaterThan(-1);
     expect(revalidateIndex).toBeGreaterThan(waitIndex);
-    expect(tokenIndex).toBeGreaterThan(revalidateIndex);
+    expect(sourceRunIndex).toBeGreaterThan(revalidateIndex);
+    expect(runtimeScopeIndex).toBeGreaterThan(sourceRunIndex);
+    expect(tokenIndex).toBeGreaterThan(runtimeScopeIndex);
     expect(mergeIndex).toBeGreaterThan(tokenIndex);
     expect(source).toContain('--required');
     expect(source).toContain('--watch');
@@ -76,6 +100,20 @@ describe('Dependabot auto-merge workflow policy', () => {
       'Security remediation decision dependency scope is invalid'
     );
     expect(source).toContain("decision.dependencyScope !== 'development'");
+    expect(source).toContain(
+      'Security remediation decision package authority is invalid'
+    );
+    expect(source).toContain('decision.authorizedPackages');
+    expect(source).toContain('decision.changedPackages');
+    expect(source).toContain('decision.ignoredRuntimeGhsas');
+    expect(source).toContain(
+      'Security remediation source run is no longer an exact successful authority'
+    );
+    expect(source).toContain("run.conclusion !== 'success'");
+    expect(source).toContain('DEPENDABOT_ALERTS_TOKEN');
+    expect(source).toContain(
+      'Security remediation package authority gained a live runtime conflict before merge'
+    );
     expect(source).toContain(
       'Security remediation base moved after authenticated generation'
     );

@@ -75,7 +75,7 @@ jobs:
       - name: Upload auto-merge decision
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dependabot-auto-merge-decision
+          name: dependabot-auto-merge-decision-${{ github.run_id }}-${{ github.run_attempt }}
           path: .dependabot-auto-merge/decision.json
           include-hidden-files: true
           if-no-files-found: error
@@ -220,7 +220,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dependabot-security-remediation-candidate-${{ steps.envelope.outputs.source_run_id }}-${{ steps.envelope.outputs.source_run_attempt }}
-          path: .security-remediation-source
+          path: /tmp/security-remediation-source
           run-id: ${{ steps.envelope.outputs.source_run_id }}
           github-token: ${{ github.token }}
 
@@ -242,7 +242,7 @@ jobs:
 
           const candidate = JSON.parse(
             fs.readFileSync(
-              '.security-remediation-source/candidate.json',
+              '/tmp/security-remediation-source/candidate.json',
               'utf8'
             )
           );
@@ -257,6 +257,21 @@ jobs:
             sourceRunId: Number(process.env.SOURCE_RUN_ID),
             sourceRunAttempt: Number(process.env.SOURCE_RUN_ATTEMPT),
           };
+          const validPackageList = (value) =>
+            Array.isArray(value) &&
+            value.length > 0 &&
+            value.every(
+              (entry) => typeof entry === 'string' && entry.length > 0
+            );
+          const validGhsaList = (value) =>
+            Array.isArray(value) &&
+            value.every(
+              (entry) =>
+                typeof entry === 'string' &&
+                /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/i.test(
+                  entry
+                )
+            );
 
           if (
             candidate.schemaVersion !== 1 ||
@@ -271,7 +286,14 @@ jobs:
             candidate.dependencyScope !== expected.dependencyScope ||
             expected.dependencyScope !== 'development' ||
             candidate.sourceRunId !== expected.sourceRunId ||
-            candidate.sourceRunAttempt !== expected.sourceRunAttempt
+            candidate.sourceRunAttempt !== expected.sourceRunAttempt ||
+            !validPackageList(candidate.authorizedPackages) ||
+            !validPackageList(candidate.changedPackages) ||
+            candidate.changedPackages.some(
+              (packageName) =>
+                !candidate.authorizedPackages.includes(packageName)
+            ) ||
+            !validGhsaList(candidate.ignoredRuntimeGhsas)
           ) {
             throw new Error(
               'Security remediation candidate artifact does not authenticate this PR head'
@@ -304,9 +326,24 @@ jobs:
         run: >-
           node scripts/ci/dependabot-security-remediation.mjs validate-pr
           --base "$BASE_SHA"
+          --candidate /tmp/security-remediation-source/candidate.json
 
       - name: Prove in-scope registry advisories are closed by the candidate
-        run: pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ignore_args=()
+          while IFS= read -r ghsa; do
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid authenticated runtime GHSA exclusion: $ghsa"
+              exit 1
+            }
+            ignore_args+=(--ignore "$ghsa")
+          done < <(
+            jq -r '.ignoredRuntimeGhsas[]' /tmp/security-remediation-source/candidate.json
+          )
+
+          pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }} "${ignore_args[@]}"
 
       - name: Write immutable security auto-merge decision
         shell: bash
@@ -336,6 +373,12 @@ jobs:
           const dependencyScope = process.env.DEPENDENCY_SCOPE ?? '';
           const sourceRunId = Number(process.env.SOURCE_RUN_ID);
           const sourceRunAttempt = Number(process.env.SOURCE_RUN_ATTEMPT);
+          const candidate = JSON.parse(
+            fs.readFileSync(
+              '/tmp/security-remediation-source/candidate.json',
+              'utf8'
+            )
+          );
 
           if (!Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) {
             throw new Error(
@@ -383,6 +426,9 @@ jobs:
             dependencyScope,
             sourceRunId,
             sourceRunAttempt,
+            authorizedPackages: candidate.authorizedPackages,
+            changedPackages: candidate.changedPackages,
+            ignoredRuntimeGhsas: candidate.ignoredRuntimeGhsas,
             eligible: true,
           };
 
@@ -397,7 +443,7 @@ jobs:
       - name: Upload security auto-merge decision
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dependabot-auto-merge-decision
+          name: dependabot-auto-merge-decision-${{ github.run_id }}-${{ github.run_attempt }}
           path: .dependabot-auto-merge/decision.json
           include-hidden-files: true
           if-no-files-found: error
