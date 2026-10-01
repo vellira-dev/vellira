@@ -607,7 +607,7 @@ export function SocialProof({
                   iconEnd={<ArrowRight size={14} aria-hidden='true' />}
                 >
                   <a
-                    href='https://docs.vellira.dev/production'
+                    href='https://docs.vellira.dev/start/production'
                     target='_blank'
                     rel='noreferrer'
                   >
