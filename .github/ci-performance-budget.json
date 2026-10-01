@@ -33,6 +33,11 @@
       "toleranceSeconds": 60,
       "expectedExecutionPath": "affected"
     },
+    "release-sync": {
+      "targetSeconds": 120,
+      "toleranceSeconds": 45,
+      "expectedExecutionPath": "affected"
+    },
     "shared": {
       "targetSeconds": 360,
       "toleranceSeconds": 75,
