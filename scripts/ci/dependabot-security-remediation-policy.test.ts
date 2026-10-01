@@ -193,33 +193,33 @@ describe('Dependabot security remediation workflow policy', () => {
   });
 
   it('reconciles alert tracker after dependency changes', async () => {
-      const source = await readFile(alertWatchWorkflowPath, 'utf8');
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
 
-      expect(source).toContain('push:');
-      expect(source).toContain('- main');
-      expect(source).toContain("'pnpm-lock.yaml'");
-      expect(source).toContain("'pnpm-workspace.yaml'");
-      expect(source).toContain("'**/package.json'");
-      expect(source).toContain("if: github.ref == 'refs/heads/main'");
-      expect(source).toContain('group: dependabot-alert-watch');
-      expect(source).toContain('cancel-in-progress: true');
-      expect(source).toContain('max_reads=4');
-      expect(source).toContain('sleep 30');
-      expect(source).toContain('Dependency graph reads: $read_number');
-      expect(source).toContain('Observed main SHA: $main_sha');
-      expect(source).toContain('gh api "repos/$GH_REPO/branches/main" --jq');
+    expect(source).toContain('push:');
+    expect(source).toContain('- main');
+    expect(source).toContain("'pnpm-lock.yaml'");
+    expect(source).toContain("'pnpm-workspace.yaml'");
+    expect(source).toContain("'**/package.json'");
+    expect(source).toContain("if: github.ref == 'refs/heads/main'");
+    expect(source).toContain('group: dependabot-alert-watch');
+    expect(source).toContain('cancel-in-progress: true');
+    expect(source).toContain('max_reads=4');
+    expect(source).toContain('sleep 30');
+    expect(source).toContain('Dependency graph reads: $read_number');
+    expect(source).toContain('Observed main SHA: $main_sha');
+    expect(source).toContain('gh api "repos/$GH_REPO/branches/main" --jq');
   });
 
   it('surfaces alert scope and manifest evidence', async () => {
-      const source = await readFile(alertWatchWorkflowPath, 'utf8');
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
 
-      expect(source).toContain(
-        '| Severity | Scope | Package | Manifest | Alert |'
-      );
-      expect(source).toContain('.dependency.scope // "unknown"');
-      expect(source).toContain('.dependency.manifest_path // "unknown"');
-      expect(source).toContain('Development-scope alerts: $development_count');
-      expect(source).toContain('Runtime-scope alerts: $runtime_count');
-      expect(source).toContain('against observed main \\`${main_sha}\\`');
+    expect(source).toContain(
+      '| Severity | Scope | Package | Manifest | Alert |'
+    );
+    expect(source).toContain('.dependency.scope // "unknown"');
+    expect(source).toContain('.dependency.manifest_path // "unknown"');
+    expect(source).toContain('Development-scope alerts: $development_count');
+    expect(source).toContain('Runtime-scope alerts: $runtime_count');
+    expect(source).toContain('against observed main \\`${main_sha}\\`');
   });
 });
