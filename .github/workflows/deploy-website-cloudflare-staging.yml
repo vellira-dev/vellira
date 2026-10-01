@@ -85,6 +85,9 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: |
+            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
+            apps/react-storybook/test-results/cloudflare-migration/summary.json
+            apps/react-storybook/test-results/cloudflare-migration/*.log
 
   deploy:
     name: Build, deploy, and verify merged main on website staging
@@ -339,9 +342,6 @@ jobs:
           include-hidden-files: true
           path: |
             apps/react-storybook/test-results/cloudflare-soak/
-            apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
-            apps/react-storybook/test-results/cloudflare-migration/summary.json
-            apps/react-storybook/test-results/cloudflare-migration/*.log
             apps/website/.open-next/asset-audit*.json
             apps/website/.open-next/archive-evidence.json
             apps/website/.open-next/vellira-build.json
