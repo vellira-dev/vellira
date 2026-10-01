@@ -80,6 +80,5 @@ describe('first-use documentation contract', () => {
     expectPeerRanges(nativeReadme, peerDependencies);
     expectPeerRanges(gettingStarted, peerDependencies);
     expectPeerRanges(nativeDocs, peerDependencies);
-
   });
 });
