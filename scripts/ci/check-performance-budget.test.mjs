@@ -19,8 +19,17 @@ import {
   buildTurboArgs,
   parseAffectedWorkspaces,
 } from './run-affected-workspaces.mjs';
+import {
+  RELEASE_SYNC_MANIFESTS,
+  isReleaseSyncFileSet,
+  verifyReleaseSyncDocuments,
+} from './release-sync-contract.mjs';
 
 const ciWorkflow = await fs.readFile('.github/workflows/ci.yml', 'utf8');
+const lighthouseWorkflow = await fs.readFile(
+  '.github/workflows/lighthouse.yml',
+  'utf8'
+);
 
 function jobBlock(jobId, nextJobId) {
   const start = ciWorkflow.indexOf(`\n  ${jobId}:\n`);
@@ -55,12 +64,82 @@ const budgets = {
     toleranceSeconds: 60,
     expectedExecutionPath: 'affected',
   },
+  'release-sync': {
+    targetSeconds: 120,
+    toleranceSeconds: 45,
+    expectedExecutionPath: 'affected',
+  },
   shared: {
     targetSeconds: 360,
     toleranceSeconds: 75,
     expectedExecutionPath: 'full',
   },
 };
+
+test('classifies the exact release-managed manifest set as release-sync', () => {
+  assert.equal(isReleaseSyncFileSet(RELEASE_SYNC_MANIFESTS), true);
+  assert.equal(
+    classifyAffectedFiles(RELEASE_SYNC_MANIFESTS, classification),
+    'release-sync'
+  );
+  assert.equal(classifyFiles(RELEASE_SYNC_MANIFESTS, classification), 'release-sync');
+
+  assert.equal(
+    isReleaseSyncFileSet([...RELEASE_SYNC_MANIFESTS, 'packages/react/src/Button.tsx']),
+    false
+  );
+});
+
+test('release-sync semantic contract permits version-only bot changes', () => {
+  const baseDocuments = Object.fromEntries(
+    RELEASE_SYNC_MANIFESTS.map((manifestPath) => [
+      manifestPath,
+      { name: manifestPath, version: '2.126.3', private: false },
+    ])
+  );
+  const headDocuments = Object.fromEntries(
+    RELEASE_SYNC_MANIFESTS.map((manifestPath) => [
+      manifestPath,
+      { name: manifestPath, version: '2.126.4', private: false },
+    ])
+  );
+
+  assert.deepEqual(
+    verifyReleaseSyncDocuments({
+      files: RELEASE_SYNC_MANIFESTS,
+      baseDocuments,
+      headDocuments,
+      title: 'chore(release): sync package versions',
+      headRef: 'chore/sync-release-2.126.4',
+      author: 'vellira-release-sync[bot]',
+    }),
+    {
+      baseVersion: '2.126.3',
+      headVersion: '2.126.4',
+      files: [...RELEASE_SYNC_MANIFESTS].sort((left, right) =>
+        left.localeCompare(right)
+      ),
+    }
+  );
+
+  headDocuments['packages/react/package.json'] = {
+    ...headDocuments['packages/react/package.json'],
+    scripts: { postinstall: 'unexpected' },
+  };
+
+  assert.throws(
+    () =>
+      verifyReleaseSyncDocuments({
+        files: RELEASE_SYNC_MANIFESTS,
+        baseDocuments,
+        headDocuments,
+        title: 'chore(release): sync package versions',
+        headRef: 'chore/sync-release-2.126.4',
+        author: 'vellira-release-sync[bot]',
+      }),
+    /only permits the version field/
+  );
+});
 
 test('classifies documentation-only changes conservatively', () => {
   assert.equal(
@@ -103,6 +182,7 @@ test('affected execution classifier stays aligned with the performance budget cl
     ['packages/tokens/src/light.ts'],
     ['packages/react/src/Button.tsx', 'apps/website/src/app/page.tsx'],
     ['.github/workflows/ci.yml'],
+    RELEASE_SYNC_MANIFESTS,
     [],
   ];
 
@@ -165,6 +245,22 @@ test('affected execution narrows docs immediately but package-local only after g
   assert.equal(
     planAffectedExecution(['.github/workflows/ci.yml'], classification).executionPath,
     'full'
+  );
+});
+
+test('release-sync uses the affected execution path without workspace fan-out', () => {
+  assert.deepEqual(
+    planAffectedExecution(RELEASE_SYNC_MANIFESTS, classification),
+    {
+      shape: 'release-sync',
+      executionPath: 'affected',
+      packageName: null,
+      graphStatus: 'not-applicable',
+      graphReason: '',
+      affectedWorkspaces: [],
+      affectedWorkspacePaths: [],
+      changedFiles: [...RELEASE_SYNC_MANIFESTS],
+    }
   );
 });
 
@@ -265,6 +361,62 @@ test('docs-only affected path does not invoke an empty workspace build', () => {
   assert.match(
     step.slice(0, 260),
     /if: \$\{\{ needs\.impact\.outputs\.execution_path == 'affected' && needs\.impact\.outputs\.affected_workspaces != '\[\]' \}\}/
+  );
+});
+
+test('release-sync keeps required CI contexts while replacing heavy work with semantic verification', () => {
+  const quality = jobBlock('quality', 'cloudflare-runtime-contracts');
+  const typecheck = jobBlock('typecheck', 'tooling');
+  const tooling = jobBlock('tooling', 'unit-coverage');
+  assert.match(
+    tooling,
+    /shape == 'release-sync' \|\| \(needs\.impact\.outputs\.shape != 'docs-only'/
+  );
+  const unitCoverage = jobBlock('unit-coverage', 'generator-blog');
+  const buildValidate = jobBlock('ci');
+
+  assert.match(quality, /if: needs\.impact\.outputs\.shape != 'release-sync'/);
+  assert.match(
+    unitCoverage,
+    /needs\.impact\.outputs\.shape != 'release-sync'/
+  );
+
+  for (const block of [typecheck, tooling, buildValidate]) {
+    assert.match(block, /Trust checked-out repository in container/);
+    assert.match(
+      block,
+      /git config --global --add safe\.directory "\$GITHUB_WORKSPACE"/
+    );
+    assert.ok(
+      block.indexOf('Trust checked-out repository in container') <
+        block.indexOf('Verify canonical release-sync fast path')
+    );
+    assert.match(block, /Verify canonical release-sync fast path/);
+    assert.match(block, /release-sync-contract\.mjs/);
+    assert.match(block, /--verify/);
+    assert.match(
+      block,
+      /if: needs\.impact\.outputs\.shape != 'release-sync'/
+    );
+  }
+
+  assert.match(
+    typecheck,
+    /needs\.impact\.outputs\.shape != 'release-sync'.*execution_path == 'affected'/s
+  );
+});
+
+test('release-sync skips expensive Lighthouse jobs after exact file-set detection', () => {
+  assert.match(lighthouseWorkflow, /Lighthouse release-sync impact/);
+  assert.match(lighthouseWorkflow, /release-sync-contract\.mjs/);
+  assert.match(lighthouseWorkflow, /--detect/);
+  assert.match(
+    lighthouseWorkflow,
+    /docs:\s+name: Lighthouse \/ Docs\s+needs: release-sync-impact\s+if: needs\.release-sync-impact\.outputs\.release_sync != 'true'/s
+  );
+  assert.match(
+    lighthouseWorkflow,
+    /website:\s+name: Lighthouse \/ Website\s+needs: release-sync-impact\s+if: needs\.release-sync-impact\.outputs\.release_sync != 'true'/s
   );
 });
 

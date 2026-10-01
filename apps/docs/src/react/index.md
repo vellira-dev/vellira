@@ -15,6 +15,8 @@ It owns DOM structure, CSS modules, browser events, accessibility ids, and web o
 pnpm add @vellira-ui/react
 ```
 
+The package expects `react >=18.2 <20` and `react-dom >=18.2 <20`.
+
 Import the stylesheet once in your application entry point.
 
 ```tsx

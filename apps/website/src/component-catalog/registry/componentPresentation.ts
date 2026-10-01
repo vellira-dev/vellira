@@ -50,8 +50,8 @@ export const componentCatalogPresentation = [
     category: 'forms',
     order: 30,
     docs: {
-      react: 'https://docs.vellira.dev/react/radio',
-      'react-native': 'https://docs.vellira.dev/react-native/radio',
+      react: 'https://docs.vellira.dev/react/radio-group',
+      'react-native': 'https://docs.vellira.dev/react-native/radio-group',
     },
   },
   {
@@ -63,8 +63,8 @@ export const componentCatalogPresentation = [
     category: 'forms',
     order: 40,
     docs: {
-      react: 'https://docs.vellira.dev/react/radio',
-      'react-native': 'https://docs.vellira.dev/react-native/radio',
+      react: 'https://docs.vellira.dev/react/radio-group',
+      'react-native': 'https://docs.vellira.dev/react-native/radio-group',
     },
   },
   {
