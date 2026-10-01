@@ -194,7 +194,7 @@ describe('release state guard', () => {
   it('keeps semantic-release GitHub publication issue-write free', () => {
     const config = readFileSync('release.config.cjs', 'utf8');
 
-    expect(config).toContain("['@semantic-release/github'");
+    expect(config).toContain("'@semantic-release/github'");
     expect(config).toContain('successComment: false');
     expect(config).toContain('failComment: false');
     expect(config).toContain('releasedLabels: false');
