@@ -336,3 +336,262 @@ for (const status of [307, 308]) {
     });
   }
 }
+
+// Synthetic routes keep the document-boundary regression deterministic. The
+// production observer still receives only each original browser fetch/response.
+async function documentFixture(t) {
+  const origin = 'https://vellira-observer.test';
+  const context = await browser.newContext();
+  const calls = [];
+  let documentNumber = 0;
+  t.after(() => context.close());
+  await context.route(`${origin}/**`, async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname.startsWith('/api/')) {
+      const number = Number(request.headers()['x-fixture-document']);
+      calls.push({
+        document: number,
+        method: request.method(),
+        path: url.pathname,
+      });
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          document: number,
+          liked: number > 1,
+          metrics: payload,
+        }),
+      });
+      return;
+    }
+    const number = ++documentNumber;
+    await route.fulfill({
+      contentType: 'text/html',
+      body: `<script>
+        window.load = async (path, method = 'GET') => {
+          const response = await fetch(path, {
+            method, headers: { 'x-fixture-document': '${number}' },
+          });
+          return response.json();
+        };
+        window.bootstrapDone = false;
+        window.bootstrap = async () => {
+          for (const [method, path] of ${JSON.stringify([
+            ['GET', likePath],
+            ['POST', viewPath],
+          ])}) {
+            if (method === ${JSON.stringify(url.searchParams.get('omit'))}) continue;
+            await load(path, method);
+            if (method === ${JSON.stringify(url.searchParams.get('duplicate'))}) await load(path, method);
+          }
+          window.bootstrapDone = true;
+        };
+        ${url.pathname === '/bootstrap' ? 'void bootstrap();' : ''}
+      </script>`,
+    });
+  });
+  const page = await context.newPage();
+  const observe = await captureBrowserJson(page, origin);
+  await page.goto(`${origin}/plain`);
+  const requests = [
+    { url: `${origin}${likePath}`, method: 'GET' },
+    { url: `${origin}${viewPath}`, method: 'POST' },
+  ];
+  const navigate = async (query = '') => {
+    await page.goto(`${origin}/bootstrap${query}`);
+    await page.waitForFunction(() => window.bootstrapDone);
+  };
+  return { page, observe, calls, requests, navigate };
+}
+
+test('next-document bootstrap excludes outgoing GET and POST, including repeated same-URL reloads', async (t) => {
+  const { page, observe, calls, requests, navigate } = await documentFixture(t);
+  for (let number = 2; number <= 5; number += 1) {
+    const responses = await observe(
+      requests,
+      async () => {
+        // Deterministically reproduce the outgoing hydration captured while the
+        // old smoke was arming a reload. Both methods still reach the application.
+        await page.evaluate(() => bootstrap());
+        await navigate();
+      },
+      2_000,
+      { document: 'next' }
+    );
+    assert.deepEqual(
+      responses.map((response) => response.payload.document),
+      [number, number]
+    );
+  }
+  assert.equal(
+    calls.length,
+    16,
+    'capture must not retry, suppress or add requests'
+  );
+});
+
+for (const missing of ['GET', 'POST']) {
+  test(`outgoing ${missing} cannot hide a missing destination bootstrap response`, async (t) => {
+    const { page, observe, requests, navigate } = await documentFixture(t);
+    await assert.rejects(
+      observe(
+        requests,
+        async () => {
+          await page.evaluate(() => bootstrap());
+          await navigate(`?omit=${missing}`);
+        },
+        500,
+        { document: 'next' }
+      ),
+      /timed out/
+    );
+  });
+}
+
+for (const method of ['GET', 'POST']) {
+  test(`duplicate destination ${method} still fails in next-document mode`, async (t) => {
+    const { observe, requests, navigate } = await documentFixture(t);
+    await assert.rejects(
+      observe(requests, () => navigate(`?duplicate=${method}`), 2_000, {
+        document: 'next',
+      }),
+      /Duplicate observed request/
+    );
+  });
+}
+
+for (const method of ['GET', 'POST', 'PUT', 'DELETE']) {
+  test(`current-document ${method} duplicates remain fatal`, async (t) => {
+    const { page, observe, requests } = await documentFixture(t);
+    const url = method === 'POST' ? requests[1].url : requests[0].url;
+    await assert.rejects(
+      observe([{ url, method }], () =>
+        page.evaluate(
+          async ({ url, method }) => {
+            await load(url, method);
+            await load(url, method);
+          },
+          { url, method }
+        )
+      ),
+      /Duplicate observed request/
+    );
+  });
+}
+
+test('current-document mode rejects navigation rather than accepting replacement responses', async (t) => {
+  const { observe, requests, navigate } = await documentFixture(t);
+  await assert.rejects(
+    observe(requests, () => navigate()),
+    /document changed/
+  );
+});
+
+test('a completed current-document response cannot authorize a later document in the same action', async (t) => {
+  const { page, observe, requests, navigate } = await documentFixture(t);
+  await assert.rejects(
+    observe(requests, async () => {
+      await page.evaluate(() => bootstrap());
+      await navigate();
+    }),
+    /document changed/
+  );
+});
+
+test('one bootstrap cannot combine GET and POST from two replacement documents', async (t) => {
+  const { observe, requests, navigate } = await documentFixture(t);
+  await assert.rejects(
+    observe(
+      requests,
+      async () => {
+        await navigate('?omit=POST');
+        await navigate('?omit=GET');
+      },
+      2_000,
+      { document: 'next' }
+    ),
+    /document changed/
+  );
+});
+
+test('invalid document scope fails before action and leaves the observer reusable', async (t) => {
+  const { page, observe, requests } = await documentFixture(t);
+  let acted = false;
+  await assert.rejects(
+    observe(
+      requests,
+      async () => {
+        acted = true;
+      },
+      2_000,
+      { document: 'any' }
+    ),
+    /Invalid.*document scope/
+  );
+  assert.equal(acted, false);
+  const result = await observe(requests, () =>
+    page.evaluate(() => bootstrap())
+  );
+  assert.equal(result[0].payload.document, 1);
+});
+
+test('a queued request start cannot acquire a subsequent observation ticket', async (t) => {
+  const { page, observe, requests } = await documentFixture(t);
+  await observe(requests, () => page.evaluate(() => bootstrap()));
+  await page.evaluate(async (url) => {
+    const key = Object.getOwnPropertySymbols(window).find((key) =>
+      Symbol.keyFor(key)?.startsWith('__velliraJson_')
+    );
+    const state = window[key];
+    const earlier = await state.observation;
+    state.observation = new Promise((resolve) => {
+      window.releaseEarlierStart = () => resolve(earlier);
+    });
+    void load(url);
+  }, requests[0].url);
+  await assert.rejects(
+    observe(
+      [requests[0]],
+      () => page.evaluate(() => releaseEarlierStart()),
+      500
+    ),
+    /timed out/
+  );
+});
+
+test('the arming deadline prevents a late action and holds the overlap lock', async (t) => {
+  const { page, observe, requests } = await documentFixture(t);
+  const evaluate = page.evaluate.bind(page);
+  let release;
+  const delayed = new Promise((resolve) => {
+    release = resolve;
+  });
+  let arming;
+  page.evaluate = (...args) => {
+    arming = delayed.then(() => evaluate(...args));
+    return arming;
+  };
+  let acted = false;
+  const pending = observe(
+    requests,
+    async () => {
+      acted = true;
+    },
+    50
+  );
+  await assert.rejects(
+    observe(requests, async () => {}),
+    /Overlapping/
+  );
+  await assert.rejects(pending, /timed out/);
+  page.evaluate = evaluate;
+  release();
+  // Finish the exact held evaluation before checking for a late action.
+  await arming;
+  assert.equal(acted, false);
+  const responses = await observe(requests, () =>
+    page.evaluate(() => bootstrap())
+  );
+  assert.equal(responses[0].payload.document, 1);
+});

@@ -11,6 +11,10 @@ const metadataWorkflowPath = resolve(
   process.cwd(),
   '.github/workflows/dependabot-auto-merge-metadata.yml'
 );
+const alertWatchWorkflowPath = resolve(
+  process.cwd(),
+  '.github/workflows/dependabot-alert-watch.yml'
+);
 
 describe('Dependabot security remediation workflow policy', () => {
   it('runs daily for high severity and weekly for all severities', async () => {
@@ -24,9 +28,7 @@ describe('Dependabot security remediation workflow policy', () => {
 
   it('keeps mutation bounded to pnpm security authority', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
-    const fixIndex = source.indexOf(
-      'pnpm audit --fix=override --dev --ignore-unfixable --audit-level'
-    );
+    const fixIndex = source.indexOf('Generate bounded pnpm security override');
     const diffIndex = source.indexOf('validate-working-tree');
     const auditIndex = source.indexOf(
       'Prove no in-scope registry advisory remains'
@@ -55,12 +57,30 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('.dependency.scope == "development"');
     expect(source).not.toContain('pnpm audit --fix=update');
     expect(source).not.toContain('pnpm audit --fix --dev');
-    expect(source).toContain(
-      'pnpm audit --fix=override --dev --ignore-unfixable --audit-level'
-    );
+    expect(source).toContain('--fix=override');
+    expect(source).toContain('--ignore-unfixable');
     expect(source).toContain(
       'Runtime alerts remain outside this bounded fallback.'
     );
+    expect(source).toContain('--audit .security-remediation/audit-before.json');
+    expect(source).toContain('--plan .security-remediation/plan.json');
+    expect(source).toContain('runtime-ignores');
+    expect(source).toContain('runtime-audit-ignores.json');
+    expect(source).toContain('steps.plan.outputs.fixable_packages');
+    expect(source).toContain(
+      'Package authority: exact fixable development-scope Dependabot plan'
+    );
+    expect(source).toContain('registry audit is confirming evidence only');
+    expect(source).toContain("<<'BODY'");
+    expect(source).not.toContain('<<BODY');
+    expect(source).toContain(
+      "printf '\\n<!-- vellira-security-remediation-v1 base-sha=%s"
+    );
+    expect(source).toContain('Record generated workspace evidence');
+    expect(source).toContain(
+      'authorizedPackages: validation.authorizedPackages'
+    );
+    expect(source).toContain('changedPackages: validation.changedPackages');
     expect(source).toContain('include-hidden-files: true');
     expect(source).toContain('if-no-files-found: error');
     expect(source).not.toContain('gh pr merge');
@@ -154,9 +174,52 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     expect(metadataSource).toContain('validate-pr');
     expect(metadataSource).toContain(
-      'pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }}'
+      '--candidate /tmp/security-remediation-source/candidate.json'
+    );
+    expect(metadataSource).toContain('path: /tmp/security-remediation-source');
+    expect(metadataSource).toContain('candidate.authorizedPackages');
+    expect(metadataSource).toContain('candidate.changedPackages');
+    expect(metadataSource).toContain('candidate.ignoredRuntimeGhsas');
+    expect(metadataSource).toContain("jq -r '.ignoredRuntimeGhsas[]'");
+    expect(metadataSource).toContain(
+      'Prove in-scope registry advisories are closed by the candidate'
+    );
+    expect(metadataSource).toContain('--ignore-unfixable');
+    expect(metadataSource).toContain(
+      '--audit-level ${{ steps.envelope.outputs.audit_level }}'
     );
     expect(metadataSource).toContain("kind: 'security-remediation'");
     expect(metadataSource).toContain('include-hidden-files: true');
+  });
+
+  it('reconciles alert tracker after dependency changes', async () => {
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
+
+    expect(source).toContain('push:');
+    expect(source).toContain('- main');
+    expect(source).toContain("'pnpm-lock.yaml'");
+    expect(source).toContain("'pnpm-workspace.yaml'");
+    expect(source).toContain("'**/package.json'");
+    expect(source).toContain("if: github.ref == 'refs/heads/main'");
+    expect(source).toContain('group: dependabot-alert-watch');
+    expect(source).toContain('cancel-in-progress: true');
+    expect(source).toContain('max_reads=4');
+    expect(source).toContain('sleep 30');
+    expect(source).toContain('Dependency graph reads: $read_number');
+    expect(source).toContain('Observed main SHA: $main_sha');
+    expect(source).toContain('gh api "repos/$GH_REPO/branches/main" --jq');
+  });
+
+  it('surfaces alert scope and manifest evidence', async () => {
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
+
+    expect(source).toContain(
+      '| Severity | Scope | Package | Manifest | Alert |'
+    );
+    expect(source).toContain('.dependency.scope // "unknown"');
+    expect(source).toContain('.dependency.manifest_path // "unknown"');
+    expect(source).toContain('Development-scope alerts: $development_count');
+    expect(source).toContain('Runtime-scope alerts: $runtime_count');
+    expect(source).toContain('against observed main \\`${main_sha}\\`');
   });
 });

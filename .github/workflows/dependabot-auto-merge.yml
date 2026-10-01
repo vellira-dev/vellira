@@ -31,62 +31,104 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .dependabot-auto-merge
+
           gh api --method GET \
-            "repos/$REPOSITORY/actions/workflows/dependabot-auto-merge-metadata.yml/runs" \
-            -f event=pull_request \
-            -f status=success \
-            -f head_sha="$EXPECTED_HEAD_SHA" \
+            "repos/$REPOSITORY/commits/$EXPECTED_HEAD_SHA/pulls" \
             -f per_page=100 \
-            > .dependabot-auto-merge/metadata-runs.json
-          node <<'NODE'
-          const fs = require('node:fs');
+            > .dependabot-auto-merge/head-pulls.json
 
-          const payload = JSON.parse(
-            fs.readFileSync('.dependabot-auto-merge/metadata-runs.json', 'utf8')
-          );
-          const repository = process.env.REPOSITORY;
-          const expectedHeadSha = process.env.EXPECTED_HEAD_SHA ?? '';
-          const runs = Array.isArray(payload.workflow_runs)
-            ? payload.workflow_runs
-            : [];
-          const match = runs.find(
-            (run) =>
-              run.conclusion === 'success' &&
-              run.event === 'pull_request' &&
-              run.head_sha === expectedHeadSha &&
-              run.head_repository?.full_name === repository
-          );
+          eligible_prs="$(
+            jq \
+              --arg sha "$EXPECTED_HEAD_SHA" \
+              --arg repository "$REPOSITORY" \
+              '[
+                .[]
+                | select(.state == "open")
+                | select(.head.sha == $sha)
+                | select(.head.repo.full_name == $repository)
+                | select(
+                    .user.login == "dependabot[bot]"
+                    or (
+                      .user.login == "vellira-release-sync[bot]"
+                      and .head.ref == "automation/dependabot-security-remediation"
+                    )
+                  )
+              ] | length' \
+              .dependabot-auto-merge/head-pulls.json
+          )"
 
-          if (!match) {
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'found=false\n');
-            console.log(
-              JSON.stringify({
-                found: false,
-                headSha: expectedHeadSha,
-                reason: 'no matching successful Dependabot metadata run',
-              })
-            );
-            process.exit(0);
-          }
+          if [[ "$eligible_prs" -eq 0 ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Exact CI head is not an eligible dependency PR." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ "$eligible_prs" -ne 1 ]]; then
+            echo "::error::Exact CI head belongs to $eligible_prs eligible dependency PRs; refusing ambiguous metadata authority."
+            exit 1
+          fi
 
-          fs.appendFileSync(
-            process.env.GITHUB_OUTPUT,
-            `found=true\nrun_id=${match.id}\n`
-          );
-          console.log(
-            JSON.stringify({
-              found: true,
-              headSha: expectedHeadSha,
-              metadataRunId: match.id,
-            })
-          );
-          NODE
+          deadline=$((SECONDS + 900))
+          while (( SECONDS < deadline )); do
+            gh api --method GET \
+              "repos/$REPOSITORY/actions/workflows/dependabot-auto-merge-metadata.yml/runs" \
+              -f event=pull_request \
+              -f head_sha="$EXPECTED_HEAD_SHA" \
+              -f per_page=100 \
+              > .dependabot-auto-merge/metadata-runs.json
+
+            latest_run="$(
+              jq -c \
+                --arg sha "$EXPECTED_HEAD_SHA" \
+                --arg repository "$REPOSITORY" \
+                '[
+                  .workflow_runs[]
+                  | select(.event == "pull_request")
+                  | select(.head_sha == $sha)
+                  | select(.head_repository.full_name == $repository)
+                ]
+                | sort_by(.id)
+                | last // empty' \
+                .dependabot-auto-merge/metadata-runs.json
+            )"
+
+            if [[ -n "$latest_run" ]]; then
+              latest_run_id="$(jq -r '.id' <<<"$latest_run")"
+              latest_status="$(jq -r '.status' <<<"$latest_run")"
+              latest_conclusion="$(jq -r '.conclusion // empty' <<<"$latest_run")"
+
+              latest_run_attempt="$(jq -r '.run_attempt' <<<"$latest_run")"
+
+              if [[ "$latest_status" == "completed" && "$latest_conclusion" == "success" ]]; then
+                [[ "$latest_run_attempt" =~ ^[1-9][0-9]*$ ]] || {
+                  echo "::error::Latest metadata run attempt is invalid: $latest_run_attempt"
+                  exit 1
+                }
+                echo "found=true" >> "$GITHUB_OUTPUT"
+                echo "run_id=$latest_run_id" >> "$GITHUB_OUTPUT"
+                echo "run_attempt=$latest_run_attempt" >> "$GITHUB_OUTPUT"
+                echo "Authenticated latest metadata run: $latest_run_id attempt $latest_run_attempt" \
+                  >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+
+              if [[ "$latest_status" == "completed" ]]; then
+                echo "::error::Latest exact-head dependency metadata run $latest_run_id completed with $latest_conclusion; refusing auto-merge."
+                exit 1
+              fi
+            fi
+
+            sleep 5
+          done
+
+          echo "::error::Timed out waiting for successful exact-head dependency metadata."
+          exit 1
 
       - name: Download auto-merge decision
         if: steps.metadata.outputs.found == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dependabot-auto-merge-decision
+          name: dependabot-auto-merge-decision-${{ steps.metadata.outputs.run_id }}-${{ steps.metadata.outputs.run_attempt }}
           path: .dependabot-auto-merge
           run-id: ${{ steps.metadata.outputs.run_id }}
           github-token: ${{ github.token }}
@@ -181,6 +223,34 @@ jobs:
             ) {
               throw new Error(
                 'Security remediation decision source identity is invalid'
+              );
+            }
+            const validPackageList = (value) =>
+              Array.isArray(value) &&
+              value.length > 0 &&
+              value.every(
+                (entry) => typeof entry === 'string' && entry.length > 0
+              );
+            const validGhsaList = (value) =>
+              Array.isArray(value) &&
+              value.every(
+                (entry) =>
+                  typeof entry === 'string' &&
+                  /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/i.test(
+                    entry
+                  )
+              );
+            if (
+              !validPackageList(decision.authorizedPackages) ||
+              !validPackageList(decision.changedPackages) ||
+              decision.changedPackages.some(
+                (packageName) =>
+                  !decision.authorizedPackages.includes(packageName)
+              ) ||
+              !validGhsaList(decision.ignoredRuntimeGhsas)
+            ) {
+              throw new Error(
+                'Security remediation decision package authority is invalid'
               );
             }
 
@@ -424,6 +494,115 @@ jobs:
                 'Security remediation changed files outside dependency authority'
               );
             }
+          }
+          NODE
+
+      - name: Revalidate completed remediation source run
+        if: >
+          steps.candidate.outputs.eligible == 'true' &&
+          steps.candidate.outputs.kind == 'security-remediation'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          source_run_id="$(
+            jq -r '.sourceRunId' .dependabot-auto-merge/decision.json
+          )"
+          test "$source_run_id" != "null"
+          test -n "$source_run_id"
+
+          gh api "repos/$REPOSITORY/actions/runs/$source_run_id" \
+            > .dependabot-auto-merge/current-source-run.json
+
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const decision = JSON.parse(
+            fs.readFileSync('.dependabot-auto-merge/decision.json', 'utf8')
+          );
+          const run = JSON.parse(
+            fs.readFileSync(
+              '.dependabot-auto-merge/current-source-run.json',
+              'utf8'
+            )
+          );
+
+          if (
+            run.id !== decision.sourceRunId ||
+            run.run_attempt !== decision.sourceRunAttempt ||
+            run.status !== 'completed' ||
+            run.conclusion !== 'success' ||
+            run.path !==
+              '.github/workflows/dependabot-security-remediation.yml' ||
+            run.head_branch !== 'main' ||
+            run.head_sha !== decision.baseSha ||
+            (run.event !== 'schedule' && run.event !== 'workflow_dispatch') ||
+            run.repository?.full_name !== decision.repository
+          ) {
+            throw new Error(
+              'Security remediation source run is no longer an exact successful authority'
+            );
+          }
+          NODE
+
+      - name: Revalidate live runtime dependency scope
+        if: >
+          steps.candidate.outputs.eligible == 'true' &&
+          steps.candidate.outputs.kind == 'security-remediation'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}"
+          gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$REPOSITORY/dependabot/alerts?state=open&per_page=100" \
+            | jq -s 'add' \
+            > .dependabot-auto-merge/live-dependabot-alerts.json
+
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const decision = JSON.parse(
+            fs.readFileSync('.dependabot-auto-merge/decision.json', 'utf8')
+          );
+          const alerts = JSON.parse(
+            fs.readFileSync(
+              '.dependabot-auto-merge/live-dependabot-alerts.json',
+              'utf8'
+            )
+          );
+          if (!Array.isArray(alerts)) {
+            throw new Error('Live Dependabot alerts payload must be an array');
+          }
+
+          const authorized = new Set(decision.authorizedPackages ?? []);
+          const runtimeConflicts = alerts.filter((alert) => {
+            const packageName = alert?.dependency?.package?.name;
+            return (
+              alert?.state === 'open' &&
+              alert?.dependency?.package?.ecosystem === 'npm' &&
+              alert?.dependency?.scope !== 'development' &&
+              typeof packageName === 'string' &&
+              authorized.has(packageName)
+            );
+          });
+
+          if (runtimeConflicts.length > 0) {
+            const evidence = runtimeConflicts
+              .map(
+                (alert) =>
+                  `#${alert.number ?? '?'}:${alert?.dependency?.package?.name ?? '?'}:${alert?.dependency?.scope ?? '?'}`
+              )
+              .sort()
+              .join(', ');
+            throw new Error(
+              `Security remediation package authority gained a live runtime conflict before merge: ${evidence}`
+            );
           }
           NODE
 
