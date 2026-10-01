@@ -108,7 +108,7 @@ jobs:
 
       - name: Publish to Chromatic
         if: steps.impact.outputs.run_chromatic == 'true' && github.actor != 'dependabot[bot]'
-        uses: chromaui/action@6b3c2820222d23bad770d57a4ad5e2d1c91f92e9 # v18
+        uses: chromaui/action@db3ceb5efb0cd7447d63c2d8cce7da732ce89322 # v18
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           token: ${{ secrets.GITHUB_TOKEN }}
