@@ -17,6 +17,8 @@ const imageIn = (container: HTMLElement) => {
   if (!image) throw new Error('Missing test image.');
   return image;
 };
+const requestIn = (container: HTMLElement) =>
+  captureNativeImageRequest(imageIn(container));
 
 afterEach(() => {
   while (cleanups.length) cleanups.pop()?.();
@@ -40,7 +42,7 @@ describe('native image harness', () => {
     expect(start).toHaveBeenCalledTimes(1);
     expect(load).not.toHaveBeenCalled();
     expect(end).not.toHaveBeenCalled();
-    act(() => captureNativeImageRequest(image).load({ width: 24, height: 32 }));
+    act(() => requestIn(container).load({ width: 24, height: 32 }));
     expect(load).toHaveBeenCalledWith({
       nativeEvent: {
         source: {
@@ -60,20 +62,13 @@ describe('native image harness', () => {
     const result = mount(
       <Image source={{ uri: 'first' }} onError={error} onLoadEnd={end} />
     );
-    act(() =>
-      captureNativeImageRequest(imageIn(result.container)).error('unavailable')
-    );
+    act(() => requestIn(result.container).error('unavailable'));
     expect(error).toHaveBeenCalledWith({
       nativeEvent: { error: 'unavailable' },
     });
     expect(end).toHaveBeenCalledTimes(1);
     result.rerender(<Image source={{ uri: 'second' }} onLoad={load} />);
-    act(() =>
-      captureNativeImageRequest(imageIn(result.container)).load({
-        width: 1,
-        height: 2,
-      })
-    );
+    act(() => requestIn(result.container).load({ width: 1, height: 2 }));
     expect(load).toHaveBeenCalledWith({
       nativeEvent: { source: { uri: 'second', width: 1, height: 2 } },
     });
@@ -83,9 +78,9 @@ describe('native image harness', () => {
     const first = vi.fn();
     const second = vi.fn();
     const result = mount(<Image source={{ uri: 'first' }} onLoad={first} />);
-    const oldRequest = captureNativeImageRequest(imageIn(result.container));
+    const oldRequest = requestIn(result.container);
     result.rerender(<Image source={{ uri: 'second' }} onLoad={second} />);
-    const newRequest = captureNativeImageRequest(imageIn(result.container));
+    const newRequest = requestIn(result.container);
     act(() => oldRequest.load({ width: 1, height: 1 }));
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).not.toHaveBeenCalled();
@@ -103,12 +98,7 @@ describe('native image harness', () => {
     result.rerender(
       <Image source={{ uri: 'same' }} onLoad={second} onLoadStart={start} />
     );
-    act(() =>
-      captureNativeImageRequest(imageIn(result.container)).load({
-        width: 1,
-        height: 1,
-      })
-    );
+    act(() => requestIn(result.container).load({ width: 1, height: 1 }));
     expect(start).toHaveBeenCalledTimes(1);
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
@@ -117,9 +107,8 @@ describe('native image harness', () => {
   it('removes the active request when the source is removed', () => {
     const result = mount(<Image source={{ uri: 'first' }} />);
     result.rerender(<Image />);
-    expect(() => captureNativeImageRequest(imageIn(result.container))).toThrow(
-      'No committed native image request'
-    );
+    const capture = () => requestIn(result.container);
+    expect(capture).toThrow('No committed native image request');
   });
 
   it('does not deliver retained events after unmount', () => {
@@ -140,27 +129,23 @@ describe('native image harness', () => {
     expect(() => captureNativeImageRequest(image)).toThrow();
   });
 
-  it.each([{ source: 123 }, { source: [{ uri: 'one' }, { uri: 'two' }] }])(
-    'preserves a non-URI descriptor without device resolution',
-    ({ source }) => {
-      const { container } = mount(<Image source={source} />);
-      expect(captureNativeImageRequest(imageIn(container)).source).toEqual(
-        source
-      );
-    }
-  );
+  it('preserves numeric assets without device resolution', () => {
+    const { container } = mount(<Image source={123} />);
+    expect(requestIn(container).source).toEqual(123);
+  });
+
+  it('preserves source arrays without device resolution', () => {
+    const source = [{ uri: 'one' }, { uri: 'two' }];
+    const { container } = mount(<Image source={source} />);
+    expect(requestIn(container).source).toEqual(source);
+  });
 
   it('isolates image instances', () => {
     const first = vi.fn();
     const second = vi.fn();
     const a = mount(<Image source={{ uri: 'same' }} onLoad={first} />);
     const b = mount(<Image source={{ uri: 'same' }} onLoad={second} />);
-    act(() =>
-      captureNativeImageRequest(imageIn(a.container)).load({
-        width: 1,
-        height: 1,
-      })
-    );
+    act(() => requestIn(a.container).load({ width: 1, height: 1 }));
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).not.toHaveBeenCalled();
     expect(imageIn(a.container)).not.toBe(imageIn(b.container));
@@ -176,9 +161,8 @@ describe('native image harness', () => {
         />
       </View>
     );
-    expect(
-      container.querySelector('[aria-label="Person"]')?.getAttribute('role')
-    ).toBe('img');
+    const wrapper = container.querySelector('[aria-label="Person"]');
+    expect(wrapper?.getAttribute('role')).toBe('img');
     expect(imageIn(container).getAttribute('aria-hidden')).toBe('true');
   });
 
