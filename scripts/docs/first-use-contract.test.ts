@@ -33,6 +33,26 @@ function expectPeerRanges(
   }
 }
 
+function expectCompleteNativeInstallCommands(
+  source: string,
+  peerDependencies: Record<string, string>
+) {
+  const commands = source.match(
+    /^pnpm add @vellira-ui\/react-native(?: [^\r\n]+)?$/gm
+  );
+  const requiredInstallPeers = Object.keys(peerDependencies).filter(
+    (name) => name !== 'react' && name !== 'react-native'
+  );
+
+  expect(commands?.length ?? 0).toBeGreaterThan(0);
+
+  for (const command of commands ?? []) {
+    for (const peer of requiredInstallPeers) {
+      expect(command).toContain(peer);
+    }
+  }
+}
+
 describe('first-use documentation contract', () => {
   it('keeps React install and stylesheet setup explicit', () => {
     expect(rootReadme).toContain(`pnpm add ${reactPackage.name}`);
@@ -52,19 +72,14 @@ describe('first-use documentation contract', () => {
   it('keeps React Native install docs aligned with declared peers', () => {
     const peerDependencies = nativePackage.peerDependencies ?? {};
 
-    expect(rootReadme).toContain(`pnpm add ${nativePackage.name}`);
-    expect(gettingStarted).toContain(`pnpm add ${nativePackage.name}`);
-    expect(nativeDocs).toContain(`pnpm add ${nativePackage.name}`);
+    expectCompleteNativeInstallCommands(rootReadme, peerDependencies);
+    expectCompleteNativeInstallCommands(gettingStarted, peerDependencies);
+    expectCompleteNativeInstallCommands(nativeDocs, peerDependencies);
+    expectCompleteNativeInstallCommands(nativeReadme, peerDependencies);
 
     expectPeerRanges(nativeReadme, peerDependencies);
     expectPeerRanges(gettingStarted, peerDependencies);
     expectPeerRanges(nativeDocs, peerDependencies);
 
-    for (const peer of Object.keys(peerDependencies).filter(
-      (name) => name !== 'react' && name !== 'react-native'
-    )) {
-      expect(rootReadme).toContain(peer);
-      expect(gettingStarted).toContain(peer);
-    }
   });
 });
