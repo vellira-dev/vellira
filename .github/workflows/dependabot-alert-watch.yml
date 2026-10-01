@@ -4,6 +4,16 @@ on:
   schedule:
     # Every day at 08:00 UTC
     - cron: '0 8 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - '**/package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/dependabot.yml'
+      - '.github/workflows/dependabot-alert-watch.yml'
   workflow_dispatch:
 
 permissions:
@@ -11,8 +21,13 @@ permissions:
   security-events: read
   issues: write
 
+concurrency:
+  group: dependabot-alert-watch
+  cancel-in-progress: false
+
 jobs:
   check-alerts:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -43,6 +58,19 @@ jobs:
 
           jq -e 'type == "array"' <<< "$alerts" > /dev/null
           count="$(jq 'length' <<< "$alerts")"
+          development_count="$(
+            jq '[.[] | select(.dependency.scope == "development")] | length' <<< "$alerts"
+          )"
+          runtime_count="$(
+            jq '[.[] | select(.dependency.scope != "development")] | length' <<< "$alerts"
+          )"
+
+          {
+            echo "Open High/Critical alerts: $count"
+            echo "Development-scope alerts: $development_count"
+            echo "Runtime-scope alerts: $runtime_count"
+            echo "Exact main SHA: $GITHUB_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           find_tracker() {
             local state="$1"
@@ -68,7 +96,7 @@ jobs:
             if [ -n "$existing_open" ]; then
               gh issue close "$existing_open" \
                 --repo "$GH_REPO" \
-                --comment "All High/Critical Dependabot alerts have been resolved automatically."
+                --comment "All High/Critical Dependabot alerts have been resolved automatically on exact main \`${GITHUB_SHA}\`."
             fi
 
             exit 0
@@ -81,16 +109,16 @@ jobs:
             echo
             echo "Found **${count}** open High/Critical alert(s)."
             echo
-            echo "| Severity | Package | Alert |"
-            echo "| --- | --- | --- |"
+            echo "| Severity | Scope | Package | Manifest | Alert |"
+            echo "| --- | --- | --- | --- | --- |"
 
             jq -r '
               .[] |
-              "| \(.security_advisory.severity | ascii_upcase) | `\(.dependency.package.name)` | \(.security_advisory.summary) (#\(.number)) |"
+              "| \(.security_advisory.severity | ascii_upcase) | \(.dependency.scope // "unknown") | `\(.dependency.package.name)` | `\(.dependency.manifest_path // "unknown")` | \(.security_advisory.summary) (#\(.number)) |"
             ' <<< "$alerts"
 
             echo
-            echo "_Last checked: $(date -u '+%Y-%m-%d %H:%M UTC')_"
+            echo "_Last checked: $(date -u '+%Y-%m-%d %H:%M UTC') against exact main \`${GITHUB_SHA}\`_"
           } > /tmp/dependabot-alerts.md
 
           if [ -n "$existing_open" ]; then
