@@ -187,6 +187,52 @@ describe('release recovery decisions', () => {
     expect(assessGithubRelease(null, expected)).toEqual({ action: 'create' });
   });
 
+  it('accepts canonical semantic-release notes with h1 or h2 headings', () => {
+    const expected = {
+      tagName: 'v2.126.0',
+      name: 'v2.126.0',
+      body: 'generated notes may differ',
+    };
+    const compareUrl =
+      'https://github.com/vellira-dev/vellira/compare/v2.125.7...v2.126.0';
+
+    expect(
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body: `# [2.126.0](${compareUrl}) (2026-10-01)\n\n### Bug Fixes\n`,
+        }),
+        expected
+      )
+    ).toEqual({ action: 'none', releaseId: 1 });
+
+    expect(
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body: `## [2.126.0](${compareUrl})\n\n### Bug Fixes\n`,
+        }),
+        expected
+      )
+    ).toEqual({ action: 'none', releaseId: 1 });
+
+    expect(() =>
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body:
+            '# [2.126.1](' +
+            'https://github.com/vellira-dev/vellira/compare/' +
+            'v2.125.7...v2.126.1)',
+        }),
+        expected
+      )
+    ).toThrow('Existing release notes conflict');
+  });
+
   it('stops when an existing package lacks verified integrity or provenance', () => {
     const invalid = states();
     invalid['@vellira-ui/icons'] = { exists: true, verified: false };
