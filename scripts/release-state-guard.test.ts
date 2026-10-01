@@ -67,6 +67,46 @@ describe('release state guard', () => {
     expect(workflow.match(/HUSKY: '0'/g)).toHaveLength(2);
   });
 
+  it('seeds release-sync refs at exact main without workflow permission', () => {
+    const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
+    const releaseStart = workflow.indexOf('jobs:\n  release:');
+    const recoveryStart = workflow.indexOf('\n  recover-existing-release:');
+    const releaseJob = workflow.slice(releaseStart, recoveryStart);
+    const recoveryJob = workflow.slice(recoveryStart);
+
+    const releaseToken = releaseJob.indexOf(
+      'Create release sync GitHub App token'
+    );
+    const releaseSeed = releaseJob.indexOf(
+      'Seed version sync branch at exact main'
+    );
+    const releaseCreate = releaseJob.indexOf('- name: Create version sync PR');
+    const recoveryToken = recoveryJob.indexOf(
+      'Create recovery release sync GitHub App token'
+    );
+    const recoverySeed = recoveryJob.indexOf(
+      'Seed recovery version sync branch at exact main'
+    );
+    const recoveryCreate = recoveryJob.indexOf(
+      '- name: Create version sync PR'
+    );
+
+    expect(releaseToken).toBeGreaterThan(-1);
+    expect(releaseSeed).toBeGreaterThan(releaseToken);
+    expect(releaseCreate).toBeGreaterThan(releaseSeed);
+    expect(recoveryToken).toBeGreaterThan(-1);
+    expect(recoverySeed).toBeGreaterThan(recoveryToken);
+    expect(recoveryCreate).toBeGreaterThan(recoverySeed);
+    expect(workflow.match(/GH_TOKEN: \$\{\{ github\.token \}\}/g)).toHaveLength(
+      2
+    );
+    expect(workflow.match(/git\/ref\/heads\/main/g)).toHaveLength(2);
+    expect(workflow.match(/matching-refs\/heads\/\$BRANCH/g)).toHaveLength(2);
+    expect(workflow.match(/git\/refs\/heads\/\$BRANCH/g)).toHaveLength(2);
+    expect(workflow.match(/-F force=true/g)).toHaveLength(2);
+    expect(workflow).not.toContain('permission-workflows: write');
+  });
+
   it('runs before dependency installation and semantic-release in the Release workflow', () => {
     const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
     const guard = workflow.indexOf('Guard synchronized release state');

@@ -182,6 +182,45 @@ jobs:
                 @tsv'
           )
 
+      - name: Seed version sync branch at exact main
+        if: steps.version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ steps.version-sync.outputs.branch }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Release sync seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api             "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH"             > /tmp/release-sync-refs.json
+          matching_count="$(
+            jq               --arg ref "refs/heads/$BRANCH"               '[.[] | select(.ref == $ref)] | length'               /tmp/release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Release sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r                 --arg ref "refs/heads/$BRANCH"                 '.[] | select(.ref == $ref) | .object.sha'                 /tmp/release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api                 --method PATCH                 "repos/$REPOSITORY/git/refs/heads/$BRANCH"                 -f sha="$BASE_SHA"                 -F force=true                 > /dev/null
+            fi
+          else
+            gh api               --method POST               "repos/$REPOSITORY/git/refs"               -f ref="refs/heads/$BRANCH"               -f sha="$BASE_SHA"               > /dev/null
+          fi
+
       - name: Create version sync PR
         if: steps.version-sync.outputs.changed == 'true'
         id: version-sync-pr
@@ -334,6 +373,45 @@ jobs:
           private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
+
+      - name: Seed recovery version sync branch at exact main
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: chore/sync-release-${{ inputs.release_version }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Recovery version sync seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api             "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH"             > /tmp/recovery-release-sync-refs.json
+          matching_count="$(
+            jq               --arg ref "refs/heads/$BRANCH"               '[.[] | select(.ref == $ref)] | length'               /tmp/recovery-release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Recovery version sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r                 --arg ref "refs/heads/$BRANCH"                 '.[] | select(.ref == $ref) | .object.sha'                 /tmp/recovery-release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api                 --method PATCH                 "repos/$REPOSITORY/git/refs/heads/$BRANCH"                 -f sha="$BASE_SHA"                 -F force=true                 > /dev/null
+            fi
+          else
+            gh api               --method POST               "repos/$REPOSITORY/git/refs"               -f ref="refs/heads/$BRANCH"               -f sha="$BASE_SHA"               > /dev/null
+          fi
 
       - name: Create version sync PR
         if: steps.recovery-version-sync.outputs.changed == 'true'
