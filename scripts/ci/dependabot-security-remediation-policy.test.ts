@@ -192,9 +192,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain('include-hidden-files: true');
   });
 
-  it(
-    'reconciles the alert tracker immediately after dependency authority changes',
-    async () => {
+  it('reconciles alert tracker after dependency changes', async () => {
       const source = await readFile(alertWatchWorkflowPath, 'utf8');
 
       expect(source).toContain('push:');
@@ -210,12 +208,9 @@ describe('Dependabot security remediation workflow policy', () => {
       expect(source).toContain('Dependency graph reads: $read_number');
       expect(source).toContain('Observed main SHA: $main_sha');
       expect(source).toContain('gh api "repos/$GH_REPO/branches/main" --jq');
-    }
-  );
+  });
 
-  it(
-    'surfaces alert scope and manifest evidence in the canonical tracker',
-    async () => {
+  it('surfaces alert scope and manifest evidence', async () => {
       const source = await readFile(alertWatchWorkflowPath, 'utf8');
 
       expect(source).toContain(
@@ -226,6 +221,5 @@ describe('Dependabot security remediation workflow policy', () => {
       expect(source).toContain('Development-scope alerts: $development_count');
       expect(source).toContain('Runtime-scope alerts: $runtime_count');
       expect(source).toContain('against observed main \\`${main_sha}\\`');
-    }
-  );
+  });
 });
