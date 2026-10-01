@@ -4,6 +4,7 @@ import { Image, View } from 'react-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { captureNativeImageRequest } from '../../test/native-image.mock';
+
 import { render } from './render';
 
 const cleanups: (() => void)[] = [];
