@@ -12,8 +12,42 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  release-sync-impact:
+    name: Lighthouse release-sync impact
+    runs-on: ubuntu-latest
+    outputs:
+      release_sync: ${{ steps.classify.outputs.release_sync }}
+    steps:
+      - name: Checkout PR head
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Classify release-sync impact
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "release_sync=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node scripts/ci/release-sync-contract.mjs \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --detect
+
   docs:
     name: Lighthouse / Docs
+    needs: release-sync-impact
+    if: needs.release-sync-impact.outputs.release_sync != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -67,6 +101,8 @@ jobs:
 
   website:
     name: Lighthouse / Website
+    needs: release-sync-impact
+    if: needs.release-sync-impact.outputs.release_sync != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
