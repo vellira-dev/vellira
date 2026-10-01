@@ -22,6 +22,42 @@ function jobBlock(workflow, jobId, nextJobId) {
   return workflow.slice(start, end);
 }
 
+test('staging skips canonical release-sync pushes and prioritizes the latest runtime candidate', () => {
+  const workflowHeader = stagingWorkflow.split('\njobs:\n')[0];
+  assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
+
+  const migration = jobBlock(stagingWorkflow, 'migration', 'deploy');
+  const deploy = jobBlock(stagingWorkflow, 'deploy');
+
+  for (const job of [migration, deploy]) {
+    assert.match(
+      job,
+      /github\.event_name == 'workflow_dispatch' \|\| github\.actor != 'vellira-release-sync\[bot\]'/
+    );
+    assert.match(
+      job,
+      /group: deploy-worker-vellira-website-staging\n {6}cancel-in-progress: true/
+    );
+  }
+
+  assert.match(
+    migration,
+    /image: mcr\.microsoft\.com\/playwright:v1\.61\.1-noble/
+  );
+  assert.match(migration, /pnpm test:cloudflare-migration/);
+  assert.doesNotMatch(migration, /playwright install(?: --with-deps)?/);
+
+  assert.match(deploy, /needs: migration/);
+  assert.doesNotMatch(deploy, /Install migration regression browsers/);
+  assert.doesNotMatch(deploy, /pnpm test:cloudflare-migration/);
+
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  assert.match(
+    candidate,
+    /github\.event\.workflow_run\.actor\.login != 'vellira-release-sync\[bot\]'/
+  );
+});
+
 test('staging publishes a dedicated machine-readable promotion artifact', () => {
   assert.match(stagingWorkflow, /name: Publish production promotion evidence/);
   assert.match(
