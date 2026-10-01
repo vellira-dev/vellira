@@ -15,7 +15,9 @@
       "Storybook & Browser Tests",
       "Build, Test & Validate"
     ],
-    "allowedNonCriticalJobs": ["PR Impact"]
+    "allowedNonCriticalJobs": [
+      "PR Impact"
+    ]
   },
   "budgets": {
     "normal": {
@@ -37,6 +39,11 @@
       "targetSeconds": 360,
       "toleranceSeconds": 75,
       "expectedExecutionPath": "full"
+    },
+    "release-sync": {
+      "targetSeconds": 120,
+      "toleranceSeconds": 45,
+      "expectedExecutionPath": "affected"
     }
   },
   "enforcement": {
@@ -52,14 +59,19 @@
       "packages/core/",
       "packages/metadata/"
     ],
-    "docsPrefixes": ["docs/"],
+    "docsPrefixes": [
+      "docs/"
+    ],
     "docsBasenames": [
       "README.md",
       "CONTRIBUTING.md",
       "CODE_OF_CONDUCT.md",
       "SECURITY.md"
     ],
-    "docsExtensions": [".md", ".mdx"]
+    "docsExtensions": [
+      ".md",
+      ".mdx"
+    ]
   },
   "externalWorkflowsExcludedFromCriticalPath": [
     "Chromatic Publish",
