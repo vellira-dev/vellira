@@ -7,23 +7,40 @@ export async function captureBrowserJson(page, baseUrl) {
   const origin = new URL(baseUrl).origin;
   let active;
   let sequence = 0;
-  let rejectRun;
 
   await page.exposeBinding(binding, (source, message) => {
-    if (source.frame !== page.mainFrame() || !active) return null;
-    const entry = active.find(
+    if (source.frame !== page.mainFrame() || !active?.armed) return null;
+    if (message.phase === 'document') {
+      // A main frame survives reloads; its documents do not. Only the next
+      // document may join a navigation observation, never the outgoing one.
+      if (message.documentId === active.initialDocumentId) return null;
+      if (active.documentScope !== 'next' || active.documentId) {
+        active.reject(
+          new Error('Observed metrics document changed during action')
+        );
+        return null;
+      }
+      active.documentId = message.documentId;
+      return { observationId: active.id };
+    }
+    if (
+      message.observationId !== active.id ||
+      message.documentId !== active.documentId
+    )
+      return null;
+    const entry = active.entries.find(
       (item) => item.url === message.url && item.method === message.method
     );
     if (!entry) return null;
     if (message.phase === 'start') {
       if (entry.started) {
-        rejectRun(
+        active.reject(
           new Error(`Duplicate observed request: ${entry.method} ${entry.url}`)
         );
         return null;
       }
       entry.started = true;
-      return { id: entry.id, timeout: entry.timeout };
+      return { id: entry.id, timeout: entry.timeout, observationId: active.id };
     }
     // A late completion from an earlier action must not satisfy a new waiter.
     if (message.id !== entry.id) return null;
@@ -33,8 +50,18 @@ export async function captureBrowserJson(page, baseUrl) {
   });
 
   const install = ({ binding, origin }) => {
+    const key = Symbol.for(binding);
+    if (window[key]) return;
     const nativeFetch = window.fetch;
     const report = window[binding];
+    const documentId = Array.from(
+      crypto.getRandomValues(new Uint32Array(4))
+    ).join('-');
+    const state = { documentId };
+    window[key] = state;
+    state.observation = report({ phase: 'document', documentId }).catch(
+      () => null
+    );
     window.fetch = function (...args) {
       const [input, init] = args;
       const url = new URL(
@@ -52,8 +79,16 @@ export async function captureBrowserJson(page, baseUrl) {
       ) {
         return nativeFetch.apply(this, args);
       }
-      const metadata = { url: url.href, method };
-      const ticket = report({ ...metadata, phase: 'start' }).catch(() => null);
+      const metadata = { url: url.href, method, documentId };
+      // Snapshot the observation at fetch invocation. A queued start from an
+      // earlier action must not acquire a later action's ticket.
+      const ticket = state.observation
+        .then((observation) =>
+          observation
+            ? report({ ...metadata, ...observation, phase: 'start' })
+            : null
+        )
+        .catch(() => null);
       const notify = async (data) => {
         const selected = await ticket;
         if (selected)
@@ -61,6 +96,7 @@ export async function captureBrowserJson(page, baseUrl) {
             ...metadata,
             ...data,
             id: selected.id,
+            observationId: selected.observationId,
             phase: 'complete',
           });
       };
@@ -127,17 +163,27 @@ export async function captureBrowserJson(page, baseUrl) {
   // Also support an already-loaded page; subsequent documents use initScript.
   await page.evaluate(install, { binding, origin });
 
-  return async function observe(requests, action, timeout = 15_000) {
+  return async function observe(
+    requests,
+    action,
+    timeout = 15_000,
+    { document: documentScope = 'current' } = {}
+  ) {
     if (active)
       throw new Error('Overlapping metrics observations are not allowed');
     if (!Number.isFinite(timeout) || timeout <= 0)
       throw new Error('Invalid observation timeout');
+    if (!['current', 'next'].includes(documentScope))
+      throw new Error('Invalid metrics observation document scope');
     const keys = requests.map(({ url, method }) => `${method} ${url}`);
     if (!requests.length || new Set(keys).size !== requests.length) {
       throw new Error('Expected metrics requests must be nonempty and unique');
     }
     let timer;
-    active = requests.map(({ url, method }) => {
+    const run = { id: ++sequence, documentScope, armed: false };
+    // Lock before the first await, including document arming in the deadline.
+    active = run;
+    run.entries = requests.map(({ url, method }) => {
       const entry = { url, method, timeout, id: ++sequence, started: false };
       entry.promise = new Promise((resolve, reject) => {
         entry.resolve = resolve;
@@ -145,13 +191,46 @@ export async function captureBrowserJson(page, baseUrl) {
       });
       return entry;
     });
-    const results = Promise.all(active.map((entry) => entry.promise));
+    const results = Promise.all(run.entries.map((entry) => entry.promise));
+    const failed = new Promise((_, reject) => {
+      run.reject = reject;
+    });
     try {
-      const [, responses] = await Promise.race([
-        new Promise((_, reject) => {
-          rejectRun = reject;
-        }),
-        Promise.all([Promise.resolve().then(action), results]),
+      return await Promise.race([
+        failed,
+        (async () => {
+          run.initialDocumentId = await page.evaluate(
+            ({ binding, observationId }) => {
+              const state = window[Symbol.for(binding)];
+              if (!state) throw new Error('Metrics observer is not installed');
+              state.observation = Promise.resolve(
+                observationId === null ? null : { observationId }
+              );
+              return state.documentId;
+            },
+            {
+              binding,
+              observationId: documentScope === 'current' ? run.id : null,
+            }
+          );
+          // Arming may complete after the deadline; it must not run the action.
+          if (active !== run)
+            throw new Error('Metrics observation expired while arming');
+          if (documentScope === 'current')
+            run.documentId = run.initialDocumentId;
+          run.armed = true;
+          const [, responses] = await Promise.all([
+            Promise.resolve().then(action),
+            results,
+          ]);
+          const finalDocumentId = await page.evaluate(
+            (binding) => window[Symbol.for(binding)]?.documentId,
+            binding
+          );
+          if (!run.documentId || finalDocumentId !== run.documentId)
+            throw new Error('Observed metrics document changed during action');
+          return responses;
+        })(),
         new Promise((_, reject) => {
           timer = setTimeout(
             () =>
@@ -162,11 +241,9 @@ export async function captureBrowserJson(page, baseUrl) {
           );
         }),
       ]);
-      return responses;
     } finally {
       clearTimeout(timer);
       active = undefined;
-      rejectRun = undefined;
     }
   };
 }

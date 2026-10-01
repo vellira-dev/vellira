@@ -33,7 +33,6 @@ const metricsApiOrigin = new URL(metricsApiBaseUrl).origin;
 const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
-const observeActorJson = await captureBrowserJson(page, baseUrl);
 const diagnostics = [];
 const criticalDiagnostics = [];
 const vercelRuntimeRequests = [];
@@ -64,7 +63,10 @@ function isDirectMetricRequest(url) {
 
 function isObsoleteVercelRuntimeRequest(url) {
   const parsedUrl = new URL(url);
-  return parsedUrl.origin === baseOrigin && parsedUrl.pathname.startsWith('/_vercel/');
+  return (
+    parsedUrl.origin === baseOrigin &&
+    parsedUrl.pathname.startsWith('/_vercel/')
+  );
 }
 
 function isExpectedNavigationAbort(request) {
@@ -103,98 +105,102 @@ function markProvenStagingCatalogLag404sHandled(candidateOnlySlugs) {
   }
 }
 
-page.on('request', (request) => {
-  if (isObsoleteVercelRuntimeRequest(request.url())) {
-    const diagnostic = `obsolete Vercel runtime request: ${request.url()}`;
-    diagnostics.push(diagnostic);
-    criticalDiagnostics.push(diagnostic);
-    vercelRuntimeRequests.push(request.url());
-  }
+function attachPageDiagnostics(page) {
+  page.on('request', (request) => {
+    if (isObsoleteVercelRuntimeRequest(request.url())) {
+      const diagnostic = `obsolete Vercel runtime request: ${request.url()}`;
+      diagnostics.push(diagnostic);
+      criticalDiagnostics.push(diagnostic);
+      vercelRuntimeRequests.push(request.url());
+    }
 
-  if (isDirectMetricRequest(request.url())) {
-    const diagnostic =
-      `blog metrics bypassed the first-party proxy: ` +
-      `${request.method()} ${request.url()}`;
-    diagnostics.push(diagnostic);
-    criticalDiagnostics.push(diagnostic);
-    directMetricRequests.push(request.url());
-  }
-});
+    if (isDirectMetricRequest(request.url())) {
+      const diagnostic =
+        `blog metrics bypassed the first-party proxy: ` +
+        `${request.method()} ${request.url()}`;
+      diagnostics.push(diagnostic);
+      criticalDiagnostics.push(diagnostic);
+      directMetricRequests.push(request.url());
+    }
+  });
 
-page.on('console', (message) => {
-  if (message.type() !== 'error') {
-    return;
-  }
-
-  const diagnostic = `console.error: ${message.text()}`;
-  diagnostics.push(diagnostic);
-  if (isBrowserResource404ConsoleError(message.text())) {
-    deferredResource404ConsoleDiagnostics.push(diagnostic);
-    return;
-  }
-  criticalDiagnostics.push(diagnostic);
-});
-
-page.on('pageerror', (error) => {
-  const diagnostic = `pageerror: ${error.stack ?? error.message}`;
-  diagnostics.push(diagnostic);
-  criticalDiagnostics.push(diagnostic);
-});
-
-page.on('response', (response) => {
-  if (response.status() < 400) {
-    return;
-  }
-
-  const diagnostic =
-    `response: ${response.status()} ${response.request().method()} ` +
-    response.url();
-  diagnostics.push(diagnostic);
-
-  if (response.status() === 404) {
-    const method = response.request().method();
-    const aggregate = isBlogAggregateMetricsResponse(response);
-    const potentialCandidateBootstrap =
-      isPotentialStagingCandidateBlogMetricsRequest({
-        requestUrl: response.url(),
-        method,
-        baseOrigin,
-      });
-    const handled =
-      acceptedStagingCatalogLag &&
-      isExpectedStagingCandidateBlogMetricsRequest({
-        requestUrl: response.url(),
-        method,
-        baseOrigin,
-        candidateOnlySlugs: acceptedStagingCandidateOnlySlugs,
-      });
-
-    if (aggregate || potentialCandidateBootstrap) {
-      blogMetrics404Responses.push({
-        diagnostic,
-        url: response.url(),
-        method,
-        aggregate,
-        handled,
-      });
+  page.on('console', (message) => {
+    if (message.type() !== 'error') {
       return;
     }
-  }
 
-  criticalDiagnostics.push(diagnostic);
-});
+    const diagnostic = `console.error: ${message.text()}`;
+    diagnostics.push(diagnostic);
+    if (isBrowserResource404ConsoleError(message.text())) {
+      deferredResource404ConsoleDiagnostics.push(diagnostic);
+      return;
+    }
+    criticalDiagnostics.push(diagnostic);
+  });
 
-page.on('requestfailed', (request) => {
-  if (!sameOrigin(request.url()) || isExpectedNavigationAbort(request)) {
-    return;
-  }
+  page.on('pageerror', (error) => {
+    const diagnostic = `pageerror: ${error.stack ?? error.message}`;
+    diagnostics.push(diagnostic);
+    criticalDiagnostics.push(diagnostic);
+  });
 
-  const diagnostic =
-    `requestfailed: ${request.method()} ${request.url()} ` +
-    `${request.failure()?.errorText ?? ''}`;
-  diagnostics.push(diagnostic);
-  criticalDiagnostics.push(diagnostic);
-});
+  page.on('response', (response) => {
+    if (response.status() < 400) {
+      return;
+    }
+
+    const diagnostic =
+      `response: ${response.status()} ${response.request().method()} ` +
+      response.url();
+    diagnostics.push(diagnostic);
+
+    if (response.status() === 404) {
+      const method = response.request().method();
+      const aggregate = isBlogAggregateMetricsResponse(response);
+      const potentialCandidateBootstrap =
+        isPotentialStagingCandidateBlogMetricsRequest({
+          requestUrl: response.url(),
+          method,
+          baseOrigin,
+        });
+      const handled =
+        acceptedStagingCatalogLag &&
+        isExpectedStagingCandidateBlogMetricsRequest({
+          requestUrl: response.url(),
+          method,
+          baseOrigin,
+          candidateOnlySlugs: acceptedStagingCandidateOnlySlugs,
+        });
+
+      if (aggregate || potentialCandidateBootstrap) {
+        blogMetrics404Responses.push({
+          diagnostic,
+          url: response.url(),
+          method,
+          aggregate,
+          handled,
+        });
+        return;
+      }
+    }
+
+    criticalDiagnostics.push(diagnostic);
+  });
+
+  page.on('requestfailed', (request) => {
+    if (!sameOrigin(request.url()) || isExpectedNavigationAbort(request)) {
+      return;
+    }
+
+    const diagnostic =
+      `requestfailed: ${request.method()} ${request.url()} ` +
+      `${request.failure()?.errorText ?? ''}`;
+    diagnostics.push(diagnostic);
+    criticalDiagnostics.push(diagnostic);
+  });
+}
+
+attachPageDiagnostics(page);
 
 async function goto(path) {
   await page.goto(`${baseUrl}${path}`, {
@@ -290,7 +296,9 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
 
   const payload = await response.json();
   if (!Array.isArray(payload?.items)) {
-    throw new Error('Production-catalog metrics proxy returned an invalid payload.');
+    throw new Error(
+      'Production-catalog metrics proxy returned an invalid payload.'
+    );
   }
 
   if (payload.items.length !== productionSlugs.length) {
@@ -486,18 +494,32 @@ async function verifyHighlightedArticleCode() {
   console.log('OK highlighted MDX code /blog/two-runtimes');
 }
 
-async function loadArticleWithActorMetrics(articlePath, likeUrl, viewUrl) {
+async function loadArticleWithActorMetrics(
+  page,
+  observeActorJson,
+  articlePath,
+  likeUrl,
+  viewUrl
+) {
   const [likeStateResponse, viewResponse] = await observeActorJson(
     [
       { url: likeUrl, method: 'GET' },
       { url: viewUrl, method: 'POST' },
     ],
-    () => goto(articlePath)
+    () =>
+      page.goto(`${baseUrl}${articlePath}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15_000,
+      }),
+    15_000,
+    { document: 'next' }
   );
 
   if (
-    likeStateResponse.status < 200 || likeStateResponse.status >= 300 ||
-    viewResponse.status < 200 || viewResponse.status >= 300
+    likeStateResponse.status < 200 ||
+    likeStateResponse.status >= 300 ||
+    viewResponse.status < 200 ||
+    viewResponse.status >= 300
   ) {
     throw new Error(
       `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
@@ -521,76 +543,48 @@ async function verifyBlogActorContinuity() {
   const likeUrl = actorMetricsUrl(slug, 'like');
   const viewUrl = actorMetricsUrl(slug, 'views');
 
-  await context.clearCookies();
+  // Start the actor journey in an untouched context, not by clearing cookies
+  // under a previous article's still-running hydration requests.
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    attachPageDiagnostics(page);
+    const observeActorJson = await captureBrowserJson(page, baseUrl);
 
-  const first = await loadArticleWithActorMetrics(
-    articlePath,
-    likeUrl,
-    viewUrl
-  );
-
-  if (first.likeState.liked) {
-    throw new Error('Fresh anonymous actor unexpectedly started liked.');
-  }
-
-  const formatCount = (value) => new Intl.NumberFormat('en-US').format(value);
-  await page
-    .getByLabel(`${formatCount(first.viewWrite.metrics.views)} views`)
-    .waitFor({ state: 'visible', timeout: 15_000 });
-
-  const [firstLikeResponse] = await observeActorJson(
-    [{ url: likeUrl, method: 'PUT' }],
-    () => page.getByRole('button', { name: 'Like this article' }).click()
-  );
-
-  if (firstLikeResponse.status < 200 || firstLikeResponse.status >= 300) {
-    throw new Error(`Blog like failed with ${firstLikeResponse.status}.`);
-  }
-
-  const firstLikeWrite = firstLikeResponse.payload;
-  if (
-    firstLikeWrite?.liked !== true ||
-    firstLikeWrite?.changed !== true ||
-    !firstLikeWrite?.metrics
-  ) {
-    throw new Error(
-      `First like did not create actor state: ${JSON.stringify(firstLikeWrite)}`
-    );
-  }
-
-  await page.getByRole('button', { name: 'Unlike this article' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-
-  for (let reloadAttempt = 1; reloadAttempt <= 3; reloadAttempt += 1) {
-    const repeated = await loadArticleWithActorMetrics(
+    const first = await loadArticleWithActorMetrics(
+      page,
+      observeActorJson,
       articlePath,
       likeUrl,
       viewUrl
     );
 
-    if (!repeated.likeState.liked) {
-      throw new Error(
-        `Like state was lost after reload ${reloadAttempt}.`
-      );
+    if (first.likeState.liked) {
+      throw new Error('Fresh anonymous actor unexpectedly started liked.');
     }
 
-    if (repeated.viewWrite.metrics.views !== first.viewWrite.metrics.views) {
-      throw new Error(
-        `Repeated view changed the count after reload ${reloadAttempt}: ` +
-          `first=${first.viewWrite.metrics.views} ` +
-          `repeated=${repeated.viewWrite.metrics.views}`
-      );
+    const formatCount = (value) => new Intl.NumberFormat('en-US').format(value);
+    await page
+      .getByLabel(`${formatCount(first.viewWrite.metrics.views)} views`)
+      .waitFor({ state: 'visible', timeout: 15_000 });
+
+    const [firstLikeResponse] = await observeActorJson(
+      [{ url: likeUrl, method: 'PUT' }],
+      () => page.getByRole('button', { name: 'Like this article' }).click()
+    );
+
+    if (firstLikeResponse.status < 200 || firstLikeResponse.status >= 300) {
+      throw new Error(`Blog like failed with ${firstLikeResponse.status}.`);
     }
 
+    const firstLikeWrite = firstLikeResponse.payload;
     if (
-      typeof repeated.viewWrite.counted === 'boolean' &&
-      repeated.viewWrite.counted !== false
+      firstLikeWrite?.liked !== true ||
+      firstLikeWrite?.changed !== true ||
+      !firstLikeWrite?.metrics
     ) {
       throw new Error(
-        `Repeated same-day view was counted after reload ${reloadAttempt}: ` +
-          JSON.stringify(repeated.viewWrite)
+        `First like did not create actor state: ${JSON.stringify(firstLikeWrite)}`
       );
     }
 
@@ -598,49 +592,90 @@ async function verifyBlogActorContinuity() {
       state: 'visible',
       timeout: 15_000,
     });
-  }
 
-  for (let repeat = 1; repeat <= 3; repeat += 1) {
-    const repeatedLikeResponse = await context.request.put(likeUrl, {
+    for (let reloadAttempt = 1; reloadAttempt <= 3; reloadAttempt += 1) {
+      const repeated = await loadArticleWithActorMetrics(
+        page,
+        observeActorJson,
+        articlePath,
+        likeUrl,
+        viewUrl
+      );
+
+      if (!repeated.likeState.liked) {
+        throw new Error(`Like state was lost after reload ${reloadAttempt}.`);
+      }
+
+      if (repeated.viewWrite.metrics.views !== first.viewWrite.metrics.views) {
+        throw new Error(
+          `Repeated view changed the count after reload ${reloadAttempt}: ` +
+            `first=${first.viewWrite.metrics.views} ` +
+            `repeated=${repeated.viewWrite.metrics.views}`
+        );
+      }
+
+      if (
+        typeof repeated.viewWrite.counted === 'boolean' &&
+        repeated.viewWrite.counted !== false
+      ) {
+        throw new Error(
+          `Repeated same-day view was counted after reload ${reloadAttempt}: ` +
+            JSON.stringify(repeated.viewWrite)
+        );
+      }
+
+      await page.getByRole('button', { name: 'Unlike this article' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+    }
+
+    for (let repeat = 1; repeat <= 3; repeat += 1) {
+      const repeatedLikeResponse = await context.request.put(likeUrl, {
+        failOnStatusCode: false,
+      });
+      if (!repeatedLikeResponse.ok()) {
+        throw new Error(
+          `Repeated like PUT ${repeat} failed with ${repeatedLikeResponse.status()}.`
+        );
+      }
+
+      const repeatedLikeWrite = await repeatedLikeResponse.json();
+      if (
+        repeatedLikeWrite?.liked !== true ||
+        repeatedLikeWrite?.changed !== false ||
+        repeatedLikeWrite?.metrics?.likes !== firstLikeWrite.metrics.likes
+      ) {
+        throw new Error(
+          `Repeated like ${repeat} was not idempotent: ${JSON.stringify(
+            repeatedLikeWrite
+          )}`
+        );
+      }
+    }
+
+    const restoreResponse = await context.request.delete(likeUrl, {
       failOnStatusCode: false,
     });
-    if (!repeatedLikeResponse.ok()) {
+    if (!restoreResponse.ok()) {
       throw new Error(
-        `Repeated like PUT ${repeat} failed with ${repeatedLikeResponse.status()}.`
+        `Blog like restore failed with ${restoreResponse.status()}.`
       );
     }
 
-    const repeatedLikeWrite = await repeatedLikeResponse.json();
-    if (
-      repeatedLikeWrite?.liked !== true ||
-      repeatedLikeWrite?.changed !== false ||
-      repeatedLikeWrite?.metrics?.likes !== firstLikeWrite.metrics.likes
-    ) {
+    const restored = await restoreResponse.json();
+    if (restored?.liked !== false) {
       throw new Error(
-        `Repeated like ${repeat} was not idempotent: ${JSON.stringify(
-          repeatedLikeWrite
-        )}`
+        `Blog like restore returned invalid state: ${JSON.stringify(restored)}`
       );
     }
-  }
 
-  const restoreResponse = await context.request.delete(likeUrl, {
-    failOnStatusCode: false,
-  });
-  if (!restoreResponse.ok()) {
-    throw new Error(`Blog like restore failed with ${restoreResponse.status()}.`);
-  }
-
-  const restored = await restoreResponse.json();
-  if (restored?.liked !== false) {
-    throw new Error(
-      `Blog like restore returned invalid state: ${JSON.stringify(restored)}`
+    console.log(
+      'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
     );
+  } finally {
+    await context.close();
   }
-
-  console.log(
-    'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
-  );
 }
 
 async function verifyMetricsFailureDoesNotBreakArticleActions() {
