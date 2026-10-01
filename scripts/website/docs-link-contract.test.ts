@@ -55,6 +55,16 @@ function canonicalDocsRoutes() {
   );
 }
 
+function isDynamicTemplateReference(
+  source: string,
+  match: RegExpMatchArray
+): boolean {
+  const start = match.index ?? 0;
+  const lookahead = source.slice(start, start + match[0].length + 2);
+
+  return lookahead.includes('${');
+}
+
 describe('public website documentation links', () => {
   it('points static docs.vellira.dev links at real VitePress routes', () => {
     const routes = canonicalDocsRoutes();
@@ -67,6 +77,10 @@ describe('public website documentation links', () => {
         const source = fs.readFileSync(filePath, 'utf8');
 
         for (const match of source.matchAll(docsUrlPattern)) {
+          if (isDynamicTemplateReference(source, match)) {
+            continue;
+          }
+
           const url = match[0];
           const pathname = new URL(url).pathname;
           const normalized =
