@@ -26,6 +26,10 @@ import {
 } from './release-sync-contract.mjs';
 
 const ciWorkflow = await fs.readFile('.github/workflows/ci.yml', 'utf8');
+const lighthouseWorkflow = await fs.readFile(
+  '.github/workflows/lighthouse.yml',
+  'utf8'
+);
 
 function jobBlock(jobId, nextJobId) {
   const start = ciWorkflow.indexOf(`\n  ${jobId}:\n`);
@@ -390,6 +394,20 @@ test('release-sync keeps required CI contexts while replacing heavy work with se
   assert.match(
     typecheck,
     /needs\.impact\.outputs\.shape != 'release-sync'.*execution_path == 'affected'/s
+  );
+});
+
+test('release-sync skips expensive Lighthouse jobs after exact file-set detection', () => {
+  assert.match(lighthouseWorkflow, /Lighthouse release-sync impact/);
+  assert.match(lighthouseWorkflow, /release-sync-contract\.mjs/);
+  assert.match(lighthouseWorkflow, /--detect/);
+  assert.match(
+    lighthouseWorkflow,
+    /docs:\s+name: Lighthouse \/ Docs\s+needs: release-sync-impact\s+if: needs\.release-sync-impact\.outputs\.release_sync != 'true'/s
+  );
+  assert.match(
+    lighthouseWorkflow,
+    /website:\s+name: Lighthouse \/ Website\s+needs: release-sync-impact\s+if: needs\.release-sync-impact\.outputs\.release_sync != 'true'/s
   );
 });
 
