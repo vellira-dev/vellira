@@ -34,11 +34,16 @@ test('staging skips canonical release-sync pushes and prioritizes the latest run
       job,
       /github\.event_name == 'workflow_dispatch' \|\| github\.actor != 'vellira-release-sync\[bot\]'/
     );
-    assert.match(
-      job,
-      /group: deploy-worker-vellira-website-staging\n {6}cancel-in-progress: true/
-    );
   }
+
+  assert.match(
+    migration,
+    /group: deploy-worker-vellira-website-staging-prepare\n {6}cancel-in-progress: true/
+  );
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website-staging\n {6}cancel-in-progress: false/
+  );
 
   assert.match(
     migration,
@@ -46,8 +51,11 @@ test('staging skips canonical release-sync pushes and prioritizes the latest run
   );
   assert.match(migration, /pnpm test:cloudflare-migration/);
   assert.doesNotMatch(migration, /playwright install(?: --with-deps)?/);
+  assert.doesNotMatch(migration, /cloudflare-archive-preflight\.mjs/);
+  assert.doesNotMatch(migration, /CLOUDFLARE_API_TOKEN/);
 
   assert.match(deploy, /needs: migration/);
+  assert.match(deploy, /cloudflare-archive-preflight\.mjs wrangler\.jsonc/);
   assert.doesNotMatch(deploy, /Install migration regression browsers/);
   assert.doesNotMatch(deploy, /pnpm test:cloudflare-migration/);
 
