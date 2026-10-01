@@ -229,9 +229,12 @@ try {
             .click();
           await expect(code).toContainText("from '@vellira-ui/react-native';");
           await expect(
-            section.getByText('pnpm add @vellira-ui/react-native', {
-              exact: true,
-            })
+            section.getByText(
+              'pnpm add @vellira-ui/react-native @react-native-picker/picker',
+              {
+                exact: true,
+              }
+            )
           ).toBeVisible();
           await control('Dropdown').click();
           await checkSelection('Dropdown', 'react-native');
