@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { isReleaseSyncFileSet } from './release-sync-contract.mjs';
 
 const DEFAULT_CONFIG = '.github/ci-performance-budget.json';
 const WORKSPACE_GROUPS = ['packages', 'apps'];
@@ -16,6 +17,8 @@ function normalizePath(file) {
 
 export function classifyFiles(files, classification) {
   if (files.length === 0) return 'normal';
+
+  if (isReleaseSyncFileSet(files)) return 'release-sync';
 
   const normalizedFiles = files.map(normalizePath);
   const docsOnly = normalizedFiles.every((file) => {
@@ -105,7 +108,7 @@ export function planAffectedExecution(files, classification, packageImpact = nul
   const shape = classifyFiles(files, classification);
   const packageName = shape === 'package-local' ? packageNameForFiles(files) : null;
 
-  let executionPath = shape === 'docs-only' ? 'affected' : 'full';
+  let executionPath = ['docs-only', 'release-sync'].includes(shape) ? 'affected' : 'full';
   let graphStatus = 'not-applicable';
   let graphReason = '';
   let affectedWorkspaces = [];
