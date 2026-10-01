@@ -37,6 +37,10 @@ const tasks = [
     ],
   },
   {
+    name: 'Chromatic impact contracts',
+    args: ['exec', 'node', '--test', 'scripts/ci/chromatic-impact.test.mjs'],
+  },
+  {
     name: 'tooling suite',
     args: baseArgs,
   },
