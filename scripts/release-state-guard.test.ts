@@ -259,8 +259,23 @@ describe('release state guard', () => {
     expect(recoveryToken).toBeGreaterThan(-1);
     expect(recoverySeed).toBeGreaterThan(recoveryToken);
     expect(recoveryCreate).toBeGreaterThan(recoverySeed);
-    expect(workflow.match(/GH_TOKEN: \$\{\{ github\.token \}\}/g)).toHaveLength(
-      3
+    expect(
+      releaseJob.slice(releaseSeed, releaseCreate)
+    ).toContain('GH_TOKEN: ${{ github.token }}');
+    expect(
+      recoveryJob.slice(recoverySeed, recoveryCreate)
+    ).toContain('GH_TOKEN: ${{ github.token }}');
+
+    const reconcileSeed = workflow.indexOf(
+      'Seed auto-reconcile version sync branch at exact main'
+    );
+    const reconcileCreate = workflow.indexOf(
+      'Create or update automatic version sync PR'
+    );
+    expect(reconcileSeed).toBeGreaterThan(-1);
+    expect(reconcileCreate).toBeGreaterThan(reconcileSeed);
+    expect(workflow.slice(reconcileSeed, reconcileCreate)).toContain(
+      'GH_TOKEN: ${{ github.token }}'
     );
     expect(workflow.match(/git\/ref\/heads\/main/g)).toHaveLength(3);
     expect(workflow.match(/matching-refs\/heads\/\$BRANCH/g)).toHaveLength(3);
