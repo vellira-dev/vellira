@@ -108,7 +108,7 @@ export function planAffectedExecution(files, classification, packageImpact = nul
   const shape = classifyFiles(files, classification);
   const packageName = shape === 'package-local' ? packageNameForFiles(files) : null;
 
-  let executionPath = shape === 'docs-only' ? 'affected' : 'full';
+  let executionPath = ['docs-only', 'release-sync'].includes(shape) ? 'affected' : 'full';
   let graphStatus = 'not-applicable';
   let graphReason = '';
   let affectedWorkspaces = [];
