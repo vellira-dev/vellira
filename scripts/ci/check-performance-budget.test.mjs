@@ -234,6 +234,18 @@ test('affected workspace runner rejects malformed inputs', () => {
   );
 });
 
+test('docs-only affected path does not invoke an empty workspace build', () => {
+  const buildValidate = jobBlock('ci');
+
+  const marker = '      - name: Build affected workspaces\n';
+  const step = buildValidate.split(marker)[1];
+  assert.ok(step, 'Missing affected workspace build step');
+  assert.match(
+    step.slice(0, 260),
+    /if: \$\{\{ needs\.impact\.outputs\.execution_path == 'affected' && needs\.impact\.outputs\.affected_workspaces != '\[\]' \}\}/
+  );
+});
+
 test('affected Storybook tests provision matching Chromium before execution', () => {
   const unitCoverage = jobBlock('unit-coverage', 'generator-blog');
   const browserInstall =
