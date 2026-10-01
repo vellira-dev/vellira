@@ -247,7 +247,37 @@ describe('providerless production diagnostics', () => {
     );
     expect(lint?.result?.status).toBe('failed');
     expect(quality?.result?.status).toBe('passed');
+    expect(report.status).toBe('incomplete');
     expect(report.readyForReview).toBe(false);
+  });
+
+  it.each([
+    { timedOut: true },
+    { exitCode: null },
+    { error: 'spawn validator ENOENT' },
+  ])('marks runtime failure %j as incomplete', (failure) => {
+    const { root, snapshot } = fixture();
+    const called: string[] = [];
+    const report = runComponentProductionDiagnostics({
+      root,
+      input: INPUT,
+      candidateSnapshot: snapshot,
+      runner: (command) => {
+        called.push(command.id);
+        return command.id === 'lint' ? { ...passed(), ...failure } : passed();
+      },
+    });
+    const allExecuted = report.entries.every(
+      (entry) => entry.state === 'completed'
+    );
+    const lint = report.entries.find((entry) => entry.id === 'lint');
+    expect(allExecuted).toBe(true);
+    expect(lint?.result?.status).toBe('failed');
+    expect(called).toContain('diagnostic-quality');
+    expect(called).toContain('native-smoke');
+    expect(report.status).toBe('incomplete');
+    expect(report.readyForReview).toBe(false);
+    expect(report.readinessAuthority).toBe(false);
   });
 
   it('rejects invalid digests and selects only bounded diagnostics', () => {

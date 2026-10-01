@@ -327,6 +327,13 @@ export function runComponentProductionDiagnostics(params: {
       throw new Error('Diagnostic dependency graph contains a cycle.');
     }
   }
+  // A runner finishing is not proof that its validation completed reliably.
+  // Canonical "blocked" means findings; "failed" means collection was incomplete.
+  const collectionComplete = entries.every(
+    (entry) =>
+      entry.state === 'completed' &&
+      (entry.result?.status === 'passed' || entry.result?.status === 'blocked')
+  );
   // Never emit the canonical production result schema or readiness.
   return {
     schemaVersion: '1',
@@ -334,9 +341,7 @@ export function runComponentProductionDiagnostics(params: {
     readinessAuthority: false,
     readyForReview: false,
     status:
-      entries.every((entry) => entry.state === 'completed') &&
-      integrityValid &&
-      inspectionFailures.length === 0
+      collectionComplete && integrityValid && inspectionFailures.length === 0
         ? 'collected'
         : 'incomplete',
     componentName: input.componentName,
