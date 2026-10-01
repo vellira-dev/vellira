@@ -15,10 +15,13 @@ const {
   RELEASE_WORKFLOW,
   REPOSITORY,
   assessGithubRelease,
+  assertVerifiedExistingRelease,
   assertTaggedCheckout,
   assertTaggedSourceChanges,
   assertTagState,
+  isTrustedRecoveryProvenanceSource,
   planPackageRecovery,
+  provenanceSourceShas,
   validateInputs,
   verifyRegistryEvidence,
 } = require('./recovery.cjs');
@@ -32,6 +35,8 @@ const input = validateInputs({
 const githubToken = process.env.GITHUB_TOKEN;
 const api = process.env.GITHUB_API_URL ?? 'https://api.github.com';
 const controlSha = process.env.GITHUB_SHA;
+
+const provenanceSourceTrust = new Map();
 
 function git(...args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -92,9 +97,14 @@ async function currentMainSha() {
     .sha;
 }
 
-async function assertImmutableGitState() {
+async function assertImmutableGitState({
+  allowedEvents = ['workflow_dispatch'],
+} = {}) {
   assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Recovery is workflow-only');
-  assert.equal(process.env.GITHUB_EVENT_NAME, 'workflow_dispatch');
+  assert.ok(
+    allowedEvents.includes(process.env.GITHUB_EVENT_NAME),
+    `Unexpected workflow event: ${process.env.GITHUB_EVENT_NAME}`
+  );
   assert.equal(process.env.GITHUB_REPOSITORY, REPOSITORY);
   assert.equal(process.env.GITHUB_REF, 'refs/heads/main');
   assert.ok(controlSha, 'Missing workflow source SHA');
@@ -120,6 +130,59 @@ function decodeAttestations(body) {
     'Invalid npm attestation response'
   );
   return body.attestations;
+}
+
+async function isAllowedProvenanceSourceSha(sourceSha) {
+  if (
+    isTrustedRecoveryProvenanceSource({
+      sourceSha,
+      expectedTagSha: input.expectedTagSha,
+      controlSha,
+    })
+  ) {
+    return true;
+  }
+  if (provenanceSourceTrust.has(sourceSha)) {
+    return provenanceSourceTrust.get(sourceSha);
+  }
+
+  let trusted = false;
+  try {
+    const [tagToSource, sourceToControl] = await Promise.all([
+      githubJson(
+        `/repos/${REPOSITORY}/compare/${input.expectedTagSha}...${sourceSha}`
+      ),
+      githubJson(`/repos/${REPOSITORY}/compare/${sourceSha}...${controlSha}`),
+    ]);
+    trusted = isTrustedRecoveryProvenanceSource({
+      sourceSha,
+      expectedTagSha: input.expectedTagSha,
+      controlSha,
+      tagToSourceStatus: tagToSource.status,
+      sourceToControlStatus: sourceToControl.status,
+    });
+  } catch {
+    trusted = false;
+  }
+  provenanceSourceTrust.set(sourceSha, trusted);
+  return trusted;
+}
+
+async function allowedProvenanceSourceShas(attestations) {
+  const exact = new Set([input.expectedTagSha, controlSha].filter(Boolean));
+  const candidates = [...new Set(provenanceSourceShas(attestations))];
+
+  if (candidates.some((sourceSha) => exact.has(sourceSha))) {
+    return [...exact];
+  }
+
+  for (const sourceSha of candidates) {
+    if (await isAllowedProvenanceSourceSha(sourceSha)) {
+      exact.add(sourceSha);
+      break;
+    }
+  }
+  return [...exact];
 }
 
 async function registryState(packageName) {
@@ -148,14 +211,16 @@ async function registryState(packageName) {
     attestationResponse,
     `${packageName} attestations`
   );
+  const attestations = decodeAttestations(attestationBody);
+  const allowedSourceShas = await allowedProvenanceSourceShas(attestations);
   const evidence = verifyRegistryEvidence(
     {
       packageName,
       version: input.version,
       dist: metadata.dist,
-      attestations: decodeAttestations(attestationBody),
+      attestations,
     },
-    { allowedSourceShas: [input.expectedTagSha, controlSha] }
+    { allowedSourceShas }
   );
   return { exists: true, verified: true, packageName, ...evidence };
 }
@@ -182,6 +247,30 @@ function previousTag() {
   const previous = git('describe', '--tags', '--abbrev=0', `${input.tag}^`);
   assert.match(previous, /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
   return previous;
+}
+
+async function expectedGithubRelease() {
+  const previous = previousTag();
+  const generated = await githubJson(
+    `/repos/${REPOSITORY}/releases/generate-notes`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tag_name: input.tag,
+        target_commitish: input.expectedTagSha,
+        previous_tag_name: previous,
+      }),
+    }
+  );
+  return {
+    previous,
+    expected: {
+      tagName: input.tag,
+      name: generated.name,
+      body: generated.body,
+    },
+  };
 }
 
 function writeOutput(name, value) {
@@ -252,24 +341,7 @@ async function githubRelease() {
   const states = await packageStates();
   const plan = planPackageRecovery(publicPackages, states);
   assert.deepEqual(plan.publish, [], 'All npm packages must be verified first');
-  const previous = previousTag();
-  const generated = await githubJson(
-    `/repos/${REPOSITORY}/releases/generate-notes`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tag_name: input.tag,
-        target_commitish: input.expectedTagSha,
-        previous_tag_name: previous,
-      }),
-    }
-  );
-  const expected = {
-    tagName: input.tag,
-    name: generated.name,
-    body: generated.body,
-  };
+  const { previous, expected } = await expectedGithubRelease();
   const current = await existingRelease();
   const decision = assessGithubRelease(current, expected);
   let release = current;
@@ -287,13 +359,13 @@ async function githubRelease() {
         '--target',
         input.expectedTagSha,
         '--title',
-        generated.name,
+        expected.name,
         '--notes-file',
         '-',
       ],
       {
         encoding: 'utf8',
-        input: generated.body,
+        input: expected.body,
         env: { ...process.env, GH_TOKEN: githubToken },
         stdio: ['pipe', 'pipe', 'inherit'],
       }
@@ -317,7 +389,39 @@ async function githubRelease() {
   );
 }
 
-const commands = { preflight, packages, 'github-release': githubRelease };
+
+async function verifyExisting() {
+  await assertImmutableGitState({ allowedEvents: ['push'] });
+  const states = await packageStates();
+  const { previous, expected } = await expectedGithubRelease();
+  const current = await existingRelease();
+  const proof = assertVerifiedExistingRelease({
+    packageNames: publicPackages,
+    states,
+    existingRelease: current,
+    expected,
+  });
+  console.log(
+    JSON.stringify(
+      {
+        input,
+        previousTag: previous,
+        decision: proof.decision,
+        releaseId: current.id,
+        htmlUrl: current.html_url,
+      },
+      null,
+      2
+    )
+  );
+}
+
+const commands = {
+  preflight,
+  packages,
+  'github-release': githubRelease,
+  'verify-existing': verifyExisting,
+};
 assert.ok(
   commands[command],
   `Usage: ${path.basename(process.argv[1])} <${Object.keys(commands).join('|')}>`

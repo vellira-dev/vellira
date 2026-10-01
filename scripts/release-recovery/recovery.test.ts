@@ -5,11 +5,14 @@ import { describe, expect, it, vi } from 'vitest';
 const require = createRequire(import.meta.url);
 const {
   assessGithubRelease,
+  assertVerifiedExistingRelease,
   assertNoCloudflareChanges,
   assertTaggedCheckout,
   assertTaggedSourceChanges,
   assertTagState,
+  isTrustedRecoveryProvenanceSource,
   planPackageRecovery,
+  provenanceSourceShas,
   validateInputs,
   verifyRegistryEvidence,
 } = require('./recovery.cjs');
@@ -136,6 +139,53 @@ describe('release recovery decisions', () => {
         body: 'notes',
       })
     ).toEqual({ action: 'none', releaseId: 1 });
+  });
+
+  it('auto-reconcile accepts only complete verified external release state', () => {
+    const expected = {
+      tagName: 'v2.104.1',
+      name: 'Vellira 2.104.1',
+      body: 'notes',
+    };
+
+    expect(
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(),
+        existingRelease: release(),
+        expected,
+      })
+    ).toEqual({
+      plan: { publish: [], satisfied: packages },
+      decision: { action: 'none', releaseId: 1 },
+    });
+
+    expect(() =>
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(['@vellira-ui/icons']),
+        existingRelease: release(),
+        expected,
+      })
+    ).toThrow('every npm package to already exist');
+
+    expect(() =>
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(),
+        existingRelease: null,
+        expected,
+      })
+    ).toThrow('requires an existing GitHub Release');
+
+    expect(() =>
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(),
+        existingRelease: release({ body: 'conflicting notes' }),
+        expected,
+      })
+    ).toThrow('Existing release notes conflict');
   });
 
   it('selects only missing packages and never republishes existing versions', () => {
@@ -292,6 +342,69 @@ describe('release recovery decisions', () => {
     ).toThrow('unexpected change');
   });
 
+  it('accepts historical recovery provenance only inside tag-to-main lineage', () => {
+    const tagSha = '1'.repeat(40);
+    const historicalRecoverySha = '2'.repeat(40);
+    const currentMainSha = '3'.repeat(40);
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: historicalRecoverySha,
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+        tagToSourceStatus: 'ahead',
+        sourceToControlStatus: 'ahead',
+      })
+    ).toBe(true);
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: tagSha,
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+      })
+    ).toBe(true);
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: currentMainSha,
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+      })
+    ).toBe(true);
+
+    for (const [tagToSourceStatus, sourceToControlStatus] of [
+      ['behind', 'ahead'],
+      ['diverged', 'ahead'],
+      ['ahead', 'behind'],
+      ['ahead', 'diverged'],
+    ]) {
+      expect(
+        isTrustedRecoveryProvenanceSource({
+          sourceSha: historicalRecoverySha,
+          expectedTagSha: tagSha,
+          controlSha: currentMainSha,
+          tagToSourceStatus,
+          sourceToControlStatus,
+        })
+      ).toBe(false);
+    }
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: 'not-a-sha',
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+        tagToSourceStatus: 'ahead',
+        sourceToControlStatus: 'ahead',
+      })
+    ).toBe(false);
+
+    const cli = readFileSync('scripts/release-recovery/cli.cjs', 'utf8');
+    expect(cli).toContain('/compare/${input.expectedTagSha}...${sourceSha}');
+    expect(cli).toContain('/compare/${sourceSha}...${controlSha}');
+  });
+
   it('verifies attestation digest, trusted workflow, and source SHA', () => {
     const digest = Buffer.alloc(64, 7);
     const integrity = `sha512-${digest.toString('base64')}`;
@@ -317,6 +430,7 @@ describe('release recovery decisions', () => {
         },
       },
     };
+    expect(provenanceSourceShas([attestation])).toEqual([sha]);
     expect(
       verifyRegistryEvidence(
         {
