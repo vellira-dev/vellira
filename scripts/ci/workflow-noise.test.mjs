@@ -581,3 +581,36 @@ shellTest('diagnostics execute only the selected canonical command and preserve 
     assert.equal(readFileSync(path.join(cwd, 'vellira-diagnostics/output.log'), 'utf8').trim(), command);
   }
 });
+
+test('GitHub Actions tooling keeps component-production e2e fixtures on dedicated shards', () => {
+  const toolingRunner = readFileSync(
+    new URL('./run-tooling-tests.mjs', import.meta.url),
+    'utf8'
+  );
+  const unitRunner = readFileSync(
+    new URL('./run-unit-tests.mjs', import.meta.url),
+    'utf8'
+  );
+  const pageRunner = readFileSync(
+    new URL('./run-component-page-generator-tests.mjs', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(
+    toolingRunner,
+    /const splitProductionFixtures = process\.env\.GITHUB_ACTIONS === 'true';/
+  );
+  assert.doesNotMatch(toolingRunner, /GITHUB_JOB === 'tooling'/);
+  assert.match(
+    toolingRunner,
+    /--exclude', 'scripts\/component-production\/e2e-fixtures\.test\.ts'/
+  );
+
+  assert.match(unitRunner, /GITHUB_JOB === 'unit-coverage'/);
+  assert.match(unitRunner, /boolean-form-control\|compound-divergent/);
+  assert.match(pageRunner, /GITHUB_JOB === 'generator-blog'/);
+  assert.match(
+    pageRunner,
+    /base-web\|overlay-web\|base-cross-platform\|rejects invalid resources\|blocks compound completeness/
+  );
+});
