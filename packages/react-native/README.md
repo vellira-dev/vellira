@@ -9,7 +9,7 @@ interaction behavior inside the React Native layer.
 
 ## Installation
 
-Requires React `>=19`, React Native `>=0.86`, and
+Requires `react >=19`, `react-native >=0.86`, and
 `@react-native-picker/picker >=2`.
 
 ```bash
