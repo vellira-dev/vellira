@@ -6,6 +6,20 @@ import { pathToFileURL } from 'node:url';
 const SHA = /^[0-9a-f]{40}$/;
 const ZERO_SHA = /^0{40}$/;
 const PACKAGE_MANIFEST = /^(?:package\.json|packages\/[^/]+\/package\.json)$/;
+const CHROMATIC_DOCS_ONLY_PREFIXES = ['apps/docs/', 'docs/'];
+const CHROMATIC_DOCS_ONLY_BASENAMES = new Set([
+  'README.md',
+  'CONTRIBUTING.md',
+  'CODE_OF_CONDUCT.md',
+  'SECURITY.md',
+]);
+
+export function isChromaticDocsOnlyPath(filePath) {
+  return (
+    CHROMATIC_DOCS_ONLY_BASENAMES.has(filePath) ||
+    CHROMATIC_DOCS_ONLY_PREFIXES.some((prefix) => filePath.startsWith(prefix))
+  );
+}
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -69,6 +83,16 @@ export function classifyChromaticImpact(changes) {
   }
 
   const changedFiles = changes.map((change) => change.path).sort();
+
+  if (changes.every((change) => isChromaticDocsOnlyPath(change.path))) {
+    return {
+      schemaVersion: 1,
+      shouldRun: false,
+      reason: 'docs-only',
+      changedFiles,
+    };
+  }
+
   if (changes.every(isVersionOnlyManifestChange)) {
     const transitions = new Set(
       changes.map((change) => {
