@@ -202,8 +202,14 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain("'**/package.json'");
     expect(source).toContain("if: github.ref == 'refs/heads/main'");
     expect(source).toContain('group: dependabot-alert-watch');
-    expect(source).toContain('cancel-in-progress: false');
-    expect(source).toContain('Exact main SHA: $GITHUB_SHA');
+    expect(source).toContain('cancel-in-progress: true');
+    expect(source).toContain('max_reads=4');
+    expect(source).toContain('sleep 30');
+    expect(source).toContain('Dependency graph reads: $read_number');
+    expect(source).toContain('Observed main SHA: $main_sha');
+    expect(source).toContain(
+      'gh api "repos/$GH_REPO/branches/main" --jq'
+    );
   });
 
   it('surfaces alert scope and manifest evidence in the canonical tracker', async () => {
@@ -218,6 +224,6 @@ describe('Dependabot security remediation workflow policy', () => {
       'Development-scope alerts: $development_count'
     );
     expect(source).toContain('Runtime-scope alerts: $runtime_count');
-    expect(source).toContain('against exact main \\`${GITHUB_SHA}\\`');
+    expect(source).toContain('against observed main \\`${main_sha}\\`');
   });
 });
