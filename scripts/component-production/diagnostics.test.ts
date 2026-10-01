@@ -38,7 +38,8 @@ const passed = (): ValidationCommandExecution => ({
 function fixture(
   files: Record<string, string> = { [SOURCE]: 'export const value = 1;\n' }
 ) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'production-diagnostics-'));
+  const prefix = path.join(os.tmpdir(), 'production-diagnostics-');
+  const root = fs.mkdtempSync(prefix);
   roots.push(root);
   const git = (...args: string[]) =>
     execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
@@ -179,9 +180,8 @@ describe('providerless production diagnostics', () => {
       },
     });
     expect(calls).toBe(0);
-    expect(report.entries.every((entry) => entry.state === 'not-run')).toBe(
-      true
-    );
+    const noneRun = report.entries.every((entry) => entry.state === 'not-run');
+    expect(noneRun).toBe(true);
     expect(report.integrityFailures[0]?.boundary).toBe('before-diagnostics');
   });
 
@@ -207,7 +207,7 @@ describe('providerless production diagnostics', () => {
     expect(report.readyForReview).toBe(false);
   });
 
-  it('finds missing imports without rejecting an existing SCSS resource', () => {
+  it('reports missing imports but accepts existing SCSS', () => {
     const directory = path.posix.dirname(SOURCE);
     const { root, snapshot } = fixture({
       [SOURCE]:
@@ -265,15 +265,15 @@ describe('providerless production diagnostics', () => {
     expect(new Set(commands.map((command) => command.id)).size).toBe(
       commands.length
     );
-    expect(
-      commands.some((command) => command.command.includes('--write'))
-    ).toBe(false);
+    const hasWrite = commands.some((item) => item.command.includes('--write'));
+    expect(hasWrite).toBe(false);
     const nativeCommands = componentProductionDiagnosticCommands({
       ...INPUT,
       platform: 'native',
     });
-    expect(
-      nativeCommands.some((command) => command.id.startsWith('diagnostic-docker'))
-    ).toBe(false);
+    const docker = nativeCommands.filter((item) =>
+      item.id.startsWith('diagnostic-docker')
+    );
+    expect(docker).toEqual([]);
   });
 });

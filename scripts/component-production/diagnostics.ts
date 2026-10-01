@@ -133,7 +133,7 @@ export function componentProductionDiagnosticCommands(
 }
 
 /** Resolve relative imports in exact changed source artifacts. */
-export function diagnoseRelativeImports(
+function diagnoseRelativeImports(
   root: string,
   snapshot: CandidateSnapshotV1
 ): readonly RelativeImportFinding[] {
@@ -159,7 +159,10 @@ export function diagnoseRelativeImports(
         findings.push({
           path: entry.path,
           module: '',
-          message: ts.flattenDiagnosticMessageText(config.error.messageText, '\n'),
+          message: ts.flattenDiagnosticMessageText(
+            config.error.messageText,
+            '\n'
+          ),
         });
         continue;
       }
@@ -182,7 +185,8 @@ export function diagnoseRelativeImports(
       options = parsed.options;
     }
     const source = fs.readFileSync(file, 'utf8');
-    for (const imported of ts.preProcessFile(source, true, true).importedFiles) {
+    const imports = ts.preProcessFile(source, true, true).importedFiles;
+    for (const imported of imports) {
       if (
         !imported.fileName.startsWith('./') &&
         !imported.fileName.startsWith('../')
@@ -284,7 +288,8 @@ export function runComponentProductionDiagnostics(params: {
   while (pending.size > 0) {
     let progressed = false;
     for (const [id, command] of pending) {
-      if (command.requires.some((dependency) => pending.has(dependency))) continue;
+      const waiting = command.requires.some((item) => pending.has(item));
+      if (waiting) continue;
       progressed = true;
       pending.delete(id);
       const blockedBy = command.requires.filter(
