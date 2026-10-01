@@ -92,6 +92,55 @@ for (const [name, group] of [
   });
 }
 
+test('Chromatic gates expensive work on semantic visual impact', () => {
+  const source = workflow('chromatic');
+
+  assert.match(source, /name: Classify visual impact/);
+  assert.match(
+    source,
+    /git cat-file -e "\$\{BASE_SHA\}:scripts\/ci\/chromatic-impact\.mjs"/
+  );
+  assert.match(
+    source,
+    /git show "\$\{BASE_SHA\}:scripts\/ci\/chromatic-impact\.mjs" > "\$trusted_classifier"/
+  );
+  assert.match(
+    source,
+    /node "\$trusted_classifier" --base "\$BASE_SHA" --head "\$HEAD_SHA"/
+  );
+  assert.match(source, /reason=trusted-classifier-unavailable/);
+  assert.match(
+    source,
+    /github\.event\.pull_request\.base\.sha \|\| github\.event\.before/
+  );
+  assert.match(
+    source,
+    /github\.event\.pull_request\.head\.sha \|\| github\.sha/
+  );
+  assert.match(source, /name: Record intentional Chromatic skip/);
+
+  for (const name of [
+    'Install dependencies',
+    'Build packages',
+    'Disable unrelated Google Chrome apt source',
+    'Install Playwright browsers',
+    'Test Storybook',
+  ]) {
+    const marker = `      - name: ${name}\n`;
+    const step = source.split(marker)[1];
+    assert.ok(step, `Missing Chromatic step: ${name}`);
+    assert.match(
+      step.slice(0, 180),
+      /if: steps\.impact\.outputs\.run_chromatic == 'true'/
+    );
+  }
+
+  assert.match(
+    source,
+    /if: steps\.impact\.outputs\.run_chromatic == 'true' && github\.actor != 'dependabot\[bot\]'/
+  );
+});
+
 test('required title check keeps exact-head metadata semantics with trusted authority', () => {
   const source = workflow('pr-title');
   const triggers = section(source, 'on');
