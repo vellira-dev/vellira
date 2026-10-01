@@ -59,6 +59,9 @@ jobs:
       - name: Validate trusted remediation source event
         id: source
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -75,18 +78,33 @@ jobs:
                 exit 1
               }
 
-              read -r commit parent_one parent_two extra < <(
-                git rev-list --parents -n 1 "$GITHUB_SHA"
-              )
-              test "$commit" = "$GITHUB_SHA"
-              if [[ -z "$parent_one" || -z "$parent_two" || -n "${extra:-}" ]]; then
-                echo "::error::Self-proof push must be one reviewed merge commit on main."
+              gh api                 -H "Accept: application/vnd.github+json"                 "repos/$REPOSITORY/commits/$GITHUB_SHA/pulls?per_page=100"                 > /tmp/security-remediation-source-pulls.json
+
+              source_pr_count="$(
+                jq                   --arg sha "$GITHUB_SHA"                   --arg before "$before_sha"                   '[
+                    .[]
+                    | select(.state == "closed")
+                    | select(.merged_at != null)
+                    | select(.merge_commit_sha == $sha)
+                    | select(.base.ref == "main")
+                    | select(.base.sha == $before)
+                  ] | length'                   /tmp/security-remediation-source-pulls.json
+              )"
+              if [[ "$source_pr_count" -ne 1 ]]; then
+                echo "::error::Self-proof push is not one exact protected pull request merge."
                 exit 1
               fi
-              if [[ "$parent_one" != "$before_sha" ]]; then
-                echo "::error::Self-proof push before SHA is not the merge first parent."
-                exit 1
-              fi
+
+              source_pr_number="$(
+                jq -r                   --arg sha "$GITHUB_SHA"                   --arg before "$before_sha"                   '[
+                    .[]
+                    | select(.state == "closed")
+                    | select(.merged_at != null)
+                    | select(.merge_commit_sha == $sha)
+                    | select(.base.ref == "main")
+                    | select(.base.sha == $before)
+                  ][0].number'                   /tmp/security-remediation-source-pulls.json
+              )"
 
               mapfile -t changed_files < <(
                 git diff --name-only "$before_sha" "$GITHUB_SHA" --
@@ -106,6 +124,8 @@ jobs:
                     ;;
                 esac
               done
+
+              echo "Self-proof source PR: #$source_pr_number"                 >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
               echo "::error::Unsupported remediation source event: $event"
