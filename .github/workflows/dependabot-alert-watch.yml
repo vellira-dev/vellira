@@ -4,6 +4,16 @@ on:
   schedule:
     # Every day at 08:00 UTC
     - cron: '0 8 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - '**/package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/dependabot.yml'
+      - '.github/workflows/dependabot-alert-watch.yml'
   workflow_dispatch:
 
 permissions:
@@ -11,8 +21,13 @@ permissions:
   security-events: read
   issues: write
 
+concurrency:
+  group: dependabot-alert-watch
+  cancel-in-progress: true
+
 jobs:
   check-alerts:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +40,7 @@ jobs:
 
           ISSUE_TITLE="Unresolved Dependabot security alerts"
 
-          alerts="$(
+          read_alerts() {
             gh api \
               --paginate \
               -H "Accept: application/vnd.github+json" \
@@ -39,10 +54,51 @@ jobs:
                     )
                   )
               '
-          )"
+          }
 
-          jq -e 'type == "array"' <<< "$alerts" > /dev/null
-          count="$(jq 'length' <<< "$alerts")"
+          max_reads=1
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            # Dependency graph / Dependabot alert refresh is asynchronous after
+            # a lockfile or manifest merge. Give the API a bounded convergence
+            # window before publishing the canonical tracker state.
+            max_reads=4
+          fi
+
+          read_number=1
+          while true; do
+            alerts="$(read_alerts)"
+            jq -e 'type == "array"' <<< "$alerts" > /dev/null
+            count="$(jq 'length' <<< "$alerts")"
+
+            if [[ "$count" -eq 0 || "$read_number" -ge "$max_reads" ]]; then
+              break
+            fi
+
+            echo "Dependabot still reports $count High/Critical alert(s) after dependency change; waiting for graph convergence (read $read_number/$max_reads)." >> "$GITHUB_STEP_SUMMARY"
+            sleep 30
+            read_number=$((read_number + 1))
+          done
+
+          development_count="$(
+            jq '[.[] | select(.dependency.scope == "development")] | length' <<< "$alerts"
+          )"
+          runtime_count="$(
+            jq '[.[] | select(.dependency.scope != "development")] | length' <<< "$alerts"
+          )"
+          main_sha="$(
+            gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha'
+          )"
+          test "$main_sha" != "null"
+          test -n "$main_sha"
+
+          {
+            echo "Open High/Critical alerts: $count"
+            echo "Development-scope alerts: $development_count"
+            echo "Runtime-scope alerts: $runtime_count"
+            echo "Dependency graph reads: $read_number"
+            echo "Trigger SHA: $GITHUB_SHA"
+            echo "Observed main SHA: $main_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           find_tracker() {
             local state="$1"
@@ -68,7 +124,7 @@ jobs:
             if [ -n "$existing_open" ]; then
               gh issue close "$existing_open" \
                 --repo "$GH_REPO" \
-                --comment "All High/Critical Dependabot alerts have been resolved automatically."
+                --comment "All High/Critical Dependabot alerts have been resolved automatically against observed main \`${main_sha}\`."
             fi
 
             exit 0
@@ -81,16 +137,16 @@ jobs:
             echo
             echo "Found **${count}** open High/Critical alert(s)."
             echo
-            echo "| Severity | Package | Alert |"
-            echo "| --- | --- | --- |"
+            echo "| Severity | Scope | Package | Manifest | Alert |"
+            echo "| --- | --- | --- | --- | --- |"
 
             jq -r '
               .[] |
-              "| \(.security_advisory.severity | ascii_upcase) | `\(.dependency.package.name)` | \(.security_advisory.summary) (#\(.number)) |"
+              "| \(.security_advisory.severity | ascii_upcase) | \(.dependency.scope // "unknown") | `\(.dependency.package.name)` | `\(.dependency.manifest_path // "unknown")` | \(.security_advisory.summary) (#\(.number)) |"
             ' <<< "$alerts"
 
             echo
-            echo "_Last checked: $(date -u '+%Y-%m-%d %H:%M UTC')_"
+            echo "_Last checked: $(date -u '+%Y-%m-%d %H:%M UTC') against observed main \`${main_sha}\` after ${read_number} dependency-graph read(s)_"
           } > /tmp/dependabot-alerts.md
 
           if [ -n "$existing_open" ]; then
