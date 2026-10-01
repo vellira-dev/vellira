@@ -533,7 +533,7 @@ jobs:
         run: pnpm ci:build
 
       - name: Build affected workspaces
-        if: needs.impact.outputs.execution_path == 'affected'
+        if: ${{ needs.impact.outputs.execution_path == 'affected' && needs.impact.outputs.affected_workspaces != '[]' }}
         env:
           VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
         run: node scripts/ci/run-affected-workspaces.mjs build
