@@ -124,6 +124,11 @@ test('Chromatic gates expensive work on semantic visual impact', () => {
     source,
     /container:\n {6}image: mcr\.microsoft\.com\/playwright:v1\.61\.1-noble\n {6}options: --ipc=host/
   );
+  assert.match(source, /name: Trust checked-out repository in Playwright container/);
+  assert.match(
+    source,
+    /git config --global --add safe\.directory "\$GITHUB_WORKSPACE"/
+  );
   assert.match(source, /name: Setup Node without dependency cache/);
   assert.doesNotMatch(source, /cache: pnpm/);
   assert.doesNotMatch(source, /Install Playwright browsers/);
