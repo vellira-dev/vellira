@@ -52,10 +52,13 @@ Accessibility-minded • Cross-platform • Modular
 Install the renderer you need:
 
 ```bash
-pnpm add @vellira-ui/react @vellira-ui/tokens
+pnpm add @vellira-ui/react
 # or
-pnpm add @vellira-ui/react-native @vellira-ui/tokens
+pnpm add @vellira-ui/react-native @react-native-picker/picker
 ```
+
+The renderer packages already consume Vellira tokens internally. Install
+`@vellira-ui/tokens` directly only when your application reads tokens itself.
 
 The same component intent stays recognizable across runtimes while each platform
 uses its native interaction model.
@@ -189,7 +192,7 @@ yarn add @vellira-ui/react
 ### React Native
 
 ```bash
-pnpm add @vellira-ui/react-native
+pnpm add @vellira-ui/react-native @react-native-picker/picker
 ```
 
 ---
