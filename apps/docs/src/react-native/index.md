@@ -10,10 +10,11 @@ description: Build accessible iOS and Android interfaces with Vellira React Nati
 ## Installation
 
 ```bash
-pnpm add @vellira-ui/react-native
+pnpm add @vellira-ui/react-native @react-native-picker/picker
 ```
 
-The package expects `react` and `react-native` as peer dependencies.
+The package expects React `>=19`, React Native `>=0.86`, and
+`@react-native-picker/picker >=2` as peer dependencies.
 
 ## Components
 
