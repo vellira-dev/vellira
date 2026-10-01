@@ -34,10 +34,49 @@ env:
   PRODUCTION_WWW_URL: https://www.vellira.dev
 
 jobs:
+  classify:
+    name: Classify staging promotion authority
+    runs-on: ubuntu-latest
+    outputs:
+      release_sync: ${{ steps.classify.outputs.release_sync }}
+    env:
+      CANDIDATE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.candidate_sha }}
+    steps:
+      - name: Checkout exact staging candidate for release-sync verification
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.actor.login == 'vellira-release-sync[bot]'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 2
+
+      - name: Verify release-sync promotion no-op authority
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          STAGING_ACTOR: ${{ github.event.workflow_run.actor.login }}
+          VELLIRA_PUSH_ACTOR: ${{ github.event.workflow_run.actor.login }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" != "workflow_run" || "$STAGING_ACTOR" != "vellira-release-sync[bot]" ]]; then
+            echo "release_sync=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="$(git rev-parse "$CANDIDATE_SHA^")"
+          node scripts/ci/release-sync-contract.mjs \
+            --base "$base_sha" \
+            --head "$CANDIDATE_SHA" \
+            --verify-merged
+
   candidate:
     name: Qualify immutable production candidate
+    needs: classify
     if: >-
       (github.event_name == 'workflow_run' &&
+       needs.classify.result == 'success' &&
+       needs.classify.outputs.release_sync != 'true' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main') ||

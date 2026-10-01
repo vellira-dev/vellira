@@ -36,27 +36,14 @@ function cloneWithoutVersion(manifest) {
   return clone;
 }
 
-export function verifyReleaseSyncDocuments({
+function verifyReleaseSyncManifestTransition({
   files,
   baseDocuments,
   headDocuments,
-  title,
-  headRef,
-  author,
 }) {
   if (!isReleaseSyncFileSet(files)) {
     throw new Error(
       'Release-sync fast path requires exactly the seven release-managed package manifests.'
-    );
-  }
-
-  if (title !== 'chore(release): sync package versions') {
-    throw new Error('Release-sync fast path requires the canonical PR title.');
-  }
-
-  if (author !== 'vellira-release-sync[bot]') {
-    throw new Error(
-      'Release-sync fast path requires the release-sync GitHub App author.'
     );
   }
 
@@ -105,17 +92,73 @@ export function verifyReleaseSyncDocuments({
     throw new Error('Release-sync fast path requires an actual version change.');
   }
 
-  if (headRef !== `chore/sync-release-${headVersion}`) {
-    throw new Error(
-      `Release-sync branch must be chore/sync-release-${headVersion}; found ${headRef}.`
-    );
-  }
-
   return {
     baseVersion,
     headVersion,
     files: sorted(files.map(normalizePath)),
   };
+}
+
+export function verifyReleaseSyncDocuments({
+  files,
+  baseDocuments,
+  headDocuments,
+  title,
+  headRef,
+  author,
+}) {
+  if (title !== 'chore(release): sync package versions') {
+    throw new Error('Release-sync fast path requires the canonical PR title.');
+  }
+
+  if (author !== 'vellira-release-sync[bot]') {
+    throw new Error(
+      'Release-sync fast path requires the release-sync GitHub App author.'
+    );
+  }
+
+  const result = verifyReleaseSyncManifestTransition({
+    files,
+    baseDocuments,
+    headDocuments,
+  });
+
+  if (headRef !== `chore/sync-release-${result.headVersion}`) {
+    throw new Error(
+      `Release-sync branch must be chore/sync-release-${result.headVersion}; found ${headRef}.`
+    );
+  }
+
+  return result;
+}
+
+export function verifyMergedReleaseSyncDocuments({
+  files,
+  baseDocuments,
+  headDocuments,
+  actor,
+  commitSubject,
+}) {
+  if (actor !== 'vellira-release-sync[bot]') {
+    throw new Error(
+      'Merged release-sync verification requires the release-sync GitHub App actor.'
+    );
+  }
+
+  if (
+    typeof commitSubject !== 'string' ||
+    !/^chore\(release\): sync package versions \(#\d+\)$/.test(commitSubject)
+  ) {
+    throw new Error(
+      'Merged release-sync verification requires the canonical squash-merge commit subject.'
+    );
+  }
+
+  return verifyReleaseSyncManifestTransition({
+    files,
+    baseDocuments,
+    headDocuments,
+  });
 }
 
 function argumentValue(args, name) {
@@ -152,11 +195,24 @@ async function main() {
 
   if (!base || !head) {
     throw new Error(
-      'Usage: node scripts/ci/release-sync-contract.mjs --base <sha> --head <sha> [--detect|--verify]'
+      'Usage: node scripts/ci/release-sync-contract.mjs --base <sha> --head <sha> [--detect|--verify|--verify-merged]'
     );
   }
 
-  const files = git(['diff', '--name-only', `${base}...${head}`])
+  const mergedMode = args.includes('--verify-merged');
+  if (mergedMode) {
+    const parents = git(['rev-list', '--parents', '-n', '1', head])
+      .split(/\s+/)
+      .slice(1);
+    if (parents.length !== 1 || parents[0] !== base) {
+      throw new Error(
+        'Merged release-sync verification requires one exact first parent matching --base.'
+      );
+    }
+  }
+
+  const range = mergedMode ? `${base}..${head}` : `${base}...${head}`;
+  const files = git(['diff', '--name-only', range])
     .split(/\r?\n/)
     .map((file) => file.trim())
     .filter(Boolean);
@@ -171,8 +227,15 @@ async function main() {
     return;
   }
 
-  if (!args.includes('--verify')) {
-    throw new Error('Choose exactly one mode: --detect or --verify.');
+  const verifyPr = args.includes('--verify');
+  if (!verifyPr && !mergedMode) {
+    throw new Error(
+      'Choose exactly one mode: --detect, --verify, or --verify-merged.'
+    );
+  }
+
+  if (verifyPr && mergedMode) {
+    throw new Error('Release-sync verification modes are mutually exclusive.');
   }
 
   const baseDocuments = {};
@@ -182,15 +245,24 @@ async function main() {
     headDocuments[manifestPath] = readJsonAt(head, manifestPath);
   }
 
-  const result = verifyReleaseSyncDocuments({
-    files,
-    baseDocuments,
-    headDocuments,
-    title: process.env.VELLIRA_PR_TITLE,
-    headRef: process.env.VELLIRA_PR_HEAD_REF,
-    author: process.env.VELLIRA_PR_AUTHOR,
-  });
+  const result = mergedMode
+    ? verifyMergedReleaseSyncDocuments({
+        files,
+        baseDocuments,
+        headDocuments,
+        actor: process.env.VELLIRA_PUSH_ACTOR,
+        commitSubject: git(['show', '-s', '--format=%s', head]),
+      })
+    : verifyReleaseSyncDocuments({
+        files,
+        baseDocuments,
+        headDocuments,
+        title: process.env.VELLIRA_PR_TITLE,
+        headRef: process.env.VELLIRA_PR_HEAD_REF,
+        author: process.env.VELLIRA_PR_AUTHOR,
+      });
 
+  await writeOutput('release_sync', 'true');
   process.stdout.write(
     `Verified canonical release sync ${result.baseVersion} -> ${result.headVersion}.\n`
   );
