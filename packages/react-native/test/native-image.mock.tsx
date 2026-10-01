@@ -140,9 +140,7 @@ export function createNativeImageMock(
               height: event.currentTarget.naturalHeight,
             })
           }
-          onError={() =>
-            request.result?.error('Native image mock load error.')
-          }
+          onError={() => request.result?.error('Native image mock load error.')}
         />
       );
     }

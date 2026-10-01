@@ -40,9 +40,7 @@ describe('native image harness', () => {
     expect(start).toHaveBeenCalledTimes(1);
     expect(load).not.toHaveBeenCalled();
     expect(end).not.toHaveBeenCalled();
-    act(() =>
-      captureNativeImageRequest(image).load({ width: 24, height: 32 })
-    );
+    act(() => captureNativeImageRequest(image).load({ width: 24, height: 32 }));
     expect(load).toHaveBeenCalledWith({
       nativeEvent: {
         source: {
@@ -60,11 +58,7 @@ describe('native image harness', () => {
     const load = vi.fn();
     const end = vi.fn();
     const result = mount(
-      <Image
-        source={{ uri: 'first' }}
-        onError={error}
-        onLoadEnd={end}
-      />
+      <Image source={{ uri: 'first' }} onError={error} onLoadEnd={end} />
     );
     act(() =>
       captureNativeImageRequest(imageIn(result.container)).error('unavailable')
@@ -123,9 +117,9 @@ describe('native image harness', () => {
   it('removes the active request when the source is removed', () => {
     const result = mount(<Image source={{ uri: 'first' }} />);
     result.rerender(<Image />);
-    expect(() =>
-      captureNativeImageRequest(imageIn(result.container))
-    ).toThrow('No committed native image request');
+    expect(() => captureNativeImageRequest(imageIn(result.container))).toThrow(
+      'No committed native image request'
+    );
   });
 
   it('does not deliver retained events after unmount', () => {
@@ -146,13 +140,15 @@ describe('native image harness', () => {
     expect(() => captureNativeImageRequest(image)).toThrow();
   });
 
-  it.each([
-    { source: 123 },
-    { source: [{ uri: 'one' }, { uri: 'two' }] },
-  ])('preserves a non-URI descriptor without device resolution', ({ source }) => {
-    const { container } = mount(<Image source={source} />);
-    expect(captureNativeImageRequest(imageIn(container)).source).toEqual(source);
-  });
+  it.each([{ source: 123 }, { source: [{ uri: 'one' }, { uri: 'two' }] }])(
+    'preserves a non-URI descriptor without device resolution',
+    ({ source }) => {
+      const { container } = mount(<Image source={source} />);
+      expect(captureNativeImageRequest(imageIn(container)).source).toEqual(
+        source
+      );
+    }
+  );
 
   it('isolates image instances', () => {
     const first = vi.fn();
@@ -188,10 +184,7 @@ describe('native image harness', () => {
 
   it('preserves exact flattened style dimensions', () => {
     const { container } = mount(
-      <Image
-        source={{ uri: 'image' }}
-        style={[{ width: 24 }, { height: 32 }]}
-      />
+      <Image source={{ uri: 'image' }} style={[{ width: 24 }, { height: 32 }]} />
     );
     expect(imageIn(container).style.width).toBe('24px');
     expect(imageIn(container).style.height).toBe('32px');
