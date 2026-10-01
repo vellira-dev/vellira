@@ -231,6 +231,35 @@ describe('release recovery decisions', () => {
         expected
       )
     ).toThrow('Existing release notes conflict');
+
+    expect(() =>
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body:
+            '# [2.126.0](' +
+            'https://github.com/vellira-dev/vellira/compare/' +
+            'v2.125.7...v9.9.9)\n\n' +
+            'Unrelated text mentioning ...v2.126.0)',
+        }),
+        expected
+      )
+    ).toThrow('Existing release notes conflict');
+
+    expect(() =>
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body:
+            '# [2.126.0](' +
+            'https://github.com/other/repo/compare/' +
+            'v2.125.7...v2.126.0)',
+        }),
+        expected
+      )
+    ).toThrow('Existing release notes conflict');
   });
 
   it('stops when an existing package lacks verified integrity or provenance', () => {
