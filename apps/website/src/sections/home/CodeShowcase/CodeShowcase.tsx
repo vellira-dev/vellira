@@ -38,12 +38,11 @@ const exampleLabels: Record<ExampleName, string> = {
   dropdown: 'Dropdown',
 };
 
-const docsLinks: Record<ExampleName, string> = {
-  button: 'https://docs.vellira.dev/components/button',
-  input: 'https://docs.vellira.dev/components/input',
-  modal: 'https://docs.vellira.dev/components/modal',
-  dropdown: 'https://docs.vellira.dev/components/dropdown',
-};
+function getDocsLink(platform: Platform, example: ExampleName) {
+  const docsPlatform = platform === 'react' ? 'react' : 'react-native';
+
+  return `https://docs.vellira.dev/${docsPlatform}/${example}`;
+}
 
 const storybookLinks: Record<ExampleName, string> = {
   button: 'https://storybook.vellira.dev/?path=/docs/primitives-button--docs',
@@ -884,7 +883,7 @@ export function CodeShowcase() {
               className={styles.installAction}
             >
               <a
-                href={docsLinks[activeExample]}
+                href={getDocsLink(platform, activeExample)}
                 target='_blank'
                 rel='noreferrer noopener'
               >
