@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   classifyChromaticImpact,
+  isChromaticDocsOnlyPath,
   isVersionOnlyManifestChange,
 } from './chromatic-impact.mjs';
 
@@ -39,6 +40,54 @@ test('version-only package manifest changes are visual no-ops', () => {
     reason: 'version-only-manifest-sync',
     changedFiles: [...paths].sort(),
   });
+});
+
+test('docs-only changes are visual no-ops for Storybook Chromatic', () => {
+  const paths = [
+    'README.md',
+    'docs/ACCESSIBILITY.md',
+    'docs/architecture/component-lifecycle.md',
+    'apps/docs/src/index.md',
+    'apps/docs/src/.vitepress/config.ts',
+  ];
+  const changes = paths.map((path) => ({
+    path,
+    before: 'before',
+    after: 'after',
+  }));
+
+  assert.ok(paths.every(isChromaticDocsOnlyPath));
+  assert.deepEqual(classifyChromaticImpact(changes), {
+    schemaVersion: 1,
+    shouldRun: false,
+    reason: 'docs-only',
+    changedFiles: [...paths].sort(),
+  });
+});
+
+test('docs plus any runtime or Storybook change keep Chromatic enabled', () => {
+  for (const runtimePath of [
+    'packages/react/src/primitives/Button/Button.tsx',
+    'apps/react-storybook/src/preview.ts',
+    'apps/website/src/app/page.tsx',
+    'pnpm-lock.yaml',
+  ]) {
+    const plan = classifyChromaticImpact([
+      {
+        path: 'apps/docs/src/project/component-production.md',
+        before: 'before',
+        after: 'after',
+      },
+      {
+        path: runtimePath,
+        before: 'before',
+        after: 'after',
+      },
+    ]);
+
+    assert.equal(plan.shouldRun, true);
+    assert.equal(plan.reason, 'visual-impact-not-proven-absent');
+  }
 });
 
 test('manifest dependency or script changes keep Chromatic enabled', () => {
