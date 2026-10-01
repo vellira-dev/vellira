@@ -26,6 +26,8 @@ overrides:
   'brace-expansion@>=2 <3': 2.1.7
   colord: 2.9.4
   'minimatch@10>brace-expansion': 5.0.12
+  # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
+  'get-uri@6.0.5>basic-ftp': 6.2.1
 
   'esbuild@<=0.24.2': 0.28.1
   fast-uri: 3.1.8
