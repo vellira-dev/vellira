@@ -389,7 +389,7 @@ test('deployment workflows keep archive preflight before remote build and mutati
       assert.match(migration, /pnpm test:cloudflare-migration/);
       assert.doesNotMatch(migration, /cloudflare-archive-preflight\.mjs/);
       assert.doesNotMatch(migration, /CLOUDFLARE_API_TOKEN/);
-      assert.match(stagingDeploy, /needs: migration/);
+      assert.match(stagingDeploy, /needs: \[classify, migration\]/);
       assert.match(stagingDeploy, /cloudflare-archive-preflight\.mjs wrangler\.jsonc/);
     }
   }
