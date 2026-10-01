@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export const RELEASE_SYNC_MANIFESTS = Object.freeze([
   'package.json',
@@ -53,7 +55,9 @@ export function verifyReleaseSyncDocuments({
   }
 
   if (author !== 'vellira-release-sync[bot]') {
-    throw new Error('Release-sync fast path requires the release-sync GitHub App author.');
+    throw new Error(
+      'Release-sync fast path requires the release-sync GitHub App author.'
+    );
   }
 
   const baseVersions = new Set();
@@ -71,7 +75,9 @@ export function verifyReleaseSyncDocuments({
       typeof baseManifest.version !== 'string' ||
       typeof headManifest.version !== 'string'
     ) {
-      throw new Error(`Release-sync manifest ${manifestPath} must contain string versions.`);
+      throw new Error(
+        `Release-sync manifest ${manifestPath} must contain string versions.`
+      );
     }
 
     assert.deepStrictEqual(
@@ -190,7 +196,10 @@ async function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
