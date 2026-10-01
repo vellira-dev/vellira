@@ -74,7 +74,8 @@ export async function captureBrowserJson(page, baseUrl) {
               void copy.body?.cancel().catch(() => {});
               return;
             }
-            if (response.url !== url.href) {
+            // A redirect chain can end at its original URL (A -> B -> A).
+            if (response.redirected || response.url !== url.href) {
               void copy.body?.cancel().catch(() => {});
               throw new Error('Observed metrics response was redirected');
             }

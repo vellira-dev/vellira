@@ -9,6 +9,7 @@ let base;
 const payload = { slug: 'two-runtimes-é-中-🚀', views: 9, likes: 1 };
 const likePath = '/api/blog-metrics/articles/two-runtimes/like';
 const viewPath = '/api/blog-metrics/articles/two-runtimes/views';
+const redirectHopPath = '/api/metrics-redirect-hop';
 
 before(async () => {
   browser = await chromium.launch();
@@ -18,7 +19,13 @@ after(async () => {
 });
 
 async function fixture(t) {
-  const state = { calls: [], mode: 'ok', liked: false };
+  const state = {
+    calls: [],
+    mode: 'ok',
+    liked: false,
+    redirectStatus: 307,
+    redirectStep: 0,
+  };
   const server = http.createServer((request, response) => {
     if (!request.url.startsWith('/api/')) {
       response.writeHead(200, { 'Content-Type': 'text/html' });
@@ -48,6 +55,21 @@ async function fixture(t) {
       url: request.url,
       cookie: request.headers.cookie,
     });
+    const redirectHops =
+      state.mode === 'redirect-roundtrip'
+        ? 2
+        : state.mode === 'redirect-away'
+          ? 1
+          : 0;
+    if (state.redirectStep < redirectHops) {
+      const location = state.redirectStep++ === 0 ? redirectHopPath : likePath;
+      response.writeHead(state.redirectStatus, {
+        Location: location,
+        'Cache-Control': 'no-store',
+      });
+      response.end();
+      return;
+    }
     const previous = state.liked;
     if (request.method === 'PUT') state.liked = true;
     if (request.method === 'DELETE') state.liked = false;
@@ -264,3 +286,53 @@ test('wrong method and wrong endpoint do not satisfy a pending observation', asy
     ['GET', 'POST']
   );
 });
+
+for (const status of [307, 308]) {
+  for (const mode of ['redirect-roundtrip', 'redirect-away']) {
+    test(`rejects HTTP ${status} ${mode} without replaying or changing the application's fetch`, async (t) => {
+      const { page, observe, state } = await fixture(t);
+      state.mode = mode;
+      state.redirectStatus = status;
+      let applicationResult;
+      await assert.rejects(
+        observe([spec()], () => {
+          applicationResult = page.evaluate(async (url) => {
+            window.redirectFetchCalls = (window.redirectFetchCalls ?? 0) + 1;
+            const response = await fetch(url, {
+              method: 'PUT',
+              credentials: 'include',
+            });
+            return {
+              url: response.url,
+              redirected: response.redirected,
+              status: response.status,
+              payload: await response.json(),
+              fetchCalls: window.redirectFetchCalls,
+            };
+          }, `${base}${likePath}`);
+          return applicationResult;
+        }),
+        /Observed metrics response was redirected/
+      );
+      // The guard rejects evidence after the native redirect has happened. It
+      // must not abort/rewrite the application's fetch or replay the mutation.
+      const received = await applicationResult;
+      const roundtrip = mode === 'redirect-roundtrip';
+      assert.equal(received.redirected, true);
+      assert.equal(received.status, 200);
+      assert.equal(
+        received.url,
+        `${base}${roundtrip ? likePath : redirectHopPath}`
+      );
+      assert.deepEqual(received.payload.metrics, payload);
+      assert.equal(received.fetchCalls, 1);
+      assert.deepEqual(
+        state.calls.map(({ method, url }) => ({ method, url })),
+        (roundtrip
+          ? [likePath, redirectHopPath, likePath]
+          : [likePath, redirectHopPath]
+        ).map((url) => ({ method: 'PUT', url }))
+      );
+    });
+  }
+}
