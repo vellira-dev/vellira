@@ -11,7 +11,7 @@ const websiteRoots = [
 
 const websiteExtensions = new Set(['.md', '.mdx', '.ts', '.tsx']);
 const docsUrlPattern =
-  /https:\/\/docs\.vellira\.dev(?:\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*)?/g;
+  /https:\/\/docs\.vellira\.dev(?:\/[A-Za-z0-9._~:@%/-]*)?/g;
 
 function collectFiles(root: string, predicate: (filePath: string) => boolean) {
   const files: string[] = [];
