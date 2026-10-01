@@ -282,6 +282,7 @@ test('installed Wrangler proxy: local cache emits no missing-secret warning; dev
       console.log(JSON.stringify({ hasNewsletterKey: Object.hasOwn(proxy.env, 'BUTTONDOWN_API_KEY') }));
       console.warn('local-tooling-visible-warning');
     } finally { await proxy.dispose(); }
+    process.exit(0);
   `;
   const invoke = (filename) => {
     const result = spawnSync(
