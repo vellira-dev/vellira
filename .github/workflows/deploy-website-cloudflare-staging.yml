@@ -33,9 +33,45 @@ env:
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
+  classify:
+    name: Classify staging deployment authority
+    runs-on: ubuntu-latest
+    outputs:
+      release_sync: ${{ steps.classify.outputs.release_sync }}
+    steps:
+      - name: Checkout exact staging candidate
+        if: github.event_name == 'push' && github.actor == 'vellira-release-sync[bot]'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 2
+
+      - name: Verify release-sync deployment no-op authority
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_ACTOR: ${{ github.actor }}
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          VELLIRA_PUSH_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" != "push" || "$PUSH_ACTOR" != "vellira-release-sync[bot]" ]]; then
+            echo "release_sync=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node scripts/ci/release-sync-contract.mjs \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --verify-merged
+
   migration:
     name: Prove browser migration before staging activation
-    if: github.event_name == 'workflow_dispatch' || github.actor != 'vellira-release-sync[bot]'
+    needs: classify
+    if: needs.classify.outputs.release_sync != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -91,8 +127,8 @@ jobs:
 
   deploy:
     name: Build, deploy, and verify merged main on website staging
-    needs: migration
-    if: github.event_name == 'workflow_dispatch' || github.actor != 'vellira-release-sync[bot]'
+    needs: [classify, migration]
+    if: needs.classify.outputs.release_sync != 'true' && needs.migration.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     concurrency:
