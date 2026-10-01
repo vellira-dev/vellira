@@ -350,7 +350,7 @@ jobs:
   tooling:
     name: Tooling & IndexNow Tests
     needs: impact
-    if: ${{ needs.impact.outputs.shape != 'docs-only' && needs.impact.outputs.execution_path != 'affected' }}
+    if: ${{ needs.impact.outputs.shape == 'release-sync' || (needs.impact.outputs.shape != 'docs-only' && needs.impact.outputs.execution_path != 'affected') }}
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
