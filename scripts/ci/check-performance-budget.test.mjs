@@ -162,7 +162,7 @@ test('merged release-sync verification fails closed unless the exact bot version
       baseDocuments,
       headDocuments,
       actor: 'vellira-release-sync[bot]',
-      commitSubject: 'chore(release): sync package versions',
+      commitSubject: 'chore(release): sync package versions (#1437)',
     }),
     {
       baseVersion: '2.126.6',
@@ -180,7 +180,7 @@ test('merged release-sync verification fails closed unless the exact bot version
         baseDocuments,
         headDocuments,
         actor: 'romanbakurov',
-        commitSubject: 'chore(release): sync package versions',
+        commitSubject: 'chore(release): sync package versions (#1437)',
       }),
     /GitHub App actor/
   );
@@ -192,7 +192,7 @@ test('merged release-sync verification fails closed unless the exact bot version
         baseDocuments,
         headDocuments,
         actor: 'vellira-release-sync[bot]',
-        commitSubject: 'chore: mutate package metadata',
+        commitSubject: 'chore(release): sync package versions',
       }),
     /canonical commit subject/
   );
@@ -204,7 +204,7 @@ test('merged release-sync verification fails closed unless the exact bot version
         baseDocuments,
         headDocuments,
         actor: 'vellira-release-sync[bot]',
-        commitSubject: 'chore(release): sync package versions',
+        commitSubject: 'chore(release): sync package versions (#1437)',
       }),
     /exactly the seven release-managed package manifests/
   );
@@ -220,7 +220,7 @@ test('merged release-sync verification fails closed unless the exact bot version
         baseDocuments,
         headDocuments: mutatedHead,
         actor: 'vellira-release-sync[bot]',
-        commitSubject: 'chore(release): sync package versions',
+        commitSubject: 'chore(release): sync package versions (#1437)',
       }),
     /only permits the version field/
   );
