@@ -194,7 +194,7 @@ test('merged release-sync verification fails closed unless the exact bot version
         actor: 'vellira-release-sync[bot]',
         commitSubject: 'chore(release): sync package versions',
       }),
-    /canonical commit subject/
+    /canonical squash-merge commit subject/
   );
 
   assert.throws(
