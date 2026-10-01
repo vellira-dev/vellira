@@ -48,6 +48,8 @@ jobs:
 
   quality:
     name: Quality & Component Quality
+    needs: impact
+    if: needs.impact.outputs.shape != 'release-sync'
     runs-on: ubuntu-latest
     env:
       COMPONENT_QUALITY_ENFORCEMENT: blocking
@@ -298,32 +300,49 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Verify canonical release-sync fast path
+        if: needs.impact.outputs.shape == 'release-sync'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VELLIRA_PR_TITLE: ${{ github.event.pull_request.title }}
+          VELLIRA_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          VELLIRA_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: >-
+          node scripts/ci/release-sync-contract.mjs
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
+          --verify
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: needs.impact.outputs.shape != 'release-sync'
 
       - name: Setup Node without dependency cache
+        if: needs.impact.outputs.shape != 'release-sync'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.22.2
 
       - name: Install dependencies
+        if: needs.impact.outputs.shape != 'release-sync'
         run: pnpm install --frozen-lockfile
 
       - name: Build typecheck package-export prerequisites
-        if: needs.impact.outputs.execution_path != 'affected'
+        if: ${{ needs.impact.outputs.shape != 'release-sync' && needs.impact.outputs.execution_path != 'affected' }}
         run: pnpm exec turbo run build --filter=@vellira-ui/icons
 
       - name: Typecheck and API contracts
-        if: needs.impact.outputs.execution_path != 'affected'
+        if: ${{ needs.impact.outputs.shape != 'release-sync' && needs.impact.outputs.execution_path != 'affected' }}
         run: pnpm ci:typecheck
 
       - name: Typecheck affected workspaces
-        if: needs.impact.outputs.execution_path == 'affected'
+        if: ${{ needs.impact.outputs.shape != 'release-sync' && needs.impact.outputs.execution_path == 'affected' }}
         env:
           VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
         run: node scripts/ci/run-affected-workspaces.mjs typecheck
 
       - name: Validate affected public API contracts
-        if: needs.impact.outputs.execution_path == 'affected'
+        if: ${{ needs.impact.outputs.shape != 'release-sync' && needs.impact.outputs.execution_path == 'affected' }}
         run: |
           pnpm docs:api:check
           pnpm check:public-api
@@ -343,17 +362,35 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Verify canonical release-sync fast path
+        if: needs.impact.outputs.shape == 'release-sync'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VELLIRA_PR_TITLE: ${{ github.event.pull_request.title }}
+          VELLIRA_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          VELLIRA_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: >-
+          node scripts/ci/release-sync-contract.mjs
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
+          --verify
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: needs.impact.outputs.shape != 'release-sync'
 
       - name: Setup Node without dependency cache
+        if: needs.impact.outputs.shape != 'release-sync'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.22.2
 
       - name: Install dependencies
+        if: needs.impact.outputs.shape != 'release-sync'
         run: pnpm install --frozen-lockfile
 
       - name: Build tooling dist-fallback prerequisites
+        if: needs.impact.outputs.shape != 'release-sync'
         run: >-
           pnpm exec turbo run build
           --filter=@vellira-ui/react
@@ -361,15 +398,17 @@ jobs:
           --filter=@vellira-ui/icons
 
       - name: Tooling tests
+        if: needs.impact.outputs.shape != 'release-sync'
         run: pnpm test:tooling
 
       - name: IndexNow tests
+        if: needs.impact.outputs.shape != 'release-sync'
         run: node --test scripts/submit-indexnow.test.mjs
 
   unit-coverage:
     name: Unit & Coverage Tests
     needs: impact
-    if: needs.impact.outputs.shape != 'docs-only'
+    if: ${{ needs.impact.outputs.shape != 'docs-only' && needs.impact.outputs.shape != 'release-sync' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -518,14 +557,31 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Verify canonical release-sync fast path
+        if: needs.impact.outputs.shape == 'release-sync'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VELLIRA_PR_TITLE: ${{ github.event.pull_request.title }}
+          VELLIRA_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          VELLIRA_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: >-
+          node scripts/ci/release-sync-contract.mjs
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
+          --verify
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: needs.impact.outputs.shape != 'release-sync'
 
       - name: Setup Node without dependency cache
+        if: needs.impact.outputs.shape != 'release-sync'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.22.2
 
       - name: Install dependencies
+        if: needs.impact.outputs.shape != 'release-sync'
         run: pnpm install --frozen-lockfile
 
       - name: Build packages and apps
