@@ -584,6 +584,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Build docs workspace dependencies
+        if: needs.impact.outputs.shape == 'docs-only'
+        run: pnpm exec turbo run build --filter='@vellira-ui/docs^...'
+
       - name: Build docs
         if: ${{ needs.impact.outputs.shape == 'docs-only' || needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/docs') }}
         run: pnpm docs:build
