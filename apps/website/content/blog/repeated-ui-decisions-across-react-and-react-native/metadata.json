@@ -1,0 +1,9 @@
+{
+  "title": "Repeated UI Decisions Across React and React Native",
+  "description": "For teams maintaining React and React Native applications, related browser and native controls can force the same design decisions to be revisited, adding coordination and increasing the risk of inconsistent product behavior.",
+  "slug": "repeated-ui-decisions-across-react-and-react-native",
+  "publishedAt": "2026-10-01",
+  "author": "Roman Bakurov",
+  "tags": ["Design Systems", "React", "React Native"],
+  "draft": true
+}

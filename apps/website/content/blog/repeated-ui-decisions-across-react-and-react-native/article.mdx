@@ -1,0 +1,46 @@
+For teams maintaining React and React Native applications, related browser and native interfaces create a deceptively familiar problem. The work is not simply building two versions of a control. It is repeatedly deciding what should stay consistent—its meaning, states, and visual language—while still respecting the differences of each platform.
+
+## What this costs
+
+As equivalent controls evolve separately, their APIs, tokens, states, and maintenance work can drift apart. That creates more than extra implementation effort: every UI change also demands renewed coordination across browser and native work, and each handoff makes an accidental inconsistency in the product easier to introduce.
+
+## Why it keeps repeating
+
+Consider a Button used in both a browser interface and a native interface. A team adjusts its appearance and states for a new product flow, then must determine how those same choices are represented in each implementation. If the tokens and state decisions are handled independently, a small change becomes parallel review, separate maintenance, and a fresh chance for the two surfaces to communicate something slightly different.
+
+The problem returns because a shared design choice rarely appears only once. A new state, interaction, or visual adjustment can reopen decisions for each platform, even when the underlying product intent has not changed. Without a dependable way to carry common choices forward, familiar questions keep resurfacing with every related control.
+
+## A useful mental model
+
+Treat cross-platform UI as a shared intent with platform-specific expression. The shared intent is the decision people should recognize: what a control is for, which states matter, and which design choices remain consistent. The expression can differ where browser and native conventions differ. This separates alignment from sameness, so teams do not confuse related UI with identical implementation.
+
+## Where Vellira fits
+
+**Button implementations for React and React Native**
+
+Vellira publishes Button implementations for React and React Native.
+
+**Shared design tokens for supported UI packages**
+
+Vellira publishes shared design tokens for supported UI packages.
+
+## Public proof
+
+**Button implementations for React and React Native**
+
+- [React Native Button source](https://github.com/vellira-dev/vellira/blob/82cbf8634c74a6b586ecec95cf9810beb9eee60c/packages/react-native/src/primitives/Button/Button.tsx)
+- [React Button source](https://github.com/vellira-dev/vellira/blob/82cbf8634c74a6b586ecec95cf9810beb9eee60c/packages/react/src/primitives/Button/Button.tsx)
+
+**Shared design tokens for supported UI packages**
+
+- [Shared design tokens source](https://github.com/vellira-dev/vellira/blob/82cbf8634c74a6b586ecec95cf9810beb9eee60c/packages/tokens/src/index.ts)
+
+## Try it now
+
+Start with one control that routinely triggers browser-and-native coordination, such as a Button. Use it to identify the decisions that should be recognized across both surfaces and the places where platform treatment should remain distinct. A small, concrete comparison is often enough to make repeated design decisions visible without requiring a broad rewrite or a new process.
+
+Start with one current Vellira capability—**Button implementations for React and React Native**—compare it with the equivalent surface you maintain today, and expand only if the fit is useful.
+
+## Product boundaries
+
+Not every product UI decision can be shared across platforms. The approach does not require identical runtime implementation across React and React Native.
