@@ -561,6 +561,8 @@ jobs:
             !/^[0-9a-f]{40}$/.test(candidate.headSha ?? '') ||
             candidate.branch !== 'automation/dependabot-security-remediation' ||
             (candidate.auditLevel !== 'high' && candidate.auditLevel !== 'low') ||
+            (candidate.sourceEvent === 'push' &&
+              candidate.auditLevel !== 'low') ||
             candidate.dependencyScope !== 'development' ||
             !validPackageList(candidate.authorizedPackages) ||
             !validPackageList(candidate.changedPackages) ||

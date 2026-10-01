@@ -231,7 +231,9 @@ jobs:
               ) ||
               (decision.sourceEvent === 'push'
                 ? !/^[0-9a-f]{40}$/.test(decision.sourceBeforeSha ?? '')
-                : decision.sourceBeforeSha !== null)
+                : decision.sourceBeforeSha !== null) ||
+              (decision.sourceEvent === 'push' &&
+                decision.auditLevel !== 'low')
             ) {
               throw new Error(
                 'Security remediation decision source provenance is invalid'

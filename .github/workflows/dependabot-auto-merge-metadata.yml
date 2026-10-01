@@ -305,6 +305,8 @@ jobs:
             (candidate.sourceEvent === 'push'
               ? !/^[0-9a-f]{40}$/.test(candidate.sourceBeforeSha ?? '')
               : candidate.sourceBeforeSha !== null) ||
+            (candidate.sourceEvent === 'push' &&
+              candidate.auditLevel !== 'low') ||
             !validPackageList(candidate.authorizedPackages) ||
             !validPackageList(candidate.changedPackages) ||
             candidate.changedPackages.some(
@@ -487,7 +489,8 @@ jobs:
             ) ||
             (candidate.sourceEvent === 'push'
               ? !/^[0-9a-f]{40}$/.test(candidate.sourceBeforeSha ?? '')
-              : candidate.sourceBeforeSha !== null)
+              : candidate.sourceBeforeSha !== null) ||
+            (candidate.sourceEvent === 'push' && auditLevel !== 'low')
           ) {
             throw new Error('Security remediation source provenance is invalid');
           }
