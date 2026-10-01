@@ -81,6 +81,12 @@ function getPackageName(platform: Platform) {
     : '@vellira-ui/react-native';
 }
 
+function getInstallCommand(platform: Platform) {
+  return platform === 'react'
+    ? 'pnpm add @vellira-ui/react'
+    : 'pnpm add @vellira-ui/react-native @react-native-picker/picker';
+}
+
 function getTokenKind(value: string): TokenKind {
   if (/^['"]/.test(value)) {
     return 'string';
@@ -365,7 +371,7 @@ export function CodeShowcase() {
     [platform, activeExample]
   );
 
-  const installCommand = `pnpm add ${getPackageName(platform)}`;
+  const installCommand = getInstallCommand(platform);
   const activeLabel = exampleLabels[activeExample];
   const activeLine = activeLineByExample[activeExample];
 
