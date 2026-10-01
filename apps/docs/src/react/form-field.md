@@ -11,7 +11,7 @@ ids, and accessible relationships. It is the infrastructure layer used by Input
 and the foundation for other form controls.
 
 <StorybookFrame
-  story="formField.withInputContext"
+  story="formField.complete"
   title="FormField with Input context"
   :height="520"
 />
