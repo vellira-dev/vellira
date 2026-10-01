@@ -22,6 +22,7 @@ import {
 import {
   RELEASE_SYNC_MANIFESTS,
   isReleaseSyncFileSet,
+  verifyMergedReleaseSyncDocuments,
   verifyReleaseSyncDocuments,
 } from './release-sync-contract.mjs';
 
@@ -136,6 +137,90 @@ test('release-sync semantic contract permits version-only bot changes', () => {
         title: 'chore(release): sync package versions',
         headRef: 'chore/sync-release-2.126.4',
         author: 'vellira-release-sync[bot]',
+      }),
+    /only permits the version field/
+  );
+});
+
+test('merged release-sync verification fails closed unless the exact bot version-only contract holds', () => {
+  const baseDocuments = Object.fromEntries(
+    RELEASE_SYNC_MANIFESTS.map((manifestPath) => [
+      manifestPath,
+      { name: manifestPath, version: '2.126.6', private: false },
+    ])
+  );
+  const headDocuments = Object.fromEntries(
+    RELEASE_SYNC_MANIFESTS.map((manifestPath) => [
+      manifestPath,
+      { name: manifestPath, version: '2.126.7', private: false },
+    ])
+  );
+
+  assert.deepEqual(
+    verifyMergedReleaseSyncDocuments({
+      files: RELEASE_SYNC_MANIFESTS,
+      baseDocuments,
+      headDocuments,
+      actor: 'vellira-release-sync[bot]',
+      commitSubject: 'chore(release): sync package versions',
+    }),
+    {
+      baseVersion: '2.126.6',
+      headVersion: '2.126.7',
+      files: [...RELEASE_SYNC_MANIFESTS].sort((left, right) =>
+        left.localeCompare(right)
+      ),
+    }
+  );
+
+  assert.throws(
+    () =>
+      verifyMergedReleaseSyncDocuments({
+        files: RELEASE_SYNC_MANIFESTS,
+        baseDocuments,
+        headDocuments,
+        actor: 'romanbakurov',
+        commitSubject: 'chore(release): sync package versions',
+      }),
+    /GitHub App actor/
+  );
+
+  assert.throws(
+    () =>
+      verifyMergedReleaseSyncDocuments({
+        files: RELEASE_SYNC_MANIFESTS,
+        baseDocuments,
+        headDocuments,
+        actor: 'vellira-release-sync[bot]',
+        commitSubject: 'chore: mutate package metadata',
+      }),
+    /canonical commit subject/
+  );
+
+  assert.throws(
+    () =>
+      verifyMergedReleaseSyncDocuments({
+        files: [...RELEASE_SYNC_MANIFESTS, 'apps/website/src/app/page.tsx'],
+        baseDocuments,
+        headDocuments,
+        actor: 'vellira-release-sync[bot]',
+        commitSubject: 'chore(release): sync package versions',
+      }),
+    /exactly the seven release-managed package manifests/
+  );
+
+  const mutatedHead = structuredClone(headDocuments);
+  mutatedHead['packages/react/package.json'].scripts = {
+    postinstall: 'unexpected',
+  };
+  assert.throws(
+    () =>
+      verifyMergedReleaseSyncDocuments({
+        files: RELEASE_SYNC_MANIFESTS,
+        baseDocuments,
+        headDocuments: mutatedHead,
+        actor: 'vellira-release-sync[bot]',
+        commitSubject: 'chore(release): sync package versions',
       }),
     /only permits the version field/
   );
