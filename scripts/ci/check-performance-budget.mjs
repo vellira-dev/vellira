@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isReleaseSyncFileSet } from './release-sync-contract.mjs';
 
 const API_ROOT = 'https://api.github.com';
 const ARTIFACT_DIR = path.resolve('.artifacts/ci-performance');
@@ -10,6 +11,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function classifyFiles(files, classification) {
   if (files.length === 0) return 'normal';
+
+  if (isReleaseSyncFileSet(files)) return 'release-sync';
 
   const docsOnly = files.every((file) => {
     const normalized = file.replaceAll('\\', '/');
