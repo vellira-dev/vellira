@@ -19,12 +19,14 @@ const reactPackage = manifest('packages/react/package.json');
 const nativePackage = manifest('packages/react-native/package.json');
 const reactReadme = read('packages/react/README.md');
 const nativeReadme = read('packages/react-native/README.md');
+const rootReadme = read('README.md');
 const gettingStarted = read('apps/docs/src/start/getting-started.md');
 const reactDocs = read('apps/docs/src/react/index.md');
 const nativeDocs = read('apps/docs/src/react-native/index.md');
 
 describe('first-use documentation contract', () => {
   it('keeps React install and stylesheet setup explicit', () => {
+    expect(rootReadme).toContain(`pnpm add ${reactPackage.name}`);
     expect(gettingStarted).toContain(`pnpm add ${reactPackage.name}`);
     expect(reactDocs).toContain(`pnpm add ${reactPackage.name}`);
     expect(gettingStarted).toContain("import '@vellira-ui/react/styles';");
@@ -43,6 +45,7 @@ describe('first-use documentation contract', () => {
   it('keeps React Native install docs aligned with declared peers', () => {
     const peerDependencies = nativePackage.peerDependencies ?? {};
 
+    expect(rootReadme).toContain(`pnpm add ${nativePackage.name}`);
     expect(gettingStarted).toContain(`pnpm add ${nativePackage.name}`);
     expect(nativeDocs).toContain(`pnpm add ${nativePackage.name}`);
 
@@ -56,6 +59,7 @@ describe('first-use documentation contract', () => {
     for (const peer of Object.keys(peerDependencies).filter(
       (name) => name !== 'react' && name !== 'react-native'
     )) {
+      expect(rootReadme).toContain(peer);
       expect(gettingStarted).toContain(peer);
     }
   });
