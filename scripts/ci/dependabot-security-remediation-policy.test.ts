@@ -220,9 +220,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain("run.event !== 'push'");
     expect(metadataSource).toContain('bounded self-proof push provenance');
     expect(metadataSource).toContain('sourceEvent !== expected.sourceEvent');
-    expect(metadataSource).toContain(
-      'commits/$BASE_SHA/pulls?per_page=100'
-    );
+    expect(metadataSource).toContain('commits/$BASE_SHA/pulls?per_page=100');
     expect(metadataSource).toContain('.merge_commit_sha == $sha');
     expect(metadataSource).toContain('.base.sha == $before');
     expect(metadataSource).toContain('compare/$before_sha...$BASE_SHA');
@@ -236,9 +234,7 @@ describe('Dependabot security remediation workflow policy', () => {
 
     expect(autoMergeSource).toContain('run.event !== decision.sourceEvent');
     expect(autoMergeSource).toContain('bounded self-proof push provenance');
-    expect(autoMergeSource).toContain(
-      'commits/$base_sha/pulls?per_page=100'
-    );
+    expect(autoMergeSource).toContain('commits/$base_sha/pulls?per_page=100');
     expect(autoMergeSource).toContain('.merge_commit_sha == $sha');
     expect(autoMergeSource).toContain('.base.sha == $before');
     expect(autoMergeSource).toContain('compare/$before_sha...$base_sha');
