@@ -177,7 +177,7 @@ export const View = forwardRef<HTMLDivElement, NativeProps>(
           },
         },
       });
-    }, [resolvedStyle?.height, resolvedStyle?.maxHeight, resolvedStyle?.width]);
+    }, [resolvedStyle?.height, resolvedStyle?.maxWidth, resolvedStyle?.width]);
 
     return (
       <div
