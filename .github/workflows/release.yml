@@ -185,8 +185,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
+      checks: read
       contents: write
       id-token: write
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -195,6 +197,91 @@ jobs:
 
       - name: Guard synchronized release state
         run: node scripts/release-state-guard.cjs
+
+      - name: Verify merged PR validation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$REPOSITORY/commits/$RELEASE_SHA/pulls?per_page=100" \
+            > /tmp/release-prs.json
+
+          pr_count="$(
+            jq \
+              --arg sha "$RELEASE_SHA" \
+              '[.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha)] | length' \
+              /tmp/release-prs.json
+          )"
+
+          if [[ "$pr_count" != "1" ]]; then
+            echo "::error::Release source must resolve to exactly one merged PR for exact main SHA $RELEASE_SHA; found $pr_count."
+            exit 1
+          fi
+
+          pr_number="$(
+            jq -r \
+              --arg sha "$RELEASE_SHA" \
+              '.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha) | .number' \
+              /tmp/release-prs.json
+          )"
+          head_sha="$(
+            jq -r \
+              --arg sha "$RELEASE_SHA" \
+              '.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha) | .head.sha' \
+              /tmp/release-prs.json
+          )"
+
+          if [[ -z "$head_sha" || "$head_sha" == "null" ]]; then
+            echo "::error::Unable to resolve exact PR head for release source PR #$pr_number."
+            exit 1
+          fi
+
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$REPOSITORY/commits/$head_sha/check-runs?per_page=100" \
+            > /tmp/release-checks.json
+
+          required_checks=(
+            "Build, Test & Validate"
+            "Typecheck & API Contracts"
+            "Tooling & IndexNow Tests"
+            "Quality & Component Quality"
+            "Storybook & Browser Tests"
+            "Unit & Coverage Tests"
+            "CodeQL"
+            "chromatic"
+          )
+
+          for check_name in "${required_checks[@]}"; do
+            check_state="$(
+              jq -r \
+                --arg name "$check_name" \
+                '[
+                  .check_runs[]
+                  | select(.name == $name)
+                ]
+                | sort_by(.completed_at // "", .id)
+                | last
+                | if . == null
+                  then "missing"
+                  else "\(.status):\(.conclusion // "none")"
+                  end' \
+                /tmp/release-checks.json
+            )"
+
+            if [[ "$check_state" != "completed:success" ]]; then
+              echo "::error::Release source PR #$pr_number check '$check_name' is $check_state; refusing to duplicate or bypass PR validation."
+              exit 1
+            fi
+          done
+
+          echo "Verified release source PR #$pr_number ($head_sha): all release-critical PR checks are green."
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -213,23 +300,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Quality checks
-        run: pnpm ci:quality
-
-      - name: Build packages and apps
-        run: pnpm ci:build
-
-      - name: Typecheck & API validation
-        run: pnpm ci:typecheck
-
-      - name: Install Playwright browser
-        run: pnpm ci:playwright
-
-      - name: Unit and Storybook tests
-        run: pnpm test:unit && pnpm test:storybook
-
-      - name: Coverage
-        run: pnpm test:coverage
+      # The exact merged PR is already validated above. Rebuild only the
+      # publishable package artifacts in this trusted release environment.
+      - name: Build publishable packages
+        run: pnpm build
 
       - name: Smoke packages
         run: pnpm ci:smoke

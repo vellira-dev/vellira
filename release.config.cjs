@@ -14,6 +14,13 @@ module.exports = {
     ],
     './scripts/semantic-release-packages.cjs',
 
-    '@semantic-release/github',
+    [
+      '@semantic-release/github',
+      {
+        successComment: false,
+        failComment: false,
+        releasedLabels: false,
+      },
+    ],
   ],
 };
