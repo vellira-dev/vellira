@@ -533,7 +533,7 @@ jobs:
         run: pnpm ci:build
 
       - name: Build affected workspaces
-        if: needs.impact.outputs.execution_path == 'affected'
+        if: ${{ needs.impact.outputs.execution_path == 'affected' && needs.impact.outputs.affected_workspaces != '[]' }}
         env:
           VELLIRA_AFFECTED_WORKSPACES: ${{ needs.impact.outputs.affected_workspaces }}
         run: node scripts/ci/run-affected-workspaces.mjs build
@@ -583,6 +583,10 @@ jobs:
             apps/react-storybook/test-results/vellira-ui-usage
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Build docs workspace dependencies
+        if: needs.impact.outputs.shape == 'docs-only'
+        run: pnpm exec turbo run build --filter='@vellira-ui/docs^...'
 
       - name: Build docs
         if: ${{ needs.impact.outputs.shape == 'docs-only' || needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/docs') }}

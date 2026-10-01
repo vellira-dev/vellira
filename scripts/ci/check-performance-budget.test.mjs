@@ -234,6 +234,40 @@ test('affected workspace runner rejects malformed inputs', () => {
   );
 });
 
+test('docs-only CI builds docs workspace dependencies before VitePress', () => {
+  const buildValidate = jobBlock('ci');
+  const prerequisites =
+    "pnpm exec turbo run build --filter='@vellira-ui/docs^...'";
+  const prerequisitesIndex = buildValidate.indexOf(prerequisites);
+  const docsBuildIndex = buildValidate.indexOf('pnpm docs:build');
+
+  assert.ok(prerequisitesIndex >= 0, 'Missing docs workspace dependency build');
+  assert.ok(
+    docsBuildIndex > prerequisitesIndex,
+    'Docs build must run after workspace dependencies are built'
+  );
+
+  const marker = '      - name: Build docs workspace dependencies\n';
+  const step = buildValidate.split(marker)[1];
+  assert.ok(step, 'Missing docs workspace dependency step');
+  assert.match(
+    step.slice(0, 220),
+    /if: needs\.impact\.outputs\.shape == 'docs-only'/
+  );
+});
+
+test('docs-only affected path does not invoke an empty workspace build', () => {
+  const buildValidate = jobBlock('ci');
+
+  const marker = '      - name: Build affected workspaces\n';
+  const step = buildValidate.split(marker)[1];
+  assert.ok(step, 'Missing affected workspace build step');
+  assert.match(
+    step.slice(0, 260),
+    /if: \$\{\{ needs\.impact\.outputs\.execution_path == 'affected' && needs\.impact\.outputs\.affected_workspaces != '\[\]' \}\}/
+  );
+});
+
 test('affected Storybook tests provision matching Chromium before execution', () => {
   const unitCoverage = jobBlock('unit-coverage', 'generator-blog');
   const browserInstall =
