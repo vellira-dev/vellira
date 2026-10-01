@@ -192,7 +192,7 @@ yarn add @vellira-ui/react
 ### React Native
 
 ```bash
-pnpm add @vellira-ui/react-native
+pnpm add @vellira-ui/react-native @react-native-picker/picker
 ```
 
 ---
