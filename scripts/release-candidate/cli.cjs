@@ -4,4 +4,7 @@ const {
 const { prepareReleaseCandidate } = require('./package-artifacts.cjs');
 
 const packageInfos = publicPackages.map(createPackageInfo);
-prepareReleaseCandidate(packageInfos);
+prepareReleaseCandidate(packageInfos, {
+  expectedSourceSha:
+    process.env.VELLIRA_CANDIDATE_SHA ?? process.env.GITHUB_SHA,
+});
