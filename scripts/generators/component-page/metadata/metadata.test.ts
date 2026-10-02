@@ -330,9 +330,7 @@ describe('validateComponentMetadata', () => {
 
     expect(avatar.requiredDecisions.map((decision) => decision.path)).toEqual([
       'related',
-      ...(canonicalComponentSlugs.includes('avatar')
-        ? []
-        : ['catalogPreview']),
+      ...(canonicalComponentSlugs.includes('avatar') ? [] : ['catalogPreview']),
     ]);
     expect(
       matureButton.requiredDecisions.map((decision) => decision.path)
