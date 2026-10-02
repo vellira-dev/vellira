@@ -203,13 +203,31 @@ function validatePackedPackage({ packageInfo, packResult, packedManifest }) {
 
   if (packageInfo.name === '@vellira-ui/react') {
     const stylesExport = packedManifest.exports?.['./styles'];
-    const styles =
+    const stylesTarget =
       typeof stylesExport === 'string'
-        ? normalizePackagePath(stylesExport)
+        ? stylesExport
+        : stylesExport?.default ?? stylesExport?.import;
+    const styles = stylesTarget && normalizePackagePath(stylesTarget);
+    const styleTypes =
+      stylesExport &&
+      typeof stylesExport === 'object' &&
+      typeof stylesExport.types === 'string'
+        ? normalizePackagePath(stylesExport.types)
         : null;
+
     if (!styles || !fileSet.has(styles) || !styles.endsWith('.css')) {
       throw new Error(
         '@vellira-ui/react tarball must include its public stylesheet export.'
+      );
+    }
+
+    if (
+      !styleTypes ||
+      !fileSet.has(styleTypes) ||
+      !styleTypes.endsWith('.d.ts')
+    ) {
+      throw new Error(
+        '@vellira-ui/react tarball must type its public stylesheet export.'
       );
     }
   }
