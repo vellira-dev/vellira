@@ -374,12 +374,17 @@ function get(url) {
 
 async function verifyDevelopmentMode(fixtureDir) {
   const port = await findFreePort();
+  const viteBin = path.join(
+    fixtureDir,
+    'node_modules',
+    'vite',
+    'bin',
+    'vite.js'
+  );
   const child = spawn(
-    'npm',
+    process.execPath,
     [
-      'run',
-      'dev',
-      '--',
+      viteBin,
       '--host',
       '127.0.0.1',
       '--port',
