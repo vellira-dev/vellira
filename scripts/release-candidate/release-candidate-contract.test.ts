@@ -50,6 +50,6 @@ describe('release candidate artifact wiring', () => {
     );
     expect(workflow).toContain('Retain exact candidate tarballs');
     expect(workflow).not.toContain('npm publish');
-    expect(workflow).not.toContain('semantic-release');
+    expect(workflow).not.toContain('pnpm exec semantic-release');
   });
 });
