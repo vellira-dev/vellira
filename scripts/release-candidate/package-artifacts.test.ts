@@ -58,7 +58,7 @@ describe('release candidate artifact validation', () => {
   it('fails closed on missing exports, workspace protocols, and dev files', () => {
     const missingExport = coreFixture();
     missingExport.packResult.files = missingExport.packResult.files.filter(
-      ({ path }) => path !== 'dist/index.js'
+      ({ path }: { path: string }) => path !== 'dist/index.js'
     );
     expect(() => validatePackedPackage(missingExport)).toThrow(
       'export target dist/index.js is missing'
@@ -115,7 +115,7 @@ describe('release candidate artifact validation', () => {
     react.packedManifest.exports['./styles'] = './dist/styles.css';
 
     expect(() => validatePackedPackage(react)).toThrow(
-      'must include its public stylesheet export'
+      'export target dist/styles.css is missing'
     );
 
     react.packResult.files.push({ path: 'dist/styles.css' });
