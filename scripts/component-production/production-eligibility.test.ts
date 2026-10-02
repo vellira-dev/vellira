@@ -234,8 +234,20 @@ describe('canonical component-token production eligibility', () => {
   });
   it('reserved Avatar eligibility is read-only and does not promote it', () => {
     reserveTokenLifecycleFixture(root, 'Avatar');
-    const registry = path.join(root, COMPONENT_TOKEN_REGISTRY);
-    const before = fs.readFileSync(registry);
+    execFileSync('git', ['add', '.'], { cwd: root });
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.name=Fixture',
+        '-c',
+        'user.email=fixture@example.invalid',
+        'commit',
+        '-qm',
+        'reserve Avatar',
+      ],
+      { cwd: root }
+    );
 
     expect(
       resolveComponentProductionEligibility(
@@ -247,7 +259,12 @@ describe('canonical component-token production eligibility', () => {
       reason: 'reserved',
       lifecycleMutationRequired: true,
     });
-    expect(fs.readFileSync(registry)).toEqual(before);
+    expect(
+      execFileSync('git', ['status', '--porcelain'], {
+        cwd: root,
+        encoding: 'utf8',
+      })
+    ).toBe('');
   });
   it('legacy production blocker routes the same governance request', () => {
     const report = createComponentProductionResult({
