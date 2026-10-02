@@ -368,7 +368,8 @@ function isManagedGeneratedComponentTokenAddition(
   if (
     entry.themes !== undefined ||
     entry.platforms !== undefined ||
-    !isCanonicalIssue(entry.issue)
+    !isCanonicalIssue(entry.issue) ||
+    !logicalPathPattern.test(entry.to)
   ) {
     return false;
   }
