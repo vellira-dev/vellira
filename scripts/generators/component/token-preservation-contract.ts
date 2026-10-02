@@ -362,12 +362,34 @@ function baselinePresence(
   );
 }
 
-function uniqueAdditions(
+function isManagedGeneratedComponentTokenAddition(
+  entry: AdditionMigration
+): entry is ManagedComponentTokenAddition {
+  if (
+    entry.themes !== undefined ||
+    entry.platforms !== undefined ||
+    !isCanonicalIssue(entry.issue)
+  ) {
+    return false;
+  }
+
+  const expected = createGeneratedComponentTokenAddition({
+    issue: entry.issue,
+    to: entry.to,
+  });
+
+  return entry.id === expected.id && entry.reason === expected.reason;
+}
+
+export function resolveComponentTokenAdditionAuthorities(
+  manifest: readonly TokenMigrationEntry[],
   managedEntries: readonly ManagedComponentTokenAddition[]
 ): AdditionMigration[] {
   const additions = [
-    ...(tokenMigrationManifestV1 as readonly TokenMigrationEntry[]).filter(
-      (entry): entry is AdditionMigration => entry.kind === 'addition'
+    ...manifest.filter(
+      (entry): entry is AdditionMigration =>
+        entry.kind === 'addition' &&
+        !isManagedGeneratedComponentTokenAddition(entry)
     ),
     ...managedEntries,
   ];
@@ -379,6 +401,15 @@ function uniqueAdditions(
     seen.add(identity);
     return true;
   });
+}
+
+function uniqueAdditions(
+  managedEntries: readonly ManagedComponentTokenAddition[]
+): AdditionMigration[] {
+  return resolveComponentTokenAdditionAuthorities(
+    tokenMigrationManifestV1 as readonly TokenMigrationEntry[],
+    managedEntries
+  );
 }
 
 function analyzeComponentTokenPreservation(
