@@ -218,9 +218,51 @@ function validatePackedPackage({ packageInfo, packResult, packedManifest }) {
   }
 }
 
-function readPackedManifest(tarballPath) {
-  const output = run('tar', ['-xOzf', tarballPath, 'package/package.json']);
-  return JSON.parse(output);
+function listFiles(root, current = root, files = []) {
+  for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+    const entryPath = path.join(current, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(root, entryPath, files);
+      continue;
+    }
+    if (entry.isFile()) {
+      files.push(path.relative(root, entryPath).replaceAll('\\\\', '/'));
+    }
+  }
+  return files.sort();
+}
+
+function inspectTarball(tarballPath) {
+  const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'vellira-packed-artifact-')
+  );
+
+  try {
+    run('tar', ['-xzf', tarballPath, '-C', tempDir]);
+    const packageRoot = path.join(tempDir, 'package');
+    const manifestPath = path.join(packageRoot, 'package.json');
+
+    if (!fs.existsSync(manifestPath)) {
+      throw new Error(
+        `Packed tarball ${path.basename(tarballPath)} has no package/package.json.`
+      );
+    }
+
+    const files = listFiles(packageRoot);
+    const unpackedSize = files.reduce(
+      (total, filePath) =>
+        total + fs.statSync(path.join(packageRoot, filePath)).size,
+      0
+    );
+
+    return {
+      packedManifest: JSON.parse(fs.readFileSync(manifestPath, 'utf8')),
+      files,
+      unpackedSize,
+    };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 function sha256File(filePath) {
@@ -237,32 +279,48 @@ function sha512Integrity(filePath) {
     .digest('base64')}`;
 }
 
+function sha1File(filePath) {
+  return crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
+}
+
 function packPackage(packageInfo, artifactDir) {
-  const stdout = run('npm', [
+  const before = new Set(fs.readdirSync(artifactDir));
+
+  run('pnpm', [
+    '--filter',
+    packageInfo.name,
     'pack',
-    packageInfo.relativeDirectory,
-    '--json',
     '--pack-destination',
     artifactDir,
   ]);
-  const parsed = JSON.parse(stdout);
 
-  if (!Array.isArray(parsed) || parsed.length !== 1) {
+  const createdTarballs = fs
+    .readdirSync(artifactDir)
+    .filter(
+      (fileName) => fileName.endsWith('.tgz') && !before.has(fileName)
+    );
+
+  if (createdTarballs.length !== 1) {
     throw new Error(
-      `npm pack returned an unexpected result for ${packageInfo.name}.`
+      `pnpm pack must create exactly one tarball for ${packageInfo.name}; found ${createdTarballs.length}.`
     );
   }
 
-  const packResult = parsed[0];
-  const tarballPath = path.resolve(artifactDir, packResult.filename);
+  const filename = createdTarballs[0];
+  const tarballPath = path.resolve(artifactDir, filename);
+  const { packedManifest, files, unpackedSize } =
+    inspectTarball(tarballPath);
+  const packResult = {
+    name: packedManifest.name,
+    version: packedManifest.version,
+    filename,
+    integrity: sha512Integrity(tarballPath),
+    shasum: sha1File(tarballPath),
+    size: fs.statSync(tarballPath).size,
+    unpackedSize,
+    files: files.map((filePath) => ({ path: filePath })),
+  };
 
-  if (!fs.existsSync(tarballPath)) {
-    throw new Error(
-      `npm pack did not create ${packResult.filename} for ${packageInfo.name}.`
-    );
-  }
-
-  const packedManifest = readPackedManifest(tarballPath);
   validatePackedPackage({ packageInfo, packResult, packedManifest });
 
   return {
