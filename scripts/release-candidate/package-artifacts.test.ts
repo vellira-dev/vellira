@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const {
   collectExportTargets,
   forbiddenPackedFiles,
+  mismatchedInternalDependencies,
   validatePackedPackage,
   workspaceProtocolDependencies,
 } = require('./package-artifacts.cjs');
@@ -77,6 +78,33 @@ describe('release candidate artifact validation', () => {
     expect(forbiddenPackedFiles(['src/index.ts', 'dist/index.js'])).toEqual([
       'src/index.ts',
     ]);
+  });
+
+  it('pins packed internal dependencies to the exact candidate version', () => {
+    const fixture = coreFixture();
+    fixture.packedManifest.dependencies = {
+      '@vellira-ui/types': '2.127.0',
+    };
+
+    expect(
+      mismatchedInternalDependencies(
+        fixture.packedManifest,
+        fixture.packageInfo.version
+      )
+    ).toEqual([]);
+    expect(() => validatePackedPackage(fixture)).not.toThrow();
+
+    fixture.packedManifest.dependencies['@vellira-ui/types'] = '^2.127.0';
+
+    expect(
+      mismatchedInternalDependencies(
+        fixture.packedManifest,
+        fixture.packageInfo.version
+      )
+    ).toEqual(['dependencies.@vellira-ui/types=^2.127.0']);
+    expect(() => validatePackedPackage(fixture)).toThrow(
+      'exact candidate version'
+    );
   });
 
   it('requires public web styles and token CSS in the tarball', () => {
