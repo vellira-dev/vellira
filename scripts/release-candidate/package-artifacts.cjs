@@ -527,6 +527,12 @@ function loadReleaseCandidate(packageInfos, options = {}) {
     throw new Error('Release candidate manifest packages must be an array.');
   }
 
+  if (manifest.checks?.cleanInstall !== true) {
+    throw new Error(
+      'Release candidate manifest is missing successful clean-install proof.'
+    );
+  }
+
   const expectedNames = packageInfos.map(({ name }) => name).sort();
   const actualNames = manifest.packages.map(({ name }) => name).sort();
   if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
@@ -567,6 +573,13 @@ function loadReleaseCandidate(packageInfos, options = {}) {
     if (integrity !== evidence.npmIntegrity) {
       throw new Error(
         `Release candidate npm integrity mismatch for ${packageInfo.name}.`
+      );
+    }
+
+    const shasum = sha1File(tarballPath);
+    if (shasum !== evidence.npmShasum) {
+      throw new Error(
+        `Release candidate npm shasum mismatch for ${packageInfo.name}.`
       );
     }
 
