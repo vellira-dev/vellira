@@ -279,6 +279,26 @@ function listFiles(root, current = root, files = []) {
   return files.sort();
 }
 
+function findPackageLocalDeclarationImports(packageRoot, files) {
+  const findings = [];
+
+  for (const filePath of files) {
+    if (!filePath.endsWith('.d.ts')) continue;
+
+    const source = fs.readFileSync(path.join(packageRoot, filePath), 'utf8');
+    const matches = source.matchAll(/['"](#[A-Za-z0-9_./*-]+)['"]/g);
+
+    for (const match of matches) {
+      findings.push({
+        file: filePath,
+        specifier: match[1],
+      });
+    }
+  }
+
+  return findings;
+}
+
 function inspectTarball(tarballPath) {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'vellira-packed-artifact-')
@@ -305,6 +325,8 @@ function inspectTarball(tarballPath) {
     return {
       packedManifest: JSON.parse(fs.readFileSync(manifestPath, 'utf8')),
       files,
+      packageLocalDeclarationImports:
+        findPackageLocalDeclarationImports(packageRoot, files),
       unpackedSize,
     };
   } finally {
@@ -355,8 +377,23 @@ function packPackage(packageInfo, artifactDir) {
 
   const filename = createdTarballs[0];
   const tarballPath = path.resolve(artifactDir, filename);
-  const { packedManifest, files, unpackedSize } =
-    inspectTarball(tarballPath);
+  const {
+    packedManifest,
+    files,
+    packageLocalDeclarationImports,
+    unpackedSize,
+  } = inspectTarball(tarballPath);
+
+  if (packageLocalDeclarationImports.length > 0) {
+    throw new Error(
+      packageInfo.name +
+        ' tarball declarations retain package-local imports: ' +
+        packageLocalDeclarationImports
+          .map(({ file, specifier }) => file + ' -> ' + specifier)
+          .join(', ') +
+        '.'
+    );
+  }
   const packResult = {
     name: packedManifest.name,
     version: packedManifest.version,
@@ -676,6 +713,7 @@ function prepareReleaseCandidate(packageInfos, options = {}) {
 
 module.exports = {
   collectExportTargets,
+  findPackageLocalDeclarationImports,
   forbiddenPackedFiles,
   loadReleaseCandidate,
   manifestTargets,
