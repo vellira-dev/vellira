@@ -10,7 +10,7 @@ const {
   workspaceProtocolDependencies,
 } = require('./package-artifacts.cjs');
 
-function coreFixture() {
+function coreFixture(): any {
   return {
     packageInfo: {
       name: '@vellira-ui/core',
