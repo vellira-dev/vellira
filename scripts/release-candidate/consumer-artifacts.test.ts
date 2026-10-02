@@ -140,7 +140,7 @@ describe('exact candidate consumer artifacts', () => {
       JSON.stringify({
         lockfileVersion: 3,
         packages: Object.fromEntries(
-          WEB_PACKAGE_NAMES.map((name) => [
+          WEB_PACKAGE_NAMES.map((name: string) => [
             'node_modules/' + name,
             {
               version: fixture.version,
