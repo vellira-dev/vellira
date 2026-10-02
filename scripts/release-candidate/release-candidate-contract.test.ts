@@ -12,9 +12,14 @@ describe('release candidate artifact wiring', () => {
     expect(publisher).toContain(
       "require('./release-candidate/package-artifacts.cjs')"
     );
-    expect(publisher).toContain('prepareReleaseCandidate(preparedPackageInfos');
+    expect(publisher).toContain(
+      'preparedReleaseCandidate = prepareReleaseCandidate(packageInfos'
+    );
     expect(publisher).toContain(
       'packageInfo.publishTarget ?? packageInfo.relativeDirectory'
+    );
+    expect(publisher).toContain(
+      'Exact release candidate artifacts were not prepared before publication.'
     );
     expect(publisher).toContain('packageInfo.candidateIntegrity');
     expect(publisher).toContain('npm integrity mismatch');
