@@ -285,6 +285,67 @@ test('multiple contiguous canonical release-sync commits remain deployment equiv
   assert.deepEqual(result.relevantPaths, []);
 });
 
+test('release-sync manifests plus any runtime change remain stale', async () => {
+  const files = [
+    ...RELEASE_SYNC_MANIFESTS,
+    'apps/website/src/app/page.tsx',
+  ];
+
+  await assert.rejects(
+    freshness({
+      comparison: compare(files, {
+        commits: [
+          {
+            sha: B,
+            author: { login: 'vellira-release-sync[bot]' },
+            commit: {
+              message: 'chore(release): sync package versions (#1440)',
+            },
+            parents: [{ sha: A }],
+          },
+        ],
+      }),
+    }),
+    /apps\/website\/src\/app\/page\.tsx/
+  );
+});
+
+test('incomplete release-sync compare history fails closed', async () => {
+  const documents = {};
+
+  for (const manifestPath of RELEASE_SYNC_MANIFESTS) {
+    documents[`${A}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.6',
+    };
+    documents[`${B}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.7',
+    };
+  }
+
+  await assert.rejects(
+    freshness({
+      documents,
+      comparison: compare(RELEASE_SYNC_MANIFESTS, {
+        ahead_by: 2,
+        total_commits: 2,
+        commits: [
+          {
+            sha: B,
+            author: { login: 'vellira-release-sync[bot]' },
+            commit: {
+              message: 'chore(release): sync package versions (#1440)',
+            },
+            parents: [{ sha: A }],
+          },
+        ],
+      }),
+    }),
+    /commit evidence must be complete/
+  );
+});
+
 test('deployment-relevant main advance fails closed', async () => {
   const cases = [
     'apps/website/src/app/layout.tsx',
