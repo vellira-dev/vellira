@@ -772,7 +772,7 @@ describe('semantic metadata contract', () => {
     expect(contract.sourceComponent).toEqual({
       name: 'Avatar',
       slug: 'avatar',
-      isCanonical: false,
+      isCanonical: canonicalComponentSlugs.includes('avatar'),
     });
     expect(contract.constraints).toEqual({
       relatedMustUseCanonicalSlug: true,
