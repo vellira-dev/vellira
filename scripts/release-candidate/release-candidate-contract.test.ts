@@ -16,9 +16,7 @@ describe('release candidate artifact wiring', () => {
     expect(publisher).toContain(
       'packageInfo.publishTarget ?? packageInfo.relativeDirectory'
     );
-    expect(publisher).toContain(
-      'loadReleaseCandidate(preparedPackageInfos'
-    );
+    expect(publisher).toContain('loadReleaseCandidate(preparedPackageInfos');
     expect(publisher).toContain('packageInfo.candidateIntegrity');
     expect(publisher).toContain('npm integrity mismatch');
   });
@@ -59,9 +57,7 @@ describe('release candidate artifact wiring', () => {
     expect(workflow).toContain(
       "if: always() && hashFiles('.release-candidate/candidate.json') != ''"
     );
-    expect(workflow).toContain(
-      'name: npm-release-candidate-${{ github.sha }}'
-    );
+    expect(workflow).toContain('name: npm-release-candidate-${{ github.sha }}');
     expect(workflow).toContain('.release-candidate/*.tgz');
     expect(workflow).toContain('.release-candidate/candidate.json');
     expect(workflow).toContain('include-hidden-files: true');
@@ -78,9 +74,7 @@ describe('release candidate artifact wiring', () => {
       'ref: ${{ github.event.pull_request.head.sha || github.sha }}'
     );
     expect(workflow).toContain('node-version: 24.21.0');
-    expect(workflow).toContain(
-      'run: node scripts/release-candidate/cli.cjs'
-    );
+    expect(workflow).toContain('run: node scripts/release-candidate/cli.cjs');
     expect(workflow).toContain(
       'VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}'
     );
