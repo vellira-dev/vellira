@@ -60,6 +60,8 @@ describe('clean Vite consumer workflow contract', () => {
     expect(script).toContain('verifyRuntimeRender(fixtureDir)');
     expect(script).toContain('verifyPackageExports(fixtureDir)');
     expect(script).toContain('verifyDevelopmentMode(fixtureDir)');
+    expect(script).toContain("'vite.js'");
+    expect(script).toContain('spawn(\n    process.execPath');
     expect(script).toContain('verifyProductionBuild(fixtureDir)');
     expect(script).toContain('noWorkspaceResolution: true');
   });
