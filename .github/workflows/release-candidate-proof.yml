@@ -99,4 +99,5 @@ jobs:
             .release-candidate/*.tgz
             .release-candidate/candidate.json
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
