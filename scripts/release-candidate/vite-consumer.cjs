@@ -442,7 +442,7 @@ async function verifyDevelopmentMode(fixtureDir) {
     );
     if (
       moduleResponse.statusCode !== 200 ||
-      !moduleResponse.body.includes('@vellira-ui/react')
+      !moduleResponse.body.includes('Candidate Button')
     ) {
       throw new Error(
         'Vite development mode did not transform the Vellira consumer module.'
