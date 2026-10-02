@@ -175,7 +175,11 @@ function validatePackedPackage({ packageInfo, packResult, packedManifest }) {
   }
 
   if (packageInfo.name === '@vellira-ui/react') {
-    const styles = normalizePackagePath(packedManifest.exports?.['./styles']);
+    const stylesExport = packedManifest.exports?.['./styles'];
+    const styles =
+      typeof stylesExport === 'string'
+        ? normalizePackagePath(stylesExport)
+        : null;
     if (!styles || !fileSet.has(styles) || !styles.endsWith('.css')) {
       throw new Error(
         '@vellira-ui/react tarball must include its public stylesheet export.'
