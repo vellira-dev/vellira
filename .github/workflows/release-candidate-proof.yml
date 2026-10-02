@@ -1,0 +1,91 @@
+name: Release Candidate Proof
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'scripts/release-candidate/**'
+      - 'scripts/semantic-release-packages.cjs'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-candidate-proof.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    name: Pack exact npm candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up build Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build publishable packages
+        run: pnpm build
+
+      - name: Smoke workspace packages before packing
+        run: pnpm ci:smoke
+
+      - name: Match release npm runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Pack and validate exact candidate
+        id: candidate
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/release-candidate/cli.cjs
+
+      - name: Verify candidate provenance identity
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(
+            fs.readFileSync('.release-candidate/candidate.json', 'utf8')
+          );
+          if (manifest.source.sha !== process.env.EXPECTED_SHA) {
+            throw new Error(
+              `Candidate manifest SHA ${manifest.source.sha} does not match ${process.env.EXPECTED_SHA}.`
+            );
+          }
+          if (!Array.isArray(manifest.packages) || manifest.packages.length !== 6) {
+            throw new Error('Candidate manifest must contain exactly six public packages.');
+          }
+          NODE
+
+      - name: Retain exact candidate tarballs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: npm-release-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .release-candidate/*.tgz
+            .release-candidate/candidate.json
+          if-no-files-found: error
+          retention-days: 30
