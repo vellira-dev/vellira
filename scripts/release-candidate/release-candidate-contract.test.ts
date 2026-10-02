@@ -25,6 +25,22 @@ describe('release candidate artifact wiring', () => {
     expect(publisher).toContain('npm integrity mismatch');
   });
 
+  it('keeps release recovery preflight free of candidate-only dependencies', () => {
+    const validator = readFileSync(
+      'scripts/release-candidate/package-artifacts.cjs',
+      'utf8'
+    );
+    const resolverIndex = validator.indexOf(
+      'function verifyTypescriptResolution'
+    );
+    const typescriptRequireIndex = validator.indexOf(
+      "const ts = require('typescript')"
+    );
+
+    expect(resolverIndex).toBeGreaterThanOrEqual(0);
+    expect(typescriptRequireIndex).toBeGreaterThan(resolverIndex);
+  });
+
   it('retains the exact release candidate even when publication later fails', () => {
     const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
 
