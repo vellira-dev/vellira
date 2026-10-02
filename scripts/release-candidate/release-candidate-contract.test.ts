@@ -64,6 +64,7 @@ describe('release candidate artifact wiring', () => {
     );
     expect(workflow).toContain('.release-candidate/*.tgz');
     expect(workflow).toContain('.release-candidate/candidate.json');
+    expect(workflow).toContain('include-hidden-files: true');
   });
 
   it('provides a non-publishing exact candidate proof workflow', () => {
@@ -87,6 +88,7 @@ describe('release candidate artifact wiring', () => {
       'GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}'
     );
     expect(workflow).toContain('Retain exact candidate tarballs');
+    expect(workflow).toContain('include-hidden-files: true');
     expect(workflow).not.toContain('npm publish');
     expect(workflow).not.toContain('pnpm exec semantic-release');
   });
