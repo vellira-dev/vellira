@@ -286,12 +286,14 @@ function findPackageLocalDeclarationImports(packageRoot, files) {
     if (!filePath.endsWith('.d.ts')) continue;
 
     const source = fs.readFileSync(path.join(packageRoot, filePath), 'utf8');
-    const matches = source.matchAll(/['"](#[A-Za-z0-9_./*-]+)['"]/g);
+    const matches = source.matchAll(
+      /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(#[A-Za-z0-9_./*-]+)\1/g
+    );
 
     for (const match of matches) {
       findings.push({
         file: filePath,
-        specifier: match[1],
+        specifier: match[2],
       });
     }
   }
