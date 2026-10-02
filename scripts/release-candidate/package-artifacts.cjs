@@ -3,8 +3,6 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const ts = require('typescript');
-
 const DEFAULT_ARTIFACT_DIR = '.release-candidate';
 
 function run(command, args, options = {}) {
@@ -291,6 +289,7 @@ function assertSingleVersion(packageInfos) {
 }
 
 function verifyTypescriptResolution(fixtureDir, specifiers) {
+  const ts = require('typescript');
   const containingFile = path.join(fixtureDir, 'consumer.ts');
   const compilerOptions = {
     module: ts.ModuleKind.NodeNext,
