@@ -23,6 +23,19 @@ describe('release candidate artifact wiring', () => {
     expect(publisher).toContain('npm integrity mismatch');
   });
 
+  it('uses the workspace-aware pnpm packer for candidate tarballs', () => {
+    const validator = readFileSync(
+      'scripts/release-candidate/package-artifacts.cjs',
+      'utf8'
+    );
+
+    expect(validator).toContain("'pnpm'");
+    expect(validator).toContain("'--filter'");
+    expect(validator).toContain("'--pack-destination'");
+    expect(validator).not.toContain("run('npm', [\n    'pack'");
+    expect(validator).toContain('unresolved workspace dependencies');
+  });
+
   it('keeps release recovery preflight free of candidate-only dependencies', () => {
     const validator = readFileSync(
       'scripts/release-candidate/package-artifacts.cjs',
