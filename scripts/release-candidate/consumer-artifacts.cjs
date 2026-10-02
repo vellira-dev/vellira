@@ -224,6 +224,7 @@ function assertInstalledCandidatePackages(
     const realPackageDir = fs.realpathSync(packageDir);
     const relative = path.relative(nodeModulesRoot, realPackageDir);
     if (
+      relative === '..' ||
       relative.startsWith('..' + path.sep) ||
       path.isAbsolute(relative)
     ) {
