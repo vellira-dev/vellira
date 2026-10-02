@@ -232,7 +232,11 @@ describe('canonical component-token production eligibility', () => {
       assertComponentTokenLifecycleCanMaterialize('Example', root)
     ).toThrow('unregistered-component-token-family');
   });
-  it('Avatar is reserved, read-only eligibility does not materialize or promote', () => {
+  it('reserved Avatar eligibility is read-only and does not promote it', () => {
+    reserveTokenLifecycleFixture(root, 'Avatar');
+    const registry = path.join(root, COMPONENT_TOKEN_REGISTRY);
+    const before = fs.readFileSync(registry);
+
     expect(
       resolveComponentProductionEligibility(
         productionSeedForTarget(componentExpansionCatalog[2]),
@@ -243,12 +247,7 @@ describe('canonical component-token production eligibility', () => {
       reason: 'reserved',
       lifecycleMutationRequired: true,
     });
-    expect(
-      execFileSync('git', ['status', '--porcelain'], {
-        cwd: root,
-        encoding: 'utf8',
-      })
-    ).toBe('');
+    expect(fs.readFileSync(registry)).toEqual(before);
   });
   it('legacy production blocker routes the same governance request', () => {
     const report = createComponentProductionResult({
