@@ -390,6 +390,12 @@ function verifyCleanConsumerInstall(packages) {
 
     verifyNodeResolution(fixtureDir, runtimeSpecifiers);
     verifyTypescriptResolution(fixtureDir, typeSpecifiers);
+
+    return {
+      cleanInstall: true,
+      nodeResolution: runtimeSpecifiers,
+      typescriptResolution: typeSpecifiers,
+    };
   } finally {
     fs.rmSync(fixtureDir, { recursive: true, force: true });
   }
@@ -422,7 +428,7 @@ function prepareReleaseCandidate(packageInfos, options = {}) {
     packPackage(packageInfo, artifactDir)
   );
 
-  verifyCleanConsumerInstall(packages);
+  const consumerChecks = verifyCleanConsumerInstall(packages);
 
   const manifestPath = path.join(artifactDir, 'candidate.json');
   const manifest = {
@@ -433,6 +439,7 @@ function prepareReleaseCandidate(packageInfos, options = {}) {
     },
     version,
     packages: packages.map(({ evidence }) => evidence),
+    checks: consumerChecks,
   };
 
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
