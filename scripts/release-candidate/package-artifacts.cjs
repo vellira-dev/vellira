@@ -376,15 +376,20 @@ function verifyCleanConsumerInstall(packages) {
     );
 
     const packageSpecifiers = packages.map(({ packageInfo }) => packageInfo.name);
-    const representativeSpecifiers = [
+    const runtimeSpecifiers = [
       ...packageSpecifiers,
       '@vellira-ui/react/styles',
       '@vellira-ui/tokens/css',
       '@vellira-ui/icons/native',
     ];
+    const typeSpecifiers = [
+      ...packageSpecifiers,
+      '@vellira-ui/tokens/css',
+      '@vellira-ui/icons/native',
+    ];
 
-    verifyNodeResolution(fixtureDir, representativeSpecifiers);
-    verifyTypescriptResolution(fixtureDir, representativeSpecifiers);
+    verifyNodeResolution(fixtureDir, runtimeSpecifiers);
+    verifyTypescriptResolution(fixtureDir, typeSpecifiers);
   } finally {
     fs.rmSync(fixtureDir, { recursive: true, force: true });
   }
