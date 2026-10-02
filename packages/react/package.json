@@ -37,7 +37,10 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./styles": "./dist/styles.css"
+    "./styles": {
+      "types": "./styles.d.ts",
+      "default": "./dist/styles.css"
+    }
   },
   "imports": {
     "#hooks": "./src/hooks/index.ts",
@@ -51,10 +54,8 @@
     "#utils/*": "./src/utils/*.ts"
   },
   "files": [
-    "dist/index.js",
-    "dist/index.cjs",
-    "dist/index.d.ts",
-    "dist/styles.css",
+    "dist",
+    "styles.d.ts",
     "README.md",
     "LICENSE"
   ],
