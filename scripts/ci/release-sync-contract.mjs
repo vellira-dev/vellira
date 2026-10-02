@@ -14,6 +14,11 @@ export const RELEASE_SYNC_MANIFESTS = Object.freeze([
   'packages/types/package.json',
 ]);
 
+export const RELEASE_SYNC_SQUASH_SUBJECT_PATTERN =
+  /^chore\(release\): sync package versions \(#\d+\)$/;
+
+const MERGED_SHA_PATTERN = /^[0-9a-f]{40}$/;
+
 function normalizePath(file) {
   return file.replaceAll('\\', '/');
 }
@@ -147,12 +152,138 @@ export function verifyMergedReleaseSyncDocuments({
 
   if (
     typeof commitSubject !== 'string' ||
-    !/^chore\(release\): sync package versions \(#\d+\)$/.test(commitSubject)
+    !RELEASE_SYNC_SQUASH_SUBJECT_PATTERN.test(commitSubject)
   ) {
     throw new Error(
       'Merged release-sync verification requires the canonical squash-merge commit subject.'
     );
   }
+
+  return verifyReleaseSyncManifestTransition({
+    files,
+    baseDocuments,
+    headDocuments,
+  });
+}
+
+export function verifyMergedReleaseSyncAdvance({
+  candidateSha,
+  mainSha,
+  comparison,
+  baseDocuments,
+  headDocuments,
+}) {
+  assert.match(
+    candidateSha ?? '',
+    MERGED_SHA_PATTERN,
+    'Release-sync advance candidate SHA must be exact'
+  );
+  assert.match(
+    mainSha ?? '',
+    MERGED_SHA_PATTERN,
+    'Release-sync advance main SHA must be exact'
+  );
+  assert.ok(
+    comparison && typeof comparison === 'object',
+    'Release-sync advance requires a GitHub compare result'
+  );
+  assert.equal(
+    comparison.status,
+    'ahead',
+    'Release-sync advance requires current main to be strictly ahead'
+  );
+  assert.equal(
+    comparison.behind_by,
+    0,
+    'Release-sync advance cannot include a diverged candidate'
+  );
+  assert.ok(
+    Number.isInteger(comparison.total_commits) && comparison.total_commits > 0,
+    'Release-sync advance requires at least one exact commit'
+  );
+  assert.equal(
+    comparison.ahead_by,
+    comparison.total_commits,
+    'Release-sync advance compare counts must be exact'
+  );
+  assert.ok(
+    Array.isArray(comparison.commits),
+    'Release-sync advance requires compare commit evidence'
+  );
+  assert.equal(
+    comparison.commits.length,
+    comparison.total_commits,
+    'Release-sync advance commit evidence must be complete'
+  );
+  assert.ok(
+    Array.isArray(comparison.files),
+    'Release-sync advance requires compare file evidence'
+  );
+
+  const files = comparison.files.map((file) => {
+    assert.equal(
+      typeof file?.filename,
+      'string',
+      'Release-sync advance file is missing filename'
+    );
+    assert.equal(
+      file.status,
+      'modified',
+      `Release-sync advance only permits modified manifests; found ${file.status ?? 'missing'} for ${file.filename}`
+    );
+    assert.equal(
+      file.previous_filename,
+      undefined,
+      `Release-sync advance cannot rename ${file.filename}`
+    );
+    return file.filename;
+  });
+
+  if (!isReleaseSyncFileSet(files)) {
+    throw new Error(
+      'Release-sync advance requires exactly the seven release-managed package manifests.'
+    );
+  }
+
+  let expectedParent = candidateSha;
+  for (const commit of comparison.commits) {
+    assert.match(
+      commit?.sha ?? '',
+      MERGED_SHA_PATTERN,
+      'Release-sync advance commit SHA must be exact'
+    );
+    assert.equal(
+      commit?.author?.login,
+      'vellira-release-sync[bot]',
+      'Release-sync advance requires the release-sync GitHub App actor'
+    );
+    const subject =
+      typeof commit?.commit?.message === 'string'
+        ? commit.commit.message.split(/\r?\n/, 1)[0]
+        : '';
+    assert.match(
+      subject,
+      RELEASE_SYNC_SQUASH_SUBJECT_PATTERN,
+      'Release-sync advance requires canonical squash-merge commit subjects'
+    );
+    assert.equal(
+      commit?.parents?.length,
+      1,
+      'Release-sync advance must remain a linear single-parent chain'
+    );
+    assert.equal(
+      commit.parents[0]?.sha,
+      expectedParent,
+      'Release-sync advance parent chain must start at the staged candidate and remain contiguous'
+    );
+    expectedParent = commit.sha;
+  }
+
+  assert.equal(
+    expectedParent,
+    mainSha,
+    'Release-sync advance commit chain must end at current main'
+  );
 
   return verifyReleaseSyncManifestTransition({
     files,

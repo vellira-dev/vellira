@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import {
+  RELEASE_SYNC_MANIFESTS,
+  isReleaseSyncFileSet,
+  verifyMergedReleaseSyncAdvance,
+} from '../../../scripts/ci/release-sync-contract.mjs';
 import { productionDeploymentRelevantPaths } from './cloudflare-production-surface.mjs';
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
@@ -46,6 +51,84 @@ async function githubJson(
     `GitHub API GET ${pathname} failed: ${response.status} ${body}`
   );
   return body ? JSON.parse(body) : null;
+}
+
+function encodeRepositoryPath(filePath) {
+  return filePath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+}
+
+async function readJsonAtGitHubRef(
+  repository,
+  ref,
+  filePath,
+  options
+) {
+  const encodedPath = encodeRepositoryPath(filePath);
+  const data = await githubJson(
+    `/repos/${repository}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`,
+    options
+  );
+  assert.equal(
+    data?.type,
+    'file',
+    `Expected ${filePath} at ${ref} to be a GitHub file`
+  );
+  assert.equal(
+    data?.encoding,
+    'base64',
+    `Expected ${filePath} at ${ref} to use base64 GitHub content encoding`
+  );
+  assert.equal(
+    typeof data?.content,
+    'string',
+    `Missing GitHub file content for ${filePath} at ${ref}`
+  );
+  return JSON.parse(
+    Buffer.from(data.content.replaceAll('\n', ''), 'base64').toString('utf8')
+  );
+}
+
+async function releaseSyncDocuments({
+  repository,
+  candidateSha,
+  mainSha,
+  fetchImpl,
+  apiUrl,
+  githubToken,
+}) {
+  const options = { token: githubToken, fetchImpl, apiUrl };
+  const pairs = await Promise.all(
+    RELEASE_SYNC_MANIFESTS.map(async (manifestPath) => {
+      const [baseDocument, headDocument] = await Promise.all([
+        readJsonAtGitHubRef(
+          repository,
+          candidateSha,
+          manifestPath,
+          options
+        ),
+        readJsonAtGitHubRef(repository, mainSha, manifestPath, options),
+      ]);
+      return [manifestPath, baseDocument, headDocument];
+    })
+  );
+
+  return {
+    baseDocuments: Object.fromEntries(
+      pairs.map(([manifestPath, baseDocument]) => [
+        manifestPath,
+        baseDocument,
+      ])
+    ),
+    headDocuments: Object.fromEntries(
+      pairs.map(([manifestPath, , headDocument]) => [
+        manifestPath,
+        headDocument,
+      ])
+    ),
+  };
 }
 
 export function productionFreshnessMode({ configPath, candidateSource }) {
@@ -146,7 +229,29 @@ export async function assessFreshProductionCandidate({
     { token: githubToken, fetchImpl, apiUrl }
   );
   const changedPaths = changedPathsFromCompare(comparison);
-  const relevantPaths = productionDeploymentRelevantPaths(changedPaths);
+  let relevantPaths = productionDeploymentRelevantPaths(changedPaths);
+
+  if (
+    relevantPaths.length > 0 &&
+    isReleaseSyncFileSet(changedPaths)
+  ) {
+    const { baseDocuments, headDocuments } = await releaseSyncDocuments({
+      repository,
+      candidateSha,
+      mainSha,
+      fetchImpl,
+      apiUrl,
+      githubToken,
+    });
+    verifyMergedReleaseSyncAdvance({
+      candidateSha,
+      mainSha,
+      comparison,
+      baseDocuments,
+      headDocuments,
+    });
+    relevantPaths = [];
+  }
 
   assert.equal(
     relevantPaths.length,
