@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const {
+  loadReleaseCandidate,
   prepareReleaseCandidate,
 } = require('./release-candidate/package-artifacts.cjs');
 
@@ -38,7 +39,6 @@ const verificationBaseDelayMs = Number.parseInt(
   10
 );
 const minimumTrustedPublishingNpmVersion = '11.5.1';
-let preparedReleaseCandidate = null;
 
 function getPackageDirectory(packageName) {
   return path.resolve('packages', packageName.replace('@vellira-ui/', ''));
@@ -721,7 +721,7 @@ exports.prepare = async (_pluginConfig, context) => {
   }
 
   const packageInfos = publicPackages.map(createPackageInfo);
-  preparedReleaseCandidate = prepareReleaseCandidate(packageInfos, {
+  prepareReleaseCandidate(packageInfos, {
     expectedSourceSha: context?.env?.GITHUB_SHA ?? process.env.GITHUB_SHA,
   });
 };
@@ -760,13 +760,11 @@ exports.publish = async () => {
 
   assertTrustedPublishingEnvironment();
 
-  if (!preparedReleaseCandidate) {
-    throw new Error(
-      'Exact release candidate artifacts were not prepared before publication.'
-    );
-  }
-
-  const packageInfos = preparedReleaseCandidate.packageInfos;
+  const preparedPackageInfos = publicPackages.map(createPackageInfo);
+  const candidate = loadReleaseCandidate(preparedPackageInfos, {
+    expectedSourceSha: process.env.GITHUB_SHA,
+  });
+  const packageInfos = candidate.packageInfos;
   const summaries = await publishPackages(packageInfos, (packageInfo) =>
     publishPackage(packageInfo, { verifyAfterPublish: false })
   );
