@@ -8,6 +8,7 @@ import {
   changedPathsFromCompare,
   productionFreshnessMode,
 } from './cloudflare-production-freshness.mjs';
+import { RELEASE_SYNC_MANIFESTS } from '../../../scripts/ci/release-sync-contract.mjs';
 import {
   PRODUCTION_DEPLOYMENT_PATH_PATTERNS,
   isProductionDeploymentRelevantPath,
@@ -23,16 +24,36 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-function githubFetch({ mainSha = B, comparison = null } = {}) {
+function githubFetch({
+  mainSha = B,
+  comparison = null,
+  documents = {},
+} = {}) {
   const calls = [];
   const fetchImpl = async (url) => {
-    calls.push(String(url));
-    if (String(url).endsWith('/git/ref/heads/main')) {
+    const value = String(url);
+    calls.push(value);
+    if (value.endsWith('/git/ref/heads/main')) {
       return jsonResponse({ object: { sha: mainSha } });
     }
-    if (String(url).includes('/compare/')) {
+    if (value.includes('/compare/')) {
       assert.ok(comparison, 'Unexpected compare request');
       return jsonResponse(comparison);
+    }
+    if (value.includes('/contents/')) {
+      const parsed = new URL(value);
+      const marker = '/contents/';
+      const filePath = decodeURIComponent(
+        parsed.pathname.slice(parsed.pathname.indexOf(marker) + marker.length)
+      );
+      const ref = parsed.searchParams.get('ref');
+      const document = documents[`${ref}:${filePath}`];
+      assert.ok(document, `Unexpected content request for ${ref}:${filePath}`);
+      return jsonResponse({
+        type: 'file',
+        encoding: 'base64',
+        content: Buffer.from(JSON.stringify(document)).toString('base64'),
+      });
     }
     return jsonResponse({ message: 'unexpected request' }, 404);
   };
@@ -43,8 +64,13 @@ function compare(files, overrides = {}) {
   return {
     status: 'ahead',
     ahead_by: 1,
+    behind_by: 0,
+    total_commits: 1,
+    commits: [],
     files: files.map((file) =>
-      typeof file === 'string' ? { filename: file } : file
+      typeof file === 'string'
+        ? { filename: file, status: 'modified' }
+        : file
     ),
     ...overrides,
   };
@@ -54,8 +80,9 @@ async function freshness({
   mainSha = B,
   candidateSha = A,
   comparison = compare([]),
+  documents = {},
 } = {}) {
-  const mock = githubFetch({ mainSha, comparison });
+  const mock = githubFetch({ mainSha, comparison, documents });
   const result = await assertFreshProductionCandidate({
     configPath: '/repo/apps/website/wrangler.production.jsonc',
     candidateSource: 'staging',
@@ -97,6 +124,165 @@ test('deployment-irrelevant main advance remains production eligible', async () 
   assert.equal(result.deploymentEquivalent, true);
   assert.deepEqual(result.relevantPaths, []);
   assert.equal(calls.length, 2);
+});
+
+test('canonical release-sync advance remains production eligible', async () => {
+  const baseVersion = '2.126.6';
+  const headVersion = '2.126.7';
+  const documents = {};
+
+  for (const manifestPath of RELEASE_SYNC_MANIFESTS) {
+    const baseDocument = {
+      name: manifestPath,
+      private: false,
+      version: baseVersion,
+    };
+    const headDocument = {
+      ...baseDocument,
+      version: headVersion,
+    };
+    documents[`${A}:${manifestPath}`] = baseDocument;
+    documents[`${B}:${manifestPath}`] = headDocument;
+  }
+
+  const { result, calls } = await freshness({
+    documents,
+    comparison: compare(RELEASE_SYNC_MANIFESTS, {
+      commits: [
+        {
+          sha: B,
+          author: { login: 'vellira-release-sync[bot]' },
+          commit: {
+            message:
+              'chore(release): sync package versions (#1440)\n\nCo-authored-by: romanbakurov',
+          },
+          parents: [{ sha: A }],
+        },
+      ],
+    }),
+  });
+
+  assert.equal(result.deploymentEquivalent, true);
+  assert.deepEqual(result.changedPaths, [...RELEASE_SYNC_MANIFESTS].sort());
+  assert.deepEqual(result.relevantPaths, []);
+  assert.equal(calls.length, 2 + RELEASE_SYNC_MANIFESTS.length * 2);
+});
+
+test('release-sync-shaped advance from another actor fails closed', async () => {
+  const documents = {};
+
+  for (const manifestPath of RELEASE_SYNC_MANIFESTS) {
+    documents[`${A}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.6',
+    };
+    documents[`${B}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.7',
+    };
+  }
+
+  await assert.rejects(
+    freshness({
+      documents,
+      comparison: compare(RELEASE_SYNC_MANIFESTS, {
+        commits: [
+          {
+            sha: B,
+            author: { login: 'romanbakurov' },
+            commit: {
+              message: 'chore(release): sync package versions (#1440)',
+            },
+            parents: [{ sha: A }],
+          },
+        ],
+      }),
+    }),
+    /release-sync GitHub App actor/
+  );
+});
+
+test('release-sync-shaped advance with manifest drift fails closed', async () => {
+  const documents = {};
+
+  for (const manifestPath of RELEASE_SYNC_MANIFESTS) {
+    documents[`${A}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.6',
+    };
+    documents[`${B}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.7',
+    };
+  }
+  documents[`${B}:packages/react/package.json`].scripts = {
+    postinstall: 'unexpected',
+  };
+
+  await assert.rejects(
+    freshness({
+      documents,
+      comparison: compare(RELEASE_SYNC_MANIFESTS, {
+        commits: [
+          {
+            sha: B,
+            author: { login: 'vellira-release-sync[bot]' },
+            commit: {
+              message: 'chore(release): sync package versions (#1440)',
+            },
+            parents: [{ sha: A }],
+          },
+        ],
+      }),
+    }),
+    /only permits the version field/
+  );
+});
+
+test('multiple contiguous canonical release-sync commits remain deployment equivalent', async () => {
+  const C = 'c'.repeat(40);
+  const documents = {};
+
+  for (const manifestPath of RELEASE_SYNC_MANIFESTS) {
+    documents[`${A}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.6',
+    };
+    documents[`${C}:${manifestPath}`] = {
+      name: manifestPath,
+      version: '2.126.8',
+    };
+  }
+
+  const { result } = await freshness({
+    mainSha: C,
+    documents,
+    comparison: compare(RELEASE_SYNC_MANIFESTS, {
+      ahead_by: 2,
+      total_commits: 2,
+      commits: [
+        {
+          sha: B,
+          author: { login: 'vellira-release-sync[bot]' },
+          commit: {
+            message: 'chore(release): sync package versions (#1440)',
+          },
+          parents: [{ sha: A }],
+        },
+        {
+          sha: C,
+          author: { login: 'vellira-release-sync[bot]' },
+          commit: {
+            message: 'chore(release): sync package versions (#1441)',
+          },
+          parents: [{ sha: B }],
+        },
+      ],
+    }),
+  });
+
+  assert.equal(result.deploymentEquivalent, true);
+  assert.deepEqual(result.relevantPaths, []);
 });
 
 test('deployment-relevant main advance fails closed', async () => {
