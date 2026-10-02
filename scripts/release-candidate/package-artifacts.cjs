@@ -94,6 +94,25 @@ function workspaceProtocolDependencies(manifest) {
   return findings;
 }
 
+function mismatchedInternalDependencies(manifest, version) {
+  const findings = [];
+
+  for (const section of ['dependencies', 'optionalDependencies']) {
+    for (const [name, declaredVersion] of Object.entries(
+      manifest[section] ?? {}
+    )) {
+      if (
+        name.startsWith('@vellira-ui/') &&
+        declaredVersion !== version
+      ) {
+        findings.push(`${section}.${name}=${declaredVersion}`);
+      }
+    }
+  }
+
+  return findings;
+}
+
 function forbiddenPackedFiles(files) {
   const forbidden = [];
   for (const file of files) {
@@ -161,6 +180,16 @@ function validatePackedPackage({ packageInfo, packResult, packedManifest }) {
   if (workspaceDependencies.length > 0) {
     throw new Error(
       `${packageInfo.name} tarball contains unresolved workspace dependencies: ${workspaceDependencies.join(', ')}.`
+    );
+  }
+
+  const internalDependencyMismatches = mismatchedInternalDependencies(
+    packedManifest,
+    packageInfo.version
+  );
+  if (internalDependencyMismatches.length > 0) {
+    throw new Error(
+      `${packageInfo.name} tarball does not pin internal dependencies to the exact candidate version: ${internalDependencyMismatches.join(', ')}.`
     );
   }
 
@@ -619,6 +648,7 @@ module.exports = {
   forbiddenPackedFiles,
   loadReleaseCandidate,
   manifestTargets,
+  mismatchedInternalDependencies,
   prepareReleaseCandidate,
   validatePackedPackage,
   workspaceProtocolDependencies,
