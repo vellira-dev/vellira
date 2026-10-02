@@ -128,7 +128,7 @@ for (const filePath of files) {
 
   const rewritten = source.replace(
     moduleSpecifierPattern,
-    (match, prefix, quote, specifier) => {
+    (_match, prefix, quote, specifier) => {
       const target = declarationTargetFor(specifier);
       rewrites += 1;
       return (
