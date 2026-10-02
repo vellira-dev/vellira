@@ -76,7 +76,7 @@ afterEach(() => {
 });
 
 describe('exact candidate consumer artifacts', () => {
-  it('verifies exact candidate identity and digests before selecting web tarballs', () => {
+  it('validates exact candidate identity and digests', () => {
     const fixture = fixtureCandidate();
 
     const candidate = validateCandidateArtifactDirectory(
@@ -85,10 +85,12 @@ describe('exact candidate consumer artifacts', () => {
       WEB_PACKAGE_NAMES
     );
 
-    expect(candidate.manifest.version).toBe(fixture.version);
-    expect(candidate.packages.map(({ name }: { name: string }) => name)).toEqual(
-      WEB_PACKAGE_NAMES
+    const selectedNames = candidate.packages.map(
+      ({ name }: { name: string }) => name
     );
+
+    expect(candidate.manifest.version).toBe(fixture.version);
+    expect(selectedNames).toEqual(WEB_PACKAGE_NAMES);
     expect(candidate.packages).toHaveLength(5);
   });
 
@@ -117,7 +119,7 @@ describe('exact candidate consumer artifacts', () => {
     ).toThrow('SHA-256 mismatch');
   });
 
-  it('requires installed Vellira packages to come from file artifacts inside clean node_modules', () => {
+  it('requires file artifacts inside clean node_modules', () => {
     const fixture = fixtureCandidate();
     const candidate = validateCandidateArtifactDirectory(
       fixture.dir,
@@ -127,7 +129,11 @@ describe('exact candidate consumer artifacts', () => {
     const consumer = tempDir('vellira-clean-consumer-test-');
 
     for (const name of WEB_PACKAGE_NAMES) {
-      const packageDir = path.join(consumer, 'node_modules', ...name.split('/'));
+      const packageDir = path.join(
+        consumer,
+        'node_modules',
+        ...name.split('/')
+      );
       fs.mkdirSync(packageDir, { recursive: true });
       fs.writeFileSync(
         path.join(packageDir, 'package.json'),
