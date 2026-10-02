@@ -34,7 +34,7 @@ export const componentTokenLifecycle = {
   },
 
   Avatar: {
-    status: 'reserved',
+    status: 'current'
     public: true,
     owner: 'Avatar',
     purpose: 'Reserved for the canonical Avatar component token contract.',
