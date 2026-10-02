@@ -709,6 +709,8 @@ function printPublishSummary(summaries) {
 }
 
 exports.prepare = async (_pluginConfig, context) => {
+  assertTrustedPublishingEnvironment();
+
   updateVersion(path.resolve('package.json'), context.nextRelease.version);
 
   for (const packageName of publicPackages) {
