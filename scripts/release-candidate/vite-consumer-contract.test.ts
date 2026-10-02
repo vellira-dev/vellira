@@ -9,7 +9,9 @@ describe('clean Vite consumer workflow contract', () => {
       'utf8'
     );
 
-    expect(workflow).toContain('candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}');
+    expect(workflow).toContain(
+      'candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}'
+    );
     expect(workflow).toContain('vite-consumer:');
     expect(workflow).toContain('needs: candidate');
     expect(workflow).toContain(
@@ -51,7 +53,9 @@ describe('clean Vite consumer workflow contract', () => {
 
     expect(script).toContain("import '@vellira-ui/tokens/css'");
     expect(script).toContain("import '@vellira-ui/react/styles'");
-    expect(script).toContain("import { Button, Input } from '@vellira-ui/react'");
+    expect(script).toContain(
+      "import { Button, Input } from '@vellira-ui/react'"
+    );
     expect(script).toContain("run('npm', ['run', 'typecheck']");
     expect(script).toContain('verifyRuntimeRender(fixtureDir)');
     expect(script).toContain('verifyPackageExports(fixtureDir)');
