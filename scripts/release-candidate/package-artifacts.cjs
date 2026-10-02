@@ -224,7 +224,17 @@ function readPackedManifest(tarballPath) {
 }
 
 function sha256File(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(filePath))
+    .digest('hex');
+}
+
+function sha512Integrity(filePath) {
+  return `sha512-${crypto
+    .createHash('sha512')
+    .update(fs.readFileSync(filePath))
+    .digest('base64')}`;
 }
 
 function packPackage(packageInfo, artifactDir) {
@@ -400,6 +410,97 @@ function verifyCleanConsumerInstall(packages) {
   }
 }
 
+function loadReleaseCandidate(packageInfos, options = {}) {
+  const version = assertSingleVersion(packageInfos);
+  const sourceSha = exactSourceSha(options.expectedSourceSha);
+  const artifactDir = path.resolve(options.artifactDir ?? DEFAULT_ARTIFACT_DIR);
+  const manifestPath = path.join(artifactDir, 'candidate.json');
+
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(
+      `Exact release candidate manifest is missing at ${manifestPath}.`
+    );
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  if (manifest.source?.sha !== sourceSha) {
+    throw new Error(
+      `Release candidate manifest SHA ${manifest.source?.sha ?? 'missing'} does not match checkout ${sourceSha}.`
+    );
+  }
+
+  if (manifest.version !== version) {
+    throw new Error(
+      `Release candidate version ${manifest.version ?? 'missing'} does not match package version ${version}.`
+    );
+  }
+
+  if (!Array.isArray(manifest.packages)) {
+    throw new Error('Release candidate manifest packages must be an array.');
+  }
+
+  const expectedNames = packageInfos.map(({ name }) => name).sort();
+  const actualNames = manifest.packages.map(({ name }) => name).sort();
+  if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+    throw new Error(
+      'Release candidate manifest must contain exactly the expected public packages.'
+    );
+  }
+
+  const enriched = packageInfos.map((packageInfo) => {
+    const evidence = manifest.packages.find(
+      ({ name }) => name === packageInfo.name
+    );
+
+    if (!evidence || evidence.version !== packageInfo.version) {
+      throw new Error(
+        `Release candidate evidence is missing exact version identity for ${packageInfo.name}.`
+      );
+    }
+
+    const tarballPath = path.resolve(artifactDir, evidence.filename ?? '');
+    if (
+      path.dirname(tarballPath) !== artifactDir ||
+      !fs.existsSync(tarballPath)
+    ) {
+      throw new Error(
+        `Release candidate tarball is missing or escapes the artifact directory for ${packageInfo.name}.`
+      );
+    }
+
+    const sha256 = sha256File(tarballPath);
+    if (sha256 !== evidence.sha256) {
+      throw new Error(
+        `Release candidate SHA-256 mismatch for ${packageInfo.name}.`
+      );
+    }
+
+    const integrity = sha512Integrity(tarballPath);
+    if (integrity !== evidence.npmIntegrity) {
+      throw new Error(
+        `Release candidate npm integrity mismatch for ${packageInfo.name}.`
+      );
+    }
+
+    return {
+      ...packageInfo,
+      publishTarget: tarballPath,
+      candidateIntegrity: evidence.npmIntegrity,
+      candidateShasum: evidence.npmShasum,
+    };
+  });
+
+  return {
+    artifactDir,
+    manifest,
+    manifestPath,
+    packageInfos: enriched,
+    sourceSha,
+    version,
+  };
+}
+
 function writeGithubOutputs({ sourceSha, version, manifestPath, artifactDir }) {
   if (!process.env.GITHUB_OUTPUT) return;
 
@@ -449,19 +550,16 @@ function prepareReleaseCandidate(packageInfos, options = {}) {
     `[release-candidate] Validated ${packages.length} exact npm tarballs for ${sourceSha} at version ${version}.`
   );
 
-  return {
+  return loadReleaseCandidate(packageInfos, {
     artifactDir,
-    manifest,
-    manifestPath,
-    packageInfos: packages.map(({ packageInfo }) => packageInfo),
-    sourceSha,
-    version,
-  };
+    expectedSourceSha: sourceSha,
+  });
 }
 
 module.exports = {
   collectExportTargets,
   forbiddenPackedFiles,
+  loadReleaseCandidate,
   manifestTargets,
   prepareReleaseCandidate,
   validatePackedPackage,
