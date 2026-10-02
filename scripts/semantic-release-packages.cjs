@@ -38,6 +38,7 @@ const verificationBaseDelayMs = Number.parseInt(
   10
 );
 const minimumTrustedPublishingNpmVersion = '11.5.1';
+let preparedReleaseCandidate = null;
 
 function getPackageDirectory(packageName) {
   return path.resolve('packages', packageName.replace('@vellira-ui/', ''));
@@ -716,9 +717,14 @@ exports.prepare = async (_pluginConfig, context) => {
       context.nextRelease.version
     );
   }
+
+  const packageInfos = publicPackages.map(createPackageInfo);
+  preparedReleaseCandidate = prepareReleaseCandidate(packageInfos, {
+    expectedSourceSha: context?.env?.GITHUB_SHA ?? process.env.GITHUB_SHA,
+  });
 };
 
-exports.publish = async (_pluginConfig, context) => {
+exports.publish = async () => {
   if (!Number.isInteger(publishConcurrency) || publishConcurrency < 1) {
     throw new Error(
       'VELLIRA_RELEASE_PUBLISH_CONCURRENCY must be a positive integer.'
@@ -752,11 +758,13 @@ exports.publish = async (_pluginConfig, context) => {
 
   assertTrustedPublishingEnvironment();
 
-  const preparedPackageInfos = publicPackages.map(createPackageInfo);
-  const candidate = prepareReleaseCandidate(preparedPackageInfos, {
-    expectedSourceSha: context?.env?.GITHUB_SHA ?? process.env.GITHUB_SHA,
-  });
-  const packageInfos = candidate.packageInfos;
+  if (!preparedReleaseCandidate) {
+    throw new Error(
+      'Exact release candidate artifacts were not prepared before publication.'
+    );
+  }
+
+  const packageInfos = preparedReleaseCandidate.packageInfos;
   const summaries = await publishPackages(packageInfos, (packageInfo) =>
     publishPackage(packageInfo, { verifyAfterPublish: false })
   );
