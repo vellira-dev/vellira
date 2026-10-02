@@ -656,6 +656,37 @@ describe('release recovery decisions', () => {
     stderr.mockRestore();
   });
 
+  it('rejects registry integrity that differs from the packed release candidate', async () => {
+    const view = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: JSON.stringify({
+        integrity: 'sha512-registry',
+        tarball: 'https://registry.example/package.tgz',
+        attestations: { url: 'https://registry.example/attestations' },
+      }),
+      stderr: '',
+    }));
+
+    await expect(
+      verifyPublishedPackage(
+        {
+          name: '@vellira-ui/core',
+          version: '2.127.0',
+          candidateIntegrity: 'sha512-candidate',
+        },
+        {
+          now: () => 0,
+          sleep: vi.fn(async () => undefined),
+          view,
+          timeoutMs: 10,
+          baseDelayMs: 5,
+        }
+      )
+    ).rejects.toThrow('npm integrity mismatch');
+    expect(view).toHaveBeenCalledTimes(1);
+  });
+
   it('never accepts visible metadata without mandatory provenance', async () => {
     let clock = 0;
     const sleep = vi.fn(async (delay: number) => {
