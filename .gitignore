@@ -49,6 +49,7 @@ apps/website/public/brand/
 # Lighthouse CI reports
 .lighthouseci/
 lighthouse-results/
+.release-candidate/
 
 # Turborepo
 .turbo/
