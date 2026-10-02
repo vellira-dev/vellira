@@ -67,6 +67,12 @@ describe('release candidate artifact wiring', () => {
     expect(workflow).toContain(
       'run: node scripts/release-candidate/cli.cjs'
     );
+    expect(workflow).toContain(
+      'VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}'
+    );
+    expect(workflow).not.toContain(
+      'GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}'
+    );
     expect(workflow).toContain('Retain exact candidate tarballs');
     expect(workflow).not.toContain('npm publish');
     expect(workflow).not.toContain('pnpm exec semantic-release');
