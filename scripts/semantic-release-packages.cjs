@@ -2,6 +2,10 @@ const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const {
+  prepareReleaseCandidate,
+} = require('./release-candidate/package-artifacts.cjs');
+
 const publicPackages = [
   '@vellira-ui/core',
   '@vellira-ui/tokens',
@@ -231,9 +235,11 @@ function isRetryablePublishError(output) {
 }
 
 function runNpmPublish(packageInfo) {
+  const publishTarget =
+    packageInfo.publishTarget ?? packageInfo.relativeDirectory;
   const args = [
     'publish',
-    packageInfo.relativeDirectory,
+    publishTarget,
     '--access',
     'public',
     '--registry',
@@ -398,6 +404,18 @@ async function verifyPublishedPackage(packageInfo, options = {}) {
       const hasIntegrity = Boolean(dist?.integrity);
       const hasTarball = Boolean(dist?.tarball);
       const hasProvenance = hasProvenanceAttestations(dist);
+
+      if (
+        packageInfo.candidateIntegrity &&
+        hasIntegrity &&
+        dist.integrity !== packageInfo.candidateIntegrity
+      ) {
+        throw new Error(
+          `npm integrity mismatch for ${packageInfo.name}@` +
+            `${packageInfo.version}: candidate ${packageInfo.candidateIntegrity}, ` +
+            `registry ${dist.integrity}.`
+        );
+      }
 
       if (hasIntegrity && hasTarball && hasProvenance) {
         console.log(
@@ -700,7 +718,7 @@ exports.prepare = async (_pluginConfig, context) => {
   }
 };
 
-exports.publish = async () => {
+exports.publish = async (_pluginConfig, context) => {
   if (!Number.isInteger(publishConcurrency) || publishConcurrency < 1) {
     throw new Error(
       'VELLIRA_RELEASE_PUBLISH_CONCURRENCY must be a positive integer.'
@@ -734,7 +752,11 @@ exports.publish = async () => {
 
   assertTrustedPublishingEnvironment();
 
-  const packageInfos = publicPackages.map(createPackageInfo);
+  const preparedPackageInfos = publicPackages.map(createPackageInfo);
+  const candidate = prepareReleaseCandidate(preparedPackageInfos, {
+    expectedSourceSha: context?.env?.GITHUB_SHA ?? process.env.GITHUB_SHA,
+  });
+  const packageInfos = candidate.packageInfos;
   const summaries = await publishPackages(packageInfos, (packageInfo) =>
     publishPackage(packageInfo, { verifyAfterPublish: false })
   );
