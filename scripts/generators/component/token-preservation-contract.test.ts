@@ -22,6 +22,7 @@ import {
   getPlannedComponentTokenPreservationArtifacts,
   getTokenMigrationManifestFile,
   readGeneratedComponentTokenAdditions,
+  resolveComponentTokenAdditionAuthorities,
   synchronizeComponentTokenPreservationContract,
 } from './token-preservation-contract';
 
@@ -88,6 +89,31 @@ afterEach(() => {
 });
 
 describe('Generator V2 token-preservation contract', () => {
+  it('scopes generated addition evidence to the exact repository root', () => {
+    const canonicalManualAddition: TokenMigrationEntry = {
+      id: 'manual-semantic-addition',
+      kind: 'addition',
+      issue: '#1',
+      reason: 'Manual canonical addition.',
+      to: 'semantic.example',
+    };
+    const generatedOutsideRoot = createGeneratedComponentTokenAddition({
+      issue: '#560',
+      to: 'components.avatar.default.bg',
+    });
+    const generatedInsideRoot = createGeneratedComponentTokenAddition({
+      issue: '#1283',
+      to: 'components.evidenceProbe.default.bg',
+    });
+
+    expect(
+      resolveComponentTokenAdditionAuthorities(
+        [canonicalManualAddition, generatedOutsideRoot],
+        [generatedInsideRoot]
+      )
+    ).toEqual([canonicalManualAddition, generatedInsideRoot]);
+  });
+
   it('writes one governed addition for every logical leaf and reruns idempotently', async () => {
     const root = createRoot();
     reserveTokenLifecycleFixture(root, 'EvidenceProbe');
