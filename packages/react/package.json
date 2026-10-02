@@ -61,7 +61,7 @@
   ],
   "scripts": {
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; fs.rmSync('dist', { recursive: true, force: true })\"",
-    "build": "pnpm run clean && vite build",
+    "build": "pnpm run clean && vite build && node scripts/rewrite-declaration-imports.mjs",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.stories.json --noEmit && tsc -p tsconfig.tooling.json --noEmit",
