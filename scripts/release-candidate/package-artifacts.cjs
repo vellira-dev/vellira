@@ -226,7 +226,7 @@ function listFiles(root, current = root, files = []) {
       continue;
     }
     if (entry.isFile()) {
-      files.push(path.relative(root, entryPath).replaceAll('\\\\', '/'));
+      files.push(path.relative(root, entryPath).replaceAll('\\', '/'));
     }
   }
   return files.sort();
