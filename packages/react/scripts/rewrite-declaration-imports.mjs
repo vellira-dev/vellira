@@ -123,12 +123,16 @@ let rewrites = 0;
 for (const filePath of files) {
   const source = fs.readFileSync(filePath, 'utf8');
 
+  const moduleSpecifierPattern =
+    /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(#[A-Za-z0-9_./*-]+)\2/g;
+
   const rewritten = source.replace(
-    /(['"])(#[A-Za-z0-9_./*-]+)\1/g,
-    (match, quote, specifier) => {
+    moduleSpecifierPattern,
+    (match, prefix, quote, specifier) => {
       const target = declarationTargetFor(specifier);
       rewrites += 1;
       return (
+        prefix +
         quote +
         relativeDeclarationSpecifier(filePath, target) +
         quote
@@ -136,8 +140,12 @@ for (const filePath of files) {
     }
   );
 
-  const unresolved = rewritten.match(/['"]#[A-Za-z0-9_./*-]+['"]/g);
-  if (unresolved) {
+  const unresolved = [
+    ...rewritten.matchAll(
+      /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(#[A-Za-z0-9_./*-]+)\1/g
+    ),
+  ].map((match) => match[2]);
+  if (unresolved.length > 0) {
     throw new Error(
       path.relative(packageRoot, filePath) +
         ' retains package-local declaration imports: ' +
