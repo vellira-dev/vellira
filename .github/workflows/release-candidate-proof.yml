@@ -78,6 +78,17 @@ jobs:
           if (!Array.isArray(manifest.packages) || manifest.packages.length !== 6) {
             throw new Error('Candidate manifest must contain exactly six public packages.');
           }
+          if (manifest.checks?.cleanInstall !== true) {
+            throw new Error('Candidate manifest is missing clean-install proof.');
+          }
+          for (const packageEvidence of manifest.packages) {
+            if (!/^[a-f0-9]{64}$/.test(packageEvidence.sha256 ?? '')) {
+              throw new Error(`Missing SHA-256 evidence for ${packageEvidence.name}.`);
+            }
+            if (!(packageEvidence.npmIntegrity ?? '').startsWith('sha512-')) {
+              throw new Error(`Missing npm integrity evidence for ${packageEvidence.name}.`);
+            }
+          }
           NODE
 
       - name: Retain exact candidate tarballs
