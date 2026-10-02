@@ -22,6 +22,72 @@ function jobBlock(workflow, jobId, nextJobId) {
   return workflow.slice(start, end);
 }
 
+test('staging skips only semantically verified release-sync pushes and prioritizes the latest runtime candidate', () => {
+  const workflowHeader = stagingWorkflow.split('\njobs:\n')[0];
+  assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
+
+  const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
+  const migration = jobBlock(stagingWorkflow, 'migration', 'deploy');
+  const deploy = jobBlock(stagingWorkflow, 'deploy');
+
+  assert.match(classify, /release-sync-contract\.mjs/);
+  assert.match(classify, /--verify-merged/);
+  assert.match(classify, /VELLIRA_PUSH_ACTOR:/);
+  assert.match(classify, /github\.event\.before/);
+  assert.match(
+    classify,
+    /github\.actor == 'vellira-release-sync\[bot\]'/
+  );
+
+  assert.match(migration, /needs: classify/);
+  assert.match(
+    migration,
+    /if: needs\.classify\.outputs\.release_sync != 'true'/
+  );
+  assert.match(
+    migration,
+    /group: deploy-worker-vellira-website-staging-prepare\n {6}cancel-in-progress: true/
+  );
+
+  assert.match(deploy, /needs: \[classify, migration\]/);
+  assert.match(
+    deploy,
+    /needs\.classify\.outputs\.release_sync != 'true' && needs\.migration\.result == 'success'/
+  );
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website-staging\n {6}cancel-in-progress: false/
+  );
+
+  assert.match(
+    migration,
+    /image: mcr\.microsoft\.com\/playwright:v1\.61\.1-noble/
+  );
+  assert.match(migration, /pnpm test:cloudflare-migration/);
+  assert.doesNotMatch(migration, /playwright install(?: --with-deps)?/);
+  assert.doesNotMatch(migration, /cloudflare-archive-preflight\.mjs/);
+  assert.doesNotMatch(migration, /CLOUDFLARE_API_TOKEN/);
+
+  assert.match(deploy, /cloudflare-archive-preflight\.mjs wrangler\.jsonc/);
+  assert.doesNotMatch(deploy, /Install migration regression browsers/);
+  assert.doesNotMatch(deploy, /pnpm test:cloudflare-migration/);
+
+  const productionClassify = jobBlock(productionWorkflow, 'classify', 'candidate');
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  assert.match(productionClassify, /release-sync-contract\.mjs/);
+  assert.match(productionClassify, /--verify-merged/);
+  assert.match(productionClassify, /VELLIRA_PUSH_ACTOR:/);
+  assert.match(candidate, /needs: classify/);
+  assert.match(
+    candidate,
+    /needs\.classify\.outputs\.release_sync != 'true'/
+  );
+  assert.doesNotMatch(
+    candidate,
+    /actor\.login != 'vellira-release-sync\[bot\]'/
+  );
+});
+
 test('staging publishes a dedicated machine-readable promotion artifact', () => {
   assert.match(stagingWorkflow, /name: Publish production promotion evidence/);
   assert.match(
@@ -45,6 +111,9 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(productionWorkflow, /branches: \[main\]/);
 
   const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  assert.match(candidate, /needs: classify/);
+  assert.match(candidate, /needs\.classify\.result == 'success'/);
+  assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
