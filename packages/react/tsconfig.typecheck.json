@@ -22,5 +22,6 @@
       "@utils/*": ["utils/*"],
       "@assets/*": ["assets/*"]
     }
-  }
+  },
+  "include": ["src", "src/**/*.d.ts", "styles.d.ts"]
 }
