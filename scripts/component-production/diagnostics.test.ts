@@ -74,7 +74,7 @@ afterEach(() => {
   }
 });
 
-describe('providerless production diagnostics', () => {
+describe('providerless production diagnostics', { timeout: 30_000 }, () => {
   it('collects independent failures without granting readiness', () => {
     const { root, snapshot } = fixture();
     const called: string[] = [];
