@@ -48,9 +48,9 @@ work, but does not prevent a workflow card from being created for each push.
   approval job that binds the immutable candidate SHA but does not hold deployment
   concurrency or receive Cloudflare secrets. The deployment job starts only after
   that approval succeeds and then acquires the serialized production deploy mutex.
-  The Cloudflare account/token secrets remain repository-level inputs already used
-  by staging and legacy-adoption workflows; moving the environment gate upstream
-  does not copy or expose them through job outputs. IndexNow runs in a separate
+  The Cloudflare account/token secrets are already available to staging and the
+  legacy-adoption production workflow without a deployment environment; moving
+  the environment gate upstream does not copy or expose them through job outputs. IndexNow runs in a separate
   read-only job after deploy success, using
   the verified candidate SHA and the existing submission script. Notification
   failure is visible in that job and its summary but does not invalidate an
