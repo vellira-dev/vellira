@@ -193,7 +193,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      - name: Admit candidate and supersede stale promotions
+      - name: Admit latest safe production promotion
         id: admit
         run: node apps/website/scripts/cloudflare-production-admission.mjs
         env:

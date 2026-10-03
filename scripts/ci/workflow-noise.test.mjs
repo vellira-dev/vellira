@@ -474,10 +474,12 @@ test('IndexNow automatic path is downstream of verified production, not status e
   assert.equal(section(manual, 'on').trim(), 'workflow_dispatch:');
   assert.doesNotMatch(manual, /deployment_status/);
   const source = workflow('deploy-website-cloudflare-production');
+  const approval = source.split('\n  approval:\n')[1].split('\n  deploy:\n')[0];
   const deploy = source.split('\n  deploy:\n')[1].split('\n  indexnow:\n')[0];
   const notify = source.split('\n  indexnow:\n')[1];
   assert.ok(notify);
-  assert.match(deploy, /environment:\n {6}name: production/);
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.doesNotMatch(deploy, /environment:/);
   assert.doesNotMatch(deploy, /continue-on-error:/);
   assert.match(notify, /needs: \[candidate, deploy\]/);
   assert.match(notify, /if: needs\.deploy\.result == 'success'/);
