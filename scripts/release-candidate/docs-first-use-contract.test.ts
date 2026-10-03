@@ -40,8 +40,9 @@ describe('documentation first-use candidate proof', () => {
       "'README.md'",
       "'packages/react/README.md'",
       "'packages/react-native/README.md'",
-      "'apps/docs/src/**'",
-      "'scripts/docs/**'",
+      "'apps/docs/src/start/getting-started.md'",
+      "'apps/docs/src/react/index.md'",
+      "'apps/docs/src/react-native/index.md'",
     ]) {
       expect(workflow).toContain(publicPath);
     }
