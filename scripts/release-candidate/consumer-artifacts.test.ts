@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const {
+  NATIVE_PACKAGE_NAMES,
   WEB_PACKAGE_NAMES,
   assertInstalledCandidatePackages,
   validateCandidateArtifactDirectory,
@@ -92,6 +93,31 @@ describe('exact candidate consumer artifacts', () => {
     expect(candidate.manifest.version).toBe(fixture.version);
     expect(selectedNames).toEqual(WEB_PACKAGE_NAMES);
     expect(candidate.packages).toHaveLength(5);
+  });
+
+  it('selects the exact native consumer package set', () => {
+    const fixture = fixtureCandidate();
+
+    const candidate = validateCandidateArtifactDirectory(
+      fixture.dir,
+      fixture.candidateSha,
+      NATIVE_PACKAGE_NAMES
+    );
+
+    expect(
+      candidate.packages.map(({ name }: { name: string }) => name)
+    ).toEqual(NATIVE_PACKAGE_NAMES);
+    expect(candidate.packages).toHaveLength(5);
+    expect(
+      candidate.packages.some(
+        ({ name }: { name: string }) => name === '@vellira-ui/react-native'
+      )
+    ).toBe(true);
+    expect(
+      candidate.packages.some(
+        ({ name }: { name: string }) => name === '@vellira-ui/react'
+      )
+    ).toBe(false);
   });
 
   it('fails closed when candidate identity or tarball bytes drift', () => {
