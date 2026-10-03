@@ -127,8 +127,7 @@ function createFixture(candidate) {
         scripts: {
           start: 'expo start',
           typecheck: 'tsc --noEmit',
-          build:
-            'expo export --platform ios --platform android --output-dir dist',
+          build: 'expo export --platform all --output-dir dist',
         },
         dependencies,
         devDependencies,
@@ -466,9 +465,7 @@ function verifyProductionExports(fixtureDir, expoBin) {
       expoBin,
       'export',
       '--platform',
-      'ios',
-      '--platform',
-      'android',
+      'all',
       '--output-dir',
       distDir,
     ],
