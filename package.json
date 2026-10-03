@@ -118,7 +118,8 @@
     "component-production:validate:json": "node --import tsx scripts/component-production/validate-cli.ts",
     "component-token-reservation:json": "node --import tsx scripts/component-token-reservation/cli.ts",
     "check:component-quality:contract": "node --import tsx scripts/checks/component-quality/completion-contract-cli.ts",
-    "check:seo-meta-descriptions": "vitest run --config vitest.tooling.config.ts scripts/seo/meta-description-quality.test.ts"
+    "check:seo-meta-descriptions": "vitest run --config vitest.tooling.config.ts scripts/seo/meta-description-quality.test.ts",
+    "release-candidate:pack": "node scripts/release-candidate/cli.cjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

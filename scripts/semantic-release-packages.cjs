@@ -2,6 +2,11 @@ const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const {
+  loadReleaseCandidate,
+  prepareReleaseCandidate,
+} = require('./release-candidate/package-artifacts.cjs');
+
 const publicPackages = [
   '@vellira-ui/core',
   '@vellira-ui/tokens',
@@ -231,9 +236,11 @@ function isRetryablePublishError(output) {
 }
 
 function runNpmPublish(packageInfo) {
+  const publishTarget =
+    packageInfo.publishTarget ?? packageInfo.relativeDirectory;
   const args = [
     'publish',
-    packageInfo.relativeDirectory,
+    publishTarget,
     '--access',
     'public',
     '--registry',
@@ -398,6 +405,18 @@ async function verifyPublishedPackage(packageInfo, options = {}) {
       const hasIntegrity = Boolean(dist?.integrity);
       const hasTarball = Boolean(dist?.tarball);
       const hasProvenance = hasProvenanceAttestations(dist);
+
+      if (
+        packageInfo.candidateIntegrity &&
+        hasIntegrity &&
+        dist.integrity !== packageInfo.candidateIntegrity
+      ) {
+        throw new Error(
+          `npm integrity mismatch for ${packageInfo.name}@` +
+            `${packageInfo.version}: candidate ${packageInfo.candidateIntegrity}, ` +
+            `registry ${dist.integrity}.`
+        );
+      }
 
       if (hasIntegrity && hasTarball && hasProvenance) {
         console.log(
@@ -690,6 +709,8 @@ function printPublishSummary(summaries) {
 }
 
 exports.prepare = async (_pluginConfig, context) => {
+  assertTrustedPublishingEnvironment();
+
   updateVersion(path.resolve('package.json'), context.nextRelease.version);
 
   for (const packageName of publicPackages) {
@@ -698,6 +719,11 @@ exports.prepare = async (_pluginConfig, context) => {
       context.nextRelease.version
     );
   }
+
+  const packageInfos = publicPackages.map(createPackageInfo);
+  prepareReleaseCandidate(packageInfos, {
+    expectedSourceSha: context?.env?.GITHUB_SHA ?? process.env.GITHUB_SHA,
+  });
 };
 
 exports.publish = async () => {
@@ -734,7 +760,11 @@ exports.publish = async () => {
 
   assertTrustedPublishingEnvironment();
 
-  const packageInfos = publicPackages.map(createPackageInfo);
+  const preparedPackageInfos = publicPackages.map(createPackageInfo);
+  const candidate = loadReleaseCandidate(preparedPackageInfos, {
+    expectedSourceSha: process.env.GITHUB_SHA,
+  });
+  const packageInfos = candidate.packageInfos;
   const summaries = await publishPackages(packageInfos, (packageInfo) =>
     publishPackage(packageInfo, { verifyAfterPublish: false })
   );

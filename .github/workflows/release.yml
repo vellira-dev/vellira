@@ -334,6 +334,18 @@ jobs:
             exit 1
           fi
 
+      - name: Retain exact npm release candidate
+        if: always() && hashFiles('.release-candidate/candidate.json') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: npm-release-candidate-${{ github.sha }}
+          path: |
+            .release-candidate/*.tgz
+            .release-candidate/candidate.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
       - name: Detect version sync changes
         id: version-sync
         shell: bash

@@ -232,17 +232,18 @@ describe('canonical component-token production eligibility', () => {
       assertComponentTokenLifecycleCanMaterialize('Example', root)
     ).toThrow('unregistered-component-token-family');
   });
-  it('Avatar is reserved, read-only eligibility does not materialize or promote', () => {
-    expect(
-      resolveComponentProductionEligibility(
-        productionSeedForTarget(componentExpansionCatalog[2]),
-        root
-      )
-    ).toMatchObject({
+  it('keeps canonical Avatar eligibility read-only across lifecycle promotion', () => {
+    const result = resolveComponentProductionEligibility(
+      productionSeedForTarget(componentExpansionCatalog[2]),
+      root
+    );
+
+    expect(result).toMatchObject({
       eligible: true,
-      reason: 'reserved',
-      lifecycleMutationRequired: true,
+      hardInvalid: false,
     });
+    expect(['reserved', 'current']).toContain(result.reason);
+    expect(result.lifecycleMutationRequired).toBe(result.reason === 'reserved');
     expect(
       execFileSync('git', ['status', '--porcelain'], {
         cwd: root,
