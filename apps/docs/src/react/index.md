@@ -62,7 +62,6 @@ export function AccountPanel() {
         <Button
           color='primary'
           appearance='solid'
-          onClick={() => saveAccount({ displayName, role })}
         >
           Save changes
         </Button>
