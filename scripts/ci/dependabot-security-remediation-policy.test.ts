@@ -258,6 +258,30 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('Dependency graph reads: $read_number');
     expect(source).toContain('Observed main SHA: $main_sha');
     expect(source).toContain('gh api "repos/$GH_REPO/branches/main" --jq');
+    expect(source).toContain('.github/dependabot-verified-backports.json');
+    expect(source).toContain("'patches/**'");
+    expect(source).toContain(
+      'node scripts/ci/dependabot-verified-backports.mjs'
+    );
+    expect(source).toContain('Checkout observed main');
+    expect(source).toContain('ref: ${{ steps.main.outputs.sha }}');
+    expect(source).toContain('test "$(git rev-parse HEAD)" = "$main_sha"');
+  });
+
+  it('treats verified runtime backports as fail-closed mitigations, not raw alert deletion', async () => {
+    const source = await readFile(alertWatchWorkflowPath, 'utf8');
+
+    expect(source).toContain('raw_alerts="$(read_alerts)"');
+    expect(source).toContain('/tmp/dependabot-alerts-effective.json');
+    expect(source).toContain('/tmp/dependabot-verified-backports.json');
+    expect(source).toContain('Raw open High/Critical alerts: $raw_count');
+    expect(source).toContain('Verified backports: $verified_count');
+    expect(source).toContain('Unmitigated High/Critical alerts: $count');
+    expect(source).toContain(
+      'raw alert(s) are covered by exact verified backports'
+    );
+    expect(source).not.toContain('--method PATCH');
+    expect(source).not.toContain('--method DELETE');
   });
 
   it('surfaces alert scope and manifest evidence', async () => {

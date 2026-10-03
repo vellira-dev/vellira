@@ -41,13 +41,21 @@ exact-head dependency merge authority.
 Runtime dependency alerts are deliberately outside this fallback. They remain
 visible in Dependabot; High and Critical runtime alerts also remain surfaced by
 the automated security alert watcher. The watcher runs daily and immediately
-after dependency manifests, the pnpm lockfile, or dependency authority change
-on `main`. Push-triggered checks give GitHub's asynchronous dependency graph a
-bounded convergence window before publishing the tracker; the final evidence
-records the observed current main SHA plus each alert's dependency scope and
-manifest path. Runtime fixes require a native Dependabot update or a
-manifest/release-aware remediation so a repository-local override cannot be
-mistaken for a downstream consumer fix.
+after dependency manifests, the pnpm lockfile, dependency patch authority, or
+dependency policy changes on `main`. Push-triggered checks give GitHub's
+asynchronous dependency graph a bounded convergence window before publishing the
+tracker; the final evidence records the exact observed main SHA plus each
+unmitigated alert's dependency scope and manifest path.
+
+A runtime advisory with no published fixed release may use a temporary verified
+backport only when the repository records an exact alert/package/GHSA identity,
+upstream commit and blobs, patch path and SHA-256 in
+`.github/dependabot-verified-backports.json`. The watcher validates that ledger
+against the exact checked-out main revision, `patchedDependencies`, and the
+lockfile before excluding the raw alert from the launch blocker count. The raw
+Dependabot alert remains visible. Any patch, lockfile, package identity, scope,
+manifest, GHSA, or alert-number drift fails closed and makes the alert effective
+again. Remove the backport once an upstream fixed release is available.
 
 ## Local Commands
 
