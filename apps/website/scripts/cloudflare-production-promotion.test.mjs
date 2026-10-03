@@ -123,13 +123,14 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
 
-test('production admission owns duplicate/stale cleanup before serialized deploy', () => {
+test('production admission owns bounded stale waiting cleanup before serialized deploy', () => {
   const workflowHeader = productionWorkflow.split('\njobs:\n')[0];
   assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
 
   const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
-  assert.match(admission, /actions: read/);
-  assert.doesNotMatch(admission, /actions: write|deployments: write/);
+  assert.match(admission, /actions: write/);
+  assert.match(admission, /contents: read/);
+  assert.doesNotMatch(admission, /deployments: write|secrets\./);
   assert.match(admission, /cache-mode: none/);
   assert.match(
     admission,
@@ -147,6 +148,10 @@ test('production admission owns duplicate/stale cleanup before serialized deploy
   assert.match(
     admission,
     /cloudflare-production-admission\.mjs/
+  );
+  assert.match(
+    productionWorkflow,
+    /actions\/runs\/\$\{targetRunId\}\/force-cancel/
   );
 });
 
