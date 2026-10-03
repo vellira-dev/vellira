@@ -282,21 +282,8 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain(
       'raw alert(s) are covered by exact verified backports'
     );
-    expect(source).not.toContain('dependabot/alerts/
-  it('surfaces alert scope and manifest evidence', async () => {
-    const source = await readFile(alertWatchWorkflowPath, 'utf8');
-
-    expect(source).toContain(
-      '| Severity | Scope | Package | Manifest | Alert |'
-    );
-    expect(source).toContain('.dependency.scope // "unknown"');
-    expect(source).toContain('.dependency.manifest_path // "unknown"');
-    expect(source).toContain('Development-scope alerts: $development_count');
-    expect(source).toContain('Runtime-scope alerts: $runtime_count');
-    expect(source).toContain('against observed main \\`${main_sha}\\`');
-  });
-});
-);
+    expect(source).not.toContain('--method PATCH');
+    expect(source).not.toContain('--method DELETE');
   });
 
   it('surfaces alert scope and manifest evidence', async () => {
