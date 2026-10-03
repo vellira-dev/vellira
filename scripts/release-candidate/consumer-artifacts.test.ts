@@ -104,9 +104,9 @@ describe('exact candidate consumer artifacts', () => {
       NATIVE_PACKAGE_NAMES
     );
 
-    expect(candidate.packages.map(({ name }: { name: string }) => name)).toEqual(
-      NATIVE_PACKAGE_NAMES
-    );
+    expect(
+      candidate.packages.map(({ name }: { name: string }) => name)
+    ).toEqual(NATIVE_PACKAGE_NAMES);
     expect(candidate.packages).toHaveLength(5);
     expect(
       candidate.packages.some(
