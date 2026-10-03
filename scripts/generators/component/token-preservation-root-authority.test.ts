@@ -13,23 +13,23 @@ vi.mock(
     const reason =
       'Authorize a first-materialized canonical component-token leaf produced by Generator V2.';
     const suffixes = [
-    'default.bg',
-    'default.fg',
-    'default.border',
-    'hover.bg',
-    'hover.fg',
-    'hover.border',
-    'pressed.bg',
-    'pressed.fg',
-    'pressed.border',
-    'focusRing',
-    'error.fg',
-    'error.border',
-    'error.ring',
-    'disabled.bg',
-    'disabled.fg',
-    'disabled.border',
-  ];
+      'default.bg',
+      'default.fg',
+      'default.border',
+      'hover.bg',
+      'hover.fg',
+      'hover.border',
+      'pressed.bg',
+      'pressed.fg',
+      'pressed.border',
+      'focusRing',
+      'error.fg',
+      'error.border',
+      'error.ring',
+      'disabled.bg',
+      'disabled.fg',
+      'disabled.border',
+    ];
 
     return {
       ...actual,
