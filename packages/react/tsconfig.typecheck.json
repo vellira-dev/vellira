@@ -4,62 +4,24 @@
     "rootDir": "../..",
     "composite": false,
     "paths": {
-      "@/*": [
-        "*"
-      ],
-      "@test-utils/*": [
-        "test-utils/*"
-      ],
-      "@vellira-ui/core": [
-        "../../core/src/index.ts"
-      ],
-      "@vellira-ui/icons": [
-        "../../icons/src/web.ts"
-      ],
-      "@vellira-ui/icons/native": [
-        "../../icons/src/native.ts"
-      ],
-      "@vellira-ui/icons/lottie": [
-        "../../icons/src/lottie.ts"
-      ],
-      "@vellira-ui/icons/web": [
-        "../../icons/src/web.ts"
-      ],
-      "@vellira-ui/react-native": [
-        "../../react-native/src/index.ts"
-      ],
-      "@vellira-ui/tokens": [
-        "../../tokens/src/index.ts"
-      ],
-      "@vellira-ui/types": [
-        "../../types/src/index.ts"
-      ],
-      "@vellira-ui/react": [
-        "index.ts"
-      ],
-      "@components/*": [
-        "components/*"
-      ],
-      "@patterns/*": [
-        "patterns/*"
-      ],
-      "@primitives/*": [
-        "primitives/*"
-      ],
-      "@styles/*": [
-        "styles/*"
-      ],
-      "@utils/*": [
-        "utils/*"
-      ],
-      "@assets/*": [
-        "assets/*"
-      ]
+      "@/*": ["*"],
+      "@test-utils/*": ["test-utils/*"],
+      "@vellira-ui/core": ["../../core/src/index.ts"],
+      "@vellira-ui/icons": ["../../icons/src/web.ts"],
+      "@vellira-ui/icons/native": ["../../icons/src/native.ts"],
+      "@vellira-ui/icons/lottie": ["../../icons/src/lottie.ts"],
+      "@vellira-ui/icons/web": ["../../icons/src/web.ts"],
+      "@vellira-ui/react-native": ["../../react-native/src/index.ts"],
+      "@vellira-ui/tokens": ["../../tokens/src/index.ts"],
+      "@vellira-ui/types": ["../../types/src/index.ts"],
+      "@vellira-ui/react": ["index.ts"],
+      "@components/*": ["components/*"],
+      "@patterns/*": ["patterns/*"],
+      "@primitives/*": ["primitives/*"],
+      "@styles/*": ["styles/*"],
+      "@utils/*": ["utils/*"],
+      "@assets/*": ["assets/*"]
     }
   },
-  "include": [
-    "src",
-    "src/**/*.d.ts",
-    "styles.d.ts"
-  ]
+  "include": ["src", "src/**/*.d.ts", "styles.d.ts"]
 }
