@@ -230,7 +230,7 @@ try {
           await expect(code).toContainText("from '@vellira-ui/react-native';");
           await expect(
             section.getByText(
-              'pnpm add @vellira-ui/react-native @react-native-picker/picker',
+              'pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg',
               {
                 exact: true,
               }
