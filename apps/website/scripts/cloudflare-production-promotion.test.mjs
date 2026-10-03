@@ -11,6 +11,10 @@ const productionWorkflow = await fs.readFile(
   '.github/workflows/deploy-website-cloudflare-production.yml',
   'utf8'
 );
+const productionAdmission = await fs.readFile(
+  'apps/website/scripts/cloudflare-production-admission.mjs',
+  'utf8'
+);
 
 function jobBlock(workflow, jobId, nextJobId) {
   const start = workflow.indexOf(`\n  ${jobId}:\n`);
@@ -150,8 +154,14 @@ test('production admission owns bounded stale waiting cleanup before serialized 
     /cloudflare-production-admission\.mjs/
   );
   assert.match(
-    productionWorkflow,
+    productionAdmission,
     /actions\/runs\/\$\{targetRunId\}\/force-cancel/
+  );
+  assert.match(productionAdmission, /new Set\(\['pending', 'waiting'\]\)/);
+  assert.match(productionAdmission, /observed\.runNumber < currentRunNumber/);
+  assert.match(
+    productionAdmission,
+    /observed\.candidateSha !== currentCandidateSha/
   );
 });
 
