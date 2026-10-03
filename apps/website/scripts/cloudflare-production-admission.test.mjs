@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  forceCancelSupersededProductionRun,
   planCurrentProductionAdmission,
   promotionCandidateSha,
   supersededProductionRunIds,
@@ -184,6 +185,84 @@ test('same-candidate waiting promotion is never treated as stale cancellation ta
     }),
     []
   );
+});
+
+
+test('force-cancel rechecks a stale waiting run immediately before mutation', async () => {
+  const calls = [];
+  const request = async (path, options = {}) => {
+    calls.push({ path, method: options.method ?? 'GET' });
+    if ((options.method ?? 'GET') === 'GET') {
+      return {
+        id: 1,
+        run_number: 10,
+        status: 'waiting',
+        display_title: `Promote staging ${A}`,
+      };
+    }
+    return null;
+  };
+
+  assert.deepEqual(
+    await forceCancelSupersededProductionRun({
+      repository: 'vellira-dev/vellira',
+      currentRunId: 2,
+      currentRunNumber: 11,
+      currentCandidateSha: B,
+      targetRunId: 1,
+      request,
+    }),
+    {
+      runId: 1,
+      forceCancelled: true,
+      observedStatus: 'waiting',
+    }
+  );
+  assert.deepEqual(calls, [
+    {
+      path: '/repos/vellira-dev/vellira/actions/runs/1',
+      method: 'GET',
+    },
+    {
+      path: '/repos/vellira-dev/vellira/actions/runs/1/force-cancel',
+      method: 'POST',
+    },
+  ]);
+});
+
+test('force-cancel refuses a stale run that became in-progress before mutation', async () => {
+  const calls = [];
+  const request = async (path, options = {}) => {
+    calls.push({ path, method: options.method ?? 'GET' });
+    return {
+      id: 1,
+      run_number: 10,
+      status: 'in_progress',
+      display_title: `Promote staging ${A}`,
+    };
+  };
+
+  assert.deepEqual(
+    await forceCancelSupersededProductionRun({
+      repository: 'vellira-dev/vellira',
+      currentRunId: 2,
+      currentRunNumber: 11,
+      currentCandidateSha: B,
+      targetRunId: 1,
+      request,
+    }),
+    {
+      runId: 1,
+      forceCancelled: false,
+      observedStatus: 'in_progress',
+    }
+  );
+  assert.deepEqual(calls, [
+    {
+      path: '/repos/vellira-dev/vellira/actions/runs/1',
+      method: 'GET',
+    },
+  ]);
 });
 
 test('completed same-SHA runs do not retain admission ownership', () => {
