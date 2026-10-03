@@ -108,12 +108,16 @@ describe('exact candidate consumer artifacts', () => {
       NATIVE_PACKAGE_NAMES
     );
     expect(candidate.packages).toHaveLength(5);
-    expect(candidate.packages.some(({ name }: { name: string }) =>
-      name === '@vellira-ui/react-native'
-    )).toBe(true);
-    expect(candidate.packages.some(({ name }: { name: string }) =>
-      name === '@vellira-ui/react'
-    )).toBe(false);
+    expect(
+      candidate.packages.some(
+        ({ name }: { name: string }) => name === '@vellira-ui/react-native'
+      )
+    ).toBe(true);
+    expect(
+      candidate.packages.some(
+        ({ name }: { name: string }) => name === '@vellira-ui/react'
+      )
+    ).toBe(false);
   });
 
   it('fails closed when candidate identity or tarball bytes drift', () => {
