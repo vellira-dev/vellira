@@ -72,7 +72,9 @@ describe('clean Next.js consumer workflow contract', () => {
       'utf8'
     );
 
-    expect(script).toContain("'next',\n    'dist',\n    'bin',\n    'next'");
+    expect(script).toContain(
+      "'next',\\n    'dist',\\n    'bin',\\n    'next'"
+    );
     expect(script).toContain("child.kill('SIGTERM')");
     expect(script).toContain("child.kill('SIGKILL')");
     expect(script).not.toContain(
