@@ -450,7 +450,6 @@ async function verifyDevelopmentBundles(fixtureDir, expoBin) {
     [
       expoBin,
       'start',
-      '--offline',
       '--localhost',
       '--port',
       String(port),
