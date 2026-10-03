@@ -72,7 +72,7 @@ import { Button } from '@vellira-ui/react';
 
 export function ContinueButton() {
   return (
-    <Button appearance='solid' color='primary' onClick={() => submit()}>
+    <Button appearance='solid' color='primary'>
       Continue
     </Button>
   );
@@ -86,7 +86,7 @@ import { Button } from '@vellira-ui/react-native';
 
 export function ContinueButton() {
   return (
-    <Button appearance='solid' color='primary' onPress={() => submit()}>
+    <Button appearance='solid' color='primary'>
       Continue
     </Button>
   );
