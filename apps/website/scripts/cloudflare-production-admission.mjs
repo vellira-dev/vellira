@@ -152,14 +152,15 @@ export function supersededProductionRunIds({
     .map((run) => run.id);
 }
 
-async function forceCancelSupersededProductionRun({
+export async function forceCancelSupersededProductionRun({
   repository,
   currentRunId,
   currentRunNumber,
   currentCandidateSha,
   targetRunId,
+  request = githubRequest,
 }) {
-  const raw = await githubRequest(
+  const raw = await request(
     `/repos/${repository}/actions/runs/${targetRunId}`
   );
   const observed = {
@@ -186,7 +187,7 @@ async function forceCancelSupersededProductionRun({
     };
   }
 
-  await githubRequest(
+  await request(
     `/repos/${repository}/actions/runs/${targetRunId}/force-cancel`,
     { method: 'POST' }
   );
