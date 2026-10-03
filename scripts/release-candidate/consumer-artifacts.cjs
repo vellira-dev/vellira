@@ -19,6 +19,14 @@ const WEB_PACKAGE_NAMES = Object.freeze([
   '@vellira-ui/react',
 ]);
 
+const NATIVE_PACKAGE_NAMES = Object.freeze([
+  '@vellira-ui/core',
+  '@vellira-ui/tokens',
+  '@vellira-ui/types',
+  '@vellira-ui/icons',
+  '@vellira-ui/react-native',
+]);
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -297,6 +305,7 @@ function assertInstalledCandidatePackages(
 }
 
 module.exports = {
+  NATIVE_PACKAGE_NAMES,
   PUBLIC_PACKAGE_NAMES,
   WEB_PACKAGE_NAMES,
   assertInstalledCandidatePackages,
