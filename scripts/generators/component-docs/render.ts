@@ -1,6 +1,7 @@
 import type { ComponentPlatform } from '@vellira-ui/metadata';
 
 import type { PlatformDocsContract } from '../../../apps/docs/src/component-docs/types';
+import { MIN_PUBLIC_META_DESCRIPTION_LENGTH } from '../../../apps/website/src/component-catalog/registry/componentSeo';
 
 import {
   defaultAuthoredRegionPlaceholder,
@@ -51,12 +52,21 @@ export function renderComponentDocPage(params: {
 }
 
 function renderFrontmatter(docs: PlatformDocsContract) {
+  const description = publicMetaDescription(docs.description);
   return [
     '---',
     `title: ${JSON.stringify(docs.title)}`,
-    `description: ${JSON.stringify(docs.description)}`,
+    `description: ${JSON.stringify(description)}`,
     '---',
   ].join('\n');
+}
+
+function publicMetaDescription(value: string) {
+  const description = value.trim();
+  if (description.length >= MIN_PUBLIC_META_DESCRIPTION_LENGTH) {
+    return description;
+  }
+  return `${description} Includes Vellira usage, API, and accessibility guidance for production interfaces.`;
 }
 
 function renderImportSection(

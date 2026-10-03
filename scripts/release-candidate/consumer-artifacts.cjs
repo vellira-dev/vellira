@@ -90,7 +90,9 @@ function validateCandidateArtifactDirectory(
   }
 
   if (!/^[a-f0-9]{40}$/.test(expectedSha ?? '')) {
-    throw new Error('Consumer proof requires an exact 40-character candidate SHA.');
+    throw new Error(
+      'Consumer proof requires an exact 40-character candidate SHA.'
+    );
   }
 
   if (manifest.source?.sha !== expectedSha) {
@@ -120,7 +122,9 @@ function validateCandidateArtifactDirectory(
 
   const names = manifest.packages.map(({ name }) => name);
   if (new Set(names).size !== names.length) {
-    throw new Error('Candidate manifest contains duplicate package identities.');
+    throw new Error(
+      'Candidate manifest contains duplicate package identities.'
+    );
   }
 
   const canonicalNames = [...PUBLIC_PACKAGE_NAMES].sort();
@@ -144,7 +148,9 @@ function validateCandidateArtifactDirectory(
   const requiredSet = new Set(requiredPackages);
   for (const name of requiredSet) {
     if (!canonicalNames.includes(name)) {
-      throw new Error('Unknown candidate package requested by consumer: ' + name);
+      throw new Error(
+        'Unknown candidate package requested by consumer: ' + name
+      );
     }
   }
 
@@ -212,10 +218,13 @@ function assertInstalledCandidatePackages(
 ) {
   const absoluteConsumerDir = path.resolve(consumerDir);
   const nodeModulesRoot = path.join(absoluteConsumerDir, 'node_modules');
+  const realNodeModulesRoot = fs.realpathSync(nodeModulesRoot);
   const lockPath = path.join(absoluteConsumerDir, 'package-lock.json');
 
   if (!fs.existsSync(lockPath)) {
-    throw new Error('Clean consumer install did not produce package-lock.json.');
+    throw new Error(
+      'Clean consumer install did not produce package-lock.json.'
+    );
   }
 
   const lock = readJson(lockPath);
@@ -226,11 +235,13 @@ function assertInstalledCandidatePackages(
     const manifestPath = path.join(packageDir, 'package.json');
 
     if (!fs.existsSync(manifestPath)) {
-      throw new Error('Clean consumer is missing installed package ' + name + '.');
+      throw new Error(
+        'Clean consumer is missing installed package ' + name + '.'
+      );
     }
 
     const realPackageDir = fs.realpathSync(packageDir);
-    const relative = path.relative(nodeModulesRoot, realPackageDir);
+    const relative = path.relative(realNodeModulesRoot, realPackageDir);
     if (
       relative === '..' ||
       relative.startsWith('..' + path.sep) ||
@@ -265,7 +276,9 @@ function assertInstalledCandidatePackages(
     const lockEntry = lock.packages?.['node_modules/' + name];
     if (!lockEntry || typeof lockEntry.resolved !== 'string') {
       throw new Error(
-        'package-lock.json is missing resolved artifact identity for ' + name + '.'
+        'package-lock.json is missing resolved artifact identity for ' +
+          name +
+          '.'
       );
     }
 
@@ -287,9 +300,7 @@ function assertInstalledCandidatePackages(
   }
 
   const serializedLock = JSON.stringify(lock);
-  if (
-    /registry\.npmjs\.org\/(?:%40|@)vellira-ui/i.test(serializedLock)
-  ) {
+  if (/registry\.npmjs\.org\/(?:%40|@)vellira-ui/i.test(serializedLock)) {
     throw new Error(
       'Clean consumer package-lock references registry-hosted @vellira-ui artifacts.'
     );

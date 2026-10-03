@@ -110,7 +110,7 @@ describe('runComponentProductionStructuredValidation', () => {
     ]);
   });
 
-  it('blocks before validators when production input drifts from the canonical generated plan', async () => {
+  it('reports plan drift without hiding independently runnable validators', async () => {
     let workerCalled = false;
     let observedProfile: string | undefined;
 
@@ -138,9 +138,9 @@ describe('runComponentProductionStructuredValidation', () => {
     });
 
     expect(observedProfile).toBe('base');
-    expect(workerCalled).toBe(false);
-    expect(result.completeness).toBeNull();
-    expect(result.quality).toBeNull();
+    expect(workerCalled).toBe(true);
+    expect(result.completeness).not.toBeNull();
+    expect(result.quality).not.toBeNull();
     expect(result.stages[0]).toMatchObject({
       id: 'completeness',
       status: 'blocked',
@@ -151,10 +151,7 @@ describe('runComponentProductionStructuredValidation', () => {
         },
       ],
     });
-    expect(result.stages[1]).toMatchObject({
-      id: 'quality',
-      status: 'skipped',
-    });
+    expect(result.stages[1]).toMatchObject({ id: 'quality', status: 'passed' });
   });
 
   it('blocks when the generated component is not registered in canonical metadata', async () => {
@@ -222,8 +219,8 @@ describe('runComponentProductionStructuredValidation', () => {
       ],
     });
 
-    expect(result.stages[1].status).toBe('skipped');
-    expect(result.quality).toBeNull();
+    expect(result.stages[1].status).toBe('passed');
+    expect(result.quality).not.toBeNull();
   });
 
   it('preserves blocking and advisory quality findings', async () => {
@@ -415,7 +412,7 @@ describe('runComponentProductionStructuredValidation', () => {
 
     expect(result.stages.map((stage) => stage.status)).toEqual([
       'failed',
-      'skipped',
+      'failed',
     ]);
 
     expect(result.completeness).toBeNull();

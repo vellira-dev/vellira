@@ -299,7 +299,13 @@ describe('component production end-to-end fixtures', () => {
           input: fixture.input,
         });
         expect(scaffold.stages[0].status, fixture.id).toBe('blocked');
-        expect(scaffold.stages[1].status, fixture.id).toBe('skipped');
+        expect(
+          ['blocked', 'failed'],
+          `${fixture.id}: quality must run rather than inherit completeness status`
+        ).toContain(scaffold.stages[1].status);
+        expect(scaffold.stages[1].findings.length, fixture.id).toBeGreaterThan(
+          0
+        );
         expect(
           scaffold.stages[0].findings.some((finding) =>
             finding.message.includes('no executable test evidence')
@@ -321,7 +327,10 @@ describe('component production end-to-end fixtures', () => {
           root,
           input: fixture.input,
         });
-        expect(scaffold.stages[1].status, fixture.id).toBe('blocked');
+        expect(
+          ['blocked', 'failed'],
+          `${fixture.id}: quality must run rather than inherit completeness status`
+        ).toContain(scaffold.stages[1].status);
         const missingRules = scaffold.stages[1].findings.map(
           (finding) => finding.id
         );
@@ -330,7 +339,7 @@ describe('component production end-to-end fixtures', () => {
             missingRules.some((id) =>
               id.endsWith(':platform.accessibility-semantics')
             ),
-            fixture.id
+            `${fixture.id}: ${missingRules.join(', ')}`
           ).toBe(true);
         }
         if (fixture.tokenSurface) {
@@ -338,7 +347,7 @@ describe('component production end-to-end fixtures', () => {
             missingRules.some((id) =>
               id.endsWith(':conformity.component-token-contract')
             ),
-            fixture.id
+            `${fixture.id}: ${missingRules.join(', ')}`
           ).toBe(true);
         }
       }

@@ -12,6 +12,7 @@ import {
   type ValidationCommandExecution,
   type ValidationCommandRunner,
 } from './validation-command';
+import { componentProductionCommandDependencies } from './validation-dependencies';
 
 const FINAL_STAGE_IDS = [
   'public-api',
@@ -23,7 +24,9 @@ const FINAL_STAGE_IDS = [
 type FinalStageId = (typeof FINAL_STAGE_IDS)[number];
 
 export type ComponentProductionFinalCommand =
-  ValidationCommandDescriptor<FinalStageId>;
+  ValidationCommandDescriptor<FinalStageId> & {
+    requires?: readonly string[];
+  };
 
 export type ComponentProductionFinalCommandExecution =
   ValidationCommandExecution;
@@ -69,6 +72,7 @@ export function componentProductionFinalValidationCommands(
       command: ['pnpm', 'test:e2e:web:visual:docker'],
       timeoutMs: 600_000,
       platform: 'react',
+      requires: componentProductionCommandDependencies('canonical-web-visual'),
     });
   }
 
@@ -79,6 +83,7 @@ export function componentProductionFinalValidationCommands(
       command: ['pnpm', 'smoke:web'],
       timeoutMs: 180_000,
       platform: 'react',
+      requires: componentProductionCommandDependencies('web-smoke'),
     });
   }
 
@@ -89,6 +94,7 @@ export function componentProductionFinalValidationCommands(
       command: ['pnpm', 'smoke:native'],
       timeoutMs: 180_000,
       platform: 'react-native',
+      requires: componentProductionCommandDependencies('native-smoke'),
     });
   }
 
@@ -99,27 +105,46 @@ export function runComponentProductionFinalValidation(params: {
   root: string;
   input: ComponentProductionInputV1;
   runner?: ComponentProductionFinalCommandRunner;
+  commandStatuses?: Readonly<Record<string, 'passed' | 'blocked' | 'failed'>>;
 }): ComponentProductionFinalValidationResult {
   const root = path.resolve(params.root);
   const runner = params.runner ?? runComponentProductionFinalCommand;
   const commands = componentProductionFinalValidationCommands(params.input);
   const stages: ComponentProductionStageResult[] = [];
-  let blockingStage: ComponentProductionStageResult | null = null;
 
   for (const stageId of FINAL_STAGE_IDS) {
-    if (blockingStage) {
+    const stageCommands = commands.filter(
+      (command) => command.stage === stageId
+    );
+    const runnableCommands = params.commandStatuses
+      ? stageCommands.filter((command) =>
+          (command.requires ?? []).every(
+            (dependency) => params.commandStatuses?.[dependency] === 'passed'
+          )
+        )
+      : stageCommands;
+    const blockedDependencies = stageCommands.flatMap((command) =>
+      runnableCommands.includes(command)
+        ? []
+        : (command.requires ?? []).filter(
+            (dependency) => params.commandStatuses?.[dependency] !== 'passed'
+          )
+    );
+    if (
+      params.commandStatuses &&
+      blockedDependencies.length > 0 &&
+      runnableCommands.length === 0
+    ) {
       stages.push(
         skippedStage(
           stageId,
-          `Final validation was skipped because ${blockingStage.id} validation did not pass.`
+          `Final validation was dependency-blocked by ${[
+            ...new Set(blockedDependencies),
+          ].join(', ')}.`
         )
       );
       continue;
     }
-
-    const stageCommands = commands.filter(
-      (command) => command.stage === stageId
-    );
 
     if (stageId === 'visual' && stageCommands.length === 0) {
       stages.push({
@@ -136,15 +161,20 @@ export function runComponentProductionFinalValidation(params: {
     const stage = runStage({
       root,
       stageId,
-      commands: stageCommands,
+      commands: runnableCommands,
       runner,
     });
 
-    stages.push(stage);
-
-    if (stage.status !== 'passed') {
-      blockingStage = stage;
-    }
+    stages.push(
+      blockedDependencies.length > 0 && stage.status === 'passed'
+        ? skippedStage(
+            stageId,
+            `Final validation partially ran and was dependency-blocked by ${[
+              ...new Set(blockedDependencies),
+            ].join(', ')}.`
+          )
+        : stage
+    );
   }
 
   return { stages };
