@@ -52,9 +52,7 @@ describe('clean Expo consumer workflow contract', () => {
     );
 
     expect(script).toContain('NATIVE_PACKAGE_NAMES');
-    expect(script).toContain(
-      "from '@vellira-ui/react-native'"
-    );
+    expect(script).toContain("from '@vellira-ui/react-native'");
     expect(script).toContain('Candidate Native Button');
     expect(script).toContain('Candidate Native Checkbox');
     expect(script).toContain("expoBin, 'install', '--check'");
