@@ -11,6 +11,7 @@ import {
   type ValidationCommandExecution,
   type ValidationCommandRunner,
 } from './validation-command';
+import { componentProductionCommandDependencies } from './validation-dependencies';
 
 type ComponentProductionCommandStage =
   | 'format'
@@ -23,7 +24,9 @@ type ComponentProductionCommandStage =
   | 'website';
 
 export type ComponentProductionCommand =
-  ValidationCommandDescriptor<ComponentProductionCommandStage>;
+  ValidationCommandDescriptor<ComponentProductionCommandStage> & {
+    requires?: readonly string[];
+  };
 
 export type ComponentProductionCommandExecution = ValidationCommandExecution;
 
@@ -32,6 +35,7 @@ export type ComponentProductionCommandRunner =
 
 export type ComponentProductionCommandValidationResult = {
   stages: readonly ComponentProductionStageResult[];
+  commandStatuses?: Readonly<Record<string, 'passed' | 'blocked' | 'failed'>>;
 };
 
 export function componentProductionValidationCommands(
@@ -126,37 +130,61 @@ export function runComponentProductionCommandValidation(params: {
   ] as const;
 
   const stages: ComponentProductionStageResult[] = [];
-  let blockingStage: ComponentProductionStageResult | null = null;
+  const commandStatuses: Record<string, 'passed' | 'blocked' | 'failed'> = {};
 
   for (const stageId of stageIds) {
-    if (blockingStage) {
+    const stageCommands = commands.filter(
+      (command) => command.stage === stageId
+    );
+    const blockedDependencies = stageCommands.flatMap((command) =>
+      (command.requires ?? []).filter(
+        (dependency) => commandStatuses[dependency] !== 'passed'
+      )
+    );
+
+    if (blockedDependencies.length > 0) {
       stages.push(
         skippedStage(
           stageId,
-          `Validation was skipped because ${blockingStage.id} validation did not pass.`
+          `Validation was dependency-blocked by ${[
+            ...new Set(blockedDependencies),
+          ].join(', ')}.`
         )
       );
-
       continue;
     }
 
     const stage = runStage({
       root,
       stageId,
-      commands: commands.filter((command) => command.stage === stageId),
-      runner,
+      commands: stageCommands,
+      runner: (command, directory) => {
+        const execution = runner(command, directory);
+        commandStatuses[command.id] = commandExecutionStatus(execution);
+        return execution;
+      },
     });
 
     stages.push(stage);
-
-    if (stage.status !== 'passed') {
-      blockingStage = stage;
-    }
   }
 
   return {
     stages,
+    commandStatuses,
   };
+}
+
+function commandExecutionStatus(
+  execution: ComponentProductionCommandExecution
+): 'passed' | 'blocked' | 'failed' {
+  if (
+    execution.timedOut ||
+    execution.error !== undefined ||
+    execution.exitCode === null
+  ) {
+    return 'failed';
+  }
+  return execution.exitCode === 0 ? 'passed' : 'blocked';
 }
 
 export function runComponentProductionCommand(
@@ -226,6 +254,9 @@ function platformCommands(
         command: ['pnpm', 'build:storybook'],
         timeoutMs: 300_000,
         platform: 'react',
+        requires: componentProductionCommandDependencies(
+          'react-storybook-build'
+        ),
       }
     );
   }

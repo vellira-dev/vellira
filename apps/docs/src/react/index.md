@@ -59,11 +59,7 @@ export function AccountPanel() {
           <Select.Item value='viewer' label='Viewer' />
         </Select>
 
-        <Button
-          color='primary'
-          appearance='solid'
-          onClick={() => saveAccount({ displayName, role })}
-        >
+        <Button color='primary' appearance='solid'>
           Save changes
         </Button>
       </Tabs.Content>

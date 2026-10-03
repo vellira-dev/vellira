@@ -203,13 +203,31 @@ function validatePackedPackage({ packageInfo, packResult, packedManifest }) {
 
   if (packageInfo.name === '@vellira-ui/react') {
     const stylesExport = packedManifest.exports?.['./styles'];
-    const styles =
+    const stylesTarget =
       typeof stylesExport === 'string'
-        ? normalizePackagePath(stylesExport)
+        ? stylesExport
+        : stylesExport?.default ?? stylesExport?.import;
+    const styles = stylesTarget && normalizePackagePath(stylesTarget);
+    const styleTypes =
+      stylesExport &&
+      typeof stylesExport === 'object' &&
+      typeof stylesExport.types === 'string'
+        ? normalizePackagePath(stylesExport.types)
         : null;
+
     if (!styles || !fileSet.has(styles) || !styles.endsWith('.css')) {
       throw new Error(
         '@vellira-ui/react tarball must include its public stylesheet export.'
+      );
+    }
+
+    if (
+      !styleTypes ||
+      !fileSet.has(styleTypes) ||
+      !styleTypes.endsWith('.d.ts')
+    ) {
+      throw new Error(
+        '@vellira-ui/react tarball must type its public stylesheet export.'
       );
     }
   }
@@ -261,6 +279,28 @@ function listFiles(root, current = root, files = []) {
   return files.sort();
 }
 
+function findPackageLocalDeclarationImports(packageRoot, files) {
+  const findings = [];
+
+  for (const filePath of files) {
+    if (!filePath.endsWith('.d.ts')) continue;
+
+    const source = fs.readFileSync(path.join(packageRoot, filePath), 'utf8');
+    const matches = source.matchAll(
+      /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(#[A-Za-z0-9_./*-]+)\1/g
+    );
+
+    for (const match of matches) {
+      findings.push({
+        file: filePath,
+        specifier: match[2],
+      });
+    }
+  }
+
+  return findings;
+}
+
 function inspectTarball(tarballPath) {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'vellira-packed-artifact-')
@@ -287,6 +327,8 @@ function inspectTarball(tarballPath) {
     return {
       packedManifest: JSON.parse(fs.readFileSync(manifestPath, 'utf8')),
       files,
+      packageLocalDeclarationImports:
+        findPackageLocalDeclarationImports(packageRoot, files),
       unpackedSize,
     };
   } finally {
@@ -337,8 +379,23 @@ function packPackage(packageInfo, artifactDir) {
 
   const filename = createdTarballs[0];
   const tarballPath = path.resolve(artifactDir, filename);
-  const { packedManifest, files, unpackedSize } =
-    inspectTarball(tarballPath);
+  const {
+    packedManifest,
+    files,
+    packageLocalDeclarationImports,
+    unpackedSize,
+  } = inspectTarball(tarballPath);
+
+  if (packageLocalDeclarationImports.length > 0) {
+    throw new Error(
+      packageInfo.name +
+        ' tarball declarations retain package-local imports: ' +
+        packageLocalDeclarationImports
+          .map(({ file, specifier }) => file + ' -> ' + specifier)
+          .join(', ') +
+        '.'
+    );
+  }
   const packResult = {
     name: packedManifest.name,
     version: packedManifest.version,
@@ -658,6 +715,7 @@ function prepareReleaseCandidate(packageInfos, options = {}) {
 
 module.exports = {
   collectExportTargets,
+  findPackageLocalDeclarationImports,
   forbiddenPackedFiles,
   loadReleaseCandidate,
   manifestTargets,

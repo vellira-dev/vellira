@@ -7,10 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createComponentGenerationPlan } from './plan';
 import { validateComponentGenerationPlan } from './preflight';
 
-import {
-  copyTokenLifecycleFixture,
-  reserveTokenLifecycleFixture,
-} from '../../token-lifecycle/fixtures/lifecycle';
+import { createIsolatedComponentTokenAuthorityFixture } from '../../token-lifecycle/fixtures/lifecycle';
 
 const roots: string[] = [];
 
@@ -25,24 +22,7 @@ function tempRoot() {
 }
 
 function createRepositoryAuthorities(root: string) {
-  copyTokenLifecycleFixture(root);
-  reserveTokenLifecycleFixture(root, 'ContractProbe');
-  const preservationDir = path.join(root, 'packages/tokens/src/preservation');
-  fs.mkdirSync(preservationDir, { recursive: true });
-  fs.copyFileSync(
-    path.resolve(
-      'packages/tokens/src/preservation/token-preservation-baseline.v1.json'
-    ),
-    path.join(preservationDir, 'token-preservation-baseline.v1.json')
-  );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
-    path.join(preservationDir, 'token-migrations.ts')
-  );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/package.json'),
-    path.join(root, 'packages/tokens/package.json')
-  );
+  createIsolatedComponentTokenAuthorityFixture(root, ['ContractProbe']);
 
   fs.writeFileSync(
     path.join(root, 'README.md'),

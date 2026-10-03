@@ -54,7 +54,7 @@ Install the renderer you need:
 ```bash
 pnpm add @vellira-ui/react
 # or
-pnpm add @vellira-ui/react-native @react-native-picker/picker
+pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
 ```
 
 The renderer packages already consume Vellira tokens internally. Install
@@ -72,7 +72,7 @@ import { Button } from '@vellira-ui/react';
 
 export function ContinueButton() {
   return (
-    <Button appearance='solid' color='primary' onClick={() => submit()}>
+    <Button appearance='solid' color='primary'>
       Continue
     </Button>
   );
@@ -86,7 +86,7 @@ import { Button } from '@vellira-ui/react-native';
 
 export function ContinueButton() {
   return (
-    <Button appearance='solid' color='primary' onPress={() => submit()}>
+    <Button appearance='solid' color='primary'>
       Continue
     </Button>
   );
@@ -192,7 +192,7 @@ yarn add @vellira-ui/react
 ### React Native
 
 ```bash
-pnpm add @vellira-ui/react-native @react-native-picker/picker
+pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
 ```
 
 ---

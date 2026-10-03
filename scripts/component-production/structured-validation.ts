@@ -60,20 +60,25 @@ export async function runComponentProductionStructuredValidation(params: {
   const checkPlanContract =
     params.checkPlanContract ?? checkGeneratedPlanContract;
 
-  let driftedFiles: string[];
+  let contractStage: ComponentProductionStageResult = {
+    id: 'completeness',
+    status: 'passed',
+    summary: 'Canonical generated plan contract passed.',
+    findings: [],
+    artifacts: [],
+  };
 
   try {
-    driftedFiles = await checkPlanContract(plan);
+    const driftedFiles = await checkPlanContract(plan);
+    if (driftedFiles.length > 0) {
+      contractStage = productionContractMismatchStage({
+        root,
+        componentName: params.input.componentName,
+        driftedFiles,
+      });
+    }
   } catch (error) {
-    return runtimeFailure(error);
-  }
-
-  if (driftedFiles.length > 0) {
-    return productionContractMismatch({
-      root,
-      componentName: params.input.componentName,
-      driftedFiles,
-    });
+    contractStage = structuredFailureStage('completeness', error);
   }
 
   const runner =
@@ -88,7 +93,7 @@ export async function runComponentProductionStructuredValidation(params: {
       platform: qualityPlatformSelection(params.input),
     });
   } catch (error) {
-    return runtimeFailure(error);
+    return runtimeFailure(error, contractStage);
   }
 
   if (
@@ -107,7 +112,8 @@ export async function runComponentProductionStructuredValidation(params: {
               `Structured validation exited with code ${String(
                 execution.exitCode
               )}.`
-          )
+          ),
+      contractStage
     );
   }
 
@@ -116,28 +122,30 @@ export async function runComponentProductionStructuredValidation(params: {
   try {
     workerResult = parseWorkerResult(execution.stdout);
   } catch (error) {
-    return runtimeFailure(error);
+    return runtimeFailure(error, contractStage);
   }
 
   if (workerResult.status === 'blocked') {
     return {
       stages: [
         {
-          id: 'completeness',
-          status: 'blocked',
-          summary:
-            'Canonical component metadata validation blocked production.',
-          findings: [
-            {
-              id: `completeness:${normalizeId(
-                workerResult.componentName
-              )}:metadata-registration`,
-              stage: 'completeness',
-              severity: 'blocking',
-              message: workerResult.message,
-            },
-          ],
-          artifacts: [],
+          ...mergeCompletenessStages(contractStage, {
+            id: 'completeness',
+            status: 'blocked',
+            summary:
+              'Canonical component metadata validation blocked production.',
+            findings: [
+              {
+                id: `completeness:${normalizeId(
+                  workerResult.componentName
+                )}:metadata-registration`,
+                stage: 'completeness',
+                severity: 'blocking',
+                message: workerResult.message,
+              },
+            ],
+            artifacts: [],
+          }),
         },
         {
           id: 'quality',
@@ -156,29 +164,15 @@ export async function runComponentProductionStructuredValidation(params: {
   const completenessStage = completenessStageFromResults(
     workerResult.completeness
   );
-
-  if (completenessStage.status !== 'passed') {
-    return {
-      stages: [
-        completenessStage,
-        {
-          id: 'quality',
-          status: 'skipped',
-          summary:
-            'Component Quality validation was skipped because completeness validation did not pass.',
-          findings: [],
-          artifacts: [],
-        },
-      ],
-      completeness: workerResult.completeness,
-      quality: null,
-    };
-  }
+  const combinedCompleteness = mergeCompletenessStages(
+    contractStage,
+    completenessStage
+  );
 
   if (workerResult.quality === null) {
     return {
       stages: [
-        completenessStage,
+        combinedCompleteness,
         {
           id: 'quality',
           status: 'failed',
@@ -189,7 +183,7 @@ export async function runComponentProductionStructuredValidation(params: {
               stage: 'quality',
               severity: 'blocking',
               message:
-                'Structured validation worker did not return a quality result after completeness passed.',
+                'Structured validation worker did not return an independently runnable quality result.',
             },
           ],
           artifacts: [],
@@ -202,7 +196,7 @@ export async function runComponentProductionStructuredValidation(params: {
 
   return {
     stages: [
-      completenessStage,
+      combinedCompleteness,
       qualityStageFromResult(params.input, workerResult.quality),
     ],
     completeness: workerResult.completeness,
@@ -252,11 +246,11 @@ export function runComponentProductionStructuredValidationWorker(params: {
   };
 }
 
-function productionContractMismatch(params: {
+function productionContractMismatchStage(params: {
   root: string;
   componentName: string;
   driftedFiles: readonly string[];
-}): ComponentProductionStructuredValidationResult {
+}): ComponentProductionStageResult {
   const paths = [
     ...new Set(
       params.driftedFiles.map((filePath) =>
@@ -266,34 +260,42 @@ function productionContractMismatch(params: {
   ].sort();
 
   return {
-    stages: [
-      {
-        id: 'completeness',
-        status: 'blocked',
-        summary:
-          'Component production input does not match the canonical generated plan contract.',
-        findings: paths.map((filePath) => ({
-          id: `completeness:${normalizeId(
-            params.componentName
-          )}:production-contract:${normalizeId(filePath)}`,
-          stage: 'completeness',
-          severity: 'blocking',
-          message: `Component production input disagrees with the canonical generated contract at ${filePath}.`,
-          path: filePath,
-        })),
-        artifacts: [],
-      },
-      {
-        id: 'quality',
-        status: 'skipped',
-        summary:
-          'Component Quality validation was skipped because the production contract did not match canonical generated ownership.',
-        findings: [],
-        artifacts: [],
-      },
-    ],
-    completeness: null,
-    quality: null,
+    id: 'completeness',
+    status: 'blocked',
+    summary:
+      'Component production input does not match the canonical generated plan contract.',
+    findings: paths.map((filePath) => ({
+      id: `completeness:${normalizeId(
+        params.componentName
+      )}:production-contract:${normalizeId(filePath)}`,
+      stage: 'completeness',
+      severity: 'blocking',
+      message: `Component production input disagrees with the canonical generated contract at ${filePath}.`,
+      path: filePath,
+    })),
+    artifacts: [],
+  };
+}
+
+function mergeCompletenessStages(
+  left: ComponentProductionStageResult,
+  right: ComponentProductionStageResult
+): ComponentProductionStageResult {
+  const status =
+    left.status === 'failed' || right.status === 'failed'
+      ? 'failed'
+      : left.status === 'blocked' || right.status === 'blocked'
+        ? 'blocked'
+        : 'passed';
+  return {
+    id: 'completeness',
+    status,
+    summary:
+      status === 'passed'
+        ? 'Canonical generated plan and component completeness validation passed.'
+        : `${left.summary} ${right.summary}`,
+    findings: [...left.findings, ...right.findings],
+    artifacts: [...new Set([...left.artifacts, ...right.artifacts])],
   };
 }
 
@@ -526,35 +528,37 @@ function qualityStageFromResult(
   };
 }
 
-function runtimeFailure(
+function structuredFailureStage(
+  id: 'completeness' | 'quality',
   error: unknown
-): ComponentProductionStructuredValidationResult {
+): ComponentProductionStageResult {
   const message = error instanceof Error ? error.message : String(error);
+  return {
+    id,
+    status: 'failed',
+    summary: 'Structured production validation could not complete.',
+    findings: [
+      {
+        id: `${id}:runtime`,
+        stage: id,
+        severity: 'blocking',
+        message,
+      },
+    ],
+    artifacts: [],
+  };
+}
+
+function runtimeFailure(
+  error: unknown,
+  contractStage: ComponentProductionStageResult
+): ComponentProductionStructuredValidationResult {
+  const completenessFailure = structuredFailureStage('completeness', error);
 
   return {
     stages: [
-      {
-        id: 'completeness',
-        status: 'failed',
-        summary: 'Structured production validation could not complete.',
-        findings: [
-          {
-            id: 'completeness:runtime',
-            stage: 'completeness',
-            severity: 'blocking',
-            message,
-          },
-        ],
-        artifacts: [],
-      },
-      {
-        id: 'quality',
-        status: 'skipped',
-        summary:
-          'Component Quality validation was skipped because structured completeness validation could not complete.',
-        findings: [],
-        artifacts: [],
-      },
+      mergeCompletenessStages(contractStage, completenessFailure),
+      structuredFailureStage('quality', error),
     ],
     completeness: null,
     quality: null,

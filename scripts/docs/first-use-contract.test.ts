@@ -23,6 +23,9 @@ const rootReadme = read('README.md');
 const gettingStarted = read('apps/docs/src/start/getting-started.md');
 const reactDocs = read('apps/docs/src/react/index.md');
 const nativeDocs = read('apps/docs/src/react-native/index.md');
+const websiteCodeShowcase = read(
+  'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx'
+);
 
 function expectPeerRanges(
   source: string,
@@ -38,7 +41,7 @@ function expectCompleteNativeInstallCommands(
   peerDependencies: Record<string, string>
 ) {
   const commands = source.match(
-    /^pnpm add @vellira-ui\/react-native(?: [^\r\n]+)?$/gm
+    /pnpm add @vellira-ui\/react-native[^'"\`\r\n]*/g
   );
   const requiredInstallPeers = Object.keys(peerDependencies).filter(
     (name) => name !== 'react' && name !== 'react-native'
@@ -76,6 +79,7 @@ describe('first-use documentation contract', () => {
     expectCompleteNativeInstallCommands(gettingStarted, peerDependencies);
     expectCompleteNativeInstallCommands(nativeDocs, peerDependencies);
     expectCompleteNativeInstallCommands(nativeReadme, peerDependencies);
+    expectCompleteNativeInstallCommands(websiteCodeShowcase, peerDependencies);
 
     expectPeerRanges(nativeReadme, peerDependencies);
     expectPeerRanges(gettingStarted, peerDependencies);

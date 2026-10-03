@@ -88,6 +88,7 @@ export type ComponentProductionRunDependencies = {
   runFinalValidation?: (params: {
     root: string;
     input: ComponentProductionInputV1;
+    commandStatuses?: Readonly<Record<string, 'passed' | 'blocked' | 'failed'>>;
   }) => ComponentProductionFinalValidationResult;
   runReviewBundle?: typeof runComponentReviewBundle;
 };
@@ -256,59 +257,23 @@ export async function validateComponentProductionCandidate(params: {
     input: params.input,
   });
 
-  const blockingCommandStage = commandValidation.stages.find(
-    (stage) => stage.status !== 'passed'
-  );
-
-  if (blockingCommandStage) {
-    const reason = `Structured and final validation were skipped because ${blockingCommandStage.id} validation did not pass.`;
-
-    return {
-      stages: [
-        ...commandValidation.stages,
-        skippedStage('completeness', reason),
-        skippedStage('quality', reason),
-        ...skippedFinalValidationStages(reason),
-      ],
-      completeness: null,
-      quality: null,
-      reviewBundle: null,
-    };
-  }
-
   const structuredValidation = await runStructuredValidation({
     root: params.root,
     input: params.input,
   });
 
-  const blockingStructuredStage = structuredValidation.stages.find(
-    (stage) => stage.status !== 'passed'
-  );
-
-  if (blockingStructuredStage) {
-    const reason = `Final validation was skipped because ${blockingStructuredStage.id} validation did not pass.`;
-
-    return {
-      stages: [
-        ...commandValidation.stages,
-        ...structuredValidation.stages,
-        ...skippedFinalValidationStages(reason),
-      ],
-      completeness: structuredValidation.completeness,
-      quality: structuredValidation.quality,
-      reviewBundle: null,
-    };
-  }
-
   const finalValidation = runFinalValidation({
     root: params.root,
     input: params.input,
+    commandStatuses: commandValidation.commandStatuses,
   });
-  const blockingFinalStage = finalValidation.stages.find(
-    (stage) => stage.status !== 'passed'
-  );
+  const blockingStage = [
+    ...commandValidation.stages,
+    ...structuredValidation.stages,
+    ...finalValidation.stages,
+  ].find((stage) => stage.status !== 'passed');
 
-  if (blockingFinalStage || !runReviewBundle) {
+  if (blockingStage || !runReviewBundle) {
     return {
       stages: [
         ...commandValidation.stages,
@@ -375,12 +340,6 @@ function skippedStage(
     findings: [],
     artifacts: [],
   };
-}
-
-function skippedFinalValidationStages(
-  reason: string
-): ComponentProductionStageResult[] {
-  return FINAL_VALIDATION_STAGE_IDS.map((id) => skippedStage(id, reason));
 }
 
 function skippedValidationStages(

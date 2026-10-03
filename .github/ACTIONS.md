@@ -44,7 +44,14 @@ work, but does not prevent a workflow card from being created for each push.
   reopened PRs still rerun. Dependabot metadata retains `ready_for_review` because
   a draft Dependabot PR is intentionally skipped until it becomes reviewable.
 - Production candidate qualification, approval, deployment and verification remain
-  unchanged. IndexNow runs in a separate read-only job after deploy success, using
+  distinct. Protected `production` environment review happens in a dedicated
+  approval job that binds the immutable candidate SHA but does not hold deployment
+  concurrency or receive Cloudflare secrets. The deployment job starts only after
+  that approval succeeds and then acquires the serialized production deploy mutex.
+  The Cloudflare account/token secrets are already available to staging and the
+  legacy-adoption production workflow without a deployment environment; moving
+  the environment gate upstream does not copy or expose them through job outputs. IndexNow runs in a separate
+  read-only job after deploy success, using
   the verified candidate SHA and the existing submission script. Notification
   failure is visible in that job and its summary but does not invalidate an
   already verified deployment. Retry `Submit URLs to IndexNow` manually, without
@@ -65,8 +72,10 @@ work, but does not prevent a workflow card from being created for each push.
   before real activation. Deployment-irrelevant repository work therefore cannot
   strand an otherwise valid staged website, while deployment-relevant drift can
   never ride an older candidate into production. Emergency recovery remains an
-  explicit bypass. Admission and deploy jobs retain separate non-cancelling
-  concurrency groups.
+  explicit bypass. Admission stays read-only with its own non-cancelling
+  concurrency group; protected approval waits hold no deploy mutex; deployment
+  serialization begins only after approval succeeds. No workflow auto-cancels a
+  pending production environment review or an active production deployment.
 
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
