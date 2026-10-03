@@ -11,6 +11,11 @@ on:
       - '.github/workflows/release-candidate-proof.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'README.md'
+      - 'packages/react/README.md'
+      - 'packages/react-native/README.md'
+      - 'apps/docs/src/**'
+      - 'scripts/docs/**'
 
 permissions:
   contents: read
@@ -219,5 +224,44 @@ jobs:
         with:
           name: expo-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
           path: consumer-evidence/expo-consumer.json
+          if-no-files-found: error
+          retention-days: 30
+
+  docs-first-use:
+    name: Clean docs first-use
+    needs: [candidate, vite-consumer, next-consumer, expo-consumer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout docs proof at exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.candidate.outputs.candidate_sha }}
+          fetch-depth: 0
+
+      - name: Set up consumer Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Download exact retained npm candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-candidate-${{ needs.candidate.outputs.candidate_sha }}
+          path: .candidate-artifacts
+
+      - name: Validate public first-use documentation
+        env:
+          VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+          VELLIRA_CANDIDATE_DIR: .candidate-artifacts
+          VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/docs-first-use.json
+        run: node scripts/release-candidate/docs-first-use.cjs
+
+      - name: Retain docs first-use evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docs-first-use-evidence-${{ needs.candidate.outputs.candidate_sha }}
+          path: consumer-evidence/docs-first-use.json
           if-no-files-found: error
           retention-days: 30
