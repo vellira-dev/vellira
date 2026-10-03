@@ -13,7 +13,7 @@ Requires `react >=19`, `react-native >=0.86`, and
 `@react-native-picker/picker >=2`.
 
 ```bash
-pnpm add @vellira-ui/react-native @react-native-picker/picker
+pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
 ```
 
 ## Usage
