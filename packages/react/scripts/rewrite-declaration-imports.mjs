@@ -51,7 +51,7 @@ function resolveSourceTarget(specifier) {
       specifier.length - suffix.length
     );
 
-    return mapping.target.replace('*', wildcard);
+    return mapping.target.replaceAll('*', wildcard);
   }
 
   return null;
