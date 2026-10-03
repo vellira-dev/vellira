@@ -65,16 +65,18 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).toContain('noWorkspaceResolution: true');
   });
 
-  it('owns the Expo development server lifecycle directly', () => {
+  it('builds real iOS and Android development bundles through Expo Metro', () => {
     const script = readFileSync(
       'scripts/release-candidate/expo-consumer.cjs',
       'utf8'
     );
 
-    expect(script).toContain('const child = spawn(');
-    expect(script).toContain('process.execPath');
-    expect(script).toContain("child.kill('SIGTERM')");
-    expect(script).toContain("child.kill('SIGKILL')");
-    expect(script).not.toContain("spawn(\n    'npm'");
+    expect(script).toContain("'export:embed'");
+    expect(script).toContain("'--dev'");
+    expect(script).toContain("'true'");
+    expect(script).toContain("name: 'ios'");
+    expect(script).toContain("name: 'android'");
+    expect(script).toContain('Candidate Native Button');
+    expect(script).toContain('Candidate Native Checkbox');
   });
 });
