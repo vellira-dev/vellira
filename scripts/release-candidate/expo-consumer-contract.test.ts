@@ -60,8 +60,8 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).toContain('?platform=ios');
     expect(script).toContain('?platform=android');
     expect(script).toContain("'export',");
-    expect(script).toContain("'ios',");
-    expect(script).toContain("'android',");
+    expect(script).toContain("'--platform'");
+    expect(script).toContain("'all'");
     expect(script).toContain('noWorkspaceResolution: true');
   });
 
