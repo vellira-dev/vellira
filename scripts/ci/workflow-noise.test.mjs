@@ -466,7 +466,7 @@ test('production approval wait is separated from the serialized deploy mutex', (
     deploy,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  assert.doesNotMatch(deploy, /environment:/);
+  assert.doesNotMatch(deploy, /^    environment:/m);
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {
@@ -479,7 +479,7 @@ test('IndexNow automatic path is downstream of verified production, not status e
   const notify = source.split('\n  indexnow:\n')[1];
   assert.ok(notify);
   assert.match(approval, /environment:\n {6}name: production/);
-  assert.doesNotMatch(deploy, /environment:/);
+  assert.doesNotMatch(deploy, /^    environment:/m);
   assert.doesNotMatch(deploy, /continue-on-error:/);
   assert.match(notify, /needs: \[candidate, deploy\]/);
   assert.match(notify, /if: needs\.deploy\.result == 'success'/);

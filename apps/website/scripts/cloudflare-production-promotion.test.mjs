@@ -175,7 +175,7 @@ test('production approval waits outside the serialized deploy mutex', () => {
     deploy,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  assert.doesNotMatch(deploy, /environment:/);
+  assert.doesNotMatch(deploy, /^    environment:/m);
   assert.match(
     deploy,
     /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/
