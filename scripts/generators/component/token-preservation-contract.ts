@@ -362,13 +362,27 @@ function baselinePresence(
   );
 }
 
+function isGeneratedComponentTokenAddition(
+  entry: AdditionMigration
+): boolean {
+  return (
+    entry.reason === generatedReason &&
+    entry.id === generatedMigrationId(entry.issue, entry.to)
+  );
+}
+
 function uniqueAdditions(
   managedEntries: readonly ManagedComponentTokenAddition[]
 ): AdditionMigration[] {
   const additions = [
     ...(tokenMigrationManifestV1 as readonly TokenMigrationEntry[]).filter(
-      (entry): entry is AdditionMigration => entry.kind === 'addition'
+      (entry): entry is AdditionMigration =>
+        entry.kind === 'addition' &&
+        !isGeneratedComponentTokenAddition(entry)
     ),
+    // Generator-owned additions are root-scoped authority. Always use the
+    // managed array read from plan.root instead of inheriting entries from the
+    // checkout that loaded this module.
     ...managedEntries,
   ];
   const seen = new Set<string>();
