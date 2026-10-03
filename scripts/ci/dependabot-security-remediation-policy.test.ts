@@ -286,7 +286,7 @@ describe('Dependabot security remediation workflow policy', () => {
       );
       expect(source).not.toContain('--method PATCH');
       expect(source).not.toContain('--method DELETE');
-    }
+    },
   );
 
   it('surfaces alert scope and manifest evidence', async () => {
