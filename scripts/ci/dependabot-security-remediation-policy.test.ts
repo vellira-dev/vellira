@@ -265,9 +265,7 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     expect(source).toContain('Checkout observed main');
     expect(source).toContain('ref: ${{ steps.main.outputs.sha }}');
-    expect(source).toContain(
-      'test "$(git rev-parse HEAD)" = "$main_sha"'
-    );
+    expect(source).toContain('test "$(git rev-parse HEAD)" = "$main_sha"');
   });
 
   it(
@@ -286,7 +284,7 @@ describe('Dependabot security remediation workflow policy', () => {
       );
       expect(source).not.toContain('--method PATCH');
       expect(source).not.toContain('--method DELETE');
-    },
+    }
   );
 
   it('surfaces alert scope and manifest evidence', async () => {
