@@ -13,6 +13,9 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/dependabot.yml'
+      - '.github/dependabot-verified-backports.json'
+      - 'patches/**'
+      - 'scripts/ci/dependabot-verified-backports.mjs'
       - '.github/workflows/dependabot-alert-watch.yml'
   workflow_dispatch:
 
@@ -31,6 +34,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Resolve exact main revision
+        id: main
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          main_sha="$(gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha')"
+          test "$main_sha" != "null"
+          test -n "$main_sha"
+          echo "sha=$main_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout observed main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.main.outputs.sha }}
+          persist-credentials: false
+
       - name: Check unresolved High and Critical Dependabot alerts
         env:
           GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
@@ -39,6 +60,8 @@ jobs:
           set -euo pipefail
 
           ISSUE_TITLE="Unresolved Dependabot security alerts"
+          main_sha="${{ steps.main.outputs.sha }}"
+          test "$(git rev-parse HEAD)" = "$main_sha"
 
           read_alerts() {
             gh api \
@@ -66,15 +89,26 @@ jobs:
 
           read_number=1
           while true; do
-            alerts="$(read_alerts)"
-            jq -e 'type == "array"' <<< "$alerts" > /dev/null
+            raw_alerts="$(read_alerts)"
+            jq -e 'type == "array"' <<< "$raw_alerts" > /dev/null
+            printf '%s\n' "$raw_alerts" > /tmp/dependabot-alerts-raw.json
+
+            node scripts/ci/dependabot-verified-backports.mjs \
+              /tmp/dependabot-alerts-raw.json \
+              /tmp/dependabot-alerts-effective.json \
+              /tmp/dependabot-verified-backports.json
+
+            alerts="$(cat /tmp/dependabot-alerts-effective.json)"
+            verified_backports="$(cat /tmp/dependabot-verified-backports.json)"
+            raw_count="$(jq 'length' <<< "$raw_alerts")"
             count="$(jq 'length' <<< "$alerts")"
+            verified_count="$(jq 'length' <<< "$verified_backports")"
 
             if [[ "$count" -eq 0 || "$read_number" -ge "$max_reads" ]]; then
               break
             fi
 
-            echo "Dependabot still reports $count High/Critical alert(s) after dependency change; waiting for graph convergence (read $read_number/$max_reads)." >> "$GITHUB_STEP_SUMMARY"
+            echo "Dependabot still reports $count unmitigated High/Critical alert(s) after dependency change; waiting for graph convergence (read $read_number/$max_reads)." >> "$GITHUB_STEP_SUMMARY"
             sleep 30
             read_number=$((read_number + 1))
           done
@@ -85,14 +119,10 @@ jobs:
           runtime_count="$(
             jq '[.[] | select(.dependency.scope != "development")] | length' <<< "$alerts"
           )"
-          main_sha="$(
-            gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha'
-          )"
-          test "$main_sha" != "null"
-          test -n "$main_sha"
-
           {
-            echo "Open High/Critical alerts: $count"
+            echo "Raw open High/Critical alerts: $raw_count"
+            echo "Verified backports: $verified_count"
+            echo "Unmitigated High/Critical alerts: $count"
             echo "Development-scope alerts: $development_count"
             echo "Runtime-scope alerts: $runtime_count"
             echo "Dependency graph reads: $read_number"
@@ -119,12 +149,16 @@ jobs:
           fi
 
           if [ "$count" -eq 0 ]; then
-            echo "No unresolved High/Critical Dependabot alerts."
+            echo "No unmitigated High/Critical Dependabot alerts."
 
             if [ -n "$existing_open" ]; then
+              backport_note=""
+              if [ "$verified_count" -gt 0 ]; then
+                backport_note=" Raw Dependabot alert(s) remain visible only where an exact fail-closed verified backport is active."
+              fi
               gh issue close "$existing_open" \
                 --repo "$GH_REPO" \
-                --comment "All High/Critical Dependabot alerts have been resolved automatically against observed main \`${main_sha}\`."
+                --comment "All unmitigated High/Critical Dependabot alerts have been resolved automatically against observed main \`${main_sha}\`.${backport_note}"
             fi
 
             exit 0
@@ -135,7 +169,11 @@ jobs:
             echo
             echo "This issue is maintained automatically."
             echo
-            echo "Found **${count}** open High/Critical alert(s)."
+            echo "Found **${count}** unmitigated High/Critical alert(s)."
+            if [ "$verified_count" -gt 0 ]; then
+              echo
+              echo "**${verified_count}** additional raw alert(s) are covered by exact verified backports and remain visible in Dependabot."
+            fi
             echo
             echo "| Severity | Scope | Package | Manifest | Alert |"
             echo "| --- | --- | --- | --- | --- |"
