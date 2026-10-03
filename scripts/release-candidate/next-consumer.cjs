@@ -547,22 +547,22 @@ function verifyProductionBuild(fixtureDir) {
     );
   }
 
-  const staticFiles = [];
-  function collect(root, current = root) {
+  function listFiles(root, current = root, files = []) {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const entryPath = path.join(current, entry.name);
       if (entry.isDirectory()) {
-        collect(root, entryPath);
+        listFiles(root, entryPath, files);
       } else if (entry.isFile()) {
-        staticFiles.push({
+        files.push({
           name: path.relative(root, entryPath).replaceAll(path.sep, '/'),
           size: fs.statSync(entryPath).size,
         });
       }
     }
+    return files;
   }
-  collect(staticDir);
 
+  const staticFiles = listFiles(staticDir);
   const cssFiles = staticFiles.filter(({ name }) => name.endsWith('.css'));
   const jsFiles = staticFiles.filter(({ name }) => name.endsWith('.js'));
 
@@ -579,9 +579,18 @@ function verifyProductionBuild(fixtureDir) {
     );
   }
 
-  const serverFiles = [];
-  collect(serverAppDir, serverAppDir);
-  const renderedPageModule = serverFiles.length > 0;
+  const serverFiles = listFiles(serverAppDir);
+  const renderedPageModule = serverFiles.some(
+    ({ name }) =>
+      name.includes('page') &&
+      (name.endsWith('.js') || name.endsWith('.js.map'))
+  );
+
+  if (!renderedPageModule) {
+    throw new Error(
+      'Next.js production build emitted no App Router server page module.'
+    );
+  }
 
   return {
     buildId: fs.readFileSync(buildIdPath, 'utf8').trim(),
