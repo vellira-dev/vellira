@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1",
+  "componentName": "Avatar",
+  "platform": "both",
+  "layer": "primitives",
+  "category": "data-display",
+  "profile": "base",
+  "capabilities": [],
+  "semanticCapabilities": [
+    "accessible-name",
+    "fallback",
+    "image-source",
+    "size-variants"
+  ],
+  "componentTokens": "standard",
+  "workItem": {
+    "provider": "github",
+    "repository": "vellira-dev/vellira",
+    "issue": "#560"
+  },
+  "parts": []
+}
