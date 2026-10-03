@@ -514,6 +514,11 @@ async function verifyDevelopmentMode(fixtureDir) {
 }
 
 function verifyProductionBuild(fixtureDir) {
+  fs.rmSync(path.join(fixtureDir, '.next'), {
+    recursive: true,
+    force: true,
+  });
+
   const nextBin = path.join(
     fixtureDir,
     'node_modules',
