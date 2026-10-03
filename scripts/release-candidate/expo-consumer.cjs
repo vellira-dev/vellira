@@ -95,7 +95,7 @@ function createFixture(candidate) {
       playgroundPackage.dependencies?.['@react-native-picker/picker'],
       '@react-native-picker/picker'
     ),
-    expo: exactVersion(playgroundPackage.dependencies?.expo, 'expo'),
+    expo: '57.0.26',
     react: '19.2.3',
     'react-native': exactVersion(
       playgroundPackage.dependencies?.['react-native'],
@@ -110,10 +110,7 @@ function createFixture(candidate) {
   }
 
   const devDependencies = {
-    '@types/react': exactVersion(
-      playgroundPackage.devDependencies?.['@types/react'],
-      '@types/react'
-    ),
+    '@types/react': '19.2.4',
     typescript: exactVersion(
       playgroundPackage.devDependencies?.typescript,
       'typescript'
