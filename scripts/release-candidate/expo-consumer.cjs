@@ -581,8 +581,10 @@ function verifyProductionExports(fixtureDir, expoBin) {
   }
 
   const files = listFiles(distDir);
-  const iosFiles = files.filter(({ name }) => name.includes('/ios/'));
-  const androidFiles = files.filter(({ name }) => name.includes('/android/'));
+  const iosFiles = files.filter(({ name }) => /(?:^|\/)ios\//.test(name));
+  const androidFiles = files.filter(({ name }) =>
+    /(?:^|\/)android\//.test(name)
+  );
 
   if (
     iosFiles.length === 0 ||
