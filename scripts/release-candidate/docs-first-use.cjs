@@ -27,6 +27,8 @@ const docsPaths = Object.freeze({
   gettingStarted: 'apps/docs/src/start/getting-started.md',
   reactDocs: 'apps/docs/src/react/index.md',
   nativeDocs: 'apps/docs/src/react-native/index.md',
+  websiteCodeShowcase:
+    'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx',
 });
 
 function run(command, args, options = {}) {
@@ -149,6 +151,7 @@ function verifyInstallContract(sources, candidate) {
     ['React Native package README', sources.nativeReadme],
     ['Getting Started', sources.gettingStarted],
     ['React Native docs', sources.nativeDocs],
+    ['Website CodeShowcase', sources.websiteCodeShowcase],
   ];
   const requiredNativeInstallPeers = Object.keys(
     nativePackage.peerDependencies ?? {}
@@ -156,7 +159,7 @@ function verifyInstallContract(sources, candidate) {
 
   for (const [label, source] of nativeInstallSources) {
     const commands = source.match(
-      /^pnpm add @vellira-ui\/react-native(?: [^\r\n]+)?$/gm
+      /pnpm add @vellira-ui\/react-native[^'"\`\r\n]*/g
     );
     if (!commands || commands.length === 0) {
       throw new Error(label + ' is missing the React Native install command.');
