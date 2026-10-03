@@ -423,7 +423,7 @@ shellTest('clean-checkout probe rejects workspace dist but ignores dependency di
   assert.equal(shell(probe, cwd).status, 1);
 });
 
-test('production admission is read-only and standalone supersede workflow is removed', () => {
+test('production approval wait is separated from the serialized deploy mutex', () => {
   assert.equal(
     existsSync(
       new URL(
@@ -449,9 +449,24 @@ test('production admission is read-only and standalone supersede workflow is rem
     production,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  const admission = production.split('\n  admission:\n')[1].split('\n  deploy:\n')[0];
+  const admission = production.split('\n  admission:\n')[1].split('\n  approval:\n')[0];
+  const approval = production.split('\n  approval:\n')[1].split('\n  deploy:\n')[0];
+  const deploy = production.split('\n  deploy:\n')[1].split('\n  indexnow:\n')[0];
+
   assert.match(admission, /actions: read/);
   assert.doesNotMatch(admission, /actions: write|deployments: write|secrets\./);
+
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.match(approval, /needs: \[candidate, admission\]/);
+  assert.doesNotMatch(approval, /concurrency:|secrets\.|: write/);
+
+  assert.match(deploy, /needs: \[candidate, admission, approval\]/);
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
+  );
+  assert.doesNotMatch(deploy, /^ {4}environment:/m);
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {
@@ -459,10 +474,12 @@ test('IndexNow automatic path is downstream of verified production, not status e
   assert.equal(section(manual, 'on').trim(), 'workflow_dispatch:');
   assert.doesNotMatch(manual, /deployment_status/);
   const source = workflow('deploy-website-cloudflare-production');
+  const approval = source.split('\n  approval:\n')[1].split('\n  deploy:\n')[0];
   const deploy = source.split('\n  deploy:\n')[1].split('\n  indexnow:\n')[0];
   const notify = source.split('\n  indexnow:\n')[1];
   assert.ok(notify);
-  assert.match(deploy, /environment:\n {6}name: production/);
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.doesNotMatch(deploy, /^ {4}environment:/m);
   assert.doesNotMatch(deploy, /continue-on-error:/);
   assert.match(notify, /needs: \[candidate, deploy\]/);
   assert.match(notify, /if: needs\.deploy\.result == 'success'/);
