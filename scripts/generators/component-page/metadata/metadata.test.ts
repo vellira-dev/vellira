@@ -319,25 +319,24 @@ describe('validateComponentMetadata', () => {
   });
 
   it('derives conditional production decisions from canonical public state', () => {
-    const avatar = buildSemanticMetadataDecisionAuthority({
+    const futureComponent = buildSemanticMetadataDecisionAuthority({
       root: process.cwd(),
-      componentName: 'Avatar',
+      componentName: 'FutureComponent',
     });
     const matureButton = buildSemanticMetadataDecisionAuthority({
       root: process.cwd(),
       componentName: 'Button',
     });
 
-    expect(avatar.requiredDecisions.map((decision) => decision.path)).toEqual([
-      'related',
-      'catalogPreview',
-    ]);
+    expect(
+      futureComponent.requiredDecisions.map((decision) => decision.path)
+    ).toEqual(['related', 'catalogPreview']);
     expect(
       matureButton.requiredDecisions.map((decision) => decision.path)
     ).toEqual(['related']);
-    expect(avatar.validationSources.length).toBeGreaterThan(5);
+    expect(futureComponent.validationSources.length).toBeGreaterThan(5);
     expect(
-      avatar.validationSources.every((source) =>
+      futureComponent.validationSources.every((source) =>
         /^[0-9a-f]{64}$/.test(source.sha256)
       )
     ).toBe(true);
@@ -749,7 +748,7 @@ describe('semantic metadata contract', () => {
   it('exports the exact sorted canonical registry vocabulary and source digest', () => {
     const contract = buildSemanticMetadataContract({
       root: process.cwd(),
-      componentName: 'Avatar',
+      componentName: 'FutureComponent',
     });
     const registryBytes = fs.readFileSync(
       path.join(process.cwd(), COMPONENT_REGISTRY_PATH)
@@ -770,8 +769,8 @@ describe('semantic metadata contract', () => {
     expect(contract.relatedComponentRegistry.slugs).toContain('radio-group');
     expect(contract.relatedComponentRegistry.slugs).toContain('form-field');
     expect(contract.sourceComponent).toEqual({
-      name: 'Avatar',
-      slug: 'avatar',
+      name: 'FutureComponent',
+      slug: 'future-component',
       isCanonical: false,
     });
     expect(contract.constraints).toEqual({
