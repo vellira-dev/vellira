@@ -69,6 +69,12 @@ describe('documentation first-use candidate proof', () => {
     expect(proof).toContain('assertInstalledCandidatePackages');
     expect(proof).toContain('WEB_PACKAGE_NAMES');
     expect(proof).toContain('NATIVE_PACKAGE_NAMES');
+    expect(proof).toContain(
+      'Object.keys(nativePackage.peerDependencies ?? {})'
+    );
+    expect(proof).not.toContain(
+      "playgroundPackage.dependencies?.['react-native-svg']"
+    );
     expect(proof).toContain("'npm'");
     expect(proof).toContain("'install'");
     expect(proof).toContain("'typecheck'");
