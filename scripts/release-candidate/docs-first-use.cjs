@@ -370,22 +370,17 @@ function createNativeFixture(candidate, examples) {
     path.join(os.tmpdir(), 'vellira-docs-native-consumer-')
   );
   const playgroundPackage = readJson('apps/native-playground/package.json');
+  const nativePackage = readJson('packages/react-native/package.json');
+  const peerDependencies = Object.fromEntries(
+    Object.keys(nativePackage.peerDependencies ?? {}).map((name) => [
+      name,
+      exactVersion(playgroundPackage.dependencies?.[name], name),
+    ])
+  );
 
   const dependencies = {
     ...candidateDependencies(candidate, NATIVE_PACKAGE_NAMES),
-    '@react-native-picker/picker': exactVersion(
-      playgroundPackage.dependencies?.['@react-native-picker/picker'],
-      '@react-native-picker/picker'
-    ),
-    react: exactVersion(playgroundPackage.dependencies?.react, 'react'),
-    'react-native': exactVersion(
-      playgroundPackage.dependencies?.['react-native'],
-      'react-native'
-    ),
-    'react-native-svg': exactVersion(
-      playgroundPackage.dependencies?.['react-native-svg'],
-      'react-native-svg'
-    ),
+    ...peerDependencies,
   };
   const devDependencies = {
     '@types/react': exactVersion(
