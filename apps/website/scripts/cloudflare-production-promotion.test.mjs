@@ -11,10 +11,6 @@ const productionWorkflow = await fs.readFile(
   '.github/workflows/deploy-website-cloudflare-production.yml',
   'utf8'
 );
-const productionAdmission = await fs.readFile(
-  'apps/website/scripts/cloudflare-production-admission.mjs',
-  'utf8'
-);
 
 function jobBlock(workflow, jobId, nextJobId) {
   const start = workflow.indexOf(`\n  ${jobId}:\n`);
@@ -127,14 +123,13 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
 
-test('production admission owns bounded stale waiting cleanup before serialized deploy', () => {
+test('production admission remains read-only before protected approval', () => {
   const workflowHeader = productionWorkflow.split('\njobs:\n')[0];
   assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
 
-  const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
-  assert.match(admission, /actions: write/);
-  assert.match(admission, /contents: read/);
-  assert.doesNotMatch(admission, /deployments: write|secrets\./);
+  const admission = jobBlock(productionWorkflow, 'admission', 'approval');
+  assert.match(admission, /actions: read/);
+  assert.doesNotMatch(admission, /actions: write|deployments: write/);
   assert.match(admission, /cache-mode: none/);
   assert.match(
     admission,
@@ -153,24 +148,25 @@ test('production admission owns bounded stale waiting cleanup before serialized 
     admission,
     /cloudflare-production-admission\.mjs/
   );
-  assert.match(
-    productionAdmission,
-    /actions\/runs\/\$\{targetRunId\}\/force-cancel/
-  );
-  assert.match(productionAdmission, /new Set\(\['pending', 'waiting'\]\)/);
-  assert.match(productionAdmission, /observed\.runNumber < currentRunNumber/);
-  assert.match(
-    productionAdmission,
-    /observed\.candidateSha !== currentCandidateSha/
-  );
 });
 
-test('production mutation is approval-gated and pinned to the eligible SHA', () => {
+test('production approval waits outside the serialized deploy mutex', () => {
+  const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+
+  assert.match(approval, /needs: \[candidate, admission\]/);
+  assert.match(
+    approval,
+    /needs\.admission\.outputs\.admitted == 'true'/
+  );
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.doesNotMatch(approval, /concurrency:|secrets\./);
+
   assert.match(
     deploy,
-    /needs: \[candidate, admission\]/
+    /needs: \[candidate, admission, approval\]/
   );
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
   assert.match(
     deploy,
     /needs\.admission\.outputs\.admitted == 'true'/
@@ -179,7 +175,7 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
     deploy,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  assert.match(deploy, /environment:\n {6}name: production/);
+  assert.doesNotMatch(deploy, /environment:/);
   assert.match(
     deploy,
     /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/
@@ -204,11 +200,15 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
   );
 });
 
-test('manual recovery bypasses normal admission but keeps serialized deployment', () => {
-  const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
+test('manual recovery bypasses normal admission but still crosses protected approval', () => {
+  const admission = jobBlock(productionWorkflow, 'admission', 'approval');
+  const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
   assert.match(admission, /github\.event_name == 'workflow_run'/);
+  assert.match(approval, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(approval, /environment:\n {6}name: production/);
   assert.match(deploy, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
 });
 
 test('manual dispatch is an explicit break-glass recovery path', () => {

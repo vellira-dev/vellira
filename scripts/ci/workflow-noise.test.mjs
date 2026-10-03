@@ -423,7 +423,7 @@ shellTest('clean-checkout probe rejects workspace dist but ignores dependency di
   assert.equal(shell(probe, cwd).status, 1);
 });
 
-test('production admission has only the Actions write needed for bounded stale-run cleanup', () => {
+test('production approval wait is separated from the serialized deploy mutex', () => {
   assert.equal(
     existsSync(
       new URL(
@@ -449,10 +449,24 @@ test('production admission has only the Actions write needed for bounded stale-r
     production,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  const admission = production.split('\n  admission:\n')[1].split('\n  deploy:\n')[0];
-  assert.match(admission, /actions: write/);
-  assert.match(admission, /contents: read/);
-  assert.doesNotMatch(admission, /deployments: write|contents: write|secrets\./);
+  const admission = production.split('\n  admission:\n')[1].split('\n  approval:\n')[0];
+  const approval = production.split('\n  approval:\n')[1].split('\n  deploy:\n')[0];
+  const deploy = production.split('\n  deploy:\n')[1].split('\n  indexnow:\n')[0];
+
+  assert.match(admission, /actions: read/);
+  assert.doesNotMatch(admission, /actions: write|deployments: write|secrets\./);
+
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.match(approval, /needs: \[candidate, admission\]/);
+  assert.doesNotMatch(approval, /concurrency:|secrets\.|: write/);
+
+  assert.match(deploy, /needs: \[candidate, admission, approval\]/);
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
+  );
+  assert.doesNotMatch(deploy, /environment:/);
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {

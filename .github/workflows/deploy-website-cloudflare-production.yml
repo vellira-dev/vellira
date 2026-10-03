@@ -174,7 +174,7 @@ jobs:
       group: deploy-worker-vellira-website-admission
       cancel-in-progress: false
     permissions:
-      actions: write
+      actions: read
       contents: read
     outputs:
       admitted: ${{ steps.admit.outputs.admitted }}
@@ -201,8 +201,8 @@ jobs:
           CURRENT_PRODUCTION_RUN_ID: ${{ github.run_id }}
           EXPECTED_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
 
-  deploy:
-    name: Approve, deploy, and verify production candidate
+  approval:
+    name: Approve immutable production candidate
     needs: [candidate, admission]
     if: >-
       always() &&
@@ -211,12 +211,36 @@ jobs:
        (needs.admission.result == 'success' &&
         needs.admission.outputs.admitted == 'true'))
     runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-worker-vellira-website
-      cancel-in-progress: false
     environment:
       name: production
       url: https://vellira.dev
+    permissions:
+      contents: read
+    env:
+      CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+
+    steps:
+      - name: Bind production approval to immutable candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "Approved immutable production candidate: $CANDIDATE_SHA"
+
+  deploy:
+    name: Deploy and verify approved production candidate
+    needs: [candidate, admission, approval]
+    if: >-
+      always() &&
+      needs.candidate.result == 'success' &&
+      needs.approval.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (needs.admission.result == 'success' &&
+        needs.admission.outputs.admitted == 'true'))
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-worker-vellira-website
+      cancel-in-progress: false
     env:
       CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
       CANDIDATE_SOURCE: ${{ needs.candidate.outputs.source }}
