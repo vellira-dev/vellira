@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export const DEFAULT_LEDGER_PATH =
   '.github/dependabot-verified-backports.json';
@@ -50,6 +51,11 @@ function normalizeLedger(ledger) {
       requiredString(entry[field], field);
     }
 
+    if (!Number.isInteger(entry.upstreamPullRequest) || entry.upstreamPullRequest <= 0) {
+      throw new Error(
+        `Verified backport alert #${entry.alertNumber} has invalid upstream pull request.`
+      );
+    }
     if (!/^[a-f0-9]{40}$/.test(entry.upstreamCommit)) {
       throw new Error(
         `Verified backport alert #${entry.alertNumber} has invalid upstream commit.`
@@ -194,7 +200,10 @@ async function main() {
   ]);
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+) {
   main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
