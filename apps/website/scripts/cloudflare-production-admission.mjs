@@ -5,6 +5,7 @@ import { assessFreshProductionCandidate } from './cloudflare-production-freshnes
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PROMOTION_TITLE_PATTERN = /^Promote staging ([0-9a-f]{40})$/;
+const FORCE_CANCELLABLE_STATUSES = new Set(['pending', 'waiting']);
 
 function assertSha(value, label) {
   if (!SHA_PATTERN.test(value ?? '')) {
@@ -90,7 +91,7 @@ export function planCurrentProductionAdmission({
   };
 }
 
-async function githubRequest(path) {
+async function githubRequest(path, { method = 'GET' } = {}) {
   const token = process.env.GITHUB_TOKEN;
 
   if (!token) {
@@ -98,21 +99,102 @@ async function githubRequest(path) {
   }
 
   const response = await fetch(`https://api.github.com${path}`, {
+    method,
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': '2022-11-28',
     },
   });
+  const body = await response.text();
 
   if (!response.ok) {
-    const body = await response.text();
     throw new Error(
-      `GitHub API GET ${path} failed: ${response.status} ${body}`
+      `GitHub API ${method} ${path} failed: ${response.status} ${body}`
     );
   }
 
-  return response.json();
+  return body ? JSON.parse(body) : null;
+}
+
+export function supersededProductionRunIds({
+  currentRunId,
+  runs,
+  admitCurrent,
+}) {
+  assertRunId(currentRunId, 'currentRunId');
+  if (typeof admitCurrent !== 'boolean') {
+    throw new Error('admitCurrent must be boolean');
+  }
+  if (!admitCurrent) {
+    return [];
+  }
+
+  const normalized = runs.map((run) => ({
+    ...run,
+    candidateSha: promotionCandidateSha(run.displayTitle),
+  }));
+  const currentRun = normalized.find((run) => run.id === currentRunId);
+  if (!currentRun) {
+    throw new Error('Admitted production run is missing from the active run set');
+  }
+
+  return normalized
+    .filter(
+      (run) =>
+        run.id !== currentRunId &&
+        run.runNumber < currentRun.runNumber &&
+        run.candidateSha !== null &&
+        run.candidateSha !== currentRun.candidateSha &&
+        FORCE_CANCELLABLE_STATUSES.has(run.status)
+    )
+    .sort((left, right) => left.runNumber - right.runNumber)
+    .map((run) => run.id);
+}
+
+async function forceCancelSupersededProductionRun({
+  repository,
+  currentRunId,
+  currentRunNumber,
+  currentCandidateSha,
+  targetRunId,
+}) {
+  const raw = await githubRequest(
+    `/repos/${repository}/actions/runs/${targetRunId}`
+  );
+  const observed = {
+    id: raw?.id,
+    runNumber: raw?.run_number,
+    status: raw?.status,
+    displayTitle: raw?.display_title,
+    candidateSha: promotionCandidateSha(raw?.display_title),
+  };
+
+  const stillSuperseded =
+    observed.id === targetRunId &&
+    observed.id !== currentRunId &&
+    observed.runNumber < currentRunNumber &&
+    observed.candidateSha !== null &&
+    observed.candidateSha !== currentCandidateSha &&
+    FORCE_CANCELLABLE_STATUSES.has(observed.status);
+
+  if (!stillSuperseded) {
+    return {
+      runId: targetRunId,
+      forceCancelled: false,
+      observedStatus: observed.status ?? 'missing',
+    };
+  }
+
+  await githubRequest(
+    `/repos/${repository}/actions/runs/${targetRunId}/force-cancel`,
+    { method: 'POST' }
+  );
+  return {
+    runId: targetRunId,
+    forceCancelled: true,
+    observedStatus: observed.status,
+  };
 }
 
 async function currentMainSha(repository) {
@@ -190,6 +272,31 @@ export async function admitCurrentProductionPromotion({
     runs,
     currentCandidateEligible: freshness.deploymentEquivalent === true,
   });
+  const supersededRunIds = supersededProductionRunIds({
+    currentRunId,
+    runs,
+    admitCurrent: plan.admitCurrent,
+  });
+  const currentRunNumber = currentRun?.runNumber;
+  const supersedeResults = [];
+
+  if (plan.admitCurrent) {
+    if (!Number.isInteger(currentRunNumber) || currentRunNumber <= 0) {
+      throw new Error('Admitted production run number is invalid');
+    }
+
+    for (const targetRunId of supersededRunIds) {
+      supersedeResults.push(
+        await forceCancelSupersededProductionRun({
+          repository,
+          currentRunId,
+          currentRunNumber,
+          currentCandidateSha: expectedCandidateSha,
+          targetRunId,
+        })
+      );
+    }
+  }
 
   await writeAdmissionOutput(githubOutput, plan);
   console.log(
@@ -199,6 +306,8 @@ export async function admitCurrentProductionPromotion({
       expectedCandidateSha,
       freshness,
       activeProductionRuns: runs.filter((run) => run.status !== 'completed'),
+      supersededRunIds,
+      supersedeResults,
       ...plan,
     })
   );
