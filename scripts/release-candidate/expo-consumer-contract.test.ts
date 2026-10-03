@@ -57,8 +57,9 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).toContain('Candidate Native Checkbox');
     expect(script).toContain("expoBin, 'install', '--check'");
     expect(script).toContain("run('npm', ['run', 'typecheck']");
-    expect(script).toContain('?platform=ios');
-    expect(script).toContain('?platform=android');
+    expect(script).toContain("'export:embed'");
+    expect(script).toContain("name: 'ios'");
+    expect(script).toContain("name: 'android'");
     expect(script).toContain("'export',");
     expect(script).toContain("'--platform'");
     expect(script).toContain("'all'");
