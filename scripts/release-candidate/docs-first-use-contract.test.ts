@@ -43,6 +43,7 @@ describe('documentation first-use candidate proof', () => {
       "'apps/docs/src/start/getting-started.md'",
       "'apps/docs/src/react/index.md'",
       "'apps/docs/src/react-native/index.md'",
+      "'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx'",
     ]) {
       expect(workflow).toContain(publicPath);
     }
