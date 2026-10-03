@@ -1,9 +1,7 @@
 const fs = require('node:fs');
-const http = require('node:http');
-const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn, spawnSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 
 const {
   NATIVE_PACKAGE_NAMES,
@@ -364,161 +362,79 @@ function verifyExpoDependencyCompatibility(fixtureDir, expoBin) {
   };
 }
 
-function findFreePort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (!address || typeof address === 'string') {
-        server.close();
-        reject(new Error('Unable to allocate an Expo development port.'));
-        return;
+function verifyDevelopmentBundles(fixtureDir, expoBin) {
+  const outputRoot = path.join(fixtureDir, '.expo-development-bundles');
+  fs.rmSync(outputRoot, { recursive: true, force: true });
+  fs.mkdirSync(outputRoot, { recursive: true });
+
+  const platforms = [
+    {
+      name: 'ios',
+      marker: 'Candidate Native Button',
+    },
+    {
+      name: 'android',
+      marker: 'Candidate Native Checkbox',
+    },
+  ];
+  const evidence = {};
+
+  for (const platform of platforms) {
+    const bundlePath = path.join(outputRoot, platform.name + '.jsbundle');
+    const assetsDir = path.join(outputRoot, platform.name + '-assets');
+
+    run(
+      process.execPath,
+      [
+        expoBin,
+        'export:embed',
+        '--platform',
+        platform.name,
+        '--dev',
+        'true',
+        '--entry-file',
+        'index.js',
+        '--bundle-output',
+        bundlePath,
+        '--assets-dest',
+        assetsDir,
+        '--minify',
+        'false',
+      ],
+      {
+        cwd: fixtureDir,
+        env: {
+          ...process.env,
+          CI: '1',
+          EXPO_NO_TELEMETRY: '1',
+        },
       }
+    );
 
-      const port = address.port;
-      server.close((error) => {
-        if (error) reject(error);
-        else resolve(port);
-      });
-    });
-  });
-}
-
-function get(url) {
-  return new Promise((resolve, reject) => {
-    const request = http.get(url, (response) => {
-      let body = '';
-      response.setEncoding('utf8');
-      response.on('data', (chunk) => {
-        body += chunk;
-      });
-      response.on('end', () => {
-        resolve({ body, statusCode: response.statusCode ?? 0 });
-      });
-    });
-
-    request.setTimeout(30_000, () => {
-      request.destroy(new Error('Expo bundle request timed out.'));
-    });
-    request.on('error', reject);
-  });
-}
-
-async function waitForPlatformBundle(child, url, marker, stdout, stderr) {
-  const deadline = Date.now() + 120_000;
-
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null) {
+    if (!fs.existsSync(bundlePath)) {
       throw new Error(
-        'Expo development server exited early.\n' +
-          stdout() +
-          '\n' +
-          stderr()
+        'Expo development bundle is missing for ' + platform.name + '.'
       );
     }
 
-    try {
-      const response = await get(url);
-      if (
-        response.statusCode === 200 &&
-        response.body.includes(marker) &&
-        response.body.length > 10_000
-      ) {
-        return response;
-      }
-    } catch {
-      // Retry until the bounded Metro startup deadline.
+    const bundle = fs.readFileSync(bundlePath, 'utf8');
+    const bundleBytes = Buffer.byteLength(bundle);
+
+    if (bundleBytes < 10_000 || !bundle.includes(platform.marker)) {
+      throw new Error(
+        'Expo development bundle for ' +
+          platform.name +
+          ' did not retain the representative Vellira native surface.'
+      );
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 750));
-  }
-
-  throw new Error(
-    'Expo development server did not produce the requested native bundle.\n' +
-      stdout() +
-      '\n' +
-      stderr()
-  );
-}
-
-async function verifyDevelopmentBundles(fixtureDir, expoBin) {
-  const port = await findFreePort();
-  const child = spawn(
-    process.execPath,
-    [
-      expoBin,
-      'start',
-      '--localhost',
-      '--port',
-      String(port),
-    ],
-    {
-      cwd: fixtureDir,
-      env: {
-        ...process.env,
-        CI: '1',
-        EXPO_NO_TELEMETRY: '1',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }
-  );
-
-  let stdout = '';
-  let stderr = '';
-  child.stdout.on('data', (chunk) => {
-    stdout += chunk;
-  });
-  child.stderr.on('data', (chunk) => {
-    stderr += chunk;
-  });
-
-  try {
-    const baseUrl = 'http://127.0.0.1:' + String(port) + '/index.bundle';
-    const query = '&dev=true&hot=false&lazy=false&minify=false';
-
-    const ios = await waitForPlatformBundle(
-      child,
-      baseUrl + '?platform=ios' + query,
-      'Candidate Native Button',
-      () => stdout,
-      () => stderr
-    );
-    const android = await waitForPlatformBundle(
-      child,
-      baseUrl + '?platform=android' + query,
-      'Candidate Native Checkbox',
-      () => stdout,
-      () => stderr
-    );
-
-    return {
-      host: '127.0.0.1',
-      port,
-      ios: {
-        status: ios.statusCode,
-        bundleBytes: Buffer.byteLength(ios.body),
-      },
-      android: {
-        status: android.statusCode,
-        bundleBytes: Buffer.byteLength(android.body),
-      },
+    evidence[platform.name] = {
+      bundleBytes,
+      representativeSurface: true,
     };
-  } finally {
-    child.kill('SIGTERM');
-    await new Promise((resolve) => {
-      const timeout = setTimeout(resolve, 5_000);
-      child.once('close', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    });
-
-    if (child.exitCode === null) {
-      child.kill('SIGKILL');
-    }
   }
+
+  return evidence;
 }
 
 function listFiles(root, current = root, files = []) {
@@ -643,10 +559,7 @@ async function main() {
       expoBin
     );
     run('npm', ['run', 'typecheck'], { cwd: fixtureDir });
-    const development = await verifyDevelopmentBundles(
-      fixtureDir,
-      expoBin
-    );
+    const development = verifyDevelopmentBundles(fixtureDir, expoBin);
     const production = verifyProductionExports(fixtureDir, expoBin);
 
     const evidence = {
