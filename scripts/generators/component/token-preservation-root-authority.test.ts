@@ -4,10 +4,15 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../packages/tokens/src/preservation/token-migrations', () => {
-  const reason =
-    'Authorize a first-materialized canonical component-token leaf produced by Generator V2.';
-  const suffixes = [
+vi.mock(
+  '../../../packages/tokens/src/preservation/token-migrations',
+  async () => {
+    const actual = await vi.importActual<
+      typeof import('../../../packages/tokens/src/preservation/token-migrations')
+    >('../../../packages/tokens/src/preservation/token-migrations');
+    const reason =
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.';
+    const suffixes = [
     'default.bg',
     'default.fg',
     'default.border',
@@ -26,23 +31,25 @@ vi.mock('../../../packages/tokens/src/preservation/token-migrations', () => {
     'disabled.border',
   ];
 
-  return {
-    tokenMigrationManifestV1: suffixes.map((suffix) => {
-      const to = `components.evidenceProbe.${suffix}`;
+    return {
+      ...actual,
+      tokenMigrationManifestV1: suffixes.map((suffix) => {
+        const to = `components.evidenceProbe.${suffix}`;
 
-      return {
-        id: `1283-generator-v2-component-token-addition-${to.replaceAll(
-          '.',
-          '-'
-        )}`,
-        kind: 'addition',
-        issue: '#1283',
-        reason,
-        to,
-      };
-    }),
-  };
-});
+        return {
+          id: `1283-generator-v2-component-token-addition-${to.replaceAll(
+            '.',
+            '-'
+          )}`,
+          kind: 'addition',
+          issue: '#1283',
+          reason,
+          to,
+        };
+      }),
+    };
+  }
+);
 
 import {
   copyTokenLifecycleFixture,
