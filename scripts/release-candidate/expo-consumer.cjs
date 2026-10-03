@@ -96,15 +96,12 @@ function createFixture(candidate) {
       '@react-native-picker/picker'
     ),
     expo: exactVersion(playgroundPackage.dependencies?.expo, 'expo'),
-    react: exactVersion(playgroundPackage.dependencies?.react, 'react'),
+    react: '19.2.3',
     'react-native': exactVersion(
       playgroundPackage.dependencies?.['react-native'],
       'react-native'
     ),
-    'react-native-svg': exactVersion(
-      playgroundPackage.dependencies?.['react-native-svg'],
-      'react-native-svg'
-    ),
+    'react-native-svg': '15.15.4',
   };
 
   for (const packageEvidence of candidate.packages) {
@@ -329,7 +326,6 @@ function verifyExpoDependencyCompatibility(fixtureDir, expoBin) {
       ...process.env,
       CI: '1',
       EXPO_NO_TELEMETRY: '1',
-      EXPO_OFFLINE: '1',
     },
   });
 
@@ -340,7 +336,6 @@ function verifyExpoDependencyCompatibility(fixtureDir, expoBin) {
         ...process.env,
         CI: '1',
         EXPO_NO_TELEMETRY: '1',
-        EXPO_OFFLINE: '1',
       },
     })
   );
