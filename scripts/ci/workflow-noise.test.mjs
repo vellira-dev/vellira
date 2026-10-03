@@ -423,7 +423,7 @@ shellTest('clean-checkout probe rejects workspace dist but ignores dependency di
   assert.equal(shell(probe, cwd).status, 1);
 });
 
-test('production admission is read-only and standalone supersede workflow is removed', () => {
+test('production admission has only the Actions write needed for bounded stale-run cleanup', () => {
   assert.equal(
     existsSync(
       new URL(
@@ -450,8 +450,9 @@ test('production admission is read-only and standalone supersede workflow is rem
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
   const admission = production.split('\n  admission:\n')[1].split('\n  deploy:\n')[0];
-  assert.match(admission, /actions: read/);
-  assert.doesNotMatch(admission, /actions: write|deployments: write|secrets\./);
+  assert.match(admission, /actions: write/);
+  assert.match(admission, /contents: read/);
+  assert.doesNotMatch(admission, /deployments: write|contents: write|secrets\./);
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {
