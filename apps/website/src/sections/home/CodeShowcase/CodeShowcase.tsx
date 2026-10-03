@@ -84,7 +84,7 @@ function getPackageName(platform: Platform) {
 function getInstallCommand(platform: Platform) {
   return platform === 'react'
     ? 'pnpm add @vellira-ui/react'
-    : 'pnpm add @vellira-ui/react-native @react-native-picker/picker';
+    : 'pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg';
 }
 
 function getTokenKind(value: string): TokenKind {
