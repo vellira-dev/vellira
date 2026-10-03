@@ -45,7 +45,7 @@ describe('clean Next.js consumer workflow contract', () => {
     expect(nextJob).toContain('Retain Next.js consumer evidence');
   });
 
-  it('verifies styles, client/server boundaries, dev mode, typecheck, build, and exports', () => {
+  it('verifies the complete clean Next.js consumer path', () => {
     const script = readFileSync(
       'scripts/release-candidate/next-consumer.cjs',
       'utf8'
@@ -66,19 +66,16 @@ describe('clean Next.js consumer workflow contract', () => {
     expect(script).toContain('noWorkspaceResolution: true');
   });
 
-  it('runs Next directly so cleanup is not hidden behind an npm wrapper', () => {
+  it('runs Next directly and owns the dev-server lifecycle', () => {
     const script = readFileSync(
       'scripts/release-candidate/next-consumer.cjs',
       'utf8'
     );
 
-    expect(script).toContain(
-      "'next',\\n    'dist',\\n    'bin',\\n    'next'"
-    );
+    expect(script).toContain('const nextBin = path.join(');
+    expect(script).toContain('spawn(\n    process.execPath,');
     expect(script).toContain("child.kill('SIGTERM')");
     expect(script).toContain("child.kill('SIGKILL')");
-    expect(script).not.toContain(
-      "spawn(\n    'npm',\n    ['run', 'dev'"
-    );
+    expect(script).not.toContain("spawn(\n    'npm'");
   });
 });
