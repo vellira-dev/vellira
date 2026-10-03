@@ -8,6 +8,10 @@ description: Discover how Vellira ensures quality through testing, accessibility
 Quality in Vellira covers documentation, type definitions, component behavior,
 testing, and package publishing.
 
+For the lifecycle that combines generation, semantic completion, platform
+evidence, these quality checks, and review readiness into one governed component
+candidate, see [Component Production](/project/component-production).
+
 ## CI Gates
 
 The main CI workflow validates:
