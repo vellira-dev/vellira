@@ -184,7 +184,7 @@ function verifyInstallContract(sources, candidate) {
     reactPackage: reactPackage.name,
     nativePackage: nativePackage.name,
     reactStyles: '@vellira-ui/react/styles',
-    nativeRequiredInstallPeers,
+    nativeRequiredInstallPeers: requiredNativeInstallPeers,
   };
 }
 
