@@ -6,11 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createComponentGenerationPlan as createComponentGenerationPlanImplementation } from './plan';
 import { validateComponentGenerationPlan } from './preflight';
+import { synchronizeComponentTokenPreservationContract } from './token-preservation-contract';
 
-import {
-  copyTokenLifecycleFixture,
-  reserveTokenLifecycleFixture,
-} from '../../token-lifecycle/fixtures/lifecycle';
+import { createIsolatedComponentTokenAuthorityFixture } from '../../token-lifecycle/fixtures/lifecycle';
 
 const tempRoots: string[] = [];
 const workItem = {
@@ -47,25 +45,7 @@ function createLayerBarrels(
   root: string,
   layer: 'primitives' | 'components' | 'patterns' = 'primitives'
 ) {
-  copyTokenLifecycleFixture(root);
-  reserveTokenLifecycleFixture(root, 'Avatar');
-
-  const preservationDir = path.join(root, 'packages/tokens/src/preservation');
-  fs.mkdirSync(preservationDir, { recursive: true });
-  fs.copyFileSync(
-    path.resolve(
-      'packages/tokens/src/preservation/token-preservation-baseline.v1.json'
-    ),
-    path.join(preservationDir, 'token-preservation-baseline.v1.json')
-  );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/src/preservation/token-migrations.ts'),
-    path.join(preservationDir, 'token-migrations.ts')
-  );
-  fs.copyFileSync(
-    path.resolve('packages/tokens/package.json'),
-    path.join(root, 'packages/tokens/package.json')
-  );
+  createIsolatedComponentTokenAuthorityFixture(root, ['Avatar']);
 
   fs.writeFileSync(
     path.join(root, 'README.md'),
@@ -474,6 +454,76 @@ describe('component generator preflight', () => {
     expect(result).toEqual({
       ok: true,
       existingTargets: [existingDir],
+    });
+  });
+
+  it('isolates synthetic work items from unrelated materialized component provenance', async () => {
+    const root = createTempRoot();
+    createLayerBarrels(root);
+    createIsolatedComponentTokenAuthorityFixture(root, [
+      'Toast',
+      'MaterializedProbe',
+    ]);
+
+    const materialized = createComponentGenerationPlanImplementation({
+      root,
+      options: {
+        componentName: 'MaterializedProbe',
+        platform: 'both',
+        layer: 'primitives',
+        category: 'data-display',
+        profile: 'base',
+        componentTokens: 'standard',
+        workItem: { ...workItem, issue: '#560' },
+        parts: [],
+        force: false,
+      },
+    });
+    await synchronizeComponentTokenPreservationContract({
+      plan: materialized,
+      result: { updatedFiles: [] },
+    });
+
+    const independent = createComponentGenerationPlanImplementation({
+      root,
+      options: {
+        componentName: 'Toast',
+        platform: 'both',
+        layer: 'primitives',
+        category: 'data-display',
+        profile: 'base',
+        componentTokens: 'standard',
+        workItem,
+        parts: [],
+        force: false,
+      },
+    });
+    expect(validateComponentGenerationPlan(independent)).toEqual({
+      ok: true,
+      existingTargets: [],
+    });
+
+    const mismatched = createComponentGenerationPlanImplementation({
+      root,
+      options: {
+        componentName: 'MaterializedProbe',
+        platform: 'both',
+        layer: 'primitives',
+        category: 'data-display',
+        profile: 'base',
+        componentTokens: 'standard',
+        workItem,
+        parts: [],
+        force: false,
+      },
+    });
+    expect(validateComponentGenerationPlan(mismatched)).toMatchObject({
+      ok: false,
+      errors: [
+        expect.stringContaining(
+          'component-token-preservation-provenance-drift:'
+        ),
+      ],
     });
   });
 

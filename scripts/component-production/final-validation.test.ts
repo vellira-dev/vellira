@@ -169,9 +169,9 @@ describe('runComponentProductionFinalValidation', () => {
 
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
       ['public-api', 'blocked'],
-      ['tooling', 'skipped'],
-      ['visual', 'skipped'],
-      ['smoke', 'skipped'],
+      ['tooling', 'passed'],
+      ['visual', 'passed'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[0]?.findings[0]?.message).toContain(
       'Public API drift detected.'
@@ -196,8 +196,8 @@ describe('runComponentProductionFinalValidation', () => {
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
       ['public-api', 'passed'],
       ['tooling', 'blocked'],
-      ['visual', 'skipped'],
-      ['smoke', 'skipped'],
+      ['visual', 'passed'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[1]?.findings[0]).toMatchObject({
       id: 'tooling:tooling-contracts',
@@ -229,14 +229,14 @@ describe('runComponentProductionFinalValidation', () => {
       ['public-api', 'passed'],
       ['tooling', 'passed'],
       ['visual', 'blocked'],
-      ['smoke', 'skipped'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[2]?.findings[0]).toMatchObject({
       platform: 'react',
     });
   });
 
-  it('fails closed on tooling timeout and skips later final gates', () => {
+  it('fails closed on tooling timeout while running independent final gates', () => {
     const result = runComponentProductionFinalValidation({
       root: '/tmp/vellira-production',
       input: WEB_INPUT,
@@ -254,8 +254,8 @@ describe('runComponentProductionFinalValidation', () => {
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
       ['public-api', 'passed'],
       ['tooling', 'failed'],
-      ['visual', 'skipped'],
-      ['smoke', 'skipped'],
+      ['visual', 'passed'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[1]?.findings[0]?.message).toContain('timed out');
   });
