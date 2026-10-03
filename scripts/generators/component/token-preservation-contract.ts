@@ -362,9 +362,7 @@ function baselinePresence(
   );
 }
 
-function isGeneratedComponentTokenAddition(
-  entry: AdditionMigration
-): boolean {
+function isGeneratedComponentTokenAddition(entry: AdditionMigration): boolean {
   return (
     entry.reason === generatedReason &&
     entry.id === generatedMigrationId(entry.issue, entry.to)
@@ -377,8 +375,7 @@ function uniqueAdditions(
   const additions = [
     ...(tokenMigrationManifestV1 as readonly TokenMigrationEntry[]).filter(
       (entry): entry is AdditionMigration =>
-        entry.kind === 'addition' &&
-        !isGeneratedComponentTokenAddition(entry)
+        entry.kind === 'addition' && !isGeneratedComponentTokenAddition(entry)
     ),
     // Generator-owned additions are root-scoped authority. Always use the
     // managed array read from plan.root instead of inheriting entries from the
