@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   planCurrentProductionAdmission,
   promotionCandidateSha,
+  supersededProductionRunIds,
 } from './cloudflare-production-admission.mjs';
 
 const A = 'a'.repeat(40);
@@ -134,6 +135,54 @@ test('unrelated stale runs do not block the current-main owner', () => {
       admitCurrent: true,
       reason: 'admitted',
     }
+  );
+});
+
+
+test('admitted exact-main promotion supersedes only older waiting or pending stale candidates', () => {
+  const runs = [
+    run({ id: 1, candidateSha: A, runNumber: 10, status: 'waiting' }),
+    run({ id: 2, candidateSha: A, runNumber: 11, status: 'pending' }),
+    run({ id: 3, candidateSha: A, runNumber: 12, status: 'in_progress' }),
+    run({ id: 4, candidateSha: B, runNumber: 13, status: 'in_progress' }),
+    run({ id: 5, candidateSha: A, runNumber: 14, status: 'waiting' }),
+  ];
+
+  assert.deepEqual(
+    supersededProductionRunIds({
+      currentRunId: 4,
+      runs,
+      admitCurrent: true,
+    }),
+    [1, 2]
+  );
+});
+
+test('supersede planning never cancels when current promotion was not admitted', () => {
+  assert.deepEqual(
+    supersededProductionRunIds({
+      currentRunId: 2,
+      admitCurrent: false,
+      runs: [
+        run({ id: 1, candidateSha: A, runNumber: 10, status: 'waiting' }),
+        run({ id: 2, candidateSha: B, runNumber: 11, status: 'waiting' }),
+      ],
+    }),
+    []
+  );
+});
+
+test('same-candidate waiting promotion is never treated as stale cancellation target', () => {
+  assert.deepEqual(
+    supersededProductionRunIds({
+      currentRunId: 2,
+      admitCurrent: true,
+      runs: [
+        run({ id: 1, candidateSha: B, runNumber: 10, status: 'waiting' }),
+        run({ id: 2, candidateSha: B, runNumber: 11, status: 'in_progress' }),
+      ],
+    }),
+    []
   );
 });
 
