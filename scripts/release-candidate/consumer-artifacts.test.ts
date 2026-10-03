@@ -158,11 +158,7 @@ describe('exact candidate consumer artifacts', () => {
     );
 
     expect(
-      assertInstalledCandidatePackages(
-        consumer,
-        candidate,
-        WEB_PACKAGE_NAMES
-      )
+      assertInstalledCandidatePackages(consumer, candidate, WEB_PACKAGE_NAMES)
     ).toHaveLength(5);
 
     const lock = JSON.parse(
@@ -176,11 +172,7 @@ describe('exact candidate consumer artifacts', () => {
     );
 
     expect(() =>
-      assertInstalledCandidatePackages(
-        consumer,
-        candidate,
-        WEB_PACKAGE_NAMES
-      )
+      assertInstalledCandidatePackages(consumer, candidate, WEB_PACKAGE_NAMES)
     ).toThrow('was not installed from the retained tarball');
   });
 });
