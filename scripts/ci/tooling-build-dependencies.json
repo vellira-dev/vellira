@@ -1,0 +1,14 @@
+[
+  {
+    "id": "tooling-native-consumers",
+    "files": ["scripts/checks/vellira-ui-usage/developer-panel.test.tsx"],
+    "requires": ["react-native-build"]
+  },
+  {
+    "id": "tooling-package-consumers",
+    "files": [
+      "scripts/checks/workspace-source-resolution/workspace-source-resolution.test.ts"
+    ],
+    "requires": ["react-build", "react-native-build"]
+  }
+]

@@ -15,6 +15,15 @@ are not causal source locations. Repair attribution must inspect every failure,
 prefer compiler/module diagnostic locations, bind them uniquely to authorized
 candidate artifacts, and retain infrastructure or ambiguous errors as vetoes.
 
+Tooling is not a single dependency-free command. The explicit
+`scripts/ci/tooling-build-dependencies.json` manifest separates tests of built
+package consumers from source/tooling contracts. Both package builds are scheduled
+even for a single-platform candidate because these repository-wide consumer tests
+cover both platforms. Failed builds defer only their declared consumers. Source
+tooling and token-semantic checks still run, and tooling cannot pass until every
+required consumer test really executes successfully. Independent tooling tasks
+also collect failures without stopping at the first task.
+
 Visual execution has two transports, not two validation standards:
 
 - Outside a declared canonical environment, run the Docker visual entrypoint.

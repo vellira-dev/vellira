@@ -29,10 +29,16 @@ describe('componentProductionFinalValidationCommands', () => {
     expect(commands.map((command) => command.id)).toEqual([
       'public-api',
       'tooling-contracts',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
       'canonical-web-visual',
       'web-smoke',
     ]);
-    expect(tooling?.command).toEqual(['pnpm', 'test:tooling:readiness']);
+    expect(tooling?.command.at(-1)).toBe('--source-contracts');
+    expect(
+      commands.find(({ id }) => id === 'tooling-token-semantics')?.command
+    ).toEqual(['pnpm', 'check:tokens-semantic:strict']);
   });
 
   it('does not run Web visual validation for native-only candidates', () => {
@@ -41,7 +47,14 @@ describe('componentProductionFinalValidationCommands', () => {
         ...WEB_INPUT,
         platform: 'native',
       }).map((command) => command.id)
-    ).toEqual(['public-api', 'tooling-contracts', 'native-smoke']);
+    ).toEqual([
+      'public-api',
+      'tooling-contracts',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
+      'native-smoke',
+    ]);
   });
 
   it('runs one canonical visual gate and both smoke paths for cross-platform candidates', () => {
@@ -53,6 +66,9 @@ describe('componentProductionFinalValidationCommands', () => {
     ).toEqual([
       'public-api',
       'tooling-contracts',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
       'canonical-web-visual',
       'web-smoke',
       'native-smoke',
@@ -71,10 +87,12 @@ describe('componentProductionFinalValidationCommands', () => {
     expect(commands.map((command) => command.id)).toEqual([
       'public-api',
       'tooling-contracts',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
       'canonical-web-visual',
       'web-smoke',
     ]);
-    expect(tooling?.command).toEqual(['pnpm', 'test:tooling']);
+    expect(tooling?.command.at(-1)).toBe('--source-contracts');
   });
 
   it('uses semantic-aware tooling for an explicit token dependency', () => {
@@ -84,14 +102,83 @@ describe('componentProductionFinalValidationCommands', () => {
       tokens: ['semantic.surface.canvas'],
     };
     const commands = componentProductionFinalValidationCommands(input);
-    const tooling = commands.find(({ id }) => id === 'tooling-contracts');
+    const tooling = commands.find(({ id }) => id === 'tooling-token-semantics');
 
     expect(componentProductionRequiresTokenSemanticGate(input)).toBe(true);
-    expect(tooling?.command).toEqual(['pnpm', 'test:tooling:readiness']);
+    expect(tooling?.command).toEqual(['pnpm', 'check:tokens-semantic:strict']);
   });
 });
 
 describe('runComponentProductionFinalValidation', () => {
+  it('runs source tooling and token checks while deferring only failed-build consumers', () => {
+    const calls: string[] = [];
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: { ...WEB_INPUT, platform: 'both' },
+      commandStatuses: {
+        'react-build': 'passed',
+        'react-native-build': 'blocked',
+        'react-storybook-build': 'passed',
+      },
+      runner: (command) => {
+        calls.push(command.id);
+        return command.id === 'tooling-contracts'
+          ? {
+              exitCode: 1,
+              stdout: 'FAIL scripts/harness.test.ts',
+              stderr: '',
+              timedOut: false,
+            }
+          : success();
+      },
+    });
+    expect(calls).toContain('tooling-contracts');
+    expect(calls).toContain('tooling-token-semantics');
+    expect(calls).toContain('canonical-web-visual');
+    expect(calls).not.toContain('tooling-native-consumers');
+    expect(calls).not.toContain('tooling-package-consumers');
+    expect(result.stages.find(({ id }) => id === 'tooling')).toMatchObject({
+      status: 'blocked',
+    });
+    expect(result.stages.find(({ id }) => id === 'smoke')).toMatchObject({
+      status: 'skipped',
+    });
+  });
+
+  it('cannot mark tooling passed until deferred build consumers actually run', () => {
+    const blocked = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: WEB_INPUT,
+      commandStatuses: {
+        'react-build': 'passed',
+        'react-native-build': 'blocked',
+        'react-storybook-build': 'passed',
+      },
+      runner: () => success(),
+    });
+    expect(blocked.stages.find(({ id }) => id === 'tooling')?.status).toBe(
+      'skipped'
+    );
+    const calls: string[] = [];
+    const complete = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: WEB_INPUT,
+      commandStatuses: {
+        'react-build': 'passed',
+        'react-native-build': 'passed',
+        'react-storybook-build': 'passed',
+      },
+      runner: (command) => {
+        calls.push(command.id);
+        return success();
+      },
+    });
+    expect(calls).toContain('tooling-native-consumers');
+    expect(calls).toContain('tooling-package-consumers');
+    expect(complete.stages.every(({ status }) => status === 'passed')).toBe(
+      true
+    );
+  });
   it('returns all final stages passed for a clean Web candidate', () => {
     const result = runComponentProductionFinalValidation({
       root: '/tmp/vellira-production',

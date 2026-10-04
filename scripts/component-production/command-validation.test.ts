@@ -20,7 +20,7 @@ const WEB_INPUT: ComponentProductionInputV1 = {
 };
 
 describe('componentProductionValidationCommands', () => {
-  it('selects only React validation for a web component', () => {
+  it('selects React candidate checks plus both tooling build prerequisites for a web component', () => {
     expect(
       componentProductionValidationCommands(WEB_INPUT).map(
         (command) => command.id
@@ -35,6 +35,7 @@ describe('componentProductionValidationCommands', () => {
       'react-typecheck',
       'react-build',
       'react-storybook-build',
+      'react-native-build',
       'component-docs',
       'component-page-check',
       'component-page-audit',
@@ -135,6 +136,7 @@ describe('runComponentProductionCommandValidation', () => {
       'react-tests',
       'react-typecheck',
       'react-build',
+      'react-native-build',
       'react-storybook-build',
       'component-docs',
       'component-page-check',

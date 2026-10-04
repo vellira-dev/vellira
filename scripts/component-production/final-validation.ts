@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import toolingBuildDependencies from '../ci/tooling-build-dependencies.json';
 
 import type {
   ComponentProductionInputV1,
@@ -48,9 +50,6 @@ export function componentProductionRequiresTokenSemanticGate(
 export function componentProductionFinalValidationCommands(
   input: ComponentProductionInputV1
 ): readonly ComponentProductionFinalCommand[] {
-  const toolingCommand = componentProductionRequiresTokenSemanticGate(input)
-    ? 'test:tooling:readiness'
-    : 'test:tooling';
   const commands: ComponentProductionFinalCommand[] = [
     {
       id: 'public-api',
@@ -61,10 +60,39 @@ export function componentProductionFinalValidationCommands(
     {
       id: 'tooling-contracts',
       stage: 'tooling',
-      command: ['pnpm', toolingCommand],
+      command: [
+        'node',
+        fileURLToPath(new URL('../ci/run-tooling-tests.mjs', import.meta.url)),
+        '--source-contracts',
+      ],
       timeoutMs: 420_000,
     },
   ];
+  for (const group of toolingBuildDependencies) {
+    commands.push({
+      id: group.id,
+      stage: 'tooling',
+      command: [
+        'pnpm',
+        'exec',
+        'vitest',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        ...group.files,
+      ],
+      timeoutMs: 120_000,
+      requires: group.requires,
+    });
+  }
+  if (componentProductionRequiresTokenSemanticGate(input)) {
+    commands.push({
+      id: 'tooling-token-semantics',
+      stage: 'tooling',
+      command: ['pnpm', 'check:tokens-semantic:strict'],
+      timeoutMs: 120_000,
+    });
+  }
 
   if (input.platform === 'web' || input.platform === 'both') {
     commands.push({
@@ -174,7 +202,12 @@ export function runComponentProductionFinalValidation(params: {
               ...new Set(blockedDependencies),
             ].join(', ')}.`
           )
-        : stage
+        : blockedDependencies.length > 0
+          ? {
+              ...stage,
+              summary: `${stage.summary} Deferred build consumers: ${[...new Set(blockedDependencies)].join(', ')}.`,
+            }
+          : stage
     );
   }
 
@@ -231,7 +264,8 @@ function semanticRuleIdForFailure(
   ) {
     return 'validation.environment';
   }
-  if (command.id !== 'tooling-contracts') return undefined;
+  if (!['tooling-contracts', 'tooling-token-semantics'].includes(command.id))
+    return undefined;
 
   return output.includes('Token semantic audit:')
     ? 'tokens.semantic-architecture'
