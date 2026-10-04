@@ -429,6 +429,43 @@ describe('public Component Program composition authority', () => {
     );
   });
 
+  it.each(['read-only', 'derived'] as const)(
+    'rejects an independent write to %s state even when the domain permits the action',
+    (ownership) => {
+      const spec = mediaSpec();
+      const result = compileProductionProgram({
+        ...spec,
+        semanticCapabilities: ['accessible-value', 'value-range'],
+        componentProgram: {
+          schemaVersion: '1',
+          anatomy: [{ id: 'Root', role: 'root', parent: null }],
+          states: [
+            { id: 'progress', domain: 'number', ownership, api: 'none' },
+          ],
+          modules: [
+            {
+              id: 'value-range',
+              platforms: ['react', 'react-native'],
+              bindings: { value: 'progress' },
+            },
+          ],
+          transitions: [
+            {
+              state: 'progress',
+              event: 'value-change',
+              action: 'update',
+              platforms: ['react', 'react-native'],
+            },
+          ],
+        },
+      });
+      expect(result.disposition).toBe('blocked');
+      expect(result.findings.map((item) => item.reason)).toEqual([
+        'Transition cannot mutate read-only or independently owned derived state.',
+      ]);
+    }
+  );
+
   it('rejects divergent shared state owners', () => {
     const decisions = mediaProgram();
     const result = compileMedia({
@@ -553,21 +590,23 @@ describe('public Component Program composition authority', () => {
       id: 'reviewed-name-association',
       capabilities: [],
     };
-    const decisions: ComponentProgramDecisionsV1 = {
-      ...mediaProgram(),
-      modules: [
-        ...mediaProgram().modules,
-        { id: extension.id, platforms: ['react'], bindings: {} },
-      ],
-    };
     const registry = [...componentGrammarV1, extension];
-    const result = compileComponentProgram(
-      componentProgramSource(mediaSpec()),
-      decisions,
-      registry
-    );
-    expect(result.disposition).toBe('compiled');
-    expect(result.program!.order).toContain(extension.id);
+    for (const spec of [mediaSpec(), formSpec()]) {
+      const decisions: ComponentProgramDecisionsV1 = {
+        ...spec.componentProgram!,
+        modules: [
+          ...spec.componentProgram!.modules,
+          { id: extension.id, platforms: ['react'], bindings: {} },
+        ],
+      };
+      const result = compileComponentProgram(
+        componentProgramSource(spec),
+        decisions,
+        registry
+      );
+      expect(result.disposition).toBe('compiled');
+      expect(result.program!.order).toContain(extension.id);
+    }
   });
 
   it('bounds the graph and rejects anatomy cycles and opaque provider replacement', () => {
