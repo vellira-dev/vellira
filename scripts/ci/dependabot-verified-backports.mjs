@@ -17,6 +17,13 @@ function sha256(source) {
   return createHash('sha256').update(source).digest('hex');
 }
 
+function escapeRegExp(source) {
+  return source.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\function sha256(source) {
+  return createHash('sha256').update(source).digest('hex');
+}
+');
+}
+
 function gitBlobSha1(source) {
   const bytes = Buffer.isBuffer(source) ? source : Buffer.from(source);
   return createHash('sha1')
@@ -176,6 +183,36 @@ async function verifyRepositoryBinding(entry, repositoryRoot) {
   if (!lockfile.includes(patchedPackageIdentity)) {
     throw new Error(
       `Verified backport alert #${entry.alertNumber} is missing patched package identity in the lockfile.`
+    );
+  }
+
+  const snapshotsMarker = '\nsnapshots:\n';
+  const snapshotsIndex = lockfile.indexOf(snapshotsMarker);
+  if (snapshotsIndex < 0) {
+    throw new Error(
+      `Verified backport alert #${entry.alertNumber} cannot find pnpm snapshots authority.`
+    );
+  }
+  const snapshotLines = lockfile
+    .slice(snapshotsIndex + snapshotsMarker.length)
+    .split('\n');
+  const packagePattern = escapeRegExp(entry.package);
+  const versionPattern = escapeRegExp(entry.version);
+  const snapshotIdentityPattern = new RegExp(
+    `^  ${packagePattern}@${versionPattern}(?:\\(|:)`
+  );
+  const dependencyEdgePattern = new RegExp(
+    `^\\s+${packagePattern}: ${versionPattern}(?:\\(|$)`
+  );
+  const expectedPatchToken = `patch_hash=${entry.patchSha256}`;
+  const unpatchedReference = snapshotLines.find(
+    (line) =>
+      (snapshotIdentityPattern.test(line) || dependencyEdgePattern.test(line)) &&
+      !line.includes(expectedPatchToken)
+  );
+  if (unpatchedReference) {
+    throw new Error(
+      `Verified backport alert #${entry.alertNumber} has an unpatched lockfile reference: ${unpatchedReference.trim()}.`
     );
   }
 
