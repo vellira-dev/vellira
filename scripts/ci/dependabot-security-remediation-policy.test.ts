@@ -265,6 +265,10 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     expect(source).toContain('Checkout observed main');
     expect(source).toContain('ref: ${{ steps.main.outputs.sha }}');
+    expect(source).toContain('Set up pnpm');
+    expect(source).toContain('Set up Node.js');
+    expect(source).toContain('Materialize exact patched dependency graph');
+    expect(source).toContain('pnpm install --frozen-lockfile --ignore-scripts');
     expect(source).toContain('test "$(git rev-parse HEAD)" = "$main_sha"');
   });
 
