@@ -346,7 +346,10 @@ const REPRESENTATIVE_READY_CANDIDATES = [
     ],
     finalIds: [
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'tooling-token-semantics',
@@ -374,7 +377,10 @@ const REPRESENTATIVE_READY_CANDIDATES = [
     ],
     finalIds: [
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'tooling-token-semantics',
@@ -404,7 +410,10 @@ const REPRESENTATIVE_READY_CANDIDATES = [
     ],
     finalIds: [
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'tooling-token-semantics',

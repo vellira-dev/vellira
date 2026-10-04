@@ -58,6 +58,16 @@ export function componentProductionFinalValidationCommands(
       timeoutMs: 120_000,
     },
     {
+      id: 'tooling-harness-contracts',
+      stage: 'tooling',
+      command: [
+        'node',
+        fileURLToPath(new URL('../ci/run-tooling-tests.mjs', import.meta.url)),
+        '--harness-contracts',
+      ],
+      timeoutMs: 120_000,
+    },
+    {
       id: 'tooling-contracts',
       stage: 'tooling',
       command: [
@@ -67,18 +77,49 @@ export function componentProductionFinalValidationCommands(
       ],
       timeoutMs: 420_000,
     },
+    {
+      id: 'tooling-token-cli',
+      stage: 'tooling',
+      command: [
+        'node',
+        'node_modules/vitest/vitest.mjs',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        '--reporter=default',
+        '--maxWorkers=1',
+        'scripts/checks/token-semantic/cli.test.ts',
+      ],
+      timeoutMs: 120_000,
+    },
+    {
+      id: 'tooling-production-fixtures',
+      stage: 'tooling',
+      command: [
+        'node',
+        'node_modules/vitest/vitest.mjs',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        '--reporter=default',
+        '--maxWorkers=1',
+        'scripts/component-production/e2e-fixtures.test.ts',
+      ],
+      timeoutMs: 420_000,
+    },
   ];
   for (const group of toolingBuildDependencies) {
     commands.push({
       id: group.id,
       stage: 'tooling',
       command: [
-        'pnpm',
-        'exec',
-        'vitest',
+        'node',
+        'node_modules/vitest/vitest.mjs',
         'run',
         '--config',
         'vitest.tooling.config.ts',
+        '--reporter=default',
+        '--maxWorkers=1',
         ...group.files,
       ],
       timeoutMs: 120_000,
@@ -256,6 +297,7 @@ export function componentProductionFinalFailureRuleId(
   execution: ComponentProductionFinalCommandExecution
 ): string | undefined {
   const output = [execution.stdout, execution.stderr].join('\n');
+  if (command.id === 'tooling-harness-contracts') return 'validation.harness';
   if (
     command.id === 'canonical-web-visual' &&
     /Canonical visual environment check failed|docker: (?:not found|command not found)|(?:Cannot connect|permission denied).*docker|Docker daemon/i.test(

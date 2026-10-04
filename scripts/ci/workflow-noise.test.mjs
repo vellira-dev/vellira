@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -327,19 +329,17 @@ test('minimal title validator reuses canonical config and locked root resolution
 });
 
 test('minimal validator preserves canonical valid and invalid title outcomes', () => {
-  const args = [
-    '--filter',
-    '@vellira-ci/pr-title-validator',
-    'run',
-    'validate',
-  ];
+  const validatorRoot = fileURLToPath(new URL('../../tools/pr-title-validator/', import.meta.url));
+  const require = createRequire(new URL('../../tools/pr-title-validator/package.json', import.meta.url));
+  const cli = path.join(path.dirname(require.resolve('@commitlint/cli/package.json')), 'cli.js');
+  const args = [cli, '--config', 'commitlint.config.js'];
 
   for (const title of [
     'ci: isolate pull request title dependencies',
     'fix(ci): preserve exact head title validation',
   ]) {
-    const result = spawnSync('pnpm', args, {
-      cwd: process.cwd(),
+    const result = spawnSync(process.execPath, args, {
+      cwd: validatorRoot,
       input: title + '\n',
       encoding: 'utf8',
       timeout: 5000,
@@ -351,8 +351,8 @@ test('minimal validator preserves canonical valid and invalid title outcomes', (
     'Update pull request title validation',
     'feat(ci) missing conventional separator',
   ]) {
-    const result = spawnSync('pnpm', args, {
-      cwd: process.cwd(),
+    const result = spawnSync(process.execPath, args, {
+      cwd: validatorRoot,
       input: title + '\n',
       encoding: 'utf8',
       timeout: 5000,
@@ -601,7 +601,7 @@ shellTest('diagnostics execute only the selected canonical command and preserve 
 
 test('GitHub Actions tooling keeps component-production e2e fixtures on dedicated shards', () => {
   const toolingRunner = readFileSync(
-    new URL('./run-tooling-tests.mjs', import.meta.url),
+    new URL('./tooling-execution.mjs', import.meta.url),
     'utf8'
   );
   const unitRunner = readFileSync(
@@ -615,7 +615,7 @@ test('GitHub Actions tooling keeps component-production e2e fixtures on dedicate
 
   assert.match(
     toolingRunner,
-    /const splitProductionFixtures = process\.env\.GITHUB_ACTIONS === 'true';/
+    /const splitProductionFixtures = environment\.GITHUB_ACTIONS === 'true';/
   );
   assert.doesNotMatch(toolingRunner, /GITHUB_JOB === 'tooling'/);
   assert.match(
