@@ -8,7 +8,29 @@ import test from 'node:test';
 import { filterVerifiedDependabotBackports } from './dependabot-verified-backports.mjs';
 
 const patchPath = 'patches/node-forge@1.4.0.patch';
-const patch = 'verified upstream patch\n';
+const upstreamFilePath = 'lib/rsa.js';
+const upstreamBaseBlob = 'a'.repeat(40);
+const installedFixedFile = 'verified upstream fixed bytes\n';
+
+function gitBlobSha1(source) {
+  const bytes = Buffer.from(source);
+  return createHash('sha1')
+    .update(`blob ${bytes.length}\0`)
+    .update(bytes)
+    .digest('hex');
+}
+
+const upstreamFixedBlob = gitBlobSha1(installedFixedFile);
+const patch = [
+  `diff --git a/${upstreamFilePath} b/${upstreamFilePath}`,
+  `index ${upstreamBaseBlob}..${upstreamFixedBlob} 100644`,
+  `--- a/${upstreamFilePath}`,
+  `+++ b/${upstreamFilePath}`,
+  '@@ -1 +1 @@',
+  '-old',
+  '+new',
+  '',
+].join('\n');
 const patchSha256 = createHash('sha256').update(patch).digest('hex');
 
 function ledger() {
@@ -25,8 +47,9 @@ function ledger() {
         upstreamRepository: 'digitalbazaar/forge',
         upstreamPullRequest: 1152,
         upstreamCommit: 'c'.repeat(40),
-        upstreamBaseBlob: 'a'.repeat(40),
-        upstreamFixedBlob: 'b'.repeat(40),
+        upstreamBaseBlob,
+        upstreamFixedBlob,
+        upstreamFilePath,
         patchPath,
         patchSha256,
         removeWhen: 'patched release',
@@ -54,7 +77,18 @@ function alert(overrides = {}) {
 async function fixture() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'vellira-backport-test-'));
   await mkdir(path.join(root, 'patches'), { recursive: true });
+  await mkdir(path.join(root, 'node_modules', 'node-forge', 'lib'), {
+    recursive: true,
+  });
   await writeFile(path.join(root, patchPath), patch);
+  await writeFile(
+    path.join(root, 'node_modules', 'node-forge', 'package.json'),
+    JSON.stringify({ name: 'node-forge', version: '1.4.0' })
+  );
+  await writeFile(
+    path.join(root, 'node_modules', 'node-forge', upstreamFilePath),
+    installedFixedFile
+  );
   await writeFile(
     path.join(root, 'pnpm-workspace.yaml'),
     `patchedDependencies:\n  'node-forge@1.4.0': ${patchPath}\n`
@@ -131,5 +165,51 @@ test('fails closed when the lockfile loses patched package identity', async () =
       repositoryRoot,
     }),
     /missing patched package identity/
+  );
+});
+
+test('fails closed when installed patched bytes drift from upstream fixed blob', async () => {
+  const repositoryRoot = await fixture();
+  await writeFile(
+    path.join(repositoryRoot, 'node_modules', 'node-forge', upstreamFilePath),
+    'different installed bytes\n'
+  );
+
+  await assert.rejects(
+    filterVerifiedDependabotBackports({
+      alerts: [alert()],
+      ledger: ledger(),
+      repositoryRoot,
+    }),
+    /installed fixed-file blob mismatch/
+  );
+});
+
+test('fails closed when patch provenance does not bind declared upstream blobs', async () => {
+  const repositoryRoot = await fixture();
+  const malformedPatch = patch.replace(upstreamBaseBlob, 'f'.repeat(40));
+  const candidateLedger = ledger();
+  candidateLedger.backports[0].patchSha256 = createHash('sha256')
+    .update(malformedPatch)
+    .digest('hex');
+  await writeFile(path.join(repositoryRoot, patchPath), malformedPatch);
+  await writeFile(
+    path.join(repositoryRoot, 'pnpm-lock.yaml'),
+    [
+      'patchedDependencies:',
+      `  node-forge@1.4.0: ${candidateLedger.backports[0].patchSha256}`,
+      '',
+      `  node-forge@1.4.0(patch_hash=${candidateLedger.backports[0].patchSha256}): {}`,
+      '',
+    ].join('\n')
+  );
+
+  await assert.rejects(
+    filterVerifiedDependabotBackports({
+      alerts: [alert()],
+      ledger: candidateLedger,
+      repositoryRoot,
+    }),
+    /patch provenance does not bind/
   );
 });
