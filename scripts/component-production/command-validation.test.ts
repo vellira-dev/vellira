@@ -328,10 +328,10 @@ describe('runComponentProductionCommandValidation', () => {
     });
 
     expect(calls).toContain('react-native-tests');
-    expect(calls).not.toContain('react-typecheck');
-    expect(calls).not.toContain('react-native-typecheck');
-    expect(calls).not.toContain('react-build');
-    expect(calls).not.toContain('component-docs');
+    expect(calls).toContain('react-typecheck');
+    expect(calls).toContain('react-native-typecheck');
+    expect(calls).toContain('react-build');
+    expect(calls).toContain('component-docs');
 
     expect(
       result.stages
@@ -340,7 +340,7 @@ describe('runComponentProductionCommandValidation', () => {
             stage.id
           )
         )
-        .every((stage) => stage.status === 'skipped')
+        .every((stage) => stage.status === 'passed')
     ).toBe(true);
   });
 

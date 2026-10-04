@@ -254,6 +254,7 @@ describe('runComponentProductionValidation', () => {
           completeness: [],
           quality: passingQuality(),
         }),
+        runFinalValidation: () => ({ stages: finalStages() }),
       },
     });
 
@@ -261,7 +262,65 @@ describe('runComponentProductionValidation', () => {
     expect(result.readyForReview).toBe(false);
     expect(result.blockingFindings).toEqual([finding]);
     expect(result.validationSummary.blockedStages).toEqual(['tests']);
-    expect(result.lifecycle.current).toBe('candidate');
+    expect(result.lifecycle.current).toBe('validated');
+  });
+
+  it('consolidates independent candidate and harness blockers in one authoritative pass', async () => {
+    const testFinding: ComponentProductionFinding = {
+      id: 'tests:react-tests',
+      stage: 'tests',
+      severity: 'blocking',
+      message: 'Candidate test failed.',
+      path: 'packages/react/src/primitives/Fixture/Fixture.test.tsx',
+    };
+    const typecheckFinding: ComponentProductionFinding = {
+      id: 'typecheck:react-typecheck',
+      stage: 'typecheck',
+      severity: 'blocking',
+      message: 'Candidate typecheck failed.',
+      path: 'packages/react/src/primitives/Fixture/Fixture.tsx',
+    };
+    const toolingFinding: ComponentProductionFinding = {
+      id: 'tooling:tooling-contracts',
+      stage: 'tooling',
+      severity: 'blocking',
+      message: 'Synthetic fixture copied mutable production authority.',
+      path: 'scripts/generators/component/preflight.test.ts',
+    };
+    const result = await runComponentProductionValidation({
+      root: '/tmp/vellira-production',
+      input: RAW_INPUT,
+      dependencies: {
+        runCommandValidation: () => ({
+          stages: commandStages({
+            tests: blockedStage('tests', testFinding),
+            typecheck: blockedStage('typecheck', typecheckFinding),
+          }),
+        }),
+        runStructuredValidation: async () => ({
+          stages: [passedStage('completeness'), passedStage('quality')],
+          completeness: [],
+          quality: passingQuality(),
+        }),
+        runFinalValidation: () => ({
+          stages: finalStages({
+            tooling: blockedStage('tooling', toolingFinding),
+          }),
+        }),
+      },
+    });
+
+    expect(result.blockingFindings).toEqual([
+      testFinding,
+      typecheckFinding,
+      toolingFinding,
+    ]);
+    expect(result.validationSummary.blockedStages).toEqual([
+      'tests',
+      'typecheck',
+      'tooling',
+    ]);
+    expect(result.validationSummary.skippedStages).toEqual([]);
   });
 });
 
@@ -513,10 +572,15 @@ function commandStages(
   });
 }
 
-function finalStages(): ComponentProductionStageResult[] {
-  return ['public-api', 'tooling', 'visual', 'smoke'].map((id) =>
-    passedStage(id as ComponentProductionStageId)
-  );
+function finalStages(
+  overrides: Partial<
+    Record<ComponentProductionStageId, ComponentProductionStageResult>
+  > = {}
+): ComponentProductionStageResult[] {
+  return ['public-api', 'tooling', 'visual', 'smoke'].map((id) => {
+    const stageId = id as ComponentProductionStageId;
+    return overrides[stageId] ?? passedStage(stageId);
+  });
 }
 
 function passedStage(

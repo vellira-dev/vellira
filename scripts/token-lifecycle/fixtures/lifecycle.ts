@@ -46,3 +46,44 @@ export function reserveTokenLifecycleFixture(
     };
   });
 }
+
+/**
+ * Build root-local Generator V2 token authority for synthetic component tests.
+ *
+ * The lifecycle registry and preservation baseline are canonical input shapes,
+ * but generated addition provenance is deliberately empty. Copying the live
+ * migration manifest would couple a synthetic work item to whichever real
+ * component was most recently materialized in the checkout.
+ */
+export function createIsolatedComponentTokenAuthorityFixture(
+  root: string,
+  componentNames: readonly string[]
+) {
+  copyTokenLifecycleFixture(root);
+  for (const componentName of componentNames) {
+    reserveTokenLifecycleFixture(root, componentName);
+  }
+
+  const preservationDir = path.join(
+    root,
+    'packages',
+    'tokens',
+    'src',
+    'preservation'
+  );
+  fs.mkdirSync(preservationDir, { recursive: true });
+  fs.copyFileSync(
+    path.resolve(
+      'packages/tokens/src/preservation/token-preservation-baseline.v1.json'
+    ),
+    path.join(preservationDir, 'token-preservation-baseline.v1.json')
+  );
+  fs.writeFileSync(
+    path.join(preservationDir, 'token-migrations.ts'),
+    'export const generatedComponentTokenAdditionMigrationsV1 = [] as const;\n'
+  );
+  fs.copyFileSync(
+    path.resolve('packages/tokens/package.json'),
+    path.join(root, 'packages/tokens/package.json')
+  );
+}

@@ -98,17 +98,15 @@ export function componentProductionDiagnosticCommands(
     : [];
 
   const scheduled: DiagnosticCommand[] = commands.map((command) => {
-    let requires: readonly string[] = [];
-    if (command.stage === 'storybook') requires = ['react-build'];
-    if (command.id === 'canonical-web-visual') {
-      requires = [
-        'react-storybook-build',
-        'diagnostic-docker-compose',
-        'diagnostic-docker-daemon',
-      ];
-    }
-    if (command.id === 'web-smoke') requires = ['react-build'];
-    if (command.id === 'native-smoke') requires = ['react-native-build'];
+    const canonicalRequires = command.requires ?? [];
+    const requires =
+      command.id === 'canonical-web-visual'
+        ? [
+            ...canonicalRequires,
+            'diagnostic-docker-compose',
+            'diagnostic-docker-daemon',
+          ]
+        : canonicalRequires;
     return { ...command, requires };
   });
 
