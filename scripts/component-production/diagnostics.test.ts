@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CandidateSnapshotV1 } from './candidate-snapshot';
 import type { ComponentProductionInputV1 } from './contracts';
@@ -68,13 +68,52 @@ function fixture(
   return { root, snapshot };
 }
 
+beforeEach(() => {
+  vi.stubEnv('VELLIRA_VISUAL_ENVIRONMENT', undefined);
+});
+
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const root of roots.splice(0)) {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
 describe('providerless production diagnostics', { timeout: 30_000 }, () => {
+  it('does not probe nested Docker in a declared canonical container', () => {
+    vi.stubEnv('VELLIRA_VISUAL_ENVIRONMENT', 'playwright-v1.61.1-noble');
+    const commands = componentProductionDiagnosticCommands(INPUT);
+    expect(commands.some(({ id }) => id.startsWith('diagnostic-docker'))).toBe(
+      false
+    );
+    expect(
+      commands.find(({ id }) => id === 'canonical-web-visual')?.command[0]
+    ).toBe('pnpm');
+  });
+
+  it('preserves visual environment ownership in providerless replay', () => {
+    const { root, snapshot } = fixture();
+    const report = runComponentProductionDiagnostics({
+      root,
+      input: INPUT,
+      candidateSnapshot: snapshot,
+      runner: (command) =>
+        command.id === 'canonical-web-visual'
+          ? {
+              ...passed(),
+              exitCode: 1,
+              stderr: 'Canonical visual environment check failed',
+            }
+          : passed(),
+    });
+    const visual = report.entries.find(
+      ({ id }) => id === 'canonical-web-visual'
+    );
+    expect(visual?.result?.status).toBe('blocked');
+    expect(visual?.result?.findings[0].ruleId).toBe('validation.environment');
+    expect(report.readyForReview).toBe(false);
+  });
+
   it('collects independent failures without granting readiness', () => {
     const { root, snapshot } = fixture();
     const called: string[] = [];

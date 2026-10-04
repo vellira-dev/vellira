@@ -620,7 +620,7 @@ test('GitHub Actions tooling keeps component-production e2e fixtures on dedicate
   assert.doesNotMatch(toolingRunner, /GITHUB_JOB === 'tooling'/);
   assert.match(
     toolingRunner,
-    /--exclude', 'scripts\/component-production\/e2e-fixtures\.test\.ts'/
+    /--exclude',\s+'scripts\/component-production\/e2e-fixtures\.test\.ts'/
   );
 
   assert.match(unitRunner, /GITHUB_JOB === 'unit-coverage'/);

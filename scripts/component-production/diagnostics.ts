@@ -17,7 +17,10 @@ import {
   type ComponentProductionInputV1,
   type ComponentProductionStageResult,
 } from './contracts';
-import { componentProductionFinalValidationCommands } from './final-validation';
+import {
+  componentProductionFinalValidationCommands,
+  componentProductionFinalFailureRuleId,
+} from './final-validation';
 import {
   evaluateComponentReviewSurfaces,
   type ComponentReviewBundleSurface,
@@ -77,7 +80,9 @@ export function componentProductionDiagnosticCommands(
     ...componentProductionValidationCommands(input),
     ...componentProductionFinalValidationCommands(input),
   ];
-  const hasVisual = commands.some((item) => item.id === 'canonical-web-visual');
+  const hasVisual = commands.some(
+    (item) => item.id === 'canonical-web-visual' && item.command[0] === 'docker'
+  );
   const probes: DiagnosticCommand[] = hasVisual
     ? [
         {
@@ -100,7 +105,7 @@ export function componentProductionDiagnosticCommands(
   const scheduled: DiagnosticCommand[] = commands.map((command) => {
     const canonicalRequires = command.requires ?? [];
     const requires =
-      command.id === 'canonical-web-visual'
+      command.id === 'canonical-web-visual' && hasVisual
         ? [
             ...canonicalRequires,
             'diagnostic-docker-compose',
@@ -310,6 +315,7 @@ export function runComponentProductionDiagnostics(params: {
           commands: [command],
           runner,
           requireCommand: true,
+          ruleIdForFailure: componentProductionFinalFailureRuleId,
         });
         entry.state = 'completed';
         entry.blockedBy = [];

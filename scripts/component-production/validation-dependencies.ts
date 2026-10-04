@@ -1,4 +1,5 @@
 import type { ComponentProductionStageId } from './contracts';
+import toolingBuildDependencies from '../ci/tooling-build-dependencies.json';
 
 export type ComponentProductionStagePolicy = {
   id: ComponentProductionStageId;
@@ -109,5 +110,9 @@ const COMMAND_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
 export function componentProductionCommandDependencies(
   commandId: string
 ): readonly string[] {
-  return COMMAND_DEPENDENCIES[commandId] ?? [];
+  return (
+    COMMAND_DEPENDENCIES[commandId] ??
+    toolingBuildDependencies.find(({ id }) => id === commandId)?.requires ??
+    []
+  );
 }

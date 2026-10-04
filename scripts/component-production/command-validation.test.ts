@@ -20,7 +20,7 @@ const WEB_INPUT: ComponentProductionInputV1 = {
 };
 
 describe('componentProductionValidationCommands', () => {
-  it('selects only React validation for a web component', () => {
+  it('selects React candidate checks plus both tooling build prerequisites for a web component', () => {
     expect(
       componentProductionValidationCommands(WEB_INPUT).map(
         (command) => command.id
@@ -35,6 +35,7 @@ describe('componentProductionValidationCommands', () => {
       'react-typecheck',
       'react-build',
       'react-storybook-build',
+      'react-native-build',
       'component-docs',
       'component-page-check',
       'component-page-audit',
@@ -135,6 +136,7 @@ describe('runComponentProductionCommandValidation', () => {
       'react-tests',
       'react-typecheck',
       'react-build',
+      'react-native-build',
       'react-storybook-build',
       'component-docs',
       'component-page-check',
@@ -246,7 +248,7 @@ describe('runComponentProductionCommandValidation', () => {
           return {
             exitCode: 1,
             stdout: `RUN /tmp/vellira-production/packages/react\n${'x'.repeat(
-              5_000
+              65_000
             )}\n${tailDiagnostic}`,
             stderr: '',
             timedOut: false,
@@ -266,7 +268,7 @@ describe('runComponentProductionCommandValidation', () => {
     expect(finding?.message).toContain('… output truncated …');
     expect(finding?.message).toContain(tailDiagnostic);
     expect(finding).toMatchObject({ platform: 'react' });
-    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
+    expect(finding?.message.length).toBeLessThanOrEqual(64_100);
   });
 
   it('preserves stdout diagnostics when stderr also contains command output', () => {

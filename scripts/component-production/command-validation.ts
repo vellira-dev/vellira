@@ -77,6 +77,14 @@ export function componentProductionValidationCommands(
         ]
       : []),
     ...platformCommands(input),
+    // Repository-wide tooling consumes both published package surfaces, even
+    // when the candidate itself targets only one platform. Build prerequisites
+    // explicitly; do not rely on incidental dist output from an earlier run.
+    ...platformCommands({ ...input, platform: 'both' }).filter(
+      (command) =>
+        command.stage === 'build' &&
+        !platformCommands(input).some((selected) => selected.id === command.id)
+    ),
     {
       id: 'component-docs',
       stage: 'docs',

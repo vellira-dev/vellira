@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import toolingBuildDependencies from '../ci/tooling-build-dependencies.json';
 
 import type {
   ComponentProductionInputV1,
@@ -13,6 +15,7 @@ import {
   type ValidationCommandRunner,
 } from './validation-command';
 import { componentProductionCommandDependencies } from './validation-dependencies';
+import { componentProductionVisualCommand } from './visual-environment';
 
 const FINAL_STAGE_IDS = [
   'public-api',
@@ -47,9 +50,6 @@ export function componentProductionRequiresTokenSemanticGate(
 export function componentProductionFinalValidationCommands(
   input: ComponentProductionInputV1
 ): readonly ComponentProductionFinalCommand[] {
-  const toolingCommand = componentProductionRequiresTokenSemanticGate(input)
-    ? 'test:tooling:readiness'
-    : 'test:tooling';
   const commands: ComponentProductionFinalCommand[] = [
     {
       id: 'public-api',
@@ -60,16 +60,45 @@ export function componentProductionFinalValidationCommands(
     {
       id: 'tooling-contracts',
       stage: 'tooling',
-      command: ['pnpm', toolingCommand],
+      command: [
+        'node',
+        fileURLToPath(new URL('../ci/run-tooling-tests.mjs', import.meta.url)),
+        '--source-contracts',
+      ],
       timeoutMs: 420_000,
     },
   ];
+  for (const group of toolingBuildDependencies) {
+    commands.push({
+      id: group.id,
+      stage: 'tooling',
+      command: [
+        'pnpm',
+        'exec',
+        'vitest',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        ...group.files,
+      ],
+      timeoutMs: 120_000,
+      requires: group.requires,
+    });
+  }
+  if (componentProductionRequiresTokenSemanticGate(input)) {
+    commands.push({
+      id: 'tooling-token-semantics',
+      stage: 'tooling',
+      command: ['pnpm', 'check:tokens-semantic:strict'],
+      timeoutMs: 120_000,
+    });
+  }
 
   if (input.platform === 'web' || input.platform === 'both') {
     commands.push({
       id: 'canonical-web-visual',
       stage: 'visual',
-      command: ['pnpm', 'test:e2e:web:visual:docker'],
+      command: componentProductionVisualCommand(),
       timeoutMs: 600_000,
       platform: 'react',
       requires: componentProductionCommandDependencies('canonical-web-visual'),
@@ -173,7 +202,12 @@ export function runComponentProductionFinalValidation(params: {
               ...new Set(blockedDependencies),
             ].join(', ')}.`
           )
-        : stage
+        : blockedDependencies.length > 0
+          ? {
+              ...stage,
+              summary: `${stage.summary} Deferred build consumers: ${[...new Set(blockedDependencies)].join(', ')}.`,
+            }
+          : stage
     );
   }
 
@@ -200,7 +234,7 @@ function runStage(params: {
   return runValidationStage({
     ...params,
     requireCommand: true,
-    ruleIdForFailure: semanticRuleIdForFailure,
+    ruleIdForFailure: componentProductionFinalFailureRuleId,
   });
 }
 
@@ -217,13 +251,22 @@ function skippedStage(
   };
 }
 
-function semanticRuleIdForFailure(
-  command: ComponentProductionFinalCommand,
+export function componentProductionFinalFailureRuleId(
+  command: Pick<ComponentProductionFinalCommand, 'id'>,
   execution: ComponentProductionFinalCommandExecution
 ): string | undefined {
-  if (command.id !== 'tooling-contracts') return undefined;
-
   const output = [execution.stdout, execution.stderr].join('\n');
+  if (
+    command.id === 'canonical-web-visual' &&
+    /Canonical visual environment check failed|docker: (?:not found|command not found)|(?:Cannot connect|permission denied).*docker|Docker daemon/i.test(
+      output
+    )
+  ) {
+    return 'validation.environment';
+  }
+  if (!['tooling-contracts', 'tooling-token-semantics'].includes(command.id))
+    return undefined;
+
   return output.includes('Token semantic audit:')
     ? 'tokens.semantic-architecture'
     : undefined;

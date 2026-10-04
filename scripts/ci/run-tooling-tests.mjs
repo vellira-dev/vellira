@@ -1,4 +1,17 @@
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const buildDependencies = JSON.parse(
+  readFileSync(
+    new URL('./tooling-build-dependencies.json', import.meta.url),
+    'utf8'
+  )
+);
+const profile = process.argv[2];
+if (profile !== undefined && profile !== '--source-contracts') {
+  throw new Error('Unknown tooling execution profile.');
+}
 
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const splitProductionFixtures = process.env.GITHUB_ACTIONS === 'true';
@@ -12,12 +25,31 @@ const baseArgs = [
   '--exclude',
   'scripts/checks/token-semantic/cli.test.ts',
 ];
+if (profile === '--source-contracts') {
+  for (const group of buildDependencies) {
+    for (const file of group.files) baseArgs.push('--exclude', file);
+  }
+}
 
 if (splitProductionFixtures) {
-  baseArgs.push('--exclude', 'scripts/component-production/e2e-fixtures.test.ts');
+  baseArgs.push(
+    '--exclude',
+    'scripts/component-production/e2e-fixtures.test.ts'
+  );
 }
 
 const tasks = [
+  {
+    name: 'canonical visual font contracts',
+    args: [
+      'exec',
+      'node',
+      '--test',
+      fileURLToPath(
+        new URL('../visual/canonical-fonts.test.mjs', import.meta.url)
+      ),
+    ],
+  },
   {
     name: 'Actions workflow contracts',
     args: ['exec', 'node', '--test', 'scripts/ci/workflow-noise.test.mjs'],
@@ -94,6 +126,6 @@ for (const task of tasks) {
   const exitCode = await runTask(task);
   if (exitCode !== 0) {
     process.exitCode = exitCode;
-    break;
+    // Tasks are independent. Preserve every deterministic blocker in this pass.
   }
 }
