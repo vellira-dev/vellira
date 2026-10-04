@@ -102,6 +102,8 @@ async function fixture() {
       'patchedDependencies:',
       `  node-forge@1.4.0: ${patchSha256}`,
       '',
+      'snapshots:',
+      '',
       `  node-forge@1.4.0(patch_hash=${patchSha256}): {}`,
       '',
     ].join('\n')
@@ -201,6 +203,34 @@ test('fails closed when the lockfile loses patched package identity', async () =
   );
 });
 
+test('fails closed when a bare vulnerable lock reference remains', async () => {
+  const repositoryRoot = await fixture();
+  await writeFile(
+    path.join(repositoryRoot, 'pnpm-lock.yaml'),
+    [
+      'patchedDependencies:',
+      `  node-forge@1.4.0: ${patchSha256}`,
+      '',
+      'snapshots:',
+      '',
+      '  consumer@1.0.0:',
+      '    dependencies:',
+      '      node-forge: 1.4.0',
+      '',
+      `  node-forge@1.4.0(patch_hash=${patchSha256}): {}`,
+      '',
+    ].join('\n')
+  );
+
+  await assert.rejects(
+    filterVerifiedDependabotBackports({
+      alerts: [alert()],
+      ledger: ledger(),
+      repositoryRoot,
+    }),
+    /unpatched lockfile reference/
+  );
+});
 test('fails closed when installed patched bytes drift from upstream fixed blob', async () => {
   const repositoryRoot = await fixture();
   await writeFile(
@@ -231,6 +261,8 @@ test('fails closed when patch provenance does not bind declared upstream blobs',
     [
       'patchedDependencies:',
       `  node-forge@1.4.0: ${candidateLedger.backports[0].patchSha256}`,
+      '',
+      'snapshots:',
       '',
       `  node-forge@1.4.0(patch_hash=${candidateLedger.backports[0].patchSha256}): {}`,
       '',
