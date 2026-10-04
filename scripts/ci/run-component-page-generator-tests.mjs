@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { remainingProductionFixturePattern } from './component-production-fixture-shards.mjs';
 
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const runProductionFixtureShard =
@@ -27,7 +28,7 @@ if (runProductionFixtureShard) {
     'vitest.tooling.config.ts',
     'scripts/component-production/e2e-fixtures.test.ts',
     '--testNamePattern',
-    'base-web|overlay-web|base-cross-platform|rejects invalid resources|blocks compound completeness',
+    remainingProductionFixturePattern,
   ]);
 }
 

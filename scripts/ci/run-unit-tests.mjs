@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { unitProductionFixturePattern } from './component-production-fixture-shards.mjs';
 
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const runProductionFixtureShard =
@@ -31,7 +32,7 @@ if (runProductionFixtureShard) {
     'vitest.tooling.config.ts',
     'scripts/component-production/e2e-fixtures.test.ts',
     '--testNamePattern',
-    'boolean-form-control|compound-divergent',
+    unitProductionFixturePattern,
   ]);
 }
 

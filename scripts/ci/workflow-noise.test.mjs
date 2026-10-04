@@ -6,6 +6,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { unitProductionFixturePattern, remainingProductionFixturePattern } from './component-production-fixture-shards.mjs';
 
 // These probes exercise POSIX workflow steps; static contracts also run on Windows.
 const shellTest = process.platform === 'win32' ? test.skip : test;
@@ -624,10 +625,27 @@ test('GitHub Actions tooling keeps component-production e2e fixtures on dedicate
   );
 
   assert.match(unitRunner, /GITHUB_JOB === 'unit-coverage'/);
-  assert.match(unitRunner, /boolean-form-control\|compound-divergent/);
+  assert.match(unitRunner, /'--testNamePattern',\s+unitProductionFixturePattern/);
   assert.match(pageRunner, /GITHUB_JOB === 'generator-blog'/);
   assert.match(
     pageRunner,
-    /base-web\|overlay-web\|base-cross-platform\|rejects invalid resources\|blocks compound completeness/
+    /'--testNamePattern',\s+remainingProductionFixturePattern/
   );
+});
+
+test('production fixture shards are exhaustive and disjoint, including future names', () => {
+  const unit = new RegExp(unitProductionFixturePattern);
+  const remaining = new RegExp(remainingProductionFixturePattern);
+  for (const name of [
+    'base-web', 'overlay-web', 'base-cross-platform',
+    'boolean-form-control', 'compound-divergent',
+    'rejects invalid resources before writing component artifacts',
+    'blocks compound completeness until instance-isolation evidence exists',
+    'reports exactly every real generation mutation for a fresh both-platform base component',
+    'future reusable-program fixture',
+    'component production end-to-end fixtures > compound-divergent',
+    'future multiline suite\nboolean-form-control',
+  ]) {
+    assert.equal(Number(unit.test(name)) + Number(remaining.test(name)), 1, name);
+  }
 });
