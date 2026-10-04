@@ -234,7 +234,7 @@ function runStage(params: {
   return runValidationStage({
     ...params,
     requireCommand: true,
-    ruleIdForFailure: semanticRuleIdForFailure,
+    ruleIdForFailure: componentProductionFinalFailureRuleId,
   });
 }
 
@@ -251,8 +251,8 @@ function skippedStage(
   };
 }
 
-function semanticRuleIdForFailure(
-  command: ComponentProductionFinalCommand,
+export function componentProductionFinalFailureRuleId(
+  command: Pick<ComponentProductionFinalCommand, 'id'>,
   execution: ComponentProductionFinalCommandExecution
 ): string | undefined {
   const output = [execution.stdout, execution.stderr].join('\n');

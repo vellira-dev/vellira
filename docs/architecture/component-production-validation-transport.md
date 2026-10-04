@@ -37,6 +37,20 @@ when Docker is actually the transport. Runtime/environment failures remain
 infrastructure findings. Visual readiness still requires the canonical command
 to succeed; a dependency-blocked stage cannot grant readiness.
 
+The visual harness, including screenshot baselines, belongs to the pinned validator
+revision. It renders the exact candidate through its own Storybook configuration,
+tests and component code, without copying a patch into that candidate. The shared
+visual runner also serves ordinary repository visual validation. Both transports
+use the same runner and the existing canonical environment guard.
+
+Screenshot-only font loading embeds the candidate's exact root-local WOFF2 bytes
+and changes only `font-display: optional` to blocking loading. Optional font display
+can permanently retain fallback typography after a cold load even when
+`document.fonts.ready` resolves. The previously timing-dependent mobile baseline is
+corrected from the unchanged canonical reference component with its real fonts.
+This is a reviewed baseline correction, not a threshold increase or snapshot mask.
+Candidate styles, font assets, geometry, screenshot tolerances and tests are unchanged.
+
 Validation-only resume is an internal lifecycle responsibility. It must reuse the
 completed provider response, verify the prior Apply receipt and durable candidate,
 leave that receipt immutable, and seal one successor before publishing any repair

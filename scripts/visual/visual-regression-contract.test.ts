@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -29,10 +30,25 @@ const canonicalEnvironment = `playwright-v${playwrightVersion}-noble`;
 describe('Storybook visual regression contract', () => {
   it('keeps host-native E2E separate from canonical screenshot regression', () => {
     expect(storybookScripts['test:e2e']).toContain('--grep-invert @visual');
-    expect(storybookScripts['test:e2e:visual']).toContain(
-      'assert-canonical-visual-environment.mjs'
+    expect(storybookScripts['test:e2e:visual']).toBe(
+      'node ../../scripts/visual/run.mjs'
     );
-    expect(storybookScripts['test:e2e:visual']).toContain('--grep @visual');
+    const runner = readRootFile('scripts/visual/run.mjs');
+    expect(runner).toContain('assert-canonical-visual-environment.mjs');
+    expect(runner).toContain("'@visual'");
+    const invalid = spawnSync(
+      process.execPath,
+      ['../../scripts/visual/run.mjs'],
+      {
+        cwd: resolve('apps/react-storybook'),
+        encoding: 'utf8',
+        env: { ...process.env, VELLIRA_VISUAL_ENVIRONMENT: 'unsupported' },
+      }
+    );
+    expect(invalid.status).toBe(1);
+    expect(invalid.stderr).toContain(
+      'Canonical visual environment check failed'
+    );
     expect(buttonVisualSpec).toContain("test('@visual");
     expect(buttonVisualSpec).toContain('maxDiffPixelRatio: 0.02');
   });

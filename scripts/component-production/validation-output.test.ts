@@ -27,17 +27,25 @@ describe('bounded causal validation evidence', () => {
 
 describe('visual execution transport', () => {
   it('uses Docker when no canonical container is declared', () => {
-    expect(componentProductionVisualCommand({})).toEqual([
-      'pnpm',
-      'test:e2e:web:visual:docker',
-    ]);
+    const command = componentProductionVisualCommand({});
+    expect(command.slice(0, 2)).toEqual(['docker', 'compose']);
+    expect(command).toContain(
+      'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs'
+    );
+    expect(command.join(' ')).toContain(':/vellira-validation-tools:ro');
   });
   it('uses the guarded visual entrypoint inside a declared container', () => {
-    expect(
-      componentProductionVisualCommand({
-        VELLIRA_VISUAL_ENVIRONMENT: 'invalid',
-      })
-    ).toEqual(['pnpm', 'test:e2e:web:visual']);
+    const command = componentProductionVisualCommand({
+      VELLIRA_VISUAL_ENVIRONMENT: 'invalid',
+    });
+    expect(command.slice(0, 5)).toEqual([
+      'pnpm',
+      '--filter',
+      '@vellira-ui/react-storybook',
+      'exec',
+      'node',
+    ]);
+    expect(command.at(-1)).toMatch(/scripts\/visual\/run.mjs$/);
     // The existing script rejects invalid declarations; selecting transport is
     // not evidence of a successful visual run.
   });

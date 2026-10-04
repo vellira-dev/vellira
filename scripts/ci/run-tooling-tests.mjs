@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const buildDependencies = JSON.parse(
   readFileSync(
@@ -38,6 +39,17 @@ if (splitProductionFixtures) {
 }
 
 const tasks = [
+  {
+    name: 'canonical visual font contracts',
+    args: [
+      'exec',
+      'node',
+      '--test',
+      fileURLToPath(
+        new URL('../visual/canonical-fonts.test.mjs', import.meta.url)
+      ),
+    ],
+  },
   {
     name: 'Actions workflow contracts',
     args: ['exec', 'node', '--test', 'scripts/ci/workflow-noise.test.mjs'],
