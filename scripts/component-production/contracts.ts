@@ -9,6 +9,8 @@ import type {
 } from '@vellira-ui/metadata';
 
 import { componentSemanticCapabilities } from '../../packages/metadata/src/component';
+import type { ComponentProgramDecisionsV1 } from '../../packages/metadata/src/componentProgram';
+import { parseComponentProgramDecisions } from '../component-program/parse';
 import {
   parseGovernedGitHubWorkItem,
   type GovernedGitHubWorkItem,
@@ -48,6 +50,7 @@ export type ComponentProductionInputV1 = {
   componentTokens: ComponentTokenContract | false;
   workItem?: GovernedGitHubWorkItem;
   parts: readonly string[];
+  componentProgram?: ComponentProgramDecisionsV1;
 };
 
 export const COMPONENT_PRODUCTION_STAGE_IDS = [
@@ -190,6 +193,7 @@ const INPUT_KEYS = new Set([
   'componentTokens',
   'workItem',
   'parts',
+  'componentProgram',
 ]);
 
 const ICON_REQUIREMENT_KEYS = new Set(['name', 'purpose']);
@@ -335,6 +339,13 @@ export function parseComponentProductionInput(
     componentTokens: resolvedComponentTokens,
     ...(workItem !== undefined ? { workItem } : {}),
     parts: generatorOptions.parts,
+    ...(value.componentProgram === undefined
+      ? {}
+      : {
+          componentProgram: parseComponentProgramDecisions(
+            value.componentProgram
+          ),
+        }),
   };
 }
 
@@ -362,6 +373,9 @@ export function createComponentProductionGeneratorOptions(
     componentTokens: input.componentTokens,
     ...(input.workItem !== undefined ? { workItem: input.workItem } : {}),
     parts: input.parts,
+    ...(input.componentProgram === undefined
+      ? {}
+      : { componentProgram: input.componentProgram }),
     force: false,
     dryRun: false,
     check: false,
