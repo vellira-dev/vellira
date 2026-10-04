@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { filterVerifiedDependabotBackports } from './dependabot-verified-backports.mjs';
+import {
+  DEFAULT_LEDGER_PATH,
+  filterVerifiedDependabotBackports,
+} from './dependabot-verified-backports.mjs';
 
 const patchPath = 'patches/node-forge@1.4.0.patch';
 const upstreamFilePath = 'lib/rsa.js';
@@ -105,6 +108,36 @@ async function fixture() {
   );
   return root;
 }
+
+test('repository ledger verifies against materialized patched dependencies', async () => {
+  const repositoryLedger = JSON.parse(
+    await readFile(DEFAULT_LEDGER_PATH, 'utf8')
+  );
+  const alerts = repositoryLedger.backports.map((entry) => ({
+    number: entry.alertNumber,
+    dependency: {
+      package: { name: entry.package },
+      manifest_path: entry.manifestPath,
+      scope: entry.scope,
+    },
+    security_advisory: {
+      ghsa_id: entry.ghsaId,
+      severity: 'high',
+    },
+  }));
+
+  const result = await filterVerifiedDependabotBackports({
+    alerts,
+    ledger: repositoryLedger,
+    repositoryRoot: process.cwd(),
+  });
+
+  assert.deepEqual(result.effectiveAlerts, []);
+  assert.equal(result.verifiedBackports.length, repositoryLedger.backports.length);
+  for (const entry of result.verifiedBackports) {
+    assert.equal(entry.actualInstalledFixedBlob, entry.upstreamFixedBlob);
+  }
+});
 
 test('filters only an exact alert bound to a verified repository patch', async () => {
   const repositoryRoot = await fixture();
