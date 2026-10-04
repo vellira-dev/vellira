@@ -51,11 +51,14 @@ A runtime advisory with no published fixed release may use a temporary verified
 backport only when the repository records an exact alert/package/GHSA identity,
 upstream commit and blobs, patch path and SHA-256 in
 `.github/dependabot-verified-backports.json`. The watcher validates that ledger
-against the exact checked-out main revision, `patchedDependencies`, and the
-lockfile before excluding the raw alert from the launch blocker count. The raw
-Dependabot alert remains visible. Any patch, lockfile, package identity, scope,
-manifest, GHSA, or alert-number drift fails closed and makes the alert effective
-again. Remove the backport once an upstream fixed release is available.
+against the exact checked-out main revision, `patchedDependencies`, the
+lockfile, and a frozen materialization of the patched dependency graph. The
+installed patched file must have the exact Git blob identity recorded for the
+reviewed upstream fixed file before the raw alert can leave the launch blocker
+count. The raw Dependabot alert remains visible. Any patch, installed byte,
+lockfile, package identity, scope, manifest, GHSA, or alert-number drift fails
+closed and makes the alert effective again. Remove the backport once an upstream
+fixed release is available.
 
 ## Local Commands
 
