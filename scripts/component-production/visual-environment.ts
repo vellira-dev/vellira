@@ -2,7 +2,7 @@
  * A declaration selects execution transport; it never certifies a visual pass.
  */
 export function componentProductionVisualCommand(
-  environment: NodeJS.ProcessEnv = process.env
+  environment: Readonly<Record<string, string | undefined>> = process.env
 ): readonly string[] {
   return environment.VELLIRA_VISUAL_ENVIRONMENT
     ? ['pnpm', 'test:e2e:web:visual']
