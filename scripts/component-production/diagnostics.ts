@@ -77,7 +77,11 @@ export function componentProductionDiagnosticCommands(
     ...componentProductionValidationCommands(input),
     ...componentProductionFinalValidationCommands(input),
   ];
-  const hasVisual = commands.some((item) => item.id === 'canonical-web-visual');
+  const hasVisual = commands.some(
+    (item) =>
+      item.id === 'canonical-web-visual' &&
+      item.command.includes('test:e2e:web:visual:docker')
+  );
   const probes: DiagnosticCommand[] = hasVisual
     ? [
         {
@@ -100,7 +104,7 @@ export function componentProductionDiagnosticCommands(
   const scheduled: DiagnosticCommand[] = commands.map((command) => {
     const canonicalRequires = command.requires ?? [];
     const requires =
-      command.id === 'canonical-web-visual'
+      command.id === 'canonical-web-visual' && hasVisual
         ? [
             ...canonicalRequires,
             'diagnostic-docker-compose',

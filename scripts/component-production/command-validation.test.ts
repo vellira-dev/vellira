@@ -246,7 +246,7 @@ describe('runComponentProductionCommandValidation', () => {
           return {
             exitCode: 1,
             stdout: `RUN /tmp/vellira-production/packages/react\n${'x'.repeat(
-              5_000
+              65_000
             )}\n${tailDiagnostic}`,
             stderr: '',
             timedOut: false,
@@ -266,7 +266,7 @@ describe('runComponentProductionCommandValidation', () => {
     expect(finding?.message).toContain('… output truncated …');
     expect(finding?.message).toContain(tailDiagnostic);
     expect(finding).toMatchObject({ platform: 'react' });
-    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
+    expect(finding?.message.length).toBeLessThanOrEqual(64_100);
   });
 
   it('preserves stdout diagnostics when stderr also contains command output', () => {

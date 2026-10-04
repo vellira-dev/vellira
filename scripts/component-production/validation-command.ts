@@ -221,7 +221,11 @@ function validationFinding<
     severity: 'blocking',
     message: params.message,
     ...(params.command.platform ? { platform: params.command.platform } : {}),
-    ...(params.ruleId ? { ruleId: params.ruleId } : {}),
+    ...(params.runtime
+      ? { ruleId: 'validation.runtime' }
+      : params.ruleId
+        ? { ruleId: params.ruleId }
+        : {}),
   };
 }
 

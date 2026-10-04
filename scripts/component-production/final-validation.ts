@@ -13,6 +13,7 @@ import {
   type ValidationCommandRunner,
 } from './validation-command';
 import { componentProductionCommandDependencies } from './validation-dependencies';
+import { componentProductionVisualCommand } from './visual-environment';
 
 const FINAL_STAGE_IDS = [
   'public-api',
@@ -69,7 +70,7 @@ export function componentProductionFinalValidationCommands(
     commands.push({
       id: 'canonical-web-visual',
       stage: 'visual',
-      command: ['pnpm', 'test:e2e:web:visual:docker'],
+      command: componentProductionVisualCommand(),
       timeoutMs: 600_000,
       platform: 'react',
       requires: componentProductionCommandDependencies('canonical-web-visual'),
@@ -221,9 +222,17 @@ function semanticRuleIdForFailure(
   command: ComponentProductionFinalCommand,
   execution: ComponentProductionFinalCommandExecution
 ): string | undefined {
+  const output = [execution.stdout, execution.stderr].join('\n');
+  if (
+    command.id === 'canonical-web-visual' &&
+    /Canonical visual environment check failed|docker: (?:not found|command not found)|(?:Cannot connect|permission denied).*docker|Docker daemon/i.test(
+      output
+    )
+  ) {
+    return 'validation.environment';
+  }
   if (command.id !== 'tooling-contracts') return undefined;
 
-  const output = [execution.stdout, execution.stderr].join('\n');
   return output.includes('Token semantic audit:')
     ? 'tokens.semantic-architecture'
     : undefined;

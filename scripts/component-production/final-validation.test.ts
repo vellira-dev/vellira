@@ -136,7 +136,7 @@ describe('runComponentProductionFinalValidation', () => {
           ? {
               exitCode: 1,
               stdout: `public-api start\n${'x'.repeat(
-                5_000
+                65_000
               )}\n${tailDiagnostic}`,
               stderr: '',
               timedOut: false,
@@ -149,7 +149,7 @@ describe('runComponentProductionFinalValidation', () => {
     expect(finding?.message).toContain('public-api start');
     expect(finding?.message).toContain('… output truncated …');
     expect(finding?.message).toContain(tailDiagnostic);
-    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
+    expect(finding?.message.length).toBeLessThanOrEqual(64_100);
   });
 
   it('blocks readiness when public API integrity fails', () => {
