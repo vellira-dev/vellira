@@ -17,6 +17,14 @@ function sha256(source) {
   return createHash('sha256').update(source).digest('hex');
 }
 
+function gitBlobSha1(source) {
+  const bytes = Buffer.isBuffer(source) ? source : Buffer.from(source);
+  return createHash('sha1')
+    .update(`blob ${bytes.length}\0`)
+    .update(bytes)
+    .digest('hex');
+}
+
 function normalizeLedger(ledger) {
   if (ledger?.schemaVersion !== 1 || !Array.isArray(ledger.backports)) {
     throw new Error('Unsupported verified backport ledger schema.');
@@ -44,6 +52,7 @@ function normalizeLedger(ledger) {
       'upstreamCommit',
       'upstreamBaseBlob',
       'upstreamFixedBlob',
+      'upstreamFilePath',
       'patchPath',
       'patchSha256',
       'removeWhen',
@@ -71,6 +80,20 @@ function normalizeLedger(ledger) {
         `Verified backport alert #${entry.alertNumber} has invalid upstream fixed blob.`
       );
     }
+    if (
+      entry.upstreamFilePath.startsWith('/') ||
+      entry.upstreamFilePath.includes('..') ||
+      entry.upstreamFilePath.includes('\\')
+    ) {
+      throw new Error(
+        `Verified backport alert #${entry.alertNumber} has unsafe upstream file path.`
+      );
+    }
+    if (!/^(?:@[^/]+\/)?[^/]+$/.test(entry.package)) {
+      throw new Error(
+        `Verified backport alert #${entry.alertNumber} has unsafe package name.`
+      );
+    }
     if (!/^[a-f0-9]{64}$/.test(entry.patchSha256)) {
       throw new Error(
         `Verified backport alert #${entry.alertNumber} has invalid patch SHA-256.`
@@ -92,6 +115,38 @@ async function verifyRepositoryBinding(entry, repositoryRoot) {
   if (actualPatchSha !== entry.patchSha256) {
     throw new Error(
       `Verified backport alert #${entry.alertNumber} patch SHA mismatch: expected ${entry.patchSha256}, got ${actualPatchSha}.`
+    );
+  }
+
+  const expectedDiffHeader =
+    `diff --git a/${entry.upstreamFilePath} b/${entry.upstreamFilePath}`;
+  const expectedIndexBinding =
+    `index ${entry.upstreamBaseBlob}..${entry.upstreamFixedBlob}`;
+  if (
+    !patch.includes(expectedDiffHeader) ||
+    !patch.includes(expectedIndexBinding) ||
+    !patch.includes(`--- a/${entry.upstreamFilePath}`) ||
+    !patch.includes(`+++ b/${entry.upstreamFilePath}`)
+  ) {
+    throw new Error(
+      `Verified backport alert #${entry.alertNumber} patch provenance does not bind the declared upstream file/blob identities.`
+    );
+  }
+
+  const packageRoot = resolve(repositoryRoot, 'node_modules', entry.package);
+  const [installedPackageJson, installedFixedFile] = await Promise.all([
+    readFile(resolve(packageRoot, 'package.json'), 'utf8').then(JSON.parse),
+    readFile(resolve(packageRoot, entry.upstreamFilePath)),
+  ]);
+  if (installedPackageJson.version !== entry.version) {
+    throw new Error(
+      `Verified backport alert #${entry.alertNumber} installed package version mismatch: expected ${entry.version}, got ${installedPackageJson.version}.`
+    );
+  }
+  const actualFixedBlob = gitBlobSha1(installedFixedFile);
+  if (actualFixedBlob !== entry.upstreamFixedBlob) {
+    throw new Error(
+      `Verified backport alert #${entry.alertNumber} installed fixed-file blob mismatch: expected ${entry.upstreamFixedBlob}, got ${actualFixedBlob}.`
     );
   }
 
@@ -127,6 +182,7 @@ async function verifyRepositoryBinding(entry, repositoryRoot) {
   return {
     ...entry,
     actualPatchSha256: actualPatchSha,
+    actualInstalledFixedBlob: actualFixedBlob,
   };
 }
 
