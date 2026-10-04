@@ -18,12 +18,8 @@ function sha256(source) {
 }
 
 function escapeRegExp(source) {
-  return source.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\function sha256(source) {
-  return createHash('sha256').update(source).digest('hex');
+  return source.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
-');
-}
-
 function gitBlobSha1(source) {
   const bytes = Buffer.isBuffer(source) ? source : Buffer.from(source);
   return createHash('sha1')
