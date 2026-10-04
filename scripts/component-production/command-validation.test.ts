@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { runValidationCommandProcess } from './validation-command';
 
 import type { ComponentProductionInputV1 } from './contracts';
 import {
@@ -18,6 +19,23 @@ const WEB_INPUT: ComponentProductionInputV1 = {
   componentTokens: 'standard',
   parts: [],
 };
+
+it('validation subprocesses cannot implicitly reinstall dependencies, including nested pnpm commands', () => {
+  const result = runValidationCommandProcess(
+    {
+      command: [
+        process.execPath,
+        '-e',
+        'console.log(JSON.stringify([process.env.PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN, process.env.pnpm_config_verify_deps_before_run]))',
+      ],
+      timeoutMs: 5000,
+    },
+    process.cwd(),
+    'missing command'
+  );
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout)).toEqual(['false', 'false']);
+});
 
 describe('componentProductionValidationCommands', () => {
   it('selects React candidate checks plus both tooling build prerequisites for a web component', () => {
@@ -346,7 +364,7 @@ describe('runComponentProductionCommandValidation', () => {
     ).toBe(true);
   });
 
-  it('treats timeout as a runtime failure', () => {
+  it('retains bounded partial output but keeps timeouts infrastructure-owned', () => {
     const result = runComponentProductionCommandValidation({
       root: '/tmp/vellira-production',
       input: WEB_INPUT,
@@ -354,8 +372,8 @@ describe('runComponentProductionCommandValidation', () => {
         if (command.id === 'react-build') {
           return {
             exitCode: null,
-            stdout: '',
-            stderr: '',
+            stdout: 'last completed harness task',
+            stderr: 'src/Probe.ts(1,1): error TS2307: unresolved import',
             timedOut: true,
           };
         }
@@ -368,6 +386,11 @@ describe('runComponentProductionCommandValidation', () => {
 
     expect(build?.status).toBe('failed');
     expect(build?.findings[0]?.message).toContain('timed out');
+    expect(build?.findings[0]?.message).toContain(
+      'last completed harness task'
+    );
+    expect(build?.findings[0]?.message).toContain('error TS2307');
+    expect(build?.findings[0]?.ruleId).toBe('validation.runtime');
   });
 
   it('keeps focused website command runtime failures blocking', () => {

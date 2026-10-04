@@ -24,6 +24,35 @@ tooling and token-semantic checks still run, and tooling cannot pass until every
 required consumer test really executes successfully. Independent tooling tasks
 also collect failures without stopping at the first task.
 
+The production tooling DAG runs validator self-tests, candidate source contracts,
+token CLI integration and production fixtures as separate bounded commands. The
+production fixture group runs explicitly even on GitHub Actions; ordinary CI's
+fixture shard is not implicitly available to a lifecycle job. Built-package
+consumers retain their declared build dependencies. Production Vitest commands
+use one worker to bound concurrent nested TypeScript fixture compilers on private
+runners, and the default reporter preserves parseable failure sections.
+
+Validator self-tests resolve their files and working directory from the pinned
+validator checkout. Candidate contracts resolve from the immutable candidate.
+An older candidate need not contain a newer validator's self-test files. A
+validator self-test failure is explicitly `validation.harness`, even when its
+synthetic diagnostics mention a candidate-looking path. Test execution invokes
+the installed Node CLIs directly: pnpm 11's implicit dependency verification must
+not reinstall a workspace during validation. Dependency installation remains an
+explicit setup step, and title-validator tests still use the same installed
+commitlint implementation and canonical configuration.
+Nested pnpm commands inherit `verifyDepsBeforeRun=false` because fixture roots
+deliberately share the already-installed graph. This prevents implicit purging of
+shared modules; it does not suppress explicit frozen installs or dependency,
+lockfile, typecheck, build, provenance or snapshot validation.
+
+Every tooling task records its start, authority, root and outcome. Cancellation
+terminates the active subprocess group and prevents later tasks from starting;
+ordinary test failures still allow independent tasks to run. A timeout remains
+`validation.runtime` and retains bounded partial output labelled as incomplete
+evidence. Neither partial output nor a candidate compiler error can override an
+infrastructure failure or establish exhaustive candidate-only ownership.
+
 Visual execution has two transports, not two validation standards:
 
 - Outside a declared canonical environment, run the Docker visual entrypoint.

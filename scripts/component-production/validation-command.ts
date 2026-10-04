@@ -73,6 +73,13 @@ export function runValidationCommandProcess(
     encoding: 'utf8',
     timeout: command.timeoutMs,
     shell: false,
+    // Setup owns the frozen dependency installation. Validation and nested
+    // fixture commands may use it, but must not reinstall/purge it implicitly.
+    env: {
+      ...process.env,
+      PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false',
+      pnpm_config_verify_deps_before_run: 'false',
+    },
   });
 
   const errorCode =
@@ -244,13 +251,17 @@ function runtimeFailureMessage(
   command: ValidationCommandDescriptor,
   execution: ValidationCommandExecution
 ): string {
+  const detail = summarizeValidationCommandOutput(execution);
+  const suffix = detail
+    ? `\nPartial command evidence (not a completed validation):\n${detail}`
+    : '';
   if (execution.timedOut) {
-    return `${command.id} timed out after ${command.timeoutMs}ms.`;
+    return `${command.id} timed out after ${command.timeoutMs}ms.${suffix}`;
   }
 
   if (execution.error) {
-    return `${command.id} could not run: ${execution.error}`;
+    return `${command.id} could not run: ${execution.error}${suffix}`;
   }
 
-  return `${command.id} did not produce a deterministic exit code.`;
+  return `${command.id} did not produce a deterministic exit code.${suffix}`;
 }

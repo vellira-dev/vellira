@@ -28,7 +28,10 @@ describe('componentProductionFinalValidationCommands', () => {
 
     expect(commands.map((command) => command.id)).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'tooling-token-semantics',
@@ -49,7 +52,10 @@ describe('componentProductionFinalValidationCommands', () => {
       }).map((command) => command.id)
     ).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'tooling-token-semantics',
@@ -65,7 +71,10 @@ describe('componentProductionFinalValidationCommands', () => {
       }).map((command) => command.id)
     ).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'tooling-token-semantics',
@@ -86,7 +95,10 @@ describe('componentProductionFinalValidationCommands', () => {
     expect(componentProductionRequiresTokenSemanticGate(input)).toBe(false);
     expect(commands.map((command) => command.id)).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
       'tooling-native-consumers',
       'tooling-package-consumers',
       'canonical-web-visual',
@@ -110,6 +122,51 @@ describe('componentProductionFinalValidationCommands', () => {
 });
 
 describe('runComponentProductionFinalValidation', () => {
+  it('keeps harness ownership and executes every independent tooling group after timeout', () => {
+    const called: string[] = [];
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: WEB_INPUT,
+      runner: (command) => {
+        called.push(command.id);
+        if (command.id === 'tooling-harness-contracts') {
+          return {
+            exitCode: 1,
+            stdout: 'src/Probe.ts(1,1): error TS2307: missing',
+            stderr: '',
+            timedOut: false,
+          };
+        }
+        if (command.id === 'tooling-contracts') {
+          return {
+            exitCode: null,
+            stdout: 'last completed source test',
+            stderr: '',
+            timedOut: true,
+          };
+        }
+        return success();
+      },
+    });
+    const tooling = result.stages.find(({ id }) => id === 'tooling');
+    expect(tooling?.status).toBe('failed');
+    expect(tooling?.findings.map(({ ruleId }) => ruleId)).toEqual([
+      'validation.harness',
+      'validation.runtime',
+    ]);
+    expect(tooling?.findings[1]?.message).toContain(
+      'last completed source test'
+    );
+    for (const id of [
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-token-semantics',
+      'canonical-web-visual',
+      'web-smoke',
+    ])
+      expect(called).toContain(id);
+  });
+
   it('runs source tooling and token checks while deferring only failed-build consumers', () => {
     const calls: string[] = [];
     const result = runComponentProductionFinalValidation({
