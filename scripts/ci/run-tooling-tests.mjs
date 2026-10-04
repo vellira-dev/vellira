@@ -36,6 +36,15 @@ const tasks = [
     ],
   },
   {
+    name: 'verified dependency backport contracts',
+    args: [
+      'exec',
+      'node',
+      '--test',
+      'scripts/ci/dependabot-verified-backports.test.mjs',
+    ],
+  },
+  {
     name: 'Chromatic impact contracts',
     args: ['exec', 'node', '--test', 'scripts/ci/chromatic-impact.test.mjs'],
   },

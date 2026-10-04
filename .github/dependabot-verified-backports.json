@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "backports": [
+    {
+      "alertNumber": 93,
+      "package": "node-forge",
+      "manifestPath": "pnpm-lock.yaml",
+      "scope": "runtime",
+      "ghsaId": "GHSA-86w9-cpqp-85rv",
+      "version": "1.4.0",
+      "upstreamRepository": "digitalbazaar/forge",
+      "upstreamPullRequest": 1152,
+      "upstreamCommit": "ceba34402e329f0365134f23fe19898756527d65",
+      "upstreamBaseBlob": "a4264822b4dcd6dca44ca3e59e410c982eed7183",
+      "upstreamFixedBlob": "43090545115be1b1ffc484a2a27ecf31f840437e",
+      "upstreamFilePath": "lib/rsa.js",
+      "patchPath": "patches/node-forge@1.4.0.patch",
+      "patchSha256": "4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0",
+      "removeWhen": "A published node-forge release contains the upstream fix and Dependabot no longer reports alert #93."
+    }
+  ]
+}

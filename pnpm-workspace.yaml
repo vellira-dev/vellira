@@ -55,6 +55,8 @@ overrides:
 
   'nanoid@<3.3.18': 3.3.18
   postcss: 8.5.23
+  # CVE-2026-104861: probe-image-size SVG parser DoS, fixed in 7.4.0.
+  probe-image-size: 7.4.0
   qs: 6.16.0
 
   sharp: 0.35.4
@@ -71,6 +73,9 @@ overrides:
   tmp: 0.2.7
 
 patchedDependencies:
+  # CVE-2026-85393 / GHSA-86w9-cpqp-85rv: upstream forge#1152 backport.
+  # Remove after node-forge publishes a release containing commit ceba34402e329f0365134f23fe19898756527d65.
+  'node-forge@1.4.0': patches/node-forge@1.4.0.patch
   # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
   # Remove when a stable OpenNext release contains the string-shorthand guard.
   '@opennextjs/cloudflare@1.20.6': patches/@opennextjs__cloudflare@1.20.6.patch
