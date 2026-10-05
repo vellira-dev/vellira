@@ -5,7 +5,9 @@ export default function VerifyEmailPage() {
   return (
     <AuthSurface
       title='Check your email'
-      description='Verify your email address to finish setting up a password account.'
+      description={
+        'Verify your email address to finish setting up a password account.'
+      }
     >
       <VerificationFlow />
     </AuthSurface>
