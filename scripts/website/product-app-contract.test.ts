@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   bootstrapPersonalWorkspace,
+  listWorkspaces,
   login,
   verifyEmail,
 } from '../../apps/website/src/product-app/api';
@@ -35,6 +36,26 @@ describe('Vellira App browser API contract', () => {
           email: 'person@example.com',
           password: 'long enough password',
         }),
+      })
+    );
+  });
+
+  it('lists workspaces with a safe credentialed read', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ workspaces: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await listWorkspaces();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.vellira.dev/v1/workspaces',
+      expect.objectContaining({
+        credentials: 'include',
+        cache: 'no-store',
       })
     );
   });
