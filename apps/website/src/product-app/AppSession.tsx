@@ -46,6 +46,10 @@ function safeLoadError(error: unknown) {
     return 'Too many requests. Please try again shortly.';
   }
 
+  if (error instanceof VelliraApiError && error.code === 'account_disabled') {
+    return 'This Vellira account is disabled.';
+  }
+
   return 'Vellira could not load your account. Please try again.';
 }
 
