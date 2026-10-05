@@ -1,0 +1,135 @@
+.page {
+  min-height: 100vh;
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--site-header-height);
+  padding-inline: var(--site-gutter);
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.topbar a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.main {
+  display: grid;
+  min-height: calc(100vh - var(--site-header-height));
+  padding: var(--space-10) var(--space-6);
+  place-items: center;
+}
+
+.panel {
+  display: grid;
+  width: min(100%, 460px);
+  gap: var(--space-6);
+}
+
+.header,
+.form,
+.actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.eyebrow,
+.header h1,
+.header p,
+.message,
+.error,
+.footer {
+  margin: 0;
+}
+
+.eyebrow {
+  color: var(--text-brand);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  font-size: clamp(34px, 8vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.header p,
+.message,
+.footer {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.form {
+  gap: var(--space-4);
+}
+
+.actions {
+  gap: var(--space-3);
+}
+
+.secondary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.link,
+.footer a {
+  color: var(--text-brand);
+  text-underline-offset: 0.18em;
+}
+
+.link {
+  font-size: var(--font-size-sm);
+}
+
+.link:focus-visible,
+.footer a:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--space-1);
+}
+
+.message,
+.error {
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.error {
+  color: var(--text-danger);
+}
+
+.footer {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-muted);
+  text-align: center;
+}
+
+@media (width <= 640px) {
+  .topbar {
+    padding-inline: var(--space-4);
+  }
+
+  .main {
+    align-items: start;
+    padding: var(--space-10) var(--space-4);
+  }
+}
+
+@media (width <= 420px) {
+  .secondary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
