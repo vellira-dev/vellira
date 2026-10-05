@@ -1,4 +1,6 @@
 .shell {
+  --app-navigation-width: 280px;
+
   min-height: 100vh;
   color: var(--text-primary);
   background: var(--surface-canvas);
@@ -39,7 +41,7 @@
 
 .body {
   display: grid;
-  grid-template-columns: var(--explorer-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--app-navigation-width) minmax(0, 1fr);
   min-height: calc(100vh - var(--site-header-height));
 }
 
