@@ -23,11 +23,11 @@ describe('website privacy policy', () => {
   it(
     'publishes a canonical privacy route with a truthful pre-company operator',
     () => {
-    expect(privacyPage).toContain("canonical: '/privacy'");
-    expect(privacyPage).toContain('Roman Bakurov');
-    expect(privacyPage).toContain('independent software project');
-    expect(privacyPage).toContain('roman@vellira.dev');
-    expect(privacyPage).not.toContain('Vellira SAS');
+      expect(privacyPage).toContain("canonical: '/privacy'");
+      expect(privacyPage).toContain('Roman Bakurov');
+      expect(privacyPage).toContain('independent software project');
+      expect(privacyPage).toContain('roman@vellira.dev');
+      expect(privacyPage).not.toContain('Vellira SAS');
       expect(privacyPage).not.toContain('Vellira LLC');
     }
   );
@@ -35,12 +35,12 @@ describe('website privacy policy', () => {
   it(
     'documents the current website data flows instead of generic boilerplate',
     () => {
-    expect(privacyPage).toContain('Cloudflare Web Analytics');
-    expect(privacyPage).toContain('__Host-vellira_actor');
-    expect(privacyPage).toContain('180 days');
-    expect(privacyPage).toContain('vellira-website-theme');
-    expect(privacyPage).toContain('Buttondown');
-    expect(privacyPage).toContain('client IP');
+      expect(privacyPage).toContain('Cloudflare Web Analytics');
+      expect(privacyPage).toContain('__Host-vellira_actor');
+      expect(privacyPage).toContain('180 days');
+      expect(privacyPage).toContain('vellira-website-theme');
+      expect(privacyPage).toContain('Buttondown');
+      expect(privacyPage).toContain('client IP');
       expect(privacyPage).toContain('Render');
     }
   );
