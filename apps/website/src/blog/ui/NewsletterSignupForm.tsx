@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, FormField, Input, Portal, Tooltip } from '@vellira-ui/react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
 
@@ -146,6 +147,11 @@ export function NewsletterSignupForm() {
           </Button>
         </div>
       </FormField>
+
+      <p className={styles.privacyNote}>
+        We use your email to manage the subscription.{' '}
+        <Link href='/privacy'>Privacy</Link>
+      </p>
     </form>
   );
 }
