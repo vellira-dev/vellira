@@ -74,19 +74,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Diagnose privacy Prettier output
-        run: |
-          pnpm exec prettier \
-            'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' \
-            'scripts/website/privacy-page.test.ts' \
-            --write
-          echo '===FORMATTED_PRIVACY_PAGE_BEGIN==='
-          cat 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx'
-          echo '===FORMATTED_PRIVACY_PAGE_END==='
-          echo '===FORMATTED_PRIVACY_TEST_BEGIN==='
-          cat 'scripts/website/privacy-page.test.ts'
-          echo '===FORMATTED_PRIVACY_TEST_END==='
-
       - name: Quality checks
         run: pnpm ci:quality
 
