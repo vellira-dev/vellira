@@ -40,6 +40,9 @@ describe('website privacy policy', () => {
     expect(privacyPage).toContain('Vellira accounts and authentication');
     expect(privacyPage).toContain('Resend');
     expect(privacyPage).toContain('GitHub');
+    expect(privacyPage).toContain(
+      'to create, authenticate and secure Vellira accounts'
+    );
   });
 
   it('makes the privacy route discoverable from both website footers', () => {
