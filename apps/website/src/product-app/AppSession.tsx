@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import {
   bootstrapPersonalWorkspace,
   getMe,
+  listWorkspaces,
   logout,
   VelliraApiError,
   type MeResponse,
@@ -69,10 +70,13 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const workspaceResponse = await bootstrapPersonalWorkspace();
+      const workspaceList = await listWorkspaces();
+      const workspace =
+        workspaceList.workspaces[0] ??
+        (await bootstrapPersonalWorkspace()).workspace;
 
       setMe(meResponse.user);
-      setWorkspace(workspaceResponse.workspace);
+      setWorkspace(workspace);
       setStatus('ready');
     } catch (cause) {
       if (cause instanceof VelliraApiError && cause.status === 401) {
