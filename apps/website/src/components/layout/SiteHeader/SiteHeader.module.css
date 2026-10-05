@@ -334,8 +334,11 @@
 
   .actions,
   .externalActions,
-  .signInButton,
   .ctaButton {
+    display: none;
+  }
+
+  .signInButton {
     display: none;
   }
 
