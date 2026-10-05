@@ -67,6 +67,10 @@
   outline-offset: var(--space-1);
 }
 
+.form {
+  position: relative;
+}
+
 .controlRow {
   display: flex;
   flex-wrap: wrap;
@@ -83,12 +87,47 @@
   flex: 0 0 auto;
 }
 
+.privacyNote {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.privacyNote a {
+  color: var(--text-brand);
+  text-underline-offset: 0.18em;
+}
+
+.privacyNote a:hover {
+  color: var(--text-primary);
+}
+
+.privacyNote a:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--space-1);
+}
+
 @media (width > 720px) {
   .card {
     padding-block-end: max(
       clamp(28px, 5vw, 48px),
-      calc(var(--newsletter-feedback-height) + var(--newsletter-form-gap))
+      calc(
+        var(--newsletter-feedback-height) + var(--newsletter-form-gap) +
+          var(--space-2) + var(--space-6)
+      )
     );
+  }
+
+  .privacyNote {
+    position: absolute;
+    inset-block-start: calc(
+      100% + var(--newsletter-form-gap) + var(--newsletter-feedback-height) +
+        var(--space-2)
+    );
+    inset-inline: 0;
+    margin: 0;
   }
 
   .field {
@@ -131,6 +170,10 @@
 }
 
 @media (width <= 720px) {
+  .privacyNote {
+    position: static;
+  }
+
   .card {
     grid-template-columns: 1fr;
     align-items: start;
