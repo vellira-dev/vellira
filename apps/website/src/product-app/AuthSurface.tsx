@@ -28,7 +28,7 @@ export function AuthSurface({
             alt='Vellira'
             width={100}
             height={32}
-            priority
+            preload
           />
         </Link>
         <ThemeSwitcher />
