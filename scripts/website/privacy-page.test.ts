@@ -20,30 +20,24 @@ const newsletterSignup = read(
 );
 
 describe('website privacy policy', () => {
-  it(
-    'publishes a canonical privacy route with a truthful pre-company operator',
-    () => {
-      expect(privacyPage).toContain("canonical: '/privacy'");
-      expect(privacyPage).toContain('Roman Bakurov');
-      expect(privacyPage).toContain('independent software project');
-      expect(privacyPage).toContain('roman@vellira.dev');
-      expect(privacyPage).not.toContain('Vellira SAS');
-      expect(privacyPage).not.toContain('Vellira LLC');
-    }
-  );
+  it('publishes a canonical privacy route with a truthful pre-company operator', () => {
+    expect(privacyPage).toContain("canonical: '/privacy'");
+    expect(privacyPage).toContain('Roman Bakurov');
+    expect(privacyPage).toContain('independent software project');
+    expect(privacyPage).toContain('roman@vellira.dev');
+    expect(privacyPage).not.toContain('Vellira SAS');
+    expect(privacyPage).not.toContain('Vellira LLC');
+  });
 
-  it(
-    'documents the current website data flows instead of generic boilerplate',
-    () => {
-      expect(privacyPage).toContain('Cloudflare Web Analytics');
-      expect(privacyPage).toContain('__Host-vellira_actor');
-      expect(privacyPage).toContain('180 days');
-      expect(privacyPage).toContain('vellira-website-theme');
-      expect(privacyPage).toContain('Buttondown');
-      expect(privacyPage).toContain('client IP');
-      expect(privacyPage).toContain('Render');
-    }
-  );
+  it('documents the current website data flows instead of generic boilerplate', () => {
+    expect(privacyPage).toContain('Cloudflare Web Analytics');
+    expect(privacyPage).toContain('__Host-vellira_actor');
+    expect(privacyPage).toContain('180 days');
+    expect(privacyPage).toContain('vellira-website-theme');
+    expect(privacyPage).toContain('Buttondown');
+    expect(privacyPage).toContain('client IP');
+    expect(privacyPage).toContain('Render');
+  });
 
   it('makes the privacy route discoverable from both website footers', () => {
     expect(siteFooter).toContain("href='/privacy'");
@@ -51,7 +45,7 @@ describe('website privacy policy', () => {
   });
 
   it('includes the privacy route in the public sitemap', () => {
-    expect(sitemap).toContain("`${SITE_URL}/privacy`");
+    expect(sitemap).toContain('`${SITE_URL}/privacy`');
     expect(sitemap).toContain("new Date('2026-10-05')");
   });
 
