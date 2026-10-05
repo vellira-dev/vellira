@@ -59,7 +59,11 @@ export function LoginForm() {
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} aria-busy={submitting}>
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit}
+      aria-busy={submitting}
+    >
       <FormField label='Email' required>
         <Input
           type='email'
@@ -154,7 +158,11 @@ export function SignupForm() {
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} aria-busy={submitting}>
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit}
+      aria-busy={submitting}
+    >
       <FormField label='Email' required>
         <Input
           type='email'
@@ -264,7 +272,8 @@ export function VerificationFlow() {
     try {
       await requestVerification(email.trim());
       setMessage(
-        'If this account can be verified, a new verification email has been sent.'
+        'If this account can be verified, a new verification email has been ' +
+          'sent.'
       );
     } catch (cause) {
       setError(
@@ -300,10 +309,14 @@ export function VerificationFlow() {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleResend} aria-busy={submitting}>
+    <form
+      className={styles.form}
+      onSubmit={handleResend}
+      aria-busy={submitting}
+    >
       <p className={styles.message}>
-        Check your inbox and open the verification link to finish setting up your
-        account.
+        Check your inbox and open the verification link to finish setting up
+        your account.
       </p>
 
       {error && (
@@ -379,7 +392,11 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} aria-busy={submitting}>
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit}
+      aria-busy={submitting}
+    >
       <FormField label='Email' required>
         <Input
           type='email'
@@ -457,7 +474,10 @@ export function ResetPasswordForm() {
           setError('Use a password of at least 12 characters.');
         } else {
           setError(
-            genericAuthError(cause, 'Password reset is temporarily unavailable.')
+            genericAuthError(
+              cause,
+              'Password reset is temporarily unavailable.'
+            )
           );
         }
       } else {
@@ -503,7 +523,11 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} aria-busy={submitting}>
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit}
+      aria-busy={submitting}
+    >
       <FormField
         label='New password'
         description='Use at least 12 characters.'
