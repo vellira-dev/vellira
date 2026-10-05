@@ -13,6 +13,8 @@ export function CompactFooter() {
         <Link href='https://storybook.vellira.dev'>Storybook</Link>
 
         <Link href='https://github.com/vellira-dev/vellira'>GitHub</Link>
+
+        <Link href='/privacy'>Privacy</Link>
       </nav>
     </footer>
   );
