@@ -213,7 +213,10 @@ export function SettingsGeneral() {
         </p>
       </header>
 
-      <section className={styles.settingsSection} aria-labelledby='account-state'>
+      <section
+        className={styles.settingsSection}
+        aria-labelledby='account-state'
+      >
         <h2 id='account-state'>Account</h2>
         <dl className={styles.settingsList}>
           <div>
@@ -248,7 +251,10 @@ export function SettingsGeneral() {
         </dl>
       </section>
 
-      <section className={styles.settingsSection} aria-labelledby='session-state'>
+      <section
+        className={styles.settingsSection}
+        aria-labelledby='session-state'
+      >
         <div>
           <h2 id='session-state'>Session</h2>
           <p>Sign out of this browser session.</p>
