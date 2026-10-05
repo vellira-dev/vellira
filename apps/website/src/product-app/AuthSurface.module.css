@@ -107,7 +107,7 @@
 }
 
 .error {
-  color: var(--text-danger);
+  color: var(--form-field-helper-text-error-fg);
 }
 
 .footer {
