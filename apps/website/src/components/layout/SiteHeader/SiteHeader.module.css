@@ -105,6 +105,10 @@
     var(--action-icon-size, 20px) no-repeat;
 }
 
+.signInButton {
+  min-height: 34px;
+}
+
 .ctaButton {
   min-height: 34px;
   border-radius: 28px;
@@ -243,12 +247,17 @@
     background: var(--surface-subtle);
   }
 
+  .mobileNavigationActions {
+    display: grid;
+    margin-top: var(--space-3);
+    gap: var(--space-2);
+  }
+
   .mobileNavigationCta {
     display: flex;
     justify-content: center;
     width: 100%;
     min-height: 44px;
-    margin-top: var(--space-3);
   }
 
   .mobileNavigationFooter {
@@ -325,6 +334,7 @@
 
   .actions,
   .externalActions,
+  .signInButton,
   .ctaButton {
     display: none;
   }
@@ -343,7 +353,7 @@
 
 @media (width > 640px) and (width <= 1100px) {
   .mobileNavigationLinks,
-  .mobileNavigationCta,
+  .mobileNavigationActions,
   .mobileNavigationFooter {
     width: min(100%, 720px);
     margin-inline: auto;
