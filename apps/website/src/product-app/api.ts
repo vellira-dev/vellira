@@ -21,6 +21,10 @@ type WorkspaceResponse = {
   workspace: Workspace;
 };
 
+type WorkspacesResponse = {
+  workspaces: Workspace[];
+};
+
 type ApiErrorEnvelope = {
   error?: {
     code?: unknown;
@@ -113,6 +117,10 @@ export function resetPassword(token: string, newPassword: string) {
 
 export function getMe() {
   return apiRequest<MeResponse>('/v1/me');
+}
+
+export function listWorkspaces() {
+  return apiRequest<WorkspacesResponse>('/v1/workspaces');
 }
 
 export async function getCsrfToken() {
