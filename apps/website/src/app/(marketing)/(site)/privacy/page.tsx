@@ -154,16 +154,21 @@ export default function PrivacyPage() {
                   requiring an account;
                 </li>
                 <li>
+                  to create, authenticate and secure Vellira accounts, including
+                  email verification and password recovery;
+                </li>
+                <li>
                   to provide the newsletter when you explicitly subscribe; and
                 </li>
                 <li>to respond when you contact Vellira.</li>
               </ul>
               <p>
-                Where European data-protection law applies, these activities
-                rely on the request or consent you provide for optional
-                communications and on legitimate interests in operating,
-                securing and measuring the public service without advertising
-                profiles.
+                Where European data-protection law applies, account processing
+                is used to provide the account service you request and to keep
+                that service secure. Optional communications rely on your
+                request or consent where applicable. Vellira also relies on
+                legitimate interests in operating, securing and measuring the
+                public service without advertising profiles.
               </p>
             </section>
 
@@ -203,7 +208,7 @@ export default function PrivacyPage() {
                   >
                     GitHub
                   </a>{' '}
-                  when you choose GitHub as an optional sign-in provider; and
+                  when you choose GitHub as an optional sign-in provider;
                 </li>
                 <li>
                   <a
@@ -213,7 +218,7 @@ export default function PrivacyPage() {
                   >
                     Buttondown
                   </a>{' '}
-                  for newsletter subscription and email delivery; and
+                  for newsletter subscription and email delivery;
                 </li>
                 <li>
                   <a
@@ -223,8 +228,8 @@ export default function PrivacyPage() {
                   >
                     Render
                   </a>{' '}
-                  for backend/database infrastructure used by Vellira services
-                  including blog metrics.
+                  for backend/database infrastructure used by Vellira services,
+                  including account authentication and blog metrics.
                 </li>
               </ul>
               <p>
