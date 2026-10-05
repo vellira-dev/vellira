@@ -101,6 +101,24 @@ export default function PrivacyPage() {
                 to an advertising network.
               </p>
 
+              <h3>Vellira accounts and authentication</h3>
+              <p>
+                If you create or use a Vellira account, Vellira processes the
+                account information needed to authenticate you and protect the
+                service. This can include your email address, email-verification
+                state, a non-reversible password hash for password accounts,
+                bounded session records, one-time verification or password-reset
+                challenge records, and the identifiers needed to map an optional
+                GitHub sign-in to the canonical Vellira account.
+              </p>
+              <p>
+                Raw passwords are not stored. Authentication session,
+                verification and reset secrets are stored only in protected or
+                one-way forms where applicable. GitHub OAuth access tokens are
+                used only during the sign-in exchange and are not the identity or
+                product-access authority for Vellira.
+              </p>
+
               <h3>Newsletter</h3>
               <p>
                 If you subscribe to Vellira engineering notes, Vellira sends the
@@ -168,6 +186,27 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <a
+                    href='https://resend.com/legal/privacy-policy'
+                    target='_blank'
+                    rel='noreferrer noopener'
+                  >
+                    Resend
+                  </a>{' '}
+                  for transactional account emails such as verification and
+                  password recovery;
+                </li>
+                <li>
+                  <a
+                    href='https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement'
+                    target='_blank'
+                    rel='noreferrer noopener'
+                  >
+                    GitHub
+                  </a>{' '}
+                  when you choose GitHub as an optional sign-in provider; and
+                </li>
+                <li>
+                  <a
                     href='https://www.buttondown.com/legal/privacy'
                     target='_blank'
                     rel='noreferrer noopener'
@@ -211,6 +250,13 @@ export default function PrivacyPage() {
                   totals remain consistent. Pseudonymous interaction records are
                   kept only as needed to operate those metrics and related abuse
                   controls.
+                </li>
+                <li>
+                  Account identity and authentication records are kept while
+                  needed to operate and secure the account. Session and one-time
+                  authentication records use bounded expiry/revocation rules and
+                  are retained only as needed for security, recovery and
+                  operational integrity.
                 </li>
                 <li>
                   Newsletter subscriber data is kept while the subscription is
