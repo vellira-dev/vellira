@@ -10,14 +10,14 @@ const LAST_UPDATED = '2026-10-05';
 export const metadata: Metadata = {
   title: 'Privacy',
   description:
-    'How Vellira handles website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
+    'How Vellira handles account data, website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
   alternates: {
     canonical: '/privacy',
   },
   openGraph: {
     title: 'Privacy | Vellira',
     description:
-      'How Vellira handles website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
+      'How Vellira handles account data, website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
     url: '/privacy',
   },
 };
@@ -33,8 +33,8 @@ export default function PrivacyPage() {
               <h1>Privacy</h1>
               <p className={styles.lead}>
                 This page explains how vellira.dev handles information when you
-                browse the site, use blog interactions, subscribe to the
-                newsletter or contact Vellira.
+                browse the site, create or use a Vellira account, use blog
+                interactions, subscribe to the newsletter or contact Vellira.
               </p>
               <p className={styles.updated}>
                 Last updated:{' '}
