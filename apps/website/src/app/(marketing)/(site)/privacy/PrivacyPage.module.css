@@ -52,7 +52,7 @@
 
 .updated {
   margin: var(--space-2) 0 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
 }
 
