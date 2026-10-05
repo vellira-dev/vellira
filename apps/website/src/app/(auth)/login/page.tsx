@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { AuthSurface } from '@/product-app/AuthSurface';
 import { LoginForm } from '@/product-app/AuthFlows';
 
@@ -8,11 +6,7 @@ export default function LoginPage() {
     <AuthSurface
       title='Welcome back'
       description='Sign in to your Vellira account.'
-      footer={
-        <>
-          New to Vellira? <Link href='/signup'>Create an account</Link>
-        </>
-      }
+      footer={null}
     >
       <LoginForm />
     </AuthSurface>
