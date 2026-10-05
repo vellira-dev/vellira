@@ -1,0 +1,264 @@
+.shell {
+  min-height: 100vh;
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-dropdown);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--site-header-height);
+  padding-inline: var(--site-gutter);
+  background: var(--surface-canvas);
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.headerContext {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.workspaceName {
+  max-width: 32ch;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: var(--explorer-sidebar-width) minmax(0, 1fr);
+  min-height: calc(100vh - var(--site-header-height));
+}
+
+.sidebar {
+  position: sticky;
+  top: var(--site-header-height);
+  align-self: start;
+  min-height: calc(100vh - var(--site-header-height));
+  padding: var(--space-6) var(--space-4);
+  background: var(--surface-default);
+  border-right: 1px solid var(--border-muted);
+}
+
+.desktopNavigation {
+  display: block;
+}
+
+.navigationTabs {
+  width: 100%;
+}
+
+.mobileNavigation,
+.mobileNavigationRow {
+  display: none;
+}
+
+.content {
+  width: 100%;
+  max-width: var(--site-max-width);
+  padding: var(--space-10) var(--site-gutter) var(--space-16);
+}
+
+.statusPage {
+  display: grid;
+  min-height: 100vh;
+  padding: var(--space-6);
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+  place-items: center;
+}
+
+.statusContent {
+  display: grid;
+  justify-items: start;
+  width: min(100%, 560px);
+  gap: var(--space-4);
+}
+
+.statusContent h1,
+.statusContent p {
+  margin: 0;
+}
+
+.statusContent p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.page {
+  display: grid;
+  max-width: 960px;
+  gap: var(--space-12);
+}
+
+.hero,
+.settingsHeader {
+  display: grid;
+  max-width: 860px;
+  gap: var(--space-4);
+}
+
+.eyebrow,
+.sectionLabel {
+  margin: 0;
+  color: var(--text-brand);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero h1,
+.section h2,
+.settingsHeader h1,
+.settingsHeader p,
+.settingsSection h2,
+.settingsSection p,
+.settingsList {
+  margin: 0;
+}
+
+.hero h1,
+.settingsHeader h1 {
+  max-width: 780px;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.lead,
+.settingsHeader p,
+.settingsSection p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.lead {
+  max-width: 720px;
+  font-size: var(--font-size-lg);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+  gap: var(--space-3);
+}
+
+.section,
+.settingsSection {
+  display: grid;
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--border-muted);
+  gap: var(--space-6);
+}
+
+.section {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, auto);
+  align-items: start;
+}
+
+.section > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.section h2,
+.settingsSection h2 {
+  font-size: var(--font-size-xl);
+}
+
+.details,
+.settingsList {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.details div,
+.settingsList div {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr);
+  gap: var(--space-4);
+}
+
+.details dt,
+.settingsList dt {
+  color: var(--text-secondary);
+}
+
+.details dd,
+.settingsList dd {
+  margin: 0;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+@media (width <= 760px) {
+  .header {
+    padding-inline: var(--space-4);
+  }
+
+  .workspaceName {
+    display: none;
+  }
+
+  .body {
+    display: block;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobileNavigationRow {
+    display: block;
+    padding: var(--space-4);
+    background: var(--surface-default);
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  .mobileNavigationRow .mobileNavigation {
+    display: block;
+  }
+
+  .content {
+    padding: var(--space-8) var(--space-4) var(--space-12);
+  }
+
+  .page {
+    gap: var(--space-10);
+  }
+
+  .hero h1,
+  .settingsHeader h1 {
+    font-size: clamp(34px, 11vw, 48px);
+  }
+
+  .lead {
+    font-size: var(--font-size-md);
+  }
+
+  .section {
+    grid-template-columns: 1fr;
+  }
+
+  .details div,
+  .settingsList div {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
