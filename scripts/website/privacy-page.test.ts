@@ -37,6 +37,9 @@ describe('website privacy policy', () => {
     expect(privacyPage).toContain('Buttondown');
     expect(privacyPage).toContain('client IP');
     expect(privacyPage).toContain('Render');
+    expect(privacyPage).toContain('Vellira accounts and authentication');
+    expect(privacyPage).toContain('Resend');
+    expect(privacyPage).toContain('GitHub');
   });
 
   it('makes the privacy route discoverable from both website footers', () => {
