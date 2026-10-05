@@ -5,7 +5,10 @@ export default function ForgotPasswordPage() {
   return (
     <AuthSurface
       title='Reset your password'
-      description='Enter your account email and we will send a reset link when the account is eligible.'
+      description={
+        'Enter your account email and we will send a reset link when the ' +
+        'account is eligible.'
+      }
     >
       <ForgotPasswordForm />
     </AuthSurface>
