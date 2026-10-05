@@ -67,6 +67,10 @@
   outline-offset: var(--space-1);
 }
 
+.form {
+  position: relative;
+}
+
 .controlRow {
   display: flex;
   flex-wrap: wrap;
@@ -109,8 +113,21 @@
   .card {
     padding-block-end: max(
       clamp(28px, 5vw, 48px),
-      calc(var(--newsletter-feedback-height) + var(--newsletter-form-gap))
+      calc(
+        var(--newsletter-feedback-height) + var(--newsletter-form-gap) +
+          var(--space-2) + var(--space-6)
+      )
     );
+  }
+
+  .privacyNote {
+    position: absolute;
+    inset-block-start: calc(
+      100% + var(--newsletter-form-gap) + var(--newsletter-feedback-height) +
+        var(--space-2)
+    );
+    inset-inline: 0;
+    margin: 0;
   }
 
   .field {
@@ -153,6 +170,10 @@
 }
 
 @media (width <= 720px) {
+  .privacyNote {
+    position: static;
+  }
+
   .card {
     grid-template-columns: 1fr;
     align-items: start;
