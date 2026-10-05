@@ -135,27 +135,27 @@ describe('Vellira App first-party UI contract', () => {
   it(
     'does not introduce native control substitutes for canonical Vellira UI',
     () => {
-    for (const relativePath of sources) {
-      const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
-      expect(source).not.toMatch(/<(?:button|input|select|textarea)\b/u);
-      expect(source).not.toMatch(
-        /from ['"](?:@radix-ui|@mui|@chakra-ui|antd|react-bootstrap)/u
-      );
-    }
+      for (const relativePath of sources) {
+        const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
+        expect(source).not.toMatch(/<(?:button|input|select|textarea)\b/u);
+        expect(source).not.toMatch(
+          /from ['"](?:@radix-ui|@mui|@chakra-ui|antd|react-bootstrap)/u
+        );
+      }
     }
   );
 
   it(
     'keeps verification and reset secrets in the browser fragment path',
     () => {
-    const source = fs.readFileSync(
-      path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
-      'utf8'
-    );
+      const source = fs.readFileSync(
+        path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
+        'utf8'
+      );
 
-    expect(source).toContain('window.location.hash');
-    expect(source).toContain('window.history.replaceState');
-    expect(source).not.toContain("searchParams.get('token')");
+      expect(source).toContain('window.location.hash');
+      expect(source).toContain('window.history.replaceState');
+      expect(source).not.toContain("searchParams.get('token')");
       expect(source).not.toContain('searchParams.get("token")');
     }
   );
