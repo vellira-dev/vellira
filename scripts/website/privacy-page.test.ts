@@ -15,6 +15,9 @@ const compactFooter = read(
   'apps/website/src/components/layout/CompactFooter/CompactFooter.tsx'
 );
 const sitemap = read('apps/website/src/app/sitemap.ts');
+const newsletterSignup = read(
+  'apps/website/src/blog/ui/NewsletterSignupForm.tsx'
+);
 
 describe('website privacy policy', () => {
   it('publishes a canonical privacy route with a truthful pre-company operator', () => {
@@ -44,5 +47,10 @@ describe('website privacy policy', () => {
   it('includes the privacy route in the public sitemap', () => {
     expect(sitemap).toContain("`${SITE_URL}/privacy`");
     expect(sitemap).toContain("new Date('2026-10-05')");
+  });
+
+  it('links the policy at the newsletter email collection point', () => {
+    expect(newsletterSignup).toContain("href='/privacy'");
+    expect(newsletterSignup).toContain('We use your email to manage the subscription.');
   });
 });
