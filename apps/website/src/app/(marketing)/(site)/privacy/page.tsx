@@ -71,8 +71,8 @@ export default function PrivacyPage() {
                 performance information such as page views, referrers,
                 approximate country, device/browser information and Core Web
                 Vitals. Vellira does not add a tracking cookie or local-storage
-                identifier for Cloudflare Web Analytics, and does not use it
-                for advertising or cross-site profiling.
+                identifier for Cloudflare Web Analytics, and does not use it for
+                advertising or cross-site profiling.
               </p>
 
               <h3>Anonymous blog views and likes</h3>
@@ -103,8 +103,8 @@ export default function PrivacyPage() {
 
               <h3>Newsletter</h3>
               <p>
-                If you subscribe to Vellira engineering notes, Vellira sends
-                the email address you provide and, when available, the client IP
+                If you subscribe to Vellira engineering notes, Vellira sends the
+                email address you provide and, when available, the client IP
                 address to Buttondown from the server. Buttondown is used to
                 create and confirm the subscription, deliver newsletter emails,
                 manage unsubscribe state and support abuse prevention.
@@ -227,11 +227,11 @@ export default function PrivacyPage() {
             <section aria-labelledby='privacy-choices'>
               <h2 id='privacy-choices'>Your choices and rights</h2>
               <p>
-                Depending on the law that applies to you, you may have rights
-                to access, correct, delete, restrict or object to processing of
-                personal data, and in some cases to receive data you provided
-                in a portable format. You can also withdraw newsletter consent
-                by unsubscribing at any time.
+                Depending on the law that applies to you, you may have rights to
+                access, correct, delete, restrict or object to processing of
+                personal data, and in some cases to receive data you provided in
+                a portable format. You can also withdraw newsletter consent by
+                unsubscribing at any time.
               </p>
               <p>
                 Send a request to{' '}
@@ -271,8 +271,7 @@ export default function PrivacyPage() {
               <p>
                 This policy will be updated when Vellira&apos;s legal operator,
                 website features, processors or material data practices change.
-                The date at the top of this page identifies the current
-                version.
+                The date at the top of this page identifies the current version.
               </p>
             </section>
           </article>
