@@ -115,8 +115,8 @@ export default function PrivacyPage() {
                 Raw passwords are not stored. Authentication session,
                 verification and reset secrets are stored only in protected or
                 one-way forms where applicable. GitHub OAuth access tokens are
-                used only during the sign-in exchange and are not the identity or
-                product-access authority for Vellira.
+                used only during the sign-in exchange and are not the identity
+                or product-access authority for Vellira.
               </p>
 
               <h3>Newsletter</h3>
