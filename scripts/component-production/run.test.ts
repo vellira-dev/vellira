@@ -273,7 +273,7 @@ describe('runComponentProductionValidation', () => {
       'visual',
       'smoke',
     ]);
-    expect(result.lifecycle.current).toBe('validated');
+    expect(result.lifecycle.current).toBe('candidate');
   });
 
   it('defers final certification while candidate blockers remain', async () => {
