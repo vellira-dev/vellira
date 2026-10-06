@@ -283,10 +283,9 @@ export async function validateComponentProductionCandidate(params: {
         input: params.input,
         commandStatuses: commandValidation.commandStatuses,
       });
-  const blockingStage = [
-    ...preliminaryStages,
-    ...finalValidation.stages,
-  ].find((stage) => stage.status !== 'passed');
+  const blockingStage = [...preliminaryStages, ...finalValidation.stages].find(
+    (stage) => stage.status !== 'passed'
+  );
 
   if (blockingStage || !runReviewBundle) {
     return {
