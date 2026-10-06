@@ -232,13 +232,14 @@ describe('runComponentProductionValidation', () => {
     ]);
   });
 
-  it('returns machine-readable blocking findings without generation', async () => {
+  it('returns candidate blockers without running final certification', async () => {
     const finding: ComponentProductionFinding = {
       id: 'tests:react-tests',
       stage: 'tests',
       severity: 'blocking',
       message: 'Avatar tests failed.',
     };
+    let finalValidationCalled = false;
 
     const result = await runComponentProductionValidation({
       root: '/tmp/vellira-production',
@@ -254,18 +255,28 @@ describe('runComponentProductionValidation', () => {
           completeness: [],
           quality: passingQuality(),
         }),
-        runFinalValidation: () => ({ stages: finalStages() }),
+        runFinalValidation: () => {
+          finalValidationCalled = true;
+          return { stages: finalStages() };
+        },
       },
     });
 
+    expect(finalValidationCalled).toBe(false);
     expect(result.status).toBe('blocked');
     expect(result.readyForReview).toBe(false);
     expect(result.blockingFindings).toEqual([finding]);
     expect(result.validationSummary.blockedStages).toEqual(['tests']);
-    expect(result.lifecycle.current).toBe('validated');
+    expect(result.validationSummary.skippedStages).toEqual([
+      'public-api',
+      'tooling',
+      'visual',
+      'smoke',
+    ]);
+    expect(result.lifecycle.current).toBe('candidate');
   });
 
-  it('consolidates independent candidate and harness blockers in one authoritative pass', async () => {
+  it('defers final certification while candidate blockers remain', async () => {
     const testFinding: ComponentProductionFinding = {
       id: 'tests:react-tests',
       stage: 'tests',
@@ -280,13 +291,8 @@ describe('runComponentProductionValidation', () => {
       message: 'Candidate typecheck failed.',
       path: 'packages/react/src/primitives/Fixture/Fixture.tsx',
     };
-    const toolingFinding: ComponentProductionFinding = {
-      id: 'tooling:tooling-contracts',
-      stage: 'tooling',
-      severity: 'blocking',
-      message: 'Synthetic fixture copied mutable production authority.',
-      path: 'scripts/generators/component/preflight.test.ts',
-    };
+    let finalValidationCalled = false;
+
     const result = await runComponentProductionValidation({
       root: '/tmp/vellira-production',
       input: RAW_INPUT,
@@ -302,24 +308,64 @@ describe('runComponentProductionValidation', () => {
           completeness: [],
           quality: passingQuality(),
         }),
-        runFinalValidation: () => ({
-          stages: finalStages({
-            tooling: blockedStage('tooling', toolingFinding),
-          }),
-        }),
+        runFinalValidation: () => {
+          finalValidationCalled = true;
+          return { stages: finalStages() };
+        },
       },
     });
 
-    expect(result.blockingFindings).toEqual([
-      testFinding,
-      typecheckFinding,
-      toolingFinding,
-    ]);
+    expect(finalValidationCalled).toBe(false);
+    expect(result.blockingFindings).toEqual([testFinding, typecheckFinding]);
     expect(result.validationSummary.blockedStages).toEqual([
       'tests',
       'typecheck',
-      'tooling',
     ]);
+    expect(result.validationSummary.skippedStages).toEqual([
+      'public-api',
+      'tooling',
+      'visual',
+      'smoke',
+    ]);
+  });
+
+  it('runs full final certification after candidate validation passes', async () => {
+    const toolingFinding: ComponentProductionFinding = {
+      id: 'tooling:tooling-contracts',
+      stage: 'tooling',
+      severity: 'blocking',
+      message: 'Synthetic fixture copied mutable production authority.',
+      path: 'scripts/generators/component/preflight.test.ts',
+    };
+    let finalValidationCalled = false;
+
+    const result = await runComponentProductionValidation({
+      root: '/tmp/vellira-production',
+      input: RAW_INPUT,
+      dependencies: {
+        runCommandValidation: () => ({
+          stages: commandStages(),
+        }),
+        runStructuredValidation: async () => ({
+          stages: [passedStage('completeness'), passedStage('quality')],
+          completeness: [],
+          quality: passingQuality(),
+        }),
+        runFinalValidation: () => {
+          finalValidationCalled = true;
+          return {
+            stages: finalStages({
+              tooling: blockedStage('tooling', toolingFinding),
+            }),
+          };
+        },
+      },
+    });
+
+    expect(finalValidationCalled).toBe(true);
+    expect(result.readyForReview).toBe(false);
+    expect(result.blockingFindings).toEqual([toolingFinding]);
+    expect(result.validationSummary.blockedStages).toEqual(['tooling']);
     expect(result.validationSummary.skippedStages).toEqual([]);
   });
 });
