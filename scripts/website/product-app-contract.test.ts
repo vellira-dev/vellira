@@ -16,11 +16,12 @@ afterEach(() => {
 
 describe('Vellira App browser API contract', () => {
   it('uses credentialed no-store login against the canonical API', async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ authenticated: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ authenticated: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -41,11 +42,12 @@ describe('Vellira App browser API contract', () => {
   });
 
   it('lists workspaces with a safe credentialed read', async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ workspaces: [] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ workspaces: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -108,11 +110,12 @@ describe('Vellira App browser API contract', () => {
   });
 
   it('consumes verification secrets only in a JSON POST body', async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify({ verified: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ verified: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -132,31 +135,25 @@ describe('Vellira App first-party UI contract', () => {
     'apps/website/src/product-app/AuthFlows.tsx',
   ];
 
-  it(
-    'does not introduce native control substitutes for canonical Vellira UI',
-    () => {
-      for (const relativePath of sources) {
-        const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
-        expect(source).not.toMatch(/<(?:button|input|select|textarea)\b/u);
-        expect(source).not.toMatch(
-          /from ['"](?:@radix-ui|@mui|@chakra-ui|antd|react-bootstrap)/u
-        );
-      }
-    }
-  );
-
-  it(
-    'keeps verification and reset secrets in the browser fragment path',
-    () => {
-      const source = fs.readFileSync(
-        path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
-        'utf8'
+  it('does not introduce native control substitutes for canonical Vellira UI', () => {
+    for (const relativePath of sources) {
+      const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
+      expect(source).not.toMatch(/<(?:button|input|select|textarea)\b/u);
+      expect(source).not.toMatch(
+        /from ['"](?:@radix-ui|@mui|@chakra-ui|antd|react-bootstrap)/u
       );
-
-      expect(source).toContain('window.location.hash');
-      expect(source).toContain('window.history.replaceState');
-      expect(source).not.toContain("searchParams.get('token')");
-      expect(source).not.toContain('searchParams.get("token")');
     }
-  );
+  });
+
+  it('keeps verification and reset secrets in the browser fragment path', () => {
+    const source = fs.readFileSync(
+      path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
+      'utf8'
+    );
+
+    expect(source).toContain('window.location.hash');
+    expect(source).toContain('window.history.replaceState');
+    expect(source).not.toContain("searchParams.get('token')");
+    expect(source).not.toContain('searchParams.get("token")');
+  });
 });
