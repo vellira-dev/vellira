@@ -253,8 +253,7 @@ export function VerificationFlow() {
       .catch((cause) => {
         setState('invalid');
         setError(
-          cause instanceof VelliraApiError &&
-            cause.code === 'invalid_challenge'
+          cause instanceof VelliraApiError && cause.code === 'invalid_challenge'
             ? 'This verification link is invalid or has expired.'
             : 'Email verification is temporarily unavailable.'
         );
@@ -381,10 +380,7 @@ export function ForgotPasswordForm() {
       setAccepted(true);
     } catch (cause) {
       setError(
-        genericAuthError(
-          cause,
-          'Password recovery is temporarily unavailable.'
-        )
+        genericAuthError(cause, 'Password recovery is temporarily unavailable.')
       );
     } finally {
       setSubmitting(false);
