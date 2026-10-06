@@ -10,7 +10,7 @@
     "lint": "eslint 'packages/**/*.{ts,tsx}' 'apps/**/*.{ts,tsx}'",
     "lint:fix": "eslint 'packages/**/*.{ts,tsx}' 'apps/**/*.{ts,tsx}' --fix",
     "format": "prettier '**/*.{ts,tsx,json,md,css,scss}' --write",
-    "format:check": "prettier 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' 'apps/website/src/product-app/AuthFlows.tsx' 'scripts/website/product-app-contract.test.ts' --write && git diff --exit-code -- 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' 'apps/website/src/product-app/AuthFlows.tsx' 'scripts/website/product-app-contract.test.ts'",
+    "format:check": "cp 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' /tmp/privacy-page.tsx && cp 'apps/website/src/product-app/AuthFlows.tsx' /tmp/AuthFlows.tsx && cp 'scripts/website/product-app-contract.test.ts' /tmp/product-app-contract.test.ts && prettier 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' 'apps/website/src/product-app/AuthFlows.tsx' 'scripts/website/product-app-contract.test.ts' --write; diff -u /tmp/privacy-page.tsx 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' || true; diff -u /tmp/AuthFlows.tsx 'apps/website/src/product-app/AuthFlows.tsx' || true; diff -u /tmp/product-app-contract.test.ts 'scripts/website/product-app-contract.test.ts' || true; exit 1",
     "check:playwright-version": "node scripts/check-playwright-version.mjs",
     "check:source-hygiene": "node scripts/check-source-hygiene.mjs",
     "check:source-hygiene:json": "node scripts/check-source-hygiene.mjs --json",
