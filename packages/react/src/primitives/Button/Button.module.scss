@@ -82,6 +82,21 @@ $button-appearances: solid, outline, ghost, soft, link;
   overflow: visible;
 }
 
+.button.link:not(.withIcon) {
+  display: inline;
+  white-space: normal;
+}
+
+.button.link:not(.withIcon) .label,
+.button.link:not(.withIcon) .labelText {
+  display: inline;
+}
+
+.button.link.withIcon {
+  display: inline-flex;
+  white-space: nowrap;
+}
+
 .button.link .icon {
   transition:
     color 180ms ease,
@@ -105,6 +120,7 @@ $button-appearances: solid, outline, ghost, soft, link;
   }
 
   .button.link.#{$color}:not(:disabled, .loading):hover,
+  .button.link.#{$color}:focus-visible:not(:disabled, .loading),
   .button.link.#{$color}:not(:disabled, .loading):active {
     text-decoration-line: underline;
     transform: none;

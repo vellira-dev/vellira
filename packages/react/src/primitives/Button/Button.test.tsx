@@ -124,11 +124,14 @@ describe('Button', () => {
   });
 
   it('distinguishes leading and trailing icon slots for interaction motion', () => {
-    const { container, root } = renderButton({
+    const { button, container, root } = renderButton({
+      appearance: 'link',
       children: 'Navigate',
       iconStart: <svg data-testid='leading-icon' />,
       iconEnd: <svg data-testid='trailing-icon' />,
     });
+
+    expect(button?.className).toContain(styles.withIcon);
 
     expect(
       container.querySelector('[data-testid="leading-icon"]')?.parentElement

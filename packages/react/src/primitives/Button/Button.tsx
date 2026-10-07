@@ -129,6 +129,7 @@ export const Button = forwardRef<
         [styles.loading]: loading,
         [styles.fullWidth]: fullWidth,
         [styles.iconOnly]: iconOnly,
+        [styles.withIcon]: Boolean(iconStart || iconEnd),
       }
     );
 
