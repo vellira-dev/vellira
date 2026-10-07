@@ -65,6 +65,15 @@ describe('website privacy policy', () => {
     );
   });
 
+  it('routes policy links through the shared Vellira link contract', () => {
+    expect(privacyPage).toContain(
+      "from '@/components/navigation/DesignSystemLink'"
+    );
+    expect(privacyPage).toContain('<DesignSystemLink');
+    expect(privacyPage).not.toMatch(/<a\\b/u);
+    expect(privacyStyles).not.toContain('.policy a');
+  });
+
   it('renders semantic privacy lists with visible markers', () => {
     expect(privacyStyles).toContain('list-style: disc;');
     expect(privacyStyles).toContain('padding-inline-start: var(--space-5);');
