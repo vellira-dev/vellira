@@ -83,18 +83,6 @@
   gap: var(--space-3);
 }
 
-.link {
-  color: var(--text-brand);
-  font-size: var(--font-size-sm);
-  text-underline-offset: 0.18em;
-}
-
-.link:focus-visible {
-  border-radius: var(--radius-sm);
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--space-1);
-}
-
 .message,
 .error {
   font-size: var(--font-size-sm);
