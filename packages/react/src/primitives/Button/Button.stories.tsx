@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Download, Filter, Save, Search } from '@vellira-ui/icons';
 import { animatedIcons } from '@vellira-ui/icons/lottie';
+import { controlSizes } from '@vellira-ui/tokens';
 import type { CSSProperties, ReactNode } from 'react';
 const noop = () => undefined;
 
@@ -217,7 +218,7 @@ const rowStyle = {
 const matrixCellStyle = {
   display: 'flex',
   alignItems: 'center',
-  minHeight: 46,
+  minHeight: controlSizes.md.height,
 } satisfies CSSProperties;
 
 const animatedIconGridStyle = {
