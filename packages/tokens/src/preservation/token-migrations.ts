@@ -107,6 +107,9 @@ const stateVocabularyVisualApproval =
 const semanticVocabularyVisualApproval =
   '#879/#883 explicitly authorizes Semantic Vocabulary V1 normalization and the narrowly scoped hierarchy/status corrections inside existing Vellira palettes; token preservation plus pinned Linux visual regression are required evidence.';
 
+const buttonNeutralOutlineVisualApproval =
+  '#1477 is the reviewed Vellira Button neutral-outline visual correction discovered through first-party auth dogfooding; the change uses existing semantic border roles and is covered by Button visual regression before merge.';
+
 const stateVocabularyRenamePairsV1 = [
   [
     'control-active-bg',
@@ -661,7 +664,44 @@ const monoFontFamilyAdditionV1 = {
     'Canonicalize the existing first-party system monospace stack already repeated across website code surfaces and the docs theme so consumers do not need raw font stacks or undeclared aliases.',
   to: 'tokens.typography.family.mono',
 } as const satisfies TokenMigrationEntry;
+const buttonNeutralOutlineVisualMigrationsV1 = [
+  {
+    id: '1477-button-neutral-outline-default-border',
+    kind: 'visual-change',
+    issue: '#1477',
+    themes: ['light', 'dark'],
+    reason:
+      'Soften the neutral outline default border so secondary actions do not visually compete with primary actions.',
+    from: 'components.button.neutral.outline.default.border',
+    approved: true,
+    approvalEvidence: buttonNeutralOutlineVisualApproval,
+  },
+  {
+    id: '1477-button-neutral-outline-hover-border',
+    kind: 'visual-change',
+    issue: '#1477',
+    themes: ['light', 'dark'],
+    reason:
+      'Keep the neutral outline hover border visible while reducing the previous excessive contrast.',
+    from: 'components.button.neutral.outline.hover.border',
+    approved: true,
+    approvalEvidence: buttonNeutralOutlineVisualApproval,
+  },
+  {
+    id: '1477-button-neutral-outline-light-pressed-border',
+    kind: 'visual-change',
+    issue: '#1477',
+    themes: ['light'],
+    reason:
+      'Complete the light-theme neutral outline border progression with the semantic strong border on press.',
+    from: 'components.button.neutral.outline.pressed.border',
+    approved: true,
+    approvalEvidence: buttonNeutralOutlineVisualApproval,
+  },
+] as const satisfies readonly TokenMigrationEntry[];
+
 export const tokenMigrationManifestV1 = [
+  ...buttonNeutralOutlineVisualMigrationsV1,
   ...stateVocabularyRenameMigrationsV1,
   boldFontWeightAdditionV1,
   monoFontFamilyAdditionV1,
