@@ -82,6 +82,22 @@ $button-appearances: solid, outline, ghost, soft, link;
   overflow: visible;
 }
 
+.button.link .icon {
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.button.link:not(:disabled, .loading):hover .iconStart,
+.button.link:not(:disabled, .loading):active .iconStart {
+  transform: translateX(-2px);
+}
+
+.button.link:not(:disabled, .loading):hover .iconEnd,
+.button.link:not(:disabled, .loading):active .iconEnd {
+  transform: translateX(2px);
+}
+
 @each $color in $button-colors {
   .button.link.#{$color}:not(:disabled, .loading) {
     text-decoration-thickness: 1px;
@@ -241,6 +257,7 @@ $button-appearances: solid, outline, ghost, soft, link;
 @media (prefers-reduced-motion: reduce) {
   .button,
   .button::after,
+  .button .icon,
   .spinner {
     transition: none;
     animation: none;
@@ -250,6 +267,11 @@ $button-appearances: solid, outline, ghost, soft, link;
     @each $color in $button-colors {
       .button.#{$appearance}.#{$color}:not(:disabled, .loading):hover,
       .button.#{$appearance}.#{$color}:not(:disabled, .loading):active {
+        transform: none;
+      }
+
+      .button.#{$appearance}.#{$color}:not(:disabled, .loading):hover .icon,
+      .button.#{$appearance}.#{$color}:not(:disabled, .loading):active .icon {
         transform: none;
       }
     }
