@@ -94,7 +94,7 @@
     "storybook:native": "pnpm --filter native-storybook start",
     "storybook:native:ios": "pnpm --filter native-storybook ios",
     "storybook:native:android": "pnpm --filter native-storybook android",
-    "website:dev": "pnpm --filter @vellira-ui/website dev",
+    "website:dev": "pnpm --filter @vellira-ui/tokens build:tokens && pnpm --filter @vellira-ui/website dev",
     "website:build": "pnpm --filter @vellira-ui/website build",
     "website:typecheck": "pnpm --filter @vellira-ui/website typecheck",
     "lighthouse": "pnpm lighthouse:docs && pnpm lighthouse:website",
