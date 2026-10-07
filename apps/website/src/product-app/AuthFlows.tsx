@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button, FormField, Input } from '@vellira-ui/react';
 
+import { AuthTextLink } from './AuthTextLink';
 import {
   getApiUrl,
   getMe,
@@ -116,12 +117,8 @@ export function LoginForm() {
       </div>
 
       <div className={styles.secondary}>
-        <Button asChild appearance='link' color='primary' size='sm'>
-          <Link href='/forgot-password'>Forgot password?</Link>
-        </Button>
-        <Button asChild appearance='link' color='primary' size='sm'>
-          <Link href='/signup'>Create account</Link>
-        </Button>
+        <AuthTextLink href='/forgot-password'>Forgot password?</AuthTextLink>
+        <AuthTextLink href='/signup'>Create account</AuthTextLink>
       </div>
     </form>
   );
@@ -221,9 +218,7 @@ export function SignupForm() {
 
       <p className={styles.message}>
         Account data is handled according to the{' '}
-        <Button asChild appearance='link' color='primary'>
-          <Link href='/privacy'>Vellira Privacy Policy</Link>
-        </Button>
+        <AuthTextLink href='/privacy'>Vellira Privacy Policy</AuthTextLink>
         .
       </p>
     </form>
@@ -355,9 +350,7 @@ export function VerificationFlow() {
         Resend verification email
       </Button>
 
-      <Button asChild appearance='link' color='primary' size='sm'>
-        <Link href='/login'>Back to sign in</Link>
-      </Button>
+      <AuthTextLink href='/login'>Back to sign in</AuthTextLink>
     </form>
   );
 }
@@ -426,9 +419,7 @@ export function ForgotPasswordForm() {
         Send reset link
       </Button>
 
-      <Button asChild appearance='link' color='primary' size='sm'>
-        <Link href='/login'>Back to sign in</Link>
-      </Button>
+      <AuthTextLink href='/login'>Back to sign in</AuthTextLink>
     </form>
   );
 }
