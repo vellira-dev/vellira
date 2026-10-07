@@ -41,10 +41,14 @@ export function DesignSystemLink({
 
   const resolvedIconStart =
     iconStart ??
-    (direction === 'back' ? <ArrowLeft size={16} aria-hidden='true' /> : undefined);
+    (direction === 'back' ? (
+      <ArrowLeft size={16} aria-hidden='true' />
+    ) : undefined);
   const resolvedIconEnd =
     iconEnd ??
-    (direction === 'forward' ? <ArrowRight size={16} aria-hidden='true' /> : undefined);
+    (direction === 'forward' ? (
+      <ArrowRight size={16} aria-hidden='true' />
+    ) : undefined);
   const internal = href.startsWith('/');
 
   if (internal) {
