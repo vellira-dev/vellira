@@ -22,12 +22,26 @@ export function createToolingTasks({
   profile,
   environment = process.env,
 }) {
+  const sourceShards = new Map([
+    ['--source-contracts', null],
+    ['--source-contracts-shard-1', '1/2'],
+    ['--source-contracts-shard-2', '2/2'],
+  ]);
+  const productionFixturePatterns = new Map([
+    ['--production-fixtures-unit', unitProductionFixturePattern],
+    ['--production-fixtures-remaining', remainingProductionFixturePattern],
+  ]);
   if (
     profile !== undefined &&
-    !['--source-contracts', '--harness-contracts'].includes(profile)
+    profile !== '--harness-contracts' &&
+    !sourceShards.has(profile) &&
+    !productionFixturePatterns.has(profile)
   ) {
     throw new Error('Unknown tooling execution profile.');
   }
+  const sourceProfile = sourceShards.has(profile);
+  const sourceShard = sourceShards.get(profile);
+  const productionFixturePattern = productionFixturePatterns.get(profile);
   const splitProductionFixtures = environment.GITHUB_ACTIONS === 'true';
   const harness = [
     'scripts/ci/tooling-execution.test.mjs',
