@@ -442,7 +442,6 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                       <BlogDesignSystemLink
                         href={`/blog/${article.slug}`}
                         prefetch={false}
-                        color='neutral'
                         direction='forward'
                         className={styles.cardLink}
                         aria-label={`Read ${article.title}`}
