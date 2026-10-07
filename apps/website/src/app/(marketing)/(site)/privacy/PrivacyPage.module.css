@@ -98,8 +98,13 @@
 
 .policy ul {
   display: grid;
-  padding-left: var(--space-6);
+  padding-inline-start: var(--space-5);
   gap: var(--space-2);
+  list-style: disc;
+}
+
+.policy li::marker {
+  color: var(--text-brand);
 }
 
 .policy a {

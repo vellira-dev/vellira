@@ -15,6 +15,9 @@ const compactFooter = read(
   'apps/website/src/components/layout/CompactFooter/CompactFooter.tsx'
 );
 const sitemap = read('apps/website/src/app/sitemap.ts');
+const privacyStyles = read(
+  'apps/website/src/app/(marketing)/(site)/privacy/PrivacyPage.module.css'
+);
 const newsletterSignup = read(
   'apps/website/src/blog/ui/NewsletterSignupForm.tsx'
 );
@@ -54,5 +57,11 @@ describe('website privacy policy', () => {
     expect(newsletterSignup).toContain(
       'We use your email to manage the subscription.'
     );
+  });
+
+  it('renders semantic privacy lists with visible markers', () => {
+    expect(privacyStyles).toContain('list-style: disc;');
+    expect(privacyStyles).toContain('padding-inline-start: var(--space-5);');
+    expect(privacyStyles).toContain('.policy li::marker');
   });
 });
