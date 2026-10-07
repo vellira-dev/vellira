@@ -214,6 +214,12 @@ const rowStyle = {
   alignItems: 'center',
 } as const;
 
+const matrixCellStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: 46,
+} satisfies CSSProperties;
+
 const animatedIconGridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))',
@@ -489,15 +495,16 @@ export const Matrix: Story = {
                 }}
               >
                 {appearances.map((appearance) => (
-                  <Button
-                    key={`${color}-${appearance}`}
-                    {...args}
-                    color={color}
-                    appearance={appearance}
-                    fullWidth
-                  >
-                    {color} {appearance}
-                  </Button>
+                  <div key={`${color}-${appearance}`} style={matrixCellStyle}>
+                    <Button
+                      {...args}
+                      color={color}
+                      appearance={appearance}
+                      fullWidth
+                    >
+                      {color} {appearance}
+                    </Button>
+                  </div>
                 ))}
               </div>
             ))}
