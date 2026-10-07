@@ -1,9 +1,7 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
-import { Button } from '@vellira-ui/react';
+import styles from './AuthTextLink.module.css';
 
 type AuthTextLinkProps = {
   href: string;
@@ -17,13 +15,9 @@ export function AuthTextLink({
   iconStart,
 }: AuthTextLinkProps) {
   return (
-    <Button
-      asChild
-      appearance='link'
-      color='primary'
-      iconStart={iconStart}
-    >
-      <Link href={href}>{children}</Link>
-    </Button>
+    <Link href={href} className={styles.link}>
+      {iconStart && <span className={styles.icon}>{iconStart}</span>}
+      <span>{children}</span>
+    </Link>
   );
 }
