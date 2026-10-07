@@ -85,7 +85,7 @@ export function createToolingTasks({
     cwd: candidateRoot,
     args: baseArgs,
   };
-  if (profile === '--source-contracts') return [source];
+  if (sourceProfile) return [source];
   if (profile === '--harness-contracts') return harness;
   return [
     ...harness,
