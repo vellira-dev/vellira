@@ -64,15 +64,16 @@ export function createToolingTasks({
     '--exclude',
     'scripts/checks/token-semantic/cli.test.ts',
   ];
-  if (profile === '--source-contracts') {
+  if (sourceProfile) {
     // Protected private runners have less memory than public repository CI.
     // Bound nested TypeScript fixture compilers to one source-test worker.
     baseArgs.push('--reporter=default', '--maxWorkers=1');
+    if (sourceShard) baseArgs.push('--shard=' + sourceShard);
     for (const group of dependencies) {
       for (const file of group.files) baseArgs.push('--exclude', file);
     }
   }
-  if (splitProductionFixtures || profile === '--source-contracts') {
+  if (splitProductionFixtures || sourceProfile) {
     baseArgs.push(
       '--exclude',
       'scripts/component-production/e2e-fixtures.test.ts'
