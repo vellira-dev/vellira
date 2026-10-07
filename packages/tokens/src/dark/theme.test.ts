@@ -157,7 +157,6 @@ describe('high contrast theme', () => {
   });
 });
 
-
 describe('neutral outline button borders', () => {
   it('uses semantic border progression in light and dark themes', () => {
     for (const theme of [lightTheme, darkTheme]) {
@@ -182,7 +181,6 @@ describe('neutral outline button borders', () => {
     ).toBe(highContrastTheme.colors.gray[200]);
   });
 });
-
 
 describe('button link interaction', () => {
   it('keeps primary link hover visibly distinct from the default state', () => {
