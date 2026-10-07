@@ -32,7 +32,6 @@ export function BlogArticleView({
           >
             <BlogDesignSystemLink
               href='/blog'
-              color='neutral'
               direction='back'
               className={styles.backLink}
             >
