@@ -58,7 +58,6 @@ export function BlogContinueReading({ articles }: BlogContinueReadingProps) {
 
       <BlogDesignSystemLink
         href='/blog'
-        color='neutral'
         direction='forward'
         className={styles.viewAll}
       >
