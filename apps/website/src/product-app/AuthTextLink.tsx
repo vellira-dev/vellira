@@ -1,9 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 
-import { Button } from '@vellira-ui/react';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 type AuthTextLinkProps = {
   href: string;
@@ -17,13 +16,8 @@ export function AuthTextLink({
   iconStart,
 }: AuthTextLinkProps) {
   return (
-    <Button
-      asChild
-      appearance='link'
-      color='primary'
-      iconStart={iconStart}
-    >
-      <Link href={href}>{children}</Link>
-    </Button>
+    <DesignSystemLink href={href} iconStart={iconStart}>
+      {children}
+    </DesignSystemLink>
   );
 }
