@@ -145,7 +145,7 @@ describe('Vellira App first-party UI contract', () => {
     }
   });
 
-  it('keeps auth text links on the canonical Vellira Button contract', () => {
+  it('keeps auth text links on the shared canonical Vellira link contract', () => {
     const signupPage = fs.readFileSync(
       path.join(root, 'apps/website/src/app/(auth)/signup/page.tsx'),
       'utf8'
@@ -154,16 +154,28 @@ describe('Vellira App first-party UI contract', () => {
       path.join(root, 'apps/website/src/product-app/AuthTextLink.tsx'),
       'utf8'
     );
+    const designSystemLink = fs.readFileSync(
+      path.join(
+        root,
+        'apps/website/src/components/navigation/DesignSystemLink.tsx'
+      ),
+      'utf8'
+    );
 
     expect(signupPage).not.toContain("from '@vellira-ui/react'");
     expect(signupPage).toContain("from '@/product-app/AuthTextLink'");
 
-    expect(authTextLink.startsWith("'use client';")).toBe(true);
-    expect(authTextLink).toContain("from '@vellira-ui/react'");
-    expect(authTextLink).toContain("appearance='link'");
-    expect(authTextLink).toContain("color='primary'");
-    expect(authTextLink).toContain('iconStart={iconStart}');
+    expect(authTextLink).toContain(
+      "from '@/components/navigation/DesignSystemLink'"
+    );
+    expect(authTextLink).not.toContain("from '@vellira-ui/react'");
     expect(authTextLink).not.toContain('AuthTextLink.module.css');
+
+    expect(designSystemLink.startsWith("'use client';")).toBe(true);
+    expect(designSystemLink).toContain("from '@vellira-ui/react'");
+    expect(designSystemLink).toContain("appearance = 'link'");
+    expect(designSystemLink).toContain("color = 'primary'");
+    expect(designSystemLink).toContain('iconStart={resolvedIconStart}');
   });
 
   it('keeps verification and reset secrets in the browser fragment path', () => {
