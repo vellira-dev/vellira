@@ -34,6 +34,7 @@ const primary = createButtonPalette({
   hoverFg: colors.primary[400],
   hoverBg: colors.primary[900],
   hoverBorder: colors.primary[500],
+  linkHoverFg: colors.primary[300],
 
   pressedFg: colors.primary[500],
   pressedBg: colors.primary[800],
