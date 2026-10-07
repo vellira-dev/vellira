@@ -110,6 +110,9 @@ const semanticVocabularyVisualApproval =
 const buttonNeutralOutlineVisualApproval =
   '#1477 is the reviewed Vellira Button neutral-outline visual correction discovered through first-party auth dogfooding; the change uses existing semantic border roles and is covered by Button visual regression before merge.';
 
+const buttonPrimaryLinkHoverVisualApproval =
+  '#1478 is the reviewed Vellira Button link-interaction correction discovered through first-party auth dogfooding; hover contrast and directional icon motion are covered by Button interaction tests and pinned visual regression before merge.';
+
 const stateVocabularyRenamePairsV1 = [
   [
     'control-active-bg',
@@ -700,8 +703,23 @@ const buttonNeutralOutlineVisualMigrationsV1 = [
   },
 ] as const satisfies readonly TokenMigrationEntry[];
 
+const buttonPrimaryLinkHoverVisualMigrationsV1 = [
+  {
+    id: '1478-button-primary-link-hover-foreground',
+    kind: 'visual-change',
+    issue: '#1478',
+    themes: ['light', 'dark'],
+    reason:
+      'Increase primary link hover contrast so text links expose an unmistakable interactive state while remaining inside the existing brand palette.',
+    from: 'components.button.primary.link.hover.fg',
+    approved: true,
+    approvalEvidence: buttonPrimaryLinkHoverVisualApproval,
+  },
+] as const satisfies readonly TokenMigrationEntry[];
+
 export const tokenMigrationManifestV1 = [
   ...buttonNeutralOutlineVisualMigrationsV1,
+  ...buttonPrimaryLinkHoverVisualMigrationsV1,
   ...stateVocabularyRenameMigrationsV1,
   boldFontWeightAdditionV1,
   monoFontFamilyAdditionV1,

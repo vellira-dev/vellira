@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Download, Filter, Save, Search } from '@vellira-ui/icons';
 import { animatedIcons } from '@vellira-ui/icons/lottie';
+import { controlSizes } from '@vellira-ui/tokens';
 import type { CSSProperties, ReactNode } from 'react';
 const noop = () => undefined;
 
@@ -213,6 +214,12 @@ const rowStyle = {
   gap: 12,
   alignItems: 'center',
 } as const;
+
+const matrixCellStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: controlSizes.md.height,
+} satisfies CSSProperties;
 
 const animatedIconGridStyle = {
   display: 'grid',
@@ -489,15 +496,16 @@ export const Matrix: Story = {
                 }}
               >
                 {appearances.map((appearance) => (
-                  <Button
-                    key={`${color}-${appearance}`}
-                    {...args}
-                    color={color}
-                    appearance={appearance}
-                    fullWidth
-                  >
-                    {color} {appearance}
-                  </Button>
+                  <div key={`${color}-${appearance}`} style={matrixCellStyle}>
+                    <Button
+                      {...args}
+                      color={color}
+                      appearance={appearance}
+                      fullWidth
+                    >
+                      {color} {appearance}
+                    </Button>
+                  </div>
                 ))}
               </div>
             ))}
