@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { Container } from '@/components/layout/Container';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from './PrivacyPage.module.css';
 
@@ -52,7 +53,9 @@ export default function PrivacyPage() {
               </p>
               <p>
                 Privacy questions and data requests can be sent to{' '}
-                <a href='mailto:roman@vellira.dev'>roman@vellira.dev</a>.
+                <DesignSystemLink href='mailto:roman@vellira.dev'>
+                  roman@vellira.dev
+                </DesignSystemLink>.
               </p>
             </section>
 
@@ -179,55 +182,55 @@ export default function PrivacyPage() {
               </p>
               <ul>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://www.cloudflare.com/web-analytics/'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Cloudflare
-                  </a>{' '}
+                  </DesignSystemLink>{' '}
                   for website delivery, security, infrastructure and Web
                   Analytics;
                 </li>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://resend.com/legal/privacy-policy'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Resend
-                  </a>{' '}
+                  </DesignSystemLink>{' '}
                   for transactional account emails such as verification and
                   password recovery;
                 </li>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     GitHub
-                  </a>{' '}
+                  </DesignSystemLink>{' '}
                   when you choose GitHub as an optional sign-in provider;
                 </li>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://www.buttondown.com/legal/privacy'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Buttondown
-                  </a>{' '}
+                  </DesignSystemLink>{' '}
                   for newsletter subscription and email delivery;
                 </li>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://render.com/privacy'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Render
-                  </a>{' '}
+                  </DesignSystemLink>{' '}
                   for backend/database infrastructure used by Vellira services,
                   including account authentication and blog metrics.
                 </li>
@@ -286,15 +289,17 @@ export default function PrivacyPage() {
               </p>
               <p>
                 Send a request to{' '}
-                <a href='mailto:roman@vellira.dev'>roman@vellira.dev</a>. If you
+                <DesignSystemLink href='mailto:roman@vellira.dev'>
+                  roman@vellira.dev
+                </DesignSystemLink>. If you
                 are in France, you also have the right to contact the{' '}
-                <a
-                  href='https://www.cnil.fr/'
-                  target='_blank'
-                  rel='noreferrer noopener'
-                >
-                  CNIL
-                </a>{' '}
+                <DesignSystemLink
+                    href='https://www.cnil.fr/'
+                    target='_blank'
+                    rel='noreferrer noopener'
+                  >
+                    CNIL
+                  </DesignSystemLink>{' '}
                 about a data-protection concern.
               </p>
               <p>
