@@ -460,23 +460,25 @@ export function SiteHeader({
             />
           )}
 
-          <Button
-            asChild
-            size='sm'
-            appearance='ghost'
-            color='neutral'
-            className={styles.signInButton}
-          >
-            <Link href='/login' prefetch>
-              Sign in
-            </Link>
-          </Button>
+          <div className={styles.authActions}>
+            <Button
+              asChild
+              size='sm'
+              appearance='ghost'
+              color='neutral'
+              className={styles.signInButton}
+            >
+              <Link href='/login' prefetch>
+                Sign in
+              </Link>
+            </Button>
 
-          <Button asChild size='sm' className={styles.ctaButton}>
-            <a href='https://docs.vellira.dev/start/getting-started'>
-              Get started
-            </a>
-          </Button>
+            <Button asChild size='sm' className={styles.ctaButton}>
+              <a href='https://docs.vellira.dev/start/getting-started'>
+                Get started
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
     </header>
