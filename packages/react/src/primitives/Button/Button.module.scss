@@ -72,8 +72,14 @@ $button-appearances: solid, outline, ghost, soft, link;
 }
 
 @each $color in $button-colors {
+  .button.link.#{$color}:not(:disabled, .loading) {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
   .button.link.#{$color}:not(:disabled, .loading):hover,
   .button.link.#{$color}:not(:disabled, .loading):active {
+    text-decoration-line: underline;
     transform: none;
   }
 }
