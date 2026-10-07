@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import postcss from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -145,7 +146,7 @@ describe('Vellira App first-party UI contract', () => {
     }
   });
 
-  it('keeps Vellira React UI behind a client boundary on auth server pages', () => {
+  it('keeps auth text links on the canonical website link contract', () => {
     const signupPage = fs.readFileSync(
       path.join(root, 'apps/website/src/app/(auth)/signup/page.tsx'),
       'utf8'
@@ -157,8 +158,66 @@ describe('Vellira App first-party UI contract', () => {
 
     expect(signupPage).not.toContain("from '@vellira-ui/react'");
     expect(signupPage).toContain("from '@/product-app/AuthTextLink'");
-    expect(authTextLink.startsWith("'use client';")).toBe(true);
-    expect(authTextLink).toContain("from '@vellira-ui/react'");
+    expect(authTextLink).toContain("from 'next/link'");
+    expect(authTextLink).not.toContain("from '@vellira-ui/react'");
+
+    const articleStyles = postcss.parse(
+      fs.readFileSync(
+        path.join(root, 'apps/website/src/blog/ui/BlogExperience.module.css'),
+        'utf8'
+      )
+    );
+    const authStyles = postcss.parse(
+      fs.readFileSync(
+        path.join(root, 'apps/website/src/product-app/AuthTextLink.module.css'),
+        'utf8'
+      )
+    );
+
+    const declarations = (
+      stylesheet: ReturnType<typeof postcss.parse>,
+      selector: string
+    ) => {
+      const values: Record<string, string> = {};
+      stylesheet.walkRules((rule) => {
+        if (rule.parent?.type === 'root' && rule.selectors.includes(selector)) {
+          rule.walkDecls((declaration) => {
+            values[declaration.prop] = declaration.value;
+          });
+        }
+      });
+      return values;
+    };
+
+    const pairs = [
+      ['.articleBody a', '.link'],
+      ['.articleBody a:hover', '.link:hover'],
+      ['.articleBody a:focus-visible', '.link:focus-visible'],
+      ['.articleBody a:active', '.link:active'],
+    ] as const;
+    const sharedProperties = [
+      'color',
+      'text-decoration-line',
+      'text-decoration-thickness',
+      'text-underline-offset',
+      'transition',
+      'outline',
+      'outline-offset',
+      'border-radius',
+    ] as const;
+
+    for (const [articleSelector, authSelector] of pairs) {
+      const article = declarations(articleStyles, articleSelector);
+      const auth = declarations(authStyles, authSelector);
+
+      for (const property of sharedProperties) {
+        if (article[property] !== undefined) {
+          expect(auth[property], `${authSelector} ${property}`).toBe(
+            article[property]
+          );
+        }
+      }
+    }
   });
 
   it('keeps verification and reset secrets in the browser fragment path', () => {
