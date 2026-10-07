@@ -84,18 +84,18 @@ $button-appearances: solid, outline, ghost, soft, link;
 
 .button.link .icon {
   transition:
-    color 160ms ease,
-    transform 160ms ease;
+    color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .button.link:not(:disabled, .loading):hover .iconStart,
 .button.link:not(:disabled, .loading):active .iconStart {
-  transform: translateX(-2px);
+  transform: translateX(-4px);
 }
 
 .button.link:not(:disabled, .loading):hover .iconEnd,
 .button.link:not(:disabled, .loading):active .iconEnd {
-  transform: translateX(2px);
+  transform: translateX(4px);
 }
 
 @each $color in $button-colors {
