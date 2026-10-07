@@ -1,9 +1,6 @@
-import Link from 'next/link';
-
-import { Button } from '@vellira-ui/react';
-
 import { AuthSurface } from '@/product-app/AuthSurface';
 import { SignupForm } from '@/product-app/AuthFlows';
+import { AuthTextLink } from '@/product-app/AuthTextLink';
 
 export default function SignupPage() {
   return (
@@ -13,9 +10,7 @@ export default function SignupPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Button asChild appearance='link' color='primary'>
-            <Link href='/login'>Sign in</Link>
-          </Button>
+          <AuthTextLink href='/login'>Sign in</AuthTextLink>
         </>
       }
     >
