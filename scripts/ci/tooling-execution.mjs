@@ -2,6 +2,10 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  remainingProductionFixturePattern,
+  unitProductionFixturePattern,
+} from './component-production-fixture-shards.mjs';
 
 const toolingRoot = fileURLToPath(new URL('../../', import.meta.url));
 const dependencies = JSON.parse(
