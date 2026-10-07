@@ -116,12 +116,12 @@ export function LoginForm() {
       </div>
 
       <div className={styles.secondary}>
-        <Link className={styles.link} href='/forgot-password'>
-          Forgot password?
-        </Link>
-        <Link className={styles.link} href='/signup'>
-          Create account
-        </Link>
+        <Button asChild appearance='link' color='primary' size='sm'>
+          <Link href='/forgot-password'>Forgot password?</Link>
+        </Button>
+        <Button asChild appearance='link' color='primary' size='sm'>
+          <Link href='/signup'>Create account</Link>
+        </Button>
       </div>
     </form>
   );
@@ -355,9 +355,9 @@ export function VerificationFlow() {
         Resend verification email
       </Button>
 
-      <Link className={styles.link} href='/login'>
-        Back to sign in
-      </Link>
+      <Button asChild appearance='link' color='primary' size='sm'>
+        <Link href='/login'>Back to sign in</Link>
+      </Button>
     </form>
   );
 }
@@ -426,9 +426,9 @@ export function ForgotPasswordForm() {
         Send reset link
       </Button>
 
-      <Link className={styles.link} href='/login'>
-        Back to sign in
-      </Link>
+      <Button asChild appearance='link' color='primary' size='sm'>
+        <Link href='/login'>Back to sign in</Link>
+      </Button>
     </form>
   );
 }
