@@ -107,6 +107,9 @@ const stateVocabularyVisualApproval =
 const semanticVocabularyVisualApproval =
   '#879/#883 explicitly authorizes Semantic Vocabulary V1 normalization and the narrowly scoped hierarchy/status corrections inside existing Vellira palettes; token preservation plus pinned Linux visual regression are required evidence.';
 
+const buttonPrimaryLinkHoverVisualApproval =
+  '#1478 is the reviewed Vellira Button link-interaction correction discovered through first-party auth dogfooding; hover contrast and directional icon motion are covered by Button interaction tests and pinned visual regression before merge.';
+
 const stateVocabularyRenamePairsV1 = [
   [
     'control-active-bg',
@@ -661,7 +664,22 @@ const monoFontFamilyAdditionV1 = {
     'Canonicalize the existing first-party system monospace stack already repeated across website code surfaces and the docs theme so consumers do not need raw font stacks or undeclared aliases.',
   to: 'tokens.typography.family.mono',
 } as const satisfies TokenMigrationEntry;
+const buttonPrimaryLinkHoverVisualMigrationsV1 = [
+  {
+    id: '1478-button-primary-link-hover-foreground',
+    kind: 'visual-change',
+    issue: '#1478',
+    themes: ['light', 'dark'],
+    reason:
+      'Increase primary link hover contrast so text links expose an unmistakable interactive state while remaining inside the existing brand palette.',
+    from: 'components.button.primary.link.hover.fg',
+    approved: true,
+    approvalEvidence: buttonPrimaryLinkHoverVisualApproval,
+  },
+] as const satisfies readonly TokenMigrationEntry[];
+
 export const tokenMigrationManifestV1 = [
+  ...buttonPrimaryLinkHoverVisualMigrationsV1,
   ...stateVocabularyRenameMigrationsV1,
   boldFontWeightAdditionV1,
   monoFontFamilyAdditionV1,
