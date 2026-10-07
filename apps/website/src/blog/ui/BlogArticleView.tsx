@@ -1,8 +1,7 @@
-import Link from 'next/link';
-
 import { Container } from '@/components/layout/Container';
 import type { BlogArticle, BlogArticleMetadata } from '@/blog';
 import { BlogArticleActions } from './BlogArticleActions';
+import { BlogDesignSystemLink } from './BlogDesignSystemLink';
 import { BlogContinueReading } from './BlogContinueReading';
 import { formatBlogDate } from './formatBlogDate';
 import { BlogNewsletterSignup } from './BlogNewsletterSignup';
@@ -31,9 +30,14 @@ export function BlogArticleView({
           <header
             className={`${styles.articleHeader} ${responsive.articleHeader}`}
           >
-            <Link href='/blog' className={styles.backLink}>
+            <BlogDesignSystemLink
+              href='/blog'
+              color='neutral'
+              direction='back'
+              className={styles.backLink}
+            >
               Back to blog
-            </Link>
+            </BlogDesignSystemLink>
 
             <div className={styles.tags} aria-label='Article tags'>
               {metadata.tags.map((tag) => (
