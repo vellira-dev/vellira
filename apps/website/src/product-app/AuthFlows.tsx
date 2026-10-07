@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { ArrowLeft } from '@vellira-ui/icons';
 import { Button, FormField, Input } from '@vellira-ui/react';
 
 import { AuthTextLink } from './AuthTextLink';
@@ -350,7 +351,12 @@ export function VerificationFlow() {
         Resend verification email
       </Button>
 
-      <AuthTextLink href='/login'>Back to sign in</AuthTextLink>
+      <AuthTextLink
+        href='/login'
+        iconStart={<ArrowLeft size={16} aria-hidden='true' />}
+      >
+        Back to sign in
+      </AuthTextLink>
     </form>
   );
 }
@@ -419,7 +425,12 @@ export function ForgotPasswordForm() {
         Send reset link
       </Button>
 
-      <AuthTextLink href='/login'>Back to sign in</AuthTextLink>
+      <AuthTextLink
+        href='/login'
+        iconStart={<ArrowLeft size={16} aria-hidden='true' />}
+      >
+        Back to sign in
+      </AuthTextLink>
     </form>
   );
 }
