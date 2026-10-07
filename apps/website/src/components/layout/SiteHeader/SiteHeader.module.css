@@ -105,6 +105,12 @@
     var(--action-icon-size, 20px) no-repeat;
 }
 
+.authActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .signInButton {
   min-height: 34px;
 }
