@@ -145,6 +145,22 @@ describe('Vellira App first-party UI contract', () => {
     }
   });
 
+  it('keeps Vellira React UI behind a client boundary on auth server pages', () => {
+    const signupPage = fs.readFileSync(
+      path.join(root, 'apps/website/src/app/(auth)/signup/page.tsx'),
+      'utf8'
+    );
+    const authTextLink = fs.readFileSync(
+      path.join(root, 'apps/website/src/product-app/AuthTextLink.tsx'),
+      'utf8'
+    );
+
+    expect(signupPage).not.toContain("from '@vellira-ui/react'");
+    expect(signupPage).toContain("from '@/product-app/AuthTextLink'");
+    expect(authTextLink.startsWith("'use client';")).toBe(true);
+    expect(authTextLink).toContain("from '@vellira-ui/react'");
+  });
+
   it('keeps verification and reset secrets in the browser fragment path', () => {
     const source = fs.readFileSync(
       path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
