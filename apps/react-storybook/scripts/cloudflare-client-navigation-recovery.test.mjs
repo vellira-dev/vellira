@@ -24,7 +24,7 @@ test('client navigation retries only after a proven edge recovery', async () => 
       return 'ok';
     },
     failureCursor: () => failures.length,
-    failuresSince: (cursor) => failures.slice(cursor - 1),
+    failuresSince: (cursor) => failures.slice(cursor),
     recoverFailures: async (items) => items.length === 1,
     beforeRetry: async () => {
       retryCalls += 1;
