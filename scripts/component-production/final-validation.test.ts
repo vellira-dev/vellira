@@ -44,6 +44,22 @@ describe('componentProductionFinalValidationCommands', () => {
     ).toEqual(['pnpm', 'check:tokens-semantic:strict']);
   });
 
+  it('gives serialized production tooling bounded runtime budgets that match its workload', () => {
+    const commands = componentProductionFinalValidationCommands(WEB_INPUT);
+    const source = commands.find(({ id }) => id === 'tooling-contracts');
+    const fixtures = commands.find(
+      ({ id }) => id === 'tooling-production-fixtures'
+    );
+
+    expect(source?.timeoutMs).toBe(900_000);
+    expect(source?.command).toContain('--source-contracts');
+    expect(fixtures?.timeoutMs).toBe(720_000);
+    expect(fixtures?.command).toContain('--maxWorkers=1');
+    expect(fixtures?.command).toContain(
+      'scripts/component-production/e2e-fixtures.test.ts'
+    );
+  });
+
   it('does not run Web visual validation for native-only candidates', () => {
     expect(
       componentProductionFinalValidationCommands({
