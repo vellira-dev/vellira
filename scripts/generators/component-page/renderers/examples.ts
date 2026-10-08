@@ -3,6 +3,9 @@ import type { ComponentPageMetadata } from '../metadata/metadata';
 import type { ExtractedProp, GeneratedExample, Platform } from '../model/types';
 import type { ComponentProfile } from '../profiles/profiles';
 import {
+  mergeRequiredDefaultProps,
+} from './required-default-props';
+import {
   indentBlock,
   normalizePropFragments,
   normalizeSetupStatements,
@@ -145,6 +148,7 @@ export function renderExamples(params: {
   generatedFileHeader: string;
   reactApiProps: readonly ExtractedProp[];
   nativeApiProps: readonly ExtractedProp[];
+  requiredDefaultProps?: Partial<Record<Platform, readonly string[]>>;
   getDemoProps(platform: Platform): string;
 }) {
   const {
@@ -155,6 +159,7 @@ export function renderExamples(params: {
     generatedFileHeader,
     reactApiProps,
     nativeApiProps,
+    requiredDefaultProps,
     getDemoProps,
   } = params;
 
@@ -266,7 +271,15 @@ export function renderExamples(params: {
     const inheritedDemoProps =
       example.inheritDemoProps === false ? '' : getDemoProps(platform);
     const metadataProps = getExampleMetadataProps(platform, example);
-    const existingBindings = [inheritedDemoProps, ...metadataProps].join('\n');
+    const explicitProps = normalizePropFragments([
+      inheritedDemoProps,
+      ...metadataProps,
+    ]);
+    const propsWithRequiredDefaults = mergeRequiredDefaultProps(
+      requiredDefaultProps?.[platform] ?? [],
+      explicitProps
+    );
+    const existingBindings = propsWithRequiredDefaults.join('\n');
 
     const shortcutProps =
       example.inheritDemoProps === false
@@ -285,9 +298,8 @@ export function renderExamples(params: {
           ].filter(Boolean);
 
     return normalizePropFragments([
-      inheritedDemoProps,
+      ...propsWithRequiredDefaults,
       ...shortcutProps,
-      ...metadataProps,
     ]);
   }
 
