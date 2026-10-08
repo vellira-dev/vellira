@@ -6,7 +6,9 @@ import {
   buildRemediationPlan,
   buildRuntimeAuditIgnores,
   packageFromDependencySelector,
+  reconcileGeneratedWorkspaceAuthority,
   stripMutableWorkspaceSections,
+  validateAuthorizedPackagesRemediated,
   validatePlanAgainstRegistryEvidence,
   validateRemediationDiff,
 } from './dependabot-security-remediation.mjs';
@@ -360,6 +362,112 @@ test('dependency selector parsing handles parent and scoped selectors', () => {
   );
   assert.equal(packageFromDependencySelector('undici@>=7 <8'), 'undici');
   assert.equal(packageFromDependencySelector('fast-uri@3.1.7'), 'fast-uri');
+});
+
+test('generated override reconciliation prunes registry-only mutations', () => {
+  const before = `packages:
+  - 'packages/*'
+minimumReleaseAgeExclude:
+  - old@1.0.0
+nodeLinker: hoisted
+
+overrides:
+  fast-uri: 3.1.6
+`;
+  const after = `packages:
+  - 'packages/*'
+minimumReleaseAgeExclude:
+  - old@1.0.0
+  - braces@3.0.4
+  - fast-uri@3.1.7
+  - sprintf-js@1.1.4
+nodeLinker: hoisted
+
+overrides:
+  fast-uri: 3.1.6
+  'braces@<=3.0.3': ^3.0.4
+  'fast-uri@<3.1.7': ^3.1.7
+  'sprintf-js@<=1.1.3': ^1.1.4
+`;
+
+  const result = reconcileGeneratedWorkspaceAuthority({
+    workspaceBefore: before,
+    workspaceAfter: after,
+    authorizedPackages: ['fast-uri'],
+  });
+
+  assert.match(result.workspaceSource, /fast-uri@3\.1\.7/);
+  assert.match(result.workspaceSource, /fast-uri@<3\.1\.7/);
+  assert.doesNotMatch(result.workspaceSource, /braces@/);
+  assert.doesNotMatch(result.workspaceSource, /sprintf-js@/);
+  assert.deepEqual(result.evidence.retainedPackages, ['fast-uri']);
+  assert.deepEqual(result.evidence.prunedPackages, ['braces', 'sprintf-js']);
+
+  const validation = validateRemediationDiff({
+    changedFiles: ['pnpm-lock.yaml', 'pnpm-workspace.yaml'],
+    workspaceBefore: before,
+    workspaceAfter: result.workspaceSource,
+    authorizedPackages: ['fast-uri'],
+  });
+  assert.deepEqual(validation.changedPackages, ['fast-uri']);
+});
+
+test('post-remediation audit ignores registry-only packages outside authority', () => {
+  const result = validateAuthorizedPackagesRemediated(
+    {
+      advisories: {
+        1: {
+          severity: 'high',
+          module_name: 'braces',
+          github_advisory_id: 'GHSA-2345-cfgh-jmpq',
+        },
+      },
+    },
+    ['fast-uri'],
+    'high'
+  );
+
+  assert.deepEqual(result.remainingAdvisories, []);
+});
+
+test('post-remediation audit fails when an authorized package remains vulnerable', () => {
+  assert.throws(
+    () =>
+      validateAuthorizedPackagesRemediated(
+        {
+          advisories: {
+            1: {
+              severity: 'high',
+              module_name: 'fast-uri',
+              github_advisory_id: 'GHSA-qw65-cvwx-89v3',
+            },
+          },
+        },
+        ['fast-uri'],
+        'high'
+      ),
+    /Authorized remediation package\(s\) still have registry advisories/
+  );
+});
+
+test('post-remediation audit fails on authorized package without GHSA metadata', () => {
+  assert.throws(
+    () =>
+      validateAuthorizedPackagesRemediated(
+        {
+          advisories: {
+            1: {
+              severity: 'high',
+              module_name: 'fast-uri',
+              github_advisory_id: null,
+            },
+          },
+        },
+        ['fast-uri'],
+        'high'
+      ),
+    /Authorized remediation package\(s\) still have registry advisories/
+  );
 });
 
 test('diff guard permits audited security mutations and semantic YAML reformatting', () => {
