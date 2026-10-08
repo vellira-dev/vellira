@@ -27,6 +27,10 @@ import {
   type GeneratorComponentCategory,
 } from './profiles/profiles';
 import { buildPlaygroundArtifacts } from './renderers/playground';
+import {
+  buildRequiredDefaultProps,
+  withRequiredCatalogPreviewDefaults,
+} from './renderers/required-default-props';
 import { updateComponentRegistry } from './renderers/registry';
 import { renderUsage } from './renderers/usage';
 import {
@@ -222,6 +226,17 @@ if (platforms.length === 0) {
   process.exit(1);
 }
 
+const reactRequiredDefaultProps = buildRequiredDefaultProps({
+  componentConfig,
+  apiProps: reactApiProps,
+  platform: 'react',
+});
+const nativeRequiredDefaultProps = buildRequiredDefaultProps({
+  componentConfig,
+  apiProps: nativeApiProps,
+  platform: 'react-native',
+});
+
 const usageFile = path.join(componentCatalogDir, `${componentName}Usage.tsx`);
 
 const { content: usageContent, children: usageChildren } = renderUsage({
@@ -260,6 +275,10 @@ const examplesContent = renderExamples({
   generatedFileHeader,
   reactApiProps,
   nativeApiProps,
+  requiredDefaultProps: {
+    react: reactRequiredDefaultProps,
+    'react-native': nativeRequiredDefaultProps,
+  },
   getDemoProps,
 });
 
@@ -355,7 +374,10 @@ const generatedPageModel = buildGeneratedPageModel({
   slug,
   platforms,
   discovery: componentConfig.discovery,
-  catalogPreview: componentConfig.catalogPreview,
+  catalogPreview: withRequiredCatalogPreviewDefaults(
+    componentConfig.catalogPreview,
+    reactRequiredDefaultProps
+  ),
   reactStaticDemoProps,
   nativeStaticDemoProps,
   reactDemoChildren,
