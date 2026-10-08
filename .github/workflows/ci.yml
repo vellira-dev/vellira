@@ -76,9 +76,7 @@ jobs:
 
       - name: Diagnose privacy Prettier output
         run: |
-          pnpm exec prettier \\
-            'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' \\
-            --write
+          pnpm exec prettier 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' --write
           echo '===FORMATTED_PRIVACY_PAGE_BEGIN==='
           cat 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx'
           echo '===FORMATTED_PRIVACY_PAGE_END==='
