@@ -31,7 +31,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   const deploy = jobBlock(stagingWorkflow, 'deploy');
 
   assert.match(classify, /release-sync-contract\.mjs/);
-  assert.match(classify, /--verify-merged/);
+  assert.match(classify, /--classify-merged/);
   assert.match(classify, /VELLIRA_PUSH_ACTOR:/);
   assert.match(classify, /github\.event\.before/);
   assert.match(
@@ -75,7 +75,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   const productionClassify = jobBlock(productionWorkflow, 'classify', 'candidate');
   const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
   assert.match(productionClassify, /release-sync-contract\.mjs/);
-  assert.match(productionClassify, /--verify-merged/);
+  assert.match(productionClassify, /--classify-merged/);
   assert.match(productionClassify, /VELLIRA_PUSH_ACTOR:/);
   assert.match(candidate, /needs: classify/);
   assert.match(
