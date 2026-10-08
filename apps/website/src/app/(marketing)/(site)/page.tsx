@@ -3,6 +3,7 @@ import { BackToTop } from '@/components/navigation/BackToTop';
 import { homepageProductFacts } from '@/config/homepageProductFacts';
 import { CodeShowcase } from '@/sections/home/CodeShowcase';
 import { ComponentShowcase } from '@/sections/home/ComponentShowcase';
+import { FeaturedStory } from '@/sections/home/FeaturedStory';
 import { FinalCta } from '@/sections/home/FinalCta';
 import { Hero } from '@/sections/home/Hero';
 import { PlatformParity } from '@/sections/home/PlatformParity';
@@ -26,6 +27,7 @@ export default function HomePage() {
       <ProductionWorkflow />
       <QuickStart />
       <SocialProof productFacts={homepageProductFacts} />
+      <FeaturedStory />
       <Roadmap />
       <Pro />
       <FinalCta />
