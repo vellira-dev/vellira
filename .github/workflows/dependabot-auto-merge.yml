@@ -273,6 +273,36 @@ jobs:
                     `${entry.ghsaId}\0${entry.package}\0${entry.firstPatchedVersion}`
                 )
               ).size === value.length;
+            const validAuditGapMaterializations = (value) =>
+              value &&
+              typeof value === 'object' &&
+              !Array.isArray(value) &&
+              value.schemaVersion === 1 &&
+              Array.isArray(value.packages) &&
+              value.packages.every(
+                (entry) => typeof entry === 'string' && entry.length > 0
+              ) &&
+              Array.isArray(value.materializations) &&
+              value.materializations.every(
+                (entry) =>
+                  entry &&
+                  typeof entry === 'object' &&
+                  !Array.isArray(entry) &&
+                  typeof entry.package === 'string' &&
+                  value.packages.includes(entry.package) &&
+                  typeof entry.vulnerableVersionRange === 'string' &&
+                  entry.vulnerableVersionRange.length > 0 &&
+                  typeof entry.selector === 'string' &&
+                  entry.selector.length > 0 &&
+                  typeof entry.target === 'string' &&
+                  entry.target.length > 0 &&
+                  typeof entry.releaseAgeEntry === 'string' &&
+                  entry.releaseAgeEntry.length > 0 &&
+                  Array.isArray(entry.alertNumbers) &&
+                  entry.alertNumbers.every(Number.isSafeInteger) &&
+                  Array.isArray(entry.ghsaIds) &&
+                  validGhsaList(entry.ghsaIds)
+              );
             if (
               !validPackageList(decision.authorizedPackages) ||
               !validPackageList(decision.changedPackages) ||
@@ -283,6 +313,9 @@ jobs:
               !validGhsaList(decision.ignoredRuntimeGhsas) ||
               !validRegistryUnavailablePatches(
                 decision.registryUnavailablePatches
+              ) ||
+              !validAuditGapMaterializations(
+                decision.auditGapMaterializations
               )
             ) {
               throw new Error(
@@ -734,6 +767,44 @@ jobs:
               .join(', ');
             throw new Error(
               `Registry-unavailable remediation authority changed before merge: ${evidence}`
+            );
+          }
+
+          const auditGapMaterializations =
+            decision.auditGapMaterializations?.materializations ?? [];
+          const auditGapAuthorityDrift = auditGapMaterializations.filter(
+            (materialization) =>
+              !materialization.alertNumbers.every((alertNumber) =>
+                alerts.some((alert) => {
+                  const packageName = alert?.dependency?.package?.name;
+                  const vulnerableRange =
+                    alert?.security_vulnerability?.vulnerable_version_range;
+                  const patchedVersion =
+                    alert?.security_vulnerability?.first_patched_version
+                      ?.identifier;
+                  return (
+                    alert?.number === alertNumber &&
+                    alert?.state === 'open' &&
+                    alert?.dependency?.package?.ecosystem === 'npm' &&
+                    alert?.dependency?.scope === 'development' &&
+                    packageName === materialization.package &&
+                    vulnerableRange ===
+                      materialization.vulnerableVersionRange &&
+                    patchedVersion === materialization.target
+                  );
+                })
+              )
+          );
+          if (auditGapAuthorityDrift.length > 0) {
+            const evidence = auditGapAuthorityDrift
+              .map(
+                (entry) =>
+                  `${entry.package}:${entry.selector}->${entry.target}`
+              )
+              .sort()
+              .join(', ');
+            throw new Error(
+              `Dependabot audit-gap authority changed before merge: ${evidence}`
             );
           }
           NODE

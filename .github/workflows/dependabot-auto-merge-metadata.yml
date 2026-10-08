@@ -302,6 +302,36 @@ jobs:
                   `${entry.ghsaId}\0${entry.package}\0${entry.firstPatchedVersion}`
               )
             ).size === value.length;
+          const validAuditGapMaterializations = (value) =>
+            value &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            value.schemaVersion === 1 &&
+            Array.isArray(value.packages) &&
+            value.packages.every(
+              (entry) => typeof entry === 'string' && entry.length > 0
+            ) &&
+            Array.isArray(value.materializations) &&
+            value.materializations.every(
+              (entry) =>
+                entry &&
+                typeof entry === 'object' &&
+                !Array.isArray(entry) &&
+                typeof entry.package === 'string' &&
+                value.packages.includes(entry.package) &&
+                typeof entry.vulnerableVersionRange === 'string' &&
+                entry.vulnerableVersionRange.length > 0 &&
+                typeof entry.selector === 'string' &&
+                entry.selector.length > 0 &&
+                typeof entry.target === 'string' &&
+                entry.target.length > 0 &&
+                typeof entry.releaseAgeEntry === 'string' &&
+                entry.releaseAgeEntry.length > 0 &&
+                Array.isArray(entry.alertNumbers) &&
+                entry.alertNumbers.every(Number.isSafeInteger) &&
+                Array.isArray(entry.ghsaIds) &&
+                validGhsaList(entry.ghsaIds)
+            );
 
           if (
             candidate.schemaVersion !== 1 ||
@@ -335,6 +365,9 @@ jobs:
             !validGhsaList(candidate.ignoredRuntimeGhsas) ||
             !validRegistryUnavailablePatches(
               candidate.registryUnavailablePatches
+            ) ||
+            !validAuditGapMaterializations(
+              candidate.auditGapMaterializations
             )
           ) {
             throw new Error(
@@ -603,6 +636,8 @@ jobs:
             ignoredRuntimeGhsas: candidate.ignoredRuntimeGhsas,
             registryUnavailablePatches:
               candidate.registryUnavailablePatches,
+            auditGapMaterializations:
+              candidate.auditGapMaterializations,
             eligible: true,
           };
 
