@@ -12,9 +12,7 @@ describe('clean Expo consumer workflow contract', () => {
     expect(workflow).toContain('  expo-consumer:');
     expect(workflow).toContain('name: Clean Expo consumer');
     expect(workflow).toContain('needs: candidate');
-    expect(workflow).toContain(
-      'ref: ${{ needs.candidate.outputs.candidate_sha }}'
-    );
+    expect(workflow).toContain('ref: ${{ github.sha }}');
     expect(workflow).toContain(
       'name: npm-release-candidate-${{ needs.candidate.outputs.candidate_sha }}'
     );
