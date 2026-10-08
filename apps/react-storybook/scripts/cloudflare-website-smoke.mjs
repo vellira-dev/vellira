@@ -630,7 +630,10 @@ async function performRecoverableClientNavigation({
       await assertReady();
     },
     failureCursor: () => cloudflareEdgeGetFailures.length,
-    failuresSince: edgeFailuresSince,
+    failuresSince: (cursor) =>
+      edgeFailuresSince(cursor).filter(
+        (failure) => new URL(failure.url).pathname === href
+      ),
     recoverFailures: recoverCloudflareEdgeFailures,
     beforeRetry: async (attempt) => {
       console.log(
