@@ -76,9 +76,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('runtime-audit-ignores.json');
     expect(source).toContain('registry-unavailable-patches.json');
     expect(source).toContain('blockedByRegistryAvailability');
-    expect(source).toContain(
-      "steps.plan.outputs.fixable_packages != '0' &&"
-    );
+    expect(source).toContain("steps.plan.outputs.fixable_packages != '0' &&");
     expect(source).toContain(
       "steps.availability.outputs.resolvable_packages != '0'"
     );
