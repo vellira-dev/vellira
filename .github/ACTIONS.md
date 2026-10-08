@@ -80,6 +80,17 @@ work, but does not prevent a workflow card from being created for each push.
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
 
+## Release candidate consumer proof
+
+Release Candidate Proof packs the exact candidate head and binds every retained
+tarball digest to that SHA. Clean Vite, Next.js and Expo consumers run the harness
+at the exact workflow revision (`github.sha`, the PR merge revision for PR runs),
+so an older candidate can be tested with current compatibility tooling. Each
+consumer records and verifies the harness Git SHA independently of its package
+candidate SHA and rejects tracked harness drift. First-use documentation checks
+continue to read the exact candidate documentation. Current harness tooling does
+not grant authority to replace candidate tarballs or skip compatibility checks.
+
 ## Permanent component diagnostics
 
 Use `Component Diagnostics` from the `main` workflow definition. Supply an exact

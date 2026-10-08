@@ -114,6 +114,13 @@ export function componentProductionValidationCommands(
       ],
       timeoutMs: 120_000,
     },
+    {
+      id: 'website-typecheck',
+      stage: 'website',
+      command: ['pnpm', '--filter', '@vellira-ui/website', 'typecheck'],
+      timeoutMs: 180_000,
+      requires: componentProductionCommandDependencies('website-typecheck'),
+    },
   ];
 }
 
@@ -150,7 +157,12 @@ export function runComponentProductionCommandValidation(params: {
       )
     );
 
-    if (blockedDependencies.length > 0) {
+    const runnableCommands = stageCommands.filter((command) =>
+      (command.requires ?? []).every(
+        (dependency) => commandStatuses[dependency] === 'passed'
+      )
+    );
+    if (blockedDependencies.length > 0 && runnableCommands.length === 0) {
       stages.push(
         skippedStage(
           stageId,
@@ -165,7 +177,7 @@ export function runComponentProductionCommandValidation(params: {
     const stage = runStage({
       root,
       stageId,
-      commands: stageCommands,
+      commands: runnableCommands,
       runner: (command, directory) => {
         const execution = runner(command, directory);
         commandStatuses[command.id] = commandExecutionStatus(execution);
@@ -173,7 +185,19 @@ export function runComponentProductionCommandValidation(params: {
       },
     });
 
-    stages.push(stage);
+    stages.push(
+      blockedDependencies.length === 0
+        ? stage
+        : stage.status === 'passed'
+          ? skippedStage(
+              stageId,
+              `Validation partially ran and was dependency-blocked by ${[...new Set(blockedDependencies)].join(', ')}.`
+            )
+          : {
+              ...stage,
+              summary: `${stage.summary} Deferred build consumers: ${[...new Set(blockedDependencies)].join(', ')}.`,
+            }
+    );
   }
 
   return {
