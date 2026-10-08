@@ -1218,6 +1218,171 @@ function runGit(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trimEnd();
 }
 
+function gitIsAncestor(ancestorSha, descendantSha) {
+  try {
+    execFileSync(
+      'git',
+      ['merge-base', '--is-ancestor', ancestorSha, descendantSha],
+      { stdio: 'ignore' }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function validateCandidateBaseSyncChain({
+  candidateBaseSha,
+  candidateHeadSha,
+  currentBaseSha,
+  currentHeadSha,
+  mergeCommits = [],
+}) {
+  for (const [label, value] of Object.entries({
+    candidateBaseSha,
+    candidateHeadSha,
+    currentBaseSha,
+    currentHeadSha,
+  })) {
+    if (!/^[0-9a-f]{40}$/.test(value ?? '')) {
+      throw new Error(`Security remediation ${label} is not an exact SHA`);
+    }
+  }
+
+  if (currentHeadSha === candidateHeadSha) {
+    if (currentBaseSha !== candidateBaseSha || mergeCommits.length !== 0) {
+      throw new Error(
+        'Direct security remediation candidate no longer targets its exact source base'
+      );
+    }
+    return {
+      mode: 'direct',
+      mergeCount: 0,
+      candidateBaseSha,
+      candidateHeadSha,
+      currentBaseSha,
+      currentHeadSha,
+    };
+  }
+
+  if (!Array.isArray(mergeCommits) || mergeCommits.length === 0) {
+    throw new Error(
+      'Security remediation head moved without authenticated base-sync merges'
+    );
+  }
+
+  let expectedFirstParent = candidateHeadSha;
+  for (const merge of mergeCommits) {
+    if (
+      merge === null ||
+      typeof merge !== 'object' ||
+      Array.isArray(merge) ||
+      !/^[0-9a-f]{40}$/.test(merge.sha ?? '') ||
+      !/^[0-9a-f]{40}$/.test(merge.firstParent ?? '') ||
+      !/^[0-9a-f]{40}$/.test(merge.secondParent ?? '') ||
+      merge.firstParent !== expectedFirstParent
+    ) {
+      throw new Error(
+        'Security remediation base-sync first-parent chain is invalid'
+      );
+    }
+    expectedFirstParent = merge.sha;
+  }
+
+  if (expectedFirstParent !== currentHeadSha) {
+    throw new Error(
+      'Security remediation base-sync chain does not reach the current PR head'
+    );
+  }
+  if (
+    mergeCommits[mergeCommits.length - 1].secondParent !== currentBaseSha
+  ) {
+    throw new Error(
+      'Security remediation latest base-sync merge does not use the current PR base'
+    );
+  }
+
+  return {
+    mode: 'base-sync',
+    mergeCount: mergeCommits.length,
+    candidateBaseSha,
+    candidateHeadSha,
+    currentBaseSha,
+    currentHeadSha,
+  };
+}
+
+function collectCandidateBaseSyncEvidence({
+  candidateBaseSha,
+  candidateHeadSha,
+  currentBaseSha,
+  currentHeadSha,
+}) {
+  if (!gitIsAncestor(candidateBaseSha, currentBaseSha)) {
+    throw new Error(
+      'Security remediation current base is not a descendant of the immutable candidate base'
+    );
+  }
+
+  if (currentHeadSha === candidateHeadSha) {
+    return validateCandidateBaseSyncChain({
+      candidateBaseSha,
+      candidateHeadSha,
+      currentBaseSha,
+      currentHeadSha,
+      mergeCommits: [],
+    });
+  }
+
+  if (!gitIsAncestor(candidateHeadSha, currentHeadSha)) {
+    throw new Error(
+      'Security remediation current head is not a descendant of the immutable candidate head'
+    );
+  }
+
+  const reverseMerges = [];
+  let cursor = currentHeadSha;
+  for (let count = 0; cursor !== candidateHeadSha; count += 1) {
+    if (count >= 32) {
+      throw new Error('Security remediation base-sync chain is unbounded');
+    }
+
+    const parts = runGit(['rev-list', '--parents', '-n', '1', cursor])
+      .trim()
+      .split(/\s+/);
+    if (parts.length !== 3 || parts[0] !== cursor) {
+      throw new Error(
+        'Security remediation head contains a non-merge mutation after the immutable candidate'
+      );
+    }
+
+    const [, firstParent, secondParent] = parts;
+    if (
+      !gitIsAncestor(candidateBaseSha, secondParent) ||
+      !gitIsAncestor(secondParent, currentBaseSha)
+    ) {
+      throw new Error(
+        'Security remediation base-sync merge imported a commit outside current main ancestry'
+      );
+    }
+
+    reverseMerges.push({
+      sha: cursor,
+      firstParent,
+      secondParent,
+    });
+    cursor = firstParent;
+  }
+
+  return validateCandidateBaseSyncChain({
+    candidateBaseSha,
+    candidateHeadSha,
+    currentBaseSha,
+    currentHeadSha,
+    mergeCommits: reverseMerges.reverse(),
+  });
+}
+
 function readChangedFiles(args) {
   const output = runGit(args);
   return output.length === 0 ? [] : output.split('\n').filter(Boolean);
@@ -1281,11 +1446,21 @@ function validatePullRequest(baseSha, candidatePath) {
   const candidate = readJson(candidatePath);
   if (
     candidate.schemaVersion !== 1 ||
+    !/^[0-9a-f]{40}$/.test(candidate.baseSha ?? '') ||
+    !/^[0-9a-f]{40}$/.test(candidate.headSha ?? '') ||
     !Array.isArray(candidate.authorizedPackages) ||
     candidate.authorizedPackages.length === 0
   ) {
     throw new Error('Security remediation candidate package authority is invalid');
   }
+
+  const currentHeadSha = runGit(['rev-parse', 'HEAD']);
+  const baseSync = collectCandidateBaseSyncEvidence({
+    candidateBaseSha: candidate.baseSha,
+    candidateHeadSha: candidate.headSha,
+    currentBaseSha: baseSha,
+    currentHeadSha,
+  });
 
   const changedFiles = readChangedFiles([
     'diff',
@@ -1321,7 +1496,10 @@ function validatePullRequest(baseSha, candidatePath) {
     );
   }
 
-  return validation;
+  return {
+    ...validation,
+    baseSync,
+  };
 }
 
 function flagValue(args, flag) {

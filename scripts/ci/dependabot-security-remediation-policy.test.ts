@@ -191,13 +191,18 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain(
       'Security remediation source run does not match the exact candidate base'
     );
+    expect(metadataSource).toContain('candidate_base_sha=');
+    expect(metadataSource).toContain('candidate_head_sha=');
+    expect(metadataSource).toContain(
+      'steps.envelope.outputs.candidate_base_sha'
+    );
     expect(metadataSource).toContain('run.head_sha !== expectedBaseSha');
     expect(metadataSource).toContain('run.path !==');
     expect(metadataSource).toContain(
       "'.github/workflows/dependabot-security-remediation.yml'"
     );
     expect(metadataSource).toContain(
-      'Security remediation candidate artifact does not authenticate this PR head'
+      'Security remediation candidate artifact does not authenticate the immutable source candidate'
     );
     expect(metadataSource).toContain('scope=(development)');
     expect(metadataSource).toContain(
@@ -229,6 +234,17 @@ describe('Dependabot security remediation workflow policy', () => {
       'Patched release became available before merge'
     );
     expect(autoMergeSource).toContain('decision.auditGapMaterializations');
+    expect(metadataSource).toContain(
+      'sourceCandidateBaseSha: candidate.baseSha'
+    );
+    expect(metadataSource).toContain(
+      'sourceCandidateHeadSha: candidate.headSha'
+    );
+    expect(autoMergeSource).toContain('decision.sourceCandidateBaseSha');
+    expect(autoMergeSource).toContain('decision.sourceCandidateHeadSha');
+    expect(autoMergeSource).toContain(
+      'run.head_sha !== decision.sourceCandidateBaseSha'
+    );
     expect(autoMergeSource).toContain(
       'Dependabot audit-gap authority changed before merge'
     );

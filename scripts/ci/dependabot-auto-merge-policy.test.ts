@@ -107,8 +107,13 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('decision.changedPackages');
     expect(source).toContain('decision.ignoredRuntimeGhsas');
     expect(source).toContain('decision.auditGapMaterializations');
+    expect(source).toContain('decision.sourceCandidateBaseSha');
+    expect(source).toContain('decision.sourceCandidateHeadSha');
     expect(source).toContain(
       'Security remediation source run is no longer an exact successful authority'
+    );
+    expect(source).toContain(
+      'run.head_sha !== decision.sourceCandidateBaseSha'
     );
     expect(source).toContain('scripts/ci/dependabot-auto-merge-policy.test.ts');
     expect(source).toContain("run.conclusion !== 'success'");
