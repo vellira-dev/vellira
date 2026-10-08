@@ -1,3 +1,11 @@
+export function destinationEdgeFailures(failures, href) {
+  const destinationPath = new URL(href, 'https://vellira.invalid').pathname;
+  return failures.filter(
+    (failure) =>
+      new URL(failure.url, 'https://vellira.invalid').pathname === destinationPath
+  );
+}
+
 export async function runRecoverableClientNavigation({
   stage,
   maxAttempts,
