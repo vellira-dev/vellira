@@ -8,6 +8,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { ArrowLeftRight, ArrowRight, Check } from '@vellira-ui/icons';
 import { useTheme } from '@vellira-ui/react';
 import { Container } from '@/components/layout/Container';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from './SiteFooter.module.css';
 
@@ -187,7 +188,7 @@ export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
           <span>Independent modules. One seamless system.</span>
           <div className={styles.legalLinks}>
             <span>Built in public</span>
-            <Link href='/privacy'>Privacy</Link>
+            <DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>
           </div>
         </div>
       </Container>
