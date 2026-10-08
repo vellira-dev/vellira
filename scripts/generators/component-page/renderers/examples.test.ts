@@ -13,6 +13,7 @@ type RenderParams = {
   reactApiProps?: readonly ExtractedProp[];
   nativeApiProps?: readonly ExtractedProp[];
   componentConfig?: RenderConfig;
+  requiredDefaultProps?: Partial<Record<Platform, readonly string[]>>;
 };
 
 function prop(name: string, kind: PropKind, type: string): ExtractedProp {
@@ -54,6 +55,7 @@ function render(params: RenderParams) {
     generatedFileHeader: '',
     reactApiProps: params.reactApiProps ?? [],
     nativeApiProps: params.nativeApiProps ?? [],
+    requiredDefaultProps: params.requiredDefaultProps,
     getDemoProps: () => '',
   });
 }
@@ -205,6 +207,49 @@ describe('renderExamples', () => {
 
     expect(content).toContain('<ReactAccordion\n          open');
     expect(content).toContain('<NativeAccordion\n          visible');
+  });
+
+  it('renders required metadata defaults and preserves explicit overrides', () => {
+    const requiredName = {
+      name: 'name',
+      kind: 'string',
+      required: true,
+      type: 'string',
+      description: '',
+    } as const;
+    const requiredFallback = {
+      name: 'fallback',
+      kind: 'string',
+      required: true,
+      type: 'string',
+      description: '',
+    } as const;
+    const content = render({
+      componentName: 'Avatar',
+      generatedExamples: [
+        {
+          title: 'Default',
+          description: 'Default avatar.',
+          props: [],
+        },
+        {
+          title: 'Named',
+          description: 'Explicit name.',
+          props: ["name='Ada Lovelace'"],
+        },
+      ],
+      reactApiProps: [requiredFallback, requiredName],
+      nativeApiProps: [requiredFallback, requiredName],
+      requiredDefaultProps: {
+        react: ["fallback='JD'", "name='Jordan Diaz'"],
+        'react-native': ["fallback='JD'", "name='Jordan Diaz'"],
+      },
+    });
+
+    expect(content).toContain("fallback='JD'");
+    expect(content).toContain("name='Jordan Diaz'");
+    expect(content).toContain("name='Ada Lovelace'");
+    expect(content).not.toContain("name='Jordan Diaz'\n          name='Ada Lovelace'");
   });
 
   it('filters unavailable demo shortcuts', () => {
