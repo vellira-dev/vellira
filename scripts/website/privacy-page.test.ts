@@ -48,9 +48,15 @@ describe('website privacy policy', () => {
     );
   });
 
-  it('makes the privacy route discoverable from both website footers', () => {
-    expect(siteFooter).toContain("href='/privacy'");
-    expect(compactFooter).toContain("href='/privacy'");
+  it('makes the privacy route discoverable from both website footers through the shared link contract', () => {
+    for (const footer of [siteFooter, compactFooter]) {
+      expect(footer).toContain(
+        "from '@/components/navigation/DesignSystemLink'"
+      );
+      expect(footer).toContain(
+        "<DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>"
+      );
+    }
   });
 
   it('includes the privacy route in the public sitemap', () => {
