@@ -12,6 +12,7 @@ import {
   stripMutableWorkspaceSections,
   validateAuditGapMaterializations,
   validateAuthorizedPackagesRemediated,
+  validateCandidateBaseSyncChain,
   validatePlanAgainstRegistryEvidence,
   validateRemediationDiff,
 } from './dependabot-security-remediation.mjs';
@@ -360,6 +361,107 @@ test('registry evidence records Dependabot advisory gaps without revoking author
     vulnerableVersionRange: '<3.1.7',
     firstPatchedVersion: '3.1.7',
   });
+});
+
+test('candidate base sync accepts the exact direct candidate', () => {
+  const base = '1'.repeat(40);
+  const head = '2'.repeat(40);
+
+  assert.deepEqual(
+    validateCandidateBaseSyncChain({
+      candidateBaseSha: base,
+      candidateHeadSha: head,
+      currentBaseSha: base,
+      currentHeadSha: head,
+      mergeCommits: [],
+    }),
+    {
+      mode: 'direct',
+      mergeCount: 0,
+      candidateBaseSha: base,
+      candidateHeadSha: head,
+      currentBaseSha: base,
+      currentHeadSha: head,
+    }
+  );
+});
+
+test('candidate base sync accepts bounded first-parent main merges', () => {
+  const candidateBaseSha = '1'.repeat(40);
+  const candidateHeadSha = '2'.repeat(40);
+  const intermediateBaseSha = '3'.repeat(40);
+  const firstMergeSha = '4'.repeat(40);
+  const currentBaseSha = '5'.repeat(40);
+  const currentHeadSha = '6'.repeat(40);
+
+  assert.deepEqual(
+    validateCandidateBaseSyncChain({
+      candidateBaseSha,
+      candidateHeadSha,
+      currentBaseSha,
+      currentHeadSha,
+      mergeCommits: [
+        {
+          sha: firstMergeSha,
+          firstParent: candidateHeadSha,
+          secondParent: intermediateBaseSha,
+        },
+        {
+          sha: currentHeadSha,
+          firstParent: firstMergeSha,
+          secondParent: currentBaseSha,
+        },
+      ],
+    }),
+    {
+      mode: 'base-sync',
+      mergeCount: 2,
+      candidateBaseSha,
+      candidateHeadSha,
+      currentBaseSha,
+      currentHeadSha,
+    }
+  );
+});
+
+test('candidate base sync rejects non-candidate first-parent history', () => {
+  assert.throws(
+    () =>
+      validateCandidateBaseSyncChain({
+        candidateBaseSha: '1'.repeat(40),
+        candidateHeadSha: '2'.repeat(40),
+        currentBaseSha: '5'.repeat(40),
+        currentHeadSha: '6'.repeat(40),
+        mergeCommits: [
+          {
+            sha: '6'.repeat(40),
+            firstParent: '7'.repeat(40),
+            secondParent: '5'.repeat(40),
+          },
+        ],
+      }),
+    /first-parent chain is invalid/
+  );
+});
+
+test('candidate base sync rejects a stale latest base merge', () => {
+  assert.throws(
+    () =>
+      validateCandidateBaseSyncChain({
+        candidateBaseSha: '1'.repeat(40),
+        candidateHeadSha: '2'.repeat(40),
+        currentBaseSha: '5'.repeat(40),
+        currentHeadSha: '6'.repeat(40),
+        mergeCommits: [
+          {
+            sha: '6'.repeat(40),
+            firstParent: '2'.repeat(40),
+            secondParent: '3'.repeat(40),
+          },
+        ],
+      }),
+    /does not use the current PR base/
+  );
 });
 
 test('dependency selector parsing handles parent and scoped selectors', () => {

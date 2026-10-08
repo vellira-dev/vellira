@@ -454,6 +454,7 @@ jobs:
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
+          scripts/cloudflare-edge-recovery.test.mjs
 
       - name: Verify production component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
@@ -476,7 +477,7 @@ jobs:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production static chunk integrity
-        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
+        if: ${{ success() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
