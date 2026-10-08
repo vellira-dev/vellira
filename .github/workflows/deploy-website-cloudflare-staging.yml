@@ -331,20 +331,16 @@ jobs:
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
           import fs from 'node:fs/promises';
+          import { waitForRuntimeStability } from './apps/website/scripts/cloudflare-runtime-stabilization.mjs';
 
           const build = JSON.parse(
             await fs.readFile('apps/website/.open-next/vellira-build.json', 'utf8')
           );
-          const runtimeResponse = await fetch(
-            new URL('/__vellira_runtime', process.env.STAGING_URL),
-            { cache: 'no-store' }
-          );
-          assert.equal(runtimeResponse.status, 200);
-          const runtime = await runtimeResponse.json();
-          assert.equal(runtime.buildId, build.buildId);
-          assert.ok(runtime.workerVersion);
+          const runtime = await waitForRuntimeStability({
+            base: process.env.STAGING_URL,
+            expectedBuildId: build.buildId,
+          });
 
           const evidence = {
             schemaVersion: 1,
