@@ -6,6 +6,8 @@ on:
     paths:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-client-navigation-recovery.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-client-navigation-recovery.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-edge-recovery.mjs'
       - 'apps/react-storybook/scripts/cloudflare-edge-recovery.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.mjs'
@@ -292,6 +294,7 @@ jobs:
           scripts/cloudflare-browser-diagnostics.test.mjs
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
           scripts/cloudflare-edge-recovery.test.mjs
+          scripts/cloudflare-client-navigation-recovery.test.mjs
 
       - name: Verify component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
