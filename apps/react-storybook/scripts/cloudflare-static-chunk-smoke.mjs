@@ -1,6 +1,15 @@
 import { chromium } from '@playwright/test';
+import {
+  destinationEdgeFailures,
+  runRecoverableClientNavigation,
+} from './cloudflare-client-navigation-recovery.mjs';
+import {
+  isCloudflareEdgeGeneratedGet5xx,
+  recoverCloudflareEdgeGet5xx,
+} from './cloudflare-edge-recovery.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
+const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -15,6 +24,7 @@ const page = await context.newPage();
 const criticalDiagnostics = [];
 const abortedChunkUrls = new Set();
 const abortedRouterRequests = new Map();
+const routerEdgeFailures = [];
 
 function isSameOrigin(url) {
   return new URL(url).origin === origin;
@@ -84,6 +94,39 @@ function recordCritical(diagnostic) {
   }
 }
 
+function routerEdgeFailuresSince(index) {
+  return routerEdgeFailures
+    .slice(index)
+    .filter((failure) => !failure.handled);
+}
+
+async function recoverRouterEdgeFailures(failures, stage) {
+  if (failures.length === 0) return false;
+
+  for (const failure of failures) {
+    const result = await recoverCloudflareEdgeGet5xx({
+      url: failure.url,
+      requestHeaders: failure.requestHeaders,
+      expectedBuildId,
+      requestGet: (...args) => context.request.get(...args),
+    });
+
+    if (!result.recovered) return false;
+    failure.handled = true;
+    console.log(
+      `Recovered transient Cloudflare router GET during ${stage}: ${failure.url} (attempts ${result.attempts})`
+    );
+  }
+
+  return true;
+}
+
+function reconcileRouterEdgeFailures() {
+  for (const failure of routerEdgeFailures) {
+    if (!failure.handled) recordCritical(failure.diagnostic);
+  }
+}
+
 page.on('response', (response) => {
   if (isNextStaticChunk(response.url()) && response.status() >= 400) {
     recordCritical(
@@ -95,9 +138,24 @@ page.on('response', (response) => {
     isNextRouterDataRequest(response.request()) &&
     response.status() >= 400
   ) {
-    recordCritical(
-      `router data response: ${response.status()} ${describeRouterRequest(response.request())}`
-    );
+    const diagnostic =
+      `router data response: ${response.status()} ${describeRouterRequest(response.request())}`;
+    if (
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: response.headers(),
+      })
+    ) {
+      routerEdgeFailures.push({
+        diagnostic,
+        url: response.url(),
+        requestHeaders: response.request().headers(),
+        handled: false,
+      });
+    } else {
+      recordCritical(diagnostic);
+    }
   }
 });
 
@@ -234,10 +292,30 @@ async function verifyAbortedRouterRequests(stage) {
     });
 
     if (!response.ok()) {
-      throw new Error(
-        `Aborted router prefetch is not serviceable during ${stage}: ` +
-          `${response.status()} ${request.description}`
+      const result = isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: 'GET',
+        headers: response.headers(),
+      })
+        ? await recoverCloudflareEdgeGet5xx({
+            url: request.url,
+            requestHeaders: request.headers,
+            expectedBuildId,
+            requestGet: (...args) => context.request.get(...args),
+          })
+        : { recovered: false };
+
+      if (!result.recovered) {
+        throw new Error(
+          `Aborted router prefetch is not serviceable during ${stage}: ` +
+            `${response.status()} ${request.description}`
+        );
+      }
+
+      console.log(
+        `Recovered aborted router prefetch during ${stage}: ${request.description}`
       );
+      continue;
     }
 
     console.log(
@@ -250,6 +328,8 @@ async function settleAndVerifyChunks(stage) {
   await page.waitForTimeout(700);
   await verifyAbortedChunkUrls(stage);
   await verifyAbortedRouterRequests(stage);
+  await recoverRouterEdgeFailures(routerEdgeFailuresSince(0), stage);
+  reconcileRouterEdgeFailures();
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
@@ -273,51 +353,98 @@ async function collectRoutes(indexPath, prefix) {
     .sort();
 }
 
+async function performRecoverableClientNavigation({
+  startPath,
+  href,
+  stage,
+  prepare,
+  click,
+}) {
+  return runRecoverableClientNavigation({
+    stage,
+    maxAttempts: 3,
+    prepareAttempt: async () => {
+      await goto(startPath);
+      await settleAndVerifyChunks(`document load ${startPath}`);
+      await prepare();
+    },
+    runAttempt: async () => {
+      await click();
+      await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
+      await waitForRenderedBody(href);
+      await settleAndVerifyChunks(stage);
+    },
+    failureCursor: () => routerEdgeFailures.length,
+    failuresSince: (cursor) =>
+      destinationEdgeFailures(routerEdgeFailuresSince(cursor), href),
+    recoverFailures: recoverRouterEdgeFailures,
+    beforeRetry: async () => {
+      await page.waitForTimeout(1_500);
+    },
+  });
+}
+
 async function verifyGlobalHeaderNavigation() {
-  await goto('/');
-  await settleAndVerifyChunks('home load and header prefetch');
+  await performRecoverableClientNavigation({
+    startPath: '/',
+    href: '/blog',
+    stage: 'primary navigation / -> /blog',
+    prepare: async () => {
+      await page
+        .locator('nav[aria-label="Primary navigation"] a[href="/blog"]')
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('nav[aria-label="Primary navigation"] a[href="/blog"]')
+        .click(),
+  });
 
-  const primaryNavigation = page.locator(
-    'nav[aria-label="Primary navigation"]'
-  );
+  await performRecoverableClientNavigation({
+    startPath: '/blog',
+    href: '/components',
+    stage: 'primary navigation /blog -> /components',
+    prepare: async () => {
+      await page
+        .locator('nav[aria-label="Primary navigation"] a[href="/components"]')
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('nav[aria-label="Primary navigation"] a[href="/components"]')
+        .click(),
+  });
 
-  const blogLink = primaryNavigation.locator('a[href="/blog"]');
-  await blogLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await blogLink.click();
-  await page.waitForURL(`${baseUrl}/blog`, { timeout: 15_000 });
-  await waitForRenderedBody('/blog');
-  await settleAndVerifyChunks('primary navigation / -> /blog');
-
-  const componentsLink = page
-    .locator('nav[aria-label="Primary navigation"]')
-    .locator('a[href="/components"]');
-  await componentsLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await componentsLink.click();
-  await page.waitForURL(`${baseUrl}/components`, { timeout: 15_000 });
-  await waitForRenderedBody('/components');
-  await settleAndVerifyChunks('primary navigation /blog -> /components');
-
-  const brandLink = page.locator('header a[href="/"]').first();
-  await brandLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await brandLink.click();
-  await page.waitForURL(`${baseUrl}/`, { timeout: 15_000 });
-  await waitForRenderedBody('/');
-  await settleAndVerifyChunks('brand navigation /components -> /');
+  await performRecoverableClientNavigation({
+    startPath: '/components',
+    href: '/',
+    stage: 'brand navigation /components -> /',
+    prepare: async () => {
+      await page
+        .locator('header a[href="/"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () => page.locator('header a[href="/"]').first().click(),
+  });
 
   console.log('OK global header navigation and router/static integrity');
 }
 
 async function verifyClientRoutes(indexPath, routes) {
   for (const href of routes) {
-    await goto(indexPath);
-    await settleAndVerifyChunks(`document load ${indexPath}`);
-
-    const link = page.locator(`a[href="${href}"]`).first();
-    await link.waitFor({ state: 'visible', timeout: 15_000 });
-    await link.click();
-    await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-    await waitForRenderedBody(href);
-    await settleAndVerifyChunks(`client navigation ${indexPath} -> ${href}`);
+    await performRecoverableClientNavigation({
+      startPath: indexPath,
+      href,
+      stage: `client navigation ${indexPath} -> ${href}`,
+      prepare: async () => {
+        await page
+          .locator(`a[href="${href}"]`)
+          .first()
+          .waitFor({ state: 'visible', timeout: 15_000 });
+      },
+      click: () => page.locator(`a[href="${href}"]`).first().click(),
+    });
 
     console.log(`OK chunk navigation ${indexPath} -> ${href}`);
   }
@@ -345,6 +472,11 @@ try {
   await verifyClientRoutes('/components', componentRoutes);
   await verifyAbortedChunkUrls('final verification');
   await verifyAbortedRouterRequests('final verification');
+  await recoverRouterEdgeFailures(
+    routerEdgeFailuresSince(0),
+    'final verification'
+  );
+  reconcileRouterEdgeFailures();
 
   if (criticalDiagnostics.length > 0) {
     throw new Error(
