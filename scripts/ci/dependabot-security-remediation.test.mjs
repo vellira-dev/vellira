@@ -5,9 +5,12 @@ import {
   buildRegistryRemediationEvidence,
   buildRemediationPlan,
   buildRuntimeAuditIgnores,
+  materializeDependabotAuditGaps,
+  normalizeDependabotVulnerableRange,
   packageFromDependencySelector,
   reconcileGeneratedWorkspaceAuthority,
   stripMutableWorkspaceSections,
+  validateAuditGapMaterializations,
   validateAuthorizedPackagesRemediated,
   validatePlanAgainstRegistryEvidence,
   validateRemediationDiff,
@@ -309,7 +312,7 @@ test('registry evidence captures all advisories at the requested severity floor'
   assert.equal('dependencyScope' in evidence, false);
 });
 
-test('registry evidence must match each exact fixable Dependabot advisory', () => {
+test('registry evidence records Dependabot advisory gaps without revoking authority', () => {
   const plan = buildRemediationPlan([
     {
       number: 10,
@@ -341,10 +344,22 @@ test('registry evidence must match each exact fixable Dependabot advisory', () =
     ],
   };
 
-  assert.throws(
-    () => validatePlanAgainstRegistryEvidence(plan, wrongAdvisoryEvidence),
-    /advisory evidence is absent from the registry audit/
+  const comparison = validatePlanAgainstRegistryEvidence(
+    plan,
+    wrongAdvisoryEvidence
   );
+
+  assert.deepEqual(comparison.matchedPackages, ['fast-uri']);
+  assert.deepEqual(comparison.missingPackages, []);
+  assert.equal(comparison.missingAdvisories.length, 1);
+  assert.deepEqual(comparison.missingAdvisories[0], {
+    number: 10,
+    ghsaId: 'GHSA-qw65-cvwx-89v3',
+    package: 'fast-uri',
+    severity: 'high',
+    vulnerableVersionRange: '<3.1.7',
+    firstPatchedVersion: '3.1.7',
+  });
 });
 
 test('dependency selector parsing handles parent and scoped selectors', () => {
@@ -362,6 +377,140 @@ test('dependency selector parsing handles parent and scoped selectors', () => {
   );
   assert.equal(packageFromDependencySelector('undici@>=7 <8'), 'undici');
   assert.equal(packageFromDependencySelector('fast-uri@3.1.7'), 'fast-uri');
+});
+
+test('audit-gap materialization adds exact Dependabot fallback overrides', () => {
+  const plan = buildRemediationPlan([
+    {
+      number: 115,
+      state: 'open',
+      dependency: {
+        package: { ecosystem: 'npm', name: 'handlebars' },
+        scope: 'development',
+      },
+      security_advisory: {
+        severity: 'critical',
+        ghsa_id: 'GHSA-2345-cfgh-jmpq',
+      },
+      security_vulnerability: {
+        vulnerable_version_range: '>= 4.0.0, <= 4.7.9',
+        first_patched_version: { identifier: '4.7.10' },
+      },
+    },
+    {
+      number: 116,
+      state: 'open',
+      dependency: {
+        package: { ecosystem: 'npm', name: 'handlebars' },
+        scope: 'development',
+      },
+      security_advisory: {
+        severity: 'critical',
+        ghsa_id: 'GHSA-5678-fghj-mpqr',
+      },
+      security_vulnerability: {
+        vulnerable_version_range: '>= 4.0.0, <= 4.7.9',
+        first_patched_version: { identifier: '4.7.10' },
+      },
+    },
+  ]);
+  const comparison = validatePlanAgainstRegistryEvidence(plan, {
+    schemaVersion: 1,
+    auditLevel: 'high',
+    packages: [],
+    advisories: [],
+  });
+  const workspace = `packages:
+  - 'packages/*'
+minimumReleaseAgeExclude:
+  - old@1.0.0
+nodeLinker: hoisted
+
+overrides:
+  fast-uri: 3.1.8
+`;
+
+  const result = materializeDependabotAuditGaps({
+    workspaceSource: workspace,
+    plan,
+    comparison,
+  });
+
+  assert.equal(
+    normalizeDependabotVulnerableRange('>= 4.0.0, <= 4.7.9'),
+    '>=4.0.0 <=4.7.9'
+  );
+  assert.match(result.workspaceSource, /handlebars@>=4\.0\.0 <=4\.7\.9/);
+  assert.match(result.workspaceSource, /'4\.7\.10'/);
+  assert.match(result.workspaceSource, /handlebars@4\.7\.10/);
+  assert.deepEqual(result.evidence.packages, ['handlebars']);
+  assert.equal(result.evidence.materializations.length, 1);
+  assert.equal(
+    result.evidence.materializations[0].vulnerableVersionRange,
+    '>= 4.0.0, <= 4.7.9'
+  );
+  assert.equal(
+    result.evidence.materializations[0].selector,
+    'handlebars@>=4.0.0 <=4.7.9'
+  );
+  assert.deepEqual(result.evidence.materializations[0].alertNumbers, [115, 116]);
+  assert.deepEqual(result.evidence.materializations[0].ghsaIds, [
+    'GHSA-2345-cfgh-jmpq',
+    'GHSA-5678-fghj-mpqr',
+  ]);
+  assert.equal(result.evidence.materializations[0].overrideAdded, true);
+  assert.equal(result.evidence.materializations[0].releaseAgeAdded, true);
+  assert.deepEqual(
+    validateAuditGapMaterializations(
+      result.workspaceSource,
+      result.evidence
+    ),
+    {
+      schemaVersion: 1,
+      packages: ['handlebars'],
+      materializationCount: 1,
+    }
+  );
+});
+
+test('audit-gap materialization fails closed on conflicting existing override', () => {
+  const plan = buildRemediationPlan([
+    {
+      number: 115,
+      state: 'open',
+      dependency: {
+        package: { ecosystem: 'npm', name: 'handlebars' },
+        scope: 'development',
+      },
+      security_advisory: {
+        severity: 'critical',
+        ghsa_id: 'GHSA-2345-cfgh-jmpq',
+      },
+      security_vulnerability: {
+        vulnerable_version_range: '>= 4.0.0, <= 4.7.9',
+        first_patched_version: { identifier: '4.7.10' },
+      },
+    },
+  ]);
+  const comparison = validatePlanAgainstRegistryEvidence(plan, {
+    schemaVersion: 1,
+    auditLevel: 'high',
+    packages: [],
+    advisories: [],
+  });
+
+  assert.throws(
+    () =>
+      materializeDependabotAuditGaps({
+        workspaceSource: `nodeLinker: hoisted
+overrides:
+  'handlebars@>=4.0.0 <=4.7.9': '4.7.9'
+`,
+        plan,
+        comparison,
+      }),
+    /conflicts with existing override/
+  );
 });
 
 test('generated override reconciliation prunes registry-only mutations', () => {

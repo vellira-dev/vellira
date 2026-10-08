@@ -106,6 +106,7 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('decision.authorizedPackages');
     expect(source).toContain('decision.changedPackages');
     expect(source).toContain('decision.ignoredRuntimeGhsas');
+    expect(source).toContain('decision.auditGapMaterializations');
     expect(source).toContain(
       'Security remediation source run is no longer an exact successful authority'
     );
@@ -113,6 +114,9 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain('DEPENDABOT_ALERTS_TOKEN');
     expect(source).toContain(
       'Security remediation package authority gained a live runtime conflict before merge'
+    );
+    expect(source).toContain(
+      'Dependabot audit-gap authority changed before merge'
     );
     expect(source).toContain(
       'Security remediation base moved after authenticated generation'

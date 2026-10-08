@@ -344,47 +344,62 @@ export function validatePlanAgainstRegistryEvidence(plan, registryEvidence) {
     !Array.isArray(plan.packages) ||
     !Array.isArray(plan.fixablePackages) ||
     !Array.isArray(plan.alerts) ||
-    !Array.isArray(registryEvidence.packages)
+    !Array.isArray(registryEvidence.packages) ||
+    !Array.isArray(registryEvidence.advisories)
   ) {
     throw new Error('Dependabot remediation plan is malformed or mismatched');
   }
 
+  const authorizedPackages = new Set(plan.fixablePackages);
   const confirmedPackages = new Set(registryEvidence.packages);
-  const missing = plan.fixablePackages.filter(
-    (packageName) => !confirmedPackages.has(packageName)
-  );
-  if (missing.length > 0) {
-    throw new Error(
-      `Dependabot remediation package(s) are absent from the registry audit evidence: ${missing.join(', ')}`
-    );
-  }
-
-  if (!Array.isArray(registryEvidence.advisories)) {
-    throw new Error('Registry audit advisory evidence is malformed');
-  }
   const auditAdvisories = new Set(
     registryEvidence.advisories.map(
       (advisory) => `${advisory.ghsaId}\0${advisory.package}`
     )
   );
-  const missingAdvisories = plan.alerts
-    .filter(
-      (alert) =>
-        alert?.blockedByRuntimeScope !== true &&
-        typeof alert?.firstPatchedVersion === 'string' &&
-        alert.firstPatchedVersion.length > 0
-    )
+  const actionableAlerts = plan.alerts.filter(
+    (alert) =>
+      alert?.blockedByRuntimeScope !== true &&
+      alert?.blockedByRegistryAvailability !== true &&
+      authorizedPackages.has(alert?.package) &&
+      typeof alert?.firstPatchedVersion === 'string' &&
+      alert.firstPatchedVersion.length > 0
+  );
+  const missingAdvisories = actionableAlerts
     .filter(
       (alert) =>
         !auditAdvisories.has(`${alert.ghsaId}\0${alert.package}`)
     )
-    .map((alert) => `${alert.ghsaId ?? '?'}:${alert.package ?? '?'}`)
-    .sort();
-  if (missingAdvisories.length > 0) {
-    throw new Error(
-      `Dependabot remediation advisory evidence is absent from the registry audit: ${missingAdvisories.join(', ')}`
-    );
-  }
+    .map((alert) => ({
+      number: alert.number ?? null,
+      ghsaId: alert.ghsaId ?? null,
+      package: alert.package ?? null,
+      severity: alert.severity ?? null,
+      vulnerableVersionRange: alert.vulnerableVersionRange ?? null,
+      firstPatchedVersion: alert.firstPatchedVersion ?? null,
+    }))
+    .sort((a, b) => {
+      const byPackage = String(a.package).localeCompare(String(b.package));
+      if (byPackage !== 0) {
+        return byPackage;
+      }
+      return String(a.ghsaId).localeCompare(String(b.ghsaId));
+    });
+
+  return {
+    schemaVersion: 1,
+    auditLevel: plan.auditLevel,
+    matchedPackages: plan.fixablePackages
+      .filter((packageName) => confirmedPackages.has(packageName))
+      .sort(),
+    missingPackages: plan.fixablePackages
+      .filter((packageName) => !confirmedPackages.has(packageName))
+      .sort(),
+    registryOnlyPackages: registryEvidence.packages
+      .filter((packageName) => !authorizedPackages.has(packageName))
+      .sort(),
+    missingAdvisories,
+  };
 }
 
 function workspaceMutationSummary(workspaceBefore, workspaceAfter) {
@@ -512,6 +527,239 @@ function appendBeforeTrailingBlankLines(lines, line) {
     index -= 1;
   }
   lines.splice(index, 0, line);
+}
+
+function yamlSingleQuoted(value) {
+  const text = String(value);
+  if (text.includes('\n') || text.includes('\r')) {
+    throw new Error('Security remediation YAML scalar contains a line break');
+  }
+  return `'${text.replaceAll("'", "''")}'`;
+}
+
+export function normalizeDependabotVulnerableRange(value) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('Dependabot vulnerable version range must be a string');
+  }
+  return value
+    .trim()
+    .replaceAll(',', ' ')
+    .replace(/([<>]=?)\s+/g, '$1')
+    .replace(/\s+/g, ' ');
+}
+
+export function materializeDependabotAuditGaps({
+  workspaceSource,
+  plan,
+  comparison,
+}) {
+  if (
+    plan === null ||
+    typeof plan !== 'object' ||
+    Array.isArray(plan) ||
+    comparison === null ||
+    typeof comparison !== 'object' ||
+    Array.isArray(comparison) ||
+    plan.schemaVersion !== 1 ||
+    comparison.schemaVersion !== 1 ||
+    !Array.isArray(plan.fixablePackages) ||
+    !Array.isArray(comparison.missingAdvisories)
+  ) {
+    throw new Error('Dependabot audit-gap materialization evidence is malformed');
+  }
+
+  const authorized = new Set(plan.fixablePackages);
+  const rules = new Map();
+  for (const alert of comparison.missingAdvisories) {
+    const packageName = alert?.package;
+    const vulnerableVersionRange = alert?.vulnerableVersionRange;
+    const firstPatchedVersion = alert?.firstPatchedVersion;
+    if (
+      typeof packageName !== 'string' ||
+      !authorized.has(packageName) ||
+      typeof vulnerableVersionRange !== 'string' ||
+      vulnerableVersionRange.trim().length === 0 ||
+      typeof firstPatchedVersion !== 'string' ||
+      firstPatchedVersion.trim().length === 0
+    ) {
+      throw new Error(
+        'Dependabot audit gap requires package, vulnerable range, and patched version authority'
+      );
+    }
+
+    const rawVulnerableVersionRange = vulnerableVersionRange.trim();
+    const normalizedVulnerableVersionRange =
+      normalizeDependabotVulnerableRange(rawVulnerableVersionRange);
+    const selector = `${packageName}@${normalizedVulnerableVersionRange}`;
+    const target = firstPatchedVersion.trim();
+    const existing = rules.get(selector);
+    if (existing !== undefined && existing.target !== target) {
+      throw new Error(
+        `Dependabot audit gap has conflicting patched versions for ${selector}`
+      );
+    }
+    const rule =
+      existing ??
+      {
+        package: packageName,
+        vulnerableVersionRange: rawVulnerableVersionRange,
+        selector,
+        target,
+        releaseAgeEntry: `${packageName}@${target}`,
+        alertNumbers: [],
+        ghsaIds: [],
+      };
+    if (Number.isSafeInteger(alert?.number)) {
+      rule.alertNumbers.push(alert.number);
+    }
+    if (typeof alert?.ghsaId === 'string' && alert.ghsaId.length > 0) {
+      rule.ghsaIds.push(alert.ghsaId);
+    }
+    rules.set(selector, rule);
+  }
+
+  const split = splitWorkspaceSections(workspaceSource);
+  const byKey = new Map(split.sections.map((section) => [section.key, section]));
+  const overridesSection = byKey.get('overrides') ?? {
+    key: 'overrides',
+    lines: ['overrides:'],
+  };
+  const releaseAgeSection = byKey.get('minimumReleaseAgeExclude') ?? {
+    key: 'minimumReleaseAgeExclude',
+    lines: ['minimumReleaseAgeExclude:'],
+  };
+  const overrideLines = [...overridesSection.lines];
+  const releaseAgeLines = [...releaseAgeSection.lines];
+  const overrideEntries = rawMapSectionEntries(overridesSection);
+  const releaseAgeEntries = rawListSectionEntries(releaseAgeSection);
+  const materializations = [];
+
+  for (const rule of [...rules.values()].sort((a, b) =>
+    a.selector.localeCompare(b.selector)
+  )) {
+    const existingOverride = overrideEntries.get(rule.selector);
+    if (
+      existingOverride !== undefined &&
+      existingOverride.value !== rule.target
+    ) {
+      throw new Error(
+        `Dependabot audit gap conflicts with existing override ${rule.selector}: ${existingOverride.value}`
+      );
+    }
+
+    const overrideAdded = existingOverride === undefined;
+    if (overrideAdded) {
+      const line = `  ${yamlSingleQuoted(rule.selector)}: ${yamlSingleQuoted(rule.target)}`;
+      appendBeforeTrailingBlankLines(overrideLines, line);
+      overrideEntries.set(rule.selector, {
+        key: rule.selector,
+        value: rule.target,
+        line,
+        index: overrideLines.length - 1,
+      });
+    }
+
+    const releaseAgeAdded = !releaseAgeEntries.has(rule.releaseAgeEntry);
+    if (releaseAgeAdded) {
+      const line = `  - ${yamlSingleQuoted(rule.releaseAgeEntry)}`;
+      appendBeforeTrailingBlankLines(releaseAgeLines, line);
+      releaseAgeEntries.set(rule.releaseAgeEntry, {
+        value: rule.releaseAgeEntry,
+        line,
+        index: releaseAgeLines.length - 1,
+      });
+    }
+
+    materializations.push({
+      ...rule,
+      alertNumbers: [...new Set(rule.alertNumbers)].sort((a, b) => a - b),
+      ghsaIds: [...new Set(rule.ghsaIds)].sort(),
+      overrideAdded,
+      releaseAgeAdded,
+    });
+  }
+
+  const replacements = new Map([
+    ['overrides', { key: 'overrides', lines: overrideLines }],
+    [
+      'minimumReleaseAgeExclude',
+      { key: 'minimumReleaseAgeExclude', lines: releaseAgeLines },
+    ],
+  ]);
+  const sections = [];
+  const seen = new Set();
+  for (const section of split.sections) {
+    if (replacements.has(section.key)) {
+      sections.push(replacements.get(section.key));
+      seen.add(section.key);
+    } else {
+      sections.push(section);
+    }
+  }
+  for (const key of ['minimumReleaseAgeExclude', 'overrides']) {
+    if (!seen.has(key)) {
+      sections.push(replacements.get(key));
+    }
+  }
+
+  return {
+    workspaceSource: [
+      ...split.prefix,
+      ...sections.flatMap((section) => section.lines),
+    ].join('\n'),
+    evidence: {
+      schemaVersion: 1,
+      packages: [
+        ...new Set(materializations.map((entry) => entry.package)),
+      ].sort(),
+      materializations,
+    },
+  };
+}
+
+export function validateAuditGapMaterializations(workspaceSource, evidence) {
+  if (
+    evidence === null ||
+    typeof evidence !== 'object' ||
+    Array.isArray(evidence) ||
+    evidence.schemaVersion !== 1 ||
+    !Array.isArray(evidence.packages) ||
+    !Array.isArray(evidence.materializations)
+  ) {
+    throw new Error('Security remediation audit-gap evidence is invalid');
+  }
+
+  const parsed = parseWorkspace(workspaceSource).parsed.sections;
+  const overrides = parsed.overrides ?? {};
+  const releaseAge = new Set(parsed.minimumReleaseAgeExclude ?? []);
+  for (const entry of evidence.materializations) {
+    if (
+      entry === null ||
+      typeof entry !== 'object' ||
+      Array.isArray(entry) ||
+      typeof entry.package !== 'string' ||
+      typeof entry.vulnerableVersionRange !== 'string' ||
+      entry.vulnerableVersionRange.length === 0 ||
+      typeof entry.selector !== 'string' ||
+      typeof entry.target !== 'string' ||
+      typeof entry.releaseAgeEntry !== 'string' ||
+      !Array.isArray(entry.alertNumbers) ||
+      !Array.isArray(entry.ghsaIds) ||
+      !evidence.packages.includes(entry.package) ||
+      overrides[entry.selector] !== entry.target ||
+      !releaseAge.has(entry.releaseAgeEntry)
+    ) {
+      throw new Error(
+        'Security remediation audit-gap materialization does not match the dependency graph'
+      );
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    packages: [...evidence.packages].sort(),
+    materializationCount: evidence.materializations.length,
+  };
 }
 
 export function reconcileGeneratedWorkspaceAuthority({
@@ -991,8 +1239,11 @@ function resolveSourceAuthority({ auditPath, planPath, auditLevel }) {
     auditLevel
   );
   const plan = readJson(planPath);
-  validatePlanAgainstRegistryEvidence(plan, registryEvidence);
-  return { registryEvidence, plan };
+  const comparison = validatePlanAgainstRegistryEvidence(
+    plan,
+    registryEvidence
+  );
+  return { registryEvidence, plan, comparison };
 }
 
 function validateWorkingTree({ auditPath, planPath, auditLevel }) {
@@ -1051,6 +1302,10 @@ function validatePullRequest(baseSha, candidatePath) {
     workspaceAfter,
     authorizedPackages: candidate.authorizedPackages,
   });
+  validateAuditGapMaterializations(
+    workspaceAfter,
+    candidate.auditGapMaterializations
+  );
   if (!Array.isArray(candidate.changedPackages)) {
     throw new Error(
       'Security remediation candidate changed-package evidence is invalid'
@@ -1096,12 +1351,30 @@ function main(argv) {
 
   if (command === 'verify-plan-audit') {
     const auditLevel = flagValue(rest, '--level') ?? 'high';
-    const { registryEvidence } = resolveSourceAuthority({
+    const { comparison } = resolveSourceAuthority({
       auditPath: flagValue(rest, '--audit'),
       planPath: flagValue(rest, '--plan'),
       auditLevel,
     });
-    console.log(JSON.stringify(registryEvidence, null, 2));
+    console.log(JSON.stringify(comparison, null, 2));
+    return;
+  }
+
+  if (command === 'materialize-audit-gaps') {
+    const planPath = flagValue(rest, '--plan');
+    const comparisonPath = flagValue(rest, '--comparison');
+    if (!planPath || !comparisonPath) {
+      throw new Error(
+        'Dependabot audit-gap materialization requires --plan and --comparison'
+      );
+    }
+    const result = materializeDependabotAuditGaps({
+      workspaceSource: fs.readFileSync('pnpm-workspace.yaml', 'utf8'),
+      plan: readJson(planPath),
+      comparison: readJson(comparisonPath),
+    });
+    fs.writeFileSync('pnpm-workspace.yaml', result.workspaceSource, 'utf8');
+    console.log(JSON.stringify(result.evidence, null, 2));
     return;
   }
 
@@ -1186,7 +1459,7 @@ function main(argv) {
   }
 
   throw new Error(
-    'Usage: dependabot-security-remediation.mjs <plan|runtime-ignores|verify-plan-audit|reconcile-generated-workspace|verify-remediated-audit|validate-working-tree|validate-pr>'
+    'Usage: dependabot-security-remediation.mjs <plan|runtime-ignores|verify-plan-audit|materialize-audit-gaps|reconcile-generated-workspace|verify-remediated-audit|validate-working-tree|validate-pr>'
   );
 }
 
