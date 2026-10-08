@@ -80,6 +80,7 @@ jobs:
           echo '===FORMATTED_PRIVACY_PAGE_BEGIN==='
           cat 'apps/website/src/app/(marketing)/(site)/privacy/page.tsx'
           echo '===FORMATTED_PRIVACY_PAGE_END==='
+          exit 1
 
       - name: Quality checks
         run: pnpm ci:quality
