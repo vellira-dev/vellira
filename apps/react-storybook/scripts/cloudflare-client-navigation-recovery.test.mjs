@@ -57,7 +57,6 @@ test('client navigation fails closed without a matching recoverable edge failure
   );
 });
 
-
 test('destination matching ignores unrelated background edge failures', () => {
   const failures = [
     { url: 'https://vellira.test/blog/two-runtimes?_rsc=abc' },
