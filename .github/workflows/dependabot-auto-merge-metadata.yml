@@ -283,6 +283,25 @@ jobs:
                   entry
                 )
             );
+          const validRegistryUnavailablePatches = (value) =>
+            Array.isArray(value) &&
+            value.every(
+              (entry) =>
+                entry &&
+                typeof entry === 'object' &&
+                !Array.isArray(entry) &&
+                validGhsaList([entry.ghsaId]) &&
+                typeof entry.package === 'string' &&
+                entry.package.length > 0 &&
+                typeof entry.firstPatchedVersion === 'string' &&
+                entry.firstPatchedVersion.length > 0
+            ) &&
+            new Set(
+              value.map(
+                (entry) =>
+                  `${entry.ghsaId}\0${entry.package}\0${entry.firstPatchedVersion}`
+              )
+            ).size === value.length;
 
           if (
             candidate.schemaVersion !== 1 ||
@@ -313,7 +332,10 @@ jobs:
               (packageName) =>
                 !candidate.authorizedPackages.includes(packageName)
             ) ||
-            !validGhsaList(candidate.ignoredRuntimeGhsas)
+            !validGhsaList(candidate.ignoredRuntimeGhsas) ||
+            !validRegistryUnavailablePatches(
+              candidate.registryUnavailablePatches
+            )
           ) {
             throw new Error(
               'Security remediation candidate artifact does not authenticate this PR head'
@@ -399,6 +421,66 @@ jobs:
       - name: Install exact remediated dependency graph
         run: pnpm install --frozen-lockfile
 
+      - name: Revalidate registry-unavailable patched releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="/tmp/security-remediation-registry-response.json"
+
+          while IFS= read -r row; do
+            ghsa="$(jq -r '.ghsaId' <<<"$row")"
+            package="$(jq -r '.package' <<<"$row")"
+            version="$(jq -r '.firstPatchedVersion' <<<"$row")"
+
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid authenticated registry-unavailable GHSA: $ghsa"
+              exit 1
+            }
+            encoded_package="$(
+              node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$package"
+            )"
+            encoded_version="$(
+              node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$version"
+            )"
+
+            set +e
+            http_status="$(
+              curl \
+                --silent \
+                --show-error \
+                --location \
+                --connect-timeout 10 \
+                --max-time 30 \
+                --output "$response_file" \
+                --write-out '%{http_code}' \
+                "https://registry.npmjs.org/${encoded_package}/${encoded_version}"
+            )"
+            curl_status=$?
+            set -e
+
+            if [[ "$curl_status" -ne 0 ]]; then
+              echo "::error::npm registry revalidation failed for $package@$version."
+              exit "$curl_status"
+            fi
+
+            case "$http_status" in
+              404) ;;
+              200)
+                echo "::error::Previously unavailable patched release is now published: $package@$version. Regenerate the remediation candidate."
+                exit 1
+                ;;
+              *)
+                echo "::error::npm registry returned HTTP $http_status while revalidating $package@$version."
+                cat "$response_file" >&2 || true
+                exit 1
+                ;;
+            esac
+          done < <(
+            jq -c '.registryUnavailablePatches[]' \
+              /tmp/security-remediation-source/candidate.json
+          )
+          rm -f "$response_file"
+
       - name: Validate dependency-only remediation diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -419,7 +501,13 @@ jobs:
             }
             ignore_args+=(--ignore "$ghsa")
           done < <(
-            jq -r '.ignoredRuntimeGhsas[]' /tmp/security-remediation-source/candidate.json
+            jq -r '
+              (
+                .ignoredRuntimeGhsas +
+                (.registryUnavailablePatches | map(.ghsaId))
+              )
+              | unique[]
+            ' /tmp/security-remediation-source/candidate.json
           )
 
           pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }} "${ignore_args[@]}"
@@ -521,6 +609,8 @@ jobs:
             authorizedPackages: candidate.authorizedPackages,
             changedPackages: candidate.changedPackages,
             ignoredRuntimeGhsas: candidate.ignoredRuntimeGhsas,
+            registryUnavailablePatches:
+              candidate.registryUnavailablePatches,
             eligible: true,
           };
 

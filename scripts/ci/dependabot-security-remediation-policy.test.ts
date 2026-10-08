@@ -32,6 +32,9 @@ describe('Dependabot security remediation workflow policy', () => {
 
   it('keeps mutation bounded to pnpm security authority', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
+    const availabilityIndex = source.indexOf(
+      'Reconcile patched-release registry availability'
+    );
     const fixIndex = source.indexOf('Generate bounded pnpm security override');
     const diffIndex = source.indexOf('validate-working-tree');
     const auditIndex = source.indexOf(
@@ -48,7 +51,8 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     const branchIndex = source.indexOf('Publish canonical remediation branch');
 
-    expect(fixIndex).toBeGreaterThan(-1);
+    expect(availabilityIndex).toBeGreaterThan(-1);
+    expect(fixIndex).toBeGreaterThan(availabilityIndex);
     expect(diffIndex).toBeGreaterThan(fixIndex);
     expect(auditIndex).toBeGreaterThan(diffIndex);
     expect(artifactIndex).toBeGreaterThan(auditIndex);
@@ -70,6 +74,15 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('--plan .security-remediation/plan.json');
     expect(source).toContain('runtime-ignores');
     expect(source).toContain('runtime-audit-ignores.json');
+    expect(source).toContain('registry-unavailable-patches.json');
+    expect(source).toContain('blockedByRegistryAvailability');
+    expect(source).toContain("steps.plan.outputs.fixable_packages != '0' &&");
+    expect(source).toContain(
+      "steps.availability.outputs.resolvable_packages != '0'"
+    );
+    expect(source).toContain(
+      'Registry-unavailable patched releases remain open'
+    );
     expect(source).toContain('steps.plan.outputs.fixable_packages');
     expect(source).toContain(
       'Package authority: exact fixable development-scope Dependabot plan'
@@ -141,6 +154,7 @@ describe('Dependabot security remediation workflow policy', () => {
   it('authenticates remediation PRs before auto-merge metadata', async () => {
     const remediationSource = await readFile(remediationWorkflowPath, 'utf8');
     const metadataSource = await readFile(metadataWorkflowPath, 'utf8');
+    const autoMergeSource = await readFile(autoMergeWorkflowPath, 'utf8');
 
     expect(remediationSource).toContain(
       'Publish immutable remediation candidate'
@@ -184,7 +198,24 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain('candidate.authorizedPackages');
     expect(metadataSource).toContain('candidate.changedPackages');
     expect(metadataSource).toContain('candidate.ignoredRuntimeGhsas');
-    expect(metadataSource).toContain("jq -r '.ignoredRuntimeGhsas[]'");
+    expect(metadataSource).toContain('candidate.registryUnavailablePatches');
+    expect(metadataSource).toContain(
+      'Revalidate registry-unavailable patched releases'
+    );
+    expect(metadataSource).toContain(
+      '.registryUnavailablePatches | map(.ghsaId)'
+    );
+    expect(metadataSource).toContain('registryUnavailablePatches:');
+    expect(autoMergeSource).toContain('decision.registryUnavailablePatches');
+    expect(autoMergeSource).toContain(
+      'Registry-unavailable remediation authority changed before merge'
+    );
+    expect(autoMergeSource).toContain(
+      'Revalidate registry-unavailable patched releases before merge'
+    );
+    expect(autoMergeSource).toContain(
+      'Patched release became available before merge'
+    );
     expect(metadataSource).toContain(
       'Prove in-scope registry advisories are closed by the candidate'
     );
