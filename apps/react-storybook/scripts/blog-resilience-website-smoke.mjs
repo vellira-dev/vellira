@@ -81,9 +81,9 @@ async function linkState(link) {
       outline: style.outlineStyle,
       outlineWidth: parseFloat(style.outlineWidth),
       transition: style.transitionDuration,
-      normal: resolveColor('--text-brand'),
-      hover: resolveColor('--text-interactive-hover'),
-      pressed: resolveColor('--text-interactive-pressed'),
+      normal: resolveColor('--button-primary-link-default-fg'),
+      hover: resolveColor('--button-primary-link-hover-fg'),
+      pressed: resolveColor('--button-primary-link-pressed-fg'),
     };
   });
 }
@@ -106,7 +106,7 @@ async function verifyLinkStates(page, link, theme) {
       await expect.poll(async () => (await linkState(link)).hovered, { message: `${theme}: pointer must remain over the prose link` }).toBe(true);
       await expect(link).toHaveCSS('color', normal.hover);
       await expect(link).toHaveCSS('text-decoration-line', 'underline');
-      await expect(link).toHaveCSS('text-decoration-thickness', '0.5px');
+      await expect(link).toHaveCSS('text-decoration-thickness', '1px');
       await page.mouse.down();
       try {
         await expect(link).toHaveCSS('color', normal.pressed);
@@ -119,9 +119,8 @@ async function verifyLinkStates(page, link, theme) {
       await page.keyboard.press('Shift+Tab');
       await page.keyboard.press('Tab');
       await expect(link).toBeFocused();
-      await expect(link).toHaveCSS('color', normal.hover);
-      await expect(link).toHaveCSS('text-decoration-line', 'underline');
-      await expect(link).toHaveCSS('text-decoration-thickness', '0.5px');
+      await expect(link).toHaveCSS('color', normal.normal);
+      await expect(link).toHaveCSS('text-decoration-line', 'none');
       const focus = await linkState(link);
       assert.ok(focus.focused && focus.outline !== 'none' && focus.outlineWidth > 0);
       // Pointer exit and focus exit must restore the undecorated brand state.
@@ -231,7 +230,7 @@ export async function verifyBlogResilience(browser, baseUrl) {
         // the resolved semantic role, not a transient in-flight color sample.
         const backColor = await back.evaluate((element) => {
           const probe = document.createElement('span');
-          probe.style.color = 'var(--text-secondary)';
+          probe.style.color = 'var(--button-primary-link-default-fg)';
           element.append(probe);
           const color = getComputedStyle(probe).color;
           probe.remove();

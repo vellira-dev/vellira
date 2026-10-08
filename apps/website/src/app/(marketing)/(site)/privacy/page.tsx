@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { Container } from '@/components/layout/Container';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from './PrivacyPage.module.css';
 
@@ -10,14 +11,14 @@ const LAST_UPDATED = '2026-10-05';
 export const metadata: Metadata = {
   title: 'Privacy',
   description:
-    'How Vellira handles website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
+    'How Vellira handles account data, website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
   alternates: {
     canonical: '/privacy',
   },
   openGraph: {
     title: 'Privacy | Vellira',
     description:
-      'How Vellira handles website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
+      'How Vellira handles account data, website analytics, anonymous blog metrics, newsletter subscriptions and privacy requests.',
     url: '/privacy',
   },
 };
@@ -33,8 +34,8 @@ export default function PrivacyPage() {
               <h1>Privacy</h1>
               <p className={styles.lead}>
                 This page explains how vellira.dev handles information when you
-                browse the site, use blog interactions, subscribe to the
-                newsletter or contact Vellira.
+                browse the site, create or use a Vellira account, use blog
+                interactions, subscribe to the newsletter or contact Vellira.
               </p>
               <p className={styles.updated}>
                 Last updated:{' '}
@@ -52,7 +53,10 @@ export default function PrivacyPage() {
               </p>
               <p>
                 Privacy questions and data requests can be sent to{' '}
-                <a href='mailto:roman@vellira.dev'>roman@vellira.dev</a>.
+                <DesignSystemLink href='mailto:roman@vellira.dev'>
+                  roman@vellira.dev
+                </DesignSystemLink>
+                .
               </p>
             </section>
 
@@ -101,6 +105,24 @@ export default function PrivacyPage() {
                 to an advertising network.
               </p>
 
+              <h3>Vellira accounts and authentication</h3>
+              <p>
+                If you create or use a Vellira account, Vellira processes the
+                account information needed to authenticate you and protect the
+                service. This can include your email address, email-verification
+                state, a non-reversible password hash for password accounts,
+                bounded session records, one-time verification or password-reset
+                challenge records, and the identifiers needed to map an optional
+                GitHub sign-in to the canonical Vellira account.
+              </p>
+              <p>
+                Raw passwords are not stored. Authentication session,
+                verification and reset secrets are stored only in protected or
+                one-way forms where applicable. GitHub OAuth access tokens are
+                used only during the sign-in exchange and are not the identity
+                or product-access authority for Vellira.
+              </p>
+
               <h3>Newsletter</h3>
               <p>
                 If you subscribe to Vellira engineering notes, Vellira sends the
@@ -136,16 +158,21 @@ export default function PrivacyPage() {
                   requiring an account;
                 </li>
                 <li>
+                  to create, authenticate and secure Vellira accounts, including
+                  email verification and password recovery;
+                </li>
+                <li>
                   to provide the newsletter when you explicitly subscribe; and
                 </li>
                 <li>to respond when you contact Vellira.</li>
               </ul>
               <p>
-                Where European data-protection law applies, these activities
-                rely on the request or consent you provide for optional
-                communications and on legitimate interests in operating,
-                securing and measuring the public service without advertising
-                profiles.
+                Where European data-protection law applies, account processing
+                is used to provide the account service you request and to keep
+                that service secure. Optional communications rely on your
+                request or consent where applicable. Vellira also relies on
+                legitimate interests in operating, securing and measuring the
+                public service without advertising profiles.
               </p>
             </section>
 
@@ -156,36 +183,57 @@ export default function PrivacyPage() {
               </p>
               <ul>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://www.cloudflare.com/web-analytics/'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Cloudflare
-                  </a>{' '}
+                  </DesignSystemLink>{' '}
                   for website delivery, security, infrastructure and Web
                   Analytics;
                 </li>
                 <li>
-                  <a
+                  <DesignSystemLink
+                    href='https://resend.com/legal/privacy-policy'
+                    target='_blank'
+                    rel='noreferrer noopener'
+                  >
+                    Resend
+                  </DesignSystemLink>{' '}
+                  for transactional account emails such as verification and
+                  password recovery;
+                </li>
+                <li>
+                  <DesignSystemLink
+                    href='https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement'
+                    target='_blank'
+                    rel='noreferrer noopener'
+                  >
+                    GitHub
+                  </DesignSystemLink>{' '}
+                  when you choose GitHub as an optional sign-in provider;
+                </li>
+                <li>
+                  <DesignSystemLink
                     href='https://www.buttondown.com/legal/privacy'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Buttondown
-                  </a>{' '}
-                  for newsletter subscription and email delivery; and
+                  </DesignSystemLink>{' '}
+                  for newsletter subscription and email delivery;
                 </li>
                 <li>
-                  <a
+                  <DesignSystemLink
                     href='https://render.com/privacy'
                     target='_blank'
                     rel='noreferrer noopener'
                   >
                     Render
-                  </a>{' '}
-                  for backend/database infrastructure used by Vellira services
-                  including blog metrics.
+                  </DesignSystemLink>{' '}
+                  for backend/database infrastructure used by Vellira services,
+                  including account authentication and blog metrics.
                 </li>
               </ul>
               <p>
@@ -213,6 +261,13 @@ export default function PrivacyPage() {
                   controls.
                 </li>
                 <li>
+                  Account identity and authentication records are kept while
+                  needed to operate and secure the account. Session and one-time
+                  authentication records use bounded expiry/revocation rules and
+                  are retained only as needed for security, recovery and
+                  operational integrity.
+                </li>
+                <li>
                   Newsletter subscriber data is kept while the subscription is
                   active and as needed to honor unsubscribe state, deletion
                   requests and provider/legal retention requirements.
@@ -235,15 +290,20 @@ export default function PrivacyPage() {
               </p>
               <p>
                 Send a request to{' '}
-                <a href='mailto:roman@vellira.dev'>roman@vellira.dev</a>. If you
-                are in France, you also have the right to contact the{' '}
-                <a
+                <DesignSystemLink href='mailto:roman@vellira.dev'>
+                  roman@vellira.dev
+                </DesignSystemLink>
+                .
+              </p>
+              <p>
+                If you are in France, you also have the right to contact the{' '}
+                <DesignSystemLink
                   href='https://www.cnil.fr/'
                   target='_blank'
                   rel='noreferrer noopener'
                 >
                   CNIL
-                </a>{' '}
+                </DesignSystemLink>{' '}
                 about a data-protection concern.
               </p>
               <p>

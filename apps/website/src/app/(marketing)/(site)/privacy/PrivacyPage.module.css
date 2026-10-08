@@ -107,21 +107,6 @@
   color: var(--text-brand);
 }
 
-.policy a {
-  color: var(--text-brand);
-  text-underline-offset: 0.18em;
-}
-
-.policy a:hover {
-  color: var(--text-primary);
-}
-
-.policy a:focus-visible {
-  border-radius: var(--radius-sm);
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--space-1);
-}
-
 .policy code {
   padding: 0.12em 0.36em;
   color: var(--text-primary);

@@ -94,21 +94,6 @@
   line-height: 1.6;
 }
 
-.privacyNote a {
-  color: var(--text-brand);
-  text-underline-offset: 0.18em;
-}
-
-.privacyNote a:hover {
-  color: var(--text-primary);
-}
-
-.privacyNote a:focus-visible {
-  border-radius: var(--radius-sm);
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--space-1);
-}
-
 @media (width > 720px) {
   .card {
     padding-block-end: max(

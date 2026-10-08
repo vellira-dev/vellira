@@ -40,6 +40,12 @@ describe('website privacy policy', () => {
     expect(privacyPage).toContain('Buttondown');
     expect(privacyPage).toContain('client IP');
     expect(privacyPage).toContain('Render');
+    expect(privacyPage).toContain('Vellira accounts and authentication');
+    expect(privacyPage).toContain('Resend');
+    expect(privacyPage).toContain('GitHub');
+    expect(privacyPage).toContain(
+      'to create, authenticate and secure Vellira accounts'
+    );
   });
 
   it('makes the privacy route discoverable from both website footers', () => {
@@ -57,6 +63,15 @@ describe('website privacy policy', () => {
     expect(newsletterSignup).toContain(
       'We use your email to manage the subscription.'
     );
+  });
+
+  it('routes policy links through the shared Vellira link contract', () => {
+    expect(privacyPage).toContain(
+      "from '@/components/navigation/DesignSystemLink'"
+    );
+    expect(privacyPage).toContain('<DesignSystemLink');
+    expect(privacyPage).not.toMatch(/<a\\b/u);
+    expect(privacyStyles).not.toContain('.policy a');
   });
 
   it('renders semantic privacy lists with visible markers', () => {

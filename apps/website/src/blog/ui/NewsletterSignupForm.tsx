@@ -1,9 +1,10 @@
 'use client';
 
 import { Button, FormField, Input, Portal, Tooltip } from '@vellira-ui/react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
+
+import { BlogDesignSystemLink } from './BlogDesignSystemLink';
 
 import styles from './BlogNewsletterSignup.module.css';
 
@@ -155,7 +156,7 @@ export function NewsletterSignupForm() {
 
       <p className={styles.privacyNote}>
         We use your email to manage the subscription.{' '}
-        <Link href='/privacy'>Privacy</Link>
+        <BlogDesignSystemLink href='/privacy'>Privacy</BlogDesignSystemLink>
       </p>
     </form>
   );
