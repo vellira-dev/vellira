@@ -132,11 +132,13 @@ jobs:
               'Security remediation provenance marker is missing or malformed'
             );
           }
-          if (marker[1] !== process.env.PR_BASE_SHA) {
-            throw new Error('Security remediation base SHA marker mismatch');
-          }
-          if (marker[2] !== process.env.PR_HEAD_SHA) {
-            throw new Error('Security remediation head SHA marker mismatch');
+          if (
+            !/^[0-9a-f]{40}$/.test(process.env.PR_BASE_SHA ?? '') ||
+            !/^[0-9a-f]{40}$/.test(process.env.PR_HEAD_SHA ?? '')
+          ) {
+            throw new Error(
+              'Security remediation current PR base/head must be exact SHAs'
+            );
           }
 
           const sourceRunId = Number(marker[3]);
@@ -152,7 +154,9 @@ jobs:
 
           fs.appendFileSync(
             process.env.GITHUB_OUTPUT,
-            `source_run_id=${sourceRunId}\n` +
+            `candidate_base_sha=${marker[1]}\n` +
+              `candidate_head_sha=${marker[2]}\n` +
+              `source_run_id=${sourceRunId}\n` +
               `source_run_attempt=${sourceRunAttempt}\n` +
               `audit_level=${marker[5]}\n` +
               `dependency_scope=${marker[6]}\n`
@@ -164,7 +168,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_BASE_SHA: ${{ steps.envelope.outputs.candidate_base_sha }}
           SOURCE_RUN_ID: ${{ steps.envelope.outputs.source_run_id }}
           SOURCE_RUN_ATTEMPT: ${{ steps.envelope.outputs.source_run_attempt }}
         run: |
@@ -232,8 +236,8 @@ jobs:
         shell: bash
         env:
           REPOSITORY: ${{ github.repository }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CANDIDATE_BASE_SHA: ${{ steps.envelope.outputs.candidate_base_sha }}
+          CANDIDATE_HEAD_SHA: ${{ steps.envelope.outputs.candidate_head_sha }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           AUDIT_LEVEL: ${{ steps.envelope.outputs.audit_level }}
           DEPENDENCY_SCOPE: ${{ steps.envelope.outputs.dependency_scope }}
@@ -259,8 +263,8 @@ jobs:
           );
           const expected = {
             repository: process.env.REPOSITORY,
-            baseSha: process.env.PR_BASE_SHA,
-            headSha: process.env.PR_HEAD_SHA,
+            baseSha: process.env.CANDIDATE_BASE_SHA,
+            headSha: process.env.CANDIDATE_HEAD_SHA,
             branch: process.env.PR_HEAD_REF,
             auditLevel: process.env.AUDIT_LEVEL,
             dependencyScope: process.env.DEPENDENCY_SCOPE,
@@ -371,7 +375,7 @@ jobs:
             )
           ) {
             throw new Error(
-              'Security remediation candidate artifact does not authenticate this PR head'
+              'Security remediation candidate artifact does not authenticate the immutable source candidate'
             );
           }
           NODE
@@ -381,7 +385,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ steps.envelope.outputs.candidate_base_sha }}
         run: |
           set -euo pipefail
 
@@ -631,6 +635,8 @@ jobs:
             sourceRunAttempt,
             sourceEvent: candidate.sourceEvent,
             sourceBeforeSha: candidate.sourceBeforeSha,
+            sourceCandidateBaseSha: candidate.baseSha,
+            sourceCandidateHeadSha: candidate.headSha,
             authorizedPackages: candidate.authorizedPackages,
             changedPackages: candidate.changedPackages,
             ignoredRuntimeGhsas: candidate.ignoredRuntimeGhsas,

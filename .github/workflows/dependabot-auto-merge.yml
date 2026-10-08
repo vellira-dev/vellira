@@ -226,6 +226,8 @@ jobs:
               );
             }
             if (
+              !/^[0-9a-f]{40}$/.test(decision.sourceCandidateBaseSha ?? '') ||
+              !/^[0-9a-f]{40}$/.test(decision.sourceCandidateHeadSha ?? '') ||
               !['schedule', 'workflow_dispatch', 'push'].includes(
                 decision.sourceEvent
               ) ||
@@ -606,7 +608,7 @@ jobs:
             run.path !==
               '.github/workflows/dependabot-security-remediation.yml' ||
             run.head_branch !== 'main' ||
-            run.head_sha !== decision.baseSha ||
+            run.head_sha !== decision.sourceCandidateBaseSha ||
             run.event !== decision.sourceEvent ||
             run.repository?.full_name !== decision.repository
           ) {
@@ -638,7 +640,7 @@ jobs:
             jq -r '.sourceBeforeSha' .dependabot-auto-merge/decision.json
           )"
           base_sha="$(
-            jq -r '.baseSha' .dependabot-auto-merge/decision.json
+            jq -r '.sourceCandidateBaseSha' .dependabot-auto-merge/decision.json
           )"
           [[ "$before_sha" =~ ^[0-9a-f]{40}$ ]] || {
             echo "::error::Self-proof decision is missing an exact before SHA."
