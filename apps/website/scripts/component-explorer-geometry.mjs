@@ -128,7 +128,7 @@ async function assertCompactHeaderGeometry() {
         'nav[aria-label="Primary navigation"]'
       );
       const menuTrigger = header?.querySelector(
-        'button[aria-label="Open navigation"]'
+        'button[aria-label="Open component navigation"]'
       );
       if (!(brand && search && navigation && menuTrigger)) {
         throw new Error('Global header compact markup missing');
@@ -152,7 +152,7 @@ async function assertCompactHeaderGeometry() {
     assert.notEqual(
       geometry.menuDisplay,
       'none',
-      '1280px global navigation trigger must be visible'
+      '1280px component navigation trigger must be visible'
     );
     assert.ok(
       geometry.brand.right <= geometry.search.left,
