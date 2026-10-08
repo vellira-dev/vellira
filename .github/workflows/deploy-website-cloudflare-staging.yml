@@ -332,7 +332,14 @@ jobs:
           set -euo pipefail
           node --input-type=module <<'NODE'
           import fs from 'node:fs/promises';
-          import { waitForRuntimeStability } from './apps/website/scripts/cloudflare-runtime-stabilization.mjs';
+          import path from 'node:path';
+          import { pathToFileURL } from 'node:url';
+
+          const { waitForRuntimeStability } = await import(
+            pathToFileURL(
+              path.resolve('apps/website/scripts/cloudflare-runtime-stabilization.mjs')
+            ).href
+          );
 
           const build = JSON.parse(
             await fs.readFile('apps/website/.open-next/vellira-build.json', 'utf8')
