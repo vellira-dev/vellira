@@ -37,8 +37,11 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     const fixIndex = source.indexOf('Generate bounded pnpm security override');
     const diffIndex = source.indexOf('validate-working-tree');
+    const reconcileIndex = source.indexOf(
+      'Reconcile generated override authority'
+    );
     const auditIndex = source.indexOf(
-      'Prove no in-scope registry advisory remains'
+      'Prove authorized registry advisories are closed'
     );
     const tokenIndex = source.indexOf(
       'Create short-lived remediation GitHub App token'
@@ -53,7 +56,8 @@ describe('Dependabot security remediation workflow policy', () => {
 
     expect(availabilityIndex).toBeGreaterThan(-1);
     expect(fixIndex).toBeGreaterThan(availabilityIndex);
-    expect(diffIndex).toBeGreaterThan(fixIndex);
+    expect(reconcileIndex).toBeGreaterThan(fixIndex);
+    expect(diffIndex).toBeGreaterThan(reconcileIndex);
     expect(auditIndex).toBeGreaterThan(diffIndex);
     expect(artifactIndex).toBeGreaterThan(auditIndex);
     expect(tokenIndex).toBeGreaterThan(artifactIndex);
@@ -67,6 +71,10 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).not.toContain('pnpm audit --fix --dev');
     expect(source).toContain('--fix=override');
     expect(source).toContain('--ignore-unfixable');
+    expect(source).toContain('reconcile-generated-workspace');
+    expect(source).toContain('generated-override-reconciliation.json');
+    expect(source).toContain('verify-plan-audit');
+    expect(source).toContain('verify-remediated-audit');
     expect(source).toContain(
       'Runtime alerts remain outside this bounded fallback.'
     );
@@ -202,9 +210,7 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain(
       'Revalidate registry-unavailable patched releases'
     );
-    expect(metadataSource).toContain(
-      '.registryUnavailablePatches | map(.ghsaId)'
-    );
+    expect(metadataSource).toContain('.registryUnavailablePatches[]');
     expect(metadataSource).toContain('registryUnavailablePatches:');
     expect(autoMergeSource).toContain('decision.registryUnavailablePatches');
     expect(autoMergeSource).toContain(
@@ -217,9 +223,12 @@ describe('Dependabot security remediation workflow policy', () => {
       'Patched release became available before merge'
     );
     expect(metadataSource).toContain(
-      'Prove in-scope registry advisories are closed by the candidate'
+      'Prove authenticated registry advisories are closed'
     );
-    expect(metadataSource).toContain('--ignore-unfixable');
+    expect(metadataSource).toContain('verify-remediated-audit');
+    expect(metadataSource).toContain(
+      '--audit /tmp/security-remediation-source/audit-current.json'
+    );
     expect(metadataSource).toContain(
       '--audit-level ${{ steps.envelope.outputs.audit_level }}'
     );
