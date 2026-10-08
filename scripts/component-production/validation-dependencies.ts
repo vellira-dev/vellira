@@ -102,6 +102,7 @@ export const COMPONENT_PRODUCTION_VALIDATION_STAGE_POLICY = [
 
 const COMMAND_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   'react-storybook-build': ['react-build'],
+  'website-typecheck': ['react-build', 'react-native-build'],
   'canonical-web-visual': ['react-storybook-build'],
   'web-smoke': ['react-build'],
   'native-smoke': ['react-native-build'],

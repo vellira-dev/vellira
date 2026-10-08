@@ -389,6 +389,7 @@ const REPRESENTATIVE_READY_CANDIDATES = [
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ],
     finalIds: [
       'public-api',
@@ -420,6 +421,7 @@ const REPRESENTATIVE_READY_CANDIDATES = [
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ],
     finalIds: [
       'public-api',
@@ -453,6 +455,7 @@ const REPRESENTATIVE_READY_CANDIDATES = [
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ],
     finalIds: [
       'public-api',
