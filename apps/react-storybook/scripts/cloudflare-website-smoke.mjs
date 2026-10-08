@@ -14,6 +14,12 @@ import {
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
   resolveBlogMetricsPublicationMode,
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
+import {
+  cloudflareEdgeReplayHeaders,
+  isBrowserResource5xxConsoleError,
+  isCloudflareEdgeGeneratedGet5xx,
+  reconcileHandledCloudflareEdgeConsoleDiagnostics,
+} from './cloudflare-edge-recovery.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
 const metricsApiBaseUrl = 'https://api.vellira.dev';
@@ -23,6 +29,9 @@ const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
 );
 const aggregateMetricsMaxAttempts = 8;
 const aggregateMetricsRetryDelayMs = 12_000;
+const edgeRecoveryMaxAttempts = 3;
+const edgeRecoveryDelayMs = 1_500;
+const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -39,6 +48,8 @@ const vercelRuntimeRequests = [];
 const directMetricRequests = [];
 const blogMetrics404Responses = [];
 const deferredResource404ConsoleDiagnostics = [];
+const deferredResource5xxConsoleDiagnostics = [];
+const cloudflareEdgeGetFailures = [];
 let acceptedStagingCatalogLag = false;
 let acceptedStagingCandidateOnlySlugs = [];
 
@@ -105,6 +116,87 @@ function markProvenStagingCatalogLag404sHandled(candidateOnlySlugs) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function edgeFailuresSince(index) {
+  return cloudflareEdgeGetFailures
+    .slice(index)
+    .filter((failure) => !failure.handled);
+}
+
+async function recoverCloudflareEdgeFailures(failures, stage) {
+  if (failures.length === 0) return false;
+
+  for (const failure of failures) {
+    let recovered = false;
+
+    for (
+      let attempt = 1;
+      attempt <= edgeRecoveryMaxAttempts;
+      attempt += 1
+    ) {
+      const replay = await context.request.get(failure.url, {
+        failOnStatusCode: false,
+        headers: failure.replayHeaders,
+        timeout: 10_000,
+      });
+
+      try {
+        const replayHeaders = replay.headers();
+        const exactBuild =
+          !expectedBuildId ||
+          replayHeaders['x-vellira-build-id'] === expectedBuildId;
+
+        if (replay.ok() && exactBuild) {
+          failure.handled = true;
+          recovered = true;
+          console.log(
+            `Recovered transient Cloudflare edge GET during ${stage}: ${failure.url} (attempt ${attempt})`
+          );
+          break;
+        }
+
+        if (
+          !isCloudflareEdgeGeneratedGet5xx({
+            status: replay.status(),
+            method: 'GET',
+            headers: replayHeaders,
+          })
+        ) {
+          return false;
+        }
+      } finally {
+        await replay.dispose();
+      }
+
+      if (attempt < edgeRecoveryMaxAttempts) {
+        await sleep(edgeRecoveryDelayMs);
+      }
+    }
+
+    if (!recovered) return false;
+  }
+
+  return true;
+}
+
+function reconcileCloudflareEdgeDiagnostics() {
+  for (const failure of cloudflareEdgeGetFailures) {
+    if (!failure.handled && !criticalDiagnostics.includes(failure.diagnostic)) {
+      criticalDiagnostics.push(failure.diagnostic);
+    }
+  }
+
+  const consoleDiagnostics =
+    reconcileHandledCloudflareEdgeConsoleDiagnostics(
+      deferredResource5xxConsoleDiagnostics,
+      cloudflareEdgeGetFailures.filter((failure) => failure.handled).length
+    );
+  criticalDiagnostics.push(...consoleDiagnostics.critical);
+}
+
 function attachPageDiagnostics(page) {
   page.on('request', (request) => {
     if (isObsoleteVercelRuntimeRequest(request.url())) {
@@ -135,6 +227,10 @@ function attachPageDiagnostics(page) {
       deferredResource404ConsoleDiagnostics.push(diagnostic);
       return;
     }
+    if (isBrowserResource5xxConsoleError(message.text())) {
+      deferredResource5xxConsoleDiagnostics.push(diagnostic);
+      return;
+    }
     criticalDiagnostics.push(diagnostic);
   });
 
@@ -153,6 +249,26 @@ function attachPageDiagnostics(page) {
       `response: ${response.status()} ${response.request().method()} ` +
       response.url();
     diagnostics.push(diagnostic);
+
+    const responseHeaders = response.headers();
+    if (
+      sameOrigin(response.url()) &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: responseHeaders,
+      })
+    ) {
+      cloudflareEdgeGetFailures.push({
+        diagnostic,
+        url: response.url(),
+        replayHeaders: cloudflareEdgeReplayHeaders(
+          response.request().headers()
+        ),
+        handled: false,
+      });
+      return;
+    }
 
     if (response.status() === 404) {
       const method = response.request().method();
@@ -203,10 +319,30 @@ function attachPageDiagnostics(page) {
 attachPageDiagnostics(page);
 
 async function goto(path) {
-  await page.goto(`${baseUrl}${path}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
+  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
+    const edgeStart = cloudflareEdgeGetFailures.length;
+    const response = await page.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    if (response && response.status() < 400) return response;
+
+    const failures = edgeFailuresSince(edgeStart);
+    if (
+      attempt < edgeRecoveryMaxAttempts &&
+      (await recoverCloudflareEdgeFailures(failures, `navigation ${path}`))
+    ) {
+      await sleep(edgeRecoveryDelayMs);
+      continue;
+    }
+
+    throw new Error(
+      `Document navigation failed for ${path}: HTTP ${response?.status() ?? 'no-response'}`
+    );
+  }
+
+  throw new Error(`Document navigation did not recover for ${path}.`);
 }
 
 async function loadHomePage() {
@@ -501,40 +637,62 @@ async function loadArticleWithActorMetrics(
   likeUrl,
   viewUrl
 ) {
-  const [likeStateResponse, viewResponse] = await observeActorJson(
-    [
-      { url: likeUrl, method: 'GET' },
-      { url: viewUrl, method: 'POST' },
-    ],
-    () =>
-      page.goto(`${baseUrl}${articlePath}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 15_000,
-      }),
-    15_000,
-    { document: 'next' }
-  );
+  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
+    const edgeStart = cloudflareEdgeGetFailures.length;
 
-  if (
-    likeStateResponse.status < 200 ||
-    likeStateResponse.status >= 300 ||
-    viewResponse.status < 200 ||
-    viewResponse.status >= 300
-  ) {
-    throw new Error(
-      `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
-        `view=${viewResponse.status}`
-    );
+    try {
+      const [likeStateResponse, viewResponse] = await observeActorJson(
+        [
+          { url: likeUrl, method: 'GET' },
+          { url: viewUrl, method: 'POST' },
+        ],
+        () =>
+          page.goto(`${baseUrl}${articlePath}`, {
+            waitUntil: 'domcontentloaded',
+            timeout: 15_000,
+          }),
+        15_000,
+        { document: 'next' }
+      );
+
+      if (
+        likeStateResponse.status < 200 ||
+        likeStateResponse.status >= 300 ||
+        viewResponse.status < 200 ||
+        viewResponse.status >= 300
+      ) {
+        throw new Error(
+          `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
+            `view=${viewResponse.status}`
+        );
+      }
+
+      const likeState = likeStateResponse.payload;
+      const viewWrite = viewResponse.payload;
+
+      if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
+        throw new Error('Blog metrics bootstrap returned an invalid payload.');
+      }
+
+      return { likeState, viewWrite };
+    } catch (error) {
+      const failures = edgeFailuresSince(edgeStart);
+      if (
+        attempt < edgeRecoveryMaxAttempts &&
+        (await recoverCloudflareEdgeFailures(
+          failures,
+          `actor bootstrap ${articlePath}`
+        ))
+      ) {
+        await sleep(edgeRecoveryDelayMs);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const likeState = likeStateResponse.payload;
-  const viewWrite = viewResponse.payload;
-
-  if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
-    throw new Error('Blog metrics bootstrap returned an invalid payload.');
-  }
-
-  return { likeState, viewWrite };
+  throw new Error(`Blog actor bootstrap did not recover for ${articlePath}.`);
 }
 
 async function verifyBlogActorContinuity() {
@@ -821,6 +979,8 @@ try {
       criticalDiagnostics.push(response.diagnostic);
     }
   }
+
+  reconcileCloudflareEdgeDiagnostics();
 
   const reconciledResource404Diagnostics =
     reconcileHandledBlogMetrics404ConsoleDiagnostics(
