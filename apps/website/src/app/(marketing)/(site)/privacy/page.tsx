@@ -314,9 +314,7 @@ export default function PrivacyPage() {
             </section>
 
             <section aria-labelledby='privacy-no-sale'>
-              <h2 id='privacy-no-sale'>
-                No advertising profiles or sale of data
-              </h2>
+              <h2 id='privacy-no-sale'>No advertising profiles or sale of data</h2>
               <p>
                 Vellira does not sell newsletter addresses or anonymous blog
                 interaction data, and does not use the public website to build
