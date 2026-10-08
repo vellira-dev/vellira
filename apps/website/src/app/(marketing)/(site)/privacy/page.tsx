@@ -291,8 +291,8 @@ export default function PrivacyPage() {
                 Send a request to{' '}
                 <DesignSystemLink href='mailto:roman@vellira.dev'>
                   roman@vellira.dev
-                </DesignSystemLink>. If you are in France, you also have the
-                right to contact the{' '}
+                </DesignSystemLink>
+                . If you are in France, you also have the right to contact the{' '}
                 <DesignSystemLink
                   href='https://www.cnil.fr/'
                   target='_blank'

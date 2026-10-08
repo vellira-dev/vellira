@@ -11,16 +11,24 @@ describe('Blog design-system link contract', () => {
   it('renders MDX prose links through Vellira UI', () => {
     const mdxComponents = read('apps/website/mdx-components.tsx');
     const bridge = read('apps/website/src/blog/ui/BlogDesignSystemLink.tsx');
+    const sharedLink = read(
+      'apps/website/src/components/navigation/DesignSystemLink.tsx'
+    );
 
     assert.match(mdxComponents, /a: BlogDesignSystemLink/u);
-    assert.match(bridge, /from '@vellira-ui\/react'/u);
-    assert.match(bridge, /appearance = 'link'/u);
-    assert.match(bridge, /<Button/u);
+    assert.match(bridge, /DesignSystemLink as BlogDesignSystemLink/u);
+    assert.match(sharedLink, /from '@vellira-ui\/react'/u);
+    assert.match(sharedLink, /appearance = 'link'/u);
+    assert.match(sharedLink, /<Button/u);
   });
 
   it('does not re-implement text-link interaction states in website CSS', () => {
-    const articleStyles = read('apps/website/src/blog/ui/BlogExperience.module.css');
-    const newsletterStyles = read('apps/website/src/blog/ui/BlogNewsletterSignup.module.css');
+    const articleStyles = read(
+      'apps/website/src/blog/ui/BlogExperience.module.css'
+    );
+    const newsletterStyles = read(
+      'apps/website/src/blog/ui/BlogNewsletterSignup.module.css'
+    );
 
     assert.doesNotMatch(articleStyles, /\.articleBody a/u);
     assert.doesNotMatch(newsletterStyles, /\.privacyNote a/u);

@@ -219,8 +219,7 @@ export function SignupForm() {
 
       <p className={styles.message}>
         Account data is handled according to the{' '}
-        <AuthTextLink href='/privacy'>Vellira Privacy Policy</AuthTextLink>
-        .
+        <AuthTextLink href='/privacy'>Vellira Privacy Policy</AuthTextLink>.
       </p>
     </form>
   );

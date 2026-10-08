@@ -31,7 +31,8 @@ function articleActionControls() {
       ts.isJsxElement(node) &&
       node.openingElement.tagName.getText(sourceFile) === 'Button' &&
       attribute(node, 'appearance')?.initializer?.getText(sourceFile) ===
-        "'bare'"
+        "'bare'" &&
+      attribute(node, 'type')?.initializer?.getText(sourceFile) === "'button'"
     ) {
       controls.push(node);
     }

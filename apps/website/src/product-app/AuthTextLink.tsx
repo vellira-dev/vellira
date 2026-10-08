@@ -10,11 +10,7 @@ type AuthTextLinkProps = {
   iconStart?: ReactNode;
 };
 
-export function AuthTextLink({
-  href,
-  children,
-  iconStart,
-}: AuthTextLinkProps) {
+export function AuthTextLink({ href, children, iconStart }: AuthTextLinkProps) {
   return (
     <DesignSystemLink href={href} iconStart={iconStart}>
       {children}
