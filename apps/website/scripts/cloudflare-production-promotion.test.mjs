@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 import './cloudflare-production-admission.test.mjs';
@@ -21,6 +22,16 @@ function jobBlock(workflow, jobId, nextJobId) {
   assert.notEqual(end, -1, `Missing following workflow job: ${nextJobId}`);
   return workflow.slice(start, end);
 }
+
+test('static chunk smoke script remains syntactically valid', () => {
+  assert.doesNotThrow(() =>
+    execFileSync(
+      process.execPath,
+      ['--check', 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'],
+      { stdio: 'pipe' }
+    )
+  );
+});
 
 test('staging skips only semantically verified release-sync pushes and prioritizes the latest runtime candidate', () => {
   const workflowHeader = stagingWorkflow.split('\njobs:\n')[0];
