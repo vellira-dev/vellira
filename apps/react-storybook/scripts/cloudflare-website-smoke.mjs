@@ -1,6 +1,9 @@
 import { chromium } from '@playwright/test';
 import { captureBrowserJson } from './cloudflare-browser-json.mjs';
-import { runRecoverableClientNavigation } from './cloudflare-client-navigation-recovery.mjs';
+import {
+  destinationEdgeFailures,
+  runRecoverableClientNavigation,
+} from './cloudflare-client-navigation-recovery.mjs';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -631,9 +634,7 @@ async function performRecoverableClientNavigation({
     },
     failureCursor: () => cloudflareEdgeGetFailures.length,
     failuresSince: (cursor) =>
-      edgeFailuresSince(cursor).filter(
-        (failure) => new URL(failure.url).pathname === href
-      ),
+      destinationEdgeFailures(edgeFailuresSince(cursor), href),
     recoverFailures: recoverCloudflareEdgeFailures,
     beforeRetry: async (attempt) => {
       console.log(
