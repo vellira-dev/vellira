@@ -1,4 +1,4 @@
-import { ArrowRight } from '@vellira-ui/icons';
+import { ArrowRight, Book } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
 import styles from './FeaturedStory.module.css';
@@ -17,7 +17,7 @@ export function FeaturedStory() {
           <div className={styles.sourcePanel}>
             <div className={styles.sourceIdentity}>
               <span className={styles.sourceMark} aria-hidden='true'>
-                CL
+                <Book size={20} />
               </span>
 
               <div>
