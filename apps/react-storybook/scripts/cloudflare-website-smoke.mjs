@@ -980,6 +980,13 @@ try {
     }
   }
 
+  const backgroundEdgeFailures = edgeFailuresSince(0);
+  if (backgroundEdgeFailures.length > 0) {
+    await recoverCloudflareEdgeFailures(
+      backgroundEdgeFailures,
+      'final background browser diagnostics'
+    );
+  }
   reconcileCloudflareEdgeDiagnostics();
 
   const reconciledResource404Diagnostics =
