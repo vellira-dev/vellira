@@ -438,6 +438,317 @@ function workspaceMutationSummary(workspaceBefore, workspaceAfter) {
   };
 }
 
+
+function rawMapSectionEntries(section) {
+  const entries = new Map();
+  if (section === undefined) {
+    return entries;
+  }
+
+  section.lines.slice(1).forEach((line, offset) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith('#')) {
+      return;
+    }
+    const match = /^ {2}(\S.*?):\s*(.*?)\s*$/.exec(line.trimEnd());
+    if (!match) {
+      throw new Error(
+        `Unsupported mapping syntax in pnpm-workspace.yaml section ${section.key}: ${line}`
+      );
+    }
+    const key = normalizeScalar(match[1]);
+    if (entries.has(key)) {
+      throw new Error(
+        `Duplicate pnpm-workspace.yaml entry in ${section.key}: ${key}`
+      );
+    }
+    entries.set(key, {
+      key,
+      value: normalizeScalar(match[2]),
+      line: line.trimEnd(),
+      index: offset + 1,
+    });
+  });
+
+  return entries;
+}
+
+function rawListSectionEntries(section) {
+  const entries = new Map();
+  if (section === undefined) {
+    return entries;
+  }
+
+  section.lines.slice(1).forEach((line, offset) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith('#')) {
+      return;
+    }
+    const match = /^ {2}-\s+(.+)$/.exec(line.trimEnd());
+    if (!match) {
+      throw new Error(
+        `Unsupported list syntax in pnpm-workspace.yaml section ${section.key}: ${line}`
+      );
+    }
+    const value = normalizeScalar(match[1]);
+    if (entries.has(value)) {
+      throw new Error(
+        `Duplicate pnpm-workspace.yaml entry in ${section.key}: ${value}`
+      );
+    }
+    entries.set(value, {
+      value,
+      line: line.trimEnd(),
+      index: offset + 1,
+    });
+  });
+
+  return entries;
+}
+
+function appendBeforeTrailingBlankLines(lines, line) {
+  let index = lines.length;
+  while (index > 1 && lines[index - 1].trim().length === 0) {
+    index -= 1;
+  }
+  lines.splice(index, 0, line);
+}
+
+export function reconcileGeneratedWorkspaceAuthority({
+  workspaceBefore,
+  workspaceAfter,
+  authorizedPackages = [],
+}) {
+  if (
+    JSON.stringify(immutableWorkspaceView(workspaceBefore)) !==
+    JSON.stringify(immutableWorkspaceView(workspaceAfter))
+  ) {
+    throw new Error(
+      'Generated security fix changed pnpm-workspace.yaml outside overrides/minimumReleaseAgeExclude'
+    );
+  }
+
+  const authorized = new Set(authorizedPackages);
+  if (authorized.size === 0) {
+    throw new Error(
+      'Generated security fix reconciliation requires explicit package authority'
+    );
+  }
+
+  const beforeSplit = splitWorkspaceSections(workspaceBefore);
+  const afterSplit = splitWorkspaceSections(workspaceAfter);
+  const beforeByKey = new Map(
+    beforeSplit.sections.map((section) => [section.key, section])
+  );
+  const afterByKey = new Map(
+    afterSplit.sections.map((section) => [section.key, section])
+  );
+  const retainedMutations = [];
+  const prunedMutations = [];
+
+  const sanitizeMapSection = (key) => {
+    const beforeSection = beforeByKey.get(key);
+    const afterSection = afterByKey.get(key);
+    if (beforeSection === undefined && afterSection === undefined) {
+      return null;
+    }
+
+    const beforeEntries = rawMapSectionEntries(beforeSection);
+    const afterEntries = rawMapSectionEntries(afterSection);
+    const lines =
+      beforeSection !== undefined
+        ? [...beforeSection.lines]
+        : [afterSection.lines[0]];
+
+    for (const [selector, current] of afterEntries) {
+      const previous = beforeEntries.get(selector);
+      if (previous !== undefined && previous.value === current.value) {
+        continue;
+      }
+
+      const packageName = packageFromDependencySelector(selector);
+      const mutation = {
+        section: key,
+        selector,
+        packageName,
+        previousValue: previous?.value ?? null,
+        generatedValue: current.value,
+      };
+
+      if (!authorized.has(packageName)) {
+        prunedMutations.push(mutation);
+        continue;
+      }
+
+      retainedMutations.push(mutation);
+      if (previous !== undefined) {
+        lines[previous.index] = current.line;
+      } else {
+        appendBeforeTrailingBlankLines(lines, current.line);
+      }
+    }
+
+    if (beforeSection === undefined && retainedMutations.every(
+      (mutation) => mutation.section !== key
+    )) {
+      return null;
+    }
+
+    return { key, lines };
+  };
+
+  const sanitizeListSection = (key) => {
+    const beforeSection = beforeByKey.get(key);
+    const afterSection = afterByKey.get(key);
+    if (beforeSection === undefined && afterSection === undefined) {
+      return null;
+    }
+
+    const beforeEntries = rawListSectionEntries(beforeSection);
+    const afterEntries = rawListSectionEntries(afterSection);
+    const lines =
+      beforeSection !== undefined
+        ? [...beforeSection.lines]
+        : [afterSection.lines[0]];
+
+    for (const [entry, current] of afterEntries) {
+      if (beforeEntries.has(entry)) {
+        continue;
+      }
+
+      const packageName = packageFromDependencySelector(entry);
+      const mutation = {
+        section: key,
+        selector: entry,
+        packageName,
+        previousValue: null,
+        generatedValue: entry,
+      };
+
+      if (!authorized.has(packageName)) {
+        prunedMutations.push(mutation);
+        continue;
+      }
+
+      retainedMutations.push(mutation);
+      appendBeforeTrailingBlankLines(lines, current.line);
+    }
+
+    if (beforeSection === undefined && retainedMutations.every(
+      (mutation) => mutation.section !== key
+    )) {
+      return null;
+    }
+
+    return { key, lines };
+  };
+
+  const replacements = new Map([
+    ['overrides', sanitizeMapSection('overrides')],
+    [
+      'minimumReleaseAgeExclude',
+      sanitizeListSection('minimumReleaseAgeExclude'),
+    ],
+  ]);
+
+  const sections = [];
+  const seen = new Set();
+  for (const section of afterSplit.sections) {
+    if (!MUTABLE_WORKSPACE_SECTIONS.has(section.key)) {
+      sections.push(section);
+      continue;
+    }
+    const replacement = replacements.get(section.key);
+    seen.add(section.key);
+    if (replacement !== null) {
+      sections.push(replacement);
+    }
+  }
+
+  for (const key of MUTABLE_WORKSPACE_SECTIONS) {
+    if (seen.has(key)) {
+      continue;
+    }
+    const replacement = replacements.get(key);
+    if (replacement !== null) {
+      sections.push(replacement);
+    }
+  }
+
+  const sortMutations = (a, b) => {
+    const bySection = a.section.localeCompare(b.section);
+    return bySection !== 0
+      ? bySection
+      : a.selector.localeCompare(b.selector);
+  };
+  retainedMutations.sort(sortMutations);
+  prunedMutations.sort(sortMutations);
+
+  return {
+    workspaceSource: [
+      ...afterSplit.prefix,
+      ...sections.flatMap((section) => section.lines),
+    ].join('\n'),
+    evidence: {
+      schemaVersion: 1,
+      authorizedPackages: [...authorized].sort(),
+      retainedPackages: [
+        ...new Set(retainedMutations.map((mutation) => mutation.packageName)),
+      ].sort(),
+      prunedPackages: [
+        ...new Set(prunedMutations.map((mutation) => mutation.packageName)),
+      ].sort(),
+      retainedMutations,
+      prunedMutations,
+    },
+  };
+}
+
+export function validateAuthorizedPackagesRemediated(
+  auditReport,
+  authorizedPackages,
+  auditLevel = 'high'
+) {
+  const authorized = new Set(authorizedPackages);
+  if (authorized.size === 0) {
+    throw new Error(
+      'Post-remediation registry proof requires explicit package authority'
+    );
+  }
+
+  const registryEvidence = buildRegistryRemediationEvidence(
+    auditReport,
+    auditLevel
+  );
+  const remainingPackages = registryEvidence.packages.filter((packageName) =>
+    authorized.has(packageName)
+  );
+  const remainingAdvisories = registryEvidence.advisories.filter((advisory) =>
+    authorized.has(advisory.package)
+  );
+
+  if (remainingPackages.length > 0) {
+    const advisoryEvidence = remainingAdvisories
+      .map((advisory) => `${advisory.ghsaId}:${advisory.package}`)
+      .sort();
+    const evidence =
+      advisoryEvidence.length > 0
+        ? advisoryEvidence.join(', ')
+        : remainingPackages.join(', ');
+    throw new Error(
+      `Authorized remediation package(s) still have registry advisories: ${evidence}`
+    );
+  }
+
+  return {
+    schemaVersion: 1,
+    auditLevel,
+    authorizedPackages: [...authorized].sort(),
+    remainingPackages: [],
+    remainingAdvisories: [],
+  };
+}
+
 export function validateRemediationDiff({
   changedFiles,
   untrackedFiles = [],
@@ -783,6 +1094,67 @@ function main(argv) {
     return;
   }
 
+  if (command === 'verify-plan-audit') {
+    const auditLevel = flagValue(rest, '--level') ?? 'high';
+    const { registryEvidence } = resolveSourceAuthority({
+      auditPath: flagValue(rest, '--audit'),
+      planPath: flagValue(rest, '--plan'),
+      auditLevel,
+    });
+    console.log(JSON.stringify(registryEvidence, null, 2));
+    return;
+  }
+
+  if (command === 'reconcile-generated-workspace') {
+    const planPath = flagValue(rest, '--plan');
+    if (!planPath) {
+      throw new Error('Generated workspace reconciliation requires --plan');
+    }
+    const plan = readJson(planPath);
+    if (!Array.isArray(plan.fixablePackages)) {
+      throw new Error('Remediation plan fixablePackages must be an array');
+    }
+    const workspaceBefore = runGit(['show', 'HEAD:pnpm-workspace.yaml']);
+    const workspaceAfter = fs.readFileSync('pnpm-workspace.yaml', 'utf8');
+    const result = reconcileGeneratedWorkspaceAuthority({
+      workspaceBefore,
+      workspaceAfter,
+      authorizedPackages: plan.fixablePackages,
+    });
+    fs.writeFileSync('pnpm-workspace.yaml', result.workspaceSource, 'utf8');
+    console.log(JSON.stringify(result.evidence, null, 2));
+    return;
+  }
+
+  if (command === 'verify-remediated-audit') {
+    const auditLevel = flagValue(rest, '--level') ?? 'high';
+    const auditPath = flagValue(rest, '--audit');
+    const planPath = flagValue(rest, '--plan');
+    const candidatePath = flagValue(rest, '--candidate');
+    if (!auditPath || (Boolean(planPath) === Boolean(candidatePath))) {
+      throw new Error(
+        'Post-remediation audit requires --audit and exactly one of --plan or --candidate'
+      );
+    }
+    const authority = readJson(planPath ?? candidatePath);
+    const authorizedPackages =
+      planPath !== undefined
+        ? authority.fixablePackages
+        : authority.authorizedPackages;
+    console.log(
+      JSON.stringify(
+        validateAuthorizedPackagesRemediated(
+          readJson(auditPath),
+          authorizedPackages,
+          auditLevel
+        ),
+        null,
+        2
+      )
+    );
+    return;
+  }
+
   if (command === 'validate-working-tree') {
     const auditLevel = flagValue(rest, '--level') ?? 'high';
     console.log(
@@ -814,7 +1186,7 @@ function main(argv) {
   }
 
   throw new Error(
-    'Usage: dependabot-security-remediation.mjs <plan|runtime-ignores|validate-working-tree|validate-pr>'
+    'Usage: dependabot-security-remediation.mjs <plan|runtime-ignores|verify-plan-audit|reconcile-generated-workspace|verify-remediated-audit|validate-working-tree|validate-pr>'
   );
 }
 

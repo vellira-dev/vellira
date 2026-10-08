@@ -503,22 +503,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ignore_args=()
-          while IFS= read -r ghsa; do
-            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
-              echo "::error::Invalid runtime GHSA exclusion: $ghsa"
-              exit 1
-            }
-            ignore_args+=(--ignore "$ghsa")
-          done < <(
-            jq -r '.ignoredGhsas[]' .security-remediation/runtime-audit-ignores.json
-          )
-
           set +e
-          pnpm audit --dev --audit-level ${{ steps.severity.outputs.level }} "${ignore_args[@]}" --json > .security-remediation/audit-before.json
+          pnpm audit --dev --audit-level ${{ steps.severity.outputs.level }} --json > .security-remediation/audit-before.json
           status=$?
           set -e
           echo "Pre-remediation audit exit code: $status" >> "$GITHUB_STEP_SUMMARY"
+
+          node scripts/ci/dependabot-security-remediation.mjs verify-plan-audit \
+            --audit .security-remediation/audit-before.json \
+            --plan .security-remediation/plan.json \
+            --level ${{ steps.severity.outputs.level }} \
+            > .security-remediation/audit-before-validation.json
 
       - name: Generate bounded pnpm security override
         if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
@@ -546,6 +541,23 @@ jobs:
           override_status=$?
           set -e
           echo "pnpm audit --fix=override (${{ steps.severity.outputs.level }}) exit code: $override_status" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reconcile generated override authority
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/dependabot-security-remediation.mjs reconcile-generated-workspace \
+            --plan .security-remediation/plan.json \
+            > .security-remediation/generated-override-reconciliation.json
+
+          pruned_packages="$(
+            jq -r '.prunedPackages | join(", ")' \
+              .security-remediation/generated-override-reconciliation.json
+          )"
+          if [[ -n "$pruned_packages" ]]; then
+            echo "Pruned registry-only package mutations outside Dependabot authority: $pruned_packages" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Re-resolve lockfile from generated security fix
         if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
@@ -581,28 +593,22 @@ jobs:
             --level ${{ steps.severity.outputs.level }} \
             > .security-remediation/diff-validation.json
 
-      - name: Prove no in-scope registry advisory remains
+      - name: Prove authorized registry advisories are closed
         if: steps.diff.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          ignore_args=()
-          while IFS= read -r ghsa; do
-            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
-              echo "::error::Invalid runtime GHSA exclusion: $ghsa"
-              exit 1
-            }
-            ignore_args+=(--ignore "$ghsa")
-          done < <(
-            jq -r -s '
-              (.[0].ignoredGhsas + (.[1] | map(.ghsaId)))
-              | unique[]
-            ' \
-              .security-remediation/runtime-audit-ignores.json \
-              .security-remediation/registry-unavailable-patches.json
-          )
+          set +e
+          pnpm audit --dev --audit-level ${{ steps.severity.outputs.level }} --json > .security-remediation/audit-after.json
+          status=$?
+          set -e
+          echo "Post-remediation audit exit code: $status" >> "$GITHUB_STEP_SUMMARY"
 
-          pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }} "${ignore_args[@]}" --json > .security-remediation/audit-after.json
+          node scripts/ci/dependabot-security-remediation.mjs verify-remediated-audit \
+            --audit .security-remediation/audit-after.json \
+            --plan .security-remediation/plan.json \
+            --level ${{ steps.severity.outputs.level }} \
+            > .security-remediation/audit-after-validation.json
 
       - name: Revalidate current main before mutation
         if: steps.diff.outputs.changed == 'true'

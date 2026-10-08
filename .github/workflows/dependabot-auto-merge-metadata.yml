@@ -489,28 +489,20 @@ jobs:
           --base "$BASE_SHA"
           --candidate /tmp/security-remediation-source/candidate.json
 
-      - name: Prove in-scope registry advisories are closed by the candidate
+      - name: Prove authenticated registry advisories are closed
         shell: bash
         run: |
           set -euo pipefail
-          ignore_args=()
-          while IFS= read -r ghsa; do
-            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
-              echo "::error::Invalid authenticated runtime GHSA exclusion: $ghsa"
-              exit 1
-            }
-            ignore_args+=(--ignore "$ghsa")
-          done < <(
-            jq -r '
-              (
-                .ignoredRuntimeGhsas +
-                (.registryUnavailablePatches | map(.ghsaId))
-              )
-              | unique[]
-            ' /tmp/security-remediation-source/candidate.json
-          )
+          set +e
+          pnpm audit --dev --audit-level ${{ steps.envelope.outputs.audit_level }} --json > /tmp/security-remediation-source/audit-current.json
+          status=$?
+          set -e
+          echo "Authenticated candidate audit exit code: $status" >> "$GITHUB_STEP_SUMMARY"
 
-          pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }} "${ignore_args[@]}"
+          node scripts/ci/dependabot-security-remediation.mjs verify-remediated-audit \
+            --audit /tmp/security-remediation-source/audit-current.json \
+            --candidate /tmp/security-remediation-source/candidate.json \
+            --level ${{ steps.envelope.outputs.audit_level }}
 
       - name: Write immutable security auto-merge decision
         shell: bash
