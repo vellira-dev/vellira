@@ -199,6 +199,8 @@ jobs:
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
           scripts/cloudflare-edge-recovery.test.mjs
           scripts/cloudflare-client-navigation-recovery.test.mjs
+      - name: Test Cloudflare edge fetch retry
+        run: node --test apps/website/scripts/cloudflare-edge-fetch.test.mjs
       - name: Test OpenNext string-export package patch
         run: node --test apps/website/scripts/opennext-string-exports-patch.test.mjs
       - run: pnpm test:cloudflare-cache
