@@ -10,10 +10,7 @@ const interviewUrl =
 
 export function FeaturedStory() {
   return (
-    <section
-      className={styles.section}
-      aria-labelledby='featured-story-title'
-    >
+    <section className={styles.section} aria-labelledby='featured-story-title'>
       <div className={styles.container}>
         <article className={styles.card}>
           <div className={styles.sourcePanel}>
