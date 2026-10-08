@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type {
   ComponentProductionFinding,
@@ -56,7 +58,10 @@ export function runValidationCommandProcess(
   root: string,
   emptyCommandError: string
 ): ValidationCommandExecution {
-  const [executable, ...args] = command.command;
+  const [executable, ...args] = canonicalProjectionCheckCommand(
+    command.command,
+    root
+  );
 
   if (!executable) {
     return {
@@ -96,6 +101,48 @@ export function runValidationCommandProcess(
     timedOut: errorCode === 'ETIMEDOUT',
     ...(result.error ? { error: result.error.message } : {}),
   };
+}
+
+// A pinned validator may inspect an older candidate checkout. Its projection
+// checks must use the generator from that validator, without overlaying tooling
+// into the candidate or switching package builds away from candidate source.
+function canonicalProjectionCheckCommand(
+  command: readonly string[],
+  root: string
+) {
+  const toolsRoot = fileURLToPath(new URL('../../', import.meta.url));
+  if (path.resolve(root) === path.resolve(toolsRoot)) return command;
+  let script: string;
+  let args: readonly string[];
+  if (
+    command.length === 5 &&
+    command[0] === 'pnpm' &&
+    command[1] === 'create:component-page' &&
+    /^[A-Z][A-Za-z0-9]*$/.test(command[2]) &&
+    command[3] === '--force' &&
+    command[4] === '--check'
+  ) {
+    script = 'create-component-page.ts';
+    args = command.slice(2);
+  } else if (
+    command.length === 4 &&
+    command[0] === 'pnpm' &&
+    command[1] === 'component-pages:audit' &&
+    command[2] === '--component' &&
+    /^[A-Z][A-Za-z0-9]*$/.test(command[3])
+  ) {
+    script = 'audit-component-pages.ts';
+    args = command.slice(2);
+  } else {
+    return command;
+  }
+  return [
+    process.execPath,
+    '--import',
+    path.join(toolsRoot, 'node_modules/tsx/dist/loader.mjs'),
+    path.join(toolsRoot, 'scripts/generators/component-page', script),
+    ...args,
+  ];
 }
 
 export function runValidationStage<
