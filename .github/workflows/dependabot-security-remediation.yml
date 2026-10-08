@@ -116,7 +116,7 @@ jobs:
 
               for file in "${changed_files[@]}"; do
                 case "$file" in
-                  .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+                  .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts|scripts/ci/dependabot-auto-merge-policy.test.ts)
                     ;;
                   *)
                     echo "::error::Self-proof push changed forbidden path: $file"
@@ -559,6 +559,24 @@ jobs:
             echo "Pruned registry-only package mutations outside Dependabot authority: $pruned_packages" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Materialize Dependabot audit gaps
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/dependabot-security-remediation.mjs materialize-audit-gaps \
+            --plan .security-remediation/plan.json \
+            --comparison .security-remediation/audit-before-validation.json \
+            > .security-remediation/audit-gap-materializations.json
+
+          gap_packages="$(
+            jq -r '.packages | join(", ")' \
+              .security-remediation/audit-gap-materializations.json
+          )"
+          if [[ -n "$gap_packages" ]]; then
+            echo "Dependabot-only advisory packages materialized from authenticated alert ranges: $gap_packages" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Re-resolve lockfile from generated security fix
         if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
         run: |
@@ -681,6 +699,12 @@ jobs:
               'utf8'
             )
           );
+          const auditGapMaterializations = JSON.parse(
+            fs.readFileSync(
+              '.security-remediation/audit-gap-materializations.json',
+              'utf8'
+            )
+          );
           const candidate = {
             schemaVersion: 1,
             kind: 'dependabot-security-remediation',
@@ -700,6 +724,7 @@ jobs:
             changedPackages: validation.changedPackages,
             ignoredRuntimeGhsas: runtimeIgnores.ignoredGhsas,
             registryUnavailablePatches,
+            auditGapMaterializations,
           };
 
           const validPackageList = (value) =>
@@ -730,6 +755,36 @@ jobs:
                 typeof entry.firstPatchedVersion === 'string' &&
                 entry.firstPatchedVersion.length > 0
             );
+          const validAuditGapMaterializations = (value) =>
+            value &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            value.schemaVersion === 1 &&
+            Array.isArray(value.packages) &&
+            value.packages.every(
+              (entry) => typeof entry === 'string' && entry.length > 0
+            ) &&
+            Array.isArray(value.materializations) &&
+            value.materializations.every(
+              (entry) =>
+                entry &&
+                typeof entry === 'object' &&
+                !Array.isArray(entry) &&
+                typeof entry.package === 'string' &&
+                value.packages.includes(entry.package) &&
+                typeof entry.vulnerableVersionRange === 'string' &&
+                entry.vulnerableVersionRange.length > 0 &&
+                typeof entry.selector === 'string' &&
+                entry.selector.length > 0 &&
+                typeof entry.target === 'string' &&
+                entry.target.length > 0 &&
+                typeof entry.releaseAgeEntry === 'string' &&
+                entry.releaseAgeEntry.length > 0 &&
+                Array.isArray(entry.alertNumbers) &&
+                entry.alertNumbers.every(Number.isSafeInteger) &&
+                Array.isArray(entry.ghsaIds) &&
+                validGhsaList(entry.ghsaIds)
+            );
 
           if (
             !Number.isSafeInteger(candidate.sourceRunId) ||
@@ -758,6 +813,9 @@ jobs:
             !validGhsaList(candidate.ignoredRuntimeGhsas) ||
             !validRegistryUnavailablePatches(
               candidate.registryUnavailablePatches
+            ) ||
+            !validAuditGapMaterializations(
+              candidate.auditGapMaterializations
             )
           ) {
             throw new Error('Generated remediation candidate identity is invalid');
