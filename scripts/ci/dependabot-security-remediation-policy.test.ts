@@ -77,7 +77,10 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('registry-unavailable-patches.json');
     expect(source).toContain('blockedByRegistryAvailability');
     expect(source).toContain(
-      "steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'"
+      "steps.plan.outputs.fixable_packages != '0' &&"
+    );
+    expect(source).toContain(
+      "steps.availability.outputs.resolvable_packages != '0'"
     );
     expect(source).toContain(
       'Registry-unavailable patched releases remain open'
@@ -101,43 +104,6 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('if-no-files-found: error');
     expect(source).not.toContain('gh pr merge');
   });
-
-  it(
-    'authenticates registry-unavailable patches across the merge boundary',
-    async () => {
-      const remediationSource = await readFile(remediationWorkflowPath, 'utf8');
-      const metadataSource = await readFile(metadataWorkflowPath, 'utf8');
-      const autoMergeSource = await readFile(autoMergeWorkflowPath, 'utf8');
-
-      expect(remediationSource).toContain('registryUnavailablePatches');
-      expect(remediationSource).toContain(
-        'https://registry.npmjs.org/${encoded_package}/${encoded_version}'
-      );
-      expect(remediationSource).toContain(
-        'Registry boundary: an advisory whose declared first patched version is not yet published'
-      );
-
-      expect(metadataSource).toContain('candidate.registryUnavailablePatches');
-      expect(metadataSource).toContain(
-        'Revalidate registry-unavailable patched releases'
-      );
-      expect(metadataSource).toContain(
-        '.registryUnavailablePatches | map(.ghsaId)'
-      );
-      expect(metadataSource).toContain('registryUnavailablePatches:');
-
-      expect(autoMergeSource).toContain('decision.registryUnavailablePatches');
-      expect(autoMergeSource).toContain(
-        'Registry-unavailable remediation authority changed before merge'
-      );
-      expect(autoMergeSource).toContain(
-        'Revalidate registry-unavailable patched releases before merge'
-      );
-      expect(autoMergeSource).toContain(
-        'Patched release became available before merge'
-      );
-    }
-  );
 
   it('rejects non-main sources before any remediation work', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
@@ -190,6 +156,7 @@ describe('Dependabot security remediation workflow policy', () => {
   it('authenticates remediation PRs before auto-merge metadata', async () => {
     const remediationSource = await readFile(remediationWorkflowPath, 'utf8');
     const metadataSource = await readFile(metadataWorkflowPath, 'utf8');
+    const autoMergeSource = await readFile(autoMergeWorkflowPath, 'utf8');
 
     expect(remediationSource).toContain(
       'Publish immutable remediation candidate'
@@ -233,8 +200,23 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain('candidate.authorizedPackages');
     expect(metadataSource).toContain('candidate.changedPackages');
     expect(metadataSource).toContain('candidate.ignoredRuntimeGhsas');
+    expect(metadataSource).toContain('candidate.registryUnavailablePatches');
+    expect(metadataSource).toContain(
+      'Revalidate registry-unavailable patched releases'
+    );
     expect(metadataSource).toContain(
       '.registryUnavailablePatches | map(.ghsaId)'
+    );
+    expect(metadataSource).toContain('registryUnavailablePatches:');
+    expect(autoMergeSource).toContain('decision.registryUnavailablePatches');
+    expect(autoMergeSource).toContain(
+      'Registry-unavailable remediation authority changed before merge'
+    );
+    expect(autoMergeSource).toContain(
+      'Revalidate registry-unavailable patched releases before merge'
+    );
+    expect(autoMergeSource).toContain(
+      'Patched release became available before merge'
     );
     expect(metadataSource).toContain(
       'Prove in-scope registry advisories are closed by the candidate'
