@@ -1,4 +1,5 @@
 export * from './components/createAccordionTokens.js';
+export * from './components/createAvatarTokens.js';
 export * from './components/createButtonTokens.js';
 export * from './components/createCheckboxTokens.js';
 export * from './components/createContextMenuTokens.js';

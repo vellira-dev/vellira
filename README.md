@@ -357,6 +357,7 @@ Platform availability is validated against the canonical component metadata regi
 | Component  | React | React Native |
 | ---------- | :---: | :----------: |
 | Accordion  |  ✅   |      ✅      |
+| Avatar     |  ✅   |      ✅      |
 | Button     |  ✅   |      ✅      |
 | Checkbox   |  ✅   |      ✅      |
 | Dropdown   |  ✅   |      ✅      |

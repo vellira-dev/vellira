@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "component": "Avatar",
+  "platform": "native",
+  "profile": "base",
+  "control": "value",
+  "parts": [],
+  "baseline": {
+    "ownership": "generated",
+    "requirements": ["render", "accessibility"]
+  },
+  "componentSpecific": {
+    "ownership": "manual",
+    "required": false,
+    "requirements": []
+  }
+}

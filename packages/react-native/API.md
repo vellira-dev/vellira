@@ -1017,3 +1017,18 @@ function ThemeReader() {
 | `onValueChange`  | `(value: string) => void` | No       | Called when the value changes.            |
 
 <!-- api-docgen:end native.TextareaProps.Textarea -->
+
+## Avatar
+
+## Avatar
+
+<!-- api-docgen:start native.AvatarProps.Avatar -->
+
+| Prop       | Type                   | Required | Description |
+| ---------- | ---------------------- | -------- | ----------- |
+| `fallback` | `string`               | Yes      | —           |
+| `name`     | `string`               | Yes      | —           |
+| `size`     | `'sm' \| 'md' \| 'lg'` | No       | Input size. |
+| `source`   | `string \| number`     | No       | —           |
+
+<!-- api-docgen:end native.AvatarProps.Avatar -->

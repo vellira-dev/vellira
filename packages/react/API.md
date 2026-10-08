@@ -1177,3 +1177,18 @@ All interactive components support:
 | `onValueChange`    | `(value: string) => void` | No       | Called when the value changes.            |
 
 <!-- api-docgen:end web.TextareaProps.Textarea -->
+
+## Avatar
+
+## Avatar
+
+<!-- api-docgen:start web.AvatarProps.Avatar -->
+
+| Prop       | Type                   | Required | Description |
+| ---------- | ---------------------- | -------- | ----------- |
+| `fallback` | `string`               | Yes      | —           |
+| `name`     | `string`               | Yes      | —           |
+| `size`     | `'sm' \| 'md' \| 'lg'` | No       | Input size. |
+| `source`   | `string`               | No       | —           |
+
+<!-- api-docgen:end web.AvatarProps.Avatar -->
