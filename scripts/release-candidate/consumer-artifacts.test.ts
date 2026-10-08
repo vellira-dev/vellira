@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -11,6 +12,7 @@ const {
   NATIVE_PACKAGE_NAMES,
   WEB_PACKAGE_NAMES,
   assertInstalledCandidatePackages,
+  captureConsumerHarness,
   validateCandidateArtifactDirectory,
 } = require('./consumer-artifacts.cjs');
 
@@ -74,6 +76,54 @@ afterEach(() => {
   while (tempDirs.length > 0) {
     fs.rmSync(tempDirs.pop()!, { recursive: true, force: true });
   }
+});
+
+describe('separate exact consumer harness authority', () => {
+  function harnessRepository() {
+    const root = tempDir('vellira-consumer-harness-');
+    const git = (...args: string[]) =>
+      execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+    git('init', '-q');
+    git('config', 'user.name', 'Fixture');
+    git('config', 'user.email', 'fixture@example.test');
+    fs.writeFileSync(path.join(root, 'harness.txt'), 'canonical fixture\n');
+    git('add', '.');
+    git('commit', '-qm', 'harness fixture');
+    return { root, sha: git('rev-parse', 'HEAD') };
+  }
+
+  it('binds current harness separately while retaining exact historical package digests', () => {
+    const harness = harnessRepository();
+    const fixture = fixtureCandidate();
+    expect(harness.sha).not.toBe(fixture.candidateSha);
+    expect(captureConsumerHarness(harness.sha, harness.root)).toEqual({
+      sha: harness.sha,
+    });
+    const candidate = validateCandidateArtifactDirectory(
+      fixture.dir,
+      fixture.candidateSha,
+      NATIVE_PACKAGE_NAMES
+    );
+    expect(candidate.manifest.source.sha).toBe(fixture.candidateSha);
+    expect(() =>
+      validateCandidateArtifactDirectory(
+        fixture.dir,
+        harness.sha,
+        NATIVE_PACKAGE_NAMES
+      )
+    ).toThrow(/does not match expected/);
+  });
+
+  it('rejects harness revision drift and local source modifications', () => {
+    const harness = harnessRepository();
+    expect(() => captureConsumerHarness('f'.repeat(40), harness.root)).toThrow(
+      /exact workflow revision/
+    );
+    fs.appendFileSync(path.join(harness.root, 'harness.txt'), 'drift\n');
+    expect(() => captureConsumerHarness(harness.sha, harness.root)).toThrow(
+      /modified tracked files/
+    );
+  });
 });
 
 describe('exact candidate consumer artifacts', () => {

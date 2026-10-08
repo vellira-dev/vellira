@@ -6,6 +6,7 @@ const { spawnSync } = require('node:child_process');
 const {
   NATIVE_PACKAGE_NAMES,
   assertInstalledCandidatePackages,
+  captureConsumerHarness,
   readJson,
   validateCandidateArtifactDirectory,
 } = require('./consumer-artifacts.cjs');
@@ -519,6 +520,7 @@ function verifyProductionExports(fixtureDir, expoBin) {
 }
 
 async function main() {
+  const harness = captureConsumerHarness();
   const candidate = validateCandidateArtifactDirectory(
     candidateDir,
     expectedSha,
@@ -577,6 +579,7 @@ async function main() {
         ),
       },
       tooling: {
+        harness: captureConsumerHarness(harness.sha),
         node: process.version,
         npm: run('npm', ['--version'], { cwd: fixtureDir }),
         expo: readJson(

@@ -1,6 +1,32 @@
-const crypto = require('node:crypto');
+const nodeCrypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+
+function captureConsumerHarness(
+  expectedSha = process.env.VELLIRA_CONSUMER_HARNESS_SHA,
+  root = path.resolve(__dirname, '../..')
+) {
+  const sha = execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: root,
+    encoding: 'utf8',
+  }).trim();
+  if (
+    !/^[a-f0-9]{40}$/.test(sha) ||
+    (expectedSha !== undefined && expectedSha !== sha)
+  ) {
+    throw new Error(
+      'Consumer harness checkout differs from its exact workflow revision.'
+    );
+  }
+  const dirty = execFileSync(
+    'git',
+    ['status', '--porcelain', '--untracked-files=no'],
+    { cwd: root, encoding: 'utf8' }
+  ).trim();
+  if (dirty) throw new Error('Consumer harness has modified tracked files.');
+  return { sha };
+}
 
 const PUBLIC_PACKAGE_NAMES = Object.freeze([
   '@vellira-ui/core',
@@ -32,7 +58,7 @@ function readJson(filePath) {
 }
 
 function digestFile(filePath, algorithm, encoding) {
-  return crypto
+  return nodeCrypto
     .createHash(algorithm)
     .update(fs.readFileSync(filePath))
     .digest(encoding);
@@ -320,6 +346,7 @@ module.exports = {
   PUBLIC_PACKAGE_NAMES,
   WEB_PACKAGE_NAMES,
   assertInstalledCandidatePackages,
+  captureConsumerHarness,
   hasWorkspaceProtocol,
   readJson,
   sha256File,
