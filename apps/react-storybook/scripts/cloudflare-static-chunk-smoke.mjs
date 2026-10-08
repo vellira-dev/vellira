@@ -249,16 +249,47 @@ async function waitForRenderedBody(path, response = null) {
 }
 
 async function goto(path) {
-  const response = await page.goto(`${baseUrl}${path}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await page.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
 
-  if (!response || response.status() >= 400) {
-    throw new Error(`Document load failed: ${await describePage(response, path)}`);
+    if (response && response.status() < 400) {
+      await waitForRenderedBody(path, response);
+      return response;
+    }
+
+    if (
+      response &&
+      attempt < 3 &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: response.headers(),
+      })
+    ) {
+      const recovery = await recoverCloudflareEdgeGet5xx({
+        url: response.url(),
+        requestHeaders: response.request().headers(),
+        expectedBuildId,
+        requestGet: (...args) => context.request.get(...args),
+      });
+      if (recovery.recovered) {
+        console.log(
+          `Retrying document load after transient Cloudflare edge failure: ${path} (attempt ${attempt + 1}/3)`
+        );
+        await page.waitForTimeout(1_500);
+        continue;
+      }
+    }
+
+    throw new Error(
+      `Document load failed: ${await describePage(response, path)}`
+    );
   }
 
-  await waitForRenderedBody(path, response);
+  throw new Error(`Document load did not recover: ${path}`);
 }
 
 async function verifyAbortedChunkUrls(stage) {
