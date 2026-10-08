@@ -79,3 +79,23 @@ test('edge fetch remains bounded when Cloudflare 503 persists', async () => {
   assert.equal(result.attempts, 3);
   assert.equal(calls, 3);
 });
+
+
+test('edge fetch never retries non-GET requests', async () => {
+  let calls = 0;
+  const result = await fetchWithCloudflareEdgeRetry(
+    'https://example.test/mutation',
+    { method: 'POST' },
+    {
+      fetchImpl: async () => {
+        calls += 1;
+        return response(503, { Server: 'cloudflare' });
+      },
+      delayMs: 0,
+    }
+  );
+
+  assert.equal(result.response.status, 503);
+  assert.equal(result.attempts, 1);
+  assert.equal(calls, 1);
+});
