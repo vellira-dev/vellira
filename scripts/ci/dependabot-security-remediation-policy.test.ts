@@ -290,6 +290,15 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(autoMergeSource).toContain('compare/$before_sha...$base_sha');
     expect(autoMergeSource).toContain("decision.sourceEvent === 'push' &&");
     expect(autoMergeSource).toContain("decision.auditLevel !== 'low'");
+    expect(remediationSource).toContain(
+      'scripts/ci/dependabot-auto-merge-policy.test.ts'
+    );
+    expect(metadataSource).toContain(
+      'scripts/ci/dependabot-auto-merge-policy.test.ts'
+    );
+    expect(autoMergeSource).toContain(
+      'scripts/ci/dependabot-auto-merge-policy.test.ts'
+    );
   });
 
   it('reconciles alert tracker after dependency changes', async () => {

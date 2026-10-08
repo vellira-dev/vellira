@@ -110,6 +110,7 @@ describe('Dependabot auto-merge workflow policy', () => {
     expect(source).toContain(
       'Security remediation source run is no longer an exact successful authority'
     );
+    expect(source).toContain('scripts/ci/dependabot-auto-merge-policy.test.ts');
     expect(source).toContain("run.conclusion !== 'success'");
     expect(source).toContain('DEPENDABOT_ALERTS_TOKEN');
     expect(source).toContain(

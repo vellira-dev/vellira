@@ -116,7 +116,7 @@ jobs:
 
               for file in "${changed_files[@]}"; do
                 case "$file" in
-                  .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+                  .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts|scripts/ci/dependabot-auto-merge-policy.test.ts)
                     ;;
                   *)
                     echo "::error::Self-proof push changed forbidden path: $file"
