@@ -6,6 +6,7 @@ import {
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
   reconcileHandledCloudflareEdgeConsoleDiagnostics,
+  recoverCloudflareEdgeGet5xx,
 } from './cloudflare-edge-recovery.mjs';
 
 test('classifies only Cloudflare edge GET 5xx responses without Vellira execution headers', () => {
@@ -85,4 +86,65 @@ test('reconciles browser 5xx console noise only after a handled edge response', 
     ),
     false
   );
+});
+
+
+function fakeResponse(status, headers = {}) {
+  return {
+    status: () => status,
+    headers: () => headers,
+    async dispose() {},
+  };
+}
+
+test('bounded edge recovery requires exact active build after transient Cloudflare 503', async () => {
+  const responses = [
+    fakeResponse(503, { server: 'cloudflare' }),
+    fakeResponse(200, {
+      server: 'cloudflare',
+      'x-vellira-build-id': 'build-1',
+    }),
+  ];
+  const result = await recoverCloudflareEdgeGet5xx({
+    url: 'https://example.test/blog?_rsc=abc',
+    requestHeaders: { RSC: '1' },
+    expectedBuildId: 'build-1',
+    requestGet: async () => responses.shift(),
+    delayMs: 0,
+    sleep: async () => {},
+  });
+
+  assert.deepEqual(result, {
+    recovered: true,
+    attempts: 2,
+    status: 200,
+  });
+});
+
+test('edge recovery fails closed for Worker 5xx and wrong-build success', async () => {
+  const workerFailure = await recoverCloudflareEdgeGet5xx({
+    url: 'https://example.test/blog?_rsc=abc',
+    expectedBuildId: 'build-1',
+    requestGet: async () =>
+      fakeResponse(503, {
+        server: 'cloudflare',
+        'x-vellira-worker-version': 'worker',
+      }),
+    delayMs: 0,
+  });
+  assert.equal(workerFailure.recovered, false);
+  assert.equal(workerFailure.reason, 'non-edge-or-build-mismatch');
+
+  const wrongBuild = await recoverCloudflareEdgeGet5xx({
+    url: 'https://example.test/blog?_rsc=abc',
+    expectedBuildId: 'build-1',
+    requestGet: async () =>
+      fakeResponse(200, {
+        server: 'cloudflare',
+        'x-vellira-build-id': 'build-2',
+      }),
+    delayMs: 0,
+  });
+  assert.equal(wrongBuild.recovered, false);
+  assert.equal(wrongBuild.reason, 'non-edge-or-build-mismatch');
 });
