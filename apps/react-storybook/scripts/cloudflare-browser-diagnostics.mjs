@@ -2,6 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { isBrowserResource404ConsoleError } from './cloudflare-blog-metrics-smoke-policy.mjs';
+import {
+  isBrowserResource5xxConsoleError,
+  isCloudflareEdgeGeneratedGet5xx,
+  recoverCloudflareEdgeGet5xx,
+} from './cloudflare-edge-recovery.mjs';
 
 export function diagnosticHeaders(headers) {
   return Object.fromEntries(
@@ -22,14 +27,20 @@ export async function captureDiagnostics(
   context,
   baseUrl,
   directory,
-  { isExpected404Response } = {}
+  {
+    isExpected404Response,
+    expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim(),
+  } = {}
 ) {
   const origin = new URL(baseUrl).origin;
   const events = [];
   const staticFailures = [];
   const errors = [];
   const handled404ResponsesByUrl = new Map();
+  const handledEdgeResponsesByUrl = new Map();
   const deferredResource404ConsoleErrors = [];
+  const deferredResource5xxConsoleErrors = [];
+  const edgeFailures = [];
   const pending = new Set();
   const started = Date.now();
   const record = (kind, data) => {
@@ -40,6 +51,17 @@ export async function captureDiagnostics(
   const sameOrigin = (url) => new URL(url).origin === origin;
   const isStatic = (url) =>
     sameOrigin(url) && new URL(url).pathname.startsWith('/_next/static/');
+  const isRouterDataRequest = (request) => {
+    const headers = request.headers();
+    const url = new URL(request.url());
+    return (
+      request.method() === 'GET' &&
+      (url.searchParams.has('_rsc') ||
+        headers.rsc === '1' ||
+        Object.hasOwn(headers, 'next-router-prefetch') ||
+        Object.hasOwn(headers, 'next-router-segment-prefetch'))
+    );
+  };
   const track = (promise) => {
     pending.add(promise);
     promise.finally(() => pending.delete(promise));
@@ -124,7 +146,25 @@ export async function captureDiagnostics(
       ),
     });
     if (response.status() >= 400) {
-      if (response.status() === 404 && isExpected404Response?.(event)) {
+      if (
+        !isStatic(response.url()) &&
+        isRouterDataRequest(request) &&
+        isCloudflareEdgeGeneratedGet5xx({
+          status: response.status(),
+          method: request.method(),
+          headers,
+        })
+      ) {
+        edgeFailures.push({
+          event,
+          url: response.url(),
+          requestHeaders: request.headers(),
+          handled: false,
+        });
+      } else if (
+        response.status() === 404 &&
+        isExpected404Response?.(event)
+      ) {
         handled404ResponsesByUrl.set(
           event.url,
           (handled404ResponsesByUrl.get(event.url) ?? 0) + 1
@@ -169,6 +209,8 @@ export async function captureDiagnostics(
         isBrowserResource404ConsoleError(message.text())
       ) {
         deferredResource404ConsoleErrors.push(event);
+      } else if (isBrowserResource5xxConsoleError(message.text())) {
+        deferredResource5xxConsoleErrors.push(event);
       } else {
         errors.push(event);
       }
@@ -178,25 +220,69 @@ export async function captureDiagnostics(
     errors.push(record('pageerror', { error: error.stack ?? String(error) }))
   );
 
-  const unresolvedErrors = () => {
-    const handled404ConsoleCounts = new Map(handled404ResponsesByUrl);
-    const resource404ConsoleErrors = [];
+  const reconcileDeferredConsoleErrors = (
+    deferred,
+    handledByUrl
+  ) => {
+    const remainingByUrl = new Map(handledByUrl);
+    const unresolved = [];
 
-    for (const event of deferredResource404ConsoleErrors) {
+    for (const event of deferred) {
       const url = event.location?.url;
-      const remaining = handled404ConsoleCounts.get(url) ?? 0;
+      const remaining = remainingByUrl.get(url) ?? 0;
       if (remaining > 0) {
-        handled404ConsoleCounts.set(url, remaining - 1);
+        remainingByUrl.set(url, remaining - 1);
       } else {
-        resource404ConsoleErrors.push(event);
+        unresolved.push(event);
       }
     }
 
-    return [...errors, ...resource404ConsoleErrors];
+    return unresolved;
   };
+
+  const unresolvedErrors = () => [
+    ...errors,
+    ...edgeFailures
+      .filter((failure) => !failure.handled)
+      .map((failure) => failure.event),
+    ...reconcileDeferredConsoleErrors(
+      deferredResource404ConsoleErrors,
+      handled404ResponsesByUrl
+    ),
+    ...reconcileDeferredConsoleErrors(
+      deferredResource5xxConsoleErrors,
+      handledEdgeResponsesByUrl
+    ),
+  ];
 
   return {
     record,
+    async recoverEdgeFailures(stage) {
+      for (const failure of edgeFailures.filter((item) => !item.handled)) {
+        const result = await recoverCloudflareEdgeGet5xx({
+          url: failure.url,
+          requestHeaders: failure.requestHeaders,
+          expectedBuildId,
+          requestGet: (...args) => context.request.get(...args),
+        });
+
+        record('edge-recovery', {
+          stage,
+          url: failure.url,
+          recovered: result.recovered,
+          attempts: result.attempts,
+          reason: result.reason ?? null,
+        });
+
+        if (result.recovered) {
+          failure.handled = true;
+          handledEdgeResponsesByUrl.set(
+            failure.url,
+            (handledEdgeResponsesByUrl.get(failure.url) ?? 0) + 1
+          );
+        }
+      }
+    },
     assertHealthy(stage) {
       const unresolved = unresolvedErrors();
       if (staticFailures.length || unresolved.length) {
@@ -233,6 +319,7 @@ export async function captureDiagnostics(
       }
     },
     async finish(error) {
+      await this.recoverEdgeFailures('finish');
       await this.anchor('finish');
       // A broken streaming response must not prevent failure artifacts from
       // being written. Its status/URL is already recorded, even without a body.
@@ -294,8 +381,10 @@ export async function waitForRoute(page, diagnostics, baseUrl, href, title) {
     await page
       .getByRole('heading', { level: 1, name: title, exact: true })
       .waitFor({ state: 'visible', timeout: 15_000 });
+    await diagnostics.recoverEdgeFailures?.(`route readiness ${href}`);
     diagnostics.assertHealthy(href);
   } catch (error) {
+    await diagnostics.recoverEdgeFailures?.(`route readiness failure ${href}`);
     diagnostics.assertHealthy(href);
     throw new Error(
       `Route readiness failed: expected ${href} heading ${JSON.stringify(title)}; final URL ${page.url()}`,
