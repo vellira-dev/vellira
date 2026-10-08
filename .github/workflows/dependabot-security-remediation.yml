@@ -369,8 +369,137 @@ jobs:
           --level ${{ steps.severity.outputs.level }}
           > .security-remediation/runtime-audit-ignores.json
 
-      - name: Record pre-remediation audit
+      - name: Reconcile patched-release registry availability
         if: steps.plan.outputs.fixable_packages != '0'
+        id: availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          unavailable_ndjson=".security-remediation/registry-unavailable-patches.ndjson"
+          unavailable_json=".security-remediation/registry-unavailable-patches.json"
+          response_file=".security-remediation/registry-response.json"
+          : > "$unavailable_ndjson"
+
+          while IFS= read -r row; do
+            ghsa="$(jq -r '.ghsaId' <<<"$row")"
+            package="$(jq -r '.package' <<<"$row")"
+            version="$(jq -r '.firstPatchedVersion' <<<"$row")"
+
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid registry-availability GHSA: $ghsa"
+              exit 1
+            }
+            test -n "$package"
+            test -n "$version"
+
+            encoded_package="$(
+              node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$package"
+            )"
+            encoded_version="$(
+              node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$version"
+            )"
+
+            set +e
+            http_status="$(
+              curl \
+                --silent \
+                --show-error \
+                --location \
+                --connect-timeout 10 \
+                --max-time 30 \
+                --output "$response_file" \
+                --write-out '%{http_code}' \
+                "https://registry.npmjs.org/${encoded_package}/${encoded_version}"
+            )"
+            curl_status=$?
+            set -e
+
+            if [[ "$curl_status" -ne 0 ]]; then
+              echo "::error::npm registry availability check failed for $package@$version."
+              exit "$curl_status"
+            fi
+
+            case "$http_status" in
+              200)
+                published_version="$(jq -r '.version // empty' "$response_file")"
+                if [[ "$published_version" != "$version" ]]; then
+                  echo "::error::npm registry returned unexpected version for $package@$version: $published_version"
+                  exit 1
+                fi
+                ;;
+              404)
+                printf '%s\n' "$row" >> "$unavailable_ndjson"
+                ;;
+              *)
+                echo "::error::npm registry returned HTTP $http_status for $package@$version."
+                cat "$response_file" >&2 || true
+                exit 1
+                ;;
+            esac
+          done < <(
+            jq -c '
+              .alerts[]
+              | select(.blockedByRuntimeScope != true)
+              | select((.firstPatchedVersion // "") | length > 0)
+              | {
+                  ghsaId,
+                  package,
+                  firstPatchedVersion
+                }
+            ' .security-remediation/plan.json
+          )
+
+          if [[ -s "$unavailable_ndjson" ]]; then
+            jq -s '
+              unique_by([.ghsaId, .package, .firstPatchedVersion])
+              | sort_by([.package, .ghsaId, .firstPatchedVersion])
+            ' "$unavailable_ndjson" > "$unavailable_json"
+          else
+            printf '[]\n' > "$unavailable_json"
+          fi
+          rm -f "$unavailable_ndjson" "$response_file"
+
+          jq \
+            --slurpfile unavailable "$unavailable_json" \
+            '
+              ($unavailable[0] | map(.ghsaId) | unique) as $unavailableGhsas
+              | .alerts |= map(
+                  . + {
+                    blockedByRegistryAvailability:
+                      ((.ghsaId as $ghsa | $unavailableGhsas | index($ghsa)) != null)
+                  }
+                )
+              | .fixableAlertCount = ([
+                  .alerts[]
+                  | select(.blockedByRuntimeScope != true)
+                  | select(.blockedByRegistryAvailability != true)
+                  | select((.firstPatchedVersion // "") | length > 0)
+                ] | length)
+              | .blockedAlertCount = (.relevantAlertCount - .fixableAlertCount)
+              | .fixablePackages = ([
+                  .alerts[]
+                  | select(.blockedByRuntimeScope != true)
+                  | select(.blockedByRegistryAvailability != true)
+                  | select((.firstPatchedVersion // "") | length > 0)
+                  | .package
+                ] | unique | sort)
+            ' \
+            .security-remediation/plan.json \
+            > .security-remediation/plan.next.json
+          mv .security-remediation/plan.next.json .security-remediation/plan.json
+
+          resolvable_packages="$(jq '.fixablePackages | length' .security-remediation/plan.json)"
+          unavailable_count="$(jq 'length' "$unavailable_json")"
+          echo "resolvable_packages=$resolvable_packages" >> "$GITHUB_OUTPUT"
+          echo "unavailable_count=$unavailable_count" >> "$GITHUB_OUTPUT"
+          echo "Registry-resolvable fixable package count: $resolvable_packages" >> "$GITHUB_STEP_SUMMARY"
+          echo "Registry-unavailable patched release count: $unavailable_count" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$unavailable_count" -gt 0 ]]; then
+            echo "Registry-unavailable patched releases remain open and are excluded only from this bounded mutation." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Record pre-remediation audit
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -392,7 +521,7 @@ jobs:
           echo "Pre-remediation audit exit code: $status" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate bounded pnpm security override
-        if: steps.plan.outputs.fixable_packages != '0'
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -404,7 +533,12 @@ jobs:
             }
             ignore_args+=(--ignore "$ghsa")
           done < <(
-            jq -r '.ignoredGhsas[]' .security-remediation/runtime-audit-ignores.json
+            jq -r -s '
+              (.[0].ignoredGhsas + (.[1] | map(.ghsaId)))
+              | unique[]
+            ' \
+              .security-remediation/runtime-audit-ignores.json \
+              .security-remediation/registry-unavailable-patches.json
           )
 
           set +e
@@ -414,13 +548,13 @@ jobs:
           echo "pnpm audit --fix=override (${{ steps.severity.outputs.level }}) exit code: $override_status" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Re-resolve lockfile from generated security fix
-        if: steps.plan.outputs.fixable_packages != '0'
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
         run: |
           pnpm install --lockfile-only
           pnpm install --frozen-lockfile
 
       - name: Record generated workspace evidence
-        if: steps.plan.outputs.fixable_packages != '0'
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -429,7 +563,7 @@ jobs:
           git diff -- pnpm-workspace.yaml > .security-remediation/workspace.diff || true
 
       - name: Detect generated remediation diff
-        if: steps.plan.outputs.fixable_packages != '0'
+        if: steps.plan.outputs.fixable_packages != '0' && steps.availability.outputs.resolvable_packages != '0'
         id: diff
         shell: bash
         run: |
@@ -460,7 +594,12 @@ jobs:
             }
             ignore_args+=(--ignore "$ghsa")
           done < <(
-            jq -r '.ignoredGhsas[]' .security-remediation/runtime-audit-ignores.json
+            jq -r -s '
+              (.[0].ignoredGhsas + (.[1] | map(.ghsaId)))
+              | unique[]
+            ' \
+              .security-remediation/runtime-audit-ignores.json \
+              .security-remediation/registry-unavailable-patches.json
           )
 
           pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }} "${ignore_args[@]}" --json > .security-remediation/audit-after.json
@@ -530,6 +669,12 @@ jobs:
               'utf8'
             )
           );
+          const registryUnavailablePatches = JSON.parse(
+            fs.readFileSync(
+              '.security-remediation/registry-unavailable-patches.json',
+              'utf8'
+            )
+          );
           const candidate = {
             schemaVersion: 1,
             kind: 'dependabot-security-remediation',
@@ -548,6 +693,7 @@ jobs:
             authorizedPackages: validation.authorizedPackages,
             changedPackages: validation.changedPackages,
             ignoredRuntimeGhsas: runtimeIgnores.ignoredGhsas,
+            registryUnavailablePatches,
           };
 
           const validPackageList = (value) =>
@@ -564,6 +710,19 @@ jobs:
                 /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/i.test(
                   entry
                 )
+            );
+          const validRegistryUnavailablePatches = (value) =>
+            Array.isArray(value) &&
+            value.every(
+              (entry) =>
+                entry &&
+                typeof entry === 'object' &&
+                !Array.isArray(entry) &&
+                validGhsaList([entry.ghsaId]) &&
+                typeof entry.package === 'string' &&
+                entry.package.length > 0 &&
+                typeof entry.firstPatchedVersion === 'string' &&
+                entry.firstPatchedVersion.length > 0
             );
 
           if (
@@ -590,7 +749,10 @@ jobs:
               (packageName) =>
                 !candidate.authorizedPackages.includes(packageName)
             ) ||
-            !validGhsaList(candidate.ignoredRuntimeGhsas)
+            !validGhsaList(candidate.ignoredRuntimeGhsas) ||
+            !validRegistryUnavailablePatches(
+              candidate.registryUnavailablePatches
+            )
           ) {
             throw new Error('Generated remediation candidate identity is invalid');
           }
@@ -643,6 +805,7 @@ jobs:
           - Mutation authority: `pnpm audit --fix=override --dev --ignore-unfixable --audit-level ${{ steps.severity.outputs.level }}`
           - Package authority: exact fixable development-scope Dependabot plan; the registry audit is confirming evidence only
           - Runtime boundary: packages with any open runtime Dependabot alert are excluded from automatic override remediation
+          - Registry boundary: an advisory whose declared first patched version is not yet published is retained as an open alert and excluded only from this bounded mutation
           - Allowed repository changes: `pnpm-workspace.yaml` and `pnpm-lock.yaml`
           - Merge authority: existing exact-head dependency auto-merge workflow after full CI
           BODY
