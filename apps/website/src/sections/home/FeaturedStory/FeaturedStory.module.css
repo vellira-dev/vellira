@@ -1,6 +1,7 @@
 .section {
   position: relative;
-  padding: 0 var(--space-6) var(--space-6);
+  z-index: 1;
+  padding: 0 var(--space-6);
   background: var(--surface-default);
 }
 
@@ -179,7 +180,6 @@
 @media (width <= 640px) {
   .section {
     padding-right: var(--space-4);
-    padding-bottom: var(--space-5);
     padding-left: var(--space-4);
   }
 
