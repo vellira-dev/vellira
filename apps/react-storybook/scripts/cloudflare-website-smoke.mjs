@@ -1,5 +1,6 @@
 import { chromium } from '@playwright/test';
 import { captureBrowserJson } from './cloudflare-browser-json.mjs';
+import { runRecoverableClientNavigation } from './cloudflare-client-navigation-recovery.mjs';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -616,35 +617,28 @@ async function performRecoverableClientNavigation({
   click,
   assertReady,
 }) {
-  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
-    await goto(startPath);
-    await prepare?.();
-
-    const edgeStart = cloudflareEdgeGetFailures.length;
-
-    try {
+  return runRecoverableClientNavigation({
+    stage,
+    maxAttempts: edgeRecoveryMaxAttempts,
+    prepareAttempt: async () => {
+      await goto(startPath);
+      await prepare?.();
+    },
+    runAttempt: async () => {
       await click();
       await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
       await assertReady();
-      return;
-    } catch (error) {
-      const failures = edgeFailuresSince(edgeStart);
-      if (
-        attempt < edgeRecoveryMaxAttempts &&
-        (await recoverCloudflareEdgeFailures(failures, stage))
-      ) {
-        console.log(
-          `Retrying client navigation after transient Cloudflare edge failure during ${stage} (attempt ${attempt + 1}/${edgeRecoveryMaxAttempts})`
-        );
-        await sleep(edgeRecoveryDelayMs);
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw new Error(`Client navigation did not recover during ${stage}.`);
+    },
+    failureCursor: () => cloudflareEdgeGetFailures.length,
+    failuresSince: edgeFailuresSince,
+    recoverFailures: recoverCloudflareEdgeFailures,
+    beforeRetry: async (attempt) => {
+      console.log(
+        `Retrying client navigation after transient Cloudflare edge failure during ${stage} (attempt ${attempt}/${edgeRecoveryMaxAttempts})`
+      );
+      await sleep(edgeRecoveryDelayMs);
+    },
+  });
 }
 
 async function navigateByLink(startPath, href, expectedText) {
