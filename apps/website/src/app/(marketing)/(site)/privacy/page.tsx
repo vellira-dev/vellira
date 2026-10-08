@@ -288,20 +288,21 @@ export default function PrivacyPage() {
                 unsubscribing at any time.
               </p>
               <p>
-                Send a request to{' '}
+                {'Send a request to '}
                 <DesignSystemLink href='mailto:roman@vellira.dev'>
                   roman@vellira.dev
                 </DesignSystemLink>
-                {'. If you are in France, you also have the right to '}
-                contact the{' '}
+                {
+                  '. If you are in France, you also have the right to contact the '
+                }
                 <DesignSystemLink
                   href='https://www.cnil.fr/'
                   target='_blank'
                   rel='noreferrer noopener'
                 >
                   CNIL
-                </DesignSystemLink>{' '}
-                about a data-protection concern.
+                </DesignSystemLink>
+                {' about a data-protection concern.'}
               </p>
               <p>
                 You can clear <code>__Host-vellira_actor</code> and the
