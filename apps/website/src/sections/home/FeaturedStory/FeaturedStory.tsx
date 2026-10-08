@@ -1,3 +1,5 @@
+'use client';
+
 import { ArrowRight, Book } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
