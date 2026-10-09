@@ -29,6 +29,7 @@ export function createToolingTasks({
     'scripts/ci/tooling-execution.test.mjs',
     'scripts/visual/canonical-fonts.test.mjs',
     'scripts/ci/workflow-noise.test.mjs',
+    'scripts/ci/pr-change-intent.test.mjs',
     'scripts/smoke/utils.test.mjs',
     'scripts/ci/dependabot-security-remediation.test.mjs',
     'scripts/ci/dependabot-verified-backports.test.mjs',
