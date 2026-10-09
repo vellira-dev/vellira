@@ -10,6 +10,10 @@ import {
   populateLocalCache,
   withLocalCacheConfig,
 } from './cloudflare-populate-local-cache.mjs';
+import {
+  createSiteNavigationNetworkDrain,
+  runSiteNavigationActionAfterDrain,
+} from './cloudflare-site-navigation-browser.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const repo = path.resolve(root, '../..');
@@ -287,6 +291,158 @@ test('local population uses only the upstream local command and propagates proce
   );
   assert.equal(calls, 1);
   await assert.rejects(fs.access(generated), { code: 'ENOENT' });
+});
+
+test('Cloudflare tooling imports emit no punycode deprecation', async () => {
+  for (const moduleName of [
+    'node-fetch',
+    'wrangler',
+    '@opennextjs/cloudflare',
+    '@aws-sdk/client-s3',
+    'cloudflare',
+  ]) {
+    let sourceEvidence = '';
+    if (moduleName === 'wrangler') {
+      const entry = import.meta.resolve(moduleName);
+      const source = await fs.readFile(new URL(entry), 'utf8');
+      sourceEvidence = source
+        .split('\n')
+        .map((line, index) => ({ line, number: index + 1 }))
+        .filter(({ line }) => /punycode/i.test(line))
+        .map(({ line, number }) => `${number}: ${line}`)
+        .join('\n');
+    }
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--trace-deprecation',
+        '-e',
+        [
+          'const Module=require("node:module");',
+          'const original=Module._load;',
+          'Module._load=function(request,parent,isMain){',
+          'if(request==="punycode"||request==="node:punycode"){',
+          'console.error("PUNYCODE_IMPORTER",request,parent?.filename??"<unknown>");',
+          '}',
+          'return original.apply(this,arguments);',
+          '};',
+          'const target=process.argv[1];',
+          'const imports={',
+          '"node-fetch":()=>import("node-fetch"),',
+          '"wrangler":()=>import("wrangler"),',
+          '"@opennextjs/cloudflare":()=>import("@opennextjs/cloudflare"),',
+          '"@aws-sdk/client-s3":()=>import("@aws-sdk/client-s3"),',
+          '"cloudflare":()=>import("cloudflare"),',
+          '};',
+          'if(!Object.hasOwn(imports,target))throw new Error("unknown diagnostic module");',
+          'imports[target]().catch((error)=>{console.error(error);process.exitCode=1;});',
+        ].join(''),
+        moduleName,
+      ],
+      {
+        cwd: repo,
+        encoding: 'utf8',
+        timeout: 10_000,
+      }
+    );
+
+    assert.equal(
+      result.status,
+      0,
+      `${moduleName} import failed:\n${result.stderr}`
+    );
+    assert.doesNotMatch(
+      result.stderr,
+      /DEP0040|punycode.*deprecated/i,
+      `${moduleName} still loads Node's builtin punycode:\n${result.stderr}\nWRANGLER_SOURCE:\n${sourceEvidence}`
+    );
+  }
+});
+
+test('site navigation drains only same-origin requests before teardown', async () => {
+  const handlers = new Map();
+  const page = {
+    on(event, handler) {
+      handlers.set(event, handler);
+    },
+    off(event, handler) {
+      if (handlers.get(event) === handler) handlers.delete(event);
+    },
+  };
+  const networkDrain = createSiteNavigationNetworkDrain(
+    page,
+    'https://vellira.test',
+    { quietMs: 0, pollMs: 1 }
+  );
+  const local = {
+    url: () => 'https://vellira.test/api/blog-metrics/articles/example/like',
+    failure: () => null,
+  };
+  const external = {
+    url: () => 'https://example.com/background',
+    failure: () => null,
+  };
+
+  handlers.get('request')(local);
+  handlers.get('request')(external);
+  setTimeout(() => handlers.get('requestfinished')(local), 2);
+  await networkDrain.drain(100);
+  assert.deepEqual(networkDrain.failures(), []);
+  networkDrain.dispose();
+  assert.equal(handlers.size, 0);
+});
+
+test('site navigation records local request failures without waiting on external traffic', async () => {
+  const handlers = new Map();
+  const page = {
+    on(event, handler) {
+      handlers.set(event, handler);
+    },
+    off(event, handler) {
+      if (handlers.get(event) === handler) handlers.delete(event);
+    },
+  };
+  const networkDrain = createSiteNavigationNetworkDrain(
+    page,
+    'https://vellira.test',
+    { quietMs: 0, pollMs: 1 }
+  );
+  const failed = {
+    url: () => 'https://vellira.test/blog?_rsc=probe',
+    failure: () => ({ errorText: 'net::ERR_ABORTED' }),
+  };
+
+  handlers.get('request')(failed);
+  handlers.get('requestfailed')(failed);
+  await networkDrain.drain(100);
+  assert.deepEqual(networkDrain.failures(), [
+    {
+      url: 'https://vellira.test/blog?_rsc=probe',
+      errorText: 'net::ERR_ABORTED',
+    },
+  ]);
+  networkDrain.dispose();
+});
+
+test('site navigation drains local requests before changing routes', async () => {
+  const calls = [];
+  await runSiteNavigationActionAfterDrain(
+    {
+      async drain(timeout) {
+        calls.push({ type: 'drain', timeout });
+      },
+    },
+    async () => {
+      calls.push({ type: 'action' });
+    },
+    2_345
+  );
+
+  assert.deepEqual(calls, [
+    { type: 'drain', timeout: 2_345 },
+    { type: 'action' },
+  ]);
 });
 
 test('warning suppression is configuration-scoped, not log-filter based', async (t) => {

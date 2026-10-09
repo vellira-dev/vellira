@@ -57,6 +57,9 @@ patchedDependencies:
   next@16.3.8: 496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b
   node-forge@1.4.0: 4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0
   sprintf-js@1.0.3: 5ab824202ac5896cae9cee1075a8ca1311ee7c4830bc0b16a2d06553c3707b36
+  tr46@0.0.3: 79bdc14cbadfa8868f5ee3574fa637e8f7b9f1fb8fec3d79730d548d680f0131
+  whatwg-url@5.0.0: d3aceb628354c7eea07ec15e1f7ceb681ac68b608af00bf2850b9060ef52e058
+  wrangler@4.136.3: 5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e
 
 importers:
 
@@ -149,6 +152,9 @@ importers:
       prettier:
         specifier: ^3.9.8
         version: 3.9.8
+      punycode:
+        specifier: 2.3.1
+        version: 2.3.1
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -183,8 +189,8 @@ importers:
         specifier: ^8.70.1
         version: 8.70.1(eslint@9.39.5(jiti@2.6.1)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       wrangler:
-        specifier: ^4.136.2
-        version: 4.136.3(@types/node@26.6.2)
+        specifier: 4.136.3
+        version: 4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2)
 
   apps/docs:
     devDependencies:
@@ -576,7 +582,7 @@ importers:
         version: 16.3.6(@mdx-js/loader@3.1.1(supports-color@10.2.2)(webpack@5.108.3(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.23)(uglify-js@3.19.3)))(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.0))
       '@opennextjs/cloudflare':
         specifier: 1.20.6
-        version: 1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(@types/node@26.6.2))
+        version: 1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2))
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
@@ -608,8 +614,8 @@ importers:
         specifier: ^5
         version: 5.9.3
       wrangler:
-        specifier: ^4.136.2
-        version: 4.136.3(@types/node@26.6.2)
+        specifier: 4.136.3
+        version: 4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2)
 
   packages/assets: {}
 
@@ -14582,7 +14588,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(@types/node@26.6.2))':
+  '@opennextjs/cloudflare@1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
@@ -14594,7 +14600,7 @@ snapshots:
       glob: 12.0.0
       next: 16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.104.1)
       ts-tqdm: 0.8.6
-      wrangler: 4.136.3(@types/node@26.6.2)
+      wrangler: 4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2)
       yargs: 18.1.0
     transitivePeerDependencies:
       - encoding
@@ -21262,7 +21268,7 @@ snapshots:
 
   node-fetch@2.7.0:
     dependencies:
-      whatwg-url: 5.0.0
+      whatwg-url: 5.0.0(patch_hash=d3aceb628354c7eea07ec15e1f7ceb681ac68b608af00bf2850b9060ef52e058)
 
   node-forge@1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0): {}
 
@@ -23309,7 +23315,7 @@ snapshots:
     dependencies:
       tldts: 7.4.6
 
-  tr46@0.0.3: {}
+  tr46@0.0.3(patch_hash=79bdc14cbadfa8868f5ee3574fa637e8f7b9f1fb8fec3d79730d548d680f0131): {}
 
   tr46@6.0.0:
     dependencies:
@@ -24077,9 +24083,9 @@ snapshots:
     transitivePeerDependencies:
       - '@noble/hashes'
 
-  whatwg-url@5.0.0:
+  whatwg-url@5.0.0(patch_hash=d3aceb628354c7eea07ec15e1f7ceb681ac68b608af00bf2850b9060ef52e058):
     dependencies:
-      tr46: 0.0.3
+      tr46: 0.0.3(patch_hash=79bdc14cbadfa8868f5ee3574fa637e8f7b9f1fb8fec3d79730d548d680f0131)
       webidl-conversions: 3.0.1
 
   which-boxed-primitive@1.1.1:
@@ -24162,7 +24168,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260921.1
       '@cloudflare/workerd-windows-64': 1.20260921.1
 
-  wrangler@4.136.3(@types/node@26.6.2):
+  wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20260921.1)
