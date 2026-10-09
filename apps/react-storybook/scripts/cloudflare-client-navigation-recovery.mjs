@@ -40,3 +40,49 @@ export async function runRecoverableClientNavigation({
 
   throw new Error(`Client navigation did not recover during ${stage}.`);
 }
+
+
+function normalizedHeaders(headers = {}) {
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [
+      name.toLowerCase(),
+      String(value),
+    ])
+  );
+}
+
+export function isRecoveredDocumentFallback({
+  href,
+  baseUrl,
+  expectedBuildId,
+  edgeRecovered,
+  documentResponse,
+  previousDocumentSequence,
+}) {
+  if (!edgeRecovered || !expectedBuildId || !documentResponse) return false;
+  if (
+    !Number.isInteger(previousDocumentSequence) ||
+    !Number.isInteger(documentResponse.sequence) ||
+    documentResponse.sequence <= previousDocumentSequence
+  ) {
+    return false;
+  }
+
+  const expected = new URL(href, baseUrl);
+  const actual = new URL(documentResponse.url);
+  const headers = normalizedHeaders(documentResponse.headers);
+
+  return (
+    actual.origin === new URL(baseUrl).origin &&
+    actual.pathname === expected.pathname &&
+    documentResponse.status === 200 &&
+    headers['x-vellira-build-id'] === expectedBuildId &&
+    Boolean(headers['x-vellira-worker-version']) &&
+    Boolean(headers['x-vellira-request-id']) &&
+    headers['cache-control'] === 'no-cache, max-age=0, must-revalidate' &&
+    headers['cloudflare-cdn-cache-control'] === 'no-store' &&
+    !headers['clear-site-data'] &&
+    !headers['set-cookie'] &&
+    !headers.location
+  );
+}
