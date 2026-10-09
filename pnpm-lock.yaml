@@ -11397,7 +11397,7 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e):
+  wrangler@4.136.3:
     resolution: {integrity: sha512-L1bS8BI9xoEk3RRr5XoZn5q5k1jCRo8+37ZEEab/jsUFzE1Ea2sIBAbmP1CdwSeD6mZYmnUtR6xpi9esHIl6GA==}
     engines: {node: '>=22.0.0'}
     hasBin: true
