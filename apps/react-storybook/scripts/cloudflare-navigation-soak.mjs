@@ -5,7 +5,10 @@ import {
   captureDiagnostics,
   waitForRoute,
 } from './cloudflare-browser-diagnostics.mjs';
-import { isRecoveredDocumentFallback } from './cloudflare-client-navigation-recovery.mjs';
+import {
+  isRecoveredDocumentFallback,
+  isSafeClientNavigationReplay,
+} from './cloudflare-client-navigation-recovery.mjs';
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
   candidateOnlyBlogSlugs,
@@ -33,6 +36,12 @@ const routerStaleTimeMs = Number(
 const maxRecoveredDocumentFallbacks = Number(
   process.env.SOAK_MAX_DOCUMENT_FALLBACKS ?? 3
 );
+const navigationRetryMaxAttempts = Number(
+  process.env.SOAK_NAVIGATION_RETRY_MAX_ATTEMPTS ?? 3
+);
+const navigationRetryDelayMs = Number(
+  process.env.SOAK_NAVIGATION_RETRY_DELAY_MS ?? 1_500
+);
 if (
   !Number.isInteger(rounds) ||
   rounds < 1 ||
@@ -41,10 +50,14 @@ if (
   !Number.isFinite(routerStaleTimeMs) ||
   routerStaleTimeMs <= 0 ||
   !Number.isInteger(maxRecoveredDocumentFallbacks) ||
-  maxRecoveredDocumentFallbacks < 0
+  maxRecoveredDocumentFallbacks < 0 ||
+  !Number.isInteger(navigationRetryMaxAttempts) ||
+  navigationRetryMaxAttempts < 1 ||
+  !Number.isFinite(navigationRetryDelayMs) ||
+  navigationRetryDelayMs < 0
 ) {
   throw new Error(
-    'SOAK_ROUNDS must be positive, SOAK_DWELL_MS nonnegative, SOAK_ROUTER_STALE_TIME_MS positive and SOAK_MAX_DOCUMENT_FALLBACKS a nonnegative integer.'
+    'SOAK_ROUNDS must be positive, SOAK_DWELL_MS nonnegative, SOAK_ROUTER_STALE_TIME_MS positive, SOAK_MAX_DOCUMENT_FALLBACKS a nonnegative integer, SOAK_NAVIGATION_RETRY_MAX_ATTEMPTS positive and SOAK_NAVIGATION_RETRY_DELAY_MS nonnegative.'
   );
 }
 const browser = await chromium.launch();
@@ -239,15 +252,70 @@ async function ready(
   assertRscCachePolicy(`settled ${href}`);
 }
 
+async function runRecoverableSoakNavigation({
+  href,
+  title,
+  stage,
+  action,
+}) {
+  const startPath = new URL(page.url()).pathname;
+
+  for (let attempt = 1; attempt <= navigationRetryMaxAttempts; attempt += 1) {
+    diagnostics.record('navigation', { href, title, stage, attempt });
+    const edgeCursor = diagnostics.edgeFailureCursor();
+    const documentCursor = documentSequence;
+
+    try {
+      await action();
+      await ready(href, title, {
+        edgeCursor,
+        documentCursor,
+        allowRecoveredDocumentFallback: true,
+      });
+      return;
+    } catch (error) {
+      const edgeRecovered =
+        diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, href);
+      const currentDocumentToken = documentToken
+        ? await page
+            .evaluate(() => window.__velliraSoakDocument)
+            .catch(() => null)
+        : null;
+      const safeReplay = isSafeClientNavigationReplay({
+        baseUrl,
+        startPath,
+        currentUrl: page.url(),
+        expectedDocumentToken: documentToken,
+        currentDocumentToken,
+        edgeRecovered,
+      });
+
+      if (attempt >= navigationRetryMaxAttempts || !safeReplay) {
+        throw error;
+      }
+
+      diagnostics.record('navigation-retry', {
+        href,
+        title,
+        stage,
+        attempt: attempt + 1,
+      });
+      console.log(
+        `Retrying soak navigation after recovered destination edge failure during ${stage} (attempt ${attempt + 1}/${navigationRetryMaxAttempts})`
+      );
+      await page.waitForTimeout(navigationRetryDelayMs);
+    }
+  }
+
+  throw new Error(`Soak navigation did not recover during ${stage}.`);
+}
+
 async function click(link, href, title) {
-  diagnostics.record('navigation', { href, title });
-  const edgeCursor = diagnostics.edgeFailureCursor();
-  const documentCursor = documentSequence;
-  await link.click({ timeout: 15_000 });
-  await ready(href, title, {
-    edgeCursor,
-    documentCursor,
-    allowRecoveredDocumentFallback: true,
+  await runRecoverableSoakNavigation({
+    href,
+    title,
+    stage: `click ${new URL(page.url()).pathname} -> ${href}`,
+    action: () => link.click({ timeout: 15_000 }),
   });
 }
 
@@ -315,15 +383,14 @@ async function blog() {
   for (let round = 1; round <= rounds; round++) {
     for (const { href, title } of targets) {
       await click(page.locator(`main a[href="${href}"]`).first(), href, title);
-      // History preserves the loaded runtime/router caches, unlike page.goto('/blog').
-      const edgeCursor = diagnostics.edgeFailureCursor();
-      const documentCursor = documentSequence;
-      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 15_000 });
-      await ready('/blog', 'Blog', {
-        edgeCursor,
-        documentCursor,
-        allowRecoveredDocumentFallback: true,
-      });
+      // Use the canonical article back link so retrying the action cannot
+      // advance browser history twice. This remains a client navigation and
+      // preserves the loaded router/runtime caches unlike page.goto('/blog').
+      await click(
+        page.locator('main a[href="/blog"]').first(),
+        '/blog',
+        'Blog'
+      );
     }
     await diagnostics.anchor(`blog round ${round}`);
     console.log(`OK blog round ${round}/${rounds}: ${targets.length} routes`);
