@@ -11,7 +11,7 @@ import {
   withLocalCacheConfig,
 } from './cloudflare-populate-local-cache.mjs';
 import {
-  drainSiteNavigationNetwork,
+  createSiteNavigationNetworkDrain,
   runSiteNavigationActionAfterDrain,
 } from './cloudflare-site-navigation-browser.mjs';
 
@@ -360,32 +360,79 @@ test('Cloudflare tooling imports emit no punycode deprecation', async () => {
   }
 });
 
-test('site navigation drains background network before browser teardown', async () => {
-  const calls = [];
-  await drainSiteNavigationNetwork(
-    {
-      async waitForLoadState(state, options) {
-        calls.push({ state, options });
-      },
-    },
-    1_234
-  );
-
-  assert.deepEqual(calls, [
-    { state: 'networkidle', options: { timeout: 1_234 } },
-  ]);
-});
-
-test('site navigation drains the current surface before changing routes', async () => {
-  const calls = [];
+test('site navigation drains only same-origin requests before teardown', async () => {
+  const handlers = new Map();
   const page = {
-    async waitForLoadState(state, options) {
-      calls.push({ type: 'drain', state, options });
+    on(event, handler) {
+      handlers.set(event, handler);
+    },
+    off(event, handler) {
+      if (handlers.get(event) === handler) handlers.delete(event);
     },
   };
-
-  await runSiteNavigationActionAfterDrain(
+  const networkDrain = createSiteNavigationNetworkDrain(
     page,
+    'https://vellira.test',
+    { quietMs: 0, pollMs: 1 }
+  );
+  const local = {
+    url: () => 'https://vellira.test/api/blog-metrics/articles/example/like',
+    failure: () => null,
+  };
+  const external = {
+    url: () => 'https://example.com/background',
+    failure: () => null,
+  };
+
+  handlers.get('request')(local);
+  handlers.get('request')(external);
+  setTimeout(() => handlers.get('requestfinished')(local), 2);
+  await networkDrain.drain(100);
+  assert.deepEqual(networkDrain.failures(), []);
+  networkDrain.dispose();
+  assert.equal(handlers.size, 0);
+});
+
+test('site navigation records local request failures without waiting on external traffic', async () => {
+  const handlers = new Map();
+  const page = {
+    on(event, handler) {
+      handlers.set(event, handler);
+    },
+    off(event, handler) {
+      if (handlers.get(event) === handler) handlers.delete(event);
+    },
+  };
+  const networkDrain = createSiteNavigationNetworkDrain(
+    page,
+    'https://vellira.test',
+    { quietMs: 0, pollMs: 1 }
+  );
+  const failed = {
+    url: () => 'https://vellira.test/blog?_rsc=probe',
+    failure: () => ({ errorText: 'net::ERR_ABORTED' }),
+  };
+
+  handlers.get('request')(failed);
+  handlers.get('requestfailed')(failed);
+  await networkDrain.drain(100);
+  assert.deepEqual(networkDrain.failures(), [
+    {
+      url: 'https://vellira.test/blog?_rsc=probe',
+      errorText: 'net::ERR_ABORTED',
+    },
+  ]);
+  networkDrain.dispose();
+});
+
+test('site navigation drains local requests before changing routes', async () => {
+  const calls = [];
+  await runSiteNavigationActionAfterDrain(
+    {
+      async drain(timeout) {
+        calls.push({ type: 'drain', timeout });
+      },
+    },
     async () => {
       calls.push({ type: 'action' });
     },
@@ -393,11 +440,7 @@ test('site navigation drains the current surface before changing routes', async 
   );
 
   assert.deepEqual(calls, [
-    {
-      type: 'drain',
-      state: 'networkidle',
-      options: { timeout: 2_345 },
-    },
+    { type: 'drain', timeout: 2_345 },
     { type: 'action' },
   ]);
 });
