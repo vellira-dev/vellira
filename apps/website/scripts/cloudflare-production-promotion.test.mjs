@@ -275,4 +275,19 @@ test('staging, production and legacy adoption share browser recovery gates and r
   assert.match(soak, /isSafeClientNavigationReplay\(/);
   assert.match(soak, /isRecoveredDocumentFallback\(/);
   assert.match(soak, /headers\['x-vellira-build-id'\] !== expectedBuildId/);
+  assert.match(soak, /async function navigateToBlogIndex\(\)/);
+  assert.match(
+    soak,
+    /nav\[aria-label="Primary navigation"\] a\[href="\/blog"\]/
+  );
+  assert.match(
+    soak,
+    /nav\[aria-label="Mobile navigation"\] a\[href="\/blog"\]/
+  );
+  assert.match(soak, /name: 'Open navigation'/);
+  assert.match(soak, /await prepareAttempt\?\.\(attempt\)/);
+  assert.doesNotMatch(
+    soak,
+    /page\.locator\('header a\[href="\/blog"\]'\)\.first\(\)/
+  );
 });
