@@ -125,15 +125,19 @@ try {
 
     const redirectPath = '/blog/two-runtimes?source=cloudflare-postflight&n=1';
     const redirectUrl = new URL(redirectPath, publicWww);
-    const response = await fetch(redirectUrl, {
-      cache: 'no-store',
-      redirect: 'manual',
-      headers: { 'Cache-Control': 'no-cache' },
-      signal: AbortSignal.timeout(10_000),
-    });
+    const { response, attempts } = await fetchWithCloudflareEdgeRetry(
+      redirectUrl,
+      {
+        cache: 'no-store',
+        redirect: 'manual',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+      { expectedBuildId: buildId }
+    );
     const bytes = Buffer.from(await response.arrayBuffer());
     evidence.push({
       pathname: redirectUrl.toString(),
+      attempts,
       status: response.status,
       headers: Object.fromEntries(response.headers),
       sha256: sha256(bytes),

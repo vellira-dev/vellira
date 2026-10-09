@@ -53,6 +53,9 @@ const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
 const diagnostics = [];
+const browserEvents = [];
+const artifactDirectory = path.resolve('test-results/cloudflare-website-smoke');
+await fs.mkdir(artifactDirectory, { recursive: true });
 const criticalDiagnostics = [];
 const vercelRuntimeRequests = [];
 const directMetricRequests = [];
@@ -171,6 +174,14 @@ function reconcileCloudflareEdgeDiagnostics() {
 
 function attachPageDiagnostics(page) {
   page.on('request', (request) => {
+    if (sameOrigin(request.url()))
+      browserEvents.push({
+        kind: 'request',
+        at: Date.now(),
+        page: page.url(),
+        url: request.url(),
+        method: request.method(),
+      });
     if (isObsoleteVercelRuntimeRequest(request.url())) {
       const diagnostic = `obsolete Vercel runtime request: ${request.url()}`;
       diagnostics.push(diagnostic);
@@ -213,6 +224,15 @@ function attachPageDiagnostics(page) {
   });
 
   page.on('response', (response) => {
+    if (sameOrigin(response.url()))
+      browserEvents.push({
+        kind: 'response',
+        at: Date.now(),
+        page: page.url(),
+        url: response.url(),
+        method: response.request().method(),
+        status: response.status(),
+      });
     if (response.status() < 400) {
       return;
     }
@@ -278,6 +298,15 @@ function attachPageDiagnostics(page) {
   });
 
   page.on('requestfailed', (request) => {
+    if (sameOrigin(request.url()))
+      browserEvents.push({
+        kind: 'requestfailed',
+        at: Date.now(),
+        page: page.url(),
+        url: request.url(),
+        method: request.method(),
+        error: request.failure()?.errorText,
+      });
     if (!sameOrigin(request.url()) || isExpectedNavigationAbort(request)) {
       return;
     }
@@ -749,8 +778,10 @@ async function verifyBlogActorContinuity() {
   // Start the actor journey in an untouched context, not by clearing cookies
   // under a previous article's still-running hydration requests.
   const context = await browser.newContext();
+  let actorPage;
   try {
     const page = await context.newPage();
+    actorPage = page;
     attachPageDiagnostics(page);
     const observeActorJson = await captureBrowserJson(page, baseUrl);
 
@@ -877,7 +908,15 @@ async function verifyBlogActorContinuity() {
       'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
     );
   } finally {
-    await context.close();
+    try {
+      if (actorPage)
+        await fs.writeFile(
+          path.join(artifactDirectory, 'actor-page.html'),
+          await actorPage.content().catch(String)
+        );
+    } finally {
+      await context.close();
+    }
   }
 }
 
@@ -1036,15 +1075,14 @@ async function navigateWithinMobileComponentSidebar() {
 }
 
 async function writeRecoveryEvidence() {
-  const directory = path.resolve('test-results/cloudflare-website-smoke');
-  await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(
-    path.join(directory, 'edge-recovery.json'),
+    path.join(artifactDirectory, 'edge-recovery.json'),
     JSON.stringify(
       {
         expectedBuildId,
         finalUrl: page.url(),
         diagnostics,
+        browserEvents,
         failures: cloudflareEdgeGetFailures.map((failure) => ({
           ...failure,
           requestHeaders: cloudflareEdgeReplayHeaders(failure.requestHeaders),
