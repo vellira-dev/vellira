@@ -111,10 +111,6 @@
   gap: var(--space-3);
 }
 
-.signInButton {
-  min-height: 34px;
-}
-
 .ctaButton {
   min-height: 34px;
   border-radius: 28px;
@@ -341,10 +337,6 @@
   .actions,
   .externalActions,
   .ctaButton {
-    display: none;
-  }
-
-  .signInButton {
     display: none;
   }
 
