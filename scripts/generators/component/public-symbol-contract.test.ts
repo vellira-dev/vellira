@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createComponentGenerationPlan } from './plan';
+import type { ComponentGeneratorOptions } from './cli';
 import {
   checkPublicApiContractSynchronization,
   getPublicSymbolContractFile,
@@ -62,6 +63,7 @@ function createPlan(params: {
   root: string;
   platform: 'web' | 'native' | 'both';
   parts?: string[];
+  capabilities?: ComponentGeneratorOptions['capabilities'];
 }) {
   return createComponentGenerationPlan({
     root: params.root,
@@ -72,6 +74,7 @@ function createPlan(params: {
       category: 'data-display',
       profile: 'base',
       parts: params.parts ?? [],
+      capabilities: params.capabilities,
       force: false,
     },
   });
@@ -194,4 +197,73 @@ describe('generated public symbol contract synchronization', () => {
       'Unable to locate public symbol contract for packages/react/src/index.ts'
     );
   });
+});
+
+it('synchronizes approved shared domains and props without touching their source', () => {
+  const root = createRoot();
+  const plan = createPlan({
+    root,
+    platform: 'both',
+    capabilities: ['controlled'],
+  });
+  fs.mkdirSync(path.dirname(plan.sharedTypesFile), { recursive: true });
+  const source =
+    "export type AvatarTone = 'neutral' | 'warning';\nexport interface BaseAvatarProps { tone?: AvatarTone }\n";
+  fs.writeFileSync(plan.sharedTypesFile, source);
+  const file = getPublicSymbolContractFile(root);
+  fs.writeFileSync(
+    file,
+    fs
+      .readFileSync(file, 'utf8')
+      .replace(
+        'const publicSymbolContracts = {',
+        "const publicSymbolContracts = {\n  'packages/types/src/index.ts': [\n    'ExistingType',\n  ],"
+      )
+  );
+  expect(checkPublicApiContractSynchronization(plan)).toContain(file);
+  synchronizePublicSymbolContracts({ plan, updatedFiles: [] });
+  const once = fs.readFileSync(file, 'utf8');
+  expect(once).toContain("    'AvatarTone',");
+  expect(once).toContain("    'BaseAvatarProps',");
+  expect(once).toContain("    'ExistingType',");
+  expect(checkPublicApiContractSynchronization(plan)).toEqual([]);
+  synchronizePublicSymbolContracts({ plan, updatedFiles: [] });
+  expect(fs.readFileSync(file, 'utf8')).toBe(once);
+  expect(fs.readFileSync(plan.sharedTypesFile, 'utf8')).toBe(source);
+});
+
+it('rejects shared declarations outside the exact generated component owner', () => {
+  const root = createRoot();
+  const plan = createPlan({
+    root,
+    platform: 'both',
+    capabilities: ['controlled'],
+  });
+  fs.mkdirSync(path.dirname(plan.sharedTypesFile), { recursive: true });
+  fs.writeFileSync(plan.sharedTypesFile, 'export interface UnrelatedType {}');
+  expect(() =>
+    synchronizePublicSymbolContracts({ plan, updatedFiles: [] })
+  ).toThrow('outside component ownership');
+});
+
+it.each([
+  'export const AvatarValue = 1;',
+  "export * from './other';",
+  'export { AvatarTone };',
+  'export default AvatarTone;',
+])('rejects runtime or indirect shared export authority: %s', (extra) => {
+  const root = createRoot();
+  const plan = createPlan({
+    root,
+    platform: 'both',
+    capabilities: ['controlled'],
+  });
+  fs.mkdirSync(path.dirname(plan.sharedTypesFile), { recursive: true });
+  fs.writeFileSync(
+    plan.sharedTypesFile,
+    "export type AvatarTone = 'neutral';\n" + extra
+  );
+  expect(() =>
+    synchronizePublicSymbolContracts({ plan, updatedFiles: [] })
+  ).toThrow('explicit type declarations only');
 });
