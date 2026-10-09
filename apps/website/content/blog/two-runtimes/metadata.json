@@ -4,10 +4,6 @@
   "slug": "two-runtimes",
   "publishedAt": "2026-09-02",
   "author": "Roman Bakurov",
-  "tags": [
-    "Design Systems",
-    "React",
-    "React Native"
-  ],
+  "tags": ["Design Systems", "React", "React Native"],
   "draft": false
 }
