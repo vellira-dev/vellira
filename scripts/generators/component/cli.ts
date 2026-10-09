@@ -37,6 +37,7 @@ export type ComponentProfileArg =
 export type FormControlKindArg = 'value' | 'boolean' | 'text';
 
 export type ComponentGeneratorOptions = {
+  componentProgram?: import('../../../packages/metadata/src/componentProgram').ComponentProgramDecisionsV1;
   componentName: string;
   platform: ComponentPlatformArg;
   layer: ComponentLayerArg;

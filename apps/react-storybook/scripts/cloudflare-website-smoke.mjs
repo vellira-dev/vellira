@@ -1,4 +1,9 @@
 import { chromium } from '@playwright/test';
+import { captureBrowserJson } from './cloudflare-browser-json.mjs';
+import {
+  destinationEdgeFailures,
+  runRecoverableClientNavigation,
+} from './cloudflare-client-navigation-recovery.mjs';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -13,6 +18,12 @@ import {
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
   resolveBlogMetricsPublicationMode,
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
+import {
+  cloudflareEdgeReplayHeaders,
+  isBrowserResource5xxConsoleError,
+  isCloudflareEdgeGeneratedGet5xx,
+  reconcileHandledCloudflareEdgeConsoleDiagnostics,
+} from './cloudflare-edge-recovery.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
 const metricsApiBaseUrl = 'https://api.vellira.dev';
@@ -22,6 +33,9 @@ const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
 );
 const aggregateMetricsMaxAttempts = 8;
 const aggregateMetricsRetryDelayMs = 12_000;
+const edgeRecoveryMaxAttempts = 3;
+const edgeRecoveryDelayMs = 1_500;
+const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -38,6 +52,8 @@ const vercelRuntimeRequests = [];
 const directMetricRequests = [];
 const blogMetrics404Responses = [];
 const deferredResource404ConsoleDiagnostics = [];
+const deferredResource5xxConsoleDiagnostics = [];
+const cloudflareEdgeGetFailures = [];
 let acceptedStagingCatalogLag = false;
 let acceptedStagingCandidateOnlySlugs = [];
 
@@ -62,7 +78,10 @@ function isDirectMetricRequest(url) {
 
 function isObsoleteVercelRuntimeRequest(url) {
   const parsedUrl = new URL(url);
-  return parsedUrl.origin === baseOrigin && parsedUrl.pathname.startsWith('/_vercel/');
+  return (
+    parsedUrl.origin === baseOrigin &&
+    parsedUrl.pathname.startsWith('/_vercel/')
+  );
 }
 
 function isExpectedNavigationAbort(request) {
@@ -101,104 +120,233 @@ function markProvenStagingCatalogLag404sHandled(candidateOnlySlugs) {
   }
 }
 
-page.on('request', (request) => {
-  if (isObsoleteVercelRuntimeRequest(request.url())) {
-    const diagnostic = `obsolete Vercel runtime request: ${request.url()}`;
-    diagnostics.push(diagnostic);
-    criticalDiagnostics.push(diagnostic);
-    vercelRuntimeRequests.push(request.url());
-  }
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (isDirectMetricRequest(request.url())) {
-    const diagnostic =
-      `blog metrics bypassed the first-party proxy: ` +
-      `${request.method()} ${request.url()}`;
-    diagnostics.push(diagnostic);
-    criticalDiagnostics.push(diagnostic);
-    directMetricRequests.push(request.url());
-  }
-});
+function edgeFailuresSince(index) {
+  return cloudflareEdgeGetFailures
+    .slice(index)
+    .filter((failure) => !failure.handled);
+}
 
-page.on('console', (message) => {
-  if (message.type() !== 'error') {
-    return;
-  }
+async function recoverCloudflareEdgeFailures(failures, stage) {
+  if (failures.length === 0) return false;
 
-  const diagnostic = `console.error: ${message.text()}`;
-  diagnostics.push(diagnostic);
-  if (isBrowserResource404ConsoleError(message.text())) {
-    deferredResource404ConsoleDiagnostics.push(diagnostic);
-    return;
-  }
-  criticalDiagnostics.push(diagnostic);
-});
+  for (const failure of failures) {
+    let recovered = false;
 
-page.on('pageerror', (error) => {
-  const diagnostic = `pageerror: ${error.stack ?? error.message}`;
-  diagnostics.push(diagnostic);
-  criticalDiagnostics.push(diagnostic);
-});
-
-page.on('response', (response) => {
-  if (response.status() < 400) {
-    return;
-  }
-
-  const diagnostic =
-    `response: ${response.status()} ${response.request().method()} ` +
-    response.url();
-  diagnostics.push(diagnostic);
-
-  if (response.status() === 404) {
-    const method = response.request().method();
-    const aggregate = isBlogAggregateMetricsResponse(response);
-    const potentialCandidateBootstrap =
-      isPotentialStagingCandidateBlogMetricsRequest({
-        requestUrl: response.url(),
-        method,
-        baseOrigin,
-      });
-    const handled =
-      acceptedStagingCatalogLag &&
-      isExpectedStagingCandidateBlogMetricsRequest({
-        requestUrl: response.url(),
-        method,
-        baseOrigin,
-        candidateOnlySlugs: acceptedStagingCandidateOnlySlugs,
+    for (
+      let attempt = 1;
+      attempt <= edgeRecoveryMaxAttempts;
+      attempt += 1
+    ) {
+      const replay = await context.request.get(failure.url, {
+        failOnStatusCode: false,
+        headers: failure.replayHeaders,
+        timeout: 10_000,
       });
 
-    if (aggregate || potentialCandidateBootstrap) {
-      blogMetrics404Responses.push({
-        diagnostic,
-        url: response.url(),
-        method,
-        aggregate,
-        handled,
-      });
-      return;
+      try {
+        const replayHeaders = replay.headers();
+        const exactBuild =
+          !expectedBuildId ||
+          replayHeaders['x-vellira-build-id'] === expectedBuildId;
+
+        if (replay.ok() && exactBuild) {
+          failure.handled = true;
+          recovered = true;
+          console.log(
+            `Recovered transient Cloudflare edge GET during ${stage}: ${failure.url} (attempt ${attempt})`
+          );
+          break;
+        }
+
+        if (
+          !isCloudflareEdgeGeneratedGet5xx({
+            status: replay.status(),
+            method: 'GET',
+            headers: replayHeaders,
+          })
+        ) {
+          return false;
+        }
+      } finally {
+        await replay.dispose();
+      }
+
+      if (attempt < edgeRecoveryMaxAttempts) {
+        await sleep(edgeRecoveryDelayMs);
+      }
+    }
+
+    if (!recovered) return false;
+  }
+
+  return true;
+}
+
+function reconcileCloudflareEdgeDiagnostics() {
+  for (const failure of cloudflareEdgeGetFailures) {
+    if (!failure.handled && !criticalDiagnostics.includes(failure.diagnostic)) {
+      criticalDiagnostics.push(failure.diagnostic);
     }
   }
 
-  criticalDiagnostics.push(diagnostic);
-});
+  const consoleDiagnostics =
+    reconcileHandledCloudflareEdgeConsoleDiagnostics(
+      deferredResource5xxConsoleDiagnostics,
+      cloudflareEdgeGetFailures.filter((failure) => failure.handled).length
+    );
+  criticalDiagnostics.push(...consoleDiagnostics.critical);
+}
 
-page.on('requestfailed', (request) => {
-  if (!sameOrigin(request.url()) || isExpectedNavigationAbort(request)) {
-    return;
-  }
+function attachPageDiagnostics(page) {
+  page.on('request', (request) => {
+    if (isObsoleteVercelRuntimeRequest(request.url())) {
+      const diagnostic = `obsolete Vercel runtime request: ${request.url()}`;
+      diagnostics.push(diagnostic);
+      criticalDiagnostics.push(diagnostic);
+      vercelRuntimeRequests.push(request.url());
+    }
 
-  const diagnostic =
-    `requestfailed: ${request.method()} ${request.url()} ` +
-    `${request.failure()?.errorText ?? ''}`;
-  diagnostics.push(diagnostic);
-  criticalDiagnostics.push(diagnostic);
-});
+    if (isDirectMetricRequest(request.url())) {
+      const diagnostic =
+        `blog metrics bypassed the first-party proxy: ` +
+        `${request.method()} ${request.url()}`;
+      diagnostics.push(diagnostic);
+      criticalDiagnostics.push(diagnostic);
+      directMetricRequests.push(request.url());
+    }
+  });
+
+  page.on('console', (message) => {
+    if (message.type() !== 'error') {
+      return;
+    }
+
+    const diagnostic = `console.error: ${message.text()}`;
+    diagnostics.push(diagnostic);
+    if (isBrowserResource404ConsoleError(message.text())) {
+      deferredResource404ConsoleDiagnostics.push(diagnostic);
+      return;
+    }
+    if (isBrowserResource5xxConsoleError(message.text())) {
+      deferredResource5xxConsoleDiagnostics.push(diagnostic);
+      return;
+    }
+    criticalDiagnostics.push(diagnostic);
+  });
+
+  page.on('pageerror', (error) => {
+    const diagnostic = `pageerror: ${error.stack ?? error.message}`;
+    diagnostics.push(diagnostic);
+    criticalDiagnostics.push(diagnostic);
+  });
+
+  page.on('response', (response) => {
+    if (response.status() < 400) {
+      return;
+    }
+
+    const diagnostic =
+      `response: ${response.status()} ${response.request().method()} ` +
+      response.url();
+    diagnostics.push(diagnostic);
+
+    const responseHeaders = response.headers();
+    if (
+      sameOrigin(response.url()) &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: responseHeaders,
+      })
+    ) {
+      cloudflareEdgeGetFailures.push({
+        diagnostic,
+        url: response.url(),
+        replayHeaders: cloudflareEdgeReplayHeaders(
+          response.request().headers()
+        ),
+        handled: false,
+      });
+      return;
+    }
+
+    if (response.status() === 404) {
+      const method = response.request().method();
+      const aggregate = isBlogAggregateMetricsResponse(response);
+      const potentialCandidateBootstrap =
+        isPotentialStagingCandidateBlogMetricsRequest({
+          requestUrl: response.url(),
+          method,
+          baseOrigin,
+        });
+      const handled =
+        acceptedStagingCatalogLag &&
+        isExpectedStagingCandidateBlogMetricsRequest({
+          requestUrl: response.url(),
+          method,
+          baseOrigin,
+          candidateOnlySlugs: acceptedStagingCandidateOnlySlugs,
+        });
+
+      if (aggregate || potentialCandidateBootstrap) {
+        blogMetrics404Responses.push({
+          diagnostic,
+          url: response.url(),
+          method,
+          aggregate,
+          handled,
+        });
+        return;
+      }
+    }
+
+    criticalDiagnostics.push(diagnostic);
+  });
+
+  page.on('requestfailed', (request) => {
+    if (!sameOrigin(request.url()) || isExpectedNavigationAbort(request)) {
+      return;
+    }
+
+    const diagnostic =
+      `requestfailed: ${request.method()} ${request.url()} ` +
+      `${request.failure()?.errorText ?? ''}`;
+    diagnostics.push(diagnostic);
+    criticalDiagnostics.push(diagnostic);
+  });
+}
+
+attachPageDiagnostics(page);
 
 async function goto(path) {
-  await page.goto(`${baseUrl}${path}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
+  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
+    const edgeStart = cloudflareEdgeGetFailures.length;
+    const response = await page.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    if (response && response.status() < 400) return response;
+
+    const failures = edgeFailuresSince(edgeStart);
+    if (
+      attempt < edgeRecoveryMaxAttempts &&
+      (await recoverCloudflareEdgeFailures(failures, `navigation ${path}`))
+    ) {
+      await sleep(edgeRecoveryDelayMs);
+      continue;
+    }
+
+    throw new Error(
+      `Document navigation failed for ${path}: HTTP ${response?.status() ?? 'no-response'}`
+    );
+  }
+
+  throw new Error(`Document navigation did not recover for ${path}.`);
 }
 
 async function loadHomePage() {
@@ -288,7 +436,9 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
 
   const payload = await response.json();
   if (!Array.isArray(payload?.items)) {
-    throw new Error('Production-catalog metrics proxy returned an invalid payload.');
+    throw new Error(
+      'Production-catalog metrics proxy returned an invalid payload.'
+    );
   }
 
   if (payload.items.length !== productionSlugs.length) {
@@ -462,15 +612,54 @@ async function verifyBlogIndexMetricsProxy() {
   throw new Error('Blog aggregate metrics proxy did not converge.');
 }
 
+async function performRecoverableClientNavigation({
+  startPath,
+  href,
+  stage,
+  prepare,
+  click,
+  assertReady,
+}) {
+  return runRecoverableClientNavigation({
+    stage,
+    maxAttempts: edgeRecoveryMaxAttempts,
+    prepareAttempt: async () => {
+      await goto(startPath);
+      await prepare?.();
+    },
+    runAttempt: async () => {
+      await click();
+      await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
+      await assertReady();
+    },
+    failureCursor: () => cloudflareEdgeGetFailures.length,
+    failuresSince: (cursor) =>
+      destinationEdgeFailures(edgeFailuresSince(cursor), href),
+    recoverFailures: recoverCloudflareEdgeFailures,
+    beforeRetry: async (attempt) => {
+      console.log(
+        `Retrying client navigation after transient Cloudflare edge failure during ${stage} (attempt ${attempt}/${edgeRecoveryMaxAttempts})`
+      );
+      await sleep(edgeRecoveryDelayMs);
+    },
+  });
+}
+
 async function navigateByLink(startPath, href, expectedText) {
-  await goto(startPath);
-  const link = page.locator(`a[href="${href}"]`).first();
-  await link.waitFor({ state: 'visible', timeout: 15_000 });
-  await link.click();
-  await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-  await page.getByText(expectedText, { exact: false }).first().waitFor({
-    state: 'visible',
-    timeout: 15_000,
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `client navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const link = page.locator(`a[href="${href}"]`).first();
+      await link.waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () => page.locator(`a[href="${href}"]`).first().click(),
+    assertReady: () =>
+      page.getByText(expectedText, { exact: false }).first().waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      }),
   });
   console.log(`OK client navigation ${startPath} -> ${href}`);
 }
@@ -484,40 +673,69 @@ async function verifyHighlightedArticleCode() {
   console.log('OK highlighted MDX code /blog/two-runtimes');
 }
 
-function waitForMetricResponse(url, method) {
-  return page.waitForResponse(
-    (response) =>
-      response.url() === url && response.request().method() === method,
-    { timeout: 15_000 }
-  );
-}
+async function loadArticleWithActorMetrics(
+  page,
+  observeActorJson,
+  articlePath,
+  likeUrl,
+  viewUrl
+) {
+  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
+    const edgeStart = cloudflareEdgeGetFailures.length;
 
-async function loadArticleWithActorMetrics(articlePath, likeUrl, viewUrl) {
-  const likeStatePromise = waitForMetricResponse(likeUrl, 'GET');
-  const viewPromise = waitForMetricResponse(viewUrl, 'POST');
+    try {
+      const [likeStateResponse, viewResponse] = await observeActorJson(
+        [
+          { url: likeUrl, method: 'GET' },
+          { url: viewUrl, method: 'POST' },
+        ],
+        () =>
+          page.goto(`${baseUrl}${articlePath}`, {
+            waitUntil: 'domcontentloaded',
+            timeout: 15_000,
+          }),
+        15_000,
+        { document: 'next' }
+      );
 
-  await goto(articlePath);
+      if (
+        likeStateResponse.status < 200 ||
+        likeStateResponse.status >= 300 ||
+        viewResponse.status < 200 ||
+        viewResponse.status >= 300
+      ) {
+        throw new Error(
+          `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
+            `view=${viewResponse.status}`
+        );
+      }
 
-  const [likeStateResponse, viewResponse] = await Promise.all([
-    likeStatePromise,
-    viewPromise,
-  ]);
+      const likeState = likeStateResponse.payload;
+      const viewWrite = viewResponse.payload;
 
-  if (!likeStateResponse.ok() || !viewResponse.ok()) {
-    throw new Error(
-      `Blog metrics bootstrap failed: like=${likeStateResponse.status()} ` +
-        `view=${viewResponse.status()}`
-    );
+      if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
+        throw new Error('Blog metrics bootstrap returned an invalid payload.');
+      }
+
+      return { likeState, viewWrite };
+    } catch (error) {
+      const failures = edgeFailuresSince(edgeStart);
+      if (
+        attempt < edgeRecoveryMaxAttempts &&
+        (await recoverCloudflareEdgeFailures(
+          failures,
+          `actor bootstrap ${articlePath}`
+        ))
+      ) {
+        await sleep(edgeRecoveryDelayMs);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const likeState = await likeStateResponse.json();
-  const viewWrite = await viewResponse.json();
-
-  if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
-    throw new Error('Blog metrics bootstrap returned an invalid payload.');
-  }
-
-  return { likeState, viewWrite };
+  throw new Error(`Blog actor bootstrap did not recover for ${articlePath}.`);
 }
 
 async function verifyBlogActorContinuity() {
@@ -526,75 +744,48 @@ async function verifyBlogActorContinuity() {
   const likeUrl = actorMetricsUrl(slug, 'like');
   const viewUrl = actorMetricsUrl(slug, 'views');
 
-  await context.clearCookies();
+  // Start the actor journey in an untouched context, not by clearing cookies
+  // under a previous article's still-running hydration requests.
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    attachPageDiagnostics(page);
+    const observeActorJson = await captureBrowserJson(page, baseUrl);
 
-  const first = await loadArticleWithActorMetrics(
-    articlePath,
-    likeUrl,
-    viewUrl
-  );
-
-  if (first.likeState.liked) {
-    throw new Error('Fresh anonymous actor unexpectedly started liked.');
-  }
-
-  const formatCount = (value) => new Intl.NumberFormat('en-US').format(value);
-  await page
-    .getByLabel(`${formatCount(first.viewWrite.metrics.views)} views`)
-    .waitFor({ state: 'visible', timeout: 15_000 });
-
-  const firstLikeResponsePromise = waitForMetricResponse(likeUrl, 'PUT');
-  await page.getByRole('button', { name: 'Like this article' }).click();
-  const firstLikeResponse = await firstLikeResponsePromise;
-
-  if (!firstLikeResponse.ok()) {
-    throw new Error(`Blog like failed with ${firstLikeResponse.status()}.`);
-  }
-
-  const firstLikeWrite = await firstLikeResponse.json();
-  if (
-    firstLikeWrite?.liked !== true ||
-    firstLikeWrite?.changed !== true ||
-    !firstLikeWrite?.metrics
-  ) {
-    throw new Error(
-      `First like did not create actor state: ${JSON.stringify(firstLikeWrite)}`
-    );
-  }
-
-  await page.getByRole('button', { name: 'Unlike this article' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-
-  for (let reloadAttempt = 1; reloadAttempt <= 3; reloadAttempt += 1) {
-    const repeated = await loadArticleWithActorMetrics(
+    const first = await loadArticleWithActorMetrics(
+      page,
+      observeActorJson,
       articlePath,
       likeUrl,
       viewUrl
     );
 
-    if (!repeated.likeState.liked) {
-      throw new Error(
-        `Like state was lost after reload ${reloadAttempt}.`
-      );
+    if (first.likeState.liked) {
+      throw new Error('Fresh anonymous actor unexpectedly started liked.');
     }
 
-    if (repeated.viewWrite.metrics.views !== first.viewWrite.metrics.views) {
-      throw new Error(
-        `Repeated view changed the count after reload ${reloadAttempt}: ` +
-          `first=${first.viewWrite.metrics.views} ` +
-          `repeated=${repeated.viewWrite.metrics.views}`
-      );
+    const formatCount = (value) => new Intl.NumberFormat('en-US').format(value);
+    await page
+      .getByLabel(`${formatCount(first.viewWrite.metrics.views)} views`)
+      .waitFor({ state: 'visible', timeout: 15_000 });
+
+    const [firstLikeResponse] = await observeActorJson(
+      [{ url: likeUrl, method: 'PUT' }],
+      () => page.getByRole('button', { name: 'Like this article' }).click()
+    );
+
+    if (firstLikeResponse.status < 200 || firstLikeResponse.status >= 300) {
+      throw new Error(`Blog like failed with ${firstLikeResponse.status}.`);
     }
 
+    const firstLikeWrite = firstLikeResponse.payload;
     if (
-      typeof repeated.viewWrite.counted === 'boolean' &&
-      repeated.viewWrite.counted !== false
+      firstLikeWrite?.liked !== true ||
+      firstLikeWrite?.changed !== true ||
+      !firstLikeWrite?.metrics
     ) {
       throw new Error(
-        `Repeated same-day view was counted after reload ${reloadAttempt}: ` +
-          JSON.stringify(repeated.viewWrite)
+        `First like did not create actor state: ${JSON.stringify(firstLikeWrite)}`
       );
     }
 
@@ -602,49 +793,90 @@ async function verifyBlogActorContinuity() {
       state: 'visible',
       timeout: 15_000,
     });
-  }
 
-  for (let repeat = 1; repeat <= 3; repeat += 1) {
-    const repeatedLikeResponse = await context.request.put(likeUrl, {
+    for (let reloadAttempt = 1; reloadAttempt <= 3; reloadAttempt += 1) {
+      const repeated = await loadArticleWithActorMetrics(
+        page,
+        observeActorJson,
+        articlePath,
+        likeUrl,
+        viewUrl
+      );
+
+      if (!repeated.likeState.liked) {
+        throw new Error(`Like state was lost after reload ${reloadAttempt}.`);
+      }
+
+      if (repeated.viewWrite.metrics.views !== first.viewWrite.metrics.views) {
+        throw new Error(
+          `Repeated view changed the count after reload ${reloadAttempt}: ` +
+            `first=${first.viewWrite.metrics.views} ` +
+            `repeated=${repeated.viewWrite.metrics.views}`
+        );
+      }
+
+      if (
+        typeof repeated.viewWrite.counted === 'boolean' &&
+        repeated.viewWrite.counted !== false
+      ) {
+        throw new Error(
+          `Repeated same-day view was counted after reload ${reloadAttempt}: ` +
+            JSON.stringify(repeated.viewWrite)
+        );
+      }
+
+      await page.getByRole('button', { name: 'Unlike this article' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+    }
+
+    for (let repeat = 1; repeat <= 3; repeat += 1) {
+      const repeatedLikeResponse = await context.request.put(likeUrl, {
+        failOnStatusCode: false,
+      });
+      if (!repeatedLikeResponse.ok()) {
+        throw new Error(
+          `Repeated like PUT ${repeat} failed with ${repeatedLikeResponse.status()}.`
+        );
+      }
+
+      const repeatedLikeWrite = await repeatedLikeResponse.json();
+      if (
+        repeatedLikeWrite?.liked !== true ||
+        repeatedLikeWrite?.changed !== false ||
+        repeatedLikeWrite?.metrics?.likes !== firstLikeWrite.metrics.likes
+      ) {
+        throw new Error(
+          `Repeated like ${repeat} was not idempotent: ${JSON.stringify(
+            repeatedLikeWrite
+          )}`
+        );
+      }
+    }
+
+    const restoreResponse = await context.request.delete(likeUrl, {
       failOnStatusCode: false,
     });
-    if (!repeatedLikeResponse.ok()) {
+    if (!restoreResponse.ok()) {
       throw new Error(
-        `Repeated like PUT ${repeat} failed with ${repeatedLikeResponse.status()}.`
+        `Blog like restore failed with ${restoreResponse.status()}.`
       );
     }
 
-    const repeatedLikeWrite = await repeatedLikeResponse.json();
-    if (
-      repeatedLikeWrite?.liked !== true ||
-      repeatedLikeWrite?.changed !== false ||
-      repeatedLikeWrite?.metrics?.likes !== firstLikeWrite.metrics.likes
-    ) {
+    const restored = await restoreResponse.json();
+    if (restored?.liked !== false) {
       throw new Error(
-        `Repeated like ${repeat} was not idempotent: ${JSON.stringify(
-          repeatedLikeWrite
-        )}`
+        `Blog like restore returned invalid state: ${JSON.stringify(restored)}`
       );
     }
-  }
 
-  const restoreResponse = await context.request.delete(likeUrl, {
-    failOnStatusCode: false,
-  });
-  if (!restoreResponse.ok()) {
-    throw new Error(`Blog like restore failed with ${restoreResponse.status()}.`);
-  }
-
-  const restored = await restoreResponse.json();
-  if (restored?.liked !== false) {
-    throw new Error(
-      `Blog like restore returned invalid state: ${JSON.stringify(restored)}`
+    console.log(
+      'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
     );
+  } finally {
+    await context.close();
   }
-
-  console.log(
-    'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
-  );
 }
 
 async function verifyMetricsFailureDoesNotBreakArticleActions() {
@@ -687,42 +919,73 @@ async function navigateViaContinueReading() {
     'section[aria-labelledby="blog-continue-reading-heading"]'
   );
   await section.waitFor({ state: 'visible', timeout: 15_000 });
-  const link = section.locator('a[href^="/blog/"]').first();
-  await link.waitFor({ state: 'visible', timeout: 15_000 });
+  const initialLink = section.locator('a[href^="/blog/"]').first();
+  await initialLink.waitFor({ state: 'visible', timeout: 15_000 });
 
-  const href = await link.getAttribute('href');
-  const expectedTitle = (await link.locator('h3').innerText()).trim();
+  const href = await initialLink.getAttribute('href');
+  const expectedTitle = (await initialLink.locator('h3').innerText()).trim();
   if (!href || href === startPath || !expectedTitle) {
     throw new Error(
       `Invalid Continue reading target: href=${href} title=${expectedTitle}`
     );
   }
 
-  await link.click();
-  await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-  await page
-    .getByRole('heading', { level: 1, name: expectedTitle })
-    .waitFor({ state: 'visible', timeout: 15_000 });
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `Continue reading ${startPath} -> ${href}`,
+    prepare: async () => {
+      const link = page
+        .locator('section[aria-labelledby="blog-continue-reading-heading"]')
+        .locator(`a[href="${href}"]`)
+        .first();
+      await link.waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('section[aria-labelledby="blog-continue-reading-heading"]')
+        .locator(`a[href="${href}"]`)
+        .first()
+        .click(),
+    assertReady: () =>
+      page
+        .getByRole('heading', { level: 1, name: expectedTitle })
+        .waitFor({ state: 'visible', timeout: 15_000 }),
+  });
   console.log(`OK Continue reading navigation ${startPath} -> ${href}`);
 }
 
 async function navigateWithinComponentSidebar() {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await goto('/components/switch');
-  const sidebar = page
-    .locator('aside[aria-label="Component navigation"]')
-    .first();
-  await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
-  const checkboxLink = sidebar.locator('a[href="/components/checkbox"]');
-  await checkboxLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await checkboxLink.click();
-  await page.waitForURL(`${baseUrl}/components/checkbox`, {
-    timeout: 15_000,
+  const startPath = '/components/switch';
+  const href = '/components/checkbox';
+
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `desktop component navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const sidebar = page
+        .locator('aside[aria-label="Component navigation"]')
+        .first();
+      await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
+      await sidebar
+        .locator(`a[href="${href}"]`)
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('aside[aria-label="Component navigation"]')
+        .first()
+        .locator(`a[href="${href}"]`)
+        .click(),
+    assertReady: () =>
+      page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      }),
   });
-  await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
+
   console.log(
     'OK desktop component sidebar navigation /components/switch -> /components/checkbox'
   );
@@ -730,25 +993,41 @@ async function navigateWithinComponentSidebar() {
 
 async function navigateWithinMobileComponentSidebar() {
   await page.setViewportSize({ width: 670, height: 900 });
-  await goto('/components/switch');
-  const trigger = page.getByRole('button', {
-    name: 'Open component navigation',
+  const startPath = '/components/switch';
+  const href = '/components/checkbox';
+
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `mobile component navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const trigger = page.getByRole('button', {
+        name: 'Open component navigation',
+      });
+      await trigger.waitFor({ state: 'visible', timeout: 15_000 });
+      await trigger.click();
+      const mobileSidebar = page.locator('#component-navigation');
+      await mobileSidebar.waitFor({ state: 'visible', timeout: 15_000 });
+      await mobileSidebar
+        .locator(`a[href="${href}"]`)
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('#component-navigation')
+        .locator(`a[href="${href}"]`)
+        .click(),
+    assertReady: async () => {
+      await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+      await page
+        .locator('#component-navigation')
+        .waitFor({ state: 'hidden', timeout: 15_000 });
+    },
   });
-  await trigger.waitFor({ state: 'visible', timeout: 15_000 });
-  await trigger.click();
-  const mobileSidebar = page.locator('#component-navigation');
-  await mobileSidebar.waitFor({ state: 'visible', timeout: 15_000 });
-  const checkboxLink = mobileSidebar.locator('a[href="/components/checkbox"]');
-  await checkboxLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await checkboxLink.click();
-  await page.waitForURL(`${baseUrl}/components/checkbox`, {
-    timeout: 15_000,
-  });
-  await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-  await mobileSidebar.waitFor({ state: 'hidden', timeout: 15_000 });
+
   console.log(
     'OK mobile component navigation /components/switch -> /components/checkbox and overlay closed'
   );
@@ -790,6 +1069,15 @@ try {
       criticalDiagnostics.push(response.diagnostic);
     }
   }
+
+  const backgroundEdgeFailures = edgeFailuresSince(0);
+  if (backgroundEdgeFailures.length > 0) {
+    await recoverCloudflareEdgeFailures(
+      backgroundEdgeFailures,
+      'final background browser diagnostics'
+    );
+  }
+  reconcileCloudflareEdgeDiagnostics();
 
   const reconciledResource404Diagnostics =
     reconcileHandledBlogMetrics404ConsoleDiagnostics(

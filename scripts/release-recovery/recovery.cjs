@@ -92,14 +92,8 @@ function integrityHex(integrity) {
   );
 }
 
-function verifyRegistryEvidence(
-  { packageName, version, dist, attestations },
-  { allowedSourceShas }
-) {
-  assert.ok(dist?.integrity, `${packageName}@${version} has no integrity`);
-  assert.ok(dist?.tarball, `${packageName}@${version} has no tarball`);
+function registryProvenanceEvidence(attestations) {
   assert.ok(Array.isArray(attestations) && attestations.length > 0);
-  const expectedDigest = integrityHex(dist.integrity);
   const statements = attestations.map((entry) => {
     const envelope = entry.bundle?.dsseEnvelope;
     assert.ok(envelope?.payload, 'Attestation has no DSSE payload');
@@ -108,7 +102,49 @@ function verifyRegistryEvidence(
   const provenance = statements.find(
     (statement) => statement.predicateType === 'https://slsa.dev/provenance/v1'
   );
-  assert.ok(provenance, `${packageName}@${version} has no SLSA provenance`);
+  assert.ok(provenance, 'Package has no SLSA provenance');
+  const sourceShas =
+    provenance.predicate?.buildDefinition?.resolvedDependencies
+      ?.map((dependency) => dependency.digest?.gitCommit)
+      .filter(Boolean) ?? [];
+  return { statements, provenance, sourceShas };
+}
+
+function provenanceSourceShas(attestations) {
+  return registryProvenanceEvidence(attestations).sourceShas;
+}
+
+function isTrustedRecoveryProvenanceSource({
+  sourceSha,
+  expectedTagSha,
+  controlSha,
+  tagToSourceStatus,
+  sourceToControlStatus,
+}) {
+  const sha = /^[a-f0-9]{40}$/;
+  if (
+    !sha.test(sourceSha ?? '') ||
+    !sha.test(expectedTagSha ?? '') ||
+    !sha.test(controlSha ?? '')
+  ) {
+    return false;
+  }
+  if (sourceSha === expectedTagSha || sourceSha === controlSha) return true;
+  return (
+    ['ahead', 'identical'].includes(tagToSourceStatus) &&
+    ['ahead', 'identical'].includes(sourceToControlStatus)
+  );
+}
+
+function verifyRegistryEvidence(
+  { packageName, version, dist, attestations },
+  { allowedSourceShas }
+) {
+  assert.ok(dist?.integrity, `${packageName}@${version} has no integrity`);
+  assert.ok(dist?.tarball, `${packageName}@${version} has no tarball`);
+  const expectedDigest = integrityHex(dist.integrity);
+  const { statements, provenance, sourceShas } =
+    registryProvenanceEvidence(attestations);
   assert.ok(
     statements.every((statement) =>
       statement.subject?.some(
@@ -127,10 +163,6 @@ function verifyRegistryEvidence(
     RELEASE_WORKFLOW,
     'Package was not published by the trusted Release workflow'
   );
-  const sourceShas =
-    definition.resolvedDependencies
-      ?.map((dependency) => dependency.digest?.gitCommit)
-      .filter(Boolean) ?? [];
   assert.ok(
     sourceShas.some((sha) => allowedSourceShas.includes(sha)),
     `${packageName}@${version} provenance has an unexpected source SHA`
@@ -141,8 +173,29 @@ function verifyRegistryEvidence(
 function isCanonicalSemanticReleaseBody(body, tagName) {
   if (typeof body !== 'string') return false;
   const version = tagName.startsWith('v') ? tagName.slice(1) : tagName;
-  const prefix = `## [${version}](https://github.com/${REPOSITORY}/compare/`;
-  return body.startsWith(prefix) && body.includes(`...${tagName})`);
+  const comparePrefix = `https://github.com/${REPOSITORY}/compare/`;
+  const firstLine = body.split('\n', 1)[0];
+  const headings = [
+    `# [${version}](${comparePrefix}`,
+    `## [${version}](${comparePrefix}`,
+  ];
+
+  for (const heading of headings) {
+    if (!firstLine.startsWith(heading)) continue;
+    const remainder = firstLine.slice(heading.length);
+    const linkEnd = remainder.indexOf(')');
+    if (linkEnd < 0) return false;
+    const compareRange = remainder.slice(0, linkEnd);
+    const compareRefs = compareRange.split('...');
+    return (
+      !/\s/.test(compareRange) &&
+      compareRefs.length === 2 &&
+      compareRefs[0].length > 0 &&
+      compareRefs[1] === tagName
+    );
+  }
+
+  return false;
 }
 
 function assessGithubRelease(existing, expected) {
@@ -168,6 +221,31 @@ function assessGithubRelease(existing, expected) {
   return { action: 'none', releaseId: existing.id };
 }
 
+function assertVerifiedExistingRelease({
+  packageNames,
+  states,
+  existingRelease,
+  expected,
+}) {
+  const plan = planPackageRecovery(packageNames, states);
+  assert.deepEqual(
+    plan.publish,
+    [],
+    'Automatic reconciliation requires every npm package to already exist with verified integrity and provenance'
+  );
+  assert.ok(
+    existingRelease,
+    'Automatic reconciliation requires an existing GitHub Release'
+  );
+  const decision = assessGithubRelease(existingRelease, expected);
+  assert.equal(
+    decision.action,
+    'none',
+    'Automatic reconciliation cannot create or replace a GitHub Release'
+  );
+  return { plan, decision };
+}
+
 function assertNoCloudflareChanges(paths) {
   for (const changedPath of paths) {
     assert.ok(
@@ -184,11 +262,14 @@ module.exports = {
   RELEASE_WORKFLOW,
   REPOSITORY,
   assessGithubRelease,
+  assertVerifiedExistingRelease,
   assertNoCloudflareChanges,
   assertTaggedCheckout,
   assertTaggedSourceChanges,
   assertTagState,
+  isTrustedRecoveryProvenanceSource,
   planPackageRecovery,
+  provenanceSourceShas,
   validateInputs,
   verifyRegistryEvidence,
 };

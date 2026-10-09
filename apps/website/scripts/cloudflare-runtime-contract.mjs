@@ -10,6 +10,7 @@ import { sha256 } from './cloudflare-static-asset-archive.mjs';
 import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
 import { rscProbe } from './cloudflare-rsc-probe.mjs';
 import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
+import { fetchWithCloudflareEdgeRetry } from './cloudflare-edge-fetch.mjs';
 
 const base = process.env.WEBSITE_URL;
 assert.ok(base, 'WEBSITE_URL is required');
@@ -26,16 +27,20 @@ const evidence = [];
 let publicRuntime = null;
 let passed = false;
 async function request(pathname, options = {}) {
-  const response = await fetch(new URL(pathname, base), {
-    cache: 'no-store',
-    ...options,
-  });
+  const { response, attempts } = await fetchWithCloudflareEdgeRetry(
+    new URL(pathname, base),
+    {
+      cache: 'no-store',
+      ...options,
+    }
+  );
   const bytes = Buffer.from(await response.arrayBuffer());
   evidence.push({
     pathname,
     status: response.status,
     headers: Object.fromEntries(response.headers),
     sha256: sha256(bytes),
+    attempts,
   });
   return { response, bytes };
 }

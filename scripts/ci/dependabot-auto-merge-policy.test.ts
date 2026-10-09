@@ -29,10 +29,26 @@ describe('Dependabot auto-merge workflow policy', () => {
     const source = await workflowSource();
 
     expect(source).toContain('head_sha="$EXPECTED_HEAD_SHA"');
-    expect(source).toContain('run.head_sha === expectedHeadSha');
+    expect(source).toContain('commits/$EXPECTED_HEAD_SHA/pulls');
+    expect(source).toContain('deadline=$((SECONDS + 900))');
+    expect(source).toContain('latest_run="$(');
+    expect(source).toContain('sort_by(.id)');
+    expect(source).toContain('last // empty');
+    expect(source).toContain(
+      'Authenticated latest metadata run: $latest_run_id attempt $latest_run_attempt'
+    );
+    expect(source).toContain('run_attempt=$latest_run_attempt');
+    expect(source).toContain(
+      'dependabot-auto-merge-decision-${{ steps.metadata.outputs.run_id }}-${{ steps.metadata.outputs.run_attempt }}'
+    );
+    expect(source).not.toContain('successful_run_id=');
+    expect(source).toContain(
+      'Timed out waiting for successful exact-head dependency metadata.'
+    );
+    expect(source).toContain('Exact CI head is not an eligible dependency PR.');
     expect(source).toContain('decision.headSha !== ciHeadSha');
     expect(source).toContain(
-      'Dependabot auto-merge decision does not match successful CI head'
+      'Dependency auto-merge decision does not match successful CI head'
     );
   });
 
@@ -40,20 +56,80 @@ describe('Dependabot auto-merge workflow policy', () => {
     const source = await workflowSource();
     const waitIndex = source.indexOf('Wait for required pull request checks');
     const revalidateIndex = source.indexOf(
-      'Revalidate Dependabot pull request after checks'
+      'Revalidate dependency pull request after checks'
+    );
+    const sourceRunIndex = source.indexOf(
+      'Revalidate completed remediation source run'
+    );
+    const runtimeScopeIndex = source.indexOf(
+      'Revalidate live runtime dependency scope'
     );
     const tokenIndex = source.indexOf(
       'Create short-lived merge GitHub App token'
     );
-    const mergeIndex = source.indexOf('Merge patch update after full CI');
+    const mergeIndex = source.indexOf(
+      'Merge eligible dependency update after full CI'
+    );
 
     expect(waitIndex).toBeGreaterThan(-1);
     expect(revalidateIndex).toBeGreaterThan(waitIndex);
-    expect(tokenIndex).toBeGreaterThan(revalidateIndex);
+    expect(sourceRunIndex).toBeGreaterThan(revalidateIndex);
+    expect(runtimeScopeIndex).toBeGreaterThan(sourceRunIndex);
+    expect(tokenIndex).toBeGreaterThan(runtimeScopeIndex);
     expect(mergeIndex).toBeGreaterThan(tokenIndex);
     expect(source).toContain('--required');
     expect(source).toContain('--watch');
     expect(source).toContain('--fail-fast');
+  });
+
+  it('accepts only bounded security remediation candidates', async () => {
+    const source = await workflowSource();
+
+    expect(source).toContain("decision.kind === 'security-remediation'");
+    expect(source).toContain("expectedAuthor = 'vellira-release-sync[bot]'");
+    expect(source).toContain("'automation/dependabot-security-remediation'");
+    expect(source).toContain("'pnpm-lock.yaml'");
+    expect(source).toContain("'pnpm-workspace.yaml'");
+    expect(source).toContain(
+      'Security remediation changed files outside dependency authority'
+    );
+    expect(source).toContain(
+      'Security remediation decision source identity is invalid'
+    );
+    expect(source).toContain(
+      'Security remediation decision dependency scope is invalid'
+    );
+    expect(source).toContain("decision.dependencyScope !== 'development'");
+    expect(source).toContain(
+      'Security remediation decision package authority is invalid'
+    );
+    expect(source).toContain('decision.authorizedPackages');
+    expect(source).toContain('decision.changedPackages');
+    expect(source).toContain('decision.ignoredRuntimeGhsas');
+    expect(source).toContain('decision.auditGapMaterializations');
+    expect(source).toContain('decision.sourceCandidateBaseSha');
+    expect(source).toContain('decision.sourceCandidateHeadSha');
+    expect(source).toContain(
+      'Security remediation source run is no longer an exact successful authority'
+    );
+    expect(source).toContain(
+      'run.head_sha !== decision.sourceCandidateBaseSha'
+    );
+    expect(source).toContain('scripts/ci/dependabot-auto-merge-policy.test.ts');
+    expect(source).toContain("run.conclusion !== 'success'");
+    expect(source).toContain('DEPENDABOT_ALERTS_TOKEN');
+    expect(source).toContain(
+      'Security remediation package authority gained a live runtime conflict before merge'
+    );
+    expect(source).toContain(
+      'Dependabot audit-gap authority changed before merge'
+    );
+    expect(source).toContain(
+      'Security remediation base moved after authenticated generation'
+    );
+    expect(source).toContain(
+      'Security remediation pull request title changed after authentication'
+    );
   });
 
   it('merges immediately with exact head', async () => {

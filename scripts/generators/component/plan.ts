@@ -1,4 +1,7 @@
 import path from 'node:path';
+import { compileComponentProgram } from '../../component-program/compile';
+import { componentProgramSource } from '../../component-program/source';
+import type { ComponentProgramCompilationV1 } from '../../../packages/metadata/src/componentProgram';
 
 import type {
   ComponentAssetRequirement,
@@ -40,6 +43,7 @@ export type ComponentTokenThemeTarget = {
 };
 
 export type ComponentGenerationPlan = {
+  componentProgram?: ComponentProgramCompilationV1;
   root: string;
   componentName: string;
   layer: ComponentLayerArg;
@@ -164,6 +168,24 @@ export function createComponentGenerationPlan(params: {
 }): ComponentGenerationPlan {
   const { root, options } = params;
 
+  const program =
+    options.componentProgram === undefined
+      ? undefined
+      : compileComponentProgram(
+          componentProgramSource({
+            ...options,
+            schemaVersion: '1',
+            capabilities: options.capabilities ?? [],
+            componentTokens: resolveComponentTokenContract(options),
+          }),
+          options.componentProgram
+        );
+  if (program && program.disposition !== 'compiled') {
+    throw new Error(
+      `Component Program ${program.disposition}: ${JSON.stringify(program.findings)}`
+    );
+  }
+
   const typeOwnership = resolveComponentTypeOwnership(options);
   const dependencies = resolvePlanDependencies({
     dependencies: options.dependencies,
@@ -234,6 +256,7 @@ export function createComponentGenerationPlan(params: {
   }));
 
   return {
+    ...(program === undefined ? {} : { componentProgram: program }),
     root,
     componentName: options.componentName,
     layer: options.layer,

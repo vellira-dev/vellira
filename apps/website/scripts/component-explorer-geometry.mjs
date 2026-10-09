@@ -115,6 +115,57 @@ await assertDesktopGeometry(1920);
 await assertDesktopGeometry(1440);
 await assertDesktopGeometry(1101);
 
+async function assertCompactHeaderGeometry() {
+  const page = await openPage({ width: 1280, height: 900 });
+  try {
+    const geometry = await page.evaluate(() => {
+      const header = document.querySelector('header');
+      const brand = header?.querySelector('a[href="/"]');
+      const search = header?.querySelector(
+        'input[aria-label="Search components"]'
+      );
+      const navigation = header?.querySelector(
+        'nav[aria-label="Primary navigation"]'
+      );
+      const menuTrigger = header?.querySelector(
+        'button[aria-label="Open component navigation"]'
+      );
+      if (!(brand && search && navigation && menuTrigger)) {
+        throw new Error('Global header compact markup missing');
+      }
+
+      const box = (element) => element.getBoundingClientRect().toJSON();
+
+      return {
+        brand: box(brand),
+        search: box(search),
+        navigationDisplay: getComputedStyle(navigation).display,
+        menuDisplay: getComputedStyle(menuTrigger).display,
+      };
+    });
+
+    assert.equal(
+      geometry.navigationDisplay,
+      'none',
+      '1280px global primary navigation must be compact'
+    );
+    assert.notEqual(
+      geometry.menuDisplay,
+      'none',
+      '1280px component navigation trigger must be visible'
+    );
+    assert.ok(
+      geometry.brand.right <= geometry.search.left,
+      `1280px global header brand/search overlap: brand right=${geometry.brand.right}, search left=${geometry.search.left}`
+    );
+    console.log('OK global header compact geometry at 1280px');
+  } finally {
+    await page.close();
+  }
+}
+
+await assertCompactHeaderGeometry();
+
 for (const slug of ['checkbox', 'switch']) {
   const page = await openPage({ width: 1440, height: 900 }, slug);
   await page.close();

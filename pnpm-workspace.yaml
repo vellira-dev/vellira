@@ -17,16 +17,25 @@ minimumReleaseAgeExclude:
   - '@storybook/react-native-ui-lite@10.4.5'
   - '@storybook/react-native-ui@10.4.5'
   - '@storybook/react-native@10.4.5'
+  - source-map-js@1.2.2
+  - proxy-addr@2.0.8
+  - compression@1.8.2
+  - sharp@0.35.5
+  - handlebars@4.7.10
 nodeLinker: hoisted
 
 overrides:
   '@puppeteer/browsers': 3.0.6
-  'brace-expansion@<2.0.0': 1.1.18
+  # CVE-2026-102277: patched per maintained major line.
+  'brace-expansion@<2.0.0': 1.1.21
+  'brace-expansion@>=2 <3': 2.1.7
   colord: 2.9.4
-  'minimatch@10>brace-expansion': 5.0.9
+  'minimatch@10>brace-expansion': 5.0.12
+  # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
+  'get-uri@6.0.5>basic-ftp': 6.2.1
 
   'esbuild@<=0.24.2': 0.28.1
-  fast-uri: 3.1.6
+  fast-uri: 3.1.8
 
   '@xmldom/xmldom@0.8.14': 0.8.15
   '@xmldom/xmldom@0.9.11': 0.9.12
@@ -51,21 +60,38 @@ overrides:
 
   'nanoid@<3.3.18': 3.3.18
   postcss: 8.5.23
+  # CVE-2026-104861: probe-image-size SVG parser DoS, fixed in 7.4.0.
+  probe-image-size: 7.4.0
   qs: 6.16.0
+  # GHSA-g2v6-rqmx-r4w6: Vue SSR attribute-name CR XSS, fixed in 3.5.42.
+  'vue@>=3.5.0 <3.5.42': 3.5.42
+  # CVE-2026-102422 / GHSA-pqg4-j6r4-53mv: shell-quote command injection, fixed in 1.11.0.
+  'shell-quote@>=1.8.4 <1.11.0': 1.12.0
 
   sharp: 0.35.4
 
-  'undici@<7': 6.28.0
-  'undici@>=7 <8': 7.29.0
+  'undici@<7': 6.28.1
+  'undici@>=7 <8': 7.29.1
+
+  # CVE-2026-101911/-101912: parser bound and cross-family subnet fixes.
+  ip-address: 10.7.1
 
   'uuid@<11.1.1': 11.1.1
   'valibot@<=1.4.1': 1.4.2
   'vite@<=6.4.2': 6.4.3
   tmp: 0.2.7
+  compression@<1.8.2: ^1.8.2
+  handlebars@>=4.0.0 <=4.7.9: ^4.7.10
+  proxy-addr@>=1.1.0 <2.0.8: ^2.0.8
+  sharp@<0.35.5: ^0.35.5
+  source-map-js@>=1.0.0 <1.2.2: ^1.2.2
 
 patchedDependencies:
+  # CVE-2026-85393 / GHSA-86w9-cpqp-85rv: upstream forge#1152 backport.
+  # Remove after node-forge publishes a release containing commit ceba34402e329f0365134f23fe19898756527d65.
+  'node-forge@1.4.0': patches/node-forge@1.4.0.patch
   # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
   # Remove when a stable OpenNext release contains the string-shorthand guard.
   '@opennextjs/cloudflare@1.20.6': patches/@opennextjs__cloudflare@1.20.6.patch
-  next@16.3.3: patches/next@16.3.3.patch
+  next@16.3.8: patches/next@16.3.8.patch
 allowUnusedPatches: false

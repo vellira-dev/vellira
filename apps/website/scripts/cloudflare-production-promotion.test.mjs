@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 import './cloudflare-production-admission.test.mjs';
@@ -21,6 +22,82 @@ function jobBlock(workflow, jobId, nextJobId) {
   assert.notEqual(end, -1, `Missing following workflow job: ${nextJobId}`);
   return workflow.slice(start, end);
 }
+
+test('static chunk smoke script remains syntactically valid', () => {
+  assert.doesNotThrow(() =>
+    execFileSync(
+      process.execPath,
+      ['--check', 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'],
+      { stdio: 'pipe' }
+    )
+  );
+});
+
+test('staging skips only semantically verified release-sync pushes and prioritizes the latest runtime candidate', () => {
+  const workflowHeader = stagingWorkflow.split('\njobs:\n')[0];
+  assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
+
+  const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
+  const migration = jobBlock(stagingWorkflow, 'migration', 'deploy');
+  const deploy = jobBlock(stagingWorkflow, 'deploy');
+
+  assert.match(classify, /release-sync-contract\.mjs/);
+  assert.match(classify, /--classify-merged/);
+  assert.match(classify, /VELLIRA_PUSH_ACTOR:/);
+  assert.match(classify, /github\.event\.before/);
+  assert.match(
+    classify,
+    /github\.actor == 'vellira-release-sync\[bot\]'/
+  );
+
+  assert.match(migration, /needs: classify/);
+  assert.match(
+    migration,
+    /if: needs\.classify\.outputs\.release_sync != 'true'/
+  );
+  assert.match(
+    migration,
+    /group: deploy-worker-vellira-website-staging-prepare\n {6}cancel-in-progress: true/
+  );
+
+  assert.match(deploy, /needs: \[classify, migration\]/);
+  assert.match(
+    deploy,
+    /needs\.classify\.outputs\.release_sync != 'true' && needs\.migration\.result == 'success'/
+  );
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website-staging\n {6}cancel-in-progress: false/
+  );
+
+  assert.match(
+    migration,
+    /image: mcr\.microsoft\.com\/playwright:v1\.61\.1-noble/
+  );
+  assert.match(migration, /pnpm test:cloudflare-migration/);
+  assert.doesNotMatch(migration, /playwright install(?: --with-deps)?/);
+  assert.doesNotMatch(migration, /cloudflare-archive-preflight\.mjs/);
+  assert.doesNotMatch(migration, /CLOUDFLARE_API_TOKEN/);
+
+  assert.match(deploy, /cloudflare-archive-preflight\.mjs wrangler\.jsonc/);
+  assert.doesNotMatch(deploy, /Install migration regression browsers/);
+  assert.doesNotMatch(deploy, /pnpm test:cloudflare-migration/);
+
+  const productionClassify = jobBlock(productionWorkflow, 'classify', 'candidate');
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  assert.match(productionClassify, /release-sync-contract\.mjs/);
+  assert.match(productionClassify, /--classify-merged/);
+  assert.match(productionClassify, /VELLIRA_PUSH_ACTOR:/);
+  assert.match(candidate, /needs: classify/);
+  assert.match(
+    candidate,
+    /needs\.classify\.outputs\.release_sync != 'true'/
+  );
+  assert.doesNotMatch(
+    candidate,
+    /actor\.login != 'vellira-release-sync\[bot\]'/
+  );
+});
 
 test('staging publishes a dedicated machine-readable promotion artifact', () => {
   assert.match(stagingWorkflow, /name: Publish production promotion evidence/);
@@ -45,6 +122,9 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(productionWorkflow, /branches: \[main\]/);
 
   const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  assert.match(candidate, /needs: classify/);
+  assert.match(candidate, /needs\.classify\.result == 'success'/);
+  assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
@@ -54,11 +134,11 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
 
-test('production admission owns duplicate/stale cleanup before serialized deploy', () => {
+test('production admission remains read-only before protected approval', () => {
   const workflowHeader = productionWorkflow.split('\njobs:\n')[0];
   assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
 
-  const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
+  const admission = jobBlock(productionWorkflow, 'admission', 'approval');
   assert.match(admission, /actions: read/);
   assert.doesNotMatch(admission, /actions: write|deployments: write/);
   assert.match(admission, /cache-mode: none/);
@@ -81,12 +161,23 @@ test('production admission owns duplicate/stale cleanup before serialized deploy
   );
 });
 
-test('production mutation is approval-gated and pinned to the eligible SHA', () => {
+test('production approval waits outside the serialized deploy mutex', () => {
+  const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+
+  assert.match(approval, /needs: \[candidate, admission\]/);
+  assert.match(
+    approval,
+    /needs\.admission\.outputs\.admitted == 'true'/
+  );
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.doesNotMatch(approval, /concurrency:|secrets\./);
+
   assert.match(
     deploy,
-    /needs: \[candidate, admission\]/
+    /needs: \[candidate, admission, approval\]/
   );
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
   assert.match(
     deploy,
     /needs\.admission\.outputs\.admitted == 'true'/
@@ -95,7 +186,7 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
     deploy,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  assert.match(deploy, /environment:\n {6}name: production/);
+  assert.doesNotMatch(deploy, /^ {4}environment:/m);
   assert.match(
     deploy,
     /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/
@@ -103,24 +194,32 @@ test('production mutation is approval-gated and pinned to the eligible SHA', () 
   assert.match(deploy, /ref: \$\{\{ env\.CANDIDATE_SHA \}\}/);
   assert.match(deploy, /Verify exact production candidate checkout/);
   assert.match(deploy, /Verify immutable production candidate before mutation/);
-  assert.match(deploy, /git ls-remote origin refs\/heads\/main/);
-  assert.match(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
+  assert.match(
+    deploy,
+    /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/
+  );
+  assert.doesNotMatch(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
+  assert.match(deploy, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(deploy, /Deploy production website to Cloudflare Workers/);
   assert.match(
     deploy,
     /node apps\/website\/scripts\/cloudflare-deploy\.mjs wrangler\.production\.jsonc/
   );
   assert.ok(
-    deploy.lastIndexOf('git ls-remote origin refs/heads/main') <
+    deploy.lastIndexOf('cloudflare-production-freshness.mjs') <
       deploy.lastIndexOf('cloudflare-deploy.mjs wrangler.production.jsonc')
   );
 });
 
-test('manual recovery bypasses normal admission but keeps serialized deployment', () => {
-  const admission = jobBlock(productionWorkflow, 'admission', 'deploy');
+test('manual recovery bypasses normal admission but still crosses protected approval', () => {
+  const admission = jobBlock(productionWorkflow, 'admission', 'approval');
+  const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
   assert.match(admission, /github\.event_name == 'workflow_run'/);
+  assert.match(approval, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(approval, /environment:\n {6}name: production/);
   assert.match(deploy, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
 });
 
 test('manual dispatch is an explicit break-glass recovery path', () => {

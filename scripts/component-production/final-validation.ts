@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import toolingBuildDependencies from '../ci/tooling-build-dependencies.json';
 
 import type {
   ComponentProductionInputV1,
@@ -12,6 +14,8 @@ import {
   type ValidationCommandExecution,
   type ValidationCommandRunner,
 } from './validation-command';
+import { componentProductionCommandDependencies } from './validation-dependencies';
+import { componentProductionVisualCommand } from './visual-environment';
 
 const FINAL_STAGE_IDS = [
   'public-api',
@@ -23,7 +27,9 @@ const FINAL_STAGE_IDS = [
 type FinalStageId = (typeof FINAL_STAGE_IDS)[number];
 
 export type ComponentProductionFinalCommand =
-  ValidationCommandDescriptor<FinalStageId>;
+  ValidationCommandDescriptor<FinalStageId> & {
+    requires?: readonly string[];
+  };
 
 export type ComponentProductionFinalCommandExecution =
   ValidationCommandExecution;
@@ -44,9 +50,6 @@ export function componentProductionRequiresTokenSemanticGate(
 export function componentProductionFinalValidationCommands(
   input: ComponentProductionInputV1
 ): readonly ComponentProductionFinalCommand[] {
-  const toolingCommand = componentProductionRequiresTokenSemanticGate(input)
-    ? 'test:tooling:readiness'
-    : 'test:tooling';
   const commands: ComponentProductionFinalCommand[] = [
     {
       id: 'public-api',
@@ -55,20 +58,97 @@ export function componentProductionFinalValidationCommands(
       timeoutMs: 120_000,
     },
     {
+      id: 'tooling-harness-contracts',
+      stage: 'tooling',
+      command: [
+        'node',
+        fileURLToPath(new URL('../ci/run-tooling-tests.mjs', import.meta.url)),
+        '--harness-contracts',
+      ],
+      timeoutMs: 120_000,
+    },
+    {
       id: 'tooling-contracts',
       stage: 'tooling',
-      command: ['pnpm', toolingCommand],
-      timeoutMs: 420_000,
+      command: [
+        'node',
+        fileURLToPath(new URL('../ci/run-tooling-tests.mjs', import.meta.url)),
+        '--source-contracts',
+      ],
+      // Protected Factory validation intentionally serializes this suite with
+      // one Vitest worker for memory safety. The old 7-minute process budget
+      // was shorter than a healthy serialized run and produced false runtime blocks.
+      timeoutMs: 900_000,
+    },
+    {
+      id: 'tooling-token-cli',
+      stage: 'tooling',
+      command: [
+        'node',
+        'node_modules/vitest/vitest.mjs',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        '--reporter=default',
+        '--maxWorkers=1',
+        'scripts/checks/token-semantic/cli.test.ts',
+      ],
+      timeoutMs: 120_000,
+    },
+    {
+      id: 'tooling-production-fixtures',
+      stage: 'tooling',
+      command: [
+        'node',
+        'node_modules/vitest/vitest.mjs',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        '--reporter=default',
+        '--maxWorkers=1',
+        'scripts/component-production/e2e-fixtures.test.ts',
+      ],
+      // This file contains multiple production-shaped fixtures with their own
+      // bounded 240-second test budgets. Keep the exact coverage and one-worker
+      // memory bound, but give the aggregate command enough bounded wall time.
+      timeoutMs: 720_000,
     },
   ];
+  for (const group of toolingBuildDependencies) {
+    commands.push({
+      id: group.id,
+      stage: 'tooling',
+      command: [
+        'node',
+        'node_modules/vitest/vitest.mjs',
+        'run',
+        '--config',
+        'vitest.tooling.config.ts',
+        '--reporter=default',
+        '--maxWorkers=1',
+        ...group.files,
+      ],
+      timeoutMs: 120_000,
+      requires: group.requires,
+    });
+  }
+  if (componentProductionRequiresTokenSemanticGate(input)) {
+    commands.push({
+      id: 'tooling-token-semantics',
+      stage: 'tooling',
+      command: ['pnpm', 'check:tokens-semantic:strict'],
+      timeoutMs: 120_000,
+    });
+  }
 
   if (input.platform === 'web' || input.platform === 'both') {
     commands.push({
       id: 'canonical-web-visual',
       stage: 'visual',
-      command: ['pnpm', 'test:e2e:web:visual:docker'],
+      command: componentProductionVisualCommand(),
       timeoutMs: 600_000,
       platform: 'react',
+      requires: componentProductionCommandDependencies('canonical-web-visual'),
     });
   }
 
@@ -79,6 +159,7 @@ export function componentProductionFinalValidationCommands(
       command: ['pnpm', 'smoke:web'],
       timeoutMs: 180_000,
       platform: 'react',
+      requires: componentProductionCommandDependencies('web-smoke'),
     });
   }
 
@@ -89,6 +170,7 @@ export function componentProductionFinalValidationCommands(
       command: ['pnpm', 'smoke:native'],
       timeoutMs: 180_000,
       platform: 'react-native',
+      requires: componentProductionCommandDependencies('native-smoke'),
     });
   }
 
@@ -99,27 +181,46 @@ export function runComponentProductionFinalValidation(params: {
   root: string;
   input: ComponentProductionInputV1;
   runner?: ComponentProductionFinalCommandRunner;
+  commandStatuses?: Readonly<Record<string, 'passed' | 'blocked' | 'failed'>>;
 }): ComponentProductionFinalValidationResult {
   const root = path.resolve(params.root);
   const runner = params.runner ?? runComponentProductionFinalCommand;
   const commands = componentProductionFinalValidationCommands(params.input);
   const stages: ComponentProductionStageResult[] = [];
-  let blockingStage: ComponentProductionStageResult | null = null;
 
   for (const stageId of FINAL_STAGE_IDS) {
-    if (blockingStage) {
+    const stageCommands = commands.filter(
+      (command) => command.stage === stageId
+    );
+    const runnableCommands = params.commandStatuses
+      ? stageCommands.filter((command) =>
+          (command.requires ?? []).every(
+            (dependency) => params.commandStatuses?.[dependency] === 'passed'
+          )
+        )
+      : stageCommands;
+    const blockedDependencies = stageCommands.flatMap((command) =>
+      runnableCommands.includes(command)
+        ? []
+        : (command.requires ?? []).filter(
+            (dependency) => params.commandStatuses?.[dependency] !== 'passed'
+          )
+    );
+    if (
+      params.commandStatuses &&
+      blockedDependencies.length > 0 &&
+      runnableCommands.length === 0
+    ) {
       stages.push(
         skippedStage(
           stageId,
-          `Final validation was skipped because ${blockingStage.id} validation did not pass.`
+          `Final validation was dependency-blocked by ${[
+            ...new Set(blockedDependencies),
+          ].join(', ')}.`
         )
       );
       continue;
     }
-
-    const stageCommands = commands.filter(
-      (command) => command.stage === stageId
-    );
 
     if (stageId === 'visual' && stageCommands.length === 0) {
       stages.push({
@@ -136,15 +237,25 @@ export function runComponentProductionFinalValidation(params: {
     const stage = runStage({
       root,
       stageId,
-      commands: stageCommands,
+      commands: runnableCommands,
       runner,
     });
 
-    stages.push(stage);
-
-    if (stage.status !== 'passed') {
-      blockingStage = stage;
-    }
+    stages.push(
+      blockedDependencies.length > 0 && stage.status === 'passed'
+        ? skippedStage(
+            stageId,
+            `Final validation partially ran and was dependency-blocked by ${[
+              ...new Set(blockedDependencies),
+            ].join(', ')}.`
+          )
+        : blockedDependencies.length > 0
+          ? {
+              ...stage,
+              summary: `${stage.summary} Deferred build consumers: ${[...new Set(blockedDependencies)].join(', ')}.`,
+            }
+          : stage
+    );
   }
 
   return { stages };
@@ -170,7 +281,7 @@ function runStage(params: {
   return runValidationStage({
     ...params,
     requireCommand: true,
-    ruleIdForFailure: semanticRuleIdForFailure,
+    ruleIdForFailure: componentProductionFinalFailureRuleId,
   });
 }
 
@@ -187,13 +298,23 @@ function skippedStage(
   };
 }
 
-function semanticRuleIdForFailure(
-  command: ComponentProductionFinalCommand,
+export function componentProductionFinalFailureRuleId(
+  command: Pick<ComponentProductionFinalCommand, 'id'>,
   execution: ComponentProductionFinalCommandExecution
 ): string | undefined {
-  if (command.id !== 'tooling-contracts') return undefined;
-
   const output = [execution.stdout, execution.stderr].join('\n');
+  if (command.id === 'tooling-harness-contracts') return 'validation.harness';
+  if (
+    command.id === 'canonical-web-visual' &&
+    /Canonical visual environment check failed|docker: (?:not found|command not found)|(?:Cannot connect|permission denied).*docker|Docker daemon/i.test(
+      output
+    )
+  ) {
+    return 'validation.environment';
+  }
+  if (!['tooling-contracts', 'tooling-token-semantics'].includes(command.id))
+    return undefined;
+
   return output.includes('Token semantic audit:')
     ? 'tokens.semantic-architecture'
     : undefined;

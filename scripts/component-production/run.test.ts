@@ -232,13 +232,14 @@ describe('runComponentProductionValidation', () => {
     ]);
   });
 
-  it('returns machine-readable blocking findings without generation', async () => {
+  it('returns candidate blockers without running final certification', async () => {
     const finding: ComponentProductionFinding = {
       id: 'tests:react-tests',
       stage: 'tests',
       severity: 'blocking',
       message: 'Avatar tests failed.',
     };
+    let finalValidationCalled = false;
 
     const result = await runComponentProductionValidation({
       root: '/tmp/vellira-production',
@@ -254,14 +255,118 @@ describe('runComponentProductionValidation', () => {
           completeness: [],
           quality: passingQuality(),
         }),
+        runFinalValidation: () => {
+          finalValidationCalled = true;
+          return { stages: finalStages() };
+        },
       },
     });
 
+    expect(finalValidationCalled).toBe(false);
     expect(result.status).toBe('blocked');
     expect(result.readyForReview).toBe(false);
     expect(result.blockingFindings).toEqual([finding]);
     expect(result.validationSummary.blockedStages).toEqual(['tests']);
+    expect(result.validationSummary.skippedStages).toEqual([
+      'public-api',
+      'tooling',
+      'visual',
+      'smoke',
+    ]);
     expect(result.lifecycle.current).toBe('candidate');
+  });
+
+  it('defers final certification while candidate blockers remain', async () => {
+    const testFinding: ComponentProductionFinding = {
+      id: 'tests:react-tests',
+      stage: 'tests',
+      severity: 'blocking',
+      message: 'Candidate test failed.',
+      path: 'packages/react/src/primitives/Fixture/Fixture.test.tsx',
+    };
+    const typecheckFinding: ComponentProductionFinding = {
+      id: 'typecheck:react-typecheck',
+      stage: 'typecheck',
+      severity: 'blocking',
+      message: 'Candidate typecheck failed.',
+      path: 'packages/react/src/primitives/Fixture/Fixture.tsx',
+    };
+    let finalValidationCalled = false;
+
+    const result = await runComponentProductionValidation({
+      root: '/tmp/vellira-production',
+      input: RAW_INPUT,
+      dependencies: {
+        runCommandValidation: () => ({
+          stages: commandStages({
+            tests: blockedStage('tests', testFinding),
+            typecheck: blockedStage('typecheck', typecheckFinding),
+          }),
+        }),
+        runStructuredValidation: async () => ({
+          stages: [passedStage('completeness'), passedStage('quality')],
+          completeness: [],
+          quality: passingQuality(),
+        }),
+        runFinalValidation: () => {
+          finalValidationCalled = true;
+          return { stages: finalStages() };
+        },
+      },
+    });
+
+    expect(finalValidationCalled).toBe(false);
+    expect(result.blockingFindings).toEqual([testFinding, typecheckFinding]);
+    expect(result.validationSummary.blockedStages).toEqual([
+      'tests',
+      'typecheck',
+    ]);
+    expect(result.validationSummary.skippedStages).toEqual([
+      'public-api',
+      'tooling',
+      'visual',
+      'smoke',
+    ]);
+  });
+
+  it('runs full final certification after candidate validation passes', async () => {
+    const toolingFinding: ComponentProductionFinding = {
+      id: 'tooling:tooling-contracts',
+      stage: 'tooling',
+      severity: 'blocking',
+      message: 'Synthetic fixture copied mutable production authority.',
+      path: 'scripts/generators/component/preflight.test.ts',
+    };
+    let finalValidationCalled = false;
+
+    const result = await runComponentProductionValidation({
+      root: '/tmp/vellira-production',
+      input: RAW_INPUT,
+      dependencies: {
+        runCommandValidation: () => ({
+          stages: commandStages(),
+        }),
+        runStructuredValidation: async () => ({
+          stages: [passedStage('completeness'), passedStage('quality')],
+          completeness: [],
+          quality: passingQuality(),
+        }),
+        runFinalValidation: () => {
+          finalValidationCalled = true;
+          return {
+            stages: finalStages({
+              tooling: blockedStage('tooling', toolingFinding),
+            }),
+          };
+        },
+      },
+    });
+
+    expect(finalValidationCalled).toBe(true);
+    expect(result.readyForReview).toBe(false);
+    expect(result.blockingFindings).toEqual([toolingFinding]);
+    expect(result.validationSummary.blockedStages).toEqual(['tooling']);
+    expect(result.validationSummary.skippedStages).toEqual([]);
   });
 });
 
@@ -279,14 +384,22 @@ const REPRESENTATIVE_READY_CANDIDATES = [
       'react-tests',
       'react-typecheck',
       'react-build',
+      'react-native-build',
       'react-storybook-build',
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ],
     finalIds: [
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
       'canonical-web-visual',
       'web-smoke',
     ],
@@ -304,11 +417,23 @@ const REPRESENTATIVE_READY_CANDIDATES = [
       'react-native-tests',
       'react-native-typecheck',
       'react-native-build',
+      'react-build',
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ],
-    finalIds: ['public-api', 'tooling-contracts', 'native-smoke'],
+    finalIds: [
+      'public-api',
+      'tooling-harness-contracts',
+      'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
+      'native-smoke',
+    ],
   },
   {
     name: 'cross-platform',
@@ -330,10 +455,17 @@ const REPRESENTATIVE_READY_CANDIDATES = [
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ],
     finalIds: [
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
       'canonical-web-visual',
       'web-smoke',
       'native-smoke',
@@ -513,10 +645,15 @@ function commandStages(
   });
 }
 
-function finalStages(): ComponentProductionStageResult[] {
-  return ['public-api', 'tooling', 'visual', 'smoke'].map((id) =>
-    passedStage(id as ComponentProductionStageId)
-  );
+function finalStages(
+  overrides: Partial<
+    Record<ComponentProductionStageId, ComponentProductionStageResult>
+  > = {}
+): ComponentProductionStageResult[] {
+  return ['public-api', 'tooling', 'visual', 'smoke'].map((id) => {
+    const stageId = id as ComponentProductionStageId;
+    return overrides[stageId] ?? passedStage(stageId);
+  });
 }
 
 function passedStage(

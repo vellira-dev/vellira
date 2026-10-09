@@ -34,10 +34,49 @@ env:
   PRODUCTION_WWW_URL: https://www.vellira.dev
 
 jobs:
+  classify:
+    name: Classify staging promotion authority
+    runs-on: ubuntu-latest
+    outputs:
+      release_sync: ${{ steps.classify.outputs.release_sync }}
+    env:
+      CANDIDATE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.candidate_sha }}
+    steps:
+      - name: Checkout exact staging candidate for release-sync verification
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.actor.login == 'vellira-release-sync[bot]'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 2
+
+      - name: Verify release-sync promotion no-op authority
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          STAGING_ACTOR: ${{ github.event.workflow_run.actor.login }}
+          VELLIRA_PUSH_ACTOR: ${{ github.event.workflow_run.actor.login }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" != "workflow_run" || "$STAGING_ACTOR" != "vellira-release-sync[bot]" ]]; then
+            echo "release_sync=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="$(git rev-parse "$CANDIDATE_SHA^")"
+          node scripts/ci/release-sync-contract.mjs \
+            --base "$base_sha" \
+            --head "$CANDIDATE_SHA" \
+            --classify-merged
+
   candidate:
     name: Qualify immutable production candidate
+    needs: classify
     if: >-
       (github.event_name == 'workflow_run' &&
+       needs.classify.result == 'success' &&
+       needs.classify.outputs.release_sync != 'true' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main') ||
@@ -154,7 +193,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      - name: Admit candidate and supersede stale promotions
+      - name: Admit latest safe production promotion
         id: admit
         run: node apps/website/scripts/cloudflare-production-admission.mjs
         env:
@@ -162,8 +201,8 @@ jobs:
           CURRENT_PRODUCTION_RUN_ID: ${{ github.run_id }}
           EXPECTED_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
 
-  deploy:
-    name: Approve, deploy, and verify production candidate
+  approval:
+    name: Approve immutable production candidate
     needs: [candidate, admission]
     if: >-
       always() &&
@@ -172,12 +211,36 @@ jobs:
        (needs.admission.result == 'success' &&
         needs.admission.outputs.admitted == 'true'))
     runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-worker-vellira-website
-      cancel-in-progress: false
     environment:
       name: production
       url: https://vellira.dev
+    permissions:
+      contents: read
+    env:
+      CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+
+    steps:
+      - name: Bind production approval to immutable candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "Approved immutable production candidate: $CANDIDATE_SHA"
+
+  deploy:
+    name: Deploy and verify approved production candidate
+    needs: [candidate, admission, approval]
+    if: >-
+      always() &&
+      needs.candidate.result == 'success' &&
+      needs.approval.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (needs.admission.result == 'success' &&
+        needs.admission.outputs.admitted == 'true'))
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-worker-vellira-website
+      cancel-in-progress: false
     env:
       CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
       CANDIDATE_SOURCE: ${{ needs.candidate.outputs.source }}
@@ -254,7 +317,7 @@ jobs:
 
       - name: Verify actual OpenNext runtime before remote archive or activation
         run: |
-          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-populate-local-cache.mjs wrangler.production.jsonc
           node apps/website/scripts/cloudflare-local-runtime.mjs
 
       - name: Install migration regression browsers
@@ -270,14 +333,10 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$CANDIDATE_SHA"
           test "$VELLIRA_BUILD_ID" = "$CANDIDATE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-
-          if [[ "$CANDIDATE_SOURCE" == "staging" ]]; then
-            current_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-            [[ "$current_main" =~ ^[0-9a-f]{40}$ ]]
-            test "$current_main" = "$CANDIDATE_SHA"
-          fi
-
-          echo "Production mutation remains pinned to $CANDIDATE_SHA"
+          node apps/website/scripts/cloudflare-production-freshness.mjs apps/website/wrangler.production.jsonc
+          echo "Production mutation remains pinned to deployment-equivalent candidate $CANDIDATE_SHA"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Record production promotion provenance
         shell: bash
@@ -314,18 +373,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          if [[ "$CANDIDATE_SOURCE" == "staging" ]]; then
-            current_main="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-            [[ "$current_main" =~ ^[0-9a-f]{40}$ ]]
-            test "$current_main" = "$CANDIDATE_SHA"
-          fi
-
           node apps/website/scripts/cloudflare-deploy.mjs wrangler.production.jsonc
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Audit assets after OpenNext deploy cache population
         run: >-
@@ -401,6 +454,8 @@ jobs:
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
+          scripts/cloudflare-edge-recovery.test.mjs
+          scripts/cloudflare-client-navigation-recovery.test.mjs
 
       - name: Verify production component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
@@ -423,7 +478,7 @@ jobs:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production static chunk integrity
-        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
+        if: ${{ success() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs

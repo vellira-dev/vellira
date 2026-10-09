@@ -50,16 +50,6 @@ export async function runComponentProductionStructuredValidationWorkerTask(param
     generatedDocsScope: 'targeted',
   });
 
-  if (completeness.some((result) => !result.ready)) {
-    return {
-      schemaVersion: COMPONENT_PRODUCTION_VALIDATION_WORKER_SCHEMA_VERSION,
-      status: 'ok',
-      componentName: component.name,
-      completeness,
-      quality: null,
-    };
-  }
-
   const runQuality =
     params.dependencies?.runQuality ?? runComponentQualityCheck;
 

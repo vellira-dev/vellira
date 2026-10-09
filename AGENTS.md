@@ -36,6 +36,28 @@ for a visual change.
 When working in `packages/react-native`, always read and follow
 `packages/react-native/AGENTS.md` before making changes.
 
+## Engineering change admission
+
+Before opening any engineering pull request that is not owned by an explicitly
+trusted automation identity, read and follow
+`docs/architecture/engineering-change-admission.md`.
+
+Derive a stable change-intent ID from the root problem and violated contract, not
+from the first proposed fix. Search open pull requests for the exact
+`vellira-change-intent:v1:<id>` marker before creating a new PR. If a matching
+PR exists, continue and expand that PR instead of creating a successor. A broader
+fix, changed implementation approach, or merge conflict is not by itself a reason
+to supersede an active PR.
+
+When a GitHub token is available, use
+`node scripts/ci/pr-change-intent.mjs preflight <intent-id>`; connector-based
+sessions may perform the same exact-marker lookup through the GitHub connector.
+Every admitted engineering PR that is not owned by an explicitly trusted bot
+identity must carry exactly one change-intent marker in its body. Never infer an
+exemption from PR body text, a branch name, a title, or another delivery marker.
+Unrecognized automation must emit the normal change-intent marker from its stable
+logical delivery identity.
+
 ## Actions evidence and change delivery
 
 Follow `.github/ACTIONS.md` when changing workflows or publishing patches.

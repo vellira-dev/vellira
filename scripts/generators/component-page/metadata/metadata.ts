@@ -1355,7 +1355,7 @@ function validateImportDeclaration(source: string) {
   return null;
 }
 
-function getJsxAttributeNames(source: string) {
+export function getJsxAttributeNames(source: string) {
   const sourceFile = ts.createSourceFile(
     'component-page-metadata-props.tsx',
     `<Component ${source} />`,

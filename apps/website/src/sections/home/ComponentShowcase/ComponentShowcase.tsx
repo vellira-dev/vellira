@@ -67,56 +67,56 @@ const componentLinks: Record<
   }
 > = {
   button: {
-    docs: 'https://docs.vellira.dev/components/button',
+    docs: 'https://docs.vellira.dev/react/button',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/primitives-button--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/primitives/Button',
   },
   dropdown: {
-    docs: 'https://docs.vellira.dev/components/dropdown',
+    docs: 'https://docs.vellira.dev/react/dropdown',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/components-dropdown--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/components/Dropdown',
   },
   modal: {
-    docs: 'https://docs.vellira.dev/components/modal',
+    docs: 'https://docs.vellira.dev/react/modal',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/components-modal--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/components/Modal',
   },
   input: {
-    docs: 'https://docs.vellira.dev/components/input',
+    docs: 'https://docs.vellira.dev/react/input',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/primitives-input--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/primitives/Input',
   },
   tabs: {
-    docs: 'https://docs.vellira.dev/components/tabs',
+    docs: 'https://docs.vellira.dev/react/tabs',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/components-tabs--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/components/Tabs',
   },
   checkbox: {
-    docs: 'https://docs.vellira.dev/components/checkbox',
+    docs: 'https://docs.vellira.dev/react/checkbox',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/primitives-checkbox--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/primitives/Checkbox',
   },
   radio: {
-    docs: 'https://docs.vellira.dev/components/radio',
+    docs: 'https://docs.vellira.dev/react/radio-group',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/primitives-radio--docs',
     source:
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/primitives/Radio',
   },
   tooltip: {
-    docs: 'https://docs.vellira.dev/components/tooltip',
+    docs: 'https://docs.vellira.dev/react/tooltip',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/components-tooltip--docs',
     source:

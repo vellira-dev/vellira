@@ -349,7 +349,9 @@ it('preserves exact-head report evidence even when the read-only CI checker is r
   expect(upload).toContain(
     'name: vellira-ui-usage-${{ github.event.pull_request.head.sha || github.sha }}'
   );
-  expect(upload).toContain('path: .artifacts/vellira-ui-usage/report.json');
+  expect(upload).toContain(
+    'path: candidate/.artifacts/vellira-ui-usage/report.json'
+  );
   const scripts = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts;
   expect(scripts['check:vellira-ui-usage:json']).toContain('--report-only');
   expect(scripts['check:vellira-ui-usage:json']).toContain('--json');

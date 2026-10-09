@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { runValidationCommandProcess } from './validation-command';
 
 import type { ComponentProductionInputV1 } from './contracts';
 import {
@@ -19,8 +20,25 @@ const WEB_INPUT: ComponentProductionInputV1 = {
   parts: [],
 };
 
+it('validation subprocesses cannot implicitly reinstall dependencies, including nested pnpm commands', () => {
+  const result = runValidationCommandProcess(
+    {
+      command: [
+        process.execPath,
+        '-e',
+        'console.log(JSON.stringify([process.env.PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN, process.env.pnpm_config_verify_deps_before_run]))',
+      ],
+      timeoutMs: 5000,
+    },
+    process.cwd(),
+    'missing command'
+  );
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout)).toEqual(['false', 'false']);
+});
+
 describe('componentProductionValidationCommands', () => {
-  it('selects only React validation for a web component', () => {
+  it('selects React candidate checks plus both tooling build prerequisites for a web component', () => {
     expect(
       componentProductionValidationCommands(WEB_INPUT).map(
         (command) => command.id
@@ -35,9 +53,11 @@ describe('componentProductionValidationCommands', () => {
       'react-typecheck',
       'react-build',
       'react-storybook-build',
+      'react-native-build',
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ]);
   });
 
@@ -63,6 +83,7 @@ describe('componentProductionValidationCommands', () => {
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ]);
   });
 
@@ -90,7 +111,7 @@ describe('componentProductionValidationCommands', () => {
     ).toEqual(['pnpm', '--filter', '@vellira-ui/react-native...', 'build']);
   });
 
-  it('scopes website validation to the exact component without the global catalog check', () => {
+  it('checks the exact projection and typechecks its real website consumers', () => {
     const websiteCommands = componentProductionValidationCommands({
       ...WEB_INPUT,
       componentName: 'Toast',
@@ -99,10 +120,12 @@ describe('componentProductionValidationCommands', () => {
     expect(websiteCommands.map((command) => command.id)).toEqual([
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ]);
     expect(websiteCommands.map((command) => command.command)).toEqual([
       ['pnpm', 'create:component-page', 'Toast', '--force', '--check'],
       ['pnpm', 'component-pages:audit', '--component', 'Toast'],
+      ['pnpm', '--filter', '@vellira-ui/website', 'typecheck'],
     ]);
     expect(
       websiteCommands.some((command) =>
@@ -135,10 +158,12 @@ describe('runComponentProductionCommandValidation', () => {
       'react-tests',
       'react-typecheck',
       'react-build',
+      'react-native-build',
       'react-storybook-build',
       'component-docs',
       'component-page-check',
       'component-page-audit',
+      'website-typecheck',
     ]);
 
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
@@ -246,7 +271,7 @@ describe('runComponentProductionCommandValidation', () => {
           return {
             exitCode: 1,
             stdout: `RUN /tmp/vellira-production/packages/react\n${'x'.repeat(
-              5_000
+              65_000
             )}\n${tailDiagnostic}`,
             stderr: '',
             timedOut: false,
@@ -266,7 +291,7 @@ describe('runComponentProductionCommandValidation', () => {
     expect(finding?.message).toContain('… output truncated …');
     expect(finding?.message).toContain(tailDiagnostic);
     expect(finding).toMatchObject({ platform: 'react' });
-    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
+    expect(finding?.message.length).toBeLessThanOrEqual(64_100);
   });
 
   it('preserves stdout diagnostics when stderr also contains command output', () => {
@@ -328,10 +353,10 @@ describe('runComponentProductionCommandValidation', () => {
     });
 
     expect(calls).toContain('react-native-tests');
-    expect(calls).not.toContain('react-typecheck');
-    expect(calls).not.toContain('react-native-typecheck');
-    expect(calls).not.toContain('react-build');
-    expect(calls).not.toContain('component-docs');
+    expect(calls).toContain('react-typecheck');
+    expect(calls).toContain('react-native-typecheck');
+    expect(calls).toContain('react-build');
+    expect(calls).toContain('component-docs');
 
     expect(
       result.stages
@@ -340,11 +365,11 @@ describe('runComponentProductionCommandValidation', () => {
             stage.id
           )
         )
-        .every((stage) => stage.status === 'skipped')
+        .every((stage) => stage.status === 'passed')
     ).toBe(true);
   });
 
-  it('treats timeout as a runtime failure', () => {
+  it('retains bounded partial output but keeps timeouts infrastructure-owned', () => {
     const result = runComponentProductionCommandValidation({
       root: '/tmp/vellira-production',
       input: WEB_INPUT,
@@ -352,8 +377,8 @@ describe('runComponentProductionCommandValidation', () => {
         if (command.id === 'react-build') {
           return {
             exitCode: null,
-            stdout: '',
-            stderr: '',
+            stdout: 'last completed harness task',
+            stderr: 'src/Probe.ts(1,1): error TS2307: unresolved import',
             timedOut: true,
           };
         }
@@ -366,6 +391,11 @@ describe('runComponentProductionCommandValidation', () => {
 
     expect(build?.status).toBe('failed');
     expect(build?.findings[0]?.message).toContain('timed out');
+    expect(build?.findings[0]?.message).toContain(
+      'last completed harness task'
+    );
+    expect(build?.findings[0]?.message).toContain('error TS2307');
+    expect(build?.findings[0]?.ruleId).toBe('validation.runtime');
   });
 
   it('keeps focused website command runtime failures blocking', () => {
@@ -427,3 +457,54 @@ function success(): ComponentProductionCommandExecution {
     timedOut: false,
   };
 }
+
+it('blocks website readiness when generated consumers omit required component props', () => {
+  const result = runComponentProductionCommandValidation({
+    root: '/tmp/vellira-production',
+    input: WEB_INPUT,
+    runner: (command) =>
+      command.id === 'website-typecheck'
+        ? {
+            exitCode: 2,
+            stdout:
+              "src/component-catalog/components/IdentityBadge/IdentityBadgeExamples.tsx(22,17): error TS2739: Type '{}' is missing the following properties from type 'IdentityBadgeProps': label, fallback",
+            stderr: '',
+            timedOut: false,
+          }
+        : success(),
+  });
+  const website = result.stages.find((stage) => stage.id === 'website');
+  expect(website?.status).toBe('blocked');
+  expect(website?.findings.length).toBeGreaterThan(0);
+  expect(result.commandStatuses?.['website-typecheck']).toBe('blocked');
+});
+
+it.each([false, true])(
+  'keeps independent website evidence when a package build fails (projection failure: %s)',
+  (projectionFailure) => {
+    const calls: string[] = [];
+    const result = runComponentProductionCommandValidation({
+      root: '/tmp/vellira-production',
+      input: WEB_INPUT,
+      runner: (command) => {
+        calls.push(command.id);
+        return command.id === 'react-build' ||
+          (projectionFailure && command.id === 'component-page-check')
+          ? {
+              exitCode: 1,
+              stdout: 'Candidate validation failed',
+              stderr: '',
+              timedOut: false,
+            }
+          : success();
+      },
+    });
+    expect(calls).toContain('component-page-check');
+    expect(calls).toContain('component-page-audit');
+    expect(calls).not.toContain('website-typecheck');
+    expect(result.stages.find((stage) => stage.id === 'website')?.status).toBe(
+      projectionFailure ? 'blocked' : 'skipped'
+    );
+    expect(result.commandStatuses?.['website-typecheck']).toBeUndefined();
+  }
+);

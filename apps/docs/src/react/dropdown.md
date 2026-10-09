@@ -9,7 +9,7 @@ Dropdown is for contextual actions: commands that apply to the current object,
 row, account, or page. It is not a form field and does not own a selected value.
 
 <StorybookFrame
-  story="dropdown.basic"
+  story="dropdown.groups"
   title="Dropdown actions"
   :height="420"
 />

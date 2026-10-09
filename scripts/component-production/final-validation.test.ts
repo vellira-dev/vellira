@@ -28,11 +28,36 @@ describe('componentProductionFinalValidationCommands', () => {
 
     expect(commands.map((command) => command.id)).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
       'canonical-web-visual',
       'web-smoke',
     ]);
-    expect(tooling?.command).toEqual(['pnpm', 'test:tooling:readiness']);
+    expect(tooling?.command.at(-1)).toBe('--source-contracts');
+    expect(
+      commands.find(({ id }) => id === 'tooling-token-semantics')?.command
+    ).toEqual(['pnpm', 'check:tokens-semantic:strict']);
+  });
+
+  it('gives serialized production tooling bounded runtime budgets that match its workload', () => {
+    const commands = componentProductionFinalValidationCommands(WEB_INPUT);
+    const source = commands.find(({ id }) => id === 'tooling-contracts');
+    const fixtures = commands.find(
+      ({ id }) => id === 'tooling-production-fixtures'
+    );
+
+    expect(source?.timeoutMs).toBe(900_000);
+    expect(source?.command).toContain('--source-contracts');
+    expect(fixtures?.timeoutMs).toBe(720_000);
+    expect(fixtures?.command).toContain('--maxWorkers=1');
+    expect(fixtures?.command).toContain(
+      'scripts/component-production/e2e-fixtures.test.ts'
+    );
   });
 
   it('does not run Web visual validation for native-only candidates', () => {
@@ -41,7 +66,17 @@ describe('componentProductionFinalValidationCommands', () => {
         ...WEB_INPUT,
         platform: 'native',
       }).map((command) => command.id)
-    ).toEqual(['public-api', 'tooling-contracts', 'native-smoke']);
+    ).toEqual([
+      'public-api',
+      'tooling-harness-contracts',
+      'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
+      'native-smoke',
+    ]);
   });
 
   it('runs one canonical visual gate and both smoke paths for cross-platform candidates', () => {
@@ -52,7 +87,13 @@ describe('componentProductionFinalValidationCommands', () => {
       }).map((command) => command.id)
     ).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
+      'tooling-token-semantics',
       'canonical-web-visual',
       'web-smoke',
       'native-smoke',
@@ -70,11 +111,16 @@ describe('componentProductionFinalValidationCommands', () => {
     expect(componentProductionRequiresTokenSemanticGate(input)).toBe(false);
     expect(commands.map((command) => command.id)).toEqual([
       'public-api',
+      'tooling-harness-contracts',
       'tooling-contracts',
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-native-consumers',
+      'tooling-package-consumers',
       'canonical-web-visual',
       'web-smoke',
     ]);
-    expect(tooling?.command).toEqual(['pnpm', 'test:tooling']);
+    expect(tooling?.command.at(-1)).toBe('--source-contracts');
   });
 
   it('uses semantic-aware tooling for an explicit token dependency', () => {
@@ -84,14 +130,128 @@ describe('componentProductionFinalValidationCommands', () => {
       tokens: ['semantic.surface.canvas'],
     };
     const commands = componentProductionFinalValidationCommands(input);
-    const tooling = commands.find(({ id }) => id === 'tooling-contracts');
+    const tooling = commands.find(({ id }) => id === 'tooling-token-semantics');
 
     expect(componentProductionRequiresTokenSemanticGate(input)).toBe(true);
-    expect(tooling?.command).toEqual(['pnpm', 'test:tooling:readiness']);
+    expect(tooling?.command).toEqual(['pnpm', 'check:tokens-semantic:strict']);
   });
 });
 
 describe('runComponentProductionFinalValidation', () => {
+  it('keeps harness ownership and executes every independent tooling group after timeout', () => {
+    const called: string[] = [];
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: WEB_INPUT,
+      runner: (command) => {
+        called.push(command.id);
+        if (command.id === 'tooling-harness-contracts') {
+          return {
+            exitCode: 1,
+            stdout: 'src/Probe.ts(1,1): error TS2307: missing',
+            stderr: '',
+            timedOut: false,
+          };
+        }
+        if (command.id === 'tooling-contracts') {
+          return {
+            exitCode: null,
+            stdout: 'last completed source test',
+            stderr: '',
+            timedOut: true,
+          };
+        }
+        return success();
+      },
+    });
+    const tooling = result.stages.find(({ id }) => id === 'tooling');
+    expect(tooling?.status).toBe('failed');
+    expect(tooling?.findings.map(({ ruleId }) => ruleId)).toEqual([
+      'validation.harness',
+      'validation.runtime',
+    ]);
+    expect(tooling?.findings[1]?.message).toContain(
+      'last completed source test'
+    );
+    for (const id of [
+      'tooling-token-cli',
+      'tooling-production-fixtures',
+      'tooling-token-semantics',
+      'canonical-web-visual',
+      'web-smoke',
+    ])
+      expect(called).toContain(id);
+  });
+
+  it('runs source tooling and token checks while deferring only failed-build consumers', () => {
+    const calls: string[] = [];
+    const result = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: { ...WEB_INPUT, platform: 'both' },
+      commandStatuses: {
+        'react-build': 'passed',
+        'react-native-build': 'blocked',
+        'react-storybook-build': 'passed',
+      },
+      runner: (command) => {
+        calls.push(command.id);
+        return command.id === 'tooling-contracts'
+          ? {
+              exitCode: 1,
+              stdout: 'FAIL scripts/harness.test.ts',
+              stderr: '',
+              timedOut: false,
+            }
+          : success();
+      },
+    });
+    expect(calls).toContain('tooling-contracts');
+    expect(calls).toContain('tooling-token-semantics');
+    expect(calls).toContain('canonical-web-visual');
+    expect(calls).not.toContain('tooling-native-consumers');
+    expect(calls).not.toContain('tooling-package-consumers');
+    expect(result.stages.find(({ id }) => id === 'tooling')).toMatchObject({
+      status: 'blocked',
+    });
+    expect(result.stages.find(({ id }) => id === 'smoke')).toMatchObject({
+      status: 'skipped',
+    });
+  });
+
+  it('cannot mark tooling passed until deferred build consumers actually run', () => {
+    const blocked = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: WEB_INPUT,
+      commandStatuses: {
+        'react-build': 'passed',
+        'react-native-build': 'blocked',
+        'react-storybook-build': 'passed',
+      },
+      runner: () => success(),
+    });
+    expect(blocked.stages.find(({ id }) => id === 'tooling')?.status).toBe(
+      'skipped'
+    );
+    const calls: string[] = [];
+    const complete = runComponentProductionFinalValidation({
+      root: '/tmp/candidate',
+      input: WEB_INPUT,
+      commandStatuses: {
+        'react-build': 'passed',
+        'react-native-build': 'passed',
+        'react-storybook-build': 'passed',
+      },
+      runner: (command) => {
+        calls.push(command.id);
+        return success();
+      },
+    });
+    expect(calls).toContain('tooling-native-consumers');
+    expect(calls).toContain('tooling-package-consumers');
+    expect(complete.stages.every(({ status }) => status === 'passed')).toBe(
+      true
+    );
+  });
   it('returns all final stages passed for a clean Web candidate', () => {
     const result = runComponentProductionFinalValidation({
       root: '/tmp/vellira-production',
@@ -136,7 +296,7 @@ describe('runComponentProductionFinalValidation', () => {
           ? {
               exitCode: 1,
               stdout: `public-api start\n${'x'.repeat(
-                5_000
+                65_000
               )}\n${tailDiagnostic}`,
               stderr: '',
               timedOut: false,
@@ -149,7 +309,7 @@ describe('runComponentProductionFinalValidation', () => {
     expect(finding?.message).toContain('public-api start');
     expect(finding?.message).toContain('… output truncated …');
     expect(finding?.message).toContain(tailDiagnostic);
-    expect(finding?.message.length).toBeLessThanOrEqual(4_100);
+    expect(finding?.message.length).toBeLessThanOrEqual(64_100);
   });
 
   it('blocks readiness when public API integrity fails', () => {
@@ -169,9 +329,9 @@ describe('runComponentProductionFinalValidation', () => {
 
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
       ['public-api', 'blocked'],
-      ['tooling', 'skipped'],
-      ['visual', 'skipped'],
-      ['smoke', 'skipped'],
+      ['tooling', 'passed'],
+      ['visual', 'passed'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[0]?.findings[0]?.message).toContain(
       'Public API drift detected.'
@@ -196,8 +356,8 @@ describe('runComponentProductionFinalValidation', () => {
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
       ['public-api', 'passed'],
       ['tooling', 'blocked'],
-      ['visual', 'skipped'],
-      ['smoke', 'skipped'],
+      ['visual', 'passed'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[1]?.findings[0]).toMatchObject({
       id: 'tooling:tooling-contracts',
@@ -229,14 +389,14 @@ describe('runComponentProductionFinalValidation', () => {
       ['public-api', 'passed'],
       ['tooling', 'passed'],
       ['visual', 'blocked'],
-      ['smoke', 'skipped'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[2]?.findings[0]).toMatchObject({
       platform: 'react',
     });
   });
 
-  it('fails closed on tooling timeout and skips later final gates', () => {
+  it('fails closed on tooling timeout while running independent final gates', () => {
     const result = runComponentProductionFinalValidation({
       root: '/tmp/vellira-production',
       input: WEB_INPUT,
@@ -254,8 +414,8 @@ describe('runComponentProductionFinalValidation', () => {
     expect(result.stages.map((stage) => [stage.id, stage.status])).toEqual([
       ['public-api', 'passed'],
       ['tooling', 'failed'],
-      ['visual', 'skipped'],
-      ['smoke', 'skipped'],
+      ['visual', 'passed'],
+      ['smoke', 'passed'],
     ]);
     expect(result.stages[1]?.findings[0]?.message).toContain('timed out');
   });

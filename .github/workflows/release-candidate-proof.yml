@@ -1,0 +1,272 @@
+name: Release Candidate Proof
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'scripts/release-candidate/**'
+      - 'scripts/semantic-release-packages.cjs'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-candidate-proof.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'README.md'
+      - 'packages/react/README.md'
+      - 'packages/react-native/README.md'
+      - 'apps/docs/src/start/getting-started.md'
+      - 'apps/docs/src/react/index.md'
+      - 'apps/docs/src/react-native/index.md'
+      - 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    name: Pack exact npm candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
+      candidate_version: ${{ steps.candidate.outputs.candidate_version }}
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up build Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build publishable packages
+        run: pnpm build
+
+      - name: Smoke workspace packages before packing
+        run: pnpm ci:smoke
+
+      - name: Match release npm runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Pack and validate exact candidate
+        id: candidate
+        env:
+          VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/release-candidate/cli.cjs
+
+      - name: Verify candidate provenance identity
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(
+            fs.readFileSync('.release-candidate/candidate.json', 'utf8')
+          );
+          if (manifest.source.sha !== process.env.EXPECTED_SHA) {
+            throw new Error(
+              `Candidate manifest SHA ${manifest.source.sha} does not match ${process.env.EXPECTED_SHA}.`
+            );
+          }
+          if (!Array.isArray(manifest.packages) || manifest.packages.length !== 6) {
+            throw new Error('Candidate manifest must contain exactly six public packages.');
+          }
+          if (manifest.checks?.cleanInstall !== true) {
+            throw new Error('Candidate manifest is missing clean-install proof.');
+          }
+          for (const packageEvidence of manifest.packages) {
+            if (!/^[a-f0-9]{64}$/.test(packageEvidence.sha256 ?? '')) {
+              throw new Error(`Missing SHA-256 evidence for ${packageEvidence.name}.`);
+            }
+            if (!(packageEvidence.npmIntegrity ?? '').startsWith('sha512-')) {
+              throw new Error(`Missing npm integrity evidence for ${packageEvidence.name}.`);
+            }
+          }
+          NODE
+
+      - name: Retain exact candidate tarballs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: npm-release-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .release-candidate/*.tgz
+            .release-candidate/candidate.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+  vite-consumer:
+    name: Clean Vite consumer
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout current consumer harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up consumer Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Download exact retained npm candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-candidate-${{ needs.candidate.outputs.candidate_sha }}
+          path: .candidate-artifacts
+
+      - name: Validate clean Vite consumer
+        env:
+          VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
+          VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+          VELLIRA_CANDIDATE_DIR: .candidate-artifacts
+          VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/vite-consumer.json
+        run: node scripts/release-candidate/vite-consumer.cjs
+
+      - name: Retain Vite consumer evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: vite-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
+          path: consumer-evidence/vite-consumer.json
+          if-no-files-found: error
+          retention-days: 30
+
+  next-consumer:
+    name: Clean Next.js consumer
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout current consumer harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up consumer Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Download exact retained npm candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-candidate-${{ needs.candidate.outputs.candidate_sha }}
+          path: .candidate-artifacts
+
+      - name: Validate clean Next.js consumer
+        env:
+          VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
+          VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+          VELLIRA_CANDIDATE_DIR: .candidate-artifacts
+          VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/next-consumer.json
+        run: node scripts/release-candidate/next-consumer.cjs
+
+      - name: Retain Next.js consumer evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: next-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
+          path: consumer-evidence/next-consumer.json
+          if-no-files-found: error
+          retention-days: 30
+
+  expo-consumer:
+    name: Clean Expo consumer
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout current consumer harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up consumer Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Download exact retained npm candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-candidate-${{ needs.candidate.outputs.candidate_sha }}
+          path: .candidate-artifacts
+
+      - name: Validate clean Expo consumer
+        env:
+          VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
+          VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+          VELLIRA_CANDIDATE_DIR: .candidate-artifacts
+          VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/expo-consumer.json
+        run: node scripts/release-candidate/expo-consumer.cjs
+
+      - name: Retain Expo consumer evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: expo-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
+          path: consumer-evidence/expo-consumer.json
+          if-no-files-found: error
+          retention-days: 30
+
+  docs-first-use:
+    name: Clean docs first-use
+    needs: [candidate, vite-consumer, next-consumer, expo-consumer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout docs proof at exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.candidate.outputs.candidate_sha }}
+          fetch-depth: 0
+
+      - name: Set up consumer Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Download exact retained npm candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-candidate-${{ needs.candidate.outputs.candidate_sha }}
+          path: .candidate-artifacts
+
+      - name: Validate public first-use documentation
+        env:
+          VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+          VELLIRA_CANDIDATE_DIR: .candidate-artifacts
+          VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/docs-first-use.json
+        run: node scripts/release-candidate/docs-first-use.cjs
+
+      - name: Retain docs first-use evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docs-first-use-evidence-${{ needs.candidate.outputs.candidate_sha }}
+          path: consumer-evidence/docs-first-use.json
+          if-no-files-found: error
+          retention-days: 30

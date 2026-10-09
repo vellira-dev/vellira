@@ -80,8 +80,7 @@
   opacity: 1;
 }
 
-.card:focus-visible,
-.viewAll:focus-visible {
+.card:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--space-1);
 }
@@ -156,24 +155,10 @@
 }
 
 .viewAll {
-  display: inline-flex;
-  align-items: center;
   width: fit-content;
   min-height: 40px;
-  color: var(--text-secondary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  text-decoration: none;
-  gap: var(--space-2);
-  transition: color 160ms ease;
-}
-
-.viewAll::after {
-  content: '→';
-}
-
-.viewAll:hover {
-  color: var(--text-primary);
 }
 
 @media (max-width: 900px) {
@@ -195,8 +180,7 @@
 @media (prefers-reduced-motion: reduce) {
   .card,
   .card::before,
-  .cta::after,
-  .viewAll {
+  .cta::after {
     transition: none;
   }
 

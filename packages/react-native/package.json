@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react-native",
-  "version": "2.124.0",
+  "version": "2.130.4",
   "description": "React Native components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -55,7 +55,8 @@
   "peerDependencies": {
     "@react-native-picker/picker": ">=2",
     "react": ">=19",
-    "react-native": ">=0.86"
+    "react-native": ">=0.86",
+    "react-native-svg": ">=13"
   },
   "dependencies": {
     "@vellira-ui/core": "workspace:*",

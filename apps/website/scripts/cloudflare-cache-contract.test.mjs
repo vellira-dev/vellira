@@ -35,7 +35,11 @@ import {
   requireArchivedDeployment,
   verifyArchivedAssets,
 } from './cloudflare-static-asset-archive.mjs';
-import { transportOptions, verifyNextPatch } from './next-rsc-patch-check.mjs';
+import {
+  NEXT_PATCH_VERSION,
+  transportOptions,
+  verifyNextPatch,
+} from './next-rsc-patch-check.mjs';
 import { assertRuntimeAsset } from './cloudflare-runtime-asset-contract.mjs';
 import { manualCommand } from './cloudflare-migration-manual.mjs';
 
@@ -340,7 +344,7 @@ test('archive preflight rejects wrong accounts/origins, unavailable storage and 
   );
 });
 
-test('both deployment workflows run blocking archive preflight before builds and browser tests', async () => {
+test('deployment workflows keep archive preflight before remote build and mutation', async () => {
   for (const target of ['staging', 'production']) {
     const workflow = await fs.readFile(
       path.resolve(
@@ -365,13 +369,28 @@ test('both deployment workflows run blocking archive preflight before builds and
       target === 'staging' ? 'wrangler.jsonc' : 'wrangler.production.jsonc',
     ])
       assert.ok(preflight.includes(required));
-    for (const marker of [
-      'Build website dependencies',
-      'test:cloudflare-migration',
-    ]) {
+
+    assert.ok(
+      steps.findIndex((step) => step.includes('Build website dependencies')) >
+        preflightIndex
+    );
+
+    if (target === 'production') {
       assert.ok(
-        steps.findIndex((step) => step.includes(marker)) > preflightIndex
+        steps.findIndex((step) => step.includes('test:cloudflare-migration')) >
+          preflightIndex
       );
+    } else {
+      const migrationStart = workflow.indexOf('\n  migration:\n');
+      const deployStart = workflow.indexOf('\n  deploy:\n');
+      assert.ok(migrationStart >= 0 && deployStart > migrationStart);
+      const migration = workflow.slice(migrationStart, deployStart);
+      const stagingDeploy = workflow.slice(deployStart);
+      assert.match(migration, /pnpm test:cloudflare-migration/);
+      assert.doesNotMatch(migration, /cloudflare-archive-preflight\.mjs/);
+      assert.doesNotMatch(migration, /CLOUDFLARE_API_TOKEN/);
+      assert.match(stagingDeploy, /needs: \[classify, migration\]/);
+      assert.match(stagingDeploy, /cloudflare-archive-preflight\.mjs wrangler\.jsonc/);
     }
   }
   const deploy = await fs.readFile(
@@ -385,7 +404,7 @@ test('both deployment workflows run blocking archive preflight before builds and
 });
 
 test('installed CJS/ESM transport and negative cache option contract', () => {
-  assert.equal(verifyNextPatch(), '16.3.3');
+  assert.equal(verifyNextPatch(), NEXT_PATCH_VERSION);
   const declaration =
     "const options = {credentials:'same-origin',headers,priority,signal};";
   assert.deepEqual(transportOptions(declaration), [

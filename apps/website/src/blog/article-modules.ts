@@ -10,6 +10,7 @@ import productionReadyCrossPlatformComponentMetadata from '../../content/blog/pr
 import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/quality-gates-before-component-growth/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
 import typescriptProjectOwnershipMetadata from '../../content/blog/typescript-project-ownership/metadata.json';
+import whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata from '../../content/blog/when-developers-re-decide-ui-across-browser-and-native/metadata.json';
 
 export interface BlogMDXModule {
   default: ComponentType;
@@ -63,6 +64,10 @@ const blogArticleMetadataRegistryEntries = [
     slug: 'typescript-project-ownership',
     metadata: typescriptProjectOwnershipMetadata,
   },
+  {
+    slug: 'when-developers-re-decide-ui-across-browser-and-native',
+    metadata: whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata,
+  },
 ] as const satisfies readonly BlogArticleMetadataRegistryEntry[];
 
 const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
@@ -86,6 +91,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
     'two-runtimes': () => import('../../content/blog/two-runtimes/article.mdx'),
     'typescript-project-ownership': () =>
       import('../../content/blog/typescript-project-ownership/article.mdx'),
+    'when-developers-re-decide-ui-across-browser-and-native': () =>
+      import('../../content/blog/when-developers-re-decide-ui-across-browser-and-native/article.mdx'),
   };
 
 export function getBlogArticleMetadataRegistryEntries(): readonly BlogArticleMetadataRegistryEntry[] {

@@ -119,7 +119,7 @@ jobs:
 
       - name: Verify actual OpenNext runtime before remote archive or activation
         run: |
-          pnpm --dir apps/website exec opennextjs-cloudflare populateCache local
+          node apps/website/scripts/cloudflare-populate-local-cache.mjs wrangler.production.jsonc
           node apps/website/scripts/cloudflare-local-runtime.mjs
 
       - name: Install migration regression browsers
@@ -212,6 +212,8 @@ jobs:
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
+          scripts/cloudflare-edge-recovery.test.mjs
+          scripts/cloudflare-client-navigation-recovery.test.mjs
 
       - name: Verify production component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry

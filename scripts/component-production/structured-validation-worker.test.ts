@@ -8,7 +8,7 @@ const AVATAR_METADATA = {
 } as ComponentMetadata;
 
 describe('runComponentProductionStructuredValidationWorkerTask', () => {
-  it('does not run quality after completeness blocks', async () => {
+  it('runs independent quality after completeness blocks', async () => {
     let qualityCalled = false;
 
     const result = await runComponentProductionStructuredValidationWorkerTask({
@@ -39,13 +39,13 @@ describe('runComponentProductionStructuredValidationWorkerTask', () => {
       },
     });
 
-    expect(qualityCalled).toBe(false);
+    expect(qualityCalled).toBe(true);
 
     expect(result).toMatchObject({
       schemaVersion: '1',
       status: 'ok',
       componentName: 'Avatar',
-      quality: null,
+      quality: { status: 'pass' },
     });
   });
 
@@ -71,6 +71,7 @@ describe('runComponentProductionStructuredValidationWorkerTask', () => {
             },
           ];
         },
+        runQuality: async () => passingQuality(),
       },
     });
 
@@ -78,7 +79,7 @@ describe('runComponentProductionStructuredValidationWorkerTask', () => {
     expect(observedMetadata).toEqual([AVATAR_METADATA]);
   });
 
-  it('runs quality only after completeness passes', async () => {
+  it('runs quality when completeness passes', async () => {
     let qualityCalled = false;
 
     const result = await runComponentProductionStructuredValidationWorkerTask({

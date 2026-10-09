@@ -9,10 +9,11 @@ interaction behavior inside the React Native layer.
 
 ## Installation
 
-Requires React and React Native.
+Requires `react >=19`, `react-native >=0.86`,
+`@react-native-picker/picker >=2`, and `react-native-svg >=13`.
 
 ```bash
-pnpm add @vellira-ui/react-native
+pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
 ```
 
 ## Usage

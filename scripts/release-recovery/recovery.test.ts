@@ -5,16 +5,20 @@ import { describe, expect, it, vi } from 'vitest';
 const require = createRequire(import.meta.url);
 const {
   assessGithubRelease,
+  assertVerifiedExistingRelease,
   assertNoCloudflareChanges,
   assertTaggedCheckout,
   assertTaggedSourceChanges,
   assertTagState,
+  isTrustedRecoveryProvenanceSource,
   planPackageRecovery,
+  provenanceSourceShas,
   validateInputs,
   verifyRegistryEvidence,
 } = require('./recovery.cjs');
 const {
   recovery: {
+    publishPackage,
     publishPackages,
     verifyPackageCompleteness,
     verifyPublishedPackage,
@@ -137,6 +141,53 @@ describe('release recovery decisions', () => {
     ).toEqual({ action: 'none', releaseId: 1 });
   });
 
+  it('auto-reconcile accepts only complete verified external release state', () => {
+    const expected = {
+      tagName: 'v2.104.1',
+      name: 'Vellira 2.104.1',
+      body: 'notes',
+    };
+
+    expect(
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(),
+        existingRelease: release(),
+        expected,
+      })
+    ).toEqual({
+      plan: { publish: [], satisfied: packages },
+      decision: { action: 'none', releaseId: 1 },
+    });
+
+    expect(() =>
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(['@vellira-ui/icons']),
+        existingRelease: release(),
+        expected,
+      })
+    ).toThrow('every npm package to already exist');
+
+    expect(() =>
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(),
+        existingRelease: null,
+        expected,
+      })
+    ).toThrow('requires an existing GitHub Release');
+
+    expect(() =>
+      assertVerifiedExistingRelease({
+        packageNames: packages,
+        states: states(),
+        existingRelease: release({ body: 'conflicting notes' }),
+        expected,
+      })
+    ).toThrow('Existing release notes conflict');
+  });
+
   it('selects only missing packages and never republishes existing versions', () => {
     expect(
       planPackageRecovery(
@@ -186,6 +237,81 @@ describe('release recovery decisions', () => {
     expect(assessGithubRelease(null, expected)).toEqual({ action: 'create' });
   });
 
+  it('accepts canonical semantic-release notes with h1 or h2 headings', () => {
+    const expected = {
+      tagName: 'v2.126.0',
+      name: 'v2.126.0',
+      body: 'generated notes may differ',
+    };
+    const compareUrl =
+      'https://github.com/vellira-dev/vellira/compare/v2.125.7...v2.126.0';
+
+    expect(
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body: `# [2.126.0](${compareUrl}) (2026-10-01)\n\n### Bug Fixes\n`,
+        }),
+        expected
+      )
+    ).toEqual({ action: 'none', releaseId: 1 });
+
+    expect(
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body: `## [2.126.0](${compareUrl})\n\n### Bug Fixes\n`,
+        }),
+        expected
+      )
+    ).toEqual({ action: 'none', releaseId: 1 });
+
+    expect(() =>
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body:
+            '# [2.126.1](' +
+            'https://github.com/vellira-dev/vellira/compare/' +
+            'v2.125.7...v2.126.1)',
+        }),
+        expected
+      )
+    ).toThrow('Existing release notes conflict');
+
+    expect(() =>
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body:
+            '# [2.126.0](' +
+            'https://github.com/vellira-dev/vellira/compare/' +
+            'v2.125.7...v9.9.9)\n\n' +
+            'Unrelated text mentioning ...v2.126.0)',
+        }),
+        expected
+      )
+    ).toThrow('Existing release notes conflict');
+
+    expect(() =>
+      assessGithubRelease(
+        release({
+          tag_name: 'v2.126.0',
+          name: 'v2.126.0',
+          body:
+            '# [2.126.0](' +
+            'https://github.com/other/repo/compare/' +
+            'v2.125.7...v2.126.0)',
+        }),
+        expected
+      )
+    ).toThrow('Existing release notes conflict');
+  });
+
   it('stops when an existing package lacks verified integrity or provenance', () => {
     const invalid = states();
     invalid['@vellira-ui/icons'] = { exists: true, verified: false };
@@ -216,6 +342,69 @@ describe('release recovery decisions', () => {
     ).toThrow('unexpected change');
   });
 
+  it('accepts historical recovery provenance only inside tag-to-main lineage', () => {
+    const tagSha = '1'.repeat(40);
+    const historicalRecoverySha = '2'.repeat(40);
+    const currentMainSha = '3'.repeat(40);
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: historicalRecoverySha,
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+        tagToSourceStatus: 'ahead',
+        sourceToControlStatus: 'ahead',
+      })
+    ).toBe(true);
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: tagSha,
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+      })
+    ).toBe(true);
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: currentMainSha,
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+      })
+    ).toBe(true);
+
+    for (const [tagToSourceStatus, sourceToControlStatus] of [
+      ['behind', 'ahead'],
+      ['diverged', 'ahead'],
+      ['ahead', 'behind'],
+      ['ahead', 'diverged'],
+    ]) {
+      expect(
+        isTrustedRecoveryProvenanceSource({
+          sourceSha: historicalRecoverySha,
+          expectedTagSha: tagSha,
+          controlSha: currentMainSha,
+          tagToSourceStatus,
+          sourceToControlStatus,
+        })
+      ).toBe(false);
+    }
+
+    expect(
+      isTrustedRecoveryProvenanceSource({
+        sourceSha: 'not-a-sha',
+        expectedTagSha: tagSha,
+        controlSha: currentMainSha,
+        tagToSourceStatus: 'ahead',
+        sourceToControlStatus: 'ahead',
+      })
+    ).toBe(false);
+
+    const cli = readFileSync('scripts/release-recovery/cli.cjs', 'utf8');
+    expect(cli).toContain('/compare/${input.expectedTagSha}...${sourceSha}');
+    expect(cli).toContain('/compare/${sourceSha}...${controlSha}');
+  });
+
   it('verifies attestation digest, trusted workflow, and source SHA', () => {
     const digest = Buffer.alloc(64, 7);
     const integrity = `sha512-${digest.toString('base64')}`;
@@ -241,6 +430,7 @@ describe('release recovery decisions', () => {
         },
       },
     };
+    expect(provenanceSourceShas([attestation])).toEqual([sha]);
     expect(
       verifyRegistryEvidence(
         {
@@ -252,6 +442,59 @@ describe('release recovery decisions', () => {
         { allowedSourceShas: [sha] }
       ).sourceShas
     ).toEqual([sha]);
+  });
+
+  it('defers normal publish visibility to the all-package completeness gate', async () => {
+    const verify = vi.fn(async () => {
+      throw new Error('per-package verification must be deferred');
+    });
+    const publish = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: '+ @vellira-ui/core@2.124.0\n',
+      stderr: '',
+    }));
+
+    await expect(
+      publishPackage(
+        { name: '@vellira-ui/core', version: '2.124.0' },
+        {
+          verifyAfterPublish: false,
+          publish,
+          verify,
+        }
+      )
+    ).resolves.toMatchObject({
+      status: 'accepted',
+      provenance: 'pending verification',
+    });
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it('keeps recovery publication on strict per-package verification', async () => {
+    const verify = vi.fn(async () => ({
+      integrity: 'sha512-dGVzdA==',
+      tarball: 'https://registry.example/core.tgz',
+      attestations: { url: 'https://registry.example/attestations' },
+    }));
+    const publish = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: '+ @vellira-ui/core@2.124.0\n',
+      stderr: '',
+    }));
+
+    await expect(
+      publishPackage(
+        { name: '@vellira-ui/core', version: '2.124.0' },
+        { publish, verify }
+      )
+    ).resolves.toMatchObject({
+      status: 'published',
+      provenance: 'verified',
+    });
+    expect(verify).toHaveBeenCalledTimes(1);
   });
 
   it('does not abandon the shared queue when one worker throws', async () => {
@@ -301,6 +544,31 @@ describe('release recovery decisions', () => {
     ).rejects.toThrow('one exact version');
   });
 
+  it('gives all six completeness checks one absolute deadline', async () => {
+    const infos = packages.map((name) => ({ name, version: '2.124.0' }));
+    const clock = 42_000;
+    const deadlines: number[] = [];
+    const verify = vi.fn(
+      async (
+        info: { name: string; version: string },
+        options: { deadlineAt: number; timeoutMs: number }
+      ) => {
+        deadlines.push(options.deadlineAt);
+        return info;
+      }
+    );
+
+    await expect(
+      verifyPackageCompleteness(infos, verify, {
+        now: () => clock,
+        timeoutMs: 1_200_000,
+      })
+    ).resolves.toEqual(infos);
+
+    expect(new Set(deadlines)).toEqual(new Set([1_242_000]));
+    expect(verify).toHaveBeenCalledTimes(6);
+  });
+
   it('fails the completeness gate if any package verification fails', async () => {
     const infos = packages.map((name) => ({ name, version: '2.104.1' }));
     const verify = vi.fn(async (info: { name: string }) => {
@@ -330,6 +598,21 @@ describe('release recovery decisions', () => {
     expect(warn).toHaveBeenLastCalledWith(
       expect.stringContaining('135000ms remain')
     );
+    warn.mockRestore();
+  });
+
+  it('accepts registry visibility after thirteen minutes inside the normal global budget', async () => {
+    const fake = fakeVisibility(780_000);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      verifyPublishedPackage(
+        { name: '@vellira-ui/core', version: '2.124.0' },
+        { ...fake, timeoutMs: 1_200_000, baseDelayMs: 5_000 }
+      )
+    ).resolves.toMatchObject({ tarball: expect.any(String) });
+    expect(fake.elapsed()).toBeGreaterThanOrEqual(780_000);
+    expect(fake.elapsed()).toBeLessThanOrEqual(1_200_000);
     warn.mockRestore();
   });
 
@@ -371,6 +654,37 @@ describe('release recovery decisions', () => {
     expect(fake.sleep).toHaveBeenCalledTimes(12);
     warn.mockRestore();
     stderr.mockRestore();
+  });
+
+  it('rejects registry integrity that differs from the packed release candidate', async () => {
+    const view = vi.fn(async () => ({
+      error: null,
+      status: 0,
+      stdout: JSON.stringify({
+        integrity: 'sha512-registry',
+        tarball: 'https://registry.example/package.tgz',
+        attestations: { url: 'https://registry.example/attestations' },
+      }),
+      stderr: '',
+    }));
+
+    await expect(
+      verifyPublishedPackage(
+        {
+          name: '@vellira-ui/core',
+          version: '2.127.0',
+          candidateIntegrity: 'sha512-candidate',
+        },
+        {
+          now: () => 0,
+          sleep: vi.fn(async () => undefined),
+          view,
+          timeoutMs: 10,
+          baseDelayMs: 5,
+        }
+      )
+    ).rejects.toThrow('npm integrity mismatch');
+    expect(view).toHaveBeenCalledTimes(1);
   });
 
   it('never accepts visible metadata without mandatory provenance', async () => {
@@ -438,6 +752,8 @@ describe('release recovery decisions', () => {
     );
     expect(publisher).toContain('VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS');
     expect(publisher).toContain("?? '360000'");
+    expect(publisher).toContain('VELLIRA_RELEASE_COMPLETENESS_TIMEOUT_MS');
+    expect(publisher).toContain("?? '1200000'");
     expect(publisher).not.toContain('VELLIRA_RELEASE_VERIFICATION_ATTEMPTS');
   });
 });

@@ -25,15 +25,170 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  release-state:
     if: >-
       github.event_name == 'push' &&
       !startsWith(github.event.head_commit.message, 'chore(release): sync package versions')
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      state: ${{ steps.classify.outputs.state }}
+      release_version: ${{ steps.classify.outputs.release_version }}
+      expected_tag_sha: ${{ steps.classify.outputs.expected_tag_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify release state
+        id: classify
+        run: node scripts/release-state-guard.cjs --classify
+
+  auto-reconcile-existing-release:
+    needs: release-state
+    if: needs.release-state.outputs.state == 'recoverable'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.release-state.outputs.release_version }}
+      EXPECTED_TAG_SHA: ${{ needs.release-state.outputs.expected_tag_sha }}
+      RECOVERY_CONFIRMATION: RECOVER_EXISTING_RELEASE
+    steps:
+      - name: Check out exact main reconciliation controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Verify existing external release state without mutation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-recovery/cli.cjs verify-existing
+
+      - name: Restore canonical version synchronization
+        run: |
+          node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
+          pnpm install --lockfile-only
+
+      - name: Verify reconciliation changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(git diff --name-only -- . ':!package.json' ':!pnpm-lock.yaml' ':!packages/*/package.json')"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected automatic reconciliation changes:"
+            echo "$unexpected"
+            exit 1
+          fi
+          git diff --check -- package.json pnpm-lock.yaml packages/*/package.json
+          if git diff --quiet -- package.json pnpm-lock.yaml packages/*/package.json; then
+            echo "::error::Recoverable release state produced no version-sync changes."
+            exit 1
+          fi
+          node -e "if (require('./package.json').version !== process.env.RELEASE_VERSION) process.exit(1)"
+
+      - name: Create auto-reconcile release sync GitHub App token
+        id: auto-reconcile-release-sync-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Seed auto-reconcile version sync branch at exact main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: chore/sync-release-${{ needs.release-state.outputs.release_version }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Auto-reconcile seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH" > /tmp/auto-reconcile-release-sync-refs.json
+          matching_count="$(
+            jq --arg ref "refs/heads/$BRANCH" '[.[] | select(.ref == $ref)] | length' /tmp/auto-reconcile-release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Auto-reconcile release sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r --arg ref "refs/heads/$BRANCH" '.[] | select(.ref == $ref) | .object.sha' /tmp/auto-reconcile-release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api --method PATCH "repos/$REPOSITORY/git/refs/heads/$BRANCH" -f sha="$BASE_SHA" -F force=true > /dev/null
+            fi
+          else
+            gh api --method POST "repos/$REPOSITORY/git/refs" -f ref="refs/heads/$BRANCH" -f sha="$BASE_SHA" > /dev/null
+          fi
+
+      - name: Create or update automatic version sync PR
+        id: auto-reconcile-version-sync-pr
+        env:
+          HUSKY: '0'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ steps.auto-reconcile-release-sync-token.outputs.token }}
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            packages/*/package.json
+          branch: chore/sync-release-${{ needs.release-state.outputs.release_version }}
+          commit-message: 'chore(release): sync package versions'
+          delete-branch: true
+          title: 'chore(release): sync package versions'
+          body: |
+            Automatically reconcile package manifests and lockfile with verified existing release version ${{ needs.release-state.outputs.release_version }}.
+
+      - name: Verify automatic version sync PR creation
+        env:
+          VERSION_SYNC_PR: ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-number }}
+        run: |
+          if [ -z "$VERSION_SYNC_PR" ]; then
+            echo "Verified external release state, but no automatic version-sync PR was created or found."
+            exit 1
+          fi
+
+      - name: Enable auto-merge for automatic version sync PR
+        env:
+          GH_TOKEN: ${{ steps.auto-reconcile-release-sync-token.outputs.token }}
+        run: |
+          gh pr merge ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-number }} \
+            --auto \
+            --squash \
+            --delete-branch
+
+  release:
+    needs: release-state
+    if: needs.release-state.outputs.state == 'synchronized'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      checks: read
+      contents: write
       id-token: write
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -42,6 +197,91 @@ jobs:
 
       - name: Guard synchronized release state
         run: node scripts/release-state-guard.cjs
+
+      - name: Verify merged PR validation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$REPOSITORY/commits/$RELEASE_SHA/pulls?per_page=100" \
+            > /tmp/release-prs.json
+
+          pr_count="$(
+            jq \
+              --arg sha "$RELEASE_SHA" \
+              '[.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha)] | length' \
+              /tmp/release-prs.json
+          )"
+
+          if [[ "$pr_count" != "1" ]]; then
+            echo "::error::Release source must resolve to exactly one merged PR for exact main SHA $RELEASE_SHA; found $pr_count."
+            exit 1
+          fi
+
+          pr_number="$(
+            jq -r \
+              --arg sha "$RELEASE_SHA" \
+              '.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha) | .number' \
+              /tmp/release-prs.json
+          )"
+          head_sha="$(
+            jq -r \
+              --arg sha "$RELEASE_SHA" \
+              '.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha) | .head.sha' \
+              /tmp/release-prs.json
+          )"
+
+          if [[ -z "$head_sha" || "$head_sha" == "null" ]]; then
+            echo "::error::Unable to resolve exact PR head for release source PR #$pr_number."
+            exit 1
+          fi
+
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$REPOSITORY/commits/$head_sha/check-runs?per_page=100" \
+            > /tmp/release-checks.json
+
+          required_checks=(
+            "Build, Test & Validate"
+            "Typecheck & API Contracts"
+            "Tooling & IndexNow Tests"
+            "Quality & Component Quality"
+            "Storybook & Browser Tests"
+            "Unit & Coverage Tests"
+            "CodeQL"
+            "chromatic"
+          )
+
+          for check_name in "${required_checks[@]}"; do
+            check_state="$(
+              jq -r \
+                --arg name "$check_name" \
+                '[
+                  .check_runs[]
+                  | select(.name == $name)
+                ]
+                | sort_by(.completed_at // "", .id)
+                | last
+                | if . == null
+                  then "missing"
+                  else "\(.status):\(.conclusion // "none")"
+                  end' \
+                /tmp/release-checks.json
+            )"
+
+            if [[ "$check_state" != "completed:success" ]]; then
+              echo "::error::Release source PR #$pr_number check '$check_name' is $check_state; refusing to duplicate or bypass PR validation."
+              exit 1
+            fi
+          done
+
+          echo "Verified release source PR #$pr_number ($head_sha): all release-critical PR checks are green."
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -60,23 +300,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Quality checks
-        run: pnpm ci:quality
-
-      - name: Build packages and apps
-        run: pnpm ci:build
-
-      - name: Typecheck & API validation
-        run: pnpm ci:typecheck
-
-      - name: Install Playwright browser
-        run: pnpm ci:playwright
-
-      - name: Unit and Storybook tests
-        run: pnpm test:unit && pnpm test:storybook
-
-      - name: Coverage
-        run: pnpm test:coverage
+      # The exact merged PR is already validated above. Rebuild only the
+      # publishable package artifacts in this trusted release environment.
+      - name: Build publishable packages
+        run: pnpm build
 
       - name: Smoke packages
         run: pnpm ci:smoke
@@ -106,6 +333,18 @@ jobs:
             echo "::error::semantic-release failed after it may have created immutable external state. Do not delete or move the tag. Use this workflow's manual release-recovery path after forensic review."
             exit 1
           fi
+
+      - name: Retain exact npm release candidate
+        if: always() && hashFiles('.release-candidate/candidate.json') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: npm-release-candidate-${{ github.sha }}
+          path: |
+            .release-candidate/*.tgz
+            .release-candidate/candidate.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
 
       - name: Detect version sync changes
         id: version-sync
@@ -181,6 +420,45 @@ jobs:
                 [.number, .headRefName] |
                 @tsv'
           )
+
+      - name: Seed version sync branch at exact main
+        if: steps.version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ steps.version-sync.outputs.branch }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Release sync seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api             "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH"             > /tmp/release-sync-refs.json
+          matching_count="$(
+            jq               --arg ref "refs/heads/$BRANCH"               '[.[] | select(.ref == $ref)] | length'               /tmp/release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Release sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r                 --arg ref "refs/heads/$BRANCH"                 '.[] | select(.ref == $ref) | .object.sha'                 /tmp/release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api                 --method PATCH                 "repos/$REPOSITORY/git/refs/heads/$BRANCH"                 -f sha="$BASE_SHA"                 -F force=true                 > /dev/null
+            fi
+          else
+            gh api               --method POST               "repos/$REPOSITORY/git/refs"               -f ref="refs/heads/$BRANCH"               -f sha="$BASE_SHA"               > /dev/null
+          fi
 
       - name: Create version sync PR
         if: steps.version-sync.outputs.changed == 'true'
@@ -335,6 +613,45 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
+      - name: Seed recovery version sync branch at exact main
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: chore/sync-release-${{ inputs.release_version }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Recovery version sync seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api             "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH"             > /tmp/recovery-release-sync-refs.json
+          matching_count="$(
+            jq               --arg ref "refs/heads/$BRANCH"               '[.[] | select(.ref == $ref)] | length'               /tmp/recovery-release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Recovery version sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r                 --arg ref "refs/heads/$BRANCH"                 '.[] | select(.ref == $ref) | .object.sha'                 /tmp/recovery-release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api                 --method PATCH                 "repos/$REPOSITORY/git/refs/heads/$BRANCH"                 -f sha="$BASE_SHA"                 -F force=true                 > /dev/null
+            fi
+          else
+            gh api               --method POST               "repos/$REPOSITORY/git/refs"               -f ref="refs/heads/$BRANCH"               -f sha="$BASE_SHA"               > /dev/null
+          fi
+
       - name: Create version sync PR
         if: steps.recovery-version-sync.outputs.changed == 'true'
         id: version-sync-pr
@@ -363,3 +680,13 @@ jobs:
             echo "Recovery completed externally, but no version-sync PR was created or found."
             exit 1
           fi
+
+      - name: Enable auto-merge for recovered version sync PR
+        if: steps.recovery-version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.recovery-release-sync-token.outputs.token }}
+        run: |
+          gh pr merge ${{ steps.version-sync-pr.outputs.pull-request-number }} \
+            --auto \
+            --squash \
+            --delete-branch

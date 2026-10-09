@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { unitProductionFixturePattern, remainingProductionFixturePattern } from './component-production-fixture-shards.mjs';
 
 // These probes exercise POSIX workflow steps; static contracts also run on Windows.
 const shellTest = process.platform === 'win32' ? test.skip : test;
@@ -91,6 +94,69 @@ for (const [name, group] of [
     assert.doesNotMatch(concurrency, /github\.ref|cancel-in-progress: true/);
   });
 }
+
+test('Chromatic gates expensive work on semantic visual impact', () => {
+  const source = workflow('chromatic');
+
+  assert.match(source, /name: Classify visual impact/);
+  assert.match(
+    source,
+    /git cat-file -e "\$\{BASE_SHA\}:scripts\/ci\/chromatic-impact\.mjs"/
+  );
+  assert.match(
+    source,
+    /git show "\$\{BASE_SHA\}:scripts\/ci\/chromatic-impact\.mjs" > "\$trusted_classifier"/
+  );
+  assert.match(
+    source,
+    /node "\$trusted_classifier" --base "\$BASE_SHA" --head "\$HEAD_SHA"/
+  );
+  assert.match(source, /reason=trusted-classifier-unavailable/);
+  assert.match(
+    source,
+    /github\.event\.pull_request\.base\.sha \|\| github\.event\.before/
+  );
+  assert.match(
+    source,
+    /github\.event\.pull_request\.head\.sha \|\| github\.sha/
+  );
+  assert.match(source, /name: Record intentional Chromatic skip/);
+
+  assert.match(source, /timeout-minutes: 15/);
+  assert.match(
+    source,
+    /container:\n {6}image: mcr\.microsoft\.com\/playwright:v1\.61\.1-noble\n {6}options: --ipc=host/
+  );
+  assert.match(source, /name: Trust checked-out repository in Playwright container/);
+  assert.match(
+    source,
+    /git config --global --add safe\.directory "\$GITHUB_WORKSPACE"/
+  );
+  assert.match(source, /name: Setup Node without dependency cache/);
+  assert.doesNotMatch(source, /cache: pnpm/);
+  assert.doesNotMatch(source, /Install Playwright browsers/);
+  assert.doesNotMatch(source, /Disable unrelated Google Chrome apt source/);
+  assert.doesNotMatch(source, /pnpm ci:playwright|playwright install --with-deps/);
+
+  for (const name of [
+    'Install dependencies',
+    'Build packages',
+    'Test Storybook',
+  ]) {
+    const marker = `      - name: ${name}\n`;
+    const step = source.split(marker)[1];
+    assert.ok(step, `Missing Chromatic step: ${name}`);
+    assert.match(
+      step.slice(0, 180),
+      /if: steps\.impact\.outputs\.run_chromatic == 'true'/
+    );
+  }
+
+  assert.match(
+    source,
+    /if: steps\.impact\.outputs\.run_chromatic == 'true' && github\.actor != 'dependabot\[bot\]'/
+  );
+});
 
 test('required title check keeps exact-head metadata semantics with trusted authority', () => {
   const source = workflow('pr-title');
@@ -264,19 +330,17 @@ test('minimal title validator reuses canonical config and locked root resolution
 });
 
 test('minimal validator preserves canonical valid and invalid title outcomes', () => {
-  const args = [
-    '--filter',
-    '@vellira-ci/pr-title-validator',
-    'run',
-    'validate',
-  ];
+  const validatorRoot = fileURLToPath(new URL('../../tools/pr-title-validator/', import.meta.url));
+  const require = createRequire(new URL('../../tools/pr-title-validator/package.json', import.meta.url));
+  const cli = path.join(path.dirname(require.resolve('@commitlint/cli/package.json')), 'cli.js');
+  const args = [cli, '--config', 'commitlint.config.js'];
 
   for (const title of [
     'ci: isolate pull request title dependencies',
     'fix(ci): preserve exact head title validation',
   ]) {
-    const result = spawnSync('pnpm', args, {
-      cwd: process.cwd(),
+    const result = spawnSync(process.execPath, args, {
+      cwd: validatorRoot,
       input: title + '\n',
       encoding: 'utf8',
       timeout: 5000,
@@ -288,8 +352,8 @@ test('minimal validator preserves canonical valid and invalid title outcomes', (
     'Update pull request title validation',
     'feat(ci) missing conventional separator',
   ]) {
-    const result = spawnSync('pnpm', args, {
-      cwd: process.cwd(),
+    const result = spawnSync(process.execPath, args, {
+      cwd: validatorRoot,
       input: title + '\n',
       encoding: 'utf8',
       timeout: 5000,
@@ -360,7 +424,7 @@ shellTest('clean-checkout probe rejects workspace dist but ignores dependency di
   assert.equal(shell(probe, cwd).status, 1);
 });
 
-test('production admission is read-only and standalone supersede workflow is removed', () => {
+test('production approval wait is separated from the serialized deploy mutex', () => {
   assert.equal(
     existsSync(
       new URL(
@@ -386,9 +450,24 @@ test('production admission is read-only and standalone supersede workflow is rem
     production,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
   );
-  const admission = production.split('\n  admission:\n')[1].split('\n  deploy:\n')[0];
+  const admission = production.split('\n  admission:\n')[1].split('\n  approval:\n')[0];
+  const approval = production.split('\n  approval:\n')[1].split('\n  deploy:\n')[0];
+  const deploy = production.split('\n  deploy:\n')[1].split('\n  indexnow:\n')[0];
+
   assert.match(admission, /actions: read/);
   assert.doesNotMatch(admission, /actions: write|deployments: write|secrets\./);
+
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.match(approval, /needs: \[candidate, admission\]/);
+  assert.doesNotMatch(approval, /concurrency:|secrets\.|: write/);
+
+  assert.match(deploy, /needs: \[candidate, admission, approval\]/);
+  assert.match(deploy, /needs\.approval\.result == 'success'/);
+  assert.match(
+    deploy,
+    /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
+  );
+  assert.doesNotMatch(deploy, /^ {4}environment:/m);
 });
 
 test('IndexNow automatic path is downstream of verified production, not status events', () => {
@@ -396,10 +475,12 @@ test('IndexNow automatic path is downstream of verified production, not status e
   assert.equal(section(manual, 'on').trim(), 'workflow_dispatch:');
   assert.doesNotMatch(manual, /deployment_status/);
   const source = workflow('deploy-website-cloudflare-production');
+  const approval = source.split('\n  approval:\n')[1].split('\n  deploy:\n')[0];
   const deploy = source.split('\n  deploy:\n')[1].split('\n  indexnow:\n')[0];
   const notify = source.split('\n  indexnow:\n')[1];
   assert.ok(notify);
-  assert.match(deploy, /environment:\n {6}name: production/);
+  assert.match(approval, /environment:\n {6}name: production/);
+  assert.doesNotMatch(deploy, /^ {4}environment:/m);
   assert.doesNotMatch(deploy, /continue-on-error:/);
   assert.match(notify, /needs: \[candidate, deploy\]/);
   assert.match(notify, /if: needs\.deploy\.result == 'success'/);
@@ -516,5 +597,55 @@ shellTest('diagnostics execute only the selected canonical command and preserve 
     const failure = shell(source, cwd, { ...env, PROBE_EXIT_CODE: '17' });
     assert.equal(failure.status, 17, failure.stderr);
     assert.equal(readFileSync(path.join(cwd, 'vellira-diagnostics/output.log'), 'utf8').trim(), command);
+  }
+});
+
+test('GitHub Actions tooling keeps component-production e2e fixtures on dedicated shards', () => {
+  const toolingRunner = readFileSync(
+    new URL('./tooling-execution.mjs', import.meta.url),
+    'utf8'
+  );
+  const unitRunner = readFileSync(
+    new URL('./run-unit-tests.mjs', import.meta.url),
+    'utf8'
+  );
+  const pageRunner = readFileSync(
+    new URL('./run-component-page-generator-tests.mjs', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(
+    toolingRunner,
+    /const splitProductionFixtures = environment\.GITHUB_ACTIONS === 'true';/
+  );
+  assert.doesNotMatch(toolingRunner, /GITHUB_JOB === 'tooling'/);
+  assert.match(
+    toolingRunner,
+    /--exclude',\s+'scripts\/component-production\/e2e-fixtures\.test\.ts'/
+  );
+
+  assert.match(unitRunner, /GITHUB_JOB === 'unit-coverage'/);
+  assert.match(unitRunner, /'--testNamePattern',\s+unitProductionFixturePattern/);
+  assert.match(pageRunner, /GITHUB_JOB === 'generator-blog'/);
+  assert.match(
+    pageRunner,
+    /'--testNamePattern',\s+remainingProductionFixturePattern/
+  );
+});
+
+test('production fixture shards are exhaustive and disjoint, including future names', () => {
+  const unit = new RegExp(unitProductionFixturePattern);
+  const remaining = new RegExp(remainingProductionFixturePattern);
+  for (const name of [
+    'base-web', 'overlay-web', 'base-cross-platform',
+    'boolean-form-control', 'compound-divergent',
+    'rejects invalid resources before writing component artifacts',
+    'blocks compound completeness until instance-isolation evidence exists',
+    'reports exactly every real generation mutation for a fresh both-platform base component',
+    'future reusable-program fixture',
+    'component production end-to-end fixtures > compound-divergent',
+    'future multiline suite\nboolean-form-control',
+  ]) {
+    assert.equal(Number(unit.test(name)) + Number(remaining.test(name)), 1, name);
   }
 });

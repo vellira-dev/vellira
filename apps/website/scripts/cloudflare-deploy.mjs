@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { withRemoteArchive } from './cloudflare-archive-client.mjs';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
+import { populateLocalCache } from './cloudflare-populate-local-cache.mjs';
 import { assertFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
 import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
 import {
@@ -19,14 +20,16 @@ const root = path.resolve(import.meta.dirname, '..');
 await fs.rm(path.join(root, '.open-next/vellira-build.json'), { force: true });
 const configPath = path.resolve(root, process.argv[2] ?? 'wrangler.jsonc');
 const config = readDeploymentConfig(configPath);
+const { GITHUB_TOKEN: githubToken, ...childProcessEnv } = process.env;
 const freshnessContext = {
   configPath,
   candidateSource: process.env.CANDIDATE_SOURCE,
   candidateSha: process.env.CANDIDATE_SHA,
+  githubToken,
   cwd: root,
 };
 
-function run(command, args, env = process.env) {
+function run(command, args, env = childProcessEnv) {
   const result = spawnSync(command, args, { cwd: root, env, stdio: 'inherit' });
   if (result.error) throw result.error;
   assert.equal(result.status, 0, `${command} ${args.join(' ')} failed`);
@@ -35,13 +38,7 @@ function run(command, args, env = process.env) {
 // Populate OpenNext's read-only route assets before auditing the final graph.
 // Activation uses Wrangler directly so no further OpenNext mutation can occur
 // after the archive/closure gate. Experimental skew mapping is intentionally absent.
-run('pnpm', [
-  'exec',
-  'opennextjs-cloudflare',
-  'populateCache',
-  'local',
-  `--config=${configPath}`,
-]);
+await populateLocalCache(configPath, { env: childProcessEnv });
 const identity = prepareDeployment(root);
 const inventory = await assetInventory(
   path.join(root, '.open-next/assets/_next/static')
@@ -61,7 +58,7 @@ assert.equal(
   'Cannot identify the active deployment; activation is blocked'
 );
 const previousBuildId = (await previous.text()).trim();
-assertFreshProductionCandidate(freshnessContext);
+await assertFreshProductionCandidate(freshnessContext);
 await withRemoteArchive(config, async (bucket, bucketName) => {
   // Adoption must not orphan the current live graph. Historical backfill is an
   // explicit archive-only operation, not a silent best-effort migration.
@@ -86,11 +83,11 @@ await withRemoteArchive(config, async (bucket, bucketName) => {
 run(
   'pnpm',
   ['exec', 'wrangler', 'deploy', '--dry-run', `--config=${configPath}`],
-  { ...process.env, OPEN_NEXT_DEPLOY: 'true' }
+  { ...childProcessEnv, OPEN_NEXT_DEPLOY: 'true' }
 );
-assertFreshProductionCandidate(freshnessContext);
+await assertFreshProductionCandidate(freshnessContext);
 run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
-  ...process.env,
+  ...childProcessEnv,
   OPEN_NEXT_DEPLOY: 'true',
 });
 // Cloudflare activation can propagate briefly across edges. Do not start strict
