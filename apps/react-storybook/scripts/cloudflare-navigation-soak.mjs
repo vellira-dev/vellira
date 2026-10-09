@@ -383,14 +383,14 @@ async function blog() {
   for (let round = 1; round <= rounds; round++) {
     for (const { href, title } of targets) {
       await click(page.locator(`main a[href="${href}"]`).first(), href, title);
-      // History preserves the loaded runtime/router caches, unlike page.goto('/blog').
-      await runRecoverableSoakNavigation({
-        href: '/blog',
-        title: 'Blog',
-        stage: `history back ${href} -> /blog`,
-        action: () =>
-          page.goBack({ waitUntil: 'domcontentloaded', timeout: 15_000 }),
-      });
+      // Use the canonical article back link so retrying the action cannot
+      // advance browser history twice. This remains a client navigation and
+      // preserves the loaded router/runtime caches unlike page.goto('/blog').
+      await click(
+        page.locator('main a[href="/blog"]').first(),
+        '/blog',
+        'Blog'
+      );
     }
     await diagnostics.anchor(`blog round ${round}`);
     console.log(`OK blog round ${round}/${rounds}: ${targets.length} routes`);
