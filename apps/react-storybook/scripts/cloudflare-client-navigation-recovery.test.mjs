@@ -190,7 +190,6 @@ test('document fallback fails closed without edge proof, exact build, or a new d
   );
 });
 
-
 test('soak navigation replay requires recovered edge, same route and same document', () => {
   const fixture = {
     baseUrl: 'https://vellira.test',
