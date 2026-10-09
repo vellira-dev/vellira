@@ -20,6 +20,8 @@ import {
   ForgotPasswordForm,
   LoginForm,
   OAuthCallback,
+  SignupForm,
+  VerificationFlow,
 } from '../../apps/website/src/product-app/AuthFlows';
 
 let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
@@ -193,6 +195,61 @@ describe('existing OAuth callback and account recovery', () => {
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('creates an email account and enters the app without blocking on verification', async () => {
+    fetchMock.mockResolvedValue(respond({ registered: true }));
+    render(<SignupForm />);
+    fireEvent.change(screen.getByLabelText('Email', { exact: false }), {
+      target: { value: 'new-user@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
+      target: { value: 'a sufficiently long password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
+    expect(router.push).not.toHaveBeenCalledWith('/verify-email');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.vellira.dev/v1/auth/register',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({
+          email: 'new-user@example.com',
+          password: 'a sufficiently long password',
+        }),
+      })
+    );
+  });
+
+  it('returns an already-authenticated user to the app after email verification', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/verify-email#token=verification-secret'
+    );
+    fetchMock
+      .mockResolvedValueOnce(respond({ verified: true }))
+      .mockResolvedValueOnce(
+        respond({
+          user: {
+            id: 'canonical-user',
+            status: 'active',
+            emailVerified: true,
+          },
+        })
+      );
+
+    render(<VerificationFlow />);
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
+    expect(window.location.hash).toBe('');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'https://api.vellira.dev/v1/auth/email/verify'
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      'https://api.vellira.dev/v1/me'
+    );
   });
 
   it('signs in through the existing password form and API', async () => {

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { Warning } from '@vellira-ui/icons';
 import { Button, Select, Tabs } from '@vellira-ui/react';
 
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
@@ -72,7 +73,7 @@ function AppNavigation() {
 }
 
 function AppShellContent({ children }: { children: ReactNode }) {
-  const { status, workspace, error, refresh } = useAppSession();
+  const { status, me, workspace, error, refresh } = useAppSession();
 
   if (status === 'loading') {
     return (
@@ -115,6 +116,27 @@ function AppShellContent({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </header>
+
+      {me && !me.emailVerified && (
+        <div className={styles.verificationBanner} role='status'>
+          <Warning size={20} aria-hidden='true' />
+          <div className={styles.verificationCopy}>
+            <strong>Email not verified</strong>
+            <span>
+              Verify your email to finish securing your Vellira account.
+            </span>
+          </div>
+          <Button
+            asChild
+            size='sm'
+            appearance='outline'
+            color='neutral'
+            className={styles.verificationAction}
+          >
+            <Link href='/verify-email'>Resend verification email</Link>
+          </Button>
+        </div>
+      )}
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>

@@ -178,6 +178,28 @@ describe('Vellira App first-party UI contract', () => {
     expect(designSystemLink).toContain('iconStart={resolvedIconStart}');
   });
 
+  it('keeps email verification non-blocking for an authenticated app session', () => {
+    const appSession = fs.readFileSync(
+      path.join(root, 'apps/website/src/product-app/AppSession.tsx'),
+      'utf8'
+    );
+    const appShell = fs.readFileSync(
+      path.join(root, 'apps/website/src/product-app/AppShell.tsx'),
+      'utf8'
+    );
+    const authFlows = fs.readFileSync(
+      path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
+      'utf8'
+    );
+
+    expect(appSession).not.toContain("router.replace('/verify-email')");
+    expect(appShell).toContain('Email not verified');
+    expect(appShell).toContain("href='/verify-email'");
+    expect(appShell).toContain('Resend verification email');
+    expect(authFlows).toContain("router.replace('/app')");
+    expect(authFlows).not.toContain("router.push('/verify-email')");
+  });
+
   it('keeps verification and reset secrets in the browser fragment path', () => {
     const source = fs.readFileSync(
       path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),

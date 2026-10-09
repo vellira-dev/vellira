@@ -141,7 +141,7 @@ export function SignupForm() {
 
     try {
       await register(email.trim(), password);
-      router.push('/verify-email');
+      router.replace('/app');
     } catch (cause) {
       setError(
         cause instanceof VelliraApiError && cause.code === 'invalid_request'
@@ -226,6 +226,7 @@ export function SignupForm() {
 }
 
 export function VerificationFlow() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [state, setState] = useState<
     'pending' | 'verifying' | 'verified' | 'invalid'
@@ -244,7 +245,14 @@ export function VerificationFlow() {
     setState('verifying');
 
     void verifyEmail(token)
-      .then(() => setState('verified'))
+      .then(async () => {
+        try {
+          await getMe();
+          router.replace('/app');
+        } catch {
+          setState('verified');
+        }
+      })
       .catch((cause) => {
         setState('invalid');
         setError(
@@ -253,7 +261,7 @@ export function VerificationFlow() {
             : 'Email verification is temporarily unavailable.'
         );
       });
-  }, []);
+  }, [router]);
 
   const handleResend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

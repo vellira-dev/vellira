@@ -67,13 +67,6 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     try {
       const meResponse = await getMe();
 
-      if (!meResponse.user.emailVerified) {
-        setMe(meResponse.user);
-        setWorkspace(null);
-        router.replace('/verify-email');
-        return;
-      }
-
       const workspaceList = await listWorkspaces();
       const workspace =
         workspaceList.workspaces[0] ??
