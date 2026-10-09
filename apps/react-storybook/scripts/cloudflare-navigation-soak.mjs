@@ -174,7 +174,9 @@ page.on('response', (response) => {
 });
 
 async function seedDocumentContinuity() {
-  await seedDocumentContinuity();
+  documentToken = await page.evaluate(
+    () => (window.__velliraSoakDocument = crypto.randomUUID())
+  );
   documentTokenStartedAt = Date.now();
 }
 
@@ -360,9 +362,7 @@ try {
   }
   await ready('/components/switch', 'Switch');
 
-  documentToken = await page.evaluate(
-    () => (window.__velliraSoakDocument = crypto.randomUUID())
-  );
+  await seedDocumentContinuity();
   await components();
   await blog();
   await page.waitForTimeout(5_000);
