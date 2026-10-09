@@ -626,7 +626,9 @@ export function OAuthCallback() {
 
     void getMe()
       .then(() => router.replace('/app'))
-      .catch(() => setFailure(getOAuthCallbackFailure('oauth_unavailable')));
+      .catch(() =>
+        setFailure(getOAuthCallbackFailure('oauth_unavailable'))
+      );
   }, [router]);
 
   if (!failure) {
