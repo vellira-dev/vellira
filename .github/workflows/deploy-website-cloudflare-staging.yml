@@ -6,6 +6,8 @@ on:
     paths:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-client-navigation-recovery.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-client-navigation-recovery.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-edge-recovery.mjs'
       - 'apps/react-storybook/scripts/cloudflare-edge-recovery.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.mjs'
@@ -292,6 +294,7 @@ jobs:
           scripts/cloudflare-browser-diagnostics.test.mjs
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
           scripts/cloudflare-edge-recovery.test.mjs
+          scripts/cloudflare-client-navigation-recovery.test.mjs
 
       - name: Verify component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
@@ -328,20 +331,23 @@ jobs:
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
           import fs from 'node:fs/promises';
+          import path from 'node:path';
+          import { pathToFileURL } from 'node:url';
+
+          const { waitForRuntimeStability } = await import(
+            pathToFileURL(
+              path.resolve('apps/website/scripts/cloudflare-runtime-stabilization.mjs')
+            ).href
+          );
 
           const build = JSON.parse(
             await fs.readFile('apps/website/.open-next/vellira-build.json', 'utf8')
           );
-          const runtimeResponse = await fetch(
-            new URL('/__vellira_runtime', process.env.STAGING_URL),
-            { cache: 'no-store' }
-          );
-          assert.equal(runtimeResponse.status, 200);
-          const runtime = await runtimeResponse.json();
-          assert.equal(runtime.buildId, build.buildId);
-          assert.ok(runtime.workerVersion);
+          const runtime = await waitForRuntimeStability({
+            base: process.env.STAGING_URL,
+            expectedBuildId: build.buildId,
+          });
 
           const evidence = {
             schemaVersion: 1,

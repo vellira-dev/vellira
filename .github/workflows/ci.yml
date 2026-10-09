@@ -191,12 +191,16 @@ jobs:
           apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy*.mjs
           apps/react-storybook/scripts/cloudflare-navigation-soak.mjs
           apps/react-storybook/scripts/cloudflare-edge-recovery*.mjs
+          apps/react-storybook/scripts/cloudflare-client-navigation-recovery*.mjs
           apps/react-storybook/scripts/cloudflare-website-smoke.mjs
       - name: Test website smoke policies
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
           scripts/cloudflare-edge-recovery.test.mjs
+          scripts/cloudflare-client-navigation-recovery.test.mjs
+      - name: Test Cloudflare edge fetch retry
+        run: node --test apps/website/scripts/cloudflare-edge-fetch.test.mjs
       - name: Test OpenNext string-export package patch
         run: node --test apps/website/scripts/opennext-string-exports-patch.test.mjs
       - run: pnpm test:cloudflare-cache

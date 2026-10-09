@@ -1,5 +1,9 @@
 import { chromium } from '@playwright/test';
 import { captureBrowserJson } from './cloudflare-browser-json.mjs';
+import {
+  destinationEdgeFailures,
+  runRecoverableClientNavigation,
+} from './cloudflare-client-navigation-recovery.mjs';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -608,15 +612,54 @@ async function verifyBlogIndexMetricsProxy() {
   throw new Error('Blog aggregate metrics proxy did not converge.');
 }
 
+async function performRecoverableClientNavigation({
+  startPath,
+  href,
+  stage,
+  prepare,
+  click,
+  assertReady,
+}) {
+  return runRecoverableClientNavigation({
+    stage,
+    maxAttempts: edgeRecoveryMaxAttempts,
+    prepareAttempt: async () => {
+      await goto(startPath);
+      await prepare?.();
+    },
+    runAttempt: async () => {
+      await click();
+      await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
+      await assertReady();
+    },
+    failureCursor: () => cloudflareEdgeGetFailures.length,
+    failuresSince: (cursor) =>
+      destinationEdgeFailures(edgeFailuresSince(cursor), href),
+    recoverFailures: recoverCloudflareEdgeFailures,
+    beforeRetry: async (attempt) => {
+      console.log(
+        `Retrying client navigation after transient Cloudflare edge failure during ${stage} (attempt ${attempt}/${edgeRecoveryMaxAttempts})`
+      );
+      await sleep(edgeRecoveryDelayMs);
+    },
+  });
+}
+
 async function navigateByLink(startPath, href, expectedText) {
-  await goto(startPath);
-  const link = page.locator(`a[href="${href}"]`).first();
-  await link.waitFor({ state: 'visible', timeout: 15_000 });
-  await link.click();
-  await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-  await page.getByText(expectedText, { exact: false }).first().waitFor({
-    state: 'visible',
-    timeout: 15_000,
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `client navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const link = page.locator(`a[href="${href}"]`).first();
+      await link.waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () => page.locator(`a[href="${href}"]`).first().click(),
+    assertReady: () =>
+      page.getByText(expectedText, { exact: false }).first().waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      }),
   });
   console.log(`OK client navigation ${startPath} -> ${href}`);
 }
@@ -876,42 +919,73 @@ async function navigateViaContinueReading() {
     'section[aria-labelledby="blog-continue-reading-heading"]'
   );
   await section.waitFor({ state: 'visible', timeout: 15_000 });
-  const link = section.locator('a[href^="/blog/"]').first();
-  await link.waitFor({ state: 'visible', timeout: 15_000 });
+  const initialLink = section.locator('a[href^="/blog/"]').first();
+  await initialLink.waitFor({ state: 'visible', timeout: 15_000 });
 
-  const href = await link.getAttribute('href');
-  const expectedTitle = (await link.locator('h3').innerText()).trim();
+  const href = await initialLink.getAttribute('href');
+  const expectedTitle = (await initialLink.locator('h3').innerText()).trim();
   if (!href || href === startPath || !expectedTitle) {
     throw new Error(
       `Invalid Continue reading target: href=${href} title=${expectedTitle}`
     );
   }
 
-  await link.click();
-  await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-  await page
-    .getByRole('heading', { level: 1, name: expectedTitle })
-    .waitFor({ state: 'visible', timeout: 15_000 });
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `Continue reading ${startPath} -> ${href}`,
+    prepare: async () => {
+      const link = page
+        .locator('section[aria-labelledby="blog-continue-reading-heading"]')
+        .locator(`a[href="${href}"]`)
+        .first();
+      await link.waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('section[aria-labelledby="blog-continue-reading-heading"]')
+        .locator(`a[href="${href}"]`)
+        .first()
+        .click(),
+    assertReady: () =>
+      page
+        .getByRole('heading', { level: 1, name: expectedTitle })
+        .waitFor({ state: 'visible', timeout: 15_000 }),
+  });
   console.log(`OK Continue reading navigation ${startPath} -> ${href}`);
 }
 
 async function navigateWithinComponentSidebar() {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await goto('/components/switch');
-  const sidebar = page
-    .locator('aside[aria-label="Component navigation"]')
-    .first();
-  await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
-  const checkboxLink = sidebar.locator('a[href="/components/checkbox"]');
-  await checkboxLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await checkboxLink.click();
-  await page.waitForURL(`${baseUrl}/components/checkbox`, {
-    timeout: 15_000,
+  const startPath = '/components/switch';
+  const href = '/components/checkbox';
+
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `desktop component navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const sidebar = page
+        .locator('aside[aria-label="Component navigation"]')
+        .first();
+      await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
+      await sidebar
+        .locator(`a[href="${href}"]`)
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('aside[aria-label="Component navigation"]')
+        .first()
+        .locator(`a[href="${href}"]`)
+        .click(),
+    assertReady: () =>
+      page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      }),
   });
-  await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
+
   console.log(
     'OK desktop component sidebar navigation /components/switch -> /components/checkbox'
   );
@@ -919,25 +993,41 @@ async function navigateWithinComponentSidebar() {
 
 async function navigateWithinMobileComponentSidebar() {
   await page.setViewportSize({ width: 670, height: 900 });
-  await goto('/components/switch');
-  const trigger = page.getByRole('button', {
-    name: 'Open component navigation',
+  const startPath = '/components/switch';
+  const href = '/components/checkbox';
+
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `mobile component navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const trigger = page.getByRole('button', {
+        name: 'Open component navigation',
+      });
+      await trigger.waitFor({ state: 'visible', timeout: 15_000 });
+      await trigger.click();
+      const mobileSidebar = page.locator('#component-navigation');
+      await mobileSidebar.waitFor({ state: 'visible', timeout: 15_000 });
+      await mobileSidebar
+        .locator(`a[href="${href}"]`)
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('#component-navigation')
+        .locator(`a[href="${href}"]`)
+        .click(),
+    assertReady: async () => {
+      await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+      await page
+        .locator('#component-navigation')
+        .waitFor({ state: 'hidden', timeout: 15_000 });
+    },
   });
-  await trigger.waitFor({ state: 'visible', timeout: 15_000 });
-  await trigger.click();
-  const mobileSidebar = page.locator('#component-navigation');
-  await mobileSidebar.waitFor({ state: 'visible', timeout: 15_000 });
-  const checkboxLink = mobileSidebar.locator('a[href="/components/checkbox"]');
-  await checkboxLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await checkboxLink.click();
-  await page.waitForURL(`${baseUrl}/components/checkbox`, {
-    timeout: 15_000,
-  });
-  await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-  await mobileSidebar.waitFor({ state: 'hidden', timeout: 15_000 });
+
   console.log(
     'OK mobile component navigation /components/switch -> /components/checkbox and overlay closed'
   );
