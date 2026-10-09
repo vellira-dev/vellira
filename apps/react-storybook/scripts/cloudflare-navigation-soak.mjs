@@ -274,10 +274,17 @@ async function ready(
   assertRscCachePolicy(`settled ${href}`);
 }
 
-async function runRecoverableSoakNavigation({ href, title, stage, action }) {
+async function runRecoverableSoakNavigation({
+  href,
+  title,
+  stage,
+  prepareAttempt,
+  action,
+}) {
   const startPath = new URL(page.url()).pathname;
 
   for (let attempt = 1; attempt <= navigationRetryMaxAttempts; attempt += 1) {
+    await prepareAttempt?.(attempt);
     diagnostics.record('navigation', { href, title, stage, attempt });
     const edgeCursor = diagnostics.edgeFailureCursor();
     const documentCursor = documentSequence;
@@ -345,12 +352,45 @@ async function runRecoverableSoakNavigation({ href, title, stage, action }) {
   throw new Error(`Soak navigation did not recover during ${stage}.`);
 }
 
-async function click(link, href, title) {
+async function click(link, href, title, { prepareAttempt } = {}) {
   await runRecoverableSoakNavigation({
     href,
     title,
     stage: `click ${new URL(page.url()).pathname} -> ${href}`,
+    prepareAttempt,
     action: () => link.click({ timeout: 15_000 }),
+  });
+}
+
+async function navigateToBlogIndex() {
+  const primaryBlogLink = page
+    .locator('nav[aria-label="Primary navigation"] a[href="/blog"]')
+    .first();
+  const mobileBlogLink = page
+    .locator('nav[aria-label="Mobile navigation"] a[href="/blog"]')
+    .first();
+  let activeLink = primaryBlogLink;
+
+  await runRecoverableSoakNavigation({
+    href: '/blog',
+    title: 'Blog',
+    stage: `responsive header navigation ${new URL(page.url()).pathname} -> /blog`,
+    prepareAttempt: async () => {
+      if (await primaryBlogLink.isVisible().catch(() => false)) {
+        activeLink = primaryBlogLink;
+        return;
+      }
+
+      if (!(await mobileBlogLink.isVisible().catch(() => false))) {
+        const trigger = page.getByRole('button', { name: 'Open navigation' });
+        await trigger.waitFor({ state: 'visible', timeout: 15_000 });
+        await trigger.click({ timeout: 15_000 });
+        await mobileBlogLink.waitFor({ state: 'visible', timeout: 15_000 });
+      }
+
+      activeLink = mobileBlogLink;
+    },
+    action: () => activeLink.click({ timeout: 15_000 }),
   });
 }
 
@@ -392,7 +432,7 @@ async function components() {
 }
 
 async function blog() {
-  await click(page.locator('header a[href="/blog"]').first(), '/blog', 'Blog');
+  await navigateToBlogIndex();
   const targets = await page
     .locator('main a[href^="/blog/"]')
     .evaluateAll((links) =>
