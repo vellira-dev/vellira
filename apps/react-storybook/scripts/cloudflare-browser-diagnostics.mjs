@@ -257,6 +257,16 @@ export async function captureDiagnostics(
 
   return {
     record,
+    edgeFailureCursor() {
+      return edgeFailures.length;
+    },
+    recoveredDestinationEdgeFailureSince(cursor, href) {
+      const targetPath = new URL(href, baseUrl).pathname;
+      const failures = edgeFailures
+        .slice(cursor)
+        .filter((failure) => new URL(failure.url).pathname === targetPath);
+      return failures.length > 0 && failures.every((failure) => failure.handled);
+    },
     async recoverEdgeFailures(stage) {
       for (const failure of edgeFailures.filter((item) => !item.handled)) {
         const result = await recoverCloudflareEdgeGet5xx({
