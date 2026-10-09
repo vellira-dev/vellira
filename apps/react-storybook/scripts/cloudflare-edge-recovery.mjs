@@ -122,12 +122,33 @@ export async function recoverCloudflareEdgeGet5xx({
 
   const replayHeaders = cloudflareEdgeReplayHeaders(requestHeaders);
 
+  let lastTransportError = null;
+
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const response = await requestGet(url, {
-      failOnStatusCode: false,
-      headers: replayHeaders,
-      timeout: 10_000,
-    });
+    let response;
+
+    try {
+      response = await requestGet(url, {
+        failOnStatusCode: false,
+        headers: replayHeaders,
+        timeout: 10_000,
+      });
+    } catch (error) {
+      lastTransportError =
+        error instanceof Error ? error.message : String(error);
+
+      if (attempt < maxAttempts) {
+        await sleep(delayMs);
+        continue;
+      }
+
+      return {
+        recovered: false,
+        attempts: attempt,
+        reason: 'transport-error',
+        error: lastTransportError,
+      };
+    }
 
     try {
       const status = apiResponseStatus(response);
@@ -165,6 +186,7 @@ export async function recoverCloudflareEdgeGet5xx({
   return {
     recovered: false,
     attempts: maxAttempts,
-    reason: 'edge-5xx-persisted',
+    reason: lastTransportError ? 'transport-error' : 'edge-5xx-persisted',
+    ...(lastTransportError ? { error: lastTransportError } : {}),
   };
 }
