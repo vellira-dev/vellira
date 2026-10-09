@@ -5,6 +5,17 @@ import { fileURLToPath } from 'node:url';
 export const CHANGE_INTENT_ENFORCEMENT_START = '2026-10-08T20:00:00Z';
 const CHANGE_INTENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MARKER = /<!--\s*vellira-change-intent:v1:([^\s>]+)\s*-->/g;
+const MANAGED_DELIVERY_MARKERS = [
+  '<!-- vellira-component-expansion:',
+  '<!-- vellira-content-article:',
+  '<!-- vellira-content-delivery:',
+  '<!-- vellira-pain-product:',
+  '<!-- vellira-pain-product-delivery:',
+  '<!-- vellira-maintenance-candidate:',
+  '<!-- vellira-component-token-reservation-pr:v1:',
+  '<!-- vellira-security-remediation-v1',
+  '<!-- vellira-canonical-gap:v1:',
+];
 
 export function parseChangeIntent(body = '') {
   const markers = [...String(body).matchAll(MARKER)].map((match) => match[1]);
@@ -30,6 +41,15 @@ export function parseChangeIntent(body = '') {
 export function isBotPullRequest(pull) {
   const login = pull?.user?.login ?? '';
   return pull?.user?.type === 'Bot' || /\[bot\]$/i.test(login);
+}
+
+export function isManagedDeliveryPullRequest(pull) {
+  const body = String(pull?.body ?? '');
+  return MANAGED_DELIVERY_MARKERS.some((marker) => body.includes(marker));
+}
+
+export function isAdmissionExemptPullRequest(pull) {
+  return isBotPullRequest(pull) || isManagedDeliveryPullRequest(pull);
 }
 
 export function requiresChangeIntent(

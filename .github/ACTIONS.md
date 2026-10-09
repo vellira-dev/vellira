@@ -134,8 +134,9 @@ Creator-side preflight remains the primary duplicate-prevention mechanism becaus
 it runs before PR creation. CI exists to catch bypasses and races: newly admitted
 non-bot engineering PRs require one stable root-problem marker, and a second open
 PR with the same marker fails closed. Historical PRs created before the adoption
-cutoff remain grandfathered, while canonical automated delivery paths continue to use their
-existing proposal/candidate/delivery identities and duplicate suppression even when GitHub attributes delivery to a user account.
+cutoff remain grandfathered, while canonical automated delivery paths continue
+to use their existing proposal/candidate/delivery identities and duplicate
+suppression even when GitHub attributes delivery to a user account.
 
 The first adoption PR is the only bootstrap case where the trusted base can lack
 the validator. In that case the workflow records `change_intent_adopted=false`
