@@ -51,6 +51,9 @@ jobs:
     needs: impact
     if: needs.impact.outputs.shape != 'release-sync'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: candidate
     env:
       COMPONENT_QUALITY_ENFORCEMENT: blocking
       VELLIRA_LIFECYCLE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -61,10 +64,21 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          path: candidate
+          persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Checkout exact workflow quality tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: quality-tools
+          persist-credentials: false
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: candidate/package.json
 
       - name: Setup Node without dependency cache
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -74,8 +88,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install exact workflow quality tooling dependencies
+        working-directory: quality-tools
+        run: pnpm install --frozen-lockfile
+
       - name: Quality checks
-        run: pnpm ci:quality
+        env:
+          VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          VELLIRA_CI_TOOLING_SHA: ${{ github.sha }}
+        run: node "$GITHUB_WORKSPACE/quality-tools/scripts/ci/run-candidate-quality.mjs"
+
+      - name: Retain candidate and tooling quality identities
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ci-quality-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: candidate/.artifacts/ci-quality/evidence.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Record advisory Vellira UI usage baseline
         if: always()
@@ -88,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: vellira-ui-usage-${{ github.event.pull_request.head.sha || github.sha }}
-          path: .artifacts/vellira-ui-usage/report.json
+          path: candidate/.artifacts/vellira-ui-usage/report.json
           if-no-files-found: error
           retention-days: 14
 
@@ -101,7 +131,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$PWD"
           if [[ "$VELLIRA_PR_HEAD_REF" == agent/content-article-* ]]; then
             git fetch --no-tags --depth=2 origin "refs/heads/$VELLIRA_PR_HEAD_REF"
           fi
@@ -156,7 +186,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: component-quality-report
-          path: .artifacts/component-quality/report.json
+          path: candidate/.artifacts/component-quality/report.json
           if-no-files-found: error
           retention-days: 14
 
@@ -165,6 +195,9 @@ jobs:
     needs: impact
     if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/website')) }}
     runs-on: ubuntu-latest
+    env:
+      VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VELLIRA_CI_TOOLING_SHA: ${{ github.sha }}
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -184,21 +217,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:next-rsc-patch
+      - name: Load source-check profile from exact workflow revision
+        run: |
+          git fetch --no-tags --depth=1 origin "$VELLIRA_CI_TOOLING_SHA"
+          git show "$VELLIRA_CI_TOOLING_SHA:scripts/ci/cloudflare-candidate-checks.mjs" > "$RUNNER_TEMP/cloudflare-candidate-checks.mjs"
       - name: Lint deployment and diagnostic scripts
-        run: >-
-          pnpm exec eslint apps/website/cloudflare-worker.mjs apps/website/cloudflare/*.mjs
-          apps/website/scripts/*.mjs apps/react-storybook/scripts/cloudflare-browser-diagnostics*.mjs
-          apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy*.mjs
-          apps/react-storybook/scripts/cloudflare-navigation-soak.mjs
-          apps/react-storybook/scripts/cloudflare-edge-recovery*.mjs
-          apps/react-storybook/scripts/cloudflare-client-navigation-recovery*.mjs
-          apps/react-storybook/scripts/cloudflare-website-smoke.mjs
+        run: node "$RUNNER_TEMP/cloudflare-candidate-checks.mjs" lint
       - name: Test website smoke policies
-        run: >-
-          pnpm --filter @vellira-ui/react-storybook exec node --test
-          scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
-          scripts/cloudflare-edge-recovery.test.mjs
-          scripts/cloudflare-client-navigation-recovery.test.mjs
+        run: node "$RUNNER_TEMP/cloudflare-candidate-checks.mjs" test
       - name: Test Cloudflare edge fetch retry
         run: node --test apps/website/scripts/cloudflare-edge-fetch.test.mjs
       - name: Test OpenNext string-export package patch
