@@ -10,6 +10,7 @@ import {
   populateLocalCache,
   withLocalCacheConfig,
 } from './cloudflare-populate-local-cache.mjs';
+import { drainSiteNavigationNetwork } from './cloudflare-site-navigation-browser.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const repo = path.resolve(root, '../..');
@@ -287,6 +288,41 @@ test('local population uses only the upstream local command and propagates proce
   );
   assert.equal(calls, 1);
   await assert.rejects(fs.access(generated), { code: 'ENOENT' });
+});
+
+test('legacy Cloudflare URL stack emits no punycode deprecation', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      '--trace-deprecation',
+      '-e',
+      'require("whatwg-url"); require("tr46");',
+    ],
+    {
+      cwd: repo,
+      encoding: 'utf8',
+      timeout: 5_000,
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /DEP0040|punycode.*deprecated/i);
+});
+
+test('site navigation drains background network before browser teardown', async () => {
+  const calls = [];
+  await drainSiteNavigationNetwork(
+    {
+      async waitForLoadState(state, options) {
+        calls.push({ state, options });
+      },
+    },
+    1_234
+  );
+
+  assert.deepEqual(calls, [
+    { state: 'networkidle', options: { timeout: 1_234 } },
+  ]);
 });
 
 test('warning suppression is configuration-scoped, not log-filter based', async (t) => {
