@@ -64,12 +64,12 @@
   font-size: var(--font-size-sm);
 }
 
-.verificationStatus {
-  color: var(--form-field-helper-text-success-fg) !important;
+.verificationCopy .verificationStatus {
+  color: var(--form-field-helper-text-success-fg);
 }
 
-.verificationError {
-  color: var(--form-field-helper-text-error-fg) !important;
+.verificationCopy .verificationError {
+  color: var(--form-field-helper-text-error-fg);
 }
 
 .verificationAction {
