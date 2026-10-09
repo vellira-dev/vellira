@@ -5,6 +5,10 @@ import { navigateToBlogAcrossSiteSurface } from '../../react-storybook/scripts/c
 // Run against the actual built Next layouts and CSS, never an HTML imitation.
 // Only the initial document uses goto; every subsequent hop is the same helper
 // used by staging/production soak. No article metrics mutations are involved.
+export async function drainSiteNavigationNetwork(page, timeout = 10_000) {
+  await page.waitForLoadState('networkidle', { timeout });
+}
+
 export async function verifySiteNavigationSurfaces(baseUrl) {
   const browser = await chromium.launch();
   const evidence = [];
@@ -77,6 +81,12 @@ export async function verifySiteNavigationSurfaces(baseUrl) {
           },
         });
         assert.deepEqual(row.hops, hops);
+        // The final marketing/blog surface starts background RSC prefetch and
+        // read-only metrics requests. Drain them before closing the context so
+        // local workerd never writes a successful response into a socket the
+        // browser has already torn down.
+        await drainSiteNavigationNetwork(page);
+        row.networkDrained = true;
         row.final = await identity();
         evidence.push(row);
       } finally {
