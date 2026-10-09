@@ -290,23 +290,41 @@ test('local population uses only the upstream local command and propagates proce
   await assert.rejects(fs.access(generated), { code: 'ENOENT' });
 });
 
-test('legacy Cloudflare URL stack emits no punycode deprecation', () => {
-  const result = spawnSync(
-    process.execPath,
-    [
-      '--trace-deprecation',
-      '-e',
-      'const p=require("node-fetch/package.json"); if(p.version!=="2.7.0") process.exit(9); require("node-fetch");',
-    ],
-    {
-      cwd: repo,
-      encoding: 'utf8',
-      timeout: 5_000,
-    }
-  );
+test('Cloudflare tooling imports emit no punycode deprecation', () => {
+  for (const moduleName of [
+    'node-fetch',
+    'wrangler',
+    '@opennextjs/cloudflare',
+    '@opennextjs/aws',
+    '@aws-sdk/client-s3',
+    'cloudflare',
+  ]) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--trace-deprecation',
+        '--input-type=module',
+        '-e',
+        `await import(${JSON.stringify(moduleName)})`,
+      ],
+      {
+        cwd: repo,
+        encoding: 'utf8',
+        timeout: 10_000,
+      }
+    );
 
-  assert.equal(result.status, 0, result.stderr);
-  assert.doesNotMatch(result.stderr, /DEP0040|punycode.*deprecated/i);
+    assert.equal(
+      result.status,
+      0,
+      `${moduleName} import failed:\n${result.stderr}`
+    );
+    assert.doesNotMatch(
+      result.stderr,
+      /DEP0040|punycode.*deprecated/i,
+      `${moduleName} still loads Node's builtin punycode:\n${result.stderr}`
+    );
+  }
 });
 
 test('site navigation drains background network before browser teardown', async () => {
