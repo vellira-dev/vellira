@@ -53,6 +53,7 @@ overrides:
 
 patchedDependencies:
   braces@3.0.3: cecdb90ea3f216ffb13f31d757e9e26239b040179ba9235326e1a6041cb3b055
+  sprintf-js@1.0.3: c5c9b9f4b1c11f5fc8bfc151c5610f70e50ecd93b4b2487082af425845da278b
   '@opennextjs/cloudflare@1.20.6': 4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115
   next@16.3.8: 496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b
   node-forge@1.4.0: 4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0
@@ -17118,7 +17119,7 @@ snapshots:
 
   argparse@1.0.10:
     dependencies:
-      sprintf-js: 1.0.3
+      sprintf-js: 1.0.3(patch_hash=c5c9b9f4b1c11f5fc8bfc151c5610f70e50ecd93b4b2487082af425845da278b)
 
   argparse@2.0.1: {}
 
@@ -22824,7 +22825,7 @@ snapshots:
     dependencies:
       through2: 2.0.5
 
-  sprintf-js@1.0.3: {}
+  sprintf-js@1.0.3(patch_hash=c5c9b9f4b1c11f5fc8bfc151c5610f70e50ecd93b4b2487082af425845da278b): {}
 
   sqids@0.3.0: {}
 
