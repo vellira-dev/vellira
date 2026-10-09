@@ -296,7 +296,7 @@ test('legacy Cloudflare URL stack emits no punycode deprecation', () => {
     [
       '--trace-deprecation',
       '-e',
-      'require("whatwg-url"); require("tr46");',
+      'const p=require("node-fetch/package.json"); if(p.version!=="2.7.0") process.exit(9); require("node-fetch");',
     ],
     {
       cwd: repo,
