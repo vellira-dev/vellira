@@ -470,3 +470,50 @@ test(
     );
   }
 );
+
+
+test('CDP document identity stays stable for same-document URL changes and changes on document navigation', async (t) => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-browser-document-identity-')
+  );
+  const server = http.createServer((request, response) => {
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'text/html');
+    response.end('<title>Fixture</title><h1>Fixture</h1>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    await new Promise((resolve) => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const diagnostics = await captureDiagnostics(
+    page,
+    context,
+    origin,
+    directory
+  );
+
+  await page.goto(`${origin}/one`);
+  const first = diagnostics.documentIdentity();
+  assert.equal(first.available, true);
+  assert.ok(first.loaderId);
+
+  await page.evaluate(() => history.pushState({}, '', '/same-document'));
+  const sameDocument = diagnostics.documentIdentity();
+  assert.equal(sameDocument.loaderId, first.loaderId);
+  assert.equal(sameDocument.generation, first.generation);
+
+  await page.goto(`${origin}/two`);
+  const second = diagnostics.documentIdentity();
+  assert.equal(second.available, true);
+  assert.notEqual(second.loaderId, first.loaderId);
+  assert.ok(second.generation > first.generation);
+
+  await diagnostics.finish(null);
+});
