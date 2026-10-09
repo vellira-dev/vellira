@@ -4,6 +4,7 @@ import { chromium } from '@playwright/test';
 import path from 'node:path';
 import {
   captureDiagnostics,
+  boundedBrowserRead,
   waitForRoute,
 } from './cloudflare-browser-diagnostics.mjs';
 import {
@@ -189,8 +190,10 @@ page.on('response', (response) => {
 });
 
 async function seedDocumentContinuity() {
-  documentToken = await page.evaluate(
-    () => (window.__velliraSoakDocument = crypto.randomUUID())
+  documentToken = await boundedBrowserRead(
+    () =>
+      page.evaluate(() => (window.__velliraSoakDocument = crypto.randomUUID())),
+    'seed soak document token'
   );
   documentTokenStartedAt = Date.now();
 }
@@ -207,8 +210,9 @@ async function ready(
   await waitForRoute(page, diagnostics, baseUrl, href, title);
 
   if (documentToken) {
-    const currentToken = await page.evaluate(
-      () => window.__velliraSoakDocument
+    const currentToken = await boundedBrowserRead(
+      () => page.evaluate(() => window.__velliraSoakDocument),
+      'soak document continuity'
     );
 
     if (currentToken !== documentToken) {
@@ -276,9 +280,10 @@ async function runRecoverableSoakNavigation({ href, title, stage, action }) {
         href
       );
       const currentDocumentToken = documentToken
-        ? await page
-            .evaluate(() => window.__velliraSoakDocument)
-            .catch(() => null)
+        ? await boundedBrowserRead(
+            () => page.evaluate(() => window.__velliraSoakDocument),
+            'soak replay document token'
+          ).catch(() => null)
         : null;
       const safeReplay = isSafeClientNavigationReplay({
         baseUrl,

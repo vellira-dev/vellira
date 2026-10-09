@@ -375,3 +375,88 @@ for (const scenario of [
     );
   });
 }
+
+test('browser document reads are bounded and never convert expiry into evidence', async () => {
+  const { boundedBrowserRead } =
+    await import('./cloudflare-browser-diagnostics.mjs');
+  assert.equal(
+    await boundedBrowserRead(async () => 'token', 'token', 50),
+    'token'
+  );
+  await assert.rejects(
+    boundedBrowserRead(() => new Promise(() => {}), 'stalled document', 10),
+    /Browser read timed out: stalled document/
+  );
+  const programmingError = new TypeError('invalid observer');
+  await assert.rejects(
+    boundedBrowserRead(() => {
+      throw programmingError;
+    }, 'token'),
+    (error) => error === programmingError
+  );
+  await assert.rejects(
+    boundedBrowserRead(() => 'token', 'token', 0),
+    /positive timeout/
+  );
+});
+
+test(
+  'finish retains failure evidence when document title/count/HTML reads never settle',
+  { timeout: 25_000 },
+  async (t) => {
+    const { EventEmitter } = await import('node:events');
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'vellira-stalled-evidence-')
+    );
+    const server = http.createServer((_request, response) => {
+      response.setHeader('x-vellira-build-id', 'build-1');
+      response.end('build-1');
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    t.after(async () => {
+      await new Promise((resolve) => server.close(resolve));
+      await fs.rm(directory, { recursive: true, force: true });
+    });
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const never = () => new Promise(() => {});
+    const page = Object.assign(new EventEmitter(), {
+      url: () => `${origin}/stalled`,
+      title: never,
+      content: never,
+      locator: () => ({ count: never }),
+      screenshot: async ({ timeout }) => assert.equal(timeout, 5_000),
+    });
+    let traceStopped = false;
+    const context = {
+      newCDPSession: async () => {
+        throw new Error('no CDP');
+      },
+      tracing: {
+        start: async () => {},
+        stop: async () => {
+          traceStopped = true;
+        },
+      },
+    };
+    const diagnostics = await captureDiagnostics(
+      page,
+      context,
+      origin,
+      directory,
+      { expectedBuildId: 'build-1' }
+    );
+    const failure = new Error('original route readiness failure');
+    await diagnostics.finish(failure);
+    const evidence = JSON.parse(
+      await fs.readFile(path.join(directory, 'diagnostics.json'), 'utf8')
+    );
+    assert.match(evidence.error, /original route readiness failure/);
+    assert.equal(evidence.title, null);
+    assert.equal(evidence.mainCount, null);
+    assert.match(
+      await fs.readFile(path.join(directory, 'page.html'), 'utf8'),
+      /Browser read timed out: diagnostic HTML/
+    );
+    assert.equal(traceStopped, true);
+  }
+);

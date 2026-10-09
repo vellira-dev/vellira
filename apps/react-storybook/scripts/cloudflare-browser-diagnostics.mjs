@@ -9,6 +9,33 @@ import {
   readCloudflareDiagnosticGet,
 } from './cloudflare-edge-recovery.mjs';
 
+// page.evaluate/title/content have no Playwright timeout option. A document
+// transition can leave them waiting indefinitely after a recovered edge response.
+// Expiry is a failed observation, never proof of document continuity.
+export async function boundedBrowserRead(read, label, timeoutMs = 5_000) {
+  if (
+    typeof read !== 'function' ||
+    !Number.isFinite(timeoutMs) ||
+    timeoutMs <= 0
+  ) {
+    throw new Error('Browser read requires a function and positive timeout.');
+  }
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(read),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`Browser read timed out: ${label}`)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function diagnosticHeaders(headers) {
   return Object.fromEntries(
     Object.entries(headers).filter(
@@ -335,11 +362,14 @@ export async function captureDiagnostics(
       if (pending.size) record('rsc-bodies-pending', { count: pending.size });
       const state = {
         finalUrl: page.url(),
-        title: await page.title().catch(() => null),
-        mainCount: await page
-          .locator('main')
-          .count()
-          .catch(() => null),
+        title: await boundedBrowserRead(
+          () => page.title(),
+          'diagnostic title'
+        ).catch(() => null),
+        mainCount: await boundedBrowserRead(
+          () => page.locator('main').count(),
+          'diagnostic main count'
+        ).catch(() => null),
         error: error?.stack ?? (error ? String(error) : null),
         staticFailures,
         firstBadAsset: staticFailures[0] ?? null,
@@ -355,14 +385,16 @@ export async function captureDiagnostics(
       };
       await fs.writeFile(
         path.join(directory, 'page.html'),
-        await page.content().catch(String)
+        await boundedBrowserRead(() => page.content(), 'diagnostic HTML').catch(
+          String
+        )
       );
       await fs.writeFile(
         path.join(directory, 'diagnostics.json'),
         JSON.stringify(state, null, 2)
       );
       await page
-        .screenshot({ path: path.join(directory, 'page.png') })
+        .screenshot({ path: path.join(directory, 'page.png'), timeout: 5_000 })
         .catch(() => {});
       await context.tracing.stop({ path: path.join(directory, 'trace.zip') });
       console.log(

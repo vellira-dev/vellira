@@ -374,3 +374,52 @@ test('static aborted probes accept headerless CDN 200 but reject every HTTP fail
     assert.equal(disposed, 1);
   }
 });
+
+test('soak fails closed after proven edge recovery when document token evaluation stalls', async () => {
+  const { boundedBrowserRead } =
+    await import('./cloudflare-browser-diagnostics.mjs');
+  let actions = 0;
+  let retries = 0;
+  const original = new Error('route readiness failed after edge 503');
+  const run = await smokeFunction(
+    './cloudflare-navigation-soak.mjs',
+    'runRecoverableSoakNavigation',
+    {
+      baseUrl: 'https://example.test',
+      documentToken: 'original-document',
+      navigationRetryMaxAttempts: 3,
+      navigationRetryDelayMs: 0,
+      documentSequence: 1,
+      page: {
+        url: () => 'https://example.test/start',
+        evaluate: () => new Promise(() => {}),
+        waitForTimeout: async () => {
+          retries++;
+        },
+      },
+      diagnostics: {
+        record() {},
+        edgeFailureCursor: () => 0,
+        recoveredDestinationEdgeFailureSince: () => true,
+      },
+      ready: async () => {
+        throw original;
+      },
+      boundedBrowserRead: (read, label) => boundedBrowserRead(read, label, 10),
+      isSafeClientNavigationReplay,
+    }
+  );
+  await assert.rejects(
+    run({
+      href: '/target',
+      title: 'Target',
+      stage: 'fixture',
+      action: async () => {
+        actions++;
+      },
+    }),
+    (error) => error === original
+  );
+  assert.equal(actions, 1);
+  assert.equal(retries, 0);
+});

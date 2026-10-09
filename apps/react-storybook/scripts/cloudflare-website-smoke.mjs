@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
+import { boundedBrowserRead } from './cloudflare-browser-diagnostics.mjs';
 import { captureBrowserJson } from './cloudflare-browser-json.mjs';
 import {
   destinationEdgeFailures,
@@ -912,7 +913,10 @@ async function verifyBlogActorContinuity() {
       if (actorPage)
         await fs.writeFile(
           path.join(artifactDirectory, 'actor-page.html'),
-          await actorPage.content().catch(String)
+          await boundedBrowserRead(
+            () => actorPage.content(),
+            'actor failure HTML'
+          ).catch(String)
         );
     } finally {
       await context.close();

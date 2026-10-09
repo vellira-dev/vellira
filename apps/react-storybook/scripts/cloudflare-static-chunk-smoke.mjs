@@ -1,4 +1,5 @@
 /* global document */
+import { boundedBrowserRead } from './cloudflare-browser-diagnostics.mjs';
 import { chromium } from '@playwright/test';
 import {
   destinationEdgeFailures,
@@ -195,7 +196,7 @@ async function describePage(response, path) {
   let body = '';
 
   try {
-    title = await page.title();
+    title = await boundedBrowserRead(() => page.title(), 'static smoke title');
   } catch {
     // Page details are best-effort evidence after a navigation failure.
   }
