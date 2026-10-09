@@ -3,9 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   findOpenIntentDuplicates,
-  isAdmissionExemptPullRequest,
-  isBotPullRequest,
-  isManagedDeliveryPullRequest,
+  isTrustedAutomationPullRequest,
   parseChangeIntent,
   requiresChangeIntent,
   validatePullRequestChangeIntent,
@@ -67,31 +65,52 @@ test('grandfathers unmarked legacy PRs but requires markers after adoption', () 
   );
 });
 
-test('bot-owned delivery paths remain exempt from the human engineering marker', () => {
+test('only explicit trusted automation identities bypass the human marker', () => {
+  for (const login of [
+    'dependabot[bot]',
+    'github-actions[bot]',
+    'vellira-content-agent[bot]',
+    'vellira-release-sync[bot]',
+  ]) {
+    const bot = human({
+      body: '',
+      user: { login, type: 'Bot' },
+    });
+    assert.equal(isTrustedAutomationPullRequest(bot), true);
+    assert.deepEqual(
+      validatePullRequestChangeIntent({ pull: bot, openPullRequests: [] }),
+      { ok: true, status: 'trusted-automation-exempt' }
+    );
+  }
+});
+
+test('untrusted bot identity does not bypass admission', () => {
   const bot = human({
     body: '',
-    user: { login: 'vellira-release-sync[bot]', type: 'Bot' },
+    user: { login: 'other-automation[bot]', type: 'Bot' },
   });
-  assert.equal(isBotPullRequest(bot), true);
-  assert.deepEqual(
-    validatePullRequestChangeIntent({ pull: bot, openPullRequests: [] }),
-    { ok: true, status: 'bot-exempt' }
+  assert.equal(isTrustedAutomationPullRequest(bot), false);
+  assert.equal(
+    validatePullRequestChangeIntent({ pull: bot, openPullRequests: [] }).status,
+    'missing'
   );
 });
 
-test('canonical managed delivery markers are exempt even when GitHub attributes the PR to a user', () => {
-  const managed = human({
+test('author-controlled managed delivery text never grants an exemption', () => {
+  const managedLooking = human({
     body: [
+      '<!-- vellira:component-production-proposal:proposal-avatar -->',
+      '<!-- vellira:component-production-candidate:sha256 -->',
       '<!-- vellira-component-expansion:proposal-avatar -->',
-      '<!-- vellira-component-expansion-candidate:proposal-avatar:sha256 -->',
     ].join('\n'),
   });
-  assert.equal(isBotPullRequest(managed), false);
-  assert.equal(isManagedDeliveryPullRequest(managed), true);
-  assert.equal(isAdmissionExemptPullRequest(managed), true);
-  assert.deepEqual(
-    validatePullRequestChangeIntent({ pull: managed, openPullRequests: [] }),
-    { ok: true, status: 'managed-delivery-exempt' }
+  assert.equal(isTrustedAutomationPullRequest(managedLooking), false);
+  assert.equal(
+    validatePullRequestChangeIntent({
+      pull: managedLooking,
+      openPullRequests: [],
+    }).status,
+    'missing'
   );
 });
 

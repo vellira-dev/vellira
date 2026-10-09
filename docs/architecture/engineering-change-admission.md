@@ -127,12 +127,16 @@ check is mandatory on subsequent PRs.
 
 Non-bot PRs created on or after **2026-10-08T20:00:00Z** require the marker.
 Earlier open PRs are grandfathered so adoption does not break historical work.
-Canonical automated delivery paths are exempt from this human engineering
-marker even when GitHub attributes the PR to a user account. The validator
-recognizes repository-owned delivery markers for Component Production, Content
-Agent, Maintenance, token reservation, security remediation, and canonical-gap
-delivery, plus bot-owned PRs. Those workflows already own stable
-proposal/candidate/delivery identities and duplicate suppression.
+Only explicitly trusted GitHub automation identities are exempt from the marker:
+`dependabot[bot]`, `github-actions[bot]`, `vellira-content-agent[bot]`, and
+`vellira-release-sync[bot]`. PR body text, branch names, titles, and
+repository-owned delivery markers are author-controlled metadata and never grant
+an exemption by themselves.
+
+A managed delivery attributed to any other identity must carry the same
+`vellira-change-intent:v1` marker. Its producer should derive that marker from
+its existing stable logical delivery identity. An unrecognized automation actor
+therefore fails closed instead of silently bypassing admission.
 
 ## Relationship to repository governance
 

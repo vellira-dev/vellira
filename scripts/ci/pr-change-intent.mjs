@@ -5,17 +5,12 @@ import { fileURLToPath } from 'node:url';
 export const CHANGE_INTENT_ENFORCEMENT_START = '2026-10-08T20:00:00Z';
 const CHANGE_INTENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MARKER = /<!--\s*vellira-change-intent:v1:([^\s>]+)\s*-->/g;
-const MANAGED_DELIVERY_MARKERS = [
-  '<!-- vellira-component-expansion:',
-  '<!-- vellira-content-article:',
-  '<!-- vellira-content-delivery:',
-  '<!-- vellira-pain-product:',
-  '<!-- vellira-pain-product-delivery:',
-  '<!-- vellira-maintenance-candidate:',
-  '<!-- vellira-component-token-reservation-pr:v1:',
-  '<!-- vellira-security-remediation-v1',
-  '<!-- vellira-canonical-gap:v1:',
-];
+const TRUSTED_AUTOMATION_LOGINS = new Set([
+  'dependabot[bot]',
+  'github-actions[bot]',
+  'vellira-content-agent[bot]',
+  'vellira-release-sync[bot]',
+]);
 
 export function parseChangeIntent(body = '') {
   const markers = [...String(body).matchAll(MARKER)].map((match) => match[1]);
@@ -38,25 +33,16 @@ export function parseChangeIntent(body = '') {
   return { kind: 'valid', id };
 }
 
-export function isBotPullRequest(pull) {
+export function isTrustedAutomationPullRequest(pull) {
   const login = pull?.user?.login ?? '';
-  return pull?.user?.type === 'Bot' || /\[bot\]$/i.test(login);
-}
-
-export function isManagedDeliveryPullRequest(pull) {
-  const body = String(pull?.body ?? '');
-  return MANAGED_DELIVERY_MARKERS.some((marker) => body.includes(marker));
-}
-
-export function isAdmissionExemptPullRequest(pull) {
-  return isBotPullRequest(pull) || isManagedDeliveryPullRequest(pull);
+  return pull?.user?.type === 'Bot' && TRUSTED_AUTOMATION_LOGINS.has(login);
 }
 
 export function requiresChangeIntent(
   pull,
   enforcementStart = CHANGE_INTENT_ENFORCEMENT_START
 ) {
-  if (isAdmissionExemptPullRequest(pull)) return false;
+  if (isTrustedAutomationPullRequest(pull)) return false;
   const createdAt = Date.parse(pull?.created_at ?? '');
   const threshold = Date.parse(enforcementStart);
   if (!Number.isFinite(createdAt) || !Number.isFinite(threshold)) return true;
@@ -80,11 +66,8 @@ export function validatePullRequestChangeIntent({
   openPullRequests,
   enforcementStart = CHANGE_INTENT_ENFORCEMENT_START,
 }) {
-  if (isBotPullRequest(pull)) {
-    return { ok: true, status: 'bot-exempt' };
-  }
-  if (isManagedDeliveryPullRequest(pull)) {
-    return { ok: true, status: 'managed-delivery-exempt' };
+  if (isTrustedAutomationPullRequest(pull)) {
+    return { ok: true, status: 'trusted-automation-exempt' };
   }
 
   const parsed = parseChangeIntent(pull.body ?? '');
