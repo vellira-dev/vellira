@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -8,6 +9,23 @@ const projectionScripts = new Map([
   ['component-pages:check', 'check-component-pages.ts'],
   ['component-pages:audit', 'audit-component-pages.ts'],
 ]);
+
+export function qualityEvidencePath(candidateSha, temporaryRoot, sourceRoots) {
+  if (!/^[a-f0-9]{40}$/.test(candidateSha ?? ''))
+    throw new Error('Quality evidence requires an exact candidate revision.');
+  const root = fs.realpathSync(temporaryRoot);
+  for (const source of sourceRoots) {
+    const relative = path.relative(fs.realpathSync(source), root);
+    if (
+      !relative ||
+      (!relative.startsWith(`..${path.sep}`) &&
+        relative !== '..' &&
+        !path.isAbsolute(relative))
+    )
+      throw new Error('Quality evidence must remain outside source checkouts.');
+  }
+  return path.join(root, `ci-quality-${candidateSha}.json`);
+}
 
 export function qualityCommands(candidateRoot, toolingRoot) {
   const recipe = JSON.parse(
@@ -114,14 +132,19 @@ if (
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
   try {
+    const candidateRoot = process.cwd();
+    const toolingRoot = fileURLToPath(new URL('../../', import.meta.url));
+    const output = qualityEvidencePath(
+      process.env.VELLIRA_CANDIDATE_SHA,
+      process.env.RUNNER_TEMP || os.tmpdir(),
+      [candidateRoot, toolingRoot]
+    );
     const result = runCandidateQuality({
-      candidateRoot: process.cwd(),
-      toolingRoot: fileURLToPath(new URL('../../', import.meta.url)),
+      candidateRoot,
+      toolingRoot,
       candidateSha: process.env.VELLIRA_CANDIDATE_SHA,
       toolingSha: process.env.VELLIRA_CI_TOOLING_SHA,
     });
-    const output = path.resolve('.artifacts/ci-quality/evidence.json');
-    fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, `${JSON.stringify(result.evidence, null, 2)}\n`);
     process.exitCode = result.exitCode;
   } catch (error) {

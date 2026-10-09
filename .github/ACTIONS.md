@@ -89,7 +89,8 @@ projection gates use the workflow's canonical generator and audit implementation
 including nested generator commands; candidate implementation and metadata remain
 unchanged. Missing projection gates or unsupported shell syntax fail closed.
 Both Git revisions and clean source trees are checked before and after commands,
-and the job retains the recipe digest, command results and both identities.
+and the job retains the recipe digest, command results and both identities in
+the runner's temporary directory, outside both source checkouts.
 
 Cloudflare lint and smoke-policy tests use a fixed source-check profile loaded
 from the exact workflow Git revision. The candidate retains the required baseline

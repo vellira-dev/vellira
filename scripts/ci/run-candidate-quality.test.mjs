@@ -7,6 +7,7 @@ import test from 'node:test';
 import YAML from 'yaml';
 import {
   qualityCommands,
+  qualityEvidencePath,
   runCandidateQuality,
 } from './run-candidate-quality.mjs';
 
@@ -85,6 +86,35 @@ test('all candidate quality commands retain order, flags and cwd; only projectio
       args.candidateRoot,
     ]);
   }
+});
+
+test('quality receipts remain outside both checkouts and cannot contaminate a retry', (t) => {
+  const args = fixture(t);
+  const output = qualityEvidencePath(args.candidateSha, os.tmpdir(), [
+    args.candidateRoot,
+    args.toolingRoot,
+  ]);
+  assert.equal(path.basename(output), `ci-quality-${args.candidateSha}.json`);
+  for (const root of [args.candidateRoot, args.toolingRoot]) {
+    const nested = path.join(root, 'artifacts');
+    fs.mkdirSync(nested);
+    assert.throws(
+      () =>
+        qualityEvidencePath(args.candidateSha, nested, [
+          args.candidateRoot,
+          args.toolingRoot,
+        ]),
+      /outside/
+    );
+    assert.throws(
+      () => qualityEvidencePath(args.candidateSha, root, [root]),
+      /outside/
+    );
+  }
+  assert.throws(
+    () => qualityEvidencePath('../escape', os.tmpdir(), []),
+    /revision/
+  );
 });
 
 for (const script of [
@@ -196,7 +226,12 @@ test('workflow keeps candidate checkout, quality enforcement, tooling identity a
   for (const step of job.steps.filter((step) =>
     step.uses?.startsWith('actions/upload-artifact@')
   )) {
-    assert.ok(step.with.path.startsWith('candidate/.artifacts/'));
+    if (step.name === 'Retain candidate and tooling quality identities')
+      assert.equal(
+        step.with.path,
+        '${{ runner.temp }}/ci-quality-${{ github.event.pull_request.head.sha || github.sha }}.json'
+      );
+    else assert.ok(step.with.path.startsWith('candidate/.artifacts/'));
   }
   const runtime = workflow.jobs['cloudflare-runtime-contracts'];
   assert.equal(runtime.env.VELLIRA_CANDIDATE_SHA, checkouts[0].with.ref);
