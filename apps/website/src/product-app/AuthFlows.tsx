@@ -573,6 +573,12 @@ type OAuthCallbackFailure = {
 
 function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
   switch (code) {
+    case 'rate_limited':
+      return {
+        message:
+          'Too many sign-in attempts. Please wait a minute and try again.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
     case 'account_link_required':
       return {
         message:
@@ -604,8 +610,7 @@ function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
       };
     default:
       return {
-        message:
-          'GitHub sign in is temporarily unavailable. Please try again.',
+        message: 'GitHub sign in is temporarily unavailable. Please try again.',
         primary: { href: '/login', label: 'Back to sign in' },
       };
   }
@@ -616,19 +621,49 @@ export function OAuthCallback() {
   const [failure, setFailure] = useState<OAuthCallbackFailure>();
 
   useEffect(() => {
-    const errorCode = new URLSearchParams(window.location.search).get('error');
+    const params = new URLSearchParams(window.location.search);
+    const errors = params.getAll('error');
+    const input =
+      params.size || window.location.hash
+        ? errors.length === 1 && errors[0]
+          ? errors[0]
+          : 'oauth_invalid'
+        : window.history.state?.velliraOAuthError;
 
-    if (errorCode) {
-      window.history.replaceState(null, '', window.location.pathname);
+    if (input !== undefined && input !== null) {
+      const errorCode = [
+        'account_link_required',
+        'oauth_cancelled',
+        'oauth_identity_ineligible',
+        'account_disabled',
+        'oauth_invalid',
+        'rate_limited',
+      ].includes(input)
+        ? input
+        : 'oauth_unavailable';
+      // This bounded display hint belongs only to this history entry. It is
+      // never identity/session authority. Preserve Next's own history state,
+      // and keep recovery available after refresh, back and repeated effects.
+      window.history.replaceState(
+        { ...window.history.state, velliraOAuthError: errorCode },
+        '',
+        window.location.pathname
+      );
       setFailure(getOAuthCallbackFailure(errorCode));
       return;
     }
 
+    let active = true;
     void getMe()
-      .then(() => router.replace('/app'))
-      .catch(() =>
-        setFailure(getOAuthCallbackFailure('oauth_unavailable'))
-      );
+      .then(() => {
+        if (active) router.replace('/app');
+      })
+      .catch(() => {
+        if (active) setFailure(getOAuthCallbackFailure('oauth_unavailable'));
+      });
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   if (!failure) {

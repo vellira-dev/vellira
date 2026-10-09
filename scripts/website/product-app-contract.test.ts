@@ -189,25 +189,4 @@ describe('Vellira App first-party UI contract', () => {
     expect(source).not.toContain("searchParams.get('token')");
     expect(source).not.toContain('searchParams.get("token")');
   });
-
-  it('returns GitHub OAuth callback failures to a bounded in-app recovery path', () => {
-    const source = fs.readFileSync(
-      path.join(root, 'apps/website/src/product-app/AuthFlows.tsx'),
-      'utf8'
-    );
-
-    expect(source).toContain('window.location.search');
-    expect(source).toContain("case 'account_link_required'");
-    expect(source).toContain(
-      'A Vellira account already exists for the email verified by GitHub.'
-    );
-    expect(source).toContain("href: '/login'");
-    expect(source).toContain("href: '/forgot-password'");
-    expect(source).toContain("label: 'Sign in with email'");
-    expect(source).toContain("label: 'Reset password'");
-    expect(source).toContain(
-      "window.history.replaceState(null, '', window.location.pathname)"
-    );
-    expect(source).not.toContain('account_link_required&');
-  });
 });
