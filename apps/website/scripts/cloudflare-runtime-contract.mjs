@@ -69,6 +69,11 @@ try {
     headers: { Accept: 'text/html' },
   });
   assert.equal(document.response.status, 200);
+  assert.equal(
+    document.response.headers.get('x-nextjs-cache'),
+    'HIT',
+    'Deployed prerender cache missed'
+  );
   assert.equal(document.response.headers.get('x-vellira-build-id'), buildId);
   assert.equal(
     document.response.headers.get('cache-control'),

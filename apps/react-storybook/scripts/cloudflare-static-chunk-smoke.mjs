@@ -9,6 +9,7 @@ import {
   isCloudflareEdgeGeneratedGet5xx,
   recoverCloudflareEdgeGet5xx,
   recoverCloudflareEdgeFailure,
+  readCloudflarePlatformFailure,
   readCloudflareDiagnosticGet,
 } from './cloudflare-edge-recovery.mjs';
 
@@ -132,6 +133,7 @@ page.on('response', (response) => {
         method: response.request().method(),
         headers: response.headers(),
         requestHeaders: response.request().headers(),
+        platformFailure: readCloudflarePlatformFailure(response),
         handled: false,
       });
     } else {
@@ -260,6 +262,7 @@ async function goto(path) {
       })
     ) {
       const recovery = await recoverCloudflareEdgeGet5xx({
+        originalResponse: response,
         url: response.url(),
         requestHeaders: response.request().headers(),
         expectedBuildId,

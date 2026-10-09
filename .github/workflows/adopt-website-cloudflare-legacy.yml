@@ -258,6 +258,7 @@ jobs:
             apps/website/.open-next/asset-audit*.json
             apps/website/.open-next/legacy-adoption-result.json
             apps/website/.open-next/archive-evidence.json
+            apps/website/.open-next/route-cache-evidence.json
             apps/website/.open-next/vellira-build.json
             apps/website/.open-next/runtime-contract.json
             apps/website/.open-next/local-runtime-contract.json

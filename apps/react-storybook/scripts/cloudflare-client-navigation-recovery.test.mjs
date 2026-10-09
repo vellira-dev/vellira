@@ -315,13 +315,19 @@ test('website smoke cannot mark a browser edge handled after persistent probe ti
   assert.equal(calls, 3);
 });
 
-for (const mutation of [false, true]) {
-  test(`actor bootstrap document retry cannot repeat a dispatched mutation: ${mutation}`, async () => {
+for (const [mutation, released] of [
+  [false, false],
+  [true, false],
+  [false, true],
+]) {
+  test(`actor bootstrap retry forbids mutation dispatch or release: ${mutation}/${released}`, async () => {
     const { EventEmitter } = await import('node:events');
     const page = new EventEmitter();
     const failures = [];
     let navigations = 0;
     let recoveryCalls = 0;
+    page.url = () => 'https://example.test/article';
+    page.getByRole = () => ({ waitFor: async () => {} });
     page.goto = async () => {
       navigations++;
       failures.push({ url: 'https://example.test/article' });
@@ -330,12 +336,17 @@ for (const mutation of [false, true]) {
           url: () => 'https://example.test/api/views',
           method: () => 'POST',
         });
+      return {
+        status: () => 200,
+        headers: () => ({ 'x-vellira-build-id': 'test-build' }),
+      };
     };
     const bootstrap = await smokeFunction(
       './cloudflare-website-smoke.mjs',
       'loadArticleWithActorMetrics',
       {
         baseUrl: 'https://example.test',
+        expectedBuildId: 'test-build',
         criticalDiagnostics: [],
         edgeRecoveryMaxAttempts: 3,
         edgeRecoveryDelayMs: 0,
@@ -350,7 +361,9 @@ for (const mutation of [false, true]) {
         },
       }
     );
-    const original = new Error('browser bootstrap failed');
+    const original = Object.assign(new Error('browser bootstrap failed'), {
+      metricsPhase: released ? 'metrics' : 'document-readiness',
+    });
     const observe = async (_requests, action) => {
       await action();
       if (navigations === 1) throw original;
@@ -359,14 +372,14 @@ for (const mutation of [false, true]) {
         { status: 200, payload: { metrics: {} } },
       ];
     };
-    if (mutation)
+    if (mutation || released)
       await assert.rejects(
         bootstrap(page, observe, '/article', '/like', '/views'),
         (error) => error === original
       );
     else await bootstrap(page, observe, '/article', '/like', '/views');
-    assert.equal(navigations, mutation ? 1 : 2);
-    assert.equal(recoveryCalls, mutation ? 0 : 1);
+    assert.equal(navigations, mutation || released ? 1 : 2);
+    assert.equal(recoveryCalls, mutation || released ? 0 : 1);
     assert.equal(page.listenerCount('request'), 0);
   });
 }

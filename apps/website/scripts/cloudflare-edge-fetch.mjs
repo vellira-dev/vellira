@@ -35,17 +35,17 @@ export async function fetchWithCloudflareEdgeRetry(
     delayMs,
     ...(sleepImpl ? { sleep: sleepImpl } : {}),
     requestGet: async (target, probeOptions) => {
+      const disposal = new AbortController();
       let response = await fetchImpl(target, {
         ...options,
         method: 'GET',
         headers: probeOptions.headers,
         redirect: 'manual',
-        signal: options.signal
-          ? AbortSignal.any([
-              options.signal,
-              AbortSignal.timeout(probeOptions.timeout),
-            ])
-          : AbortSignal.timeout(probeOptions.timeout),
+        signal: AbortSignal.any([
+          disposal.signal,
+          AbortSignal.timeout(probeOptions.timeout),
+          ...(options.signal ? [options.signal] : []),
+        ]),
       });
       // Include streamed 2xx bodies in the bounded request attempt. A body
       // timeout is not successful recovery. HTTP failures remain status evidence.
@@ -67,7 +67,11 @@ export async function fetchWithCloudflareEdgeRetry(
         status: response.status,
         headers: response.headers,
         native: response,
-        dispose: () => response.body?.cancel(),
+        text: () => response.text(),
+        dispose: () => {
+          disposal.abort();
+          if (!response.body?.locked) return response.body?.cancel();
+        },
       };
     },
   });

@@ -25,6 +25,7 @@ import {
   cloudflareEdgeReplayHeaders,
   readCloudflareDiagnosticGet,
   recoverCloudflareEdgeFailure,
+  readCloudflarePlatformFailure,
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
   reconcileHandledCloudflareEdgeConsoleDiagnostics,
@@ -64,6 +65,7 @@ const blogMetrics404Responses = [];
 const deferredResource404ConsoleDiagnostics = [];
 const deferredResource5xxConsoleDiagnostics = [];
 const cloudflareEdgeGetFailures = [];
+let pageSequence = 0;
 let acceptedStagingCatalogLag = false;
 let acceptedStagingCandidateOnlySlugs = [];
 
@@ -174,10 +176,48 @@ function reconcileCloudflareEdgeDiagnostics() {
 }
 
 function attachPageDiagnostics(page) {
+  const pageId = `page-${++pageSequence}`;
+  const requestIds = new WeakMap();
+  let requestSequence = 0;
+  const requestId = (request) => {
+    if (!requestIds.has(request))
+      requestIds.set(request, `${pageId}-${++requestSequence}`);
+    return requestIds.get(request);
+  };
+  void page
+    .context()
+    .newCDPSession(page)
+    .then(async (cdp) => {
+      cdp.on('Network.requestWillBeSent', (event) => {
+        if (sameOrigin(event.request.url))
+          browserEvents.push({
+            kind: 'initiator',
+            at: Date.now(),
+            pageId,
+            requestId: event.requestId,
+            url: event.request.url,
+            method: event.request.method,
+            loaderId: event.loaderId,
+            resourceType: event.type,
+            initiator: event.initiator,
+          });
+      });
+      await cdp.send('Network.enable');
+    })
+    .catch((error) =>
+      browserEvents.push({
+        kind: 'cdp-unavailable',
+        pageId,
+        error: String(error),
+      })
+    );
   page.on('request', (request) => {
     if (sameOrigin(request.url()))
       browserEvents.push({
         kind: 'request',
+        pageId,
+        requestId: requestId(request),
+        resourceType: request.resourceType(),
         at: Date.now(),
         page: page.url(),
         url: request.url(),
@@ -228,6 +268,9 @@ function attachPageDiagnostics(page) {
     if (sameOrigin(response.url()))
       browserEvents.push({
         kind: 'response',
+        pageId,
+        requestId: requestId(response.request()),
+        resourceType: response.request().resourceType(),
         at: Date.now(),
         page: page.url(),
         url: response.url(),
@@ -259,6 +302,7 @@ function attachPageDiagnostics(page) {
         status: response.status(),
         method: response.request().method(),
         headers: responseHeaders,
+        platformFailure: readCloudflarePlatformFailure(response),
         requestHeaders: response.request().headers(),
         handled: false,
       });
@@ -302,6 +346,8 @@ function attachPageDiagnostics(page) {
     if (sameOrigin(request.url()))
       browserEvents.push({
         kind: 'requestfailed',
+        pageId,
+        requestId: requestId(request),
         at: Date.now(),
         page: page.url(),
         url: request.url(),
@@ -726,13 +772,28 @@ async function loadArticleWithActorMetrics(
           { url: likeUrl, method: 'GET' },
           { url: viewUrl, method: 'POST' },
         ],
-        () =>
-          page.goto(`${baseUrl}${articlePath}`, {
-            waitUntil: 'domcontentloaded',
+        async () => {
+          const response = await page.goto(`${baseUrl}${articlePath}`, {
+            waitUntil: 'commit',
             timeout: 15_000,
-          }),
+          });
+          if (
+            !response ||
+            response.status() !== 200 ||
+            response.headers()['x-vellira-build-id'] !== expectedBuildId
+          ) {
+            throw new Error(
+              `Actor document readiness failed: status=${response?.status()} build=${response?.headers()['x-vellira-build-id']}`
+            );
+          }
+          await page
+            .getByRole('heading', { level: 1 })
+            .waitFor({ state: 'visible', timeout: 15_000 });
+          if (new URL(page.url()).pathname !== articlePath)
+            throw new Error('Actor document readiness reached the wrong route');
+        },
         15_000,
-        { document: 'next' }
+        { document: 'next', deferFetchUntilReady: true }
       );
 
       if (
@@ -762,6 +823,7 @@ async function loadArticleWithActorMetrics(
       );
       if (
         !mutationObserved &&
+        error.metricsPhase !== 'metrics' &&
         criticalDiagnostics.length === 0 &&
         attempt < edgeRecoveryMaxAttempts &&
         (await recoverCloudflareEdgeFailures(
@@ -796,7 +858,16 @@ async function verifyBlogActorContinuity() {
     const page = await context.newPage();
     actorPage = page;
     attachPageDiagnostics(page);
-    const observeActorJson = await captureBrowserJson(page, baseUrl);
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+    });
+    const observeActorJson = await captureBrowserJson(page, baseUrl, {
+      gateBootstrap: true,
+      record: (kind, data) =>
+        browserEvents.push({ kind, at: Date.now(), page: 'actor', ...data }),
+    });
 
     const first = await loadArticleWithActorMetrics(
       page,
@@ -931,7 +1002,13 @@ async function verifyBlogActorContinuity() {
           ).catch(String)
         );
     } finally {
-      await context.close();
+      try {
+        await context.tracing.stop({
+          path: path.join(artifactDirectory, 'actor-trace.zip'),
+        });
+      } finally {
+        await context.close();
+      }
     }
   }
 }

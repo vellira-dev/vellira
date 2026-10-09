@@ -85,6 +85,11 @@ try {
       bytes: Buffer.byteLength(body),
     });
     assert.equal(response.status, 200, route);
+    assert.equal(
+      response.headers.get('x-nextjs-cache'),
+      'HIT',
+      `Prerender cache miss: ${route}`
+    );
     assert.match(body, /<html/);
     assert.match(body, /<h1/);
     assert.equal(response.headers.get('cache-control'), HTML_CACHE_CONTROL);

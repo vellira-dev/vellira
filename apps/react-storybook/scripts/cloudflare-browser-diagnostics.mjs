@@ -6,6 +6,7 @@ import {
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
   recoverCloudflareEdgeFailure,
+  readCloudflarePlatformFailure,
   readCloudflareDiagnosticGet,
 } from './cloudflare-edge-recovery.mjs';
 
@@ -226,6 +227,7 @@ export async function captureDiagnostics(
           method: request.method(),
           headers,
           requestHeaders: request.headers(),
+          platformFailure: readCloudflarePlatformFailure(response),
           handled: false,
         });
       } else if (response.status() === 404 && isExpected404Response?.(event)) {

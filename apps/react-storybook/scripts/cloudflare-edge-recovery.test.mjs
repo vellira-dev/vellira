@@ -489,3 +489,58 @@ test('real HTTP probes omit credentials, preserve router headers, isolate Set-Co
   );
   assert.equal(observed.length, 3);
 });
+
+test('platform Worker termination 1102 without Vellira headers is never recovered by a later 200', async () => {
+  const { readCloudflarePlatformFailure, recoverCloudflareEdgeFailure } =
+    await import('./cloudflare-edge-recovery.mjs');
+  const response = {
+    headers: () => ({ server: 'cloudflare', 'content-type': 'text/html' }),
+    text: async () =>
+      '<span class="cf-error-code">1102</span><h2>Worker exceeded resource limits</h2>',
+  };
+  const platformFailure = readCloudflarePlatformFailure(response);
+  let calls = 0;
+  const failure = {
+    url: 'https://example.test/blog',
+    method: 'GET',
+    status: 503,
+    headers: response.headers(),
+    handled: false,
+    platformFailure,
+  };
+  const result = await recoverCloudflareEdgeFailure(failure, {
+    expectedBuildId: 'build',
+    requestGet: async () => {
+      calls++;
+      throw Error('must not probe');
+    },
+  });
+  assert.equal(result.recovered, false);
+  assert.equal(result.reason, 'worker-platform-error');
+  assert.equal(result.code, '1102');
+  assert.equal(failure.handled, false);
+  assert.equal(calls, 0);
+});
+
+test('a probe Worker termination body fails closed without retry and disposes its response', async () => {
+  let calls = 0,
+    disposed = 0;
+  const result = await recoverCloudflareEdgeGet5xx({
+    url: 'https://example.test/blog',
+    expectedBuildId: 'build',
+    requestGet: async () => {
+      calls++;
+      return {
+        status: () => 503,
+        headers: () => ({ server: 'cloudflare', 'content-type': 'text/html' }),
+        text: async () => '<span class="cf-error-code">1102</span>',
+        dispose: async () => {
+          disposed++;
+        },
+      };
+    },
+  });
+  assert.equal(result.reason, 'worker-platform-error');
+  assert.equal(calls, 1);
+  assert.equal(disposed, 1);
+});

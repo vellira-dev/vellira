@@ -208,3 +208,28 @@ test('invalid runtime probe configuration fails before even a non-retried mutati
     );
   }
 });
+
+test('a headerless Worker resource termination never becomes a successful native recovery', async () => {
+  let calls = 0;
+  let signal;
+  await assert.rejects(
+    fetchWithCloudflareEdgeRetry(
+      'https://example.test/runtime',
+      {},
+      {
+        expectedBuildId: 'build-1',
+        fetchImpl: async (_url, options) => {
+          calls++;
+          signal = options.signal;
+          return new Response('<span class="cf-error-code">1102</span>', {
+            status: 503,
+            headers: { server: 'cloudflare', 'content-type': 'text/html' },
+          });
+        },
+      }
+    ),
+    /worker-platform-error/
+  );
+  assert.equal(calls, 1);
+  assert.equal(signal.aborted, true, 'discarded probe releases its transport');
+});

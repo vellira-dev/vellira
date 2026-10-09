@@ -19,6 +19,45 @@ export function isCloudflareEdgeGeneratedGet5xx({ status, method, headers }) {
   );
 }
 
+// Platform termination pages have no application execution headers. They are
+// Worker failures, even when a later independent request returns exact-build 200.
+export async function readCloudflarePlatformFailure(response) {
+  const headers = apiResponseHeaders(response);
+  if (!headers['content-type']?.toLowerCase().includes('text/html'))
+    return null;
+  if (typeof response.text !== 'function') return null;
+  if (Number(headers['content-length']) > 65_536)
+    return {
+      reason: 'edge-body-unavailable',
+      error: 'Error body exceeds 64 KiB',
+    };
+  let timer;
+  try {
+    const text = await Promise.race([
+      response.text(),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error('Error body deadline exceeded')),
+          5_000
+        );
+      }),
+    ]);
+    if (text.length > 65_536)
+      return {
+        reason: 'edge-body-unavailable',
+        error: 'Error body exceeds 64 KiB',
+      };
+    const code = text.match(
+      /class=["']cf-error-code["'][^>]*>\s*(1101|1102|1019|1021|1024|1027|1042|10162)\s*</
+    )?.[1];
+    return code ? { reason: 'worker-platform-error', code } : null;
+  } catch (error) {
+    return { reason: 'edge-body-unavailable', error: String(error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function cloudflareEdgeReplayHeaders(headers = {}) {
   const source = normalizeHeaders(headers);
   const replay = {
@@ -230,6 +269,14 @@ export async function probeCloudflareGet({
         keepResponse = true;
         return { response, attempts: attempt, status };
       }
+      const platformFailure = await readCloudflarePlatformFailure(response);
+      if (platformFailure)
+        return {
+          recovered: false,
+          attempts: attempt,
+          status,
+          ...platformFailure,
+        };
       if (attempt === maxAttempts) {
         return {
           recovered: false,
@@ -247,6 +294,12 @@ export async function probeCloudflareGet({
 }
 
 export async function recoverCloudflareEdgeGet5xx(options) {
+  if (options.originalResponse) {
+    const failure = await readCloudflarePlatformFailure(
+      options.originalResponse
+    );
+    if (failure) return { recovered: false, attempts: 0, ...failure };
+  }
   const result = await probeCloudflareGet({ ...options, retryEdge5xx: true });
   if (!result.response) return result;
   const { response, attempts, status } = result;
@@ -273,6 +326,11 @@ export async function recoverCloudflareEdgeFailure(failure, options) {
     !isCloudflareEdgeGeneratedGet5xx(failure)
   ) {
     return { recovered: false, attempts: 0, reason: 'non-replayable' };
+  }
+  const platformFailure = await failure.platformFailure;
+  if (platformFailure) {
+    failure.recovery = { recovered: false, attempts: 0, ...platformFailure };
+    return failure.recovery;
   }
   const result = await recoverCloudflareEdgeGet5xx({
     ...options,
