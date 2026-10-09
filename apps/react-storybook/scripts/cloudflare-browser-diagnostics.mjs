@@ -70,6 +70,9 @@ export async function captureDiagnostics(
   const deferredResource5xxConsoleErrors = [];
   const edgeFailures = [];
   const pending = new Set();
+  let mainFrameId = null;
+  let mainFrameLoaderId = null;
+  let mainDocumentGeneration = 0;
   const started = Date.now();
   const record = (kind, data) => {
     const event = { ms: Date.now() - started, kind, page: page.url(), ...data };
@@ -101,10 +104,43 @@ export async function captureDiagnostics(
     sources: true,
   });
   const cdp = await context.newCDPSession(page).catch(() => null);
-  if (cdp) await cdp.send('Network.enable');
-  else
+  if (cdp) {
+    await Promise.all([cdp.send('Network.enable'), cdp.send('Page.enable')]);
+    try {
+      const frameTree = await cdp.send('Page.getFrameTree');
+      mainFrameId = frameTree.frameTree?.frame?.id ?? null;
+      mainFrameLoaderId = frameTree.frameTree?.frame?.loaderId ?? null;
+    } catch (error) {
+      record('capability', {
+        cdpDocumentIdentity: false,
+        reason: String(error),
+      });
+    }
+
+    cdp.on('Page.frameNavigated', ({ frame }) => {
+      if (frame.parentId) return;
+      const previousLoaderId = mainFrameLoaderId;
+      mainFrameId = frame.id ?? mainFrameId;
+      mainFrameLoaderId = frame.loaderId ?? null;
+      if (
+        mainFrameLoaderId &&
+        previousLoaderId &&
+        mainFrameLoaderId !== previousLoaderId
+      ) {
+        mainDocumentGeneration += 1;
+      }
+      record('document-identity', {
+        frameId: mainFrameId,
+        loaderId: mainFrameLoaderId,
+        previousLoaderId,
+        generation: mainDocumentGeneration,
+        url: frame.url,
+      });
+    });
+  } else
     record('capability', {
       cdpCacheAttribution: false,
+      cdpDocumentIdentity: false,
       reason:
         'Non-Chromium engine; correlate with origin logs, not inferred cf-ray',
     });
@@ -282,6 +318,22 @@ export async function captureDiagnostics(
 
   return {
     record,
+    documentIdentity() {
+      if (!cdp || !mainFrameLoaderId) {
+        return {
+          available: false,
+          frameId: mainFrameId,
+          loaderId: mainFrameLoaderId,
+          generation: mainDocumentGeneration,
+        };
+      }
+      return {
+        available: true,
+        frameId: mainFrameId,
+        loaderId: mainFrameLoaderId,
+        generation: mainDocumentGeneration,
+      };
+    },
     edgeFailureCursor() {
       return edgeFailures.length;
     },
