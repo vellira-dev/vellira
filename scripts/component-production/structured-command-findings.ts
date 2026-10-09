@@ -15,8 +15,8 @@ export function structuredCommandFindings(
   if (execution.exitCode !== 1)
     throw new Error('Canonical diagnostic did not exit with a finding status.');
   const text = stripVTControlCharacters(execution.stdout).trim();
-  // pnpm may precede the canonical JSON with its command banner. Nothing may
-  // follow the JSON value, and a malformed/partial report stays infrastructure.
+  // Canonical JSON commands use pnpm --silent. Legacy command banners may
+  // precede the value, but trailing output and partial reports stay infrastructure.
   const start = text.indexOf('{');
   if (
     start < 0 ||

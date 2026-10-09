@@ -129,6 +129,7 @@ export function componentProductionDiagnosticCommands(
       stage: 'quality',
       command: [
         'pnpm',
+        '--silent',
         'check:component-quality',
         input.componentName,
         '--json',
