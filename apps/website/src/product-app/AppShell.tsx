@@ -10,6 +10,7 @@ import { Button, Select, Tabs } from '@vellira-ui/react';
 
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { AppSessionProvider, useAppSession } from './AppSession';
+import { resendCurrentVerification, VelliraApiError } from './api';
 
 import styles from './AppShell.module.css';
 
@@ -74,6 +75,30 @@ function AppNavigation() {
 
 function AppShellContent({ children }: { children: ReactNode }) {
   const { status, me, workspace, error, refresh } = useAppSession();
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<string>();
+  const [verificationError, setVerificationError] = useState<string>();
+
+  const handleVerificationResend = async () => {
+    if (resendingVerification) return;
+
+    setResendingVerification(true);
+    setVerificationMessage(undefined);
+    setVerificationError(undefined);
+
+    try {
+      await resendCurrentVerification();
+      setVerificationMessage('Verification email sent.');
+    } catch (cause) {
+      setVerificationError(
+        cause instanceof VelliraApiError && cause.code === 'rate_limited'
+          ? 'Too many requests. Please try again shortly.'
+          : 'Verification email is temporarily unavailable. Please try again.'
+      );
+    } finally {
+      setResendingVerification(false);
+    }
+  };
 
   if (status === 'loading') {
     return (
@@ -125,15 +150,28 @@ function AppShellContent({ children }: { children: ReactNode }) {
             <span>
               Verify your email to finish securing your Vellira account.
             </span>
+            {verificationMessage && (
+              <span className={styles.verificationStatus} role='status'>
+                {verificationMessage}
+              </span>
+            )}
+            {verificationError && (
+              <span className={styles.verificationError} role='alert'>
+                {verificationError}
+              </span>
+            )}
           </div>
           <Button
-            asChild
             size='sm'
             appearance='outline'
             color='neutral'
             className={styles.verificationAction}
+            loading={resendingVerification}
+            loadingText='Sending…'
+            disabled={resendingVerification}
+            onClick={() => void handleVerificationResend()}
           >
-            <Link href='/verify-email'>Resend verification email</Link>
+            Resend verification email
           </Button>
         </div>
       )}
