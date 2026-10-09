@@ -11,13 +11,13 @@ function oneLineFrontmatterDescription(source) {
 }
 
 function presentationDescription(source, slug) {
-  const escaped = slug.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&');
+  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = source.match(
     new RegExp(
-      `slug: ['"]\${escaped}['"][\\s\\S]*?description:\\s*\\n?\\s*['"]([^'"]+)['"]`
+      `slug: ['"]${escaped}['"][\\s\\S]*?description:\\s*\\n?\\s*['"]([^'"]+)['"]`
     )
   );
-  assert.ok(match?.[1], `missing presentation description for \${slug}`);
+  assert.ok(match?.[1], `missing presentation description for ${slug}`);
   return match[1];
 }
 
@@ -36,7 +36,7 @@ test('external audit descriptions stay in the intended SEO range', async () => {
   for (const description of descriptions) {
     assert.ok(
       description.length >= 120 && description.length <= 160,
-      `description length out of audit range: \${description.length}`
+      `description length out of audit range: ${description.length}`
     );
   }
 });
@@ -46,7 +46,7 @@ test('two-runtimes rendered title stays below 70 characters', async () => {
     await read('apps/website/content/blog/two-runtimes/metadata.json')
   );
   assert.ok(typeof metadata.title === 'string');
-  assert.ok(`\${metadata.title} | Vellira`.length < 70);
+  assert.ok(`${metadata.title} | Vellira`.length < 70);
 });
 
 test('ai-ui-consistency article images have explicit non-empty alt text', async () => {
