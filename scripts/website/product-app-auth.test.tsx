@@ -247,9 +247,7 @@ describe('existing OAuth callback and account recovery', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       'https://api.vellira.dev/v1/auth/email/verify'
     );
-    expect(fetchMock.mock.calls[1]?.[0]).toBe(
-      'https://api.vellira.dev/v1/me'
-    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.vellira.dev/v1/me');
   });
 
   it('signs in through the existing password form and API', async () => {
