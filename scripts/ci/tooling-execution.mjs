@@ -35,6 +35,7 @@ export function createToolingTasks({
     'scripts/smoke/utils.test.mjs',
     'scripts/ci/dependabot-security-remediation.test.mjs',
     'scripts/ci/dependabot-verified-backports.test.mjs',
+    'scripts/ci/security-patched-dependencies.test.mjs',
     'scripts/ci/chromatic-impact.test.mjs',
   ].map((file) => ({
     name: file,
