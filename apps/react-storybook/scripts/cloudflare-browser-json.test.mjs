@@ -691,3 +691,25 @@ test('a missing POST response retains the completed GET and never repeats a disp
     ['GET']
   );
 });
+
+test('a gated metrics fetch without an observer ticket cannot dispatch a mutation', async (t) => {
+  const { page, observe, calls, requests } = await documentFixture(t, {
+    gateBootstrap: true,
+  });
+  const result = await page.evaluate(async (url) => {
+    try {
+      await load(url, 'POST');
+      return 'sent';
+    } catch (error) {
+      return error.name;
+    }
+  }, requests[1].url);
+  assert.equal(result, 'AbortError');
+  assert.deepEqual(calls, []);
+  // Missing registration did not create a mutation or poison a later observer.
+  await observe(requests, () => page.evaluate(() => bootstrap()));
+  assert.deepEqual(
+    calls.map(({ method }) => method),
+    ['GET', 'POST']
+  );
+});

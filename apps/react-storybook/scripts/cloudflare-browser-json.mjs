@@ -91,7 +91,7 @@ export async function captureBrowserJson(
 
   const install = ({ binding, origin, gateBootstrap }) => {
     const key = Symbol.for(binding);
-    if (window[key]) return;
+    if (window[key]) return window[key].observation;
     const nativeFetch = window.fetch;
     const report = window[binding];
     const documentId = Array.from(
@@ -148,7 +148,7 @@ export async function captureBrowserJson(
       const invoke = () => nativeFetch.apply(this, args);
       const responsePromise = state.deferFetch
         ? ticket.then((selected) => {
-            if (selected?.cancelled)
+            if (!selected || selected.cancelled)
               throw new DOMException(
                 'Metrics bootstrap document was not ready',
                 'AbortError'
@@ -214,6 +214,8 @@ export async function captureBrowserJson(
         }
       );
     };
+    // Await initial registration before arming a next-document observation.
+    return state.observation;
   };
   await page.addInitScript(install, { binding, origin, gateBootstrap });
   // Also support an already-loaded page; subsequent documents use initScript.
