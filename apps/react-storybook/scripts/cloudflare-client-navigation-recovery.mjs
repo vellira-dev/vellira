@@ -86,3 +86,32 @@ export function isRecoveredDocumentFallback({
     !headers.location
   );
 }
+
+export function isSafeClientNavigationReplay({
+  baseUrl,
+  startPath,
+  currentUrl,
+  expectedDocumentToken,
+  currentDocumentToken,
+  edgeRecovered,
+}) {
+  if (
+    !edgeRecovered ||
+    !baseUrl ||
+    !startPath ||
+    !expectedDocumentToken ||
+    currentDocumentToken !== expectedDocumentToken
+  ) {
+    return false;
+  }
+
+  const base = new URL(baseUrl);
+  const current = new URL(currentUrl, base);
+  const expectedStart = new URL(startPath, base);
+
+  return (
+    current.origin === base.origin &&
+    expectedStart.origin === base.origin &&
+    current.pathname === expectedStart.pathname
+  );
+}
