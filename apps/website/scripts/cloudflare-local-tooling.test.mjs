@@ -295,7 +295,6 @@ test('Cloudflare tooling imports emit no punycode deprecation', async () => {
     'node-fetch',
     'wrangler',
     '@opennextjs/cloudflare',
-    '@opennextjs/aws',
     '@aws-sdk/client-s3',
     'cloudflare',
   ]) {
@@ -330,7 +329,6 @@ test('Cloudflare tooling imports emit no punycode deprecation', async () => {
           '"node-fetch":()=>import("node-fetch"),',
           '"wrangler":()=>import("wrangler"),',
           '"@opennextjs/cloudflare":()=>import("@opennextjs/cloudflare"),',
-          '"@opennextjs/aws":()=>import("@opennextjs/aws"),',
           '"@aws-sdk/client-s3":()=>import("@aws-sdk/client-s3"),',
           '"cloudflare":()=>import("cloudflare"),',
           '};',
