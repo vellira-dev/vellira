@@ -80,6 +80,28 @@ work, but does not prevent a workflow card from being created for each push.
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
 
+## Immutable candidate quality checks
+
+The quality job keeps the exact PR head in a separate candidate checkout and the
+exact workflow revision in a tooling checkout. It preserves every command and
+argument in the candidate's `ci:quality` recipe. Only the two read-only website
+projection gates use the workflow's canonical generator and audit implementation,
+including nested generator commands; candidate implementation and metadata remain
+unchanged. Missing projection gates or unsupported shell syntax fail closed.
+Both Git revisions and clean source trees are checked before and after commands,
+and the job retains the recipe digest, command results and both identities in
+the runner's temporary directory, outside both source checkouts.
+
+Cloudflare lint and smoke-policy tests use a fixed source-check profile loaded
+from the exact workflow Git revision. The candidate retains the required baseline
+scripts and tests. Each additional recovery module present in that candidate must
+have its matching test; both are checked. A historical candidate need not contain
+features added later on main. Empty baseline families and missing module/test
+pairs fail closed. Runtime builds still bind the exact candidate SHA. No missing-
+file suppression or successful fallback is permitted. After a reviewed workflow
+fix merges, reopening an unchanged Draft PR can obtain current-workflow checks
+without rebasing its certified commit.
+
 ## Release candidate consumer proof
 
 Release Candidate Proof packs the exact candidate head and binds every retained

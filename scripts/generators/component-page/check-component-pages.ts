@@ -1,22 +1,23 @@
 import { spawnSync } from 'node:child_process';
 
-const previewAudit = spawnSync(
-  'pnpm',
-  [
-    'exec',
-    'tsx',
-    'scripts/generators/component-page/audit-catalog-previews.ts',
-  ],
-  {
-    stdio: 'inherit',
-  }
+import { componentPageScriptCommand } from './helpers/command';
+
+const [auditExecutable, ...auditArgs] = componentPageScriptCommand(
+  'audit-catalog-previews.ts'
 );
+const previewAudit = spawnSync(auditExecutable, auditArgs, {
+  stdio: 'inherit',
+});
 
 if (previewAudit.status !== 0) {
   process.exit(previewAudit.status ?? 1);
 }
 
-const result = spawnSync('pnpm', ['component-pages:generate', '--check'], {
+const [executable, ...args] = componentPageScriptCommand(
+  'generate-component-pages.ts',
+  ['--check']
+);
+const result = spawnSync(executable, args, {
   stdio: 'inherit',
 });
 
