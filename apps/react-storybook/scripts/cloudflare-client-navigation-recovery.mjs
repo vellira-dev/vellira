@@ -87,7 +87,6 @@ export function isRecoveredDocumentFallback({
   );
 }
 
-
 export function isSafeClientNavigationReplay({
   baseUrl,
   startPath,
