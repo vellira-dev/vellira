@@ -6,6 +6,7 @@ import { unstable_dev } from 'wrangler';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { rscProbe } from './cloudflare-rsc-probe.mjs';
+import { verifySiteNavigationSurfaces } from './cloudflare-site-navigation-browser.mjs';
 import {
   HTML_CACHE_CONTROL,
   RSC_CACHE_CONTROL,
@@ -85,6 +86,11 @@ try {
       bytes: Buffer.byteLength(body),
     });
     assert.equal(response.status, 200, route);
+    assert.equal(
+      response.headers.get('x-nextjs-cache'),
+      'HIT',
+      `Prerender cache miss: ${route}`
+    );
     assert.match(body, /<html/);
     assert.match(body, /<h1/);
     assert.equal(response.headers.get('cache-control'), HTML_CACHE_CONTROL);
@@ -113,6 +119,9 @@ try {
     assert.equal(flight.headers.get('cache-control'), RSC_CACHE_CONTROL);
     await flight.arrayBuffer();
   }
+  evidence.siteNavigation = await verifySiteNavigationSurfaces(
+    `http://${worker.address}:${worker.port}`
+  );
   evidence.passed = true;
   console.log(
     'Actual OpenNext Workers runtime: HTML/Flight routes and identity verified'

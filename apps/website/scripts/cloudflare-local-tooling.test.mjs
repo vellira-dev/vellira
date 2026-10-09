@@ -195,6 +195,25 @@ async function fixture(t, filename = 'wrangler.jsonc') {
     'export default { fetch() { return new Response("fixture"); } };\n'
   );
   await fs.writeFile(path.join(directory, '.dev.vars'), '');
+  await fs.mkdir(path.join(directory, '.next'), { recursive: true });
+  await fs.writeFile(path.join(directory, '.next/BUILD_ID'), 'fixture-build');
+  await fs.writeFile(
+    path.join(directory, '.next/prerender-manifest.json'),
+    JSON.stringify({
+      routes: { '/': { dataRoute: '/index.rsc', srcRoute: '/' } },
+    })
+  );
+  await fs.writeFile(
+    path.join(directory, '.next/app-path-routes-manifest.json'),
+    JSON.stringify({ '/page': '/' })
+  );
+  await fs.mkdir(path.join(directory, '.open-next/cache/fixture-build'), {
+    recursive: true,
+  });
+  await fs.writeFile(
+    path.join(directory, '.open-next/cache/fixture-build/index.cache'),
+    JSON.stringify({ type: 'app', html: '<h1>fixture</h1>' })
+  );
   const configPath = path.join(directory, filename);
   await fs.writeFile(configPath, JSON.stringify(rawConfig));
   return { directory, configPath };

@@ -1,3 +1,4 @@
+/* global load, bootstrap, releaseEarlierStart */
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { after, before, test } from 'node:test';
@@ -252,7 +253,7 @@ test('late responses cannot satisfy a later observation of the same URL and meth
 });
 
 test('duplicate writes during one action fail rather than accepting the first good response', async (t) => {
-  const { page, observe, state } = await fixture(t);
+  const { page, observe } = await fixture(t);
   await assert.rejects(
     observe([spec()], () =>
       page.evaluate(async (url) => {
@@ -339,7 +340,7 @@ for (const status of [307, 308]) {
 
 // Synthetic routes keep the document-boundary regression deterministic. The
 // production observer still receives only each original browser fetch/response.
-async function documentFixture(t) {
+async function documentFixture(t, options) {
   const origin = 'https://vellira-observer.test';
   const context = await browser.newContext();
   const calls = [];
@@ -392,7 +393,7 @@ async function documentFixture(t) {
     });
   });
   const page = await context.newPage();
-  const observe = await captureBrowserJson(page, origin);
+  const observe = await captureBrowserJson(page, origin, options);
   await page.goto(`${origin}/plain`);
   const requests = [
     { url: `${origin}${likePath}`, method: 'GET' },
@@ -594,4 +595,121 @@ test('the arming deadline prevents a late action and holds the overlap lock', as
     page.evaluate(() => bootstrap())
   );
   assert.equal(responses[0].payload.document, 1);
+});
+
+test('bootstrap separates document readiness from original GET/POST dispatch without replay', async (t) => {
+  const records = [];
+  const { page, observe, requests, calls } = await documentFixture(t, {
+    gateBootstrap: true,
+    record: (kind, data) => records.push({ kind, ...data }),
+  });
+  const results = await observe(
+    requests,
+    async () => {
+      await page.goto('https://vellira-observer.test/bootstrap');
+      // Automatic app bootstrap already called fetch, but Phase A cannot mutate.
+      assert.equal(calls.length, 0);
+    },
+    2_000,
+    { document: 'next', deferFetchUntilReady: true }
+  );
+  assert.deepEqual(
+    results.map((r) => r.payload.document),
+    [2, 2]
+  );
+  assert.deepEqual(
+    calls.map((c) => c.method),
+    ['GET', 'POST']
+  );
+  const phases = records
+    .filter((r) => r.kind === 'metrics-observation')
+    .map((r) => r.phase);
+  assert.deepEqual(phases, ['document-readiness', 'metrics']);
+});
+
+test('failed document readiness cancels held mutation; recovered navigation does not evaluate the failed document', async (t) => {
+  const { page, observe, requests, calls } = await documentFixture(t, {
+    gateBootstrap: true,
+  });
+  const original = new Error('classified edge document 503');
+  await assert.rejects(
+    observe(
+      requests,
+      async () => {
+        await page.goto('https://vellira-observer.test/bootstrap');
+        throw original;
+      },
+      2_000,
+      { document: 'next', deferFetchUntilReady: true }
+    ),
+    (e) => e === original
+  );
+  assert.equal(
+    calls.length,
+    0,
+    'no held request may dispatch after a failed Phase A'
+  );
+  const evaluate = page.evaluate.bind(page);
+  let navigated = false;
+  page.evaluate = (...args) => {
+    assert.ok(
+      navigated,
+      'next-document arming must not evaluate a failed outgoing context'
+    );
+    return evaluate(...args);
+  };
+  await observe(
+    requests,
+    async () => {
+      await page.goto('https://vellira-observer.test/bootstrap');
+      navigated = true;
+    },
+    2_000,
+    { document: 'next', deferFetchUntilReady: true }
+  );
+  assert.deepEqual(
+    calls.map((c) => c.method),
+    ['GET', 'POST']
+  );
+});
+
+test('a missing POST response retains the completed GET and never repeats a dispatched mutation', async (t) => {
+  const records = [];
+  const { observe, requests, calls, navigate } = await documentFixture(t, {
+    record: (kind, data) => records.push({ kind, ...data }),
+  });
+  await assert.rejects(
+    observe(requests, () => navigate('?omit=POST'), 500, { document: 'next' }),
+    /timed out/
+  );
+  const finish = records.find((r) => r.kind === 'metrics-observation-finish');
+  assert.equal(finish.entries[0].response.status, 200);
+  assert.equal(finish.entries[0].completed, true);
+  assert.equal(finish.entries[1].started, false);
+  assert.deepEqual(
+    calls.map((c) => c.method),
+    ['GET']
+  );
+});
+
+test('a gated metrics fetch without an observer ticket cannot dispatch a mutation', async (t) => {
+  const { page, observe, calls, requests } = await documentFixture(t, {
+    gateBootstrap: true,
+  });
+  const result = await page.evaluate(async (url) => {
+    try {
+      await load(url, 'POST');
+      return 'sent';
+    } catch (error) {
+      return error.name;
+    }
+  }, requests[1].url);
+  assert.equal(result, 'AbortError');
+  assert.deepEqual(calls, []);
+  // Missing registration did not create a mutation or poison a later observer.
+  await observe(requests, () => page.evaluate(() => bootstrap()));
+  assert.deepEqual(
+    calls.map(({ method }) => method),
+    ['GET', 'POST']
+  );
 });

@@ -32,7 +32,8 @@ async function request(pathname, options = {}) {
     {
       cache: 'no-store',
       ...options,
-    }
+    },
+    { expectedBuildId: buildId }
   );
   const bytes = Buffer.from(await response.arrayBuffer());
   evidence.push({
@@ -68,6 +69,11 @@ try {
     headers: { Accept: 'text/html' },
   });
   assert.equal(document.response.status, 200);
+  assert.equal(
+    document.response.headers.get('x-nextjs-cache'),
+    'HIT',
+    'Deployed prerender cache missed'
+  );
   assert.equal(document.response.headers.get('x-vellira-build-id'), buildId);
   assert.equal(
     document.response.headers.get('cache-control'),
@@ -122,18 +128,21 @@ try {
       expectedBuildId: buildId,
     });
 
-    const redirectPath =
-      '/blog/two-runtimes?source=cloudflare-postflight&n=1';
+    const redirectPath = '/blog/two-runtimes?source=cloudflare-postflight&n=1';
     const redirectUrl = new URL(redirectPath, publicWww);
-    const response = await fetch(redirectUrl, {
-      cache: 'no-store',
-      redirect: 'manual',
-      headers: { 'Cache-Control': 'no-cache' },
-      signal: AbortSignal.timeout(10_000),
-    });
+    const { response, attempts } = await fetchWithCloudflareEdgeRetry(
+      redirectUrl,
+      {
+        cache: 'no-store',
+        redirect: 'manual',
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+      { expectedBuildId: buildId }
+    );
     const bytes = Buffer.from(await response.arrayBuffer());
     evidence.push({
       pathname: redirectUrl.toString(),
+      attempts,
       status: response.status,
       headers: Object.fromEntries(response.headers),
       sha256: sha256(bytes),
@@ -153,7 +162,11 @@ try {
       response.headers.get('x-vellira-worker-version'),
       'www redirect is missing Worker version identity'
     );
-    assert.equal(bytes.length, 0, 'www redirect must not return a response body');
+    assert.equal(
+      bytes.length,
+      0,
+      'www redirect must not return a response body'
+    );
     console.log(
       `Live production domains passed: apex=${publicBase}; www=308 -> ${publicBase}`
     );
