@@ -41,7 +41,7 @@ describe('componentProductionFinalValidationCommands', () => {
     expect(tooling?.command.at(-1)).toBe('--source-contracts');
     expect(
       commands.find(({ id }) => id === 'tooling-token-semantics')?.command
-    ).toEqual(['pnpm', 'check:tokens-semantic:strict', '--json']);
+    ).toEqual(['pnpm', '--silent', 'check:tokens-semantic:strict', '--json']);
   });
 
   it('gives serialized production tooling bounded runtime budgets that match its workload', () => {
@@ -135,6 +135,7 @@ describe('componentProductionFinalValidationCommands', () => {
     expect(componentProductionRequiresTokenSemanticGate(input)).toBe(true);
     expect(tooling?.command).toEqual([
       'pnpm',
+      '--silent',
       'check:tokens-semantic:strict',
       '--json',
     ]);

@@ -136,7 +136,7 @@ export function componentProductionFinalValidationCommands(
     commands.push({
       id: 'tooling-token-semantics',
       stage: 'tooling',
-      command: ['pnpm', 'check:tokens-semantic:strict', '--json'],
+      command: ['pnpm', '--silent', 'check:tokens-semantic:strict', '--json'],
       resultFormat: 'token-semantic',
       timeoutMs: 120_000,
     });
