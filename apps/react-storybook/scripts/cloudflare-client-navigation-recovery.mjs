@@ -93,25 +93,37 @@ export function isSafeClientNavigationReplay({
   currentUrl,
   expectedDocumentToken,
   currentDocumentToken,
+  expectedDocumentIdentity,
+  currentDocumentIdentity,
   edgeRecovered,
 }) {
-  if (
-    !edgeRecovered ||
-    !baseUrl ||
-    !startPath ||
-    !expectedDocumentToken ||
-    currentDocumentToken !== expectedDocumentToken
-  ) {
-    return false;
-  }
+  if (!edgeRecovered || !baseUrl || !startPath) return false;
 
   const base = new URL(baseUrl);
   const current = new URL(currentUrl, base);
   const expectedStart = new URL(startPath, base);
-
-  return (
+  const routeStayedPut =
     current.origin === base.origin &&
     expectedStart.origin === base.origin &&
-    current.pathname === expectedStart.pathname
+    current.pathname === expectedStart.pathname;
+
+  if (!routeStayedPut) return false;
+
+  const identityProofAvailable =
+    expectedDocumentIdentity?.available === true &&
+    currentDocumentIdentity?.available === true &&
+    Boolean(expectedDocumentIdentity.loaderId) &&
+    Boolean(currentDocumentIdentity.loaderId);
+
+  if (identityProofAvailable) {
+    return (
+      expectedDocumentIdentity.loaderId === currentDocumentIdentity.loaderId &&
+      expectedDocumentIdentity.generation === currentDocumentIdentity.generation
+    );
+  }
+
+  return (
+    Boolean(expectedDocumentToken) &&
+    currentDocumentToken === expectedDocumentToken
   );
 }
