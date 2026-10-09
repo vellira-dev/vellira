@@ -9,6 +9,15 @@ export async function drainSiteNavigationNetwork(page, timeout = 10_000) {
   await page.waitForLoadState('networkidle', { timeout });
 }
 
+export async function runSiteNavigationActionAfterDrain(
+  page,
+  action,
+  timeout = 10_000
+) {
+  await drainSiteNavigationNetwork(page, timeout);
+  await action();
+}
+
 export async function verifySiteNavigationSurfaces(baseUrl) {
   const browser = await chromium.launch();
   const evidence = [];
@@ -67,7 +76,11 @@ export async function verifySiteNavigationSurfaces(baseUrl) {
             row.snapshots.push(
               await page.locator('header').first().ariaSnapshot()
             );
-            await action();
+            // Menu preparation and the current surface can both start finite
+            // background fetches (notably read-only blog metrics). Let those
+            // responses finish before changing routes so workerd never writes
+            // a successful response into a request the browser just aborted.
+            await runSiteNavigationActionAfterDrain(page, action);
             await page.waitForURL(new URL(href, baseUrl).href);
             await page
               .getByRole('heading', { name: title, level: 1, exact: true })
