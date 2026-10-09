@@ -121,3 +121,26 @@ this cleanup. Historical cancelled or failed runs are retained as evidence.
 Lightweight title dependency installation and broader workflow-trigger
 consolidation remain separate changes; their gate and queue semantics must be
 proven before existing behavior is removed.
+
+## Engineering change admission
+
+The existing `PR Title` workflow also owns the read-only Engineering Change
+Admission backstop. It runs `scripts/ci/pr-change-intent.mjs` from the trusted PR
+base checkout before dependency installation and keeps the required check name
+unchanged. The workflow retains only `contents: read` and `pull-requests: read`
+permissions; it never creates, edits, closes, merges, or retargets a PR.
+
+Creator-side preflight remains the primary duplicate-prevention mechanism because
+it runs before PR creation. CI exists to catch bypasses and races: newly admitted
+PRs outside the trusted automation allowlist require one stable root-problem marker,
+and a second open
+PR with the same marker fails closed. Historical PRs created before the adoption
+cutoff remain grandfathered. Only the explicitly reviewed bot identities in the
+trusted-base validator bypass the marker. PR body text, branch names, titles, and
+delivery markers cannot grant an exemption; unrecognized automation must carry a
+normal change-intent marker or fail closed.
+
+The first adoption PR is the only bootstrap case where the trusted base can lack
+the validator. In that case the workflow records `change_intent_adopted=false`
+and does not execute candidate validator code. Once the validator is present on
+`main`, every subsequent PR runs the trusted-base admission check.

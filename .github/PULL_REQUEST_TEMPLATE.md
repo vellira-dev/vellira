@@ -2,6 +2,16 @@
 
 <!-- Briefly explain what this pull request changes and why. -->
 
+## Change intent
+
+<!--
+For PRs not owned by a trusted automation identity, replace "replace-me" with
+one stable lowercase kebab-case ID for the root problem, not the proposed patch. Search open PRs for
+the exact marker before opening this PR; continue an existing matching PR instead
+of creating a superseding PR.
+-->
+<!-- vellira-change-intent:v1:replace-me -->
+
 ## Changes
 
 <!-- List the main changes. -->
