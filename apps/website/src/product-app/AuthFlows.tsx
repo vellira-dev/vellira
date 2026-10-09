@@ -559,17 +559,114 @@ export function ResetPasswordForm() {
   );
 }
 
+type OAuthCallbackFailure = {
+  message: string;
+  primary: {
+    href: string;
+    label: string;
+  };
+  secondary?: {
+    href: string;
+    label: string;
+  };
+};
+
+function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
+  switch (code) {
+    case 'rate_limited':
+      return {
+        message:
+          'Too many sign-in attempts. Please wait a minute and try again.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'account_link_required':
+      return {
+        message:
+          'A Vellira account already exists for the email verified by GitHub. Sign in with your email and password, or reset your password if needed.',
+        primary: { href: '/login', label: 'Sign in with email' },
+        secondary: { href: '/forgot-password', label: 'Reset password' },
+      };
+    case 'oauth_cancelled':
+      return {
+        message: 'GitHub sign in was cancelled.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'oauth_identity_ineligible':
+      return {
+        message:
+          'GitHub sign in requires a verified primary email on your GitHub account.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'account_disabled':
+      return {
+        message: 'This Vellira account is currently unavailable.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'oauth_invalid':
+      return {
+        message:
+          'This GitHub sign-in attempt expired or could not be verified. Please try again.',
+        primary: { href: '/login', label: 'Try again' },
+      };
+    default:
+      return {
+        message: 'GitHub sign in is temporarily unavailable. Please try again.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+  }
+}
+
 export function OAuthCallback() {
   const router = useRouter();
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<OAuthCallbackFailure>();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errors = params.getAll('error');
+    const input =
+      params.size || window.location.hash
+        ? errors.length === 1 && errors[0]
+          ? errors[0]
+          : 'oauth_invalid'
+        : window.history.state?.velliraOAuthError;
+
+    if (input !== undefined && input !== null) {
+      const errorCode = [
+        'account_link_required',
+        'oauth_cancelled',
+        'oauth_identity_ineligible',
+        'account_disabled',
+        'oauth_invalid',
+        'rate_limited',
+      ].includes(input)
+        ? input
+        : 'oauth_unavailable';
+      // This bounded display hint belongs only to this history entry. It is
+      // never identity/session authority. Preserve Next's own history state,
+      // and keep recovery available after refresh, back and repeated effects.
+      window.history.replaceState(
+        { ...window.history.state, velliraOAuthError: errorCode },
+        '',
+        window.location.pathname
+      );
+      setFailure(getOAuthCallbackFailure(errorCode));
+      return;
+    }
+
+    let active = true;
     void getMe()
-      .then(() => router.replace('/app'))
-      .catch(() => setFailed(true));
+      .then(() => {
+        if (active) router.replace('/app');
+      })
+      .catch(() => {
+        if (active) setFailure(getOAuthCallbackFailure('oauth_unavailable'));
+      });
+    return () => {
+      active = false;
+    };
   }, [router]);
 
-  if (!failed) {
+  if (!failure) {
     return (
       <p className={styles.message} role='status'>
         Finishing GitHub sign in…
@@ -580,11 +677,16 @@ export function OAuthCallback() {
   return (
     <div className={styles.actions}>
       <p className={styles.error} role='alert'>
-        GitHub sign in could not be completed.
+        {failure.message}
       </p>
       <Button asChild>
-        <Link href='/login'>Back to sign in</Link>
+        <Link href={failure.primary.href}>{failure.primary.label}</Link>
       </Button>
+      {failure.secondary && (
+        <Button asChild appearance='outline' color='neutral'>
+          <Link href={failure.secondary.href}>{failure.secondary.label}</Link>
+        </Button>
+      )}
     </div>
   );
 }

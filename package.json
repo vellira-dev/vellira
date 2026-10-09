@@ -120,7 +120,7 @@
     "check:component-quality:contract": "node --import tsx scripts/checks/component-quality/completion-contract-cli.ts",
     "check:seo-meta-descriptions": "vitest run --config vitest.tooling.config.ts scripts/seo/meta-description-quality.test.ts",
     "release-candidate:pack": "node scripts/release-candidate/cli.cjs",
-    "test:product-app": "vitest run --config vitest.tooling.config.ts scripts/website/product-app-contract.test.ts"
+    "test:product-app": "vitest run --config vitest.tooling.config.ts scripts/website/product-app*.test.*"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
