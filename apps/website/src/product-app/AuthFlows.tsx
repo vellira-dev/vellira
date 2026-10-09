@@ -559,17 +559,79 @@ export function ResetPasswordForm() {
   );
 }
 
+type OAuthCallbackFailure = {
+  message: string;
+  primary: {
+    href: string;
+    label: string;
+  };
+  secondary?: {
+    href: string;
+    label: string;
+  };
+};
+
+function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
+  switch (code) {
+    case 'account_link_required':
+      return {
+        message:
+          'A Vellira account already exists for the email verified by GitHub. Sign in with your email and password, or reset your password if needed.',
+        primary: { href: '/login', label: 'Sign in with email' },
+        secondary: { href: '/forgot-password', label: 'Reset password' },
+      };
+    case 'oauth_cancelled':
+      return {
+        message: 'GitHub sign in was cancelled.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'oauth_identity_ineligible':
+      return {
+        message:
+          'GitHub sign in requires a verified primary email on your GitHub account.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'account_disabled':
+      return {
+        message: 'This Vellira account is currently unavailable.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+    case 'oauth_invalid':
+      return {
+        message:
+          'This GitHub sign-in attempt expired or could not be verified. Please try again.',
+        primary: { href: '/login', label: 'Try again' },
+      };
+    default:
+      return {
+        message:
+          'GitHub sign in is temporarily unavailable. Please try again.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
+  }
+}
+
 export function OAuthCallback() {
   const router = useRouter();
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<OAuthCallbackFailure>();
 
   useEffect(() => {
+    const errorCode = new URLSearchParams(window.location.search).get('error');
+
+    if (errorCode) {
+      window.history.replaceState(null, '', window.location.pathname);
+      setFailure(getOAuthCallbackFailure(errorCode));
+      return;
+    }
+
     void getMe()
       .then(() => router.replace('/app'))
-      .catch(() => setFailed(true));
+      .catch(() =>
+        setFailure(getOAuthCallbackFailure('oauth_unavailable'))
+      );
   }, [router]);
 
-  if (!failed) {
+  if (!failure) {
     return (
       <p className={styles.message} role='status'>
         Finishing GitHub sign in…
@@ -580,11 +642,16 @@ export function OAuthCallback() {
   return (
     <div className={styles.actions}>
       <p className={styles.error} role='alert'>
-        GitHub sign in could not be completed.
+        {failure.message}
       </p>
       <Button asChild>
-        <Link href='/login'>Back to sign in</Link>
+        <Link href={failure.primary.href}>{failure.primary.label}</Link>
       </Button>
+      {failure.secondary && (
+        <Button asChild appearance='outline' color='neutral'>
+          <Link href={failure.secondary.href}>{failure.secondary.label}</Link>
+        </Button>
+      )}
     </div>
   );
 }
