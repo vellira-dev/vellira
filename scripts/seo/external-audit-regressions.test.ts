@@ -3,7 +3,9 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { getComponentMetaDescription } from '../../apps/website/src/component-catalog/registry/componentSeo';
+import {
+  getComponentMetaDescription,
+} from '../../apps/website/src/component-catalog/registry/componentSeo';
 import { webComponents } from '../../apps/website/src/component-catalog/registry/components';
 
 const EXTERNAL_AUDIT_MIN_DESCRIPTION_LENGTH = 120;
@@ -90,9 +92,7 @@ describe('external SEO audit regressions', () => {
       .map((line) => line.trim())
       .filter(Boolean);
 
-    expect(redirects).toContain(
-      '/getting-started /start/getting-started 301'
-    );
+    expect(redirects).toContain('/getting-started /start/getting-started 301');
     expect(redirects).toContain(
       '/getting-started/ /start/getting-started 301'
     );
