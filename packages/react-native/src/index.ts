@@ -92,6 +92,8 @@ export type {
   FormFieldProps,
 } from './patterns/FormField';
 export { FormField } from './patterns/FormField';
+export type { AvatarProps } from './primitives/Avatar';
+export { Avatar } from './primitives/Avatar';
 export type { ButtonProps } from './primitives/Button';
 export { Button } from './primitives/Button';
 export type { CheckboxProps } from './primitives/Checkbox';
