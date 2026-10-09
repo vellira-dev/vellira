@@ -133,6 +133,7 @@ const sidebarSelector = 'aside[aria-label="Component navigation"]';
 const rscCachePolicyFailures = [];
 let observedRscResponses = 0;
 let documentToken;
+let documentIdentity = null;
 let documentTokenStartedAt = 0;
 let documentSequence = 0;
 let latestDocumentResponse = null;
@@ -190,11 +191,18 @@ page.on('response', (response) => {
 });
 
 async function seedDocumentContinuity() {
-  documentToken = await boundedBrowserRead(
-    () =>
-      page.evaluate(() => (window.__velliraSoakDocument = crypto.randomUUID())),
-    'seed soak document token'
-  );
+  const identity = diagnostics.documentIdentity();
+  if (identity.available) {
+    documentIdentity = identity;
+    documentToken = undefined;
+  } else {
+    documentIdentity = null;
+    documentToken = await boundedBrowserRead(
+      () =>
+        page.evaluate(() => (window.__velliraSoakDocument = crypto.randomUUID())),
+      'seed soak document token'
+    );
+  }
   documentTokenStartedAt = Date.now();
 }
 
@@ -209,47 +217,55 @@ async function ready(
 ) {
   await waitForRoute(page, diagnostics, baseUrl, href, title);
 
-  if (documentToken) {
+  let documentReplaced = false;
+  if (documentIdentity?.available) {
+    const currentIdentity = diagnostics.documentIdentity();
+    documentReplaced =
+      !currentIdentity.available ||
+      currentIdentity.loaderId !== documentIdentity.loaderId ||
+      currentIdentity.generation !== documentIdentity.generation;
+  } else if (documentToken) {
     const currentToken = await boundedBrowserRead(
       () => page.evaluate(() => window.__velliraSoakDocument),
       'soak document continuity'
     );
+    documentReplaced = currentToken !== documentToken;
+  }
 
-    if (currentToken !== documentToken) {
-      const edgeRecovered =
-        allowRecoveredDocumentFallback &&
-        Number.isInteger(edgeCursor) &&
-        diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, href);
-      const recoveredFallback = isRecoveredDocumentFallback({
-        href,
-        baseUrl,
-        expectedBuildId,
-        edgeRecovered,
-        documentResponse: latestDocumentResponse,
-        previousDocumentSequence: documentCursor,
-      });
+  if (documentReplaced) {
+    const edgeRecovered =
+      allowRecoveredDocumentFallback &&
+      Number.isInteger(edgeCursor) &&
+      diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, href);
+    const recoveredFallback = isRecoveredDocumentFallback({
+      href,
+      baseUrl,
+      expectedBuildId,
+      edgeRecovered,
+      documentResponse: latestDocumentResponse,
+      previousDocumentSequence: documentCursor,
+    });
 
-      if (!recoveredFallback) {
-        throw new Error(`Client navigation replaced the document at ${href}`);
-      }
-
-      recoveredDocumentFallbacks += 1;
-      if (recoveredDocumentFallbacks > maxRecoveredDocumentFallbacks) {
-        throw new Error(
-          `Recovered document fallback limit exceeded at ${href}: ${recoveredDocumentFallbacks}/${maxRecoveredDocumentFallbacks}`
-        );
-      }
-
-      diagnostics.record('recovered-document-fallback', {
-        href,
-        sequence: latestDocumentResponse.sequence,
-        recoveredDocumentFallbacks,
-      });
-      console.log(
-        `Recovered Next document fallback after transient destination edge failure at ${href} (${recoveredDocumentFallbacks}/${maxRecoveredDocumentFallbacks})`
-      );
-      await seedDocumentContinuity();
+    if (!recoveredFallback) {
+      throw new Error(`Client navigation replaced the document at ${href}`);
     }
+
+    recoveredDocumentFallbacks += 1;
+    if (recoveredDocumentFallbacks > maxRecoveredDocumentFallbacks) {
+      throw new Error(
+        `Recovered document fallback limit exceeded at ${href}: ${recoveredDocumentFallbacks}/${maxRecoveredDocumentFallbacks}`
+      );
+    }
+
+    diagnostics.record('recovered-document-fallback', {
+      href,
+      sequence: latestDocumentResponse.sequence,
+      recoveredDocumentFallbacks,
+    });
+    console.log(
+      `Recovered Next document fallback after transient destination edge failure at ${href} (${recoveredDocumentFallbacks}/${maxRecoveredDocumentFallbacks})`
+    );
+    await seedDocumentContinuity();
   }
 
   await page.waitForTimeout(dwellMs);
@@ -265,6 +281,8 @@ async function runRecoverableSoakNavigation({ href, title, stage, action }) {
     diagnostics.record('navigation', { href, title, stage, attempt });
     const edgeCursor = diagnostics.edgeFailureCursor();
     const documentCursor = documentSequence;
+    const attemptDocumentIdentity = diagnostics.documentIdentity();
+    const attemptDocumentToken = documentToken;
 
     try {
       await action();
@@ -279,24 +297,31 @@ async function runRecoverableSoakNavigation({ href, title, stage, action }) {
         edgeCursor,
         href
       );
-      const currentDocumentToken = documentToken
-        ? await boundedBrowserRead(
-            () => page.evaluate(() => window.__velliraSoakDocument),
-            'soak replay document token'
-          ).catch((error) => {
-            diagnostics.record('document-token-unavailable', {
-              href,
-              error: String(error),
-            });
-            return null;
-          })
-        : null;
+      const currentDocumentIdentity = diagnostics.documentIdentity();
+      const identityProofAvailable =
+        attemptDocumentIdentity.available &&
+        currentDocumentIdentity.available;
+      const currentDocumentToken =
+        !identityProofAvailable && attemptDocumentToken
+          ? await boundedBrowserRead(
+              () => page.evaluate(() => window.__velliraSoakDocument),
+              'soak replay document token'
+            ).catch((error) => {
+              diagnostics.record('document-token-unavailable', {
+                href,
+                error: String(error),
+              });
+              return null;
+            })
+          : null;
       const safeReplay = isSafeClientNavigationReplay({
         baseUrl,
         startPath,
         currentUrl: page.url(),
-        expectedDocumentToken: documentToken,
+        expectedDocumentToken: attemptDocumentToken,
         currentDocumentToken,
+        expectedDocumentIdentity: attemptDocumentIdentity,
+        currentDocumentIdentity,
         edgeRecovered,
       });
 
