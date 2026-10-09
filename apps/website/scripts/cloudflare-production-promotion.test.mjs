@@ -234,6 +234,13 @@ test('staging, production and legacy adoption share browser recovery gates and r
     productionWorkflow,
     legacyWorkflow,
   ]) {
+    assert.ok(
+      workflow.indexOf('Install Chromium for browser smoke') <
+        workflow.indexOf(
+          'node apps/website/scripts/cloudflare-local-runtime.mjs'
+        ),
+      'real layout regression requires Chromium before the local runtime gate'
+    );
     for (const gate of [
       'website-smoke',
       'navigation-soak',
@@ -276,15 +283,8 @@ test('staging, production and legacy adoption share browser recovery gates and r
   assert.match(soak, /isRecoveredDocumentFallback\(/);
   assert.match(soak, /headers\['x-vellira-build-id'\] !== expectedBuildId/);
   assert.match(soak, /async function navigateToBlogIndex\(\)/);
-  assert.match(
-    soak,
-    /nav\[aria-label="Primary navigation"\] a\[href="\/blog"\]/
-  );
-  assert.match(
-    soak,
-    /nav\[aria-label="Mobile navigation"\] a\[href="\/blog"\]/
-  );
-  assert.match(soak, /name: 'Open navigation'/);
+  assert.match(soak, /await navigateToBlogAcrossSiteSurface\(/);
+  assert.match(soak, /navigate: runRecoverableSoakNavigation/);
   assert.match(soak, /await prepareAttempt\?\.\(attempt\)/);
   assert.doesNotMatch(
     soak,

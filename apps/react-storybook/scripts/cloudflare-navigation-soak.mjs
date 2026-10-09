@@ -10,6 +10,7 @@ import {
 import {
   isRecoveredDocumentFallback,
   isSafeClientNavigationReplay,
+  navigateToBlogAcrossSiteSurface,
 } from './cloudflare-client-navigation-recovery.mjs';
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -199,7 +200,9 @@ async function seedDocumentContinuity() {
     documentIdentity = null;
     documentToken = await boundedBrowserRead(
       () =>
-        page.evaluate(() => (window.__velliraSoakDocument = crypto.randomUUID())),
+        page.evaluate(
+          () => (window.__velliraSoakDocument = crypto.randomUUID())
+        ),
       'seed soak document token'
     );
   }
@@ -306,8 +309,7 @@ async function runRecoverableSoakNavigation({
       );
       const currentDocumentIdentity = diagnostics.documentIdentity();
       const identityProofAvailable =
-        attemptDocumentIdentity.available &&
-        currentDocumentIdentity.available;
+        attemptDocumentIdentity.available && currentDocumentIdentity.available;
       const currentDocumentToken =
         !identityProofAvailable && attemptDocumentToken
           ? await boundedBrowserRead(
@@ -363,34 +365,9 @@ async function click(link, href, title, { prepareAttempt } = {}) {
 }
 
 async function navigateToBlogIndex() {
-  const primaryBlogLink = page
-    .locator('nav[aria-label="Primary navigation"] a[href="/blog"]')
-    .first();
-  const mobileBlogLink = page
-    .locator('nav[aria-label="Mobile navigation"] a[href="/blog"]')
-    .first();
-  let activeLink = primaryBlogLink;
-
-  await runRecoverableSoakNavigation({
-    href: '/blog',
-    title: 'Blog',
-    stage: `responsive header navigation ${new URL(page.url()).pathname} -> /blog`,
-    prepareAttempt: async () => {
-      if (await primaryBlogLink.isVisible().catch(() => false)) {
-        activeLink = primaryBlogLink;
-        return;
-      }
-
-      if (!(await mobileBlogLink.isVisible().catch(() => false))) {
-        const trigger = page.getByRole('button', { name: 'Open navigation' });
-        await trigger.waitFor({ state: 'visible', timeout: 15_000 });
-        await trigger.click({ timeout: 15_000 });
-        await mobileBlogLink.waitFor({ state: 'visible', timeout: 15_000 });
-      }
-
-      activeLink = mobileBlogLink;
-    },
-    action: () => activeLink.click({ timeout: 15_000 }),
+  await navigateToBlogAcrossSiteSurface({
+    page,
+    navigate: runRecoverableSoakNavigation,
   });
 }
 

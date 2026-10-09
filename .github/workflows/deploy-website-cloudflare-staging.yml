@@ -205,6 +205,9 @@ jobs:
       - name: Verify cache, identity, and immutable archive contracts
         run: pnpm test:cloudflare-cache
 
+      - name: Install Chromium for browser smoke
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
+
       - name: Verify actual OpenNext runtime before remote archive or activation
         run: |
           node apps/website/scripts/cloudflare-populate-local-cache.mjs
@@ -284,9 +287,6 @@ jobs:
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
-
-      - name: Install Chromium for browser smoke
-        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
 
       - name: Test browser and blog metrics smoke policies
         run: >-

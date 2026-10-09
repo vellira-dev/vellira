@@ -6,6 +6,7 @@ import {
   isRecoveredDocumentFallback,
   isSafeClientNavigationReplay,
   runRecoverableClientNavigation,
+  navigateToBlogAcrossSiteSurface,
 } from './cloudflare-client-navigation-recovery.mjs';
 
 test('client navigation retries only after a proven edge recovery', async () => {
@@ -40,6 +41,217 @@ test('client navigation retries only after a proven edge recovery', async () => 
   assert.equal(prepareCalls, 2);
   assert.equal(actionCalls, 2);
   assert.equal(retryCalls, 1);
+});
+
+// Model the observed SiteHeader variants, including its 1280px compact header
+// and the component drawer's separate 1100px breakpoint. Real rendered layouts
+// are additionally exercised by cloudflare-local-runtime.mjs after its build.
+function siteSurfaceFixture({
+  variant = 'marketing',
+  width = 1280,
+  missing = false,
+} = {}) {
+  let pathname = variant === 'portal' ? '/components/tooltip' : '/';
+  let menuOpen = false;
+  let menuGeneration = 0;
+  const events = [];
+  const visible = (name) =>
+    !missing &&
+    {
+      primary: width > 1280,
+      mobile: width <= 1280 && menuOpen,
+      marketing: width <= 1280 && variant === 'marketing' && !menuOpen,
+      portal: width <= 1280 && variant === 'portal' && !menuOpen,
+      brand: true,
+    }[name];
+  let failedHref;
+  const control = (name) => {
+    const createdGeneration = menuGeneration;
+    return {
+      isVisible: async () => visible(name),
+      getAttribute: async () => (name === 'brand' ? '/' : '/blog'),
+      waitFor: async () => assert.ok(visible(name), `${name} must be visible`),
+      click: async ({ trial } = {}) => {
+        assert.ok(visible(name), `hidden ${name} must never be clicked`);
+        assert.notEqual(
+          name,
+          'portal',
+          '1280px component drawer cannot expose global links'
+        );
+        if (name === 'mobile')
+          assert.ok(
+            createdGeneration >= menuGeneration - 1,
+            'retry must reacquire the menu link'
+          );
+        if (trial) {
+          events.push(`actionable:${name}`);
+          return;
+        }
+        events.push(`click:${name}`);
+        if (name === 'marketing') {
+          menuOpen = true;
+          menuGeneration++;
+          return;
+        }
+        menuOpen = false;
+        const href = name === 'brand' ? '/' : '/blog';
+        if (failedHref === href) {
+          failedHref = undefined;
+          throw new Error('recovered destination edge failure');
+        }
+        pathname = href;
+        variant = 'marketing';
+      },
+    };
+  };
+  const page = {
+    url: () => `https://example.test${pathname}`,
+    viewportSize: () => ({ width, height: 900 }),
+    waitForTimeout: async () => {},
+    locator: (selector) => {
+      assert.equal(selector, 'header');
+      return {
+        getByRole: (role, options) => {
+          assert.equal(role, 'link');
+          assert.equal(options.name, 'Vellira');
+          return control('brand');
+        },
+      };
+    },
+    getByRole: (role, { name, exact }) => {
+      assert.equal(exact, true);
+      if (role === 'navigation')
+        return {
+          getByRole: (childRole, child) => {
+            assert.equal(childRole, 'link');
+            assert.equal(child.name, 'Blog');
+            return control(
+              name === 'Primary navigation' ? 'primary' : 'mobile'
+            );
+          },
+        };
+      assert.equal(role, 'button');
+      return control(name === 'Open navigation' ? 'marketing' : 'portal');
+    },
+  };
+  return {
+    page,
+    events,
+    failOnce: (href) => {
+      failedHref = href;
+    },
+  };
+}
+
+async function surfaceNavigation(
+  fixture,
+  { recovered = false, replaceDocument = false } = {}
+) {
+  let generation = 1;
+  const identity = () => ({ available: true, loaderId: 'loader', generation });
+  const navigate = await smokeFunction(
+    './cloudflare-navigation-soak.mjs',
+    'runRecoverableSoakNavigation',
+    {
+      page: fixture.page,
+      baseUrl: 'https://example.test',
+      documentToken: undefined,
+      documentSequence: 1,
+      navigationRetryMaxAttempts: 3,
+      navigationRetryDelayMs: 0,
+      diagnostics: {
+        documentIdentity: identity,
+        record: (kind, data) => {
+          fixture.events.push(`${kind}:${data.href}`);
+        },
+        edgeFailureCursor: () => {
+          fixture.events.push('cursor');
+          return 0;
+        },
+        recoveredDestinationEdgeFailureSince: () => {
+          if (replaceDocument) generation++;
+          return recovered;
+        },
+      },
+      ready: async (href) =>
+        assert.equal(new URL(fixture.page.url()).pathname, href),
+      isSafeClientNavigationReplay,
+    }
+  );
+  return navigateToBlogAcrossSiteSurface({ page: fixture.page, navigate });
+}
+
+for (const width of [1440, 1280, 390]) {
+  test(`marketing navigation uses the visible surface at ${width}px`, async () => {
+    const fixture = siteSurfaceFixture({ width });
+    await surfaceNavigation(fixture);
+    assert.deepEqual(
+      fixture.events.filter((e) => e.startsWith('click:')),
+      width > 1280 ? ['click:primary'] : ['click:marketing', 'click:mobile']
+    );
+  });
+}
+
+test('portal at 1280px uses two client route hops through the visible brand', async () => {
+  const fixture = siteSurfaceFixture({ variant: 'portal' });
+  await surfaceNavigation(fixture);
+  assert.deepEqual(
+    fixture.events.filter((e) => e.startsWith('click:')),
+    ['click:brand', 'click:marketing', 'click:mobile']
+  );
+  assert.deepEqual(
+    fixture.events.filter((e) => e.startsWith('navigation:')),
+    ['navigation:/', 'navigation:/blog']
+  );
+});
+
+for (const href of ['/', '/blog']) {
+  test(`portal retry prepares the ${href} action again after recovered edge failure`, async () => {
+    const fixture = siteSurfaceFixture({ variant: 'portal' });
+    fixture.failOnce(href);
+    await surfaceNavigation(fixture, { recovered: true });
+    const clicks = fixture.events.filter((e) => e.startsWith('click:'));
+    assert.deepEqual(
+      clicks,
+      href === '/'
+        ? ['click:brand', 'click:brand', 'click:marketing', 'click:mobile']
+        : [
+            'click:brand',
+            'click:marketing',
+            'click:mobile',
+            'click:marketing',
+            'click:mobile',
+          ]
+    );
+    for (let i = 0; i < fixture.events.length; i++) {
+      if (fixture.events[i] === 'cursor')
+        assert.match(fixture.events[i - 2], /^actionable:/);
+    }
+  });
+}
+
+test('missing visible site path fails closed with layout diagnostics', async () => {
+  const fixture = siteSurfaceFixture({ variant: 'portal', missing: true });
+  await assert.rejects(
+    surfaceNavigation(fixture),
+    /No visible client-navigation path.*components\/tooltip.*1280.*surfaces=/
+  );
+  assert.deepEqual(fixture.events, []);
+});
+
+test('visible site path never replays after unproven recovery or document replacement', async () => {
+  for (const options of [
+    { recovered: false },
+    { recovered: true, replaceDocument: true },
+  ]) {
+    const fixture = siteSurfaceFixture();
+    fixture.failOnce('/blog');
+    await assert.rejects(
+      surfaceNavigation(fixture, options),
+      /recovered destination edge failure/
+    );
+    assert.equal(fixture.events.filter((e) => e === 'click:mobile').length, 1);
+  }
 });
 
 test('client navigation fails closed without a matching recoverable edge failure', async () => {
