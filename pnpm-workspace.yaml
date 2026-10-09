@@ -99,5 +99,14 @@ patchedDependencies:
   # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
   # Remove when a stable OpenNext release contains the string-shorthand guard.
   '@opennextjs/cloudflare@1.20.6': patches/@opennextjs__cloudflare@1.20.6.patch
+  # node-fetch@2.7.0 -> whatwg-url@5/tr46@0.0.3 still imports Node's deprecated
+  # builtin punycode. Keep the legacy API, but route both imports to the
+  # maintained userland punycode package until the pinned Cloudflare SDK drops
+  # node-fetch@2.
+  'tr46@0.0.3': patches/tr46@0.0.3.patch
+  'whatwg-url@5.0.0': patches/whatwg-url@5.0.0.patch
+  # Wrangler 4.136.3 bundles two legacy bare punycode imports in wrangler-dist/cli.js.
+  # Route those exact bundled imports to the declared userland package until upstream removes them.
+  'wrangler@4.136.3': patches/wrangler@4.136.3.patch
   next@16.3.8: patches/next@16.3.8.patch
 allowUnusedPatches: false

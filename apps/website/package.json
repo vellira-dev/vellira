@@ -50,7 +50,7 @@
     "eslint-config-next": "16.3.6",
     "miniflare": "5.20260903.0-alpha",
     "typescript": "^5",
-    "wrangler": "^4.136.2"
+    "wrangler": "4.136.3"
   },
   "type": "module"
 }

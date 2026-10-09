@@ -1,0 +1,9 @@
+diff --git a/wrangler-dist/cli.js b/wrangler-dist/cli.js
+--- a/wrangler-dist/cli.js
++++ b/wrangler-dist/cli.js
+@@ -65133 +65133 @@
+-    var punycode = __require("punycode");
++    var punycode = __require("punycode/");
+@@ -65300 +65300 @@
+-    var punycode = __require("punycode");
++    var punycode = __require("punycode/");
