@@ -53,7 +53,11 @@ jobs:
         run: pnpm docs:build
 
       - name: Verify docs artifact
-        run: test -f "$DOCS_DIST_DIR/index.html"
+        run: |
+          test -f "$DOCS_DIST_DIR/index.html"
+          test -f "$DOCS_DIST_DIR/_redirects"
+          grep -Fx '/getting-started /start/getting-started 301' "$DOCS_DIST_DIR/_redirects"
+          grep -Fx '/getting-started/ /start/getting-started 301' "$DOCS_DIST_DIR/_redirects"
 
       - name: Deploy docs to Cloudflare Workers
         run: >
