@@ -437,6 +437,12 @@ test('soak fails closed after proven edge recovery when document token evaluatio
       },
       diagnostics: {
         record() {},
+        documentIdentity: () => ({
+          available: false,
+          frameId: null,
+          loaderId: null,
+          generation: 0,
+        }),
         edgeFailureCursor: () => 0,
         recoveredDestinationEdgeFailureSince: () => true,
       },
