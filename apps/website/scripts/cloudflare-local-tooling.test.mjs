@@ -10,7 +10,10 @@ import {
   populateLocalCache,
   withLocalCacheConfig,
 } from './cloudflare-populate-local-cache.mjs';
-import { drainSiteNavigationNetwork } from './cloudflare-site-navigation-browser.mjs';
+import {
+  drainSiteNavigationNetwork,
+  runSiteNavigationActionAfterDrain,
+} from './cloudflare-site-navigation-browser.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const repo = path.resolve(root, '../..');
@@ -370,6 +373,32 @@ test('site navigation drains background network before browser teardown', async 
 
   assert.deepEqual(calls, [
     { state: 'networkidle', options: { timeout: 1_234 } },
+  ]);
+});
+
+test('site navigation drains the current surface before changing routes', async () => {
+  const calls = [];
+  const page = {
+    async waitForLoadState(state, options) {
+      calls.push({ type: 'drain', state, options });
+    },
+  };
+
+  await runSiteNavigationActionAfterDrain(
+    page,
+    async () => {
+      calls.push({ type: 'action' });
+    },
+    2_345
+  );
+
+  assert.deepEqual(calls, [
+    {
+      type: 'drain',
+      state: 'networkidle',
+      options: { timeout: 2_345 },
+    },
+    { type: 'action' },
   ]);
 });
 
