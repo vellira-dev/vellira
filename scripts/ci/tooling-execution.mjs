@@ -27,6 +27,8 @@ export function createToolingTasks({
   const splitProductionFixtures = environment.GITHUB_ACTIONS === 'true';
   const harness = [
     'scripts/ci/tooling-execution.test.mjs',
+    'scripts/ci/run-candidate-quality.test.mjs',
+    'scripts/ci/cloudflare-candidate-checks.test.mjs',
     'scripts/visual/canonical-fonts.test.mjs',
     'scripts/ci/workflow-noise.test.mjs',
     'scripts/ci/pr-change-intent.test.mjs',

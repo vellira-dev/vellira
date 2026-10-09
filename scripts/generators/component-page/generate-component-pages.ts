@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import { getGeneratedComponentPageComponents } from './component-page-components';
+import { componentPageScriptCommand } from './helpers/command';
 
 const args = process.argv.slice(2);
 
@@ -58,23 +59,15 @@ for (const componentName of generatedComponentPageComponents) {
     );
   }
 
-  const command = json ? 'pnpm' : 'pnpm';
-  const commandArgs = json
-    ? [
-        'exec',
-        'tsx',
-        'scripts/generators/component-page/create-component-page.ts',
-        componentName,
-        '--force',
-        ...(check ? ['--check'] : []),
-        '--json',
-      ]
-    : [
-        'create:component-page',
-        componentName,
-        '--force',
-        ...(check ? ['--check'] : []),
-      ];
+  const [command, ...commandArgs] = componentPageScriptCommand(
+    'create-component-page.ts',
+    [
+      componentName,
+      '--force',
+      ...(check ? ['--check'] : []),
+      ...(json ? ['--json'] : []),
+    ]
+  );
 
   const result = spawnSync(command, commandArgs, {
     encoding: 'utf8',
