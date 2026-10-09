@@ -189,7 +189,7 @@ test('document fallback fails closed without edge proof, exact build, or a new d
 });
 
 test('soak navigation replay requires recovered edge, same route and same document', () => {
-  const fixture = {
+  const tokenFixture = {
     baseUrl: 'https://vellira.test',
     startPath: '/components/radio',
     currentUrl: 'https://vellira.test/components/radio',
@@ -198,22 +198,59 @@ test('soak navigation replay requires recovered edge, same route and same docume
     edgeRecovered: true,
   };
 
-  assert.equal(isSafeClientNavigationReplay(fixture), true);
+  assert.equal(isSafeClientNavigationReplay(tokenFixture), true);
   assert.equal(
-    isSafeClientNavigationReplay({ ...fixture, edgeRecovered: false }),
+    isSafeClientNavigationReplay({ ...tokenFixture, edgeRecovered: false }),
     false
   );
   assert.equal(
     isSafeClientNavigationReplay({
-      ...fixture,
+      ...tokenFixture,
       currentUrl: 'https://vellira.test/components/checkbox',
     }),
     false
   );
   assert.equal(
     isSafeClientNavigationReplay({
-      ...fixture,
+      ...tokenFixture,
       currentDocumentToken: 'doc-2',
+    }),
+    false
+  );
+
+  const identity = {
+    available: true,
+    frameId: 'frame-1',
+    loaderId: 'loader-1',
+    generation: 4,
+  };
+  const identityFixture = {
+    baseUrl: 'https://vellira.test',
+    startPath: '/components/tooltip',
+    currentUrl: 'https://vellira.test/components/tooltip',
+    expectedDocumentToken: undefined,
+    currentDocumentToken: null,
+    expectedDocumentIdentity: identity,
+    currentDocumentIdentity: { ...identity },
+    edgeRecovered: true,
+  };
+
+  assert.equal(isSafeClientNavigationReplay(identityFixture), true);
+  assert.equal(
+    isSafeClientNavigationReplay({
+      ...identityFixture,
+      currentDocumentIdentity: {
+        ...identity,
+        loaderId: 'loader-2',
+        generation: 5,
+      },
+    }),
+    false
+  );
+  assert.equal(
+    isSafeClientNavigationReplay({
+      ...identityFixture,
+      currentDocumentIdentity: { available: false },
     }),
     false
   );
