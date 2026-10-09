@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -82,16 +83,29 @@ describe('Vellira UI usage blocking enforcement', () => {
 
   it('fails the real CLI when an ephemeral raw control is injected', () => {
     const relativeProofPath = 'apps/website/src/proof.tsx';
-    const proofPath = path.join(process.cwd(), relativeProofPath);
+    // Other suites scan the maintained checkout concurrently. Never inject or
+    // remove a source file there while proving the CLI's blocking behavior.
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'vellira-ui-enforcement-')
+    );
+    const proofPath = path.join(root, relativeProofPath);
     const source = 'export const Proof = () => <button>Proof</button>;\n';
-    const cli = 'scripts/checks/vellira-ui-usage/cli.ts';
-    const args = ['--import', 'tsx', cli, '--json'];
+    const cli = path.resolve('scripts/checks/vellira-ui-usage/cli.ts');
+    const args = ['--import', import.meta.resolve('tsx'), cli, '--json'];
 
     expect(fs.existsSync(proofPath)).toBe(false);
-    fs.writeFileSync(proofPath, source);
-
     try {
-      const result = spawnSync(process.execPath, args, { encoding: 'utf8' });
+      fs.mkdirSync(path.dirname(proofPath), { recursive: true });
+      fs.symlinkSync(
+        path.resolve('packages'),
+        path.join(root, 'packages'),
+        'dir'
+      );
+      fs.writeFileSync(proofPath, source);
+      const result = spawnSync(process.execPath, args, {
+        cwd: root,
+        encoding: 'utf8',
+      });
 
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(1);
@@ -106,7 +120,7 @@ describe('Vellira UI usage blocking enforcement', () => {
       expect(finding?.severity).toBe('error');
       expect(finding?.blocking).toBe(true);
     } finally {
-      fs.rmSync(proofPath, { force: true });
+      fs.rmSync(root, { recursive: true, force: true });
     }
   });
 });
