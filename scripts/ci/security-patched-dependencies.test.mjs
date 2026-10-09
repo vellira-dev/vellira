@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 
 import braces from 'braces';
+
+const require = createRequire(import.meta.url);
+const { sprintf } = require('sprintf-js');
 
 function nestedAst(depth) {
   let node = { type: 'text', value: 'a' };
@@ -31,4 +35,24 @@ test('braces security backport bounds caller-supplied recursive ASTs', () => {
   assert.throws(() => braces.compile(nestedAst(101)), /exceeds max depth/);
   assert.throws(() => braces.stringify(nestedAst(101)), /exceeds max depth/);
   assert.throws(() => braces.expand(nestedAst(101)), /exceeds max depth/);
+});
+
+test('sprintf-js security backport rejects precision above the native bound', () => {
+  for (const format of ['%.101f', '%.101e', '%.101g', '%.200f']) {
+    assert.throws(
+      () => sprintf(format, 1),
+      (error) =>
+        error instanceof RangeError &&
+        /precision must be between 0 and 100/.test(error.message)
+    );
+  }
+});
+
+test('sprintf-js security backport preserves supported precision boundaries', () => {
+  assert.doesNotThrow(() => sprintf('%.0f', 1));
+  assert.doesNotThrow(() => sprintf('%.100f', 1));
+  assert.doesNotThrow(() => sprintf('%.0e', 1));
+  assert.doesNotThrow(() => sprintf('%.100e', 1));
+  assert.doesNotThrow(() => sprintf('%.0g', 1));
+  assert.doesNotThrow(() => sprintf('%.100g', 1));
 });
