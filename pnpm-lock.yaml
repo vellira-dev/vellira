@@ -52,6 +52,7 @@ overrides:
   source-map-js@>=1.0.0 <1.2.2: ^1.2.2
 
 patchedDependencies:
+  braces@3.0.3: 6d25bdb49d4029cb4e4527d85fb4925dcf5707f7e93fc8e616518c66dad996c9
   '@opennextjs/cloudflare@1.20.6': 4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115
   next@16.3.8: 496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b
   node-forge@1.4.0: 4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0
@@ -17442,7 +17443,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  braces@3.0.3:
+  braces@3.0.3(patch_hash=6d25bdb49d4029cb4e4527d85fb4925dcf5707f7e93fc8e616518c66dad996c9):
     dependencies:
       fill-range: 7.1.1
 
@@ -21019,7 +21020,7 @@ snapshots:
 
   micromatch@4.0.8:
     dependencies:
-      braces: 3.0.3
+      braces: 3.0.3(patch_hash=6d25bdb49d4029cb4e4527d85fb4925dcf5707f7e93fc8e616518c66dad996c9)
       picomatch: 2.3.2
 
   mime-db@1.52.0: {}
