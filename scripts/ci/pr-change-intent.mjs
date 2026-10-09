@@ -36,7 +36,7 @@ export function requiresChangeIntent(
   pull,
   enforcementStart = CHANGE_INTENT_ENFORCEMENT_START
 ) {
-  if (isBotPullRequest(pull)) return false;
+  if (isAdmissionExemptPullRequest(pull)) return false;
   const createdAt = Date.parse(pull?.created_at ?? '');
   const threshold = Date.parse(enforcementStart);
   if (!Number.isFinite(createdAt) || !Number.isFinite(threshold)) return true;
@@ -62,6 +62,9 @@ export function validatePullRequestChangeIntent({
 }) {
   if (isBotPullRequest(pull)) {
     return { ok: true, status: 'bot-exempt' };
+  }
+  if (isManagedDeliveryPullRequest(pull)) {
+    return { ok: true, status: 'managed-delivery-exempt' };
   }
 
   const parsed = parseChangeIntent(pull.body ?? '');

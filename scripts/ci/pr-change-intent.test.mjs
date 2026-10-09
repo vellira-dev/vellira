@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   findOpenIntentDuplicates,
+  isAdmissionExemptPullRequest,
   isBotPullRequest,
+  isManagedDeliveryPullRequest,
   parseChangeIntent,
   requiresChangeIntent,
   validatePullRequestChangeIntent,
@@ -74,6 +76,22 @@ test('bot-owned delivery paths remain exempt from the human engineering marker',
   assert.deepEqual(
     validatePullRequestChangeIntent({ pull: bot, openPullRequests: [] }),
     { ok: true, status: 'bot-exempt' }
+  );
+});
+
+test('canonical managed delivery markers are exempt even when GitHub attributes the PR to a user', () => {
+  const managed = human({
+    body: [
+      '<!-- vellira-component-expansion:proposal-avatar -->',
+      '<!-- vellira-component-expansion-candidate:proposal-avatar:sha256 -->',
+    ].join('\n'),
+  });
+  assert.equal(isBotPullRequest(managed), false);
+  assert.equal(isManagedDeliveryPullRequest(managed), true);
+  assert.equal(isAdmissionExemptPullRequest(managed), true);
+  assert.deepEqual(
+    validatePullRequestChangeIntent({ pull: managed, openPullRequests: [] }),
+    { ok: true, status: 'managed-delivery-exempt' }
   );
 });
 

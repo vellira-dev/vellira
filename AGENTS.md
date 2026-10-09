@@ -51,8 +51,7 @@ to supersede an active PR.
 When a GitHub token is available, use
 `node scripts/ci/pr-change-intent.mjs preflight <intent-id>`; connector-based
 sessions may perform the same exact-marker lookup through the GitHub connector.
-Every admitted non-bot engineering PR must carry exactly one change-intent marker
-in its body.
+Every admitted manual/non-managed engineering PR must carry exactly one change-intent marker in its body. Canonical automated delivery PRs keep their existing repository-owned proposal/candidate/delivery markers.
 
 ## Actions evidence and change delivery
 
