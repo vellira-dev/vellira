@@ -6,7 +6,7 @@ export const componentCatalogPresentation = [
     slug: 'button',
     name: 'Button',
     description:
-      'Accessible actions with multiple appearances, colors, sizes, and composition support.',
+      'Accessible React and React Native actions with Vellira Button: appearances, semantic colors, sizes, loading states, icons, links, and composition.',
     category: 'general',
     order: 10,
     docs: {
@@ -72,7 +72,7 @@ export const componentCatalogPresentation = [
     slug: 'select',
     name: 'Select',
     description:
-      'Composable single and multiple selection with search, groups, and virtualization.',
+      'Accessible React and React Native selection with Vellira Select: single and multiple values, search, groups, rich items, and virtualization.',
     category: 'forms',
     order: 50,
     docs: {
