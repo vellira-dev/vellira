@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   destinationEdgeFailures,
+  isRecoveredDocumentFallback,
   runRecoverableClientNavigation,
 } from './cloudflare-client-navigation-recovery.mjs';
 
@@ -115,4 +116,75 @@ test('client navigation respects the maximum attempt bound', async () => {
   );
 
   assert.equal(actionCalls, 3);
+});
+
+
+const documentFallbackFixture = {
+  href: '/components/accordion',
+  baseUrl: 'https://vellira.test',
+  expectedBuildId: 'build-1',
+  edgeRecovered: true,
+  previousDocumentSequence: 4,
+  documentResponse: {
+    sequence: 5,
+    url: 'https://vellira.test/components/accordion',
+    status: 200,
+    headers: {
+      'x-vellira-build-id': 'build-1',
+      'x-vellira-worker-version': 'worker-1',
+      'x-vellira-request-id': 'request-1',
+      'cache-control': 'no-cache, max-age=0, must-revalidate',
+      'cloudflare-cdn-cache-control': 'no-store',
+    },
+  },
+};
+
+test('document fallback is accepted only after recovered destination edge failure on exact build', () => {
+  assert.equal(isRecoveredDocumentFallback(documentFallbackFixture), true);
+});
+
+test('document fallback fails closed without edge proof, exact build, or a new document', () => {
+  assert.equal(
+    isRecoveredDocumentFallback({
+      ...documentFallbackFixture,
+      edgeRecovered: false,
+    }),
+    false
+  );
+  assert.equal(
+    isRecoveredDocumentFallback({
+      ...documentFallbackFixture,
+      documentResponse: {
+        ...documentFallbackFixture.documentResponse,
+        headers: {
+          ...documentFallbackFixture.documentResponse.headers,
+          'x-vellira-build-id': 'build-2',
+        },
+      },
+    }),
+    false
+  );
+  assert.equal(
+    isRecoveredDocumentFallback({
+      ...documentFallbackFixture,
+      documentResponse: {
+        ...documentFallbackFixture.documentResponse,
+        sequence: 4,
+      },
+    }),
+    false
+  );
+  assert.equal(
+    isRecoveredDocumentFallback({
+      ...documentFallbackFixture,
+      documentResponse: {
+        ...documentFallbackFixture.documentResponse,
+        headers: {
+          ...documentFallbackFixture.documentResponse.headers,
+          'set-cookie': 'migration=1',
+        },
+      },
+    }),
+    false
+  );
 });
