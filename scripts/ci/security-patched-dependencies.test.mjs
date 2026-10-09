@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 
+import braces from 'braces';
+
 const require = createRequire(import.meta.url);
 const { sprintf } = require('sprintf-js');
-
-import braces from 'braces';
 
 function nestedAst(depth) {
   let node = { type: 'text', value: 'a' };
@@ -36,7 +36,6 @@ test('braces security backport bounds caller-supplied recursive ASTs', () => {
   assert.throws(() => braces.stringify(nestedAst(101)), /exceeds max depth/);
   assert.throws(() => braces.expand(nestedAst(101)), /exceeds max depth/);
 });
-
 
 test('sprintf-js security backport rejects precision above the native bound', () => {
   for (const format of ['%.101f', '%.101e', '%.101g', '%.200f']) {
