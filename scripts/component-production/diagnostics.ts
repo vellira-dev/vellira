@@ -127,7 +127,14 @@ export function componentProductionDiagnosticCommands(
     {
       id: 'diagnostic-quality',
       stage: 'quality',
-      command: ['pnpm', 'check:component-quality', input.componentName],
+      command: [
+        'pnpm',
+        'check:component-quality',
+        input.componentName,
+        '--json',
+      ],
+      resultFormat: 'component-quality',
+      componentName: input.componentName,
       timeoutMs: 120_000,
       requires: [],
     }
