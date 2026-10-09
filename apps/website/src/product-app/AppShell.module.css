@@ -64,6 +64,14 @@
   font-size: var(--font-size-sm);
 }
 
+.verificationStatus {
+  color: var(--text-success) !important;
+}
+
+.verificationError {
+  color: var(--text-error) !important;
+}
+
 .verificationAction {
   white-space: nowrap;
 }
