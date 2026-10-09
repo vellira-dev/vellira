@@ -5,8 +5,37 @@ import { isBrowserResource404ConsoleError } from './cloudflare-blog-metrics-smok
 import {
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
-  recoverCloudflareEdgeGet5xx,
+  recoverCloudflareEdgeFailure,
+  readCloudflarePlatformFailure,
+  readCloudflareDiagnosticGet,
 } from './cloudflare-edge-recovery.mjs';
+
+// page.evaluate/title/content have no Playwright timeout option. A document
+// transition can leave them waiting indefinitely after a recovered edge response.
+// Expiry is a failed observation, never proof of document continuity.
+export async function boundedBrowserRead(read, label, timeoutMs = 5_000) {
+  if (
+    typeof read !== 'function' ||
+    !Number.isFinite(timeoutMs) ||
+    timeoutMs <= 0
+  ) {
+    throw new Error('Browser read requires a function and positive timeout.');
+  }
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(read),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`Browser read timed out: ${label}`)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function diagnosticHeaders(headers) {
   return Object.fromEntries(
@@ -42,6 +71,9 @@ export async function captureDiagnostics(
   const deferredResource5xxConsoleErrors = [];
   const edgeFailures = [];
   const pending = new Set();
+  let mainFrameId = null;
+  let mainFrameLoaderId = null;
+  let mainDocumentGeneration = 0;
   const started = Date.now();
   const record = (kind, data) => {
     const event = { ms: Date.now() - started, kind, page: page.url(), ...data };
@@ -73,10 +105,43 @@ export async function captureDiagnostics(
     sources: true,
   });
   const cdp = await context.newCDPSession(page).catch(() => null);
-  if (cdp) await cdp.send('Network.enable');
-  else
+  if (cdp) {
+    await Promise.all([cdp.send('Network.enable'), cdp.send('Page.enable')]);
+    try {
+      const frameTree = await cdp.send('Page.getFrameTree');
+      mainFrameId = frameTree.frameTree?.frame?.id ?? null;
+      mainFrameLoaderId = frameTree.frameTree?.frame?.loaderId ?? null;
+    } catch (error) {
+      record('capability', {
+        cdpDocumentIdentity: false,
+        reason: String(error),
+      });
+    }
+
+    cdp.on('Page.frameNavigated', ({ frame }) => {
+      if (frame.parentId) return;
+      const previousLoaderId = mainFrameLoaderId;
+      mainFrameId = frame.id ?? mainFrameId;
+      mainFrameLoaderId = frame.loaderId ?? null;
+      if (
+        mainFrameLoaderId &&
+        previousLoaderId &&
+        mainFrameLoaderId !== previousLoaderId
+      ) {
+        mainDocumentGeneration += 1;
+      }
+      record('document-identity', {
+        frameId: mainFrameId,
+        loaderId: mainFrameLoaderId,
+        previousLoaderId,
+        generation: mainDocumentGeneration,
+        url: frame.url,
+      });
+    });
+  } else
     record('capability', {
       cdpCacheAttribution: false,
+      cdpDocumentIdentity: false,
       reason:
         'Non-Chromium engine; correlate with origin logs, not inferred cf-ray',
     });
@@ -158,13 +223,14 @@ export async function captureDiagnostics(
         edgeFailures.push({
           event,
           url: response.url(),
+          status: response.status(),
+          method: request.method(),
+          headers,
           requestHeaders: request.headers(),
+          platformFailure: readCloudflarePlatformFailure(response),
           handled: false,
         });
-      } else if (
-        response.status() === 404 &&
-        isExpected404Response?.(event)
-      ) {
+      } else if (response.status() === 404 && isExpected404Response?.(event)) {
         handled404ResponsesByUrl.set(
           event.url,
           (handled404ResponsesByUrl.get(event.url) ?? 0) + 1
@@ -220,10 +286,7 @@ export async function captureDiagnostics(
     errors.push(record('pageerror', { error: error.stack ?? String(error) }))
   );
 
-  const reconcileDeferredConsoleErrors = (
-    deferred,
-    handledByUrl
-  ) => {
+  const reconcileDeferredConsoleErrors = (deferred, handledByUrl) => {
     const remainingByUrl = new Map(handledByUrl);
     const unresolved = [];
 
@@ -257,6 +320,22 @@ export async function captureDiagnostics(
 
   return {
     record,
+    documentIdentity() {
+      if (!cdp || !mainFrameLoaderId) {
+        return {
+          available: false,
+          frameId: mainFrameId,
+          loaderId: mainFrameLoaderId,
+          generation: mainDocumentGeneration,
+        };
+      }
+      return {
+        available: true,
+        frameId: mainFrameId,
+        loaderId: mainFrameLoaderId,
+        generation: mainDocumentGeneration,
+      };
+    },
     edgeFailureCursor() {
       return edgeFailures.length;
     },
@@ -265,15 +344,14 @@ export async function captureDiagnostics(
       const failures = edgeFailures
         .slice(cursor)
         .filter((failure) => new URL(failure.url).pathname === targetPath);
-      return failures.length > 0 && failures.every((failure) => failure.handled);
+      return (
+        failures.length > 0 && failures.every((failure) => failure.handled)
+      );
     },
     async recoverEdgeFailures(stage) {
       for (const failure of edgeFailures.filter((item) => !item.handled)) {
-        const result = await recoverCloudflareEdgeGet5xx({
-          url: failure.url,
-          requestHeaders: failure.requestHeaders,
+        const result = await recoverCloudflareEdgeFailure(failure, {
           expectedBuildId,
-          requestGet: (...args) => context.request.get(...args),
         });
 
         record('edge-recovery', {
@@ -282,6 +360,7 @@ export async function captureDiagnostics(
           recovered: result.recovered,
           attempts: result.attempts,
           reason: result.reason ?? null,
+          error: result.error ?? null,
         });
 
         if (result.recovered) {
@@ -308,21 +387,26 @@ export async function captureDiagnostics(
         '/BUILD_ID',
       ]) {
         try {
-          const response = await context.request.get(
-            new URL(pathname, baseUrl).href,
+          await readCloudflareDiagnosticGet(
             {
-              headers: { 'Cache-Control': 'no-cache' },
-              timeout: 15_000,
-            }
+              url: new URL(pathname, baseUrl).href,
+              // These two text anchors are CDN assets without execution
+              // headers. Retain their body/status as diagnostics, never as
+              // edge-recovery proof. Only the runtime endpoint can prove that.
+              ...(pathname === '/__vellira_runtime'
+                ? { expectedBuildId, retryEdge5xx: Boolean(expectedBuildId) }
+                : {}),
+            },
+            async (response) =>
+              record('deployment', {
+                stage,
+                pathname,
+                status: response.status(),
+                body: await response.text(),
+                evidenceSource:
+                  'independent API request; not the browser HTTP cache',
+              })
           );
-          record('deployment', {
-            stage,
-            pathname,
-            status: response.status(),
-            body: await response.text(),
-            evidenceSource:
-              'independent API request; not the browser HTTP cache',
-          });
         } catch (error) {
           record('deployment', { stage, pathname, error: String(error) });
         }
@@ -336,11 +420,14 @@ export async function captureDiagnostics(
       if (pending.size) record('rsc-bodies-pending', { count: pending.size });
       const state = {
         finalUrl: page.url(),
-        title: await page.title().catch(() => null),
-        mainCount: await page
-          .locator('main')
-          .count()
-          .catch(() => null),
+        title: await boundedBrowserRead(
+          () => page.title(),
+          'diagnostic title'
+        ).catch(() => null),
+        mainCount: await boundedBrowserRead(
+          () => page.locator('main').count(),
+          'diagnostic main count'
+        ).catch(() => null),
         error: error?.stack ?? (error ? String(error) : null),
         staticFailures,
         firstBadAsset: staticFailures[0] ?? null,
@@ -356,14 +443,16 @@ export async function captureDiagnostics(
       };
       await fs.writeFile(
         path.join(directory, 'page.html'),
-        await page.content().catch(String)
+        await boundedBrowserRead(() => page.content(), 'diagnostic HTML').catch(
+          String
+        )
       );
       await fs.writeFile(
         path.join(directory, 'diagnostics.json'),
         JSON.stringify(state, null, 2)
       );
       await page
-        .screenshot({ path: path.join(directory, 'page.png') })
+        .screenshot({ path: path.join(directory, 'page.png'), timeout: 5_000 })
         .catch(() => {});
       await context.tracing.stop({ path: path.join(directory, 'trace.zip') });
       console.log(

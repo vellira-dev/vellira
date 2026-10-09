@@ -211,7 +211,6 @@ test('an opt-in expected 404 is reconciled only with its matching resource conso
   );
 });
 
-
 test('diagnostics recover transient Cloudflare edge RSC 503 only on the exact build', async (t) => {
   const directory = await fs.mkdtemp(
     path.join(os.tmpdir(), 'vellira-browser-edge-recovery-test-')
@@ -289,6 +288,232 @@ test('diagnostics recover transient Cloudflare edge RSC 503 only on the exact bu
     false
   );
   assert.equal(rscRequests, 2);
+
+  await diagnostics.finish(null);
+});
+
+for (const scenario of [
+  'transport-recovery',
+  'worker-failure',
+  'wrong-build',
+]) {
+  test(`diagnostics preserve browser failure unless shared proof succeeds: ${scenario}`, async (t) => {
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'vellira-edge-caller-')
+    );
+    let calls = 0;
+    const server = http.createServer((request, response) => {
+      if (request.url.startsWith('/rsc')) {
+        calls++;
+        if (scenario === 'transport-recovery' && calls > 1 && calls < 4) {
+          request.socket.destroy();
+          return;
+        }
+        response.setHeader('server', 'cloudflare');
+        if (calls === 1) response.statusCode = 503;
+        else {
+          response.statusCode = scenario === 'worker-failure' ? 503 : 200;
+          response.setHeader(
+            'x-vellira-build-id',
+            scenario === 'wrong-build' ? 'other' : 'build-1'
+          );
+          response.setHeader('x-vellira-worker-version', 'worker-1');
+        }
+      }
+      response.end('<h1>Fixture</h1>');
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const browser = await chromium.launch();
+    t.after(async () => {
+      await browser.close();
+      await new Promise((resolve) => server.close(resolve));
+      await fs.rm(directory, { recursive: true, force: true });
+    });
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const diagnostics = await captureDiagnostics(
+      page,
+      context,
+      origin,
+      directory,
+      { expectedBuildId: 'build-1' }
+    );
+    await page.goto(origin);
+    const cursor = diagnostics.edgeFailureCursor();
+    await page.evaluate(() =>
+      fetch('/rsc?_rsc=caller', { headers: { RSC: '1' } })
+    );
+    await page.waitForTimeout(50);
+    await diagnostics.recoverEdgeFailures('caller proof');
+    const recovered = scenario === 'transport-recovery';
+    assert.equal(
+      diagnostics.recoveredDestinationEdgeFailureSince(cursor, '/rsc'),
+      recovered
+    );
+    if (recovered) diagnostics.assertHealthy('proven');
+    else
+      assert.throws(
+        () => diagnostics.assertHealthy('unproven'),
+        /Browser failure/
+      );
+    await diagnostics.finish(null);
+    assert.equal(
+      calls,
+      recovered ? 4 : 2,
+      'finish must not reset exhausted/rejected recovery'
+    );
+    const evidence = JSON.parse(
+      await fs.readFile(path.join(directory, 'diagnostics.json'), 'utf8')
+    );
+    assert.equal(evidence.errors.length === 0, recovered);
+    assert.ok(
+      evidence.events.some(
+        (event) =>
+          event.kind === 'edge-recovery' && event.recovered === recovered
+      )
+    );
+  });
+}
+
+test('browser document reads are bounded and never convert expiry into evidence', async () => {
+  const { boundedBrowserRead } =
+    await import('./cloudflare-browser-diagnostics.mjs');
+  assert.equal(
+    await boundedBrowserRead(async () => 'token', 'token', 50),
+    'token'
+  );
+  await assert.rejects(
+    boundedBrowserRead(() => new Promise(() => {}), 'stalled document', 10),
+    /Browser read timed out: stalled document/
+  );
+  const programmingError = new TypeError('invalid observer');
+  await assert.rejects(
+    boundedBrowserRead(() => {
+      throw programmingError;
+    }, 'token'),
+    (error) => error === programmingError
+  );
+  await assert.rejects(
+    boundedBrowserRead(() => 'token', 'token', 0),
+    /positive timeout/
+  );
+});
+
+test(
+  'finish retains failure evidence when document title/count/HTML reads never settle',
+  { timeout: 25_000 },
+  async (t) => {
+    const { EventEmitter } = await import('node:events');
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'vellira-stalled-evidence-')
+    );
+    const server = http.createServer((request, response) => {
+      if (request.url === '/__vellira_runtime')
+        response.setHeader('x-vellira-build-id', 'build-1');
+      response.end('build-1');
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    t.after(async () => {
+      await new Promise((resolve) => server.close(resolve));
+      await fs.rm(directory, { recursive: true, force: true });
+    });
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const never = () => new Promise(() => {});
+    const page = Object.assign(new EventEmitter(), {
+      url: () => `${origin}/stalled`,
+      title: never,
+      content: never,
+      locator: () => ({ count: never }),
+      screenshot: async ({ timeout }) => assert.equal(timeout, 5_000),
+    });
+    let traceStopped = false;
+    const context = {
+      newCDPSession: async () => {
+        throw new Error('no CDP');
+      },
+      tracing: {
+        start: async () => {},
+        stop: async () => {
+          traceStopped = true;
+        },
+      },
+    };
+    const diagnostics = await captureDiagnostics(
+      page,
+      context,
+      origin,
+      directory,
+      { expectedBuildId: 'build-1' }
+    );
+    const failure = new Error('original route readiness failure');
+    await diagnostics.finish(failure);
+    const evidence = JSON.parse(
+      await fs.readFile(path.join(directory, 'diagnostics.json'), 'utf8')
+    );
+    assert.match(evidence.error, /original route readiness failure/);
+    assert.equal(evidence.title, null);
+    assert.equal(evidence.mainCount, null);
+    assert.match(
+      await fs.readFile(path.join(directory, 'page.html'), 'utf8'),
+      /Browser read timed out: diagnostic HTML/
+    );
+    assert.equal(traceStopped, true);
+    assert.equal(
+      evidence.events.filter(
+        (event) =>
+          event.kind === 'deployment' &&
+          event.status === 200 &&
+          event.body === 'build-1'
+      ).length,
+      3
+    );
+  }
+);
+
+
+test('CDP document identity stays stable for same-document URL changes and changes on document navigation', async (t) => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-browser-document-identity-')
+  );
+  const server = http.createServer((request, response) => {
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'text/html');
+    response.end('<title>Fixture</title><h1>Fixture</h1>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    await new Promise((resolve) => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const diagnostics = await captureDiagnostics(
+    page,
+    context,
+    origin,
+    directory
+  );
+
+  await page.goto(`${origin}/one`);
+  const first = diagnostics.documentIdentity();
+  assert.equal(first.available, true);
+  assert.ok(first.loaderId);
+
+  await page.evaluate(() => history.pushState({}, '', '/same-document'));
+  const sameDocument = diagnostics.documentIdentity();
+  assert.equal(sameDocument.loaderId, first.loaderId);
+  assert.equal(sameDocument.generation, first.generation);
+
+  await page.goto(`${origin}/two`);
+  const second = diagnostics.documentIdentity();
+  assert.equal(second.available, true);
+  assert.notEqual(second.loaderId, first.loaderId);
+  assert.ok(second.generation > first.generation);
 
   await diagnostics.finish(null);
 });

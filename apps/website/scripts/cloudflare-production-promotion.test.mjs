@@ -27,7 +27,10 @@ test('static chunk smoke script remains syntactically valid', () => {
   assert.doesNotThrow(() =>
     execFileSync(
       process.execPath,
-      ['--check', 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'],
+      [
+        '--check',
+        'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs',
+      ],
       { stdio: 'pipe' }
     )
   );
@@ -45,10 +48,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   assert.match(classify, /--classify-merged/);
   assert.match(classify, /VELLIRA_PUSH_ACTOR:/);
   assert.match(classify, /github\.event\.before/);
-  assert.match(
-    classify,
-    /github\.actor == 'vellira-release-sync\[bot\]'/
-  );
+  assert.match(classify, /github\.actor == 'vellira-release-sync\[bot\]'/);
 
   assert.match(migration, /needs: classify/);
   assert.match(
@@ -83,16 +83,17 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   assert.doesNotMatch(deploy, /Install migration regression browsers/);
   assert.doesNotMatch(deploy, /pnpm test:cloudflare-migration/);
 
-  const productionClassify = jobBlock(productionWorkflow, 'classify', 'candidate');
+  const productionClassify = jobBlock(
+    productionWorkflow,
+    'classify',
+    'candidate'
+  );
   const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
   assert.match(productionClassify, /release-sync-contract\.mjs/);
   assert.match(productionClassify, /--classify-merged/);
   assert.match(productionClassify, /VELLIRA_PUSH_ACTOR:/);
   assert.match(candidate, /needs: classify/);
-  assert.match(
-    candidate,
-    /needs\.classify\.outputs\.release_sync != 'true'/
-  );
+  assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.doesNotMatch(
     candidate,
     /actor\.login != 'vellira-release-sync\[bot\]'/
@@ -128,8 +129,14 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
-  assert.match(candidate, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/);
-  assert.match(candidate, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/);
+  assert.match(
+    candidate,
+    /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/
+  );
+  assert.match(
+    candidate,
+    /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/
+  );
   assert.match(candidate, /cloudflare-staging-evidence-/);
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
@@ -155,10 +162,7 @@ test('production admission remains read-only before protected approval', () => {
     admission,
     /EXPECTED_CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/
   );
-  assert.match(
-    admission,
-    /cloudflare-production-admission\.mjs/
-  );
+  assert.match(admission, /cloudflare-production-admission\.mjs/);
 });
 
 test('production approval waits outside the serialized deploy mutex', () => {
@@ -166,22 +170,13 @@ test('production approval waits outside the serialized deploy mutex', () => {
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
 
   assert.match(approval, /needs: \[candidate, admission\]/);
-  assert.match(
-    approval,
-    /needs\.admission\.outputs\.admitted == 'true'/
-  );
+  assert.match(approval, /needs\.admission\.outputs\.admitted == 'true'/);
   assert.match(approval, /environment:\n {6}name: production/);
   assert.doesNotMatch(approval, /concurrency:|secrets\./);
 
-  assert.match(
-    deploy,
-    /needs: \[candidate, admission, approval\]/
-  );
+  assert.match(deploy, /needs: \[candidate, admission, approval\]/);
   assert.match(deploy, /needs\.approval\.result == 'success'/);
-  assert.match(
-    deploy,
-    /needs\.admission\.outputs\.admitted == 'true'/
-  );
+  assert.match(deploy, /needs\.admission\.outputs\.admitted == 'true'/);
   assert.match(
     deploy,
     /group: deploy-worker-vellira-website\n {6}cancel-in-progress: false/
@@ -227,4 +222,72 @@ test('manual dispatch is an explicit break-glass recovery path', () => {
   assert.match(productionWorkflow, /EMERGENCY_DEPLOY_PRODUCTION/);
   assert.doesNotMatch(productionWorkflow, /^\s+- DEPLOY_PRODUCTION$/m);
   assert.match(productionWorkflow, /source=emergency-recovery/);
+});
+
+test('staging, production and legacy adoption share browser recovery gates and retain smoke evidence', async () => {
+  const legacyWorkflow = await fs.readFile(
+    '.github/workflows/adopt-website-cloudflare-legacy.yml',
+    'utf8'
+  );
+  for (const workflow of [
+    stagingWorkflow,
+    productionWorkflow,
+    legacyWorkflow,
+  ]) {
+    assert.ok(
+      workflow.indexOf('Install Chromium for browser smoke') <
+        workflow.indexOf(
+          'node apps/website/scripts/cloudflare-local-runtime.mjs'
+        ),
+      'real layout regression requires Chromium before the local runtime gate'
+    );
+    for (const gate of [
+      'website-smoke',
+      'navigation-soak',
+      'static-chunk-smoke',
+    ]) {
+      assert.match(workflow, new RegExp(`scripts/cloudflare-${gate}\\.mjs`));
+    }
+    assert.match(workflow, /scripts\/cloudflare-edge-recovery\.test\.mjs/);
+    assert.match(
+      workflow,
+      /Retain asset and browser forensic evidence\n\s+if: always\(\)/
+    );
+    assert.match(workflow, /test-results\/cloudflare-website-smoke\//);
+    assert.match(workflow, /test-results\/cloudflare-soak\//);
+  }
+  for (const name of [
+    'website-smoke',
+    'browser-diagnostics',
+    'navigation-soak',
+    'static-chunk-smoke',
+  ]) {
+    const source = await fs.readFile(
+      `apps/react-storybook/scripts/cloudflare-${name}.mjs`,
+      'utf8'
+    );
+    assert.doesNotMatch(
+      source,
+      /context\.request\.get\(/,
+      `${name} bypasses shared bounded transport`
+    );
+    assert.match(source, /from '\.\/cloudflare-edge-recovery\.mjs'/);
+  }
+  const soak = await fs.readFile(
+    'apps/react-storybook/scripts/cloudflare-navigation-soak.mjs',
+    'utf8'
+  );
+  assert.match(soak, /SOAK_ROUTER_STALE_TIME_MS \?\? 300_000/);
+  assert.match(soak, /continuousDocumentMs <= routerStaleTimeMs/);
+  assert.match(soak, /isSafeClientNavigationReplay\(/);
+  assert.match(soak, /isRecoveredDocumentFallback\(/);
+  assert.match(soak, /headers\['x-vellira-build-id'\] !== expectedBuildId/);
+  assert.match(soak, /async function navigateToBlogIndex\(\)/);
+  assert.match(soak, /await navigateToBlogAcrossSiteSurface\(/);
+  assert.match(soak, /navigate: runRecoverableSoakNavigation/);
+  assert.match(soak, /await prepareAttempt\?\.\(attempt\)/);
+  assert.doesNotMatch(
+    soak,
+    /page\.locator\('header a\[href="\/blog"\]'\)\.first\(\)/
+  );
 });

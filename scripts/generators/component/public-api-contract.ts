@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import ts from 'typescript';
+
 import {
   parseRuntimeExportExpectation,
   runtimeExportExpectationPattern,
@@ -12,6 +14,24 @@ import type {
   ComponentGenerationPlan,
   ComponentGenerationTarget,
 } from './plan';
+
+export function assertRegularRepositoryFile(root: string, file: string) {
+  const relative = path.relative(path.resolve(root), path.resolve(file));
+  if (
+    relative.startsWith('..' + path.sep) ||
+    path.isAbsolute(relative) ||
+    !relative ||
+    relative === '..'
+  )
+    throw new Error('Public symbol authority is outside the repository.');
+  if (
+    !fs.lstatSync(file).isFile() ||
+    fs.realpathSync(file) !== path.join(fs.realpathSync(root), relative)
+  )
+    throw new Error(
+      'Public symbol authority must be a regular file without symlink traversal.'
+    );
+}
 
 function readRuntimeExportExpectation(publicApiTestFile: string) {
   if (!fs.existsSync(publicApiTestFile)) {
@@ -44,37 +64,88 @@ function getPublicSymbolEntryPath(target: ComponentGenerationTarget) {
   );
 }
 
+function renderSymbolInventory(
+  content: string,
+  entryPath: string,
+  generatedSymbols: readonly string[]
+) {
+  const blockPattern = new RegExp(
+    `('${escapeRegExp(entryPath)}': \\[\\n)([\\s\\S]*?)(\\n {2}\\],)`
+  );
+  const match = blockPattern.exec(content);
+  if (!match)
+    throw new Error(`Unable to locate public symbol contract for ${entryPath}`);
+  const existing = [...match[2].matchAll(/ {4}'([^']+)',/g)].map(
+    (entry) => entry[1]
+  );
+  const symbols = [...new Set([...existing, ...generatedSymbols])].sort();
+  return content.replace(
+    blockPattern,
+    `${match[1]}${symbols.map((symbol) => `    '${symbol}',`).join('\n')}${match[3]}`
+  );
+}
+
 function renderSynchronizedPublicSymbolContract(params: {
   content: string;
   plan: ComponentGenerationPlan;
   target: ComponentGenerationTarget;
 }) {
-  const { content, plan, target } = params;
-  const entryPath = getPublicSymbolEntryPath(target);
-  const blockPattern = new RegExp(
-    `('${escapeRegExp(entryPath)}': \\[\\n)([\\s\\S]*?)(\\n {2}\\],)`
+  return renderSymbolInventory(
+    params.content,
+    getPublicSymbolEntryPath(params.target),
+    [params.plan.componentName, ...getGeneratedPublicPropTypeNames(params.plan)]
   );
-  const match = blockPattern.exec(content);
+}
 
-  if (!match) {
-    throw new Error(`Unable to locate public symbol contract for ${entryPath}`);
+/** The materialized shared contract owns its exported type names, including
+ * approved domains/objects. Renderer prop naming is not a second inventory. */
+export function renderSynchronizedSharedSymbolContract(
+  content: string,
+  plan: ComponentGenerationPlan
+) {
+  if (plan.typeOwnership !== 'shared' || !fs.existsSync(plan.sharedTypesFile))
+    return content;
+  assertRegularRepositoryFile(plan.root, plan.sharedTypesFile);
+  const source = ts.createSourceFile(
+    plan.sharedTypesFile,
+    fs.readFileSync(plan.sharedTypesFile, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true
+  );
+  const symbols: string[] = [];
+  for (const statement of source.statements) {
+    if (ts.isExportDeclaration(statement) || ts.isExportAssignment(statement))
+      throw new Error(
+        'Generated shared contract must expose explicit type declarations only.'
+      );
+    if (
+      !ts.canHaveModifiers(statement) ||
+      !ts
+        .getModifiers(statement)
+        ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+    )
+      continue;
+    if (
+      (!ts.isInterfaceDeclaration(statement) &&
+        !ts.isTypeAliasDeclaration(statement)) ||
+      !statement.name
+    ) {
+      throw new Error(
+        'Generated shared contract must expose explicit type declarations only.'
+      );
+    }
+    const name = statement.name.text;
+    if (
+      !name.startsWith(plan.componentName) &&
+      !name.startsWith(`Base${plan.componentName}`)
+    ) {
+      throw new Error(`Shared type ${name} is outside component ownership.`);
+    }
+    symbols.push(name);
   }
-
-  const existingSymbols = [...match[2].matchAll(/ {4}'([^']+)',/g)].map(
-    (entry) => entry[1]
-  );
-  const generatedSymbols = [
-    plan.componentName,
-    ...getGeneratedPublicPropTypeNames(plan),
-  ];
-  const nextSymbols = [
-    ...new Set([...existingSymbols, ...generatedSymbols]),
-  ].sort();
-  const nextBlock = `${match[1]}${nextSymbols
-    .map((symbol) => `    '${symbol}',`)
-    .join('\n')}${match[3]}`;
-
-  return content.replace(blockPattern, nextBlock);
+  if (symbols.length === 0)
+    throw new Error('Generated shared contract has no exported types.');
+  return renderSymbolInventory(content, 'packages/types/src/index.ts', symbols);
 }
 
 export function getPublicSymbolContractFile(root: string) {
@@ -111,6 +182,8 @@ export function synchronizePublicSymbolContracts(params: {
     return;
   }
 
+  assertRegularRepositoryFile(plan.root, contractFile);
+
   let content = fs.readFileSync(contractFile, 'utf8');
 
   for (const target of plan.targets) {
@@ -121,6 +194,7 @@ export function synchronizePublicSymbolContracts(params: {
     });
   }
 
+  content = renderSynchronizedSharedSymbolContract(content, plan);
   const current = fs.readFileSync(contractFile, 'utf8');
 
   if (content === current) {
@@ -168,6 +242,7 @@ export function checkPublicApiContractSynchronization(
       });
     }
 
+    expected = renderSynchronizedSharedSymbolContract(expected, plan);
     if (current !== expected) {
       driftedFiles.push(contractFile);
     }
