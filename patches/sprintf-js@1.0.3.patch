@@ -1,7 +1,7 @@
 diff --git a/src/sprintf.js b/src/sprintf.js
 --- a/src/sprintf.js
 +++ b/src/sprintf.js
-@@ -80,13 +80,13 @@
+@@ -80,14 +80,14 @@
                      case "j":
                          arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
                      break
