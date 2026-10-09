@@ -7,6 +7,7 @@ import {
   bootstrapPersonalWorkspace,
   listWorkspaces,
   login,
+  resendCurrentVerification,
   verifyEmail,
 } from '../../apps/website/src/product-app/api';
 
@@ -109,6 +110,43 @@ describe('Vellira App browser API contract', () => {
     expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('csrf-value');
   });
 
+  it('resends verification from the current session with CSRF and no recipient email', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ csrfToken: 'csrf-value' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ accepted: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await resendCurrentVerification();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'https://api.vellira.dev/v1/auth/csrf'
+    );
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe(
+      'https://api.vellira.dev/v1/auth/email/resend/current'
+    );
+    expect(init).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      })
+    );
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('csrf-value');
+    expect(init?.body).toBeUndefined();
+  });
+
   it('consumes verification secrets only in a JSON POST body', async () => {
     const fetchMock = vi.fn<typeof fetch>(
       async () =>
@@ -194,7 +232,8 @@ describe('Vellira App first-party UI contract', () => {
 
     expect(appSession).not.toContain("router.replace('/verify-email')");
     expect(appShell).toContain('Email not verified');
-    expect(appShell).toContain("href='/verify-email'");
+    expect(appShell).toContain('resendCurrentVerification');
+    expect(appShell).not.toContain("href='/verify-email'");
     expect(appShell).toContain('Resend verification email');
     expect(authFlows).toContain("router.replace('/app')");
     expect(authFlows).not.toContain("router.push('/verify-email')");
