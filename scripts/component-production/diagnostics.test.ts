@@ -130,6 +130,28 @@ describe('providerless production diagnostics', { timeout: 30_000 }, () => {
       providerResponseSha256: 'a'.repeat(64),
       runner: (command) => {
         called.push(command.id);
+        if (command.id === 'diagnostic-quality')
+          return {
+            ...passed(),
+            exitCode: 1,
+            stdout: JSON.stringify({
+              schemaVersion: '1',
+              components: [
+                {
+                  componentName: INPUT.componentName,
+                  status: 'fail',
+                  findings: [
+                    {
+                      status: 'fail',
+                      ruleId: 'coverage.tests',
+                      evidence: [],
+                      message: 'independent fixture finding',
+                    },
+                  ],
+                },
+              ],
+            }),
+          };
         return failures.has(command.id)
           ? { ...passed(), exitCode: 1, stderr: 'independent fixture finding' }
           : passed();

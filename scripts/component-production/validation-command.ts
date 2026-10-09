@@ -8,6 +8,7 @@ import type {
   ComponentProductionStageResult,
 } from './contracts';
 import { summarizeValidationCommandOutput } from './validation-output';
+import { structuredCommandFindings } from './structured-command-findings';
 
 export type ValidationCommandDescriptor<
   TStage extends ComponentProductionStageId = ComponentProductionStageId,
@@ -17,6 +18,8 @@ export type ValidationCommandDescriptor<
   command: readonly string[];
   timeoutMs: number;
   platform?: 'react' | 'react-native';
+  resultFormat?: 'token-semantic' | 'component-quality';
+  componentName?: string;
 };
 
 export type ValidationCommandExecution = {
@@ -218,6 +221,24 @@ export function runValidationStage<
     }
 
     if (execution.exitCode !== 0) {
+      try {
+        const structured = structuredCommandFindings(command, execution);
+        if (structured !== null) {
+          findings.push(...structured);
+          continue;
+        }
+      } catch (error) {
+        runtimeFailed = true;
+        findings.push(
+          validationFinding({
+            stageId: params.stageId,
+            command,
+            message: `Structured diagnostic failed: ${String(error)}\n${validationFailureMessage(command, execution)}`,
+            runtime: true,
+          })
+        );
+        continue;
+      }
       findings.push(
         validationFinding({
           stageId: params.stageId,
