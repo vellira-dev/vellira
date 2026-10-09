@@ -204,9 +204,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
       target: { value: 'local-fixture-password' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Sign in', exact: true })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.vellira.dev/v1/auth/login',
