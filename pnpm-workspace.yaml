@@ -63,6 +63,8 @@ overrides:
   # CVE-2026-104861: probe-image-size SVG parser DoS, fixed in 7.4.0.
   probe-image-size: 7.4.0
   qs: 6.16.0
+  # CVE-2026-102422 / GHSA-pqg4-j6r4-53mv: shell-quote command injection, fixed in 1.11.0.
+  'shell-quote@>=1.8.4 <1.11.0': 1.12.0
 
   sharp: 0.35.4
 
