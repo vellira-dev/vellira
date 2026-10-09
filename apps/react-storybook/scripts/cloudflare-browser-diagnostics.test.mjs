@@ -408,8 +408,9 @@ test(
     const directory = await fs.mkdtemp(
       path.join(os.tmpdir(), 'vellira-stalled-evidence-')
     );
-    const server = http.createServer((_request, response) => {
-      response.setHeader('x-vellira-build-id', 'build-1');
+    const server = http.createServer((request, response) => {
+      if (request.url === '/__vellira_runtime')
+        response.setHeader('x-vellira-build-id', 'build-1');
       response.end('build-1');
     });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -458,5 +459,14 @@ test(
       /Browser read timed out: diagnostic HTML/
     );
     assert.equal(traceStopped, true);
+    assert.equal(
+      evidence.events.filter(
+        (event) =>
+          event.kind === 'deployment' &&
+          event.status === 200 &&
+          event.body === 'build-1'
+      ).length,
+      3
+    );
   }
 );

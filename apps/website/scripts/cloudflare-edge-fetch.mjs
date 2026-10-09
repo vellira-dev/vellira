@@ -14,6 +14,12 @@ export async function fetchWithCloudflareEdgeRetry(
     sleepImpl,
   } = {}
 ) {
+  if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1) {
+    throw new Error('maxAttempts must be a positive integer.');
+  }
+  if (!Number.isFinite(delayMs) || delayMs < 0) {
+    throw new Error('delayMs must be nonnegative.');
+  }
   const method = String(options.method ?? 'GET').toUpperCase();
   if (method !== 'GET') {
     return { response: await fetchImpl(url, options), attempts: 1 };

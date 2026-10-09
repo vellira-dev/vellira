@@ -336,8 +336,12 @@ export async function captureDiagnostics(
           await readCloudflareDiagnosticGet(
             {
               url: new URL(pathname, baseUrl).href,
-              expectedBuildId,
-              retryEdge5xx: Boolean(expectedBuildId),
+              // These two text anchors are CDN assets without execution
+              // headers. Retain their body/status as diagnostics, never as
+              // edge-recovery proof. Only the runtime endpoint can prove that.
+              ...(pathname === '/__vellira_runtime'
+                ? { expectedBuildId, retryEdge5xx: Boolean(expectedBuildId) }
+                : {}),
             },
             async (response) =>
               record('deployment', {

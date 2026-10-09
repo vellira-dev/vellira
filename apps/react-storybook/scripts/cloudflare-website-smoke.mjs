@@ -332,8 +332,17 @@ async function goto(path) {
 
     if (response && response.status() < 400) return response;
 
-    const failures = edgeFailuresSince(edgeStart);
+    const failures = destinationEdgeFailures(
+      edgeFailuresSince(edgeStart),
+      path
+    );
     if (
+      response &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: response.headers(),
+      }) &&
       attempt < edgeRecoveryMaxAttempts &&
       (await recoverCloudflareEdgeFailures(failures, `navigation ${path}`))
     ) {
@@ -651,7 +660,9 @@ async function performRecoverableClientNavigation({
     },
     failureCursor: () => cloudflareEdgeGetFailures.length,
     failuresSince: (cursor) =>
-      destinationEdgeFailures(edgeFailuresSince(cursor), href),
+      criticalDiagnostics.length === 0
+        ? destinationEdgeFailures(edgeFailuresSince(cursor), href)
+        : [],
     recoverFailures: recoverCloudflareEdgeFailures,
     beforeRetry: async (attempt) => {
       console.log(
@@ -751,6 +762,7 @@ async function loadArticleWithActorMetrics(
       );
       if (
         !mutationObserved &&
+        criticalDiagnostics.length === 0 &&
         attempt < edgeRecoveryMaxAttempts &&
         (await recoverCloudflareEdgeFailures(
           failures,

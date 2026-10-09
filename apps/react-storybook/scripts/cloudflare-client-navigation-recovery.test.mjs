@@ -299,6 +299,7 @@ for (const mutation of [false, true]) {
       'loadArticleWithActorMetrics',
       {
         baseUrl: 'https://example.test',
+        criticalDiagnostics: [],
         edgeRecoveryMaxAttempts: 3,
         edgeRecoveryDelayMs: 0,
         cloudflareEdgeGetFailures: failures,
@@ -422,4 +423,81 @@ test('soak fails closed after proven edge recovery when document token evaluatio
   );
   assert.equal(actions, 1);
   assert.equal(retries, 0);
+});
+
+test('document navigation never retries Worker failure because an unrelated edge request recovered', async () => {
+  let navigations = 0;
+  let probes = 0;
+  const { isCloudflareEdgeGeneratedGet5xx } =
+    await import('./cloudflare-edge-recovery.mjs');
+  const goto = await smokeFunction('./cloudflare-website-smoke.mjs', 'goto', {
+    baseUrl: 'https://example.test',
+    edgeRecoveryMaxAttempts: 3,
+    edgeRecoveryDelayMs: 0,
+    cloudflareEdgeGetFailures: [],
+    edgeFailuresSince: () => [{ url: 'https://example.test/unrelated?_rsc=1' }],
+    destinationEdgeFailures,
+    isCloudflareEdgeGeneratedGet5xx,
+    recoverCloudflareEdgeFailures: async () => {
+      probes++;
+      return true;
+    },
+    sleep: async () => {},
+    page: {
+      goto: async () => {
+        navigations++;
+        return {
+          status: () => 503,
+          request: () => ({ method: () => 'GET' }),
+          headers: () => ({
+            server: 'cloudflare',
+            'x-vellira-worker-version': 'worker',
+          }),
+        };
+      },
+    },
+  });
+  await assert.rejects(goto('/target'), /Document navigation failed/);
+  assert.equal(navigations, 1);
+  assert.equal(probes, 0);
+});
+
+test('static abort verification cannot turn an original mutation into a GET probe', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { runInNewContext } = await import('node:vm');
+  const ts = await import('typescript');
+  const source = ts.createSourceFile(
+    'static.mjs',
+    await readFile(
+      new URL('./cloudflare-static-chunk-smoke.mjs', import.meta.url),
+      'utf8'
+    ),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS
+  );
+  const listener = source.statements.find(
+    (node) =>
+      ts.isExpressionStatement(node) &&
+      ts.isCallExpression(node.expression) &&
+      node.expression.expression.getText(source) === 'page.on' &&
+      node.expression.arguments[0]?.text === 'requestfailed'
+  ).expression.arguments[1];
+  for (const method of ['GET', 'POST', 'PUT', 'DELETE']) {
+    const abortedChunkUrls = new Set();
+    const critical = [];
+    const handler = runInNewContext(`(${listener.getText(source)})`, {
+      isNextRouterDataRequest: () => false,
+      isNextStaticChunk: () => true,
+      abortedChunkUrls,
+      recordCritical: (value) => critical.push(value),
+    });
+    handler({
+      method: () => method,
+      url: () => 'https://example.test/_next/static/chunk.js',
+      failure: () => ({ errorText: 'net::ERR_ABORTED' }),
+    });
+    assert.equal(abortedChunkUrls.size, method === 'GET' ? 1 : 0);
+    assert.equal(critical.length, method === 'GET' ? 0 : 1);
+  }
 });

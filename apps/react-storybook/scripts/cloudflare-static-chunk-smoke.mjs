@@ -163,7 +163,10 @@ page.on('requestfailed', (request) => {
     return;
   }
 
-  if (request.failure()?.errorText === 'net::ERR_ABORTED') {
+  if (
+    request.method() === 'GET' &&
+    request.failure()?.errorText === 'net::ERR_ABORTED'
+  ) {
     abortedChunkUrls.add(request.url());
     return;
   }
@@ -368,7 +371,9 @@ async function performRecoverableClientNavigation({
     },
     failureCursor: () => routerEdgeFailures.length,
     failuresSince: (cursor) =>
-      destinationEdgeFailures(routerEdgeFailuresSince(cursor), href),
+      criticalDiagnostics.length === 0
+        ? destinationEdgeFailures(routerEdgeFailuresSince(cursor), href)
+        : [],
     recoverFailures: recoverRouterEdgeFailures,
     beforeRetry: async () => {
       await page.waitForTimeout(1_500);

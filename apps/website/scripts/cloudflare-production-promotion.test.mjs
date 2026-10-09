@@ -274,4 +274,5 @@ test('staging, production and legacy adoption share browser recovery gates and r
   assert.match(soak, /continuousDocumentMs <= routerStaleTimeMs/);
   assert.match(soak, /isSafeClientNavigationReplay\(/);
   assert.match(soak, /isRecoveredDocumentFallback\(/);
+  assert.match(soak, /headers\['x-vellira-build-id'\] !== expectedBuildId/);
 });

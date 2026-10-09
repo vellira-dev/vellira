@@ -191,3 +191,20 @@ test('a streamed success timeout is retried before declaring exact-build recover
   assert.equal(result.attempts, 2);
   assert.equal(await result.response.text(), 'ok');
 });
+
+test('invalid runtime probe configuration fails before even a non-retried mutation', async () => {
+  for (const invalid of [{ maxAttempts: 0 }, { delayMs: -1 }]) {
+    await assert.rejects(
+      fetchWithCloudflareEdgeRetry(
+        'https://example.test/mutation',
+        { method: 'POST' },
+        {
+          ...invalid,
+          fetchImpl: async () =>
+            assert.fail('invalid configuration sent a request'),
+        }
+      ),
+      /maxAttempts|delayMs/
+    );
+  }
+});

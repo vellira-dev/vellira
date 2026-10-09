@@ -283,7 +283,13 @@ async function runRecoverableSoakNavigation({ href, title, stage, action }) {
         ? await boundedBrowserRead(
             () => page.evaluate(() => window.__velliraSoakDocument),
             'soak replay document token'
-          ).catch(() => null)
+          ).catch((error) => {
+            diagnostics.record('document-token-unavailable', {
+              href,
+              error: String(error),
+            });
+            return null;
+          })
         : null;
       const safeReplay = isSafeClientNavigationReplay({
         baseUrl,
@@ -434,8 +440,13 @@ try {
   ) {
     throw new Error('Document freshness policy is missing');
   }
-  if (!headers['x-vellira-build-id'] || !headers['x-vellira-request-id']) {
-    throw new Error('Document deployment diagnostics are missing');
+  if (
+    headers['x-vellira-build-id'] !== expectedBuildId ||
+    !headers['x-vellira-request-id']
+  ) {
+    throw new Error(
+      'Document deployment identity does not match expected build'
+    );
   }
   await ready('/components/switch', 'Switch');
 
