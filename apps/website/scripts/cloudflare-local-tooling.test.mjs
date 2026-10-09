@@ -95,18 +95,6 @@ test('CLI rejects remote operations, alternate commands and flag passthrough', (
     ['--env=production'],
     ['wrangler.jsonc', '--remote'],
   ]) {
-    let sourceEvidence = '';
-    if (moduleName === 'wrangler') {
-      const entry = import.meta.resolve(moduleName);
-      const source = await fs.readFile(new URL(entry), 'utf8');
-      sourceEvidence = source
-        .split('\n')
-        .map((line, index) => ({ line, number: index + 1 }))
-        .filter(({ line }) => /punycode/i.test(line))
-        .map(({ line, number }) => `${number}: ${line}`)
-        .join('\n');
-    }
-
     const result = spawnSync(
       process.execPath,
       [path.join(root, 'scripts/cloudflare-populate-local-cache.mjs'), ...args],
@@ -311,6 +299,18 @@ test('Cloudflare tooling imports emit no punycode deprecation', async () => {
     '@aws-sdk/client-s3',
     'cloudflare',
   ]) {
+    let sourceEvidence = '';
+    if (moduleName === 'wrangler') {
+      const entry = import.meta.resolve(moduleName);
+      const source = await fs.readFile(new URL(entry), 'utf8');
+      sourceEvidence = source
+        .split('\n')
+        .map((line, index) => ({ line, number: index + 1 }))
+        .filter(({ line }) => /punycode/i.test(line))
+        .map(({ line, number }) => `${number}: ${line}`)
+        .join('\n');
+    }
+
     const result = spawnSync(
       process.execPath,
       [
