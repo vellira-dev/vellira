@@ -303,9 +303,8 @@ test('Cloudflare tooling imports emit no punycode deprecation', () => {
       process.execPath,
       [
         '--trace-deprecation',
-        '--input-type=module',
         '-e',
-        `await import(${JSON.stringify(moduleName)})`,
+        `const Module=require("node:module"); const original=Module._load; Module._load=function(request,parent,isMain){ if(request==="punycode"||request==="node:punycode") console.error("PUNYCODE_IMPORTER", request, parent?.filename ?? "<unknown>"); return original.apply(this,arguments); }; import(${JSON.stringify(moduleName)});`,
       ],
       {
         cwd: repo,
