@@ -70,13 +70,33 @@ test('every recovery module present has its test linted and executed', (t) => {
   }
 });
 
-for (const suffix of ['.mjs', '.test.mjs'])
-  test(`missing recovery pair fails rather than silently omitting it: ${suffix}`, (t) => {
-    const { root, write } = fixture(t);
-    write(`${directory}/cloudflare-edge-recovery${suffix}`);
-    assert.throws(() => cloudflareCandidateCommand(root, 'test'), /missing/);
-    assert.throws(() => cloudflareCandidateCommand(root, 'lint'), /missing/);
-  });
+test('website edge-fetch policy is mandatory when that candidate contains the feature', (t) => {
+  const { root, write } = fixture(t);
+  write('apps/website/scripts/cloudflare-edge-fetch.mjs');
+  write('apps/website/scripts/cloudflare-edge-fetch.test.mjs');
+  assert.ok(
+    cloudflareCandidateCommand(root, 'test').includes(
+      'apps/website/scripts/cloudflare-edge-fetch.test.mjs'
+    )
+  );
+  const lint = cloudflareCandidateCommand(root, 'lint');
+  assert.ok(lint.includes('apps/website/scripts/cloudflare-edge-fetch.mjs'));
+  assert.ok(
+    lint.includes('apps/website/scripts/cloudflare-edge-fetch.test.mjs')
+  );
+});
+
+for (const module of [
+  `${directory}/cloudflare-edge-recovery`,
+  'apps/website/scripts/cloudflare-edge-fetch',
+])
+  for (const suffix of ['.mjs', '.test.mjs'])
+    test(`missing feature policy pair fails rather than silently omitting it: ${module}${suffix}`, (t) => {
+      const { root, write } = fixture(t);
+      write(`${module}${suffix}`);
+      assert.throws(() => cloudflareCandidateCommand(root, 'test'), /missing/);
+      assert.throws(() => cloudflareCandidateCommand(root, 'lint'), /missing/);
+    });
 
 test('missing baseline and empty lint families fail closed', (t) => {
   const { root } = fixture(t);

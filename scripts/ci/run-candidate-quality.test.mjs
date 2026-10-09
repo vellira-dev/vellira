@@ -252,4 +252,12 @@ test('workflow keeps candidate checkout, quality enforcement, tooling identity a
     (step) => step.name === 'Test website smoke policies'
   );
   assert.match(policies.run, /cloudflare-candidate-checks.mjs" test$/);
+  assert.equal(
+    runtime.steps.some((step) =>
+      step.run?.includes(
+        'node --test apps/website/scripts/cloudflare-edge-fetch.test.mjs'
+      )
+    ),
+    false
+  );
 });

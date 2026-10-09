@@ -225,8 +225,6 @@ jobs:
         run: node "$RUNNER_TEMP/cloudflare-candidate-checks.mjs" lint
       - name: Test website smoke policies
         run: node "$RUNNER_TEMP/cloudflare-candidate-checks.mjs" test
-      - name: Test Cloudflare edge fetch retry
-        run: node --test apps/website/scripts/cloudflare-edge-fetch.test.mjs
       - name: Test OpenNext string-export package patch
         run: node --test apps/website/scripts/opennext-string-exports-patch.test.mjs
       - run: pnpm test:cloudflare-cache

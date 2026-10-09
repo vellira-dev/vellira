@@ -94,13 +94,19 @@ the runner's temporary directory, outside both source checkouts.
 
 Cloudflare lint and smoke-policy tests use a fixed source-check profile loaded
 from the exact workflow Git revision. The candidate retains the required baseline
-scripts and tests. Each additional recovery module present in that candidate must
-have its matching test; both are checked. A historical candidate need not contain
-features added later on main. Empty baseline families and missing module/test
+scripts and tests. Each additional recovery or edge-fetch module present in that
+candidate must have its matching test; both are checked through that profile.
+Standalone workflow steps must not require these later feature inputs. A
+historical candidate need not contain features added later on main. Empty baseline
+families and missing module/test
 pairs fail closed. Runtime builds still bind the exact candidate SHA. No missing-
 file suppression or successful fallback is permitted. After a reviewed workflow
-fix merges, reopening an unchanged Draft PR can obtain current-workflow checks
-without rebasing its certified commit.
+fix merges, verify that the PR merge ref contains the reviewed workflow before
+reopening an unchanged Draft PR. Check the new run's workflow steps and retained
+tooling identity: GitHub can briefly retain an older workflow after the base
+advances. Reopening after the merge ref has refreshed obtains current-workflow
+checks without rebasing the certified commit; an older run never qualifies the
+new tooling.
 
 ## Release candidate consumer proof
 
