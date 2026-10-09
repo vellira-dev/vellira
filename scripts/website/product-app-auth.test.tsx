@@ -242,10 +242,9 @@ describe('existing OAuth callback and account recovery', () => {
       'href',
       '/login'
     );
-    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
-      'href',
-      '/forgot-password'
-    );
+    expect(
+      screen.getByRole('link', { name: 'Forgot password?' })
+    ).toHaveAttribute('href', '/forgot-password');
     expect(router.replace).not.toHaveBeenCalled();
   });
 
@@ -295,7 +294,9 @@ describe('existing OAuth callback and account recovery', () => {
       'email is verified'
     );
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
-    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Sign in' })
+    ).not.toBeInTheDocument();
 
     fetchMock.mockResolvedValueOnce(
       respond({
