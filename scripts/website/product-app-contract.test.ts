@@ -133,9 +133,7 @@ describe('Vellira App browser API contract', () => {
       'https://api.vellira.dev/v1/auth/csrf'
     );
     const [url, init] = fetchMock.mock.calls[1] ?? [];
-    expect(url).toBe(
-      'https://api.vellira.dev/v1/auth/email/resend/current'
-    );
+    expect(url).toBe('https://api.vellira.dev/v1/auth/email/resend/current');
     expect(init).toEqual(
       expect.objectContaining({
         method: 'POST',
