@@ -5,7 +5,8 @@ import { isBrowserResource404ConsoleError } from './cloudflare-blog-metrics-smok
 import {
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
-  recoverCloudflareEdgeGet5xx,
+  recoverCloudflareEdgeFailure,
+  readCloudflareDiagnosticGet,
 } from './cloudflare-edge-recovery.mjs';
 
 export function diagnosticHeaders(headers) {
@@ -158,13 +159,13 @@ export async function captureDiagnostics(
         edgeFailures.push({
           event,
           url: response.url(),
+          status: response.status(),
+          method: request.method(),
+          headers,
           requestHeaders: request.headers(),
           handled: false,
         });
-      } else if (
-        response.status() === 404 &&
-        isExpected404Response?.(event)
-      ) {
+      } else if (response.status() === 404 && isExpected404Response?.(event)) {
         handled404ResponsesByUrl.set(
           event.url,
           (handled404ResponsesByUrl.get(event.url) ?? 0) + 1
@@ -220,10 +221,7 @@ export async function captureDiagnostics(
     errors.push(record('pageerror', { error: error.stack ?? String(error) }))
   );
 
-  const reconcileDeferredConsoleErrors = (
-    deferred,
-    handledByUrl
-  ) => {
+  const reconcileDeferredConsoleErrors = (deferred, handledByUrl) => {
     const remainingByUrl = new Map(handledByUrl);
     const unresolved = [];
 
@@ -265,15 +263,14 @@ export async function captureDiagnostics(
       const failures = edgeFailures
         .slice(cursor)
         .filter((failure) => new URL(failure.url).pathname === targetPath);
-      return failures.length > 0 && failures.every((failure) => failure.handled);
+      return (
+        failures.length > 0 && failures.every((failure) => failure.handled)
+      );
     },
     async recoverEdgeFailures(stage) {
       for (const failure of edgeFailures.filter((item) => !item.handled)) {
-        const result = await recoverCloudflareEdgeGet5xx({
-          url: failure.url,
-          requestHeaders: failure.requestHeaders,
+        const result = await recoverCloudflareEdgeFailure(failure, {
           expectedBuildId,
-          requestGet: (...args) => context.request.get(...args),
         });
 
         record('edge-recovery', {
@@ -282,6 +279,7 @@ export async function captureDiagnostics(
           recovered: result.recovered,
           attempts: result.attempts,
           reason: result.reason ?? null,
+          error: result.error ?? null,
         });
 
         if (result.recovered) {
@@ -308,21 +306,22 @@ export async function captureDiagnostics(
         '/BUILD_ID',
       ]) {
         try {
-          const response = await context.request.get(
-            new URL(pathname, baseUrl).href,
+          await readCloudflareDiagnosticGet(
             {
-              headers: { 'Cache-Control': 'no-cache' },
-              timeout: 15_000,
-            }
+              url: new URL(pathname, baseUrl).href,
+              expectedBuildId,
+              retryEdge5xx: Boolean(expectedBuildId),
+            },
+            async (response) =>
+              record('deployment', {
+                stage,
+                pathname,
+                status: response.status(),
+                body: await response.text(),
+                evidenceSource:
+                  'independent API request; not the browser HTTP cache',
+              })
           );
-          record('deployment', {
-            stage,
-            pathname,
-            status: response.status(),
-            body: await response.text(),
-            evidenceSource:
-              'independent API request; not the browser HTTP cache',
-          });
         } catch (error) {
           record('deployment', { stage, pathname, error: String(error) });
         }

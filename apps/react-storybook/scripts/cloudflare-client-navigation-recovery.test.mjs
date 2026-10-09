@@ -66,10 +66,9 @@ test('destination matching ignores unrelated background edge failures', () => {
     { url: 'https://vellira.test/api/blog-metrics/articles/two-runtimes/like' },
   ];
 
-  assert.deepEqual(
-    destinationEdgeFailures(failures, '/blog/two-runtimes'),
-    [failures[0]]
-  );
+  assert.deepEqual(destinationEdgeFailures(failures, '/blog/two-runtimes'), [
+    failures[0],
+  ]);
 });
 
 test('client navigation does not retry when edge recovery is not proven', async () => {
@@ -118,7 +117,6 @@ test('client navigation respects the maximum attempt bound', async () => {
 
   assert.equal(actionCalls, 3);
 });
-
 
 const documentFallbackFixture = {
   href: '/components/accordion',
@@ -219,4 +217,160 @@ test('soak navigation replay requires recovered edge, same route and same docume
     }),
     false
   );
+});
+
+// Execute the actual CLI function without launching its top-level browser journey.
+// AST extraction keeps these tests bound to maintained callers, not copied logic.
+async function smokeFunction(script, name, bindings) {
+  const { readFile } = await import('node:fs/promises');
+  const { runInNewContext } = await import('node:vm');
+  const ts = await import('typescript');
+  const source = ts.createSourceFile(
+    script,
+    await readFile(new URL(script, import.meta.url), 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS
+  );
+  const declaration = source.statements.find(
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === name
+  );
+  assert.ok(declaration, `Missing maintained function ${name}`);
+  return runInNewContext(`(${declaration.getText(source)})`, {
+    URL,
+    console: { log() {} },
+    ...bindings,
+  });
+}
+
+test('website smoke cannot mark a browser edge handled after persistent probe timeouts', async () => {
+  const { recoverCloudflareEdgeFailure } =
+    await import('./cloudflare-edge-recovery.mjs');
+  const failure = {
+    url: 'https://example.test/blog?_rsc=1',
+    status: 503,
+    method: 'GET',
+    headers: { server: 'cloudflare' },
+    requestHeaders: { RSC: '1' },
+    handled: false,
+  };
+  let calls = 0;
+  const recover = await smokeFunction(
+    './cloudflare-website-smoke.mjs',
+    'recoverCloudflareEdgeFailures',
+    {
+      expectedBuildId: 'build-1',
+      diagnostics: [],
+      recoverCloudflareEdgeFailure: (record, options) =>
+        recoverCloudflareEdgeFailure(record, {
+          ...options,
+          sleep: async () => {},
+          requestGet: async () => {
+            calls++;
+            throw Object.assign(new Error('timeout'), { name: 'TimeoutError' });
+          },
+        }),
+    }
+  );
+  assert.equal(await recover([failure], 'test'), false);
+  assert.equal(failure.handled, false);
+  assert.equal(failure.recovery.reason, 'transport-error');
+  assert.equal(calls, 3);
+});
+
+for (const mutation of [false, true]) {
+  test(`actor bootstrap document retry cannot repeat a dispatched mutation: ${mutation}`, async () => {
+    const { EventEmitter } = await import('node:events');
+    const page = new EventEmitter();
+    const failures = [];
+    let navigations = 0;
+    let recoveryCalls = 0;
+    page.goto = async () => {
+      navigations++;
+      failures.push({ url: 'https://example.test/article' });
+      if (mutation)
+        page.emit('request', {
+          url: () => 'https://example.test/api/views',
+          method: () => 'POST',
+        });
+    };
+    const bootstrap = await smokeFunction(
+      './cloudflare-website-smoke.mjs',
+      'loadArticleWithActorMetrics',
+      {
+        baseUrl: 'https://example.test',
+        edgeRecoveryMaxAttempts: 3,
+        edgeRecoveryDelayMs: 0,
+        cloudflareEdgeGetFailures: failures,
+        sameOrigin: () => true,
+        destinationEdgeFailures,
+        edgeFailuresSince: (index) => failures.slice(index),
+        sleep: async () => {},
+        recoverCloudflareEdgeFailures: async () => {
+          recoveryCalls++;
+          return true;
+        },
+      }
+    );
+    const original = new Error('browser bootstrap failed');
+    const observe = async (_requests, action) => {
+      await action();
+      if (navigations === 1) throw original;
+      return [
+        { status: 200, payload: { liked: false } },
+        { status: 200, payload: { metrics: {} } },
+      ];
+    };
+    if (mutation)
+      await assert.rejects(
+        bootstrap(page, observe, '/article', '/like', '/views'),
+        (error) => error === original
+      );
+    else await bootstrap(page, observe, '/article', '/like', '/views');
+    assert.equal(navigations, mutation ? 1 : 2);
+    assert.equal(recoveryCalls, mutation ? 0 : 1);
+    assert.equal(page.listenerCount('request'), 0);
+  });
+}
+
+test('static aborted probes accept headerless CDN 200 but reject every HTTP failure without recovery', async () => {
+  const { readCloudflareDiagnosticGet } =
+    await import('./cloudflare-edge-recovery.mjs');
+  for (const status of [200, 404, 503]) {
+    let calls = 0;
+    let disposed = 0;
+    const verify = await smokeFunction(
+      './cloudflare-static-chunk-smoke.mjs',
+      'verifyAbortedChunkUrls',
+      {
+        abortedChunkUrls: new Set([
+          'https://example.test/_next/static/chunk.js',
+        ]),
+        expectedBuildId: 'build-1',
+        readCloudflareDiagnosticGet: (options, read) =>
+          readCloudflareDiagnosticGet(
+            {
+              ...options,
+              requestGet: async () => {
+                calls++;
+                return {
+                  status: () => status,
+                  headers: () => ({ server: 'cloudflare' }),
+                  ok: () => status === 200,
+                  dispose: async () => {
+                    disposed++;
+                  },
+                };
+              },
+            },
+            read
+          ),
+      }
+    );
+    if (status === 200) await verify('test');
+    else
+      await assert.rejects(verify('test'), /Aborted static chunk is missing/);
+    assert.equal(calls, 1);
+    assert.equal(disposed, 1);
+  }
 });

@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { captureBrowserJson } from './cloudflare-browser-json.mjs';
 import {
@@ -20,6 +22,8 @@ import {
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
 import {
   cloudflareEdgeReplayHeaders,
+  readCloudflareDiagnosticGet,
+  recoverCloudflareEdgeFailure,
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
   reconcileHandledCloudflareEdgeConsoleDiagnostics,
@@ -36,6 +40,8 @@ const aggregateMetricsRetryDelayMs = 12_000;
 const edgeRecoveryMaxAttempts = 3;
 const edgeRecoveryDelayMs = 1_500;
 const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
+
+if (!expectedBuildId) throw new Error('VELLIRA_BUILD_ID is required.');
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -134,53 +140,16 @@ async function recoverCloudflareEdgeFailures(failures, stage) {
   if (failures.length === 0) return false;
 
   for (const failure of failures) {
-    let recovered = false;
-
-    for (
-      let attempt = 1;
-      attempt <= edgeRecoveryMaxAttempts;
-      attempt += 1
-    ) {
-      const replay = await context.request.get(failure.url, {
-        failOnStatusCode: false,
-        headers: failure.replayHeaders,
-        timeout: 10_000,
-      });
-
-      try {
-        const replayHeaders = replay.headers();
-        const exactBuild =
-          !expectedBuildId ||
-          replayHeaders['x-vellira-build-id'] === expectedBuildId;
-
-        if (replay.ok() && exactBuild) {
-          failure.handled = true;
-          recovered = true;
-          console.log(
-            `Recovered transient Cloudflare edge GET during ${stage}: ${failure.url} (attempt ${attempt})`
-          );
-          break;
-        }
-
-        if (
-          !isCloudflareEdgeGeneratedGet5xx({
-            status: replay.status(),
-            method: 'GET',
-            headers: replayHeaders,
-          })
-        ) {
-          return false;
-        }
-      } finally {
-        await replay.dispose();
-      }
-
-      if (attempt < edgeRecoveryMaxAttempts) {
-        await sleep(edgeRecoveryDelayMs);
-      }
-    }
-
-    if (!recovered) return false;
+    const result = await recoverCloudflareEdgeFailure(failure, {
+      expectedBuildId,
+    });
+    diagnostics.push(
+      `edge-recovery during ${stage}: ${failure.url} ${JSON.stringify(result)}`
+    );
+    if (!result.recovered) return false;
+    console.log(
+      `Recovered transient Cloudflare edge GET during ${stage}: ${failure.url} (attempts ${result.attempts})`
+    );
   }
 
   return true;
@@ -193,11 +162,10 @@ function reconcileCloudflareEdgeDiagnostics() {
     }
   }
 
-  const consoleDiagnostics =
-    reconcileHandledCloudflareEdgeConsoleDiagnostics(
-      deferredResource5xxConsoleDiagnostics,
-      cloudflareEdgeGetFailures.filter((failure) => failure.handled).length
-    );
+  const consoleDiagnostics = reconcileHandledCloudflareEdgeConsoleDiagnostics(
+    deferredResource5xxConsoleDiagnostics,
+    cloudflareEdgeGetFailures.filter((failure) => failure.handled).length
+  );
   criticalDiagnostics.push(...consoleDiagnostics.critical);
 }
 
@@ -257,6 +225,7 @@ function attachPageDiagnostics(page) {
     const responseHeaders = response.headers();
     if (
       sameOrigin(response.url()) &&
+      !new URL(response.url()).pathname.startsWith('/_next/static/') &&
       isCloudflareEdgeGeneratedGet5xx({
         status: response.status(),
         method: response.request().method(),
@@ -266,9 +235,10 @@ function attachPageDiagnostics(page) {
       cloudflareEdgeGetFailures.push({
         diagnostic,
         url: response.url(),
-        replayHeaders: cloudflareEdgeReplayHeaders(
-          response.request().headers()
-        ),
+        status: response.status(),
+        method: response.request().method(),
+        headers: responseHeaders,
+        requestHeaders: response.request().headers(),
         handled: false,
       });
       return;
@@ -371,36 +341,30 @@ async function probeBlogAggregateResponse(url) {
   // expose the non-2xx status before the streamed body finishes, which made the
   // deployment smoke wait until the job-level timeout. APIRequestContext gives
   // this diagnostic read an explicit bound instead.
-  const response = await context.request.get(url, {
-    failOnStatusCode: false,
-    headers: { 'Cache-Control': 'no-cache' },
-    timeout: 10_000,
-  });
-
-  try {
-    return {
+  return readCloudflareDiagnosticGet(
+    { url, expectedBuildId, retryEdge5xx: true },
+    async (response) => ({
       status: response.status(),
       errorCode: parseBlogMetricsErrorCode(await readJsonResponse(response)),
-    };
-  } finally {
-    await response.dispose();
-  }
+    })
+  );
 }
 
 async function fetchBlogPublicationSlugs(url, label) {
-  const response = await context.request.get(url, {
-    failOnStatusCode: false,
-    headers: { 'Cache-Control': 'no-cache' },
-    timeout: 10_000,
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `${label} request failed with ${response.status()} at ${url}.`
-    );
-  }
-
-  return parseBlogPublicationManifest(await response.json(), label);
+  return readCloudflareDiagnosticGet(
+    {
+      url,
+      ...(sameOrigin(url) ? { expectedBuildId, retryEdge5xx: true } : {}),
+    },
+    async (response) => {
+      if (!response.ok()) {
+        throw new Error(
+          `${label} request failed with ${response.status()} at ${url}.`
+        );
+      }
+      return parseBlogPublicationManifest(await response.json(), label);
+    }
+  );
 }
 
 function isValidBlogMetricsItem(item) {
@@ -423,18 +387,17 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
   }
 
   const url = new URL(buildBlogMetricsBatchPath(productionSlugs), baseUrl);
-  const response = await context.request.get(url.toString(), {
-    failOnStatusCode: false,
-    timeout: 10_000,
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `Production-catalog metrics proxy failed with ${response.status()}.`
-    );
-  }
-
-  const payload = await response.json();
+  const payload = await readCloudflareDiagnosticGet(
+    { url: url.toString(), expectedBuildId, retryEdge5xx: true },
+    async (response) => {
+      if (!response.ok()) {
+        throw new Error(
+          `Production-catalog metrics proxy failed with ${response.status()}.`
+        );
+      }
+      return response.json();
+    }
+  );
   if (!Array.isArray(payload?.items)) {
     throw new Error(
       'Production-catalog metrics proxy returned an invalid payload.'
@@ -536,6 +499,30 @@ async function verifyBlogIndexMetricsProxy() {
         `OK blog aggregate metrics use same-origin proxy and render (attempt ${attempt})`
       );
       return;
+    }
+
+    const edgeFailures = destinationEdgeFailures(
+      edgeFailuresSince(0),
+      response.url()
+    );
+    if (
+      edgeFailures.length > 0 &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: response.headers(),
+      })
+    ) {
+      if (
+        attempt < aggregateMetricsMaxAttempts &&
+        (await recoverCloudflareEdgeFailures(
+          edgeFailures,
+          'aggregate metrics browser render'
+        ))
+      ) {
+        continue;
+      }
+      throw new Error('Blog aggregate metrics edge recovery failed.');
     }
 
     const probe = await probeBlogAggregateResponse(response.url());
@@ -682,6 +669,15 @@ async function loadArticleWithActorMetrics(
 ) {
   for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
     const edgeStart = cloudflareEdgeGetFailures.length;
+    let mutationObserved = false;
+    const observeMutation = (request) => {
+      if (
+        sameOrigin(request.url()) &&
+        !['GET', 'HEAD', 'OPTIONS'].includes(request.method())
+      )
+        mutationObserved = true;
+    };
+    page.on('request', observeMutation);
 
     try {
       const [likeStateResponse, viewResponse] = await observeActorJson(
@@ -719,8 +715,12 @@ async function loadArticleWithActorMetrics(
 
       return { likeState, viewWrite };
     } catch (error) {
-      const failures = edgeFailuresSince(edgeStart);
+      const failures = destinationEdgeFailures(
+        edgeFailuresSince(edgeStart),
+        articlePath
+      );
       if (
+        !mutationObserved &&
         attempt < edgeRecoveryMaxAttempts &&
         (await recoverCloudflareEdgeFailures(
           failures,
@@ -732,6 +732,8 @@ async function loadArticleWithActorMetrics(
       }
 
       throw error;
+    } finally {
+      page.off('request', observeMutation);
     }
   }
 
@@ -1033,6 +1035,27 @@ async function navigateWithinMobileComponentSidebar() {
   );
 }
 
+async function writeRecoveryEvidence() {
+  const directory = path.resolve('test-results/cloudflare-website-smoke');
+  await fs.mkdir(directory, { recursive: true });
+  await fs.writeFile(
+    path.join(directory, 'edge-recovery.json'),
+    JSON.stringify(
+      {
+        expectedBuildId,
+        finalUrl: page.url(),
+        diagnostics,
+        failures: cloudflareEdgeGetFailures.map((failure) => ({
+          ...failure,
+          requestHeaders: cloudflareEdgeReplayHeaders(failure.requestHeaders),
+        })),
+      },
+      null,
+      2
+    )
+  );
+}
+
 try {
   await page.setViewportSize({ width: 1280, height: 900 });
   await loadHomePage();
@@ -1107,12 +1130,14 @@ try {
   for (const diagnostic of diagnostics) {
     console.error(diagnostic);
   }
+  process.exitCode = 1;
+}
+
+if (!process.exitCode) {
+  for (const diagnostic of diagnostics) console.log(diagnostic);
+}
+try {
+  await writeRecoveryEvidence();
+} finally {
   await browser.close();
-  process.exit(1);
 }
-
-for (const diagnostic of diagnostics) {
-  console.log(diagnostic);
-}
-
-await browser.close();

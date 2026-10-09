@@ -24,6 +24,7 @@ test('edge fetch retries Cloudflare-generated GET 503 and returns recovery', asy
     'https://example.test/runtime',
     {},
     {
+      expectedBuildId: 'build-1',
       fetchImpl: async () => responses.shift(),
       delayMs: 0,
       sleepImpl: async () => {
@@ -43,6 +44,7 @@ test('edge fetch does not retry Worker 5xx', async () => {
     'https://example.test/runtime',
     {},
     {
+      expectedBuildId: 'build-1',
       fetchImpl: async () => {
         calls += 1;
         return response(503, {
@@ -61,25 +63,24 @@ test('edge fetch does not retry Worker 5xx', async () => {
 
 test('edge fetch remains bounded when Cloudflare 503 persists', async () => {
   let calls = 0;
-  const result = await fetchWithCloudflareEdgeRetry(
-    'https://example.test/runtime',
-    {},
-    {
-      maxAttempts: 3,
-      fetchImpl: async () => {
-        calls += 1;
-        return response(503, { Server: 'cloudflare' });
-      },
-      delayMs: 0,
-      sleepImpl: async () => {},
-    }
+  await assert.rejects(
+    fetchWithCloudflareEdgeRetry(
+      'https://example.test/runtime',
+      {},
+      {
+        expectedBuildId: 'build-1',
+        fetchImpl: async () => {
+          calls++;
+          return response(503, { Server: 'cloudflare' });
+        },
+        delayMs: 0,
+        sleepImpl: async () => {},
+      }
+    ),
+    /edge-5xx-persisted/
   );
-
-  assert.equal(result.response.status, 503);
-  assert.equal(result.attempts, 3);
   assert.equal(calls, 3);
 });
-
 
 test('edge fetch never retries non-GET requests', async () => {
   let calls = 0;
@@ -87,6 +88,7 @@ test('edge fetch never retries non-GET requests', async () => {
     'https://example.test/mutation',
     { method: 'POST' },
     {
+      expectedBuildId: 'build-1',
       fetchImpl: async () => {
         calls += 1;
         return response(503, { Server: 'cloudflare' });
@@ -98,4 +100,94 @@ test('edge fetch never retries non-GET requests', async () => {
   assert.equal(result.response.status, 503);
   assert.equal(result.attempts, 1);
   assert.equal(calls, 1);
+});
+
+test('runtime probes use shared timeout recovery and exact-build rejection', async () => {
+  let calls = 0;
+  const result = await fetchWithCloudflareEdgeRetry(
+    'https://example.test/runtime',
+    {},
+    {
+      expectedBuildId: 'build-1',
+      delayMs: 0,
+      sleepImpl: async () => {},
+      fetchImpl: async () => {
+        if (++calls < 3)
+          throw Object.assign(new Error('timeout'), { name: 'TimeoutError' });
+        return response(200, { 'x-vellira-build-id': 'build-1' });
+      },
+    }
+  );
+  assert.equal(result.attempts, 3);
+  assert.equal(await result.response.text(), 'ok');
+  await assert.rejects(
+    fetchWithCloudflareEdgeRetry(
+      'https://example.test/runtime',
+      {},
+      {
+        expectedBuildId: 'build-1',
+        fetchImpl: async () => response(200, { 'x-vellira-build-id': 'wrong' }),
+      }
+    ),
+    /build-mismatch/
+  );
+});
+
+test('runtime static asset HTTP failures remain blockers without HTTP retries', async () => {
+  let calls = 0;
+  const result = await fetchWithCloudflareEdgeRetry(
+    'https://example.test/_next/static/chunk.js',
+    {},
+    {
+      expectedBuildId: 'build-1',
+      fetchImpl: async () => {
+        calls++;
+        return response(503, { Server: 'cloudflare' });
+      },
+    }
+  );
+  assert.equal(result.response.status, 503);
+  assert.equal(calls, 1);
+});
+
+test('headerless immutable CDN assets preserve byte validation by the caller', async () => {
+  const result = await fetchWithCloudflareEdgeRetry(
+    'https://example.test/_next/static/chunk.js',
+    {},
+    {
+      expectedBuildId: 'build-1',
+      fetchImpl: async () => response(200),
+    }
+  );
+  assert.equal(await result.response.text(), 'ok');
+});
+
+test('a streamed success timeout is retried before declaring exact-build recovery', async () => {
+  let calls = 0;
+  const result = await fetchWithCloudflareEdgeRetry(
+    'https://example.test/runtime',
+    {},
+    {
+      expectedBuildId: 'build-1',
+      delayMs: 0,
+      sleepImpl: async () => {},
+      fetchImpl: async () =>
+        ++calls === 1
+          ? new Response(
+              new ReadableStream({
+                start(controller) {
+                  controller.error(
+                    Object.assign(new Error('body timeout'), {
+                      name: 'TimeoutError',
+                    })
+                  );
+                },
+              }),
+              { headers: { 'x-vellira-build-id': 'build-1' } }
+            )
+          : response(200, { 'x-vellira-build-id': 'build-1' }),
+    }
+  );
+  assert.equal(result.attempts, 2);
+  assert.equal(await result.response.text(), 'ok');
 });

@@ -32,7 +32,8 @@ async function request(pathname, options = {}) {
     {
       cache: 'no-store',
       ...options,
-    }
+    },
+    { expectedBuildId: buildId }
   );
   const bytes = Buffer.from(await response.arrayBuffer());
   evidence.push({
@@ -122,8 +123,7 @@ try {
       expectedBuildId: buildId,
     });
 
-    const redirectPath =
-      '/blog/two-runtimes?source=cloudflare-postflight&n=1';
+    const redirectPath = '/blog/two-runtimes?source=cloudflare-postflight&n=1';
     const redirectUrl = new URL(redirectPath, publicWww);
     const response = await fetch(redirectUrl, {
       cache: 'no-store',
@@ -153,7 +153,11 @@ try {
       response.headers.get('x-vellira-worker-version'),
       'www redirect is missing Worker version identity'
     );
-    assert.equal(bytes.length, 0, 'www redirect must not return a response body');
+    assert.equal(
+      bytes.length,
+      0,
+      'www redirect must not return a response body'
+    );
     console.log(
       `Live production domains passed: apex=${publicBase}; www=308 -> ${publicBase}`
     );

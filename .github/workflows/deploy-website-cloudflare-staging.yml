@@ -386,6 +386,7 @@ jobs:
           retention-days: 7
           include-hidden-files: true
           path: |
+            apps/react-storybook/test-results/cloudflare-website-smoke/
             apps/react-storybook/test-results/cloudflare-soak/
             apps/website/.open-next/asset-audit*.json
             apps/website/.open-next/archive-evidence.json

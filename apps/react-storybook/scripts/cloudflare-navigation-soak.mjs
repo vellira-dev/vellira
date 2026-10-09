@@ -1,4 +1,5 @@
 /* global window */
+import { readCloudflareDiagnosticGet } from './cloudflare-edge-recovery.mjs';
 import { chromium } from '@playwright/test';
 import path from 'node:path';
 import {
@@ -70,19 +71,22 @@ const directory = path.resolve(
 );
 
 async function fetchBlogPublicationSlugs(url, label) {
-  const response = await context.request.get(url, {
-    failOnStatusCode: false,
-    headers: { 'Cache-Control': 'no-cache' },
-    timeout: 10_000,
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `${label} request failed with ${response.status()} at ${url}.`
-    );
-  }
-
-  return parseBlogPublicationManifest(await response.json(), label);
+  return readCloudflareDiagnosticGet(
+    {
+      url,
+      ...(new URL(url).origin === baseOrigin
+        ? { expectedBuildId, retryEdge5xx: true }
+        : {}),
+    },
+    async (response) => {
+      if (!response.ok()) {
+        throw new Error(
+          `${label} request failed with ${response.status()} at ${url}.`
+        );
+      }
+      return parseBlogPublicationManifest(await response.json(), label);
+    }
+  );
 }
 
 async function resolveCandidateOnlyStagingBlogSlugs() {
@@ -107,25 +111,23 @@ async function resolveCandidateOnlyStagingBlogSlugs() {
   return candidateOnlyBlogSlugs(candidateSlugs, productionSlugs);
 }
 
-const candidateOnlyStagingBlogSlugs =
-  await resolveCandidateOnlyStagingBlogSlugs();
-if (candidateOnlyStagingBlogSlugs.length > 0) {
-  console.log(
-    `OK navigation soak expected staging publication catalog lag for candidate-only slugs: ${candidateOnlyStagingBlogSlugs.join(', ')}`
-  );
-}
-const diagnostics = await captureDiagnostics(page, context, baseUrl, directory, {
-  isExpected404Response:
-    candidateOnlyStagingBlogSlugs.length > 0
-      ? (response) =>
-          isExpectedStagingCandidateBlogMetricsRequest({
-            requestUrl: response.url,
-            method: response.method,
-            baseOrigin,
-            candidateOnlySlugs: candidateOnlyStagingBlogSlugs,
-          })
-      : undefined,
-});
+let candidateOnlyStagingBlogSlugs = [];
+const diagnostics = await captureDiagnostics(
+  page,
+  context,
+  baseUrl,
+  directory,
+  {
+    isExpected404Response: (response) =>
+      isExpectedStagingCandidateBlogMetricsRequest({
+        requestUrl: response.url,
+        method: response.method,
+        baseOrigin,
+        candidateOnlySlugs: candidateOnlyStagingBlogSlugs,
+      }),
+  }
+);
+
 const sidebarSelector = 'aside[aria-label="Component navigation"]';
 const rscCachePolicyFailures = [];
 let observedRscResponses = 0;
@@ -252,12 +254,7 @@ async function ready(
   assertRscCachePolicy(`settled ${href}`);
 }
 
-async function runRecoverableSoakNavigation({
-  href,
-  title,
-  stage,
-  action,
-}) {
+async function runRecoverableSoakNavigation({ href, title, stage, action }) {
   const startPath = new URL(page.url()).pathname;
 
   for (let attempt = 1; attempt <= navigationRetryMaxAttempts; attempt += 1) {
@@ -274,8 +271,10 @@ async function runRecoverableSoakNavigation({
       });
       return;
     } catch (error) {
-      const edgeRecovered =
-        diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, href);
+      const edgeRecovered = diagnostics.recoveredDestinationEdgeFailureSince(
+        edgeCursor,
+        href
+      );
       const currentDocumentToken = documentToken
         ? await page
             .evaluate(() => window.__velliraSoakDocument)
@@ -399,6 +398,12 @@ async function blog() {
 
 let failure;
 try {
+  candidateOnlyStagingBlogSlugs = await resolveCandidateOnlyStagingBlogSlugs();
+  if (candidateOnlyStagingBlogSlugs.length > 0) {
+    console.log(
+      `OK navigation soak expected staging publication catalog lag for candidate-only slugs: ${candidateOnlyStagingBlogSlugs.join(', ')}`
+    );
+  }
   await diagnostics.anchor('start');
   const response = await page.goto(
     new URL('/components/switch', baseUrl).href,
