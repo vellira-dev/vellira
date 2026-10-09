@@ -1,0 +1,6 @@
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -3 +3 @@
+-var punycode = require("punycode");
++var punycode = require("punycode/");

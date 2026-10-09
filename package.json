@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.130.11",
+  "version": "2.130.12",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -152,6 +152,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1",
     "prettier": "^3.9.8",
+    "punycode": "2.3.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "semantic-release": "^25.0.9",
@@ -163,7 +164,7 @@
     "turbo": "^2.11.2",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.70.1",
-    "wrangler": "^4.136.2"
+    "wrangler": "4.136.3"
   },
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
 }
