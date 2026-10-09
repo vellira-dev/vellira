@@ -267,6 +267,7 @@ test('diagnostics recover transient Cloudflare edge RSC 503 only on the exact bu
   );
 
   await page.goto(`${origin}/fixture`);
+  const edgeCursor = diagnostics.edgeFailureCursor();
   await page.evaluate(() =>
     fetch('/rsc?_rsc=edge-test', { headers: { RSC: '1' } })
   );
@@ -279,6 +280,14 @@ test('diagnostics recover transient Cloudflare edge RSC 503 only on the exact bu
 
   await diagnostics.recoverEdgeFailures('test recovery');
   assert.doesNotThrow(() => diagnostics.assertHealthy('after recovery'));
+  assert.equal(
+    diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, '/rsc'),
+    true
+  );
+  assert.equal(
+    diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, '/other'),
+    false
+  );
   assert.equal(rscRequests, 2);
 
   await diagnostics.finish(null);
