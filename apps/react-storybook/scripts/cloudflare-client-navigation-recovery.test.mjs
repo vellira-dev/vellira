@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   destinationEdgeFailures,
   isRecoveredDocumentFallback,
+  isSafeClientNavigationReplay,
   runRecoverableClientNavigation,
 } from './cloudflare-client-navigation-recovery.mjs';
 
@@ -184,6 +185,38 @@ test('document fallback fails closed without edge proof, exact build, or a new d
           'set-cookie': 'migration=1',
         },
       },
+    }),
+    false
+  );
+});
+
+
+test('soak navigation replay requires recovered edge, same route and same document', () => {
+  const fixture = {
+    baseUrl: 'https://vellira.test',
+    startPath: '/components/radio',
+    currentUrl: 'https://vellira.test/components/radio',
+    expectedDocumentToken: 'doc-1',
+    currentDocumentToken: 'doc-1',
+    edgeRecovered: true,
+  };
+
+  assert.equal(isSafeClientNavigationReplay(fixture), true);
+  assert.equal(
+    isSafeClientNavigationReplay({ ...fixture, edgeRecovered: false }),
+    false
+  );
+  assert.equal(
+    isSafeClientNavigationReplay({
+      ...fixture,
+      currentUrl: 'https://vellira.test/components/checkbox',
+    }),
+    false
+  );
+  assert.equal(
+    isSafeClientNavigationReplay({
+      ...fixture,
+      currentDocumentToken: 'doc-2',
     }),
     false
   );
