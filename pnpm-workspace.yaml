@@ -90,6 +90,9 @@ patchedDependencies:
   # CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm: upstream braces#72 depth-bound backport.
   # Remove when a published braces release contains the fix.
   'braces@3.0.3': patches/braces@3.0.3.patch
+  # CVE-2026-97058 / GHSA-hp3w-g68c-fv3c: adapted upstream sprintf.js#238 precision-bound backport.
+  # Remove when a published sprintf-js release contains the fix.
+  'sprintf-js@1.0.3': patches/sprintf-js@1.0.3.patch
   # CVE-2026-85393 / GHSA-86w9-cpqp-85rv: upstream forge#1152 backport.
   # Remove after node-forge publishes a release containing commit ceba34402e329f0365134f23fe19898756527d65.
   'node-forge@1.4.0': patches/node-forge@1.4.0.patch
