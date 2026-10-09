@@ -30,21 +30,27 @@ export function cloudflareCandidateCommand(root, mode) {
     .readdirSync(path.join(root, storybook))
     .filter((name) => /^cloudflare-.*recovery(?:\.test)?\.mjs$/.test(name))
     .sort();
-  for (const name of recovery) {
-    requireFile(`${storybook}/${name}`);
+  const featurePolicies = [
+    ...recovery.map((name) => `${storybook}/${name}`),
+    ...fs
+      .readdirSync(path.join(root, 'apps/website/scripts'))
+      .filter((name) => /^cloudflare-edge-fetch(?:\.test)?\.mjs$/.test(name))
+      .sort()
+      .map((name) => `apps/website/scripts/${name}`),
+  ];
+  for (const name of featurePolicies) {
+    requireFile(name);
     const pair = name.endsWith('.test.mjs')
       ? name.replace('.test.mjs', '.mjs')
       : name.replace('.mjs', '.test.mjs');
-    requireFile(`${storybook}/${pair}`);
+    requireFile(pair);
   }
   if (mode === 'test') {
     return [
       process.execPath,
       '--test',
       `${storybook}/cloudflare-blog-metrics-smoke-policy.test.mjs`,
-      ...recovery
-        .filter((name) => name.endsWith('.test.mjs'))
-        .map((name) => `${storybook}/${name}`),
+      ...featurePolicies.filter((name) => name.endsWith('.test.mjs')),
     ];
   }
   const family = (directory) => {
