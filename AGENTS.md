@@ -38,7 +38,8 @@ When working in `packages/react-native`, always read and follow
 
 ## Engineering change admission
 
-Before opening any non-bot engineering pull request, read and follow
+Before opening any engineering pull request that is not owned by an explicitly
+trusted automation identity, read and follow
 `docs/architecture/engineering-change-admission.md`.
 
 Derive a stable change-intent ID from the root problem and violated contract, not

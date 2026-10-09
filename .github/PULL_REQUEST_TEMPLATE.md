@@ -5,8 +5,8 @@
 ## Change intent
 
 <!--
-For non-bot engineering PRs, replace "replace-me" with one stable lowercase
-kebab-case ID for the root problem, not the proposed patch. Search open PRs for
+For PRs not owned by a trusted automation identity, replace "replace-me" with
+one stable lowercase kebab-case ID for the root problem, not the proposed patch. Search open PRs for
 the exact marker before opening this PR; continue an existing matching PR instead
 of creating a superseding PR.
 -->

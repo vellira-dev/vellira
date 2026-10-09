@@ -2,7 +2,7 @@
 
 ## Status
 
-Canonical repository contract for admitting non-bot engineering pull requests.
+Canonical repository contract for admitting engineering pull requests that are not owned by an explicitly trusted automation identity.
 
 This contract prevents one root engineering problem from producing multiple
 overlapping implementation pull requests that later have to be closed as
@@ -51,7 +51,7 @@ candidate, certification, or delivery IDs.
 
 ## Creator-side preflight
 
-Before opening a non-bot engineering PR:
+Before opening an engineering PR that is not owned by an explicitly trusted automation identity:
 
 1. perform enough root-cause and impact analysis to name the violated contract,
    not only the first symptom;
@@ -125,7 +125,7 @@ validator; the workflow records that bootstrap state instead of executing
 candidate validator code. Once the validator exists on `main`, the trusted-base
 check is mandatory on subsequent PRs.
 
-Non-bot PRs created on or after **2026-10-08T20:00:00Z** require the marker.
+PRs not owned by an explicitly trusted automation identity and created on or after **2026-10-08T20:00:00Z** require the marker.
 Earlier open PRs are grandfathered so adoption does not break historical work.
 Only explicitly trusted GitHub automation identities are exempt from the marker:
 `dependabot[bot]`, `github-actions[bot]`, `vellira-content-agent[bot]`, and

@@ -132,7 +132,8 @@ permissions; it never creates, edits, closes, merges, or retargets a PR.
 
 Creator-side preflight remains the primary duplicate-prevention mechanism because
 it runs before PR creation. CI exists to catch bypasses and races: newly admitted
-non-bot engineering PRs require one stable root-problem marker, and a second open
+PRs outside the trusted automation allowlist require one stable root-problem marker,
+and a second open
 PR with the same marker fails closed. Historical PRs created before the adoption
 cutoff remain grandfathered. Only the explicitly reviewed bot identities in the
 trusted-base validator bypass the marker. PR body text, branch names, titles, and
