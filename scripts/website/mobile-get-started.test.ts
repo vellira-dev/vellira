@@ -35,4 +35,14 @@ describe('mobile Get started CTA', () => {
       /\.actions,\s*\.externalActions,\s*\.ctaButton\s*{\s*display:\s*none;/
     );
   });
+
+  it('switches the global header to compact navigation before the 1280px overlap boundary', () => {
+    expect(headerStyles).toContain('@media (width <= 1280px)');
+    expect(headerStyles).toMatch(
+      /@media \(width <= 1280px\)[\s\S]*?\.navigation\s*\{\s*display:\s*none;/
+    );
+    expect(headerStyles).toMatch(
+      /@media \(width <= 1280px\)[\s\S]*?\.mobileMenuTrigger,[\s\S]*?\.mobileAction\s*\{[\s\S]*?display:\s*inline-flex;/
+    );
+  });
 });

@@ -178,7 +178,7 @@ export const Button = forwardRef<
             <span className={styles.spinner} aria-hidden='true' />
           ))}
         {!loading && iconStart && (
-          <span className={styles.icon}>{iconStart}</span>
+          <span className={cn(styles.icon, styles.iconStart)}>{iconStart}</span>
         )}
         {content &&
           !iconOnly &&
@@ -199,7 +199,9 @@ export const Button = forwardRef<
           ) : (
             <span className={styles.shortcut}>{shortcut}</span>
           ))}
-        {!loading && iconEnd && <span className={styles.icon}>{iconEnd}</span>}
+        {!loading && iconEnd && (
+          <span className={cn(styles.icon, styles.iconEnd)}>{iconEnd}</span>
+        )}
       </>
     );
 

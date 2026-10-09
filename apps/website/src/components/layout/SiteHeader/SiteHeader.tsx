@@ -365,18 +365,35 @@ export function SiteHeader({
                   ))}
                 </nav>
 
-                <Button
-                  asChild
-                  size='sm'
-                  className={styles.mobileNavigationCta}
-                >
-                  <a
-                    href='https://docs.vellira.dev/start/getting-started'
-                    onClick={() => setResolvedMobileMenuOpen(false)}
+                <div className={styles.mobileNavigationActions}>
+                  <Button
+                    asChild
+                    size='sm'
+                    appearance='outline'
+                    color='neutral'
+                    className={styles.mobileNavigationCta}
                   >
-                    Get started
-                  </a>
-                </Button>
+                    <Link
+                      href='/login'
+                      onClick={() => setResolvedMobileMenuOpen(false)}
+                    >
+                      Sign in
+                    </Link>
+                  </Button>
+
+                  <Button
+                    asChild
+                    size='sm'
+                    className={styles.mobileNavigationCta}
+                  >
+                    <a
+                      href='https://docs.vellira.dev/start/getting-started'
+                      onClick={() => setResolvedMobileMenuOpen(false)}
+                    >
+                      Get started
+                    </a>
+                  </Button>
+                </div>
 
                 <div className={styles.mobileNavigationFooter}>
                   <ThemeSwitcher />
@@ -443,11 +460,25 @@ export function SiteHeader({
             />
           )}
 
-          <Button asChild size='sm' className={styles.ctaButton}>
-            <a href='https://docs.vellira.dev/start/getting-started'>
-              Get started
-            </a>
-          </Button>
+          <div className={styles.authActions}>
+            <Button
+              asChild
+              size='sm'
+              appearance='ghost'
+              color='neutral'
+              className={styles.signInButton}
+            >
+              <Link href='/login' prefetch>
+                Sign in
+              </Link>
+            </Button>
+
+            <Button asChild size='sm' className={styles.ctaButton}>
+              <a href='https://docs.vellira.dev/start/getting-started'>
+                Get started
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
     </header>

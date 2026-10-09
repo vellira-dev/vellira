@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fs from 'node:fs/promises';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
@@ -208,4 +209,77 @@ test('an opt-in expected 404 is reconciled only with its matching resource conso
     () => diagnostics.assertHealthy('unexpected 404'),
     /api\/unexpected/
   );
+});
+
+
+test('diagnostics recover transient Cloudflare edge RSC 503 only on the exact build', async (t) => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-browser-edge-recovery-test-')
+  );
+  let rscRequests = 0;
+  const server = http.createServer((request, response) => {
+    if (request.url?.startsWith('/rsc')) {
+      rscRequests += 1;
+      if (rscRequests === 1) {
+        response.statusCode = 503;
+        response.setHeader('Server', 'cloudflare');
+        response.setHeader('Content-Type', 'text/html');
+        response.end('temporary edge failure');
+        return;
+      }
+      response.statusCode = 200;
+      response.setHeader('Server', 'cloudflare');
+      response.setHeader('x-vellira-build-id', 'build-1');
+      response.setHeader('Content-Type', 'text/x-component');
+      response.end('recovered');
+      return;
+    }
+
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'text/html');
+    response.end('<title>Fixture</title><h1>Fixture</h1>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(
+    () =>
+      new Promise((resolve) => {
+        server.close(resolve);
+      })
+  );
+
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  const origin = `http://127.0.0.1:${address.port}`;
+
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const diagnostics = await captureDiagnostics(
+    page,
+    context,
+    origin,
+    directory,
+    { expectedBuildId: 'build-1' }
+  );
+
+  await page.goto(`${origin}/fixture`);
+  await page.evaluate(() =>
+    fetch('/rsc?_rsc=edge-test', { headers: { RSC: '1' } })
+  );
+  await page.waitForTimeout(50);
+
+  assert.throws(
+    () => diagnostics.assertHealthy('before recovery'),
+    /\/rsc\?_rsc=edge-test/
+  );
+
+  await diagnostics.recoverEdgeFailures('test recovery');
+  assert.doesNotThrow(() => diagnostics.assertHealthy('after recovery'));
+  assert.equal(rscRequests, 2);
+
+  await diagnostics.finish(null);
 });

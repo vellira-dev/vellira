@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.127.0",
+  "version": "2.129.3",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -38,7 +38,7 @@
     "ci:build": "turbo run build",
     "ci:typecheck": "pnpm typecheck && pnpm typecheck:tooling && pnpm docs:api:check && pnpm check:public-api",
     "ci:playwright": "pnpm --filter @vellira-ui/react-storybook run playwright:install",
-    "ci:test": "pnpm test && pnpm test:component-pages && pnpm test:component-page-generator && pnpm test:blog && pnpm test:e2e:web && pnpm test:coverage",
+    "ci:test": "pnpm test && pnpm test:product-app && pnpm test:component-pages && pnpm test:component-page-generator && pnpm test:blog && pnpm test:e2e:web && pnpm test:coverage",
     "ci:smoke": "pnpm smoke:web && pnpm smoke:native",
     "typecheck": "turbo run typecheck",
     "typecheck:tooling": "tsc -p tsconfig.tooling.json --noEmit && tsc -p tsconfig.tooling.test.json --noEmit",
@@ -94,7 +94,7 @@
     "storybook:native": "pnpm --filter native-storybook start",
     "storybook:native:ios": "pnpm --filter native-storybook ios",
     "storybook:native:android": "pnpm --filter native-storybook android",
-    "website:dev": "pnpm --filter @vellira-ui/website dev",
+    "website:dev": "pnpm --filter @vellira-ui/tokens build:tokens && pnpm --filter @vellira-ui/react build && pnpm --filter @vellira-ui/website dev",
     "website:build": "pnpm --filter @vellira-ui/website build",
     "website:typecheck": "pnpm --filter @vellira-ui/website typecheck",
     "lighthouse": "pnpm lighthouse:docs && pnpm lighthouse:website",
@@ -119,7 +119,8 @@
     "component-token-reservation:json": "node --import tsx scripts/component-token-reservation/cli.ts",
     "check:component-quality:contract": "node --import tsx scripts/checks/component-quality/completion-contract-cli.ts",
     "check:seo-meta-descriptions": "vitest run --config vitest.tooling.config.ts scripts/seo/meta-description-quality.test.ts",
-    "release-candidate:pack": "node scripts/release-candidate/cli.cjs"
+    "release-candidate:pack": "node scripts/release-candidate/cli.cjs",
+    "test:product-app": "vitest run --config vitest.tooling.config.ts scripts/website/product-app-contract.test.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

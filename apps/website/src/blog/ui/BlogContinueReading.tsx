@@ -1,6 +1,5 @@
-import Link from 'next/link';
-
 import type { BlogArticleMetadata } from '../types';
+import { BlogDesignSystemLink } from './BlogDesignSystemLink';
 import { formatBlogDate } from './formatBlogDate';
 
 import styles from './BlogContinueReading.module.css';
@@ -30,9 +29,10 @@ export function BlogContinueReading({ articles }: BlogContinueReadingProps) {
 
       <div className={styles.grid}>
         {visibleArticles.map((article) => (
-          <Link
+          <BlogDesignSystemLink
             key={article.slug}
             href={`/blog/${article.slug}`}
+            appearance='bare'
             className={styles.card}
             aria-label={`Read ${article.title}`}
           >
@@ -52,13 +52,17 @@ export function BlogContinueReading({ articles }: BlogContinueReadingProps) {
             </div>
 
             <span className={styles.cta}>Read article</span>
-          </Link>
+          </BlogDesignSystemLink>
         ))}
       </div>
 
-      <Link href='/blog' className={styles.viewAll}>
+      <BlogDesignSystemLink
+        href='/blog'
+        direction='forward'
+        className={styles.viewAll}
+      >
         View all articles
-      </Link>
+      </BlogDesignSystemLink>
     </section>
   );
 }

@@ -8,7 +8,9 @@ if (!baseUrl) {
 
 const origin = new URL(baseUrl).origin;
 const browser = await chromium.launch();
-const context = await browser.newContext();
+const context = await browser.newContext({
+  viewport: { width: 1440, height: 900 },
+});
 const page = await context.newPage();
 const criticalDiagnostics = [];
 const abortedChunkUrls = new Set();

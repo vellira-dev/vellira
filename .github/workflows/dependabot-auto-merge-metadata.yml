@@ -132,11 +132,13 @@ jobs:
               'Security remediation provenance marker is missing or malformed'
             );
           }
-          if (marker[1] !== process.env.PR_BASE_SHA) {
-            throw new Error('Security remediation base SHA marker mismatch');
-          }
-          if (marker[2] !== process.env.PR_HEAD_SHA) {
-            throw new Error('Security remediation head SHA marker mismatch');
+          if (
+            !/^[0-9a-f]{40}$/.test(process.env.PR_BASE_SHA ?? '') ||
+            !/^[0-9a-f]{40}$/.test(process.env.PR_HEAD_SHA ?? '')
+          ) {
+            throw new Error(
+              'Security remediation current PR base/head must be exact SHAs'
+            );
           }
 
           const sourceRunId = Number(marker[3]);
@@ -152,7 +154,9 @@ jobs:
 
           fs.appendFileSync(
             process.env.GITHUB_OUTPUT,
-            `source_run_id=${sourceRunId}\n` +
+            `candidate_base_sha=${marker[1]}\n` +
+              `candidate_head_sha=${marker[2]}\n` +
+              `source_run_id=${sourceRunId}\n` +
               `source_run_attempt=${sourceRunAttempt}\n` +
               `audit_level=${marker[5]}\n` +
               `dependency_scope=${marker[6]}\n`
@@ -164,7 +168,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_BASE_SHA: ${{ steps.envelope.outputs.candidate_base_sha }}
           SOURCE_RUN_ID: ${{ steps.envelope.outputs.source_run_id }}
           SOURCE_RUN_ATTEMPT: ${{ steps.envelope.outputs.source_run_attempt }}
         run: |
@@ -232,8 +236,8 @@ jobs:
         shell: bash
         env:
           REPOSITORY: ${{ github.repository }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CANDIDATE_BASE_SHA: ${{ steps.envelope.outputs.candidate_base_sha }}
+          CANDIDATE_HEAD_SHA: ${{ steps.envelope.outputs.candidate_head_sha }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           AUDIT_LEVEL: ${{ steps.envelope.outputs.audit_level }}
           DEPENDENCY_SCOPE: ${{ steps.envelope.outputs.dependency_scope }}
@@ -259,8 +263,8 @@ jobs:
           );
           const expected = {
             repository: process.env.REPOSITORY,
-            baseSha: process.env.PR_BASE_SHA,
-            headSha: process.env.PR_HEAD_SHA,
+            baseSha: process.env.CANDIDATE_BASE_SHA,
+            headSha: process.env.CANDIDATE_HEAD_SHA,
             branch: process.env.PR_HEAD_REF,
             auditLevel: process.env.AUDIT_LEVEL,
             dependencyScope: process.env.DEPENDENCY_SCOPE,
@@ -282,6 +286,55 @@ jobs:
                 /^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/i.test(
                   entry
                 )
+            );
+          const validRegistryUnavailablePatches = (value) =>
+            Array.isArray(value) &&
+            value.every(
+              (entry) =>
+                entry &&
+                typeof entry === 'object' &&
+                !Array.isArray(entry) &&
+                validGhsaList([entry.ghsaId]) &&
+                typeof entry.package === 'string' &&
+                entry.package.length > 0 &&
+                typeof entry.firstPatchedVersion === 'string' &&
+                entry.firstPatchedVersion.length > 0
+            ) &&
+            new Set(
+              value.map(
+                (entry) =>
+                  `${entry.ghsaId}\0${entry.package}\0${entry.firstPatchedVersion}`
+              )
+            ).size === value.length;
+          const validAuditGapMaterializations = (value) =>
+            value &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            value.schemaVersion === 1 &&
+            Array.isArray(value.packages) &&
+            value.packages.every(
+              (entry) => typeof entry === 'string' && entry.length > 0
+            ) &&
+            Array.isArray(value.materializations) &&
+            value.materializations.every(
+              (entry) =>
+                entry &&
+                typeof entry === 'object' &&
+                !Array.isArray(entry) &&
+                typeof entry.package === 'string' &&
+                value.packages.includes(entry.package) &&
+                typeof entry.vulnerableVersionRange === 'string' &&
+                entry.vulnerableVersionRange.length > 0 &&
+                typeof entry.selector === 'string' &&
+                entry.selector.length > 0 &&
+                typeof entry.target === 'string' &&
+                entry.target.length > 0 &&
+                typeof entry.releaseAgeEntry === 'string' &&
+                entry.releaseAgeEntry.length > 0 &&
+                Array.isArray(entry.alertNumbers) &&
+                entry.alertNumbers.every(Number.isSafeInteger) &&
+                Array.isArray(entry.ghsaIds) &&
+                validGhsaList(entry.ghsaIds)
             );
 
           if (
@@ -313,10 +366,16 @@ jobs:
               (packageName) =>
                 !candidate.authorizedPackages.includes(packageName)
             ) ||
-            !validGhsaList(candidate.ignoredRuntimeGhsas)
+            !validGhsaList(candidate.ignoredRuntimeGhsas) ||
+            !validRegistryUnavailablePatches(
+              candidate.registryUnavailablePatches
+            ) ||
+            !validAuditGapMaterializations(
+              candidate.auditGapMaterializations
+            )
           ) {
             throw new Error(
-              'Security remediation candidate artifact does not authenticate this PR head'
+              'Security remediation candidate artifact does not authenticate the immutable source candidate'
             );
           }
           NODE
@@ -326,7 +385,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ steps.envelope.outputs.candidate_base_sha }}
         run: |
           set -euo pipefail
 
@@ -371,7 +430,7 @@ jobs:
 
           for file in "${changed_files[@]}"; do
             case "$file" in
-              .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts)
+              .github/workflows/dependabot-security-remediation.yml|.github/workflows/dependabot-auto-merge-metadata.yml|.github/workflows/dependabot-auto-merge.yml|scripts/ci/dependabot-security-remediation.mjs|scripts/ci/dependabot-security-remediation.test.mjs|scripts/ci/dependabot-security-remediation-policy.test.ts|scripts/ci/dependabot-auto-merge-policy.test.ts)
                 ;;
               *)
                 echo "::error::Self-proof source changed forbidden path: $file"
@@ -399,6 +458,66 @@ jobs:
       - name: Install exact remediated dependency graph
         run: pnpm install --frozen-lockfile
 
+      - name: Revalidate registry-unavailable patched releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="/tmp/security-remediation-registry-response.json"
+
+          while IFS= read -r row; do
+            ghsa="$(jq -r '.ghsaId' <<<"$row")"
+            package="$(jq -r '.package' <<<"$row")"
+            version="$(jq -r '.firstPatchedVersion' <<<"$row")"
+
+            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
+              echo "::error::Invalid authenticated registry-unavailable GHSA: $ghsa"
+              exit 1
+            }
+            encoded_package="$(
+              node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$package"
+            )"
+            encoded_version="$(
+              node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$version"
+            )"
+
+            set +e
+            http_status="$(
+              curl \
+                --silent \
+                --show-error \
+                --location \
+                --connect-timeout 10 \
+                --max-time 30 \
+                --output "$response_file" \
+                --write-out '%{http_code}' \
+                "https://registry.npmjs.org/${encoded_package}/${encoded_version}"
+            )"
+            curl_status=$?
+            set -e
+
+            if [[ "$curl_status" -ne 0 ]]; then
+              echo "::error::npm registry revalidation failed for $package@$version."
+              exit "$curl_status"
+            fi
+
+            case "$http_status" in
+              404) ;;
+              200)
+                echo "::error::Previously unavailable patched release is now published: $package@$version. Regenerate the remediation candidate."
+                exit 1
+                ;;
+              *)
+                echo "::error::npm registry returned HTTP $http_status while revalidating $package@$version."
+                cat "$response_file" >&2 || true
+                exit 1
+                ;;
+            esac
+          done < <(
+            jq -c '.registryUnavailablePatches[]' \
+              /tmp/security-remediation-source/candidate.json
+          )
+          rm -f "$response_file"
+
       - name: Validate dependency-only remediation diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -407,22 +526,20 @@ jobs:
           --base "$BASE_SHA"
           --candidate /tmp/security-remediation-source/candidate.json
 
-      - name: Prove in-scope registry advisories are closed by the candidate
+      - name: Prove authenticated registry advisories are closed
         shell: bash
         run: |
           set -euo pipefail
-          ignore_args=()
-          while IFS= read -r ghsa; do
-            [[ "$ghsa" =~ ^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$ ]] || {
-              echo "::error::Invalid authenticated runtime GHSA exclusion: $ghsa"
-              exit 1
-            }
-            ignore_args+=(--ignore "$ghsa")
-          done < <(
-            jq -r '.ignoredRuntimeGhsas[]' /tmp/security-remediation-source/candidate.json
-          )
+          set +e
+          pnpm audit --dev --audit-level ${{ steps.envelope.outputs.audit_level }} --json > /tmp/security-remediation-source/audit-current.json
+          status=$?
+          set -e
+          echo "Authenticated candidate audit exit code: $status" >> "$GITHUB_STEP_SUMMARY"
 
-          pnpm audit --dev --ignore-unfixable --audit-level ${{ steps.envelope.outputs.audit_level }} "${ignore_args[@]}"
+          node scripts/ci/dependabot-security-remediation.mjs verify-remediated-audit \
+            --audit /tmp/security-remediation-source/audit-current.json \
+            --candidate /tmp/security-remediation-source/candidate.json \
+            --level ${{ steps.envelope.outputs.audit_level }}
 
       - name: Write immutable security auto-merge decision
         shell: bash
@@ -518,9 +635,15 @@ jobs:
             sourceRunAttempt,
             sourceEvent: candidate.sourceEvent,
             sourceBeforeSha: candidate.sourceBeforeSha,
+            sourceCandidateBaseSha: candidate.baseSha,
+            sourceCandidateHeadSha: candidate.headSha,
             authorizedPackages: candidate.authorizedPackages,
             changedPackages: candidate.changedPackages,
             ignoredRuntimeGhsas: candidate.ignoredRuntimeGhsas,
+            registryUnavailablePatches:
+              candidate.registryUnavailablePatches,
+            auditGapMaterializations:
+              candidate.auditGapMaterializations,
             eligible: true,
           };
 

@@ -1,6 +1,8 @@
 export const PRODUCTION_DEPLOYMENT_PATH_PATTERNS = Object.freeze([
   'apps/website/**',
   'apps/react-storybook/scripts/cloudflare-website-smoke.mjs',
+  'apps/react-storybook/scripts/cloudflare-edge-recovery.mjs',
+  'apps/react-storybook/scripts/cloudflare-edge-recovery.test.mjs',
   'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.mjs',
   'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.test.mjs',
   'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs',

@@ -330,15 +330,15 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
             {shareLinks.map((link) => (
               <Tooltip key={link.label} placement='top'>
                 <Tooltip.Trigger asChild>
-                  <a
+                  <Button
+                    appearance='bare'
                     className={styles.articleIconButton}
                     href={link.href}
                     target='_blank'
-                    rel='noreferrer noopener'
                     aria-label={link.label}
                   >
                     {link.icon}
-                  </a>
+                  </Button>
                 </Tooltip.Trigger>
                 <Portal>
                   <Tooltip.Content withArrow>{link.label}</Tooltip.Content>

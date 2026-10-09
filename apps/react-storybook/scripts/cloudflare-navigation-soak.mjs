@@ -157,6 +157,7 @@ async function ready(href, title) {
     throw new Error(`Client navigation replaced the document at ${href}`);
   }
   await page.waitForTimeout(dwellMs);
+  await diagnostics.recoverEdgeFailures(`settled ${href}`);
   diagnostics.assertHealthy(`settled ${href}`);
   assertRscCachePolicy(`settled ${href}`);
 }
@@ -278,6 +279,7 @@ try {
   await components();
   await blog();
   await page.waitForTimeout(5_000);
+  await diagnostics.recoverEdgeFailures('final preload settle');
   diagnostics.assertHealthy('final preload settle');
   assertRscCachePolicy('final preload settle');
   if (observedRscResponses === 0) {
@@ -292,6 +294,7 @@ try {
 } finally {
   try {
     await diagnostics.finish(failure);
+    await diagnostics.recoverEdgeFailures('diagnostic capture settle');
     diagnostics.assertHealthy('diagnostic capture settle');
     assertRscCachePolicy('diagnostic capture settle');
     if (!failure) {

@@ -212,6 +212,7 @@ jobs:
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
+          scripts/cloudflare-edge-recovery.test.mjs
 
       - name: Verify production component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry

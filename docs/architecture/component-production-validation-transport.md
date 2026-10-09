@@ -84,3 +84,12 @@ Validation-only resume is an internal lifecycle responsibility. It must reuse th
 completed provider response, verify the prior Apply receipt and durable candidate,
 leave that receipt immutable, and seal one successor before publishing any repair
 request. Tooling changes grant no additional provider write authority or budget.
+
+Website readiness includes the actual website TypeScript consumer check after
+both renderer packages and their dependency closures build. Projection freshness
+and metadata audits alone cannot prove that generated previews satisfy required
+component props. A failed prerequisite defers this typecheck while independent
+projection checks still run; a deferred check cannot grant website readiness.
+Compiler findings remain visible as candidate evidence when they bind to the
+authorized generated consumer files. Historical successful seals remain evidence
+of their original validator revision, not proof that later-discovered gaps passed.

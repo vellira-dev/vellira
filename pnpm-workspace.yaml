@@ -17,6 +17,11 @@ minimumReleaseAgeExclude:
   - '@storybook/react-native-ui-lite@10.4.5'
   - '@storybook/react-native-ui@10.4.5'
   - '@storybook/react-native@10.4.5'
+  - source-map-js@1.2.2
+  - proxy-addr@2.0.8
+  - compression@1.8.2
+  - sharp@0.35.5
+  - handlebars@4.7.10
 nodeLinker: hoisted
 
 overrides:
@@ -71,6 +76,11 @@ overrides:
   'valibot@<=1.4.1': 1.4.2
   'vite@<=6.4.2': 6.4.3
   tmp: 0.2.7
+  compression@<1.8.2: ^1.8.2
+  handlebars@>=4.0.0 <=4.7.9: ^4.7.10
+  proxy-addr@>=1.1.0 <2.0.8: ^2.0.8
+  sharp@<0.35.5: ^0.35.5
+  source-map-js@>=1.0.0 <1.2.2: ^1.2.2
 
 patchedDependencies:
   # CVE-2026-85393 / GHSA-86w9-cpqp-85rv: upstream forge#1152 backport.
@@ -79,5 +89,5 @@ patchedDependencies:
   # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
   # Remove when a stable OpenNext release contains the string-shorthand guard.
   '@opennextjs/cloudflare@1.20.6': patches/@opennextjs__cloudflare@1.20.6.patch
-  next@16.3.6: patches/next@16.3.6.patch
+  next@16.3.8: patches/next@16.3.8.patch
 allowUnusedPatches: false

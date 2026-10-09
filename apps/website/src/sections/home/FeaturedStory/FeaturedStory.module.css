@@ -1,0 +1,209 @@
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 0 var(--space-6);
+  background: var(--surface-default);
+}
+
+.container {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.34fr) minmax(0, 0.66fr);
+  overflow: hidden;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary-500) 5%, transparent),
+      transparent 48%
+    ),
+    var(--surface-default);
+  border: 1px solid var(--border-muted);
+  border-radius: calc(var(--radius-xl) + var(--space-2));
+  box-shadow: var(--shadow-lg), var(--shadow-inset);
+}
+
+.sourcePanel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(var(--space-8) + var(--space-1));
+  background:
+    radial-gradient(
+      circle at 20% 12%,
+      color-mix(in srgb, var(--color-primary-500) 16%, transparent),
+      transparent 44%
+    ),
+    color-mix(in srgb, var(--surface-subtle) 82%, transparent);
+  border-right: 1px solid var(--border-muted);
+  gap: var(--space-8);
+}
+
+.sourceIdentity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sourceMark {
+  display: grid;
+  flex: 0 0 auto;
+  width: calc(var(--space-12) + var(--space-2));
+  height: calc(var(--space-12) + var(--space-2));
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  background: var(--surface-default);
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-500) 28%, var(--border-muted));
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  place-items: center;
+}
+
+.sourceIdentity > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.sourceEyebrow,
+.eyebrow {
+  color: var(--color-primary-400);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sourceIdentity strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+}
+
+.externalBadge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background: var(--surface-default);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-full);
+}
+
+.content {
+  display: grid;
+  min-width: 0;
+  padding: calc(var(--space-8) + var(--space-1));
+  gap: calc(var(--space-6) + var(--space-1));
+}
+
+.copy {
+  display: grid;
+  max-width: 760px;
+  gap: var(--space-4);
+}
+
+.copy h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.copy p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: 1.7;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: 0.8fr 0.8fr 1.4fr;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-muted);
+  border-bottom: 1px solid var(--border-muted);
+  gap: var(--space-5);
+}
+
+.meta > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.meta span {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.meta strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.action {
+  justify-self: start;
+  width: fit-content;
+}
+
+@media (width <= 860px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+
+  .sourcePanel {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--space-6);
+    border-right: 0;
+    border-bottom: 1px solid var(--border-muted);
+  }
+}
+
+@media (width <= 640px) {
+  .section {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+
+  .sourcePanel,
+  .content {
+    padding: var(--space-5);
+  }
+
+  .sourcePanel {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .copy h2 {
+    font-size: clamp(28px, 9vw, 36px);
+  }
+
+  .meta {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .action {
+    width: 100%;
+  }
+}

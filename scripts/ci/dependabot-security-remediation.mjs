@@ -344,47 +344,62 @@ export function validatePlanAgainstRegistryEvidence(plan, registryEvidence) {
     !Array.isArray(plan.packages) ||
     !Array.isArray(plan.fixablePackages) ||
     !Array.isArray(plan.alerts) ||
-    !Array.isArray(registryEvidence.packages)
+    !Array.isArray(registryEvidence.packages) ||
+    !Array.isArray(registryEvidence.advisories)
   ) {
     throw new Error('Dependabot remediation plan is malformed or mismatched');
   }
 
+  const authorizedPackages = new Set(plan.fixablePackages);
   const confirmedPackages = new Set(registryEvidence.packages);
-  const missing = plan.fixablePackages.filter(
-    (packageName) => !confirmedPackages.has(packageName)
-  );
-  if (missing.length > 0) {
-    throw new Error(
-      `Dependabot remediation package(s) are absent from the registry audit evidence: ${missing.join(', ')}`
-    );
-  }
-
-  if (!Array.isArray(registryEvidence.advisories)) {
-    throw new Error('Registry audit advisory evidence is malformed');
-  }
   const auditAdvisories = new Set(
     registryEvidence.advisories.map(
       (advisory) => `${advisory.ghsaId}\0${advisory.package}`
     )
   );
-  const missingAdvisories = plan.alerts
-    .filter(
-      (alert) =>
-        alert?.blockedByRuntimeScope !== true &&
-        typeof alert?.firstPatchedVersion === 'string' &&
-        alert.firstPatchedVersion.length > 0
-    )
+  const actionableAlerts = plan.alerts.filter(
+    (alert) =>
+      alert?.blockedByRuntimeScope !== true &&
+      alert?.blockedByRegistryAvailability !== true &&
+      authorizedPackages.has(alert?.package) &&
+      typeof alert?.firstPatchedVersion === 'string' &&
+      alert.firstPatchedVersion.length > 0
+  );
+  const missingAdvisories = actionableAlerts
     .filter(
       (alert) =>
         !auditAdvisories.has(`${alert.ghsaId}\0${alert.package}`)
     )
-    .map((alert) => `${alert.ghsaId ?? '?'}:${alert.package ?? '?'}`)
-    .sort();
-  if (missingAdvisories.length > 0) {
-    throw new Error(
-      `Dependabot remediation advisory evidence is absent from the registry audit: ${missingAdvisories.join(', ')}`
-    );
-  }
+    .map((alert) => ({
+      number: alert.number ?? null,
+      ghsaId: alert.ghsaId ?? null,
+      package: alert.package ?? null,
+      severity: alert.severity ?? null,
+      vulnerableVersionRange: alert.vulnerableVersionRange ?? null,
+      firstPatchedVersion: alert.firstPatchedVersion ?? null,
+    }))
+    .sort((a, b) => {
+      const byPackage = String(a.package).localeCompare(String(b.package));
+      if (byPackage !== 0) {
+        return byPackage;
+      }
+      return String(a.ghsaId).localeCompare(String(b.ghsaId));
+    });
+
+  return {
+    schemaVersion: 1,
+    auditLevel: plan.auditLevel,
+    matchedPackages: plan.fixablePackages
+      .filter((packageName) => confirmedPackages.has(packageName))
+      .sort(),
+    missingPackages: plan.fixablePackages
+      .filter((packageName) => !confirmedPackages.has(packageName))
+      .sort(),
+    registryOnlyPackages: registryEvidence.packages
+      .filter((packageName) => !authorizedPackages.has(packageName))
+      .sort(),
+    missingAdvisories,
+  };
 }
 
 function workspaceMutationSummary(workspaceBefore, workspaceAfter) {
@@ -435,6 +450,550 @@ function workspaceMutationSummary(workspaceBefore, workspaceAfter) {
     overrideMutations,
     releaseAgeMutations,
     changedPackages: [...changedPackages].sort(),
+  };
+}
+
+
+function rawMapSectionEntries(section) {
+  const entries = new Map();
+  if (section === undefined) {
+    return entries;
+  }
+
+  section.lines.slice(1).forEach((line, offset) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith('#')) {
+      return;
+    }
+    const match = /^ {2}(\S.*?):\s*(.*?)\s*$/.exec(line.trimEnd());
+    if (!match) {
+      throw new Error(
+        `Unsupported mapping syntax in pnpm-workspace.yaml section ${section.key}: ${line}`
+      );
+    }
+    const key = normalizeScalar(match[1]);
+    if (entries.has(key)) {
+      throw new Error(
+        `Duplicate pnpm-workspace.yaml entry in ${section.key}: ${key}`
+      );
+    }
+    entries.set(key, {
+      key,
+      value: normalizeScalar(match[2]),
+      line: line.trimEnd(),
+      index: offset + 1,
+    });
+  });
+
+  return entries;
+}
+
+function rawListSectionEntries(section) {
+  const entries = new Map();
+  if (section === undefined) {
+    return entries;
+  }
+
+  section.lines.slice(1).forEach((line, offset) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith('#')) {
+      return;
+    }
+    const match = /^ {2}-\s+(.+)$/.exec(line.trimEnd());
+    if (!match) {
+      throw new Error(
+        `Unsupported list syntax in pnpm-workspace.yaml section ${section.key}: ${line}`
+      );
+    }
+    const value = normalizeScalar(match[1]);
+    if (entries.has(value)) {
+      throw new Error(
+        `Duplicate pnpm-workspace.yaml entry in ${section.key}: ${value}`
+      );
+    }
+    entries.set(value, {
+      value,
+      line: line.trimEnd(),
+      index: offset + 1,
+    });
+  });
+
+  return entries;
+}
+
+function appendBeforeTrailingBlankLines(lines, line) {
+  let index = lines.length;
+  while (index > 1 && lines[index - 1].trim().length === 0) {
+    index -= 1;
+  }
+  lines.splice(index, 0, line);
+}
+
+function yamlSingleQuoted(value) {
+  const text = String(value);
+  if (text.includes('\n') || text.includes('\r')) {
+    throw new Error('Security remediation YAML scalar contains a line break');
+  }
+  return `'${text.replaceAll("'", "''")}'`;
+}
+
+export function normalizeDependabotVulnerableRange(value) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('Dependabot vulnerable version range must be a string');
+  }
+  return value
+    .trim()
+    .replaceAll(',', ' ')
+    .replace(/([<>]=?)\s+/g, '$1')
+    .replace(/\s+/g, ' ');
+}
+
+export function materializeDependabotAuditGaps({
+  workspaceSource,
+  plan,
+  comparison,
+}) {
+  if (
+    plan === null ||
+    typeof plan !== 'object' ||
+    Array.isArray(plan) ||
+    comparison === null ||
+    typeof comparison !== 'object' ||
+    Array.isArray(comparison) ||
+    plan.schemaVersion !== 1 ||
+    comparison.schemaVersion !== 1 ||
+    !Array.isArray(plan.fixablePackages) ||
+    !Array.isArray(comparison.missingAdvisories)
+  ) {
+    throw new Error('Dependabot audit-gap materialization evidence is malformed');
+  }
+
+  const authorized = new Set(plan.fixablePackages);
+  const rules = new Map();
+  for (const alert of comparison.missingAdvisories) {
+    const packageName = alert?.package;
+    const vulnerableVersionRange = alert?.vulnerableVersionRange;
+    const firstPatchedVersion = alert?.firstPatchedVersion;
+    if (
+      typeof packageName !== 'string' ||
+      !authorized.has(packageName) ||
+      typeof vulnerableVersionRange !== 'string' ||
+      vulnerableVersionRange.trim().length === 0 ||
+      typeof firstPatchedVersion !== 'string' ||
+      firstPatchedVersion.trim().length === 0
+    ) {
+      throw new Error(
+        'Dependabot audit gap requires package, vulnerable range, and patched version authority'
+      );
+    }
+
+    const rawVulnerableVersionRange = vulnerableVersionRange.trim();
+    const normalizedVulnerableVersionRange =
+      normalizeDependabotVulnerableRange(rawVulnerableVersionRange);
+    const selector = `${packageName}@${normalizedVulnerableVersionRange}`;
+    const target = firstPatchedVersion.trim();
+    const existing = rules.get(selector);
+    if (existing !== undefined && existing.target !== target) {
+      throw new Error(
+        `Dependabot audit gap has conflicting patched versions for ${selector}`
+      );
+    }
+    const rule =
+      existing ??
+      {
+        package: packageName,
+        vulnerableVersionRange: rawVulnerableVersionRange,
+        selector,
+        target,
+        releaseAgeEntry: `${packageName}@${target}`,
+        alertNumbers: [],
+        ghsaIds: [],
+      };
+    if (Number.isSafeInteger(alert?.number)) {
+      rule.alertNumbers.push(alert.number);
+    }
+    if (typeof alert?.ghsaId === 'string' && alert.ghsaId.length > 0) {
+      rule.ghsaIds.push(alert.ghsaId);
+    }
+    rules.set(selector, rule);
+  }
+
+  const split = splitWorkspaceSections(workspaceSource);
+  const byKey = new Map(split.sections.map((section) => [section.key, section]));
+  const overridesSection = byKey.get('overrides') ?? {
+    key: 'overrides',
+    lines: ['overrides:'],
+  };
+  const releaseAgeSection = byKey.get('minimumReleaseAgeExclude') ?? {
+    key: 'minimumReleaseAgeExclude',
+    lines: ['minimumReleaseAgeExclude:'],
+  };
+  const overrideLines = [...overridesSection.lines];
+  const releaseAgeLines = [...releaseAgeSection.lines];
+  const overrideEntries = rawMapSectionEntries(overridesSection);
+  const releaseAgeEntries = rawListSectionEntries(releaseAgeSection);
+  const materializations = [];
+
+  for (const rule of [...rules.values()].sort((a, b) =>
+    a.selector.localeCompare(b.selector)
+  )) {
+    const existingOverride = overrideEntries.get(rule.selector);
+    if (
+      existingOverride !== undefined &&
+      existingOverride.value !== rule.target
+    ) {
+      throw new Error(
+        `Dependabot audit gap conflicts with existing override ${rule.selector}: ${existingOverride.value}`
+      );
+    }
+
+    const overrideAdded = existingOverride === undefined;
+    if (overrideAdded) {
+      const line = `  ${yamlSingleQuoted(rule.selector)}: ${yamlSingleQuoted(rule.target)}`;
+      appendBeforeTrailingBlankLines(overrideLines, line);
+      overrideEntries.set(rule.selector, {
+        key: rule.selector,
+        value: rule.target,
+        line,
+        index: overrideLines.length - 1,
+      });
+    }
+
+    const releaseAgeAdded = !releaseAgeEntries.has(rule.releaseAgeEntry);
+    if (releaseAgeAdded) {
+      const line = `  - ${yamlSingleQuoted(rule.releaseAgeEntry)}`;
+      appendBeforeTrailingBlankLines(releaseAgeLines, line);
+      releaseAgeEntries.set(rule.releaseAgeEntry, {
+        value: rule.releaseAgeEntry,
+        line,
+        index: releaseAgeLines.length - 1,
+      });
+    }
+
+    materializations.push({
+      ...rule,
+      alertNumbers: [...new Set(rule.alertNumbers)].sort((a, b) => a - b),
+      ghsaIds: [...new Set(rule.ghsaIds)].sort(),
+      overrideAdded,
+      releaseAgeAdded,
+    });
+  }
+
+  const replacements = new Map([
+    ['overrides', { key: 'overrides', lines: overrideLines }],
+    [
+      'minimumReleaseAgeExclude',
+      { key: 'minimumReleaseAgeExclude', lines: releaseAgeLines },
+    ],
+  ]);
+  const sections = [];
+  const seen = new Set();
+  for (const section of split.sections) {
+    if (replacements.has(section.key)) {
+      sections.push(replacements.get(section.key));
+      seen.add(section.key);
+    } else {
+      sections.push(section);
+    }
+  }
+  for (const key of ['minimumReleaseAgeExclude', 'overrides']) {
+    if (!seen.has(key)) {
+      sections.push(replacements.get(key));
+    }
+  }
+
+  return {
+    workspaceSource: [
+      ...split.prefix,
+      ...sections.flatMap((section) => section.lines),
+    ].join('\n'),
+    evidence: {
+      schemaVersion: 1,
+      packages: [
+        ...new Set(materializations.map((entry) => entry.package)),
+      ].sort(),
+      materializations,
+    },
+  };
+}
+
+export function validateAuditGapMaterializations(workspaceSource, evidence) {
+  if (
+    evidence === null ||
+    typeof evidence !== 'object' ||
+    Array.isArray(evidence) ||
+    evidence.schemaVersion !== 1 ||
+    !Array.isArray(evidence.packages) ||
+    !Array.isArray(evidence.materializations)
+  ) {
+    throw new Error('Security remediation audit-gap evidence is invalid');
+  }
+
+  const parsed = parseWorkspace(workspaceSource).parsed.sections;
+  const overrides = parsed.overrides ?? {};
+  const releaseAge = new Set(parsed.minimumReleaseAgeExclude ?? []);
+  for (const entry of evidence.materializations) {
+    if (
+      entry === null ||
+      typeof entry !== 'object' ||
+      Array.isArray(entry) ||
+      typeof entry.package !== 'string' ||
+      typeof entry.vulnerableVersionRange !== 'string' ||
+      entry.vulnerableVersionRange.length === 0 ||
+      typeof entry.selector !== 'string' ||
+      typeof entry.target !== 'string' ||
+      typeof entry.releaseAgeEntry !== 'string' ||
+      !Array.isArray(entry.alertNumbers) ||
+      !Array.isArray(entry.ghsaIds) ||
+      !evidence.packages.includes(entry.package) ||
+      overrides[entry.selector] !== entry.target ||
+      !releaseAge.has(entry.releaseAgeEntry)
+    ) {
+      throw new Error(
+        'Security remediation audit-gap materialization does not match the dependency graph'
+      );
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    packages: [...evidence.packages].sort(),
+    materializationCount: evidence.materializations.length,
+  };
+}
+
+export function reconcileGeneratedWorkspaceAuthority({
+  workspaceBefore,
+  workspaceAfter,
+  authorizedPackages = [],
+}) {
+  if (
+    JSON.stringify(immutableWorkspaceView(workspaceBefore)) !==
+    JSON.stringify(immutableWorkspaceView(workspaceAfter))
+  ) {
+    throw new Error(
+      'Generated security fix changed pnpm-workspace.yaml outside overrides/minimumReleaseAgeExclude'
+    );
+  }
+
+  const authorized = new Set(authorizedPackages);
+  if (authorized.size === 0) {
+    throw new Error(
+      'Generated security fix reconciliation requires explicit package authority'
+    );
+  }
+
+  const beforeSplit = splitWorkspaceSections(workspaceBefore);
+  const afterSplit = splitWorkspaceSections(workspaceAfter);
+  const beforeByKey = new Map(
+    beforeSplit.sections.map((section) => [section.key, section])
+  );
+  const afterByKey = new Map(
+    afterSplit.sections.map((section) => [section.key, section])
+  );
+  const retainedMutations = [];
+  const prunedMutations = [];
+
+  const sanitizeMapSection = (key) => {
+    const beforeSection = beforeByKey.get(key);
+    const afterSection = afterByKey.get(key);
+    if (beforeSection === undefined && afterSection === undefined) {
+      return null;
+    }
+
+    const beforeEntries = rawMapSectionEntries(beforeSection);
+    const afterEntries = rawMapSectionEntries(afterSection);
+    const lines =
+      beforeSection !== undefined
+        ? [...beforeSection.lines]
+        : [afterSection.lines[0]];
+
+    for (const [selector, current] of afterEntries) {
+      const previous = beforeEntries.get(selector);
+      if (previous !== undefined && previous.value === current.value) {
+        continue;
+      }
+
+      const packageName = packageFromDependencySelector(selector);
+      const mutation = {
+        section: key,
+        selector,
+        packageName,
+        previousValue: previous?.value ?? null,
+        generatedValue: current.value,
+      };
+
+      if (!authorized.has(packageName)) {
+        prunedMutations.push(mutation);
+        continue;
+      }
+
+      retainedMutations.push(mutation);
+      if (previous !== undefined) {
+        lines[previous.index] = current.line;
+      } else {
+        appendBeforeTrailingBlankLines(lines, current.line);
+      }
+    }
+
+    if (beforeSection === undefined && retainedMutations.every(
+      (mutation) => mutation.section !== key
+    )) {
+      return null;
+    }
+
+    return { key, lines };
+  };
+
+  const sanitizeListSection = (key) => {
+    const beforeSection = beforeByKey.get(key);
+    const afterSection = afterByKey.get(key);
+    if (beforeSection === undefined && afterSection === undefined) {
+      return null;
+    }
+
+    const beforeEntries = rawListSectionEntries(beforeSection);
+    const afterEntries = rawListSectionEntries(afterSection);
+    const lines =
+      beforeSection !== undefined
+        ? [...beforeSection.lines]
+        : [afterSection.lines[0]];
+
+    for (const [entry, current] of afterEntries) {
+      if (beforeEntries.has(entry)) {
+        continue;
+      }
+
+      const packageName = packageFromDependencySelector(entry);
+      const mutation = {
+        section: key,
+        selector: entry,
+        packageName,
+        previousValue: null,
+        generatedValue: entry,
+      };
+
+      if (!authorized.has(packageName)) {
+        prunedMutations.push(mutation);
+        continue;
+      }
+
+      retainedMutations.push(mutation);
+      appendBeforeTrailingBlankLines(lines, current.line);
+    }
+
+    if (beforeSection === undefined && retainedMutations.every(
+      (mutation) => mutation.section !== key
+    )) {
+      return null;
+    }
+
+    return { key, lines };
+  };
+
+  const replacements = new Map([
+    ['overrides', sanitizeMapSection('overrides')],
+    [
+      'minimumReleaseAgeExclude',
+      sanitizeListSection('minimumReleaseAgeExclude'),
+    ],
+  ]);
+
+  const sections = [];
+  const seen = new Set();
+  for (const section of afterSplit.sections) {
+    if (!MUTABLE_WORKSPACE_SECTIONS.has(section.key)) {
+      sections.push(section);
+      continue;
+    }
+    const replacement = replacements.get(section.key);
+    seen.add(section.key);
+    if (replacement !== null) {
+      sections.push(replacement);
+    }
+  }
+
+  for (const key of MUTABLE_WORKSPACE_SECTIONS) {
+    if (seen.has(key)) {
+      continue;
+    }
+    const replacement = replacements.get(key);
+    if (replacement !== null) {
+      sections.push(replacement);
+    }
+  }
+
+  const sortMutations = (a, b) => {
+    const bySection = a.section.localeCompare(b.section);
+    return bySection !== 0
+      ? bySection
+      : a.selector.localeCompare(b.selector);
+  };
+  retainedMutations.sort(sortMutations);
+  prunedMutations.sort(sortMutations);
+
+  return {
+    workspaceSource: [
+      ...afterSplit.prefix,
+      ...sections.flatMap((section) => section.lines),
+    ].join('\n'),
+    evidence: {
+      schemaVersion: 1,
+      authorizedPackages: [...authorized].sort(),
+      retainedPackages: [
+        ...new Set(retainedMutations.map((mutation) => mutation.packageName)),
+      ].sort(),
+      prunedPackages: [
+        ...new Set(prunedMutations.map((mutation) => mutation.packageName)),
+      ].sort(),
+      retainedMutations,
+      prunedMutations,
+    },
+  };
+}
+
+export function validateAuthorizedPackagesRemediated(
+  auditReport,
+  authorizedPackages,
+  auditLevel = 'high'
+) {
+  const authorized = new Set(authorizedPackages);
+  if (authorized.size === 0) {
+    throw new Error(
+      'Post-remediation registry proof requires explicit package authority'
+    );
+  }
+
+  const registryEvidence = buildRegistryRemediationEvidence(
+    auditReport,
+    auditLevel
+  );
+  const remainingPackages = registryEvidence.packages.filter((packageName) =>
+    authorized.has(packageName)
+  );
+  const remainingAdvisories = registryEvidence.advisories.filter((advisory) =>
+    authorized.has(advisory.package)
+  );
+
+  if (remainingPackages.length > 0) {
+    const advisoryEvidence = remainingAdvisories
+      .map((advisory) => `${advisory.ghsaId}:${advisory.package}`)
+      .sort();
+    const evidence =
+      advisoryEvidence.length > 0
+        ? advisoryEvidence.join(', ')
+        : remainingPackages.join(', ');
+    throw new Error(
+      `Authorized remediation package(s) still have registry advisories: ${evidence}`
+    );
+  }
+
+  return {
+    schemaVersion: 1,
+    auditLevel,
+    authorizedPackages: [...authorized].sort(),
+    remainingPackages: [],
+    remainingAdvisories: [],
   };
 }
 
@@ -659,6 +1218,171 @@ function runGit(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trimEnd();
 }
 
+function gitIsAncestor(ancestorSha, descendantSha) {
+  try {
+    execFileSync(
+      'git',
+      ['merge-base', '--is-ancestor', ancestorSha, descendantSha],
+      { stdio: 'ignore' }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function validateCandidateBaseSyncChain({
+  candidateBaseSha,
+  candidateHeadSha,
+  currentBaseSha,
+  currentHeadSha,
+  mergeCommits = [],
+}) {
+  for (const [label, value] of Object.entries({
+    candidateBaseSha,
+    candidateHeadSha,
+    currentBaseSha,
+    currentHeadSha,
+  })) {
+    if (!/^[0-9a-f]{40}$/.test(value ?? '')) {
+      throw new Error(`Security remediation ${label} is not an exact SHA`);
+    }
+  }
+
+  if (currentHeadSha === candidateHeadSha) {
+    if (currentBaseSha !== candidateBaseSha || mergeCommits.length !== 0) {
+      throw new Error(
+        'Direct security remediation candidate no longer targets its exact source base'
+      );
+    }
+    return {
+      mode: 'direct',
+      mergeCount: 0,
+      candidateBaseSha,
+      candidateHeadSha,
+      currentBaseSha,
+      currentHeadSha,
+    };
+  }
+
+  if (!Array.isArray(mergeCommits) || mergeCommits.length === 0) {
+    throw new Error(
+      'Security remediation head moved without authenticated base-sync merges'
+    );
+  }
+
+  let expectedFirstParent = candidateHeadSha;
+  for (const merge of mergeCommits) {
+    if (
+      merge === null ||
+      typeof merge !== 'object' ||
+      Array.isArray(merge) ||
+      !/^[0-9a-f]{40}$/.test(merge.sha ?? '') ||
+      !/^[0-9a-f]{40}$/.test(merge.firstParent ?? '') ||
+      !/^[0-9a-f]{40}$/.test(merge.secondParent ?? '') ||
+      merge.firstParent !== expectedFirstParent
+    ) {
+      throw new Error(
+        'Security remediation base-sync first-parent chain is invalid'
+      );
+    }
+    expectedFirstParent = merge.sha;
+  }
+
+  if (expectedFirstParent !== currentHeadSha) {
+    throw new Error(
+      'Security remediation base-sync chain does not reach the current PR head'
+    );
+  }
+  if (
+    mergeCommits[mergeCommits.length - 1].secondParent !== currentBaseSha
+  ) {
+    throw new Error(
+      'Security remediation latest base-sync merge does not use the current PR base'
+    );
+  }
+
+  return {
+    mode: 'base-sync',
+    mergeCount: mergeCommits.length,
+    candidateBaseSha,
+    candidateHeadSha,
+    currentBaseSha,
+    currentHeadSha,
+  };
+}
+
+function collectCandidateBaseSyncEvidence({
+  candidateBaseSha,
+  candidateHeadSha,
+  currentBaseSha,
+  currentHeadSha,
+}) {
+  if (!gitIsAncestor(candidateBaseSha, currentBaseSha)) {
+    throw new Error(
+      'Security remediation current base is not a descendant of the immutable candidate base'
+    );
+  }
+
+  if (currentHeadSha === candidateHeadSha) {
+    return validateCandidateBaseSyncChain({
+      candidateBaseSha,
+      candidateHeadSha,
+      currentBaseSha,
+      currentHeadSha,
+      mergeCommits: [],
+    });
+  }
+
+  if (!gitIsAncestor(candidateHeadSha, currentHeadSha)) {
+    throw new Error(
+      'Security remediation current head is not a descendant of the immutable candidate head'
+    );
+  }
+
+  const reverseMerges = [];
+  let cursor = currentHeadSha;
+  for (let count = 0; cursor !== candidateHeadSha; count += 1) {
+    if (count >= 32) {
+      throw new Error('Security remediation base-sync chain is unbounded');
+    }
+
+    const parts = runGit(['rev-list', '--parents', '-n', '1', cursor])
+      .trim()
+      .split(/\s+/);
+    if (parts.length !== 3 || parts[0] !== cursor) {
+      throw new Error(
+        'Security remediation head contains a non-merge mutation after the immutable candidate'
+      );
+    }
+
+    const [, firstParent, secondParent] = parts;
+    if (
+      !gitIsAncestor(candidateBaseSha, secondParent) ||
+      !gitIsAncestor(secondParent, currentBaseSha)
+    ) {
+      throw new Error(
+        'Security remediation base-sync merge imported a commit outside current main ancestry'
+      );
+    }
+
+    reverseMerges.push({
+      sha: cursor,
+      firstParent,
+      secondParent,
+    });
+    cursor = firstParent;
+  }
+
+  return validateCandidateBaseSyncChain({
+    candidateBaseSha,
+    candidateHeadSha,
+    currentBaseSha,
+    currentHeadSha,
+    mergeCommits: reverseMerges.reverse(),
+  });
+}
+
 function readChangedFiles(args) {
   const output = runGit(args);
   return output.length === 0 ? [] : output.split('\n').filter(Boolean);
@@ -680,8 +1404,11 @@ function resolveSourceAuthority({ auditPath, planPath, auditLevel }) {
     auditLevel
   );
   const plan = readJson(planPath);
-  validatePlanAgainstRegistryEvidence(plan, registryEvidence);
-  return { registryEvidence, plan };
+  const comparison = validatePlanAgainstRegistryEvidence(
+    plan,
+    registryEvidence
+  );
+  return { registryEvidence, plan, comparison };
 }
 
 function validateWorkingTree({ auditPath, planPath, auditLevel }) {
@@ -719,11 +1446,21 @@ function validatePullRequest(baseSha, candidatePath) {
   const candidate = readJson(candidatePath);
   if (
     candidate.schemaVersion !== 1 ||
+    !/^[0-9a-f]{40}$/.test(candidate.baseSha ?? '') ||
+    !/^[0-9a-f]{40}$/.test(candidate.headSha ?? '') ||
     !Array.isArray(candidate.authorizedPackages) ||
     candidate.authorizedPackages.length === 0
   ) {
     throw new Error('Security remediation candidate package authority is invalid');
   }
+
+  const currentHeadSha = runGit(['rev-parse', 'HEAD']);
+  const baseSync = collectCandidateBaseSyncEvidence({
+    candidateBaseSha: candidate.baseSha,
+    candidateHeadSha: candidate.headSha,
+    currentBaseSha: baseSha,
+    currentHeadSha,
+  });
 
   const changedFiles = readChangedFiles([
     'diff',
@@ -740,6 +1477,10 @@ function validatePullRequest(baseSha, candidatePath) {
     workspaceAfter,
     authorizedPackages: candidate.authorizedPackages,
   });
+  validateAuditGapMaterializations(
+    workspaceAfter,
+    candidate.auditGapMaterializations
+  );
   if (!Array.isArray(candidate.changedPackages)) {
     throw new Error(
       'Security remediation candidate changed-package evidence is invalid'
@@ -755,7 +1496,10 @@ function validatePullRequest(baseSha, candidatePath) {
     );
   }
 
-  return validation;
+  return {
+    ...validation,
+    baseSync,
+  };
 }
 
 function flagValue(args, flag) {
@@ -780,6 +1524,85 @@ function main(argv) {
         ? buildRemediationPlan(alerts, auditLevel)
         : buildRuntimeAuditIgnores(alerts, auditLevel);
     console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'verify-plan-audit') {
+    const auditLevel = flagValue(rest, '--level') ?? 'high';
+    const { comparison } = resolveSourceAuthority({
+      auditPath: flagValue(rest, '--audit'),
+      planPath: flagValue(rest, '--plan'),
+      auditLevel,
+    });
+    console.log(JSON.stringify(comparison, null, 2));
+    return;
+  }
+
+  if (command === 'materialize-audit-gaps') {
+    const planPath = flagValue(rest, '--plan');
+    const comparisonPath = flagValue(rest, '--comparison');
+    if (!planPath || !comparisonPath) {
+      throw new Error(
+        'Dependabot audit-gap materialization requires --plan and --comparison'
+      );
+    }
+    const result = materializeDependabotAuditGaps({
+      workspaceSource: fs.readFileSync('pnpm-workspace.yaml', 'utf8'),
+      plan: readJson(planPath),
+      comparison: readJson(comparisonPath),
+    });
+    fs.writeFileSync('pnpm-workspace.yaml', result.workspaceSource, 'utf8');
+    console.log(JSON.stringify(result.evidence, null, 2));
+    return;
+  }
+
+  if (command === 'reconcile-generated-workspace') {
+    const planPath = flagValue(rest, '--plan');
+    if (!planPath) {
+      throw new Error('Generated workspace reconciliation requires --plan');
+    }
+    const plan = readJson(planPath);
+    if (!Array.isArray(plan.fixablePackages)) {
+      throw new Error('Remediation plan fixablePackages must be an array');
+    }
+    const workspaceBefore = runGit(['show', 'HEAD:pnpm-workspace.yaml']);
+    const workspaceAfter = fs.readFileSync('pnpm-workspace.yaml', 'utf8');
+    const result = reconcileGeneratedWorkspaceAuthority({
+      workspaceBefore,
+      workspaceAfter,
+      authorizedPackages: plan.fixablePackages,
+    });
+    fs.writeFileSync('pnpm-workspace.yaml', result.workspaceSource, 'utf8');
+    console.log(JSON.stringify(result.evidence, null, 2));
+    return;
+  }
+
+  if (command === 'verify-remediated-audit') {
+    const auditLevel = flagValue(rest, '--level') ?? 'high';
+    const auditPath = flagValue(rest, '--audit');
+    const planPath = flagValue(rest, '--plan');
+    const candidatePath = flagValue(rest, '--candidate');
+    if (!auditPath || (Boolean(planPath) === Boolean(candidatePath))) {
+      throw new Error(
+        'Post-remediation audit requires --audit and exactly one of --plan or --candidate'
+      );
+    }
+    const authority = readJson(planPath ?? candidatePath);
+    const authorizedPackages =
+      planPath !== undefined
+        ? authority.fixablePackages
+        : authority.authorizedPackages;
+    console.log(
+      JSON.stringify(
+        validateAuthorizedPackagesRemediated(
+          readJson(auditPath),
+          authorizedPackages,
+          auditLevel
+        ),
+        null,
+        2
+      )
+    );
     return;
   }
 
@@ -814,7 +1637,7 @@ function main(argv) {
   }
 
   throw new Error(
-    'Usage: dependabot-security-remediation.mjs <plan|runtime-ignores|validate-working-tree|validate-pr>'
+    'Usage: dependabot-security-remediation.mjs <plan|runtime-ignores|verify-plan-audit|materialize-audit-gaps|reconcile-generated-workspace|verify-remediated-audit|validate-working-tree|validate-pr>'
   );
 }
 

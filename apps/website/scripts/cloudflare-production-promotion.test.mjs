@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 import './cloudflare-production-admission.test.mjs';
@@ -22,6 +23,16 @@ function jobBlock(workflow, jobId, nextJobId) {
   return workflow.slice(start, end);
 }
 
+test('static chunk smoke script remains syntactically valid', () => {
+  assert.doesNotThrow(() =>
+    execFileSync(
+      process.execPath,
+      ['--check', 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'],
+      { stdio: 'pipe' }
+    )
+  );
+});
+
 test('staging skips only semantically verified release-sync pushes and prioritizes the latest runtime candidate', () => {
   const workflowHeader = stagingWorkflow.split('\njobs:\n')[0];
   assert.doesNotMatch(workflowHeader, /\nconcurrency:\n/);
@@ -31,7 +42,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   const deploy = jobBlock(stagingWorkflow, 'deploy');
 
   assert.match(classify, /release-sync-contract\.mjs/);
-  assert.match(classify, /--verify-merged/);
+  assert.match(classify, /--classify-merged/);
   assert.match(classify, /VELLIRA_PUSH_ACTOR:/);
   assert.match(classify, /github\.event\.before/);
   assert.match(
@@ -75,7 +86,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   const productionClassify = jobBlock(productionWorkflow, 'classify', 'candidate');
   const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
   assert.match(productionClassify, /release-sync-contract\.mjs/);
-  assert.match(productionClassify, /--verify-merged/);
+  assert.match(productionClassify, /--classify-merged/);
   assert.match(productionClassify, /VELLIRA_PUSH_ACTOR:/);
   assert.match(candidate, /needs: classify/);
   assert.match(

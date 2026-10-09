@@ -1,0 +1,88 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const read = (path: string) => readFileSync(resolve(path), 'utf8');
+
+const privacyPage = read(
+  'apps/website/src/app/(marketing)/(site)/privacy/page.tsx'
+);
+const siteFooter = read(
+  'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx'
+);
+const compactFooter = read(
+  'apps/website/src/components/layout/CompactFooter/CompactFooter.tsx'
+);
+const sitemap = read('apps/website/src/app/sitemap.ts');
+const privacyStyles = read(
+  'apps/website/src/app/(marketing)/(site)/privacy/PrivacyPage.module.css'
+);
+const newsletterSignup = read(
+  'apps/website/src/blog/ui/NewsletterSignupForm.tsx'
+);
+
+describe('website privacy policy', () => {
+  it('publishes a canonical privacy route with a truthful pre-company operator', () => {
+    expect(privacyPage).toContain("canonical: '/privacy'");
+    expect(privacyPage).toContain('Roman Bakurov');
+    expect(privacyPage).toContain('independent software project');
+    expect(privacyPage).toContain('roman@vellira.dev');
+    expect(privacyPage).not.toContain('Vellira SAS');
+    expect(privacyPage).not.toContain('Vellira LLC');
+  });
+
+  it('documents the current website data flows instead of generic boilerplate', () => {
+    expect(privacyPage).toContain('Cloudflare Web Analytics');
+    expect(privacyPage).toContain('__Host-vellira_actor');
+    expect(privacyPage).toContain('180 days');
+    expect(privacyPage).toContain('vellira-website-theme');
+    expect(privacyPage).toContain('Buttondown');
+    expect(privacyPage).toContain('client IP');
+    expect(privacyPage).toContain('Render');
+    expect(privacyPage).toContain('Vellira accounts and authentication');
+    expect(privacyPage).toContain('Resend');
+    expect(privacyPage).toContain('GitHub');
+    expect(privacyPage).toContain(
+      'to create, authenticate and secure Vellira accounts'
+    );
+  });
+
+  it('makes the privacy route discoverable from both website footers through the shared link contract', () => {
+    for (const footer of [siteFooter, compactFooter]) {
+      expect(footer).toContain(
+        "from '@/components/navigation/DesignSystemLink'"
+      );
+      expect(footer).toContain(
+        "<DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>"
+      );
+    }
+  });
+
+  it('includes the privacy route in the public sitemap', () => {
+    expect(sitemap).toContain('`${SITE_URL}/privacy`');
+    expect(sitemap).toContain("new Date('2026-10-05')");
+  });
+
+  it('links the policy at the newsletter email collection point', () => {
+    expect(newsletterSignup).toContain("href='/privacy'");
+    expect(newsletterSignup).toContain(
+      'We use your email to manage the subscription.'
+    );
+  });
+
+  it('routes policy links through the shared Vellira link contract', () => {
+    expect(privacyPage).toContain(
+      "from '@/components/navigation/DesignSystemLink'"
+    );
+    expect(privacyPage).toContain('<DesignSystemLink');
+    expect(privacyPage).not.toMatch(/<a\\b/u);
+    expect(privacyStyles).not.toContain('.policy a');
+  });
+
+  it('renders semantic privacy lists with visible markers', () => {
+    expect(privacyStyles).toContain('list-style: disc;');
+    expect(privacyStyles).toContain('padding-inline-start: var(--space-5);');
+    expect(privacyStyles).toContain('.policy li::marker');
+  });
+});

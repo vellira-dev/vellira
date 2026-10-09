@@ -6,6 +6,8 @@ on:
     paths:
       - 'apps/website/**'
       - 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-edge-recovery.mjs'
+      - 'apps/react-storybook/scripts/cloudflare-edge-recovery.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.mjs'
       - 'apps/react-storybook/scripts/cloudflare-blog-metrics-smoke-policy.test.mjs'
       - 'apps/react-storybook/scripts/cloudflare-static-chunk-smoke.mjs'
@@ -66,7 +68,7 @@ jobs:
           node scripts/ci/release-sync-contract.mjs \
             --base "$BASE_SHA" \
             --head "$HEAD_SHA" \
-            --verify-merged
+            --classify-merged
 
   migration:
     name: Prove browser migration before staging activation
@@ -289,6 +291,7 @@ jobs:
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
           scripts/cloudflare-blog-metrics-smoke-policy.test.mjs
+          scripts/cloudflare-edge-recovery.test.mjs
 
       - name: Verify component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
@@ -312,7 +315,7 @@ jobs:
           BLOG_METRICS_PUBLICATION_MODE: staging-candidate
 
       - name: Smoke test static chunk integrity
-        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
+        if: ${{ success() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs

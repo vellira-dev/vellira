@@ -35,6 +35,47 @@ export function isReleaseSyncFileSet(files) {
   );
 }
 
+export function classifyMergedReleaseSyncShape({
+  baseSha,
+  parents,
+  files,
+}) {
+  assert.match(
+    baseSha ?? '',
+    MERGED_SHA_PATTERN,
+    'Merged release-sync classification base SHA must be exact'
+  );
+  assert.ok(
+    Array.isArray(parents),
+    'Merged release-sync classification requires parent evidence'
+  );
+  assert.ok(
+    Array.isArray(files),
+    'Merged release-sync classification requires file evidence'
+  );
+
+  const normalizedFiles = sorted(files.map(normalizePath));
+  const exactLinearParent =
+    parents.length === 1 &&
+    typeof parents[0] === 'string' &&
+    parents[0] === baseSha;
+
+  if (!exactLinearParent) {
+    return {
+      releaseSync: false,
+      reason: 'non-linear-or-base-mismatch',
+      files: normalizedFiles,
+    };
+  }
+
+  const releaseSync = isReleaseSyncFileSet(normalizedFiles);
+  return {
+    releaseSync,
+    reason: releaseSync ? 'candidate' : 'file-set-mismatch',
+    files: normalizedFiles,
+  };
+}
+
 function cloneWithoutVersion(manifest) {
   const clone = structuredClone(manifest);
   delete clone.version;
@@ -326,47 +367,68 @@ async function main() {
 
   if (!base || !head) {
     throw new Error(
-      'Usage: node scripts/ci/release-sync-contract.mjs --base <sha> --head <sha> [--detect|--verify|--verify-merged]'
+      'Usage: node scripts/ci/release-sync-contract.mjs --base <sha> --head <sha> [--detect|--verify|--verify-merged|--classify-merged]'
     );
   }
 
+  const detectMode = args.includes('--detect');
+  const verifyPr = args.includes('--verify');
   const mergedMode = args.includes('--verify-merged');
-  if (mergedMode) {
-    const parents = git(['rev-list', '--parents', '-n', '1', head])
+  const classifyMergedMode = args.includes('--classify-merged');
+  const selectedModes = [
+    detectMode,
+    verifyPr,
+    mergedMode,
+    classifyMergedMode,
+  ].filter(Boolean).length;
+  if (selectedModes !== 1) {
+    throw new Error(
+      'Choose exactly one mode: --detect, --verify, --verify-merged, or --classify-merged.'
+    );
+  }
+
+  let parents = [];
+  if (mergedMode || classifyMergedMode) {
+    parents = git(['rev-list', '--parents', '-n', '1', head])
       .split(/\s+/)
       .slice(1);
-    if (parents.length !== 1 || parents[0] !== base) {
+    if (mergedMode && (parents.length !== 1 || parents[0] !== base)) {
       throw new Error(
         'Merged release-sync verification requires one exact first parent matching --base.'
       );
     }
   }
 
-  const range = mergedMode ? `${base}..${head}` : `${base}...${head}`;
+  const range =
+    mergedMode || classifyMergedMode
+      ? `${base}..${head}`
+      : `${base}...${head}`;
   const files = git(['diff', '--name-only', range])
     .split(/\r?\n/)
     .map((file) => file.trim())
     .filter(Boolean);
 
   const candidate = isReleaseSyncFileSet(files);
-  await writeOutput('release_sync', candidate ? 'true' : 'false');
 
-  if (args.includes('--detect')) {
+  if (detectMode) {
+    await writeOutput('release_sync', candidate ? 'true' : 'false');
     process.stdout.write(
       `${JSON.stringify({ releaseSync: candidate, files: sorted(files) }, null, 2)}\n`
     );
     return;
   }
 
-  const verifyPr = args.includes('--verify');
-  if (!verifyPr && !mergedMode) {
-    throw new Error(
-      'Choose exactly one mode: --detect, --verify, or --verify-merged.'
-    );
-  }
-
-  if (verifyPr && mergedMode) {
-    throw new Error('Release-sync verification modes are mutually exclusive.');
+  if (classifyMergedMode) {
+    const classification = classifyMergedReleaseSyncShape({
+      baseSha: base,
+      parents,
+      files,
+    });
+    if (!classification.releaseSync) {
+      await writeOutput('release_sync', 'false');
+      process.stdout.write(`${JSON.stringify(classification, null, 2)}\n`);
+      return;
+    }
   }
 
   const baseDocuments = {};
@@ -376,7 +438,7 @@ async function main() {
     headDocuments[manifestPath] = readJsonAt(head, manifestPath);
   }
 
-  const result = mergedMode
+  const result = mergedMode || classifyMergedMode
     ? verifyMergedReleaseSyncDocuments({
         files,
         baseDocuments,
