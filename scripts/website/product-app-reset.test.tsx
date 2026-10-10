@@ -48,9 +48,7 @@ it('expired token offers new-link recovery', async () => {
   fireEvent.change(screen.getByLabelText(/New password/), {
     target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
   });
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Reset password', exact: true })
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
   await waitFor(() =>
     expect(screen.queryByRole('alert')?.textContent).toBe(
       'This reset link is invalid or has expired.'
@@ -66,13 +64,9 @@ it('successful reset clears form and offers normal sign-in', async () => {
   fireEvent.change(screen.getByLabelText(/New password/), {
     target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
   });
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Reset password', exact: true })
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
   await waitFor(() =>
-    expect(
-      screen.queryByRole('link', { name: 'Sign in', exact: true })
-    ).not.toBeNull()
+    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeNull()
   );
   expect(document.querySelector('input[type=password]')).toBeNull();
   expect(window.location.hash).toBe('');
@@ -120,22 +114,16 @@ it('temporary failure permits safe retry without exposing the token in URL/stora
   fireEvent.change(screen.getByLabelText(/New password/), {
     target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
   });
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Reset password', exact: true })
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
   await waitFor(() =>
     expect(screen.getByRole('alert')).toHaveTextContent(
       'temporarily unavailable'
     )
   );
-  expect(
-    screen.getByRole('button', { name: 'Reset password', exact: true })
-  ).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Reset password' })).toBeEnabled();
   expect(window.location.hash + window.location.search).toBe('');
   responseCode = 'success';
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Reset password', exact: true })
-  );
-  await screen.findByRole('link', { name: 'Sign in', exact: true });
+  fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
+  await screen.findByRole('link', { name: 'Sign in' });
   expect(document.querySelector('input[type=password]')).toBeNull();
 });
