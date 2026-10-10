@@ -101,6 +101,15 @@ describe('external artwork ownership', () => {
       ).toBe(read(`packages/icons/svg/Brand/${brand}.svg`));
     }
   });
+  it('retains shared navigation artwork required by docs and the Storybook manager', () => {
+    for (const name of ['github', 'storybook'])
+      expect(read(`packages/assets/brand/navigation/${name}.svg`)).toMatch(
+        /<svg/
+      );
+    expect(read('apps/website/brand/integrations/storybook.svg')).toBe(
+      read('packages/assets/brand/navigation/storybook.svg')
+    );
+  });
   it('composes local and shared artwork without altering bytes and clears stale output', async () => {
     const temp = await mkdtemp(join(tmpdir(), 'vellira-brand-'));
     try {

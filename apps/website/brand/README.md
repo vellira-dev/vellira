@@ -23,7 +23,7 @@ GitHub and social assets were migrated byte-for-byte from the existing Brand SVG
 sources in @vellira-ui/icons. Those released exports remain compatibility
 snapshots; do not maintain divergent artwork. Website consumers use these local
 files as monochrome masks to preserve their existing theme color and geometry.
-Storybook was moved byte-for-byte from shared brand/navigation/storybook.svg.
+Storybook is a byte-identical website copy of shared brand/navigation/storybook.svg. The original shared navigation assets remain for VitePress and the Storybook application manager; those consumers are outside the ordinary Icons catalog. Keep these existing compatibility sources unchanged during this migration.
 No new third-party library or runtime asset fetch is involved.
 
 Shared Vellira-owned marks stay in @vellira-ui/assets. DocsVellira is an owned
