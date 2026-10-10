@@ -82,3 +82,14 @@ This package is intended to become the shared home for static assets used across
 ## License
 
 MIT
+
+App-owned external brand artwork may be supplied as a second source argument:
+
+```bash
+pnpm --filter @vellira-ui/assets sync-brand apps/website/public/brand apps/website/brand
+```
+
+Shared Vellira marks remain here; website-only provider/social/integration logos
+belong to the website. The existing synchronizer copies bytes without SVG
+transformation, rejects conflicting file ownership, and clears stale generated
+files. Docs consumers omit the optional app source.
