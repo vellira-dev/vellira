@@ -1,4 +1,4 @@
-/* global window, document, location, innerWidth */
+/* global window, document, location, innerWidth, getComputedStyle */
 // Isolated browser regression suite. Run against a local website started with
 // NEXT_PUBLIC_VELLIRA_API_BASE_URL=http://127.0.0.1:41570. All API/provider proof
 // is synthetic; PostgreSQL authority is exercised by backend integration tests.
@@ -8,10 +8,17 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 const require = createRequire(import.meta.url);
 const origin = process.env.AUTH_BROWSER_BASE_URL || 'http://127.0.0.1:31570';
-const apiOrigin = 'http://127.0.0.1:41570';
-if (!['127.0.0.1', 'localhost'].includes(new URL(origin).hostname))
+const apiOrigin =
+  process.env.AUTH_BROWSER_API_ORIGIN || 'http://127.0.0.1:41570';
+if (
+  [origin, apiOrigin].some(
+    (value) => !['127.0.0.1', 'localhost'].includes(new URL(value).hostname)
+  )
+)
   throw new Error('Local test origin required');
-const out = path.resolve('test-results/auth-remediation-browser');
+const out = path.resolve(
+  process.env.AUTH_BROWSER_OUTPUT || 'test-results/auth-remediation-browser'
+);
 await mkdir(out, { recursive: true });
 const password = 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2';
 const email = 'security-canary@example.invalid';
@@ -66,9 +73,15 @@ async function fixture(width = 390, denied = false, deviceScaleFactor = 1) {
           contentType: 'application/json',
           body: JSON.stringify(body),
         });
-      if (url.pathname.endsWith('/oauth/github/start')) {
-        const params = new URLSearchParams({ provider: 'github' });
+      const providerStart = url.pathname.match(
+        /^\/v1\/auth\/oauth\/(github|google|apple)\/start$/
+      );
+      if (providerStart) {
+        const provider = providerStart[1];
+        const params = new URLSearchParams({ provider });
         if (url.searchParams.has('link')) {
+          // A new GitHub identity cannot prove its own GitHub collision.
+          expect(provider).not.toBe('github');
           state.authenticated = true;
           state.ready = true;
           params.set('link', linkID);
@@ -204,6 +217,11 @@ async function audit(page) {
   return result;
 }
 async function run(name, test) {
+  if (
+    process.env.AUTH_BROWSER_FILTER &&
+    !new RegExp(process.env.AUTH_BROWSER_FILTER).test(name)
+  )
+    return;
   try {
     results.push({ name, status: 'PASS', ...(await test()) });
   } catch (error) {
@@ -227,6 +245,141 @@ async function fill(page) {
 }
 try {
   for (const width of [320, 375, 390, 768, 1440])
+    for (const theme of ['Light', 'Dark']) {
+      await run(`provider-artwork-${width}-${theme}`, async () => {
+        const { context, page, state } = await fixture(width);
+        const evidence = [];
+        try {
+          for (const route of ['/login', '/signup']) {
+            await page.goto(origin + route);
+            await page.getByRole('button', { name: /^Theme:/ }).click();
+            await page
+              .getByRole('menuitemradio', { name: theme, exact: true })
+              .click();
+            const group = page.getByRole('group', {
+              name: 'Continue with a provider',
+            });
+            const buttons = group.getByRole('button');
+            await expect(buttons).toHaveCount(3);
+            expect(
+              await buttons.evaluateAll((nodes) =>
+                nodes.map((n) => n.getAttribute('aria-label'))
+              )
+            ).toEqual([
+              'Continue with Google',
+              'Continue with Apple',
+              'Continue with GitHub',
+            ]);
+            const boxes = await buttons.evaluateAll((nodes) =>
+              nodes.map((n) => {
+                const r = n.getBoundingClientRect();
+                return {
+                  x: r.x,
+                  y: r.y,
+                  width: r.width,
+                  height: r.height,
+                  text: n.textContent,
+                };
+              })
+            );
+            for (const b of boxes) {
+              expect(b.width).toBe(48);
+              expect(b.height).toBe(48);
+              expect(b.y).toBe(boxes[0].y);
+              expect(b.text).toBe('');
+            }
+            const images = await group
+              .locator('img:visible')
+              .evaluateAll((nodes) =>
+                nodes.map((n) => ({
+                  path: new URL(n.src).pathname,
+                  loaded: n.complete && n.naturalWidth > 0,
+                  transform: getComputedStyle(n).transform,
+                  filter: getComputedStyle(n).filter,
+                }))
+              );
+            expect(images.map((i) => i.path)).toEqual(
+              theme === 'Light'
+                ? [
+                    '/brand/auth/google-light.svg',
+                    '/brand/auth/apple-black.svg',
+                  ]
+                : ['/brand/auth/google-dark.svg', '/brand/auth/apple-white.svg']
+            );
+            for (const image of images) {
+              expect(image.loaded).toBe(true);
+              expect(image.transform).toBe('none');
+              expect(image.filter).toBe('none');
+            }
+            for (let index = 0; index < 3; index++) {
+              const button = buttons.nth(index);
+              if (index === 0)
+                await page.getByRole('button', { name: /^Theme:/ }).focus();
+              await page.keyboard.press('Tab');
+              await expect(button).toBeFocused();
+              const label = await button.getAttribute('aria-label');
+              await expect(
+                page.getByRole('tooltip', { name: label, exact: true })
+              ).toBeVisible();
+              if (index > 0)
+                await expect(
+                  page.getByRole('tooltip', {
+                    name: await buttons
+                      .nth(index - 1)
+                      .getAttribute('aria-label'),
+                    exact: true,
+                  })
+                ).toBeHidden();
+              const focus = await button.evaluate((n) => ({
+                outline: getComputedStyle(n).outlineStyle,
+                width: getComputedStyle(n).outlineWidth,
+                offset: getComputedStyle(n).outlineOffset,
+              }));
+              expect(focus.outline).toBe('solid');
+              expect(parseFloat(focus.width)).toBeGreaterThanOrEqual(2);
+              expect(parseFloat(focus.offset)).toBeGreaterThan(0);
+            }
+            await page.keyboard.press('Tab');
+            await buttons.nth(0).hover();
+            expect(
+              await buttons
+                .nth(0)
+                .evaluate((n) => getComputedStyle(n).boxShadow)
+            ).not.toBe('none');
+            await page.mouse.down();
+            await expect(buttons.nth(0)).toHaveCSS(
+              'transform',
+              'matrix(1, 0, 0, 1, 0, 1)'
+            );
+            await page.mouse.move(0, 0);
+            await page.mouse.up();
+            for (const label of [
+              'Terms of Service',
+              'Privacy Policy',
+              'Cookie Policy',
+            ])
+              await expect(
+                page.getByRole('link', {
+                  name: `${label} (opens in a new tab)`,
+                  exact: true,
+                })
+              ).toBeVisible();
+            await audit(page);
+            await page.screenshot({
+              path: path.join(out, `${route.slice(1)}-${width}-${theme}.png`),
+              fullPage: true,
+            });
+            evidence.push({ route, boxes, images });
+          }
+          expect(state.external).toEqual([]);
+          expect(state.errors).toEqual([]);
+          return { evidence };
+        } finally {
+          await context.close();
+        }
+      });
+    }
+  for (const width of [320, 375, 390, 768, 1440])
     await run('layout-a11y-' + width, async () => {
       const { context, page, state } = await fixture(width);
       const pages = [];
@@ -243,7 +396,10 @@ try {
           await expect(page.locator('main h1')).toBeVisible();
           if (route === connection)
             await expect(
-              page.getByRole('button', { name: 'Sign in', exact: true })
+              page.getByRole('button', {
+                name: 'Sign in and continue',
+                exact: true,
+              })
             ).toBeVisible();
           if (route.startsWith('/auth/callback'))
             await expect(
@@ -477,7 +633,7 @@ try {
           await page.goto(origin + '/login');
           await expect(
             page.getByRole('button', {
-              name: 'Continue with GitHub · Last used',
+              name: 'Continue with GitHub',
             })
           ).toBeVisible();
           await audit(page);
@@ -552,7 +708,7 @@ try {
         await page.goto(origin + connection);
         await fill(page);
         await page
-          .getByRole('button', { name: 'Sign in', exact: true })
+          .getByRole('button', { name: 'Sign in and continue', exact: true })
           .click();
         await expect(page.getByRole('main').getByRole('alert')).toContainText(
           'That sign-in did not confirm the account'
@@ -563,7 +719,7 @@ try {
         state.mode = 'normal';
         await fill(page);
         await page
-          .getByRole('button', { name: 'Sign in', exact: true })
+          .getByRole('button', { name: 'Sign in and continue', exact: true })
           .click();
         await expect(
           page.getByRole('button', { name: 'Connect GitHub', exact: true })
@@ -591,8 +747,11 @@ try {
     const { context, page, state } = await fixture(390, true);
     try {
       await page.goto(origin + connection);
+      await expect(
+        page.getByRole('button', { name: 'Continue with GitHub', exact: true })
+      ).toHaveCount(0);
       await page
-        .getByRole('button', { name: 'Continue with GitHub', exact: true })
+        .getByRole('button', { name: 'Continue with Google', exact: true })
         .click();
       await expect(page).toHaveURL(origin + connection);
       await expect(
