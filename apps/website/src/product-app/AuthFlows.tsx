@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -36,6 +36,11 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error && !submitting) errorRef.current?.focus();
+  }, [error, submitting]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -48,6 +53,13 @@ export function LoginForm() {
       await login(email.trim(), password);
       router.replace('/app');
     } catch (cause) {
+      // Clear a rejected credential. A transient network failure may retain the
+      // in-memory value for retry; neither path writes it to browser storage.
+      if (
+        cause instanceof VelliraApiError &&
+        cause.code === 'invalid_credentials'
+      )
+        setPassword('');
       setError(
         cause instanceof VelliraApiError && cause.code === 'invalid_credentials'
           ? 'Invalid email or password.'
@@ -89,7 +101,7 @@ export function LoginForm() {
       </FormField>
 
       {error && (
-        <p className={styles.error} role='alert'>
+        <p ref={errorRef} className={styles.error} role='alert' tabIndex={-1}>
           {error}
         </p>
       )}
@@ -131,6 +143,11 @@ export function SignupForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error && !submitting) errorRef.current?.focus();
+  }, [error, submitting]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -189,7 +206,7 @@ export function SignupForm() {
       </FormField>
 
       {error && (
-        <p className={styles.error} role='alert'>
+        <p ref={errorRef} className={styles.error} role='alert' tabIndex={-1}>
           {error}
         </p>
       )}
