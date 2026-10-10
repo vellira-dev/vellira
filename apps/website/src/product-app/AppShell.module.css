@@ -39,6 +39,43 @@
   white-space: nowrap;
 }
 
+.verificationBanner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  padding: var(--space-3) var(--site-gutter);
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border-muted);
+  gap: var(--space-3);
+}
+
+.verificationCopy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.verificationCopy strong {
+  font-size: var(--font-size-sm);
+}
+
+.verificationCopy span {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.verificationCopy .verificationStatus {
+  color: var(--form-field-helper-text-success-fg);
+}
+
+.verificationCopy .verificationError {
+  color: var(--form-field-helper-text-error-fg);
+}
+
+.verificationAction {
+  white-space: nowrap;
+}
+
 .body {
   display: grid;
   grid-template-columns: var(--app-navigation-width) minmax(0, 1fr);
@@ -216,6 +253,16 @@
 
   .workspaceName {
     display: none;
+  }
+
+  .verificationBanner {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-inline: var(--space-4);
+  }
+
+  .verificationAction {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .body {

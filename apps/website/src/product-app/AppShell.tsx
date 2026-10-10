@@ -5,10 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { Warning } from '@vellira-ui/icons';
 import { Button, Select, Tabs } from '@vellira-ui/react';
 
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { AppSessionProvider, useAppSession } from './AppSession';
+import { resendCurrentVerification, VelliraApiError } from './api';
 
 import styles from './AppShell.module.css';
 
@@ -72,7 +74,34 @@ function AppNavigation() {
 }
 
 function AppShellContent({ children }: { children: ReactNode }) {
-  const { status, workspace, error, refresh } = useAppSession();
+  const { status, me, workspace, error, refresh } = useAppSession();
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<string>();
+  const [verificationError, setVerificationError] = useState<string>();
+
+  const handleVerificationResend = async () => {
+    if (resendingVerification) return;
+
+    setResendingVerification(true);
+    setVerificationMessage(undefined);
+    setVerificationError(undefined);
+
+    try {
+      await resendCurrentVerification();
+      setVerificationMessage(
+        'If verification is still needed, check your inbox for a new verification email.'
+      );
+      await refresh();
+    } catch (cause) {
+      setVerificationError(
+        cause instanceof VelliraApiError && cause.code === 'rate_limited'
+          ? 'Too many requests. Please try again shortly.'
+          : 'Verification email is temporarily unavailable. Please try again.'
+      );
+    } finally {
+      setResendingVerification(false);
+    }
+  };
 
   if (status === 'loading') {
     return (
@@ -115,6 +144,40 @@ function AppShellContent({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </header>
+
+      {me && !me.emailVerified && (
+        <div className={styles.verificationBanner} role='status'>
+          <Warning size={20} aria-hidden='true' />
+          <div className={styles.verificationCopy}>
+            <strong>Email not verified</strong>
+            <span>
+              Verify your email to finish securing your Vellira account.
+            </span>
+            {verificationMessage && (
+              <span className={styles.verificationStatus} role='status'>
+                {verificationMessage}
+              </span>
+            )}
+            {verificationError && (
+              <span className={styles.verificationError} role='alert'>
+                {verificationError}
+              </span>
+            )}
+          </div>
+          <Button
+            size='sm'
+            appearance='outline'
+            color='neutral'
+            className={styles.verificationAction}
+            loading={resendingVerification}
+            loadingText='Sending…'
+            disabled={resendingVerification}
+            onClick={() => void handleVerificationResend()}
+          >
+            Resend verification email
+          </Button>
+        </div>
+      )}
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>

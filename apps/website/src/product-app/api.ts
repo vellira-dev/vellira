@@ -128,6 +128,15 @@ export async function getCsrfToken() {
   return response.csrfToken;
 }
 
+export async function resendCurrentVerification() {
+  const csrfToken = await getCsrfToken();
+
+  return apiRequest<{ accepted: boolean }>('/v1/auth/email/resend/current', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+  });
+}
+
 export async function bootstrapPersonalWorkspace() {
   const csrfToken = await getCsrfToken();
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -130,6 +130,7 @@ export function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
+  const [accountExists, setAccountExists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -137,20 +138,26 @@ export function SignupForm() {
     if (submitting) return;
 
     setError(undefined);
+    setAccountExists(false);
     setSubmitting(true);
 
     try {
       await register(email.trim(), password);
-      router.push('/verify-email');
+      router.replace('/app');
     } catch (cause) {
-      setError(
-        cause instanceof VelliraApiError && cause.code === 'invalid_request'
-          ? 'Use a valid email and a password of at least 12 characters.'
-          : genericAuthError(
-              cause,
-              'Account creation is temporarily unavailable. Please try again.'
-            )
-      );
+      if (cause instanceof VelliraApiError && cause.code === 'account_exists') {
+        setAccountExists(true);
+        setError('This email already has a Vellira account.');
+      } else {
+        setError(
+          cause instanceof VelliraApiError && cause.code === 'invalid_request'
+            ? 'Use a valid email and a password of at least 12 characters.'
+            : genericAuthError(
+                cause,
+                'Account creation is temporarily unavailable. Please try again.'
+              )
+        );
+      }
       setSubmitting(false);
     }
   };
@@ -194,6 +201,13 @@ export function SignupForm() {
         </p>
       )}
 
+      {accountExists && (
+        <div className={styles.secondary}>
+          <AuthTextLink href='/login'>Sign in</AuthTextLink>
+          <AuthTextLink href='/forgot-password'>Forgot password?</AuthTextLink>
+        </div>
+      )}
+
       <div className={styles.actions}>
         <Button
           type='submit'
@@ -226,13 +240,32 @@ export function SignupForm() {
 }
 
 export function VerificationFlow() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [state, setState] = useState<
-    'pending' | 'verifying' | 'verified' | 'invalid'
+    'pending' | 'verifying' | 'verified' | 'invalid' | 'refresh-error'
   >('pending');
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+
+  const finishVerifiedSession = useCallback(async () => {
+    setError(undefined);
+    try {
+      await getMe();
+      router.replace('/app');
+    } catch (cause) {
+      if (cause instanceof VelliraApiError && cause.status === 401) {
+        setState('verified');
+        return;
+      }
+
+      setState('refresh-error');
+      setError(
+        'Your email is verified, but Vellira could not refresh your account right now.'
+      );
+    }
+  }, [router]);
 
   useEffect(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
@@ -244,7 +277,7 @@ export function VerificationFlow() {
     setState('verifying');
 
     void verifyEmail(token)
-      .then(() => setState('verified'))
+      .then(() => finishVerifiedSession())
       .catch((cause) => {
         setState('invalid');
         setError(
@@ -253,7 +286,7 @@ export function VerificationFlow() {
             : 'Email verification is temporarily unavailable.'
         );
       });
-  }, []);
+  }, [finishVerifiedSession]);
 
   const handleResend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -266,8 +299,7 @@ export function VerificationFlow() {
     try {
       await requestVerification(email.trim());
       setMessage(
-        'If this account can be verified, a new verification email has been ' +
-          'sent.'
+        'If verification is still needed, check your inbox for a new verification email.'
       );
     } catch (cause) {
       setError(
@@ -286,6 +318,17 @@ export function VerificationFlow() {
       <p className={styles.message} role='status'>
         Verifying your email…
       </p>
+    );
+  }
+
+  if (state === 'refresh-error') {
+    return (
+      <div className={styles.actions}>
+        <p className={styles.error} role='alert'>
+          {error}
+        </p>
+        <Button onClick={() => void finishVerifiedSession()}>Try again</Button>
+      </div>
     );
   }
 
