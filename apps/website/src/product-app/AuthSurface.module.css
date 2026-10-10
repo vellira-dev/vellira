@@ -141,11 +141,12 @@ button.providerButton {
 }
 
 .providerButton:not(:disabled):hover {
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px var(--border-muted);
 }
 
 .providerButton:not(:disabled):active {
-  transform: scale(0.98);
+  box-shadow: 0 0 0 3px var(--border-strong);
+  transform: translateY(1px);
 }
 
 .providerButton img {
