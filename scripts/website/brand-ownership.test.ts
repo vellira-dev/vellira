@@ -1,13 +1,29 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { syncBrand } from '../../packages/assets/scripts/sync-brand.mjs';
 const root = resolve(import.meta.dirname, '../..');
+const syncBrand = async ({
+  destination,
+  overlay,
+}: {
+  source: string;
+  destination: string;
+  overlay: string;
+}) => {
+  execFileSync(
+    process.execPath,
+    [
+      'packages/assets/scripts/sync-brand.mjs',
+      relative(root, destination),
+      relative(root, overlay),
+    ],
+    { cwd: root, stdio: 'pipe' }
+  );
+};
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 const brands = [
   'GitHub',
@@ -111,7 +127,8 @@ describe('external artwork ownership', () => {
     );
   });
   it('composes local and shared artwork without altering bytes and clears stale output', async () => {
-    const temp = await mkdtemp(join(tmpdir(), 'vellira-brand-'));
+    await mkdir(join(root, 'test-results'), { recursive: true });
+    const temp = await mkdtemp(join(root, 'test-results/brand-sync-'));
     try {
       const destination = join(temp, 'public');
       await mkdir(destination);
