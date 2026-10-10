@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { GitHub } from '@vellira-ui/icons';
 import { Button, Tooltip } from '@vellira-ui/react';
 import { getApiUrl } from './api';
 import {
@@ -93,7 +92,10 @@ export function AuthProviders({
                   onClick={() => start(provider)}
                 >
                   {provider === 'github' ? (
-                    <GitHub size={24} aria-hidden='true' />
+                    <span
+                      className={styles.providerGitHub}
+                      aria-hidden='true'
+                    />
                   ) : (
                     <>
                       <Image

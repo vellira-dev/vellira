@@ -1,4 +1,5 @@
 import { getAuthProviders } from '@/product-app/api';
+import { AuthLegalFooter } from '@/product-app/AuthLegalFooter';
 import { AuthSurface } from '@/product-app/AuthSurface';
 import { SignupForm } from '@/product-app/AuthFlows';
 import { AuthTextLink } from '@/product-app/AuthTextLink';
@@ -12,6 +13,7 @@ export default async function SignupPage() {
         <>
           Already have an account?{' '}
           <AuthTextLink href='/login'>Sign in</AuthTextLink>
+          <AuthLegalFooter />
         </>
       }
     >
