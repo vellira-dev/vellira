@@ -6,7 +6,7 @@ import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from './PrivacyPage.module.css';
 
-const LAST_UPDATED = '2026-10-05';
+const LAST_UPDATED = '2026-10-10';
 
 export const metadata: Metadata = {
   title: 'Privacy',
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
               </p>
               <p className={styles.updated}>
                 Last updated:{' '}
-                <time dateTime={LAST_UPDATED}>October 5, 2026</time>
+                <time dateTime={LAST_UPDATED}>October 10, 2026</time>
               </p>
             </header>
 
@@ -103,6 +103,22 @@ export default function PrivacyPage() {
                 localStorage. This value is used only to remember the selected
                 light, dark, system or high-contrast appearance and is not sent
                 to an advertising network.
+              </p>
+
+              <h3>Saved sign-in preference</h3>
+              <p>
+                If you choose &quot;Save email and login method on this
+                device&quot;, Vellira stores your last successfully used sign-in
+                method and, independently, your saved email address in your
+                browser under
+                <code> vellira-auth-login-preference</code> using localStorage.
+                Passwords, OAuth tokens and authentication sessions are never
+                stored in this preference. You can clear it by turning the
+                option off or clearing browser site data. An optional
+                short-lived sessionStorage marker remembers your choice during
+                an OAuth redirect; a cancelled or failed attempt does not become
+                your last used method. Storage availability never controls
+                sign-in.
               </p>
 
               <h3>Vellira accounts and authentication</h3>

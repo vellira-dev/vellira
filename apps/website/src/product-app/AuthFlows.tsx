@@ -5,9 +5,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ArrowLeft } from '@vellira-ui/icons';
-import { Button, FormField, Input } from '@vellira-ui/react';
+import { Button, Checkbox, FormField, Input } from '@vellira-ui/react';
 
 import { AuthTextLink } from './AuthTextLink';
+import {
+  clearLoginPreference,
+  clearOAuthPreferenceIntent,
+  completeOAuthPreference,
+  prepareOAuthPreference,
+  isOAuthLoginMethod,
+  readSavedLoginPreference,
+  saveLoginPreference,
+  type SavedLoginMethod,
+} from './authPreference';
 import {
   getApiUrl,
   getMe,
@@ -21,6 +31,18 @@ import {
 } from './api';
 
 import styles from './AuthSurface.module.css';
+
+function rememberLogin(
+  enabled: boolean,
+  method: SavedLoginMethod,
+  email?: string
+) {
+  if (enabled) {
+    saveLoginPreference(method, email);
+  } else {
+    clearLoginPreference();
+  }
+}
 
 function genericAuthError(error: unknown, fallback: string) {
   if (error instanceof VelliraApiError && error.code === 'rate_limited') {
@@ -36,6 +58,18 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const [remember, setRemember] = useState(false);
+  const [savedMethod, setSavedMethod] = useState<SavedLoginMethod>();
+
+  useEffect(() => {
+    const saved = readSavedLoginPreference();
+    if (!saved) return;
+    setRemember(true);
+    setSavedMethod(saved.lastSuccessfulMethod);
+    if (saved.email) {
+      setEmail(saved.email);
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,6 +80,7 @@ export function LoginForm() {
 
     try {
       await login(email.trim(), password);
+      rememberLogin(remember, 'email', email);
       router.replace('/app');
     } catch (cause) {
       setError(
@@ -94,6 +129,19 @@ export function LoginForm() {
         </p>
       )}
 
+      <Checkbox
+        label='Save email and login method on this device'
+        checked={remember}
+        onCheckedChange={(checked) => {
+          setRemember(checked);
+          if (!checked) {
+            clearLoginPreference();
+            setSavedMethod(undefined);
+          }
+        }}
+        disabled={submitting}
+      />
+
       <div className={styles.actions}>
         <Button
           type='submit'
@@ -109,11 +157,14 @@ export function LoginForm() {
           appearance='outline'
           color='neutral'
           disabled={submitting}
-          onClick={() =>
-            window.location.assign(getApiUrl('/v1/auth/oauth/github/start'))
-          }
+          onClick={() => {
+            prepareOAuthPreference(remember);
+            window.location.assign(getApiUrl('/v1/auth/oauth/github/start'));
+          }}
         >
-          Continue with GitHub
+          {savedMethod === 'github'
+            ? 'Continue with GitHub · Last used'
+            : 'Continue with GitHub'}
         </Button>
       </div>
 
@@ -132,6 +183,18 @@ export function SignupForm() {
   const [error, setError] = useState<string>();
   const [accountExists, setAccountExists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [remember, setRemember] = useState(false);
+  const [savedMethod, setSavedMethod] = useState<SavedLoginMethod>();
+
+  useEffect(() => {
+    const saved = readSavedLoginPreference();
+    if (!saved) return;
+    setRemember(true);
+    setSavedMethod(saved.lastSuccessfulMethod);
+    if (saved.email) {
+      setEmail(saved.email);
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -143,6 +206,7 @@ export function SignupForm() {
 
     try {
       await register(email.trim(), password);
+      rememberLogin(remember, 'email', email);
       router.replace('/app');
     } catch (cause) {
       if (cause instanceof VelliraApiError && cause.code === 'account_exists') {
@@ -208,6 +272,19 @@ export function SignupForm() {
         </div>
       )}
 
+      <Checkbox
+        label='Save email and login method on this device'
+        checked={remember}
+        onCheckedChange={(checked) => {
+          setRemember(checked);
+          if (!checked) {
+            clearLoginPreference();
+            setSavedMethod(undefined);
+          }
+        }}
+        disabled={submitting}
+      />
+
       <div className={styles.actions}>
         <Button
           type='submit'
@@ -223,11 +300,14 @@ export function SignupForm() {
           appearance='outline'
           color='neutral'
           disabled={submitting}
-          onClick={() =>
-            window.location.assign(getApiUrl('/v1/auth/oauth/github/start'))
-          }
+          onClick={() => {
+            prepareOAuthPreference(remember);
+            window.location.assign(getApiUrl('/v1/auth/oauth/github/start'));
+          }}
         >
-          Continue with GitHub
+          {savedMethod === 'github'
+            ? 'Continue with GitHub · Last used'
+            : 'Continue with GitHub'}
         </Button>
       </div>
 
@@ -614,7 +694,18 @@ type OAuthCallbackFailure = {
   };
 };
 
-function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
+function getOAuthCallbackFailure(
+  code: string,
+  provider?: string
+): OAuthCallbackFailure {
+  const providerName =
+    provider === 'google'
+      ? 'Google'
+      : provider === 'apple'
+        ? 'Apple'
+        : provider === 'github'
+          ? 'GitHub'
+          : 'Provider';
   switch (code) {
     case 'rate_limited':
       return {
@@ -631,13 +722,12 @@ function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
       };
     case 'oauth_cancelled':
       return {
-        message: 'GitHub sign in was cancelled.',
+        message: `${providerName} sign in was cancelled.`,
         primary: { href: '/login', label: 'Back to sign in' },
       };
     case 'oauth_identity_ineligible':
       return {
-        message:
-          'GitHub sign in requires a verified primary email on your GitHub account.',
+        message: `${providerName} sign in requires a verified primary email on your provider account.`,
         primary: { href: '/login', label: 'Back to sign in' },
       };
     case 'account_disabled':
@@ -647,13 +737,12 @@ function getOAuthCallbackFailure(code: string): OAuthCallbackFailure {
       };
     case 'oauth_invalid':
       return {
-        message:
-          'This GitHub sign-in attempt expired or could not be verified. Please try again.',
+        message: `This ${providerName} sign-in attempt expired or could not be verified. Please try again.`,
         primary: { href: '/login', label: 'Try again' },
       };
     default:
       return {
-        message: 'GitHub sign in is temporarily unavailable. Please try again.',
+        message: `${providerName} sign in is temporarily unavailable. Please try again.`,
         primary: { href: '/login', label: 'Back to sign in' },
       };
   }
@@ -666,12 +755,31 @@ export function OAuthCallback() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const errors = params.getAll('error');
-    const input =
-      params.size || window.location.hash
-        ? errors.length === 1 && errors[0]
-          ? errors[0]
-          : 'oauth_invalid'
-        : window.history.state?.velliraOAuthError;
+    const providers = params.getAll('provider');
+    const providerInput = providers.length === 1 ? providers[0] : undefined;
+    const provider = isOAuthLoginMethod(providerInput)
+      ? providerInput
+      : !params.size &&
+          isOAuthLoginMethod(window.history.state?.velliraOAuthProvider)
+        ? window.history.state.velliraOAuthProvider
+        : undefined;
+    const invalidProvider =
+      providers.length > 1 || (providers.length === 1 && !provider);
+    const successInput = params.size === 1 && provider && !window.location.hash;
+    const input = invalidProvider
+      ? 'oauth_invalid'
+      : errors.length === 1 && errors[0]
+        ? errors[0]
+        : params.size || window.location.hash
+          ? successInput
+            ? undefined
+            : 'oauth_invalid'
+          : window.history.state?.velliraOAuthError;
+    // Only bounded presentation hints survive URL scrubbing, never auth proof.
+    const historyState = { ...window.history.state };
+    delete historyState.velliraOAuthProvider;
+    if (provider) historyState.velliraOAuthProvider = provider;
+    window.history.replaceState(historyState, '', window.location.pathname);
 
     if (input !== undefined && input !== null) {
       const errorCode = [
@@ -692,17 +800,26 @@ export function OAuthCallback() {
         '',
         window.location.pathname
       );
-      setFailure(getOAuthCallbackFailure(errorCode));
+      clearOAuthPreferenceIntent();
+      setFailure(getOAuthCallbackFailure(errorCode, provider));
       return;
     }
 
     let active = true;
     void getMe()
-      .then(() => {
-        if (active) router.replace('/app');
+      .then((me) => {
+        if (!me.user?.id || me.user.status !== 'active')
+          throw new Error('Invalid session response');
+        if (active) {
+          completeOAuthPreference(provider);
+          router.replace('/app');
+        }
       })
       .catch(() => {
-        if (active) setFailure(getOAuthCallbackFailure('oauth_unavailable'));
+        if (active) {
+          clearOAuthPreferenceIntent();
+          setFailure(getOAuthCallbackFailure('oauth_unavailable', provider));
+        }
       });
     return () => {
       active = false;
@@ -712,7 +829,7 @@ export function OAuthCallback() {
   if (!failure) {
     return (
       <p className={styles.message} role='status'>
-        Finishing GitHub sign in…
+        Finishing sign in…
       </p>
     );
   }
