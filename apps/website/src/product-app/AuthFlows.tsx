@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from '@vellira-ui/icons';
 import { Button, FormField, Input } from '@vellira-ui/react';
 
+import { validNewPassword } from './passwordPolicy';
+
 import { AuthTextLink } from './AuthTextLink';
 import {
   getApiUrl,
@@ -136,6 +138,10 @@ export function SignupForm() {
     event.preventDefault();
     if (submitting) return;
 
+    if (!validNewPassword(password)) {
+      setError('Use at least 12 characters and no more than 1024 UTF-8 bytes.');
+      return;
+    }
     setError(undefined);
     setSubmitting(true);
 
@@ -182,7 +188,6 @@ export function SignupForm() {
           autoComplete='new-password'
           value={password}
           onValueChange={setPassword}
-          minLength={12}
           required
           disabled={submitting}
         />
@@ -455,6 +460,10 @@ export function ResetPasswordForm() {
     event.preventDefault();
     if (submitting || !token) return;
 
+    if (!validNewPassword(newPassword)) {
+      setError('Use at least 12 characters and no more than 1024 UTF-8 bytes.');
+      return;
+    }
     setError(undefined);
     setSubmitting(true);
 
@@ -535,7 +544,6 @@ export function ResetPasswordForm() {
           autoComplete='new-password'
           value={newPassword}
           onValueChange={setNewPassword}
-          minLength={12}
           required
           disabled={submitting}
         />
