@@ -1,3 +1,4 @@
+import { AuthLegalFooter } from '@/product-app/AuthLegalFooter';
 import { AuthSurface } from '@/product-app/AuthSurface';
 import { LoginForm } from '@/product-app/AuthFlows';
 
@@ -6,7 +7,7 @@ export default function LoginPage() {
     <AuthSurface
       title='Welcome back'
       description='Sign in to your Vellira account.'
-      footer={null}
+      footer={<AuthLegalFooter />}
     >
       <LoginForm />
     </AuthSurface>
