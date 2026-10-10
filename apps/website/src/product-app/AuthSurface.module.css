@@ -180,3 +180,10 @@ button.providerButton {
   height: 1px;
   background: var(--border-muted);
 }
+
+.providerGitHub {
+  width: var(--space-6);
+  height: var(--space-6);
+  background: currentcolor;
+  mask: url('/brand/auth/github.svg') center / contain no-repeat;
+}
