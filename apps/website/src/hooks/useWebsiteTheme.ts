@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  readBrowserStorage,
+  writeBrowserStorage,
+} from '../utils/browserStorage';
+
 import { useEffect, useMemo, useState } from 'react';
 
 export type WebsiteThemePreference =
@@ -24,7 +29,7 @@ export function useWebsiteTheme() {
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    const savedPreference = window.localStorage.getItem(STORAGE_KEY);
+    const savedPreference = readBrowserStorage('localStorage', STORAGE_KEY);
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const updateSystemTheme = () => {
@@ -57,7 +62,7 @@ export function useWebsiteTheme() {
 
   const setPreference = (nextPreference: WebsiteThemePreference) => {
     setPreferenceState(nextPreference);
-    window.localStorage.setItem(STORAGE_KEY, nextPreference);
+    writeBrowserStorage('localStorage', STORAGE_KEY, nextPreference);
   };
 
   return {

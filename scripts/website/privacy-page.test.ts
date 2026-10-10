@@ -37,6 +37,8 @@ describe('website privacy policy', () => {
     expect(privacyPage).toContain('__Host-vellira_actor');
     expect(privacyPage).toContain('180 days');
     expect(privacyPage).toContain('vellira-website-theme');
+    expect(privacyPage).toContain('Saved sign-in preference');
+    expect(privacyPage).toContain('vellira-auth-login-preference');
     expect(privacyPage).toContain('Buttondown');
     expect(privacyPage).toContain('client IP');
     expect(privacyPage).toContain('Render');
@@ -61,7 +63,7 @@ describe('website privacy policy', () => {
 
   it('includes the privacy route in the public sitemap', () => {
     expect(sitemap).toContain('`${SITE_URL}/privacy`');
-    expect(sitemap).toContain("new Date('2026-10-05')");
+    expect(sitemap).toContain("new Date('2026-10-10')");
   });
 
   it('links the policy at the newsletter email collection point', () => {

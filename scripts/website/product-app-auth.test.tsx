@@ -27,6 +27,8 @@ import {
 let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
 beforeEach(() => {
   window.history.replaceState(null, '', '/auth/callback');
+  window.localStorage.clear();
+  window.sessionStorage.clear();
   fetchMock = vi.fn<typeof fetch>();
   vi.stubGlobal('fetch', fetchMock);
 });
@@ -200,7 +202,7 @@ describe('existing OAuth callback and account recovery', () => {
   it('creates an email account and enters the app without blocking on verification', async () => {
     fetchMock.mockResolvedValue(respond({ registered: true }));
     render(<SignupForm />);
-    fireEvent.change(screen.getByLabelText('Email', { exact: false }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'new-user@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
@@ -227,7 +229,7 @@ describe('existing OAuth callback and account recovery', () => {
       respond({ error: { code: 'account_exists' } }, 409)
     );
     render(<SignupForm />);
-    fireEvent.change(screen.getByLabelText('Email', { exact: false }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'existing@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
@@ -311,10 +313,78 @@ describe('existing OAuth callback and account recovery', () => {
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
   });
 
+  it('remembers only email and login method when opted in', async () => {
+    fetchMock.mockResolvedValue(respond({ authenticated: true }));
+    render(<LoginForm />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
+      target: { value: 'remember-me@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
+      target: { value: 'never-persist-this-password' },
+    });
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'Save email and login method on this device',
+      })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
+    const stored = window.localStorage.getItem('vellira-auth-login-preference');
+    expect(stored).toBe(
+      JSON.stringify({
+        version: 2,
+        email: 'remember-me@example.com',
+        lastSuccessfulMethod: 'email',
+      })
+    );
+    expect(stored).not.toContain('never-persist-this-password');
+  });
+
+  it('prefills saved email without restoring credentials', () => {
+    window.localStorage.setItem(
+      'vellira-auth-login-preference',
+      JSON.stringify({
+        method: 'email',
+        email: 'saved@example.com',
+      })
+    );
+
+    render(<LoginForm />);
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'Save email and login method on this device',
+      })
+    ).toBeChecked();
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue(
+      'saved@example.com'
+    );
+    expect(screen.getByLabelText('Password', { exact: false })).toHaveValue('');
+  });
+
+  it('marks the saved provider as last used without auto-starting OAuth', () => {
+    window.localStorage.setItem(
+      'vellira-auth-login-preference',
+      JSON.stringify({ version: 2, lastSuccessfulMethod: 'github' })
+    );
+
+    render(<LoginForm />);
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Continue with GitHub · Last used',
+      })
+    ).toBeEnabled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it('signs in through the existing password form and API', async () => {
     fetchMock.mockResolvedValue(respond({ authenticated: true }));
     render(<LoginForm />);
-    fireEvent.change(screen.getByLabelText('Email', { exact: false }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'fixture@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
@@ -338,7 +408,7 @@ describe('existing OAuth callback and account recovery', () => {
   it('requests recovery through the existing password-reset form and API', async () => {
     fetchMock.mockResolvedValue(respond({ accepted: true }));
     render(<ForgotPasswordForm />);
-    fireEvent.change(screen.getByLabelText('Email', { exact: false }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'fixture@example.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }));
