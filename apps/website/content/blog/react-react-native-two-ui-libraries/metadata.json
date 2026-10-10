@@ -4,6 +4,12 @@
   "slug": "react-react-native-two-ui-libraries",
   "publishedAt": "2026-10-10",
   "author": "Roman Bakurov",
-  "tags": ["React", "React Native", "Design Systems", "UI Libraries", "Cross-Platform"],
+  "tags": [
+    "React",
+    "React Native",
+    "Design Systems",
+    "UI Libraries",
+    "Cross-Platform"
+  ],
   "draft": true
 }
