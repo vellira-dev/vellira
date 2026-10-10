@@ -194,7 +194,7 @@ export function LoginForm({
           loadingText='Signing in…'
           disabled={submitting}
         >
-          Sign in
+          {connection ? 'Sign in and continue' : 'Sign in'}
         </Button>
       </div>
 
@@ -768,6 +768,12 @@ function getOAuthCallbackFailure(
           'Too many sign-in attempts. Please wait a minute and try again.',
         primary: { href: '/login', label: 'Back to sign in' },
       };
+    case 'link_authentication_required':
+      return {
+        message:
+          'Use a sign-in method already connected to your existing Vellira account. This sign-in did not confirm that account.',
+        primary: { href: '/login', label: 'Back to sign in' },
+      };
     case 'account_link_required':
       return {
         message:
@@ -856,6 +862,7 @@ export function OAuthCallback() {
     if (input !== undefined && input !== null) {
       const errorCode = [
         'account_link_required',
+        'link_authentication_required',
         'oauth_cancelled',
         'oauth_identity_ineligible',
         'account_disabled',
