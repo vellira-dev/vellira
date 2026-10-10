@@ -6,6 +6,7 @@ import { chromium, expect } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { createServer } from 'node:http';
 const require = createRequire(import.meta.url);
 const origin = process.env.AUTH_BROWSER_BASE_URL || 'http://127.0.0.1:31570';
 const apiOrigin =
@@ -25,7 +26,34 @@ const email = 'security-canary@example.invalid';
 const key = 'vellira-auth-login-preference';
 const linkID = '00000000-0000-4000-8000-000000000123';
 const connection = `/auth/connect?link=${linkID}&link_provider=github`;
-const browser = await chromium.launch({ headless: true });
+// The only real local API response serves SSR presentation discovery. All auth
+// requests remain intercepted synthetic fixtures; no production data is touched.
+let discoveryProviders = ['google', 'apple', 'github'];
+let discoveryAvailable = true;
+const discovery = createServer((request, response) => {
+  response.setHeader('content-type', 'application/json');
+  if (request.method !== 'GET' || request.url !== '/v1/auth/providers') {
+    response.statusCode = 404;
+    response.end('{}');
+    return;
+  }
+  response.statusCode = discoveryAvailable ? 200 : 503;
+  response.end(
+    JSON.stringify(discoveryAvailable ? { providers: discoveryProviders } : {})
+  );
+});
+await new Promise((resolve, reject) => {
+  discovery.once('error', reject);
+  discovery.listen(
+    Number(new URL(apiOrigin).port),
+    new URL(apiOrigin).hostname,
+    resolve
+  );
+});
+const browser = await chromium.launch({ headless: true }).catch((error) => {
+  discovery.close();
+  throw error;
+});
 const results = [];
 async function fixture(width = 390, denied = false, deviceScaleFactor = 1) {
   const context = await browser.newContext({
@@ -244,6 +272,91 @@ async function fill(page) {
   await page.getByLabel(/^Password/).fill(password);
 }
 try {
+  await run(
+    'provider-discovery-failure-keeps-password-login-usable',
+    async () => {
+      const { context, page, state } = await fixture(320, true);
+      try {
+        discoveryProviders = ['github'];
+        await page.goto(origin + '/login');
+        await expect(
+          page.getByRole('button', { name: 'Continue with GitHub' })
+        ).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Continue with Google' })
+        ).toHaveCount(0);
+        await expect(
+          page.getByRole('button', { name: 'Continue with Apple' })
+        ).toHaveCount(0);
+        discoveryAvailable = false;
+        await page.reload();
+        await expect(
+          page.getByRole('group', { name: 'Continue with a provider' })
+        ).toHaveCount(0);
+        await fill(page);
+        await page
+          .getByRole('button', { name: 'Sign in', exact: true })
+          .click();
+        await expect(page).toHaveURL(origin + '/app');
+        expect(state.authenticated).toBe(true);
+        return {
+          availableProviderOnly: true,
+          passwordWorksDuringDiscoveryFailure: true,
+          storageDenied: true,
+        };
+      } finally {
+        discoveryAvailable = true;
+        discoveryProviders = ['google', 'apple', 'github'];
+        await context.close();
+      }
+    }
+  );
+  await run('legal-destinations-and-local-social-artwork', async () => {
+    const { context, page, state } = await fixture(390);
+    try {
+      for (const route of ['/terms', '/privacy', '/cookies']) {
+        const response = await page.goto(origin + route);
+        expect(response.status()).toBe(200);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      }
+      await page.goto(origin + '/blog/two-runtimes');
+      const article = page.getByRole('complementary', {
+        name: 'Article actions',
+      });
+      for (const [name, slug] of [
+        ['Facebook', 'facebook'],
+        ['LinkedIn', 'linkedin'],
+        ['Reddit', 'reddit'],
+        ['X', 'x'],
+      ]) {
+        const link = article.getByRole('link', { name, exact: true });
+        await expect(link).toBeVisible();
+        const mask = await link
+          .locator('[class*=socialBrand]')
+          .evaluate((n) => getComputedStyle(n).maskImage);
+        expect(mask).toContain(`/brand/social/${slug}.svg`);
+        const resource = await page.request.get(
+          origin + `/brand/social/${slug}.svg`
+        );
+        expect(resource.status()).toBe(200);
+        await link.focus();
+        // A real Tab establishes focus-visible semantics before supplementary tooltip proof.
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Shift+Tab');
+        await expect(
+          page.getByRole('tooltip', { name, exact: true })
+        ).toBeVisible();
+      }
+      expect(state.errors).toEqual([]);
+      return {
+        realLegalPages: true,
+        localShareArtwork: true,
+        focusTooltips: true,
+      };
+    } finally {
+      await context.close();
+    }
+  });
   for (const width of [320, 375, 390, 768, 1440])
     for (const theme of ['Light', 'Dark']) {
       await run(`provider-artwork-${width}-${theme}`, async () => {
@@ -279,6 +392,7 @@ try {
                   width: r.width,
                   height: r.height,
                   text: n.textContent,
+                  radius: getComputedStyle(n).borderRadius,
                 };
               })
             );
@@ -287,6 +401,7 @@ try {
               expect(b.height).toBe(48);
               expect(b.y).toBe(boxes[0].y);
               expect(b.text).toBe('');
+              expect(b.radius).toBe('10%');
             }
             const images = await group
               .locator('img:visible')
@@ -819,6 +934,7 @@ try {
   });
 } finally {
   await browser.close();
+  await new Promise((resolve) => discovery.close(resolve));
   await writeFile(
     path.join(out, 'results.json'),
     JSON.stringify(results, null, 2)
