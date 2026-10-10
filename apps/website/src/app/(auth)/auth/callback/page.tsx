@@ -5,7 +5,7 @@ export default function AuthCallbackPage() {
   return (
     <AuthSurface
       title='Finishing sign in'
-      description='Vellira is confirming the session created by GitHub sign in.'
+      description='Vellira is confirming your sign-in result.'
     >
       <OAuthCallback />
     </AuthSurface>

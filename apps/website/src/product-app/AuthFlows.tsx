@@ -1,11 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ArrowLeft } from '@vellira-ui/icons';
 import { Button, Checkbox, FormField, Input } from '@vellira-ui/react';
+
+import { validNewPassword } from './passwordPolicy';
 
 import { AuthTextLink } from './AuthTextLink';
 import {
@@ -30,6 +39,14 @@ import {
   VelliraApiError,
 } from './api';
 
+import {
+  connectionHref,
+  connectionQuery,
+  isOAuthConnection,
+  readOAuthConnection,
+  type OAuthConnection,
+} from './oauthConnection';
+
 import styles from './AuthSurface.module.css';
 
 function rememberLogin(
@@ -52,7 +69,13 @@ function genericAuthError(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function LoginForm() {
+export function LoginForm({
+  connection,
+  onAuthenticated,
+}: {
+  connection?: OAuthConnection;
+  onAuthenticated?: () => Promise<void>;
+} = {}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,6 +93,11 @@ export function LoginForm() {
       setEmail(saved.email);
     }
   }, []);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error && !submitting) errorRef.current?.focus();
+  }, [error, submitting]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,8 +109,19 @@ export function LoginForm() {
     try {
       await login(email.trim(), password);
       rememberLogin(remember, 'email', email);
-      router.replace('/app');
+      setPassword('');
+      if (onAuthenticated) {
+        await onAuthenticated();
+        setSubmitting(false);
+      } else router.replace('/app');
     } catch (cause) {
+      // Clear a rejected credential. A transient network failure may retain the
+      // in-memory value for retry; neither path writes it to browser storage.
+      if (
+        cause instanceof VelliraApiError &&
+        cause.code === 'invalid_credentials'
+      )
+        setPassword('');
       setError(
         cause instanceof VelliraApiError && cause.code === 'invalid_credentials'
           ? 'Invalid email or password.'
@@ -124,7 +163,7 @@ export function LoginForm() {
       </FormField>
 
       {error && (
-        <p className={styles.error} role='alert'>
+        <p ref={errorRef} className={styles.error} role='alert' tabIndex={-1}>
           {error}
         </p>
       )}
@@ -159,7 +198,12 @@ export function LoginForm() {
           disabled={submitting}
           onClick={() => {
             prepareOAuthPreference(remember);
-            window.location.assign(getApiUrl('/v1/auth/oauth/github/start'));
+            window.location.assign(
+              getApiUrl(
+                '/v1/auth/oauth/github/start' +
+                  (connection ? '?' + connectionQuery(connection) : '')
+              )
+            );
           }}
         >
           {savedMethod === 'github'
@@ -169,8 +213,16 @@ export function LoginForm() {
       </div>
 
       <div className={styles.secondary}>
-        <AuthTextLink href='/forgot-password'>Forgot password?</AuthTextLink>
-        <AuthTextLink href='/signup'>Create account</AuthTextLink>
+        <AuthTextLink
+          href='/forgot-password'
+          target={connection ? '_blank' : undefined}
+          rel={connection ? 'noopener noreferrer' : undefined}
+        >
+          {connection ? 'Forgot password? (new tab)' : 'Forgot password?'}
+        </AuthTextLink>
+        {!connection && (
+          <AuthTextLink href='/signup'>Create account</AuthTextLink>
+        )}
       </div>
     </form>
   );
@@ -195,11 +247,20 @@ export function SignupForm() {
       setEmail(saved.email);
     }
   }, []);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error && !submitting) errorRef.current?.focus();
+  }, [error, submitting]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting) return;
 
+    if (!validNewPassword(password)) {
+      setError('Use at least 12 characters and no more than 1024 UTF-8 bytes.');
+      return;
+    }
     setError(undefined);
     setAccountExists(false);
     setSubmitting(true);
@@ -211,7 +272,9 @@ export function SignupForm() {
     } catch (cause) {
       if (cause instanceof VelliraApiError && cause.code === 'account_exists') {
         setAccountExists(true);
-        setError('This email already has a Vellira account.');
+        setError(
+          'An account already exists for this email. Sign in using your existing method.'
+        );
       } else {
         setError(
           cause instanceof VelliraApiError && cause.code === 'invalid_request'
@@ -253,14 +316,13 @@ export function SignupForm() {
           autoComplete='new-password'
           value={password}
           onValueChange={setPassword}
-          minLength={12}
           required
           disabled={submitting}
         />
       </FormField>
 
       {error && (
-        <p className={styles.error} role='alert'>
+        <p ref={errorRef} className={styles.error} role='alert' tabIndex={-1}>
           {error}
         </p>
       )}
@@ -533,8 +595,8 @@ export function ForgotPasswordForm() {
 
       {accepted && (
         <p className={styles.message} role='status'>
-          If this account is eligible for password recovery, a reset email has
-          been sent.
+          If this account is eligible for password recovery, check your inbox
+          for a reset link.
         </p>
       )}
 
@@ -558,6 +620,7 @@ export function ForgotPasswordForm() {
 }
 
 export function ResetPasswordForm() {
+  const capturedFragment = useRef(false);
   const [token, setToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [ready, setReady] = useState(false);
@@ -566,8 +629,16 @@ export function ResetPasswordForm() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // StrictMode may replay effects after the URL has already been scrubbed.
+    // Keep the one capture only in this mounted form, never storage/history.
+    if (capturedFragment.current) return;
+    capturedFragment.current = true;
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const nextToken = fragment.get('token');
+    const tokens = fragment.getAll('token');
+    const nextToken =
+      tokens.length === 1 && tokens[0] && tokens[0].length <= 128
+        ? tokens[0]
+        : null;
 
     window.history.replaceState(null, '', window.location.pathname);
     setToken(nextToken);
@@ -578,6 +649,10 @@ export function ResetPasswordForm() {
     event.preventDefault();
     if (submitting || !token) return;
 
+    if (!validNewPassword(newPassword)) {
+      setError('Use at least 12 characters and no more than 1024 UTF-8 bytes.');
+      return;
+    }
     setError(undefined);
     setSubmitting(true);
 
@@ -589,6 +664,8 @@ export function ResetPasswordForm() {
     } catch (cause) {
       if (cause instanceof VelliraApiError) {
         if (cause.code === 'invalid_challenge') {
+          setToken(null);
+          setNewPassword('');
           setError('This reset link is invalid or has expired.');
         } else if (cause.code === 'invalid_request') {
           setError('Use a password of at least 12 characters.');
@@ -633,7 +710,7 @@ export function ResetPasswordForm() {
     return (
       <div className={styles.actions}>
         <p className={styles.error} role='alert'>
-          This reset link is missing or invalid.
+          {error ?? 'This reset link is missing or invalid.'}
         </p>
         <Button asChild appearance='outline' color='neutral'>
           <Link href='/forgot-password'>Request another reset link</Link>
@@ -658,7 +735,6 @@ export function ResetPasswordForm() {
           autoComplete='new-password'
           value={newPassword}
           onValueChange={setNewPassword}
-          minLength={12}
           required
           disabled={submitting}
         />
@@ -716,9 +792,9 @@ function getOAuthCallbackFailure(
     case 'account_link_required':
       return {
         message:
-          'A Vellira account already exists for the email verified by GitHub. Sign in with your email and password, or reset your password if needed.',
-        primary: { href: '/login', label: 'Sign in with email' },
-        secondary: { href: '/forgot-password', label: 'Reset password' },
+          'A Vellira account already exists for this email. Sign in using a method already connected to your account. The new provider has not been connected.',
+        primary: { href: '/login', label: 'Sign in' },
+        secondary: { href: '/forgot-password', label: 'Forgot password?' },
       };
     case 'oauth_cancelled':
       return {
@@ -763,9 +839,22 @@ export function OAuthCallback() {
           isOAuthLoginMethod(window.history.state?.velliraOAuthProvider)
         ? window.history.state.velliraOAuthProvider
         : undefined;
+    const connection =
+      readOAuthConnection(params) ??
+      (!params.size &&
+      isOAuthConnection(window.history.state?.velliraOAuthConnection)
+        ? (window.history.state.velliraOAuthConnection as OAuthConnection)
+        : undefined);
+    const hasConnectionInput =
+      params.has('link') || params.has('link_provider');
     const invalidProvider =
-      providers.length > 1 || (providers.length === 1 && !provider);
-    const successInput = params.size === 1 && provider && !window.location.hash;
+      providers.length > 1 ||
+      (providers.length === 1 && !provider) ||
+      (hasConnectionInput && !connection);
+    const successInput =
+      params.size === (hasConnectionInput ? 3 : 1) &&
+      provider &&
+      !window.location.hash;
     const input = invalidProvider
       ? 'oauth_invalid'
       : errors.length === 1 && errors[0]
@@ -777,7 +866,11 @@ export function OAuthCallback() {
           : window.history.state?.velliraOAuthError;
     // Only bounded presentation hints survive URL scrubbing, never auth proof.
     const historyState = { ...window.history.state };
+    if (params.size) delete historyState.velliraOAuthError;
     delete historyState.velliraOAuthProvider;
+    delete historyState.velliraOAuthConnection;
+    if (connection && !invalidProvider)
+      historyState.velliraOAuthConnection = connection;
     if (provider) historyState.velliraOAuthProvider = provider;
     window.history.replaceState(historyState, '', window.location.pathname);
 
@@ -801,7 +894,18 @@ export function OAuthCallback() {
         window.location.pathname
       );
       clearOAuthPreferenceIntent();
-      setFailure(getOAuthCallbackFailure(errorCode, provider));
+      const failure = getOAuthCallbackFailure(errorCode, provider);
+      if (connection && !invalidProvider) {
+        if (errorCode === 'account_link_required') {
+          router.replace(connectionHref(connection));
+          return;
+        }
+        failure.primary = {
+          href: connectionHref(connection),
+          label: 'Return to connection',
+        };
+      }
+      setFailure(failure);
       return;
     }
 
@@ -812,13 +916,22 @@ export function OAuthCallback() {
           throw new Error('Invalid session response');
         if (active) {
           completeOAuthPreference(provider);
-          router.replace('/app');
+          router.replace(connection ? connectionHref(connection) : '/app');
         }
       })
       .catch(() => {
         if (active) {
           clearOAuthPreferenceIntent();
-          setFailure(getOAuthCallbackFailure('oauth_unavailable', provider));
+          const failure = getOAuthCallbackFailure(
+            'oauth_unavailable',
+            provider
+          );
+          if (connection)
+            failure.primary = {
+              href: connectionHref(connection),
+              label: 'Return to connection',
+            };
+          setFailure(failure);
         }
       });
     return () => {
