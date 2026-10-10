@@ -14,6 +14,9 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from '@vellira-ui/icons';
 import { Button, Checkbox, FormField, Input } from '@vellira-ui/react';
 
+import { AuthProviders } from './AuthProviders';
+import type { OAuthLoginMethod } from './authPreference';
+
 import { validNewPassword } from './passwordPolicy';
 
 import { AuthTextLink } from './AuthTextLink';
@@ -21,14 +24,12 @@ import {
   clearLoginPreference,
   clearOAuthPreferenceIntent,
   completeOAuthPreference,
-  prepareOAuthPreference,
   isOAuthLoginMethod,
   readSavedLoginPreference,
   saveLoginPreference,
   type SavedLoginMethod,
 } from './authPreference';
 import {
-  getApiUrl,
   getMe,
   login,
   register,
@@ -41,7 +42,6 @@ import {
 
 import {
   connectionHref,
-  connectionQuery,
   isOAuthConnection,
   readOAuthConnection,
   type OAuthConnection,
@@ -70,9 +70,11 @@ function genericAuthError(error: unknown, fallback: string) {
 }
 
 export function LoginForm({
+  providers = [],
   connection,
   onAuthenticated,
 }: {
+  providers?: readonly OAuthLoginMethod[];
   connection?: OAuthConnection;
   onAuthenticated?: () => Promise<void>;
 } = {}) {
@@ -82,13 +84,11 @@ export function LoginForm({
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [savedMethod, setSavedMethod] = useState<SavedLoginMethod>();
 
   useEffect(() => {
     const saved = readSavedLoginPreference();
     if (!saved) return;
     setRemember(true);
-    setSavedMethod(saved.lastSuccessfulMethod);
     if (saved.email) {
       setEmail(saved.email);
     }
@@ -140,6 +140,13 @@ export function LoginForm({
       onSubmit={handleSubmit}
       aria-busy={submitting}
     >
+      <AuthProviders
+        providers={providers}
+        remember={remember}
+        disabled={submitting}
+        onRedirecting={setSubmitting}
+        connection={connection}
+      />
       <FormField label='Email' required>
         <Input
           type='email'
@@ -175,7 +182,6 @@ export function LoginForm({
           setRemember(checked);
           if (!checked) {
             clearLoginPreference();
-            setSavedMethod(undefined);
           }
         }}
         disabled={submitting}
@@ -190,26 +196,6 @@ export function LoginForm({
         >
           Sign in
         </Button>
-
-        <Button
-          type='button'
-          appearance='outline'
-          color='neutral'
-          disabled={submitting}
-          onClick={() => {
-            prepareOAuthPreference(remember);
-            window.location.assign(
-              getApiUrl(
-                '/v1/auth/oauth/github/start' +
-                  (connection ? '?' + connectionQuery(connection) : '')
-              )
-            );
-          }}
-        >
-          {savedMethod === 'github'
-            ? 'Continue with GitHub · Last used'
-            : 'Continue with GitHub'}
-        </Button>
       </div>
 
       <div className={styles.secondary}>
@@ -221,14 +207,19 @@ export function LoginForm({
           {connection ? 'Forgot password? (new tab)' : 'Forgot password?'}
         </AuthTextLink>
         {!connection && (
-          <AuthTextLink href='/signup'>Create account</AuthTextLink>
+          <p className={styles.message}>
+            Don&apos;t have an account?{' '}
+            <AuthTextLink href='/signup'>Create account</AuthTextLink>
+          </p>
         )}
       </div>
     </form>
   );
 }
 
-export function SignupForm() {
+export function SignupForm({
+  providers = [],
+}: { providers?: readonly OAuthLoginMethod[] } = {}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -236,13 +227,11 @@ export function SignupForm() {
   const [accountExists, setAccountExists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [savedMethod, setSavedMethod] = useState<SavedLoginMethod>();
 
   useEffect(() => {
     const saved = readSavedLoginPreference();
     if (!saved) return;
     setRemember(true);
-    setSavedMethod(saved.lastSuccessfulMethod);
     if (saved.email) {
       setEmail(saved.email);
     }
@@ -295,6 +284,12 @@ export function SignupForm() {
       onSubmit={handleSubmit}
       aria-busy={submitting}
     >
+      <AuthProviders
+        providers={providers}
+        remember={remember}
+        disabled={submitting}
+        onRedirecting={setSubmitting}
+      />
       <FormField label='Email' required>
         <Input
           type='email'
@@ -341,7 +336,6 @@ export function SignupForm() {
           setRemember(checked);
           if (!checked) {
             clearLoginPreference();
-            setSavedMethod(undefined);
           }
         }}
         disabled={submitting}
@@ -356,27 +350,7 @@ export function SignupForm() {
         >
           Create account
         </Button>
-
-        <Button
-          type='button'
-          appearance='outline'
-          color='neutral'
-          disabled={submitting}
-          onClick={() => {
-            prepareOAuthPreference(remember);
-            window.location.assign(getApiUrl('/v1/auth/oauth/github/start'));
-          }}
-        >
-          {savedMethod === 'github'
-            ? 'Continue with GitHub · Last used'
-            : 'Continue with GitHub'}
-        </Button>
       </div>
-
-      <p className={styles.message}>
-        Account data is handled according to the{' '}
-        <AuthTextLink href='/privacy'>Vellira Privacy Policy</AuthTextLink>.
-      </p>
     </form>
   );
 }

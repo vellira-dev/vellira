@@ -112,7 +112,101 @@
 
 @media (width <= 420px) {
   .secondary {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
+}
+
+.providerRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--space-4);
+}
+
+button.providerButton {
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--space-12);
+  width: var(--space-12);
+  height: var(--space-12);
+  padding: 0;
+
+  /* Official Google square: radius 4 / width 40. Scale the wrapper, not SVG paths. */
+  border-radius: 10%;
+}
+
+button.providerApple,
+button.providerGitHubButton {
+  background: #fff;
+
+  /* Brand-owned button surface, matching the supplied Google artwork boundary. */
+  border: calc(var(--space-12) / 40) solid #747775;
+}
+
+[data-vellira-theme='dark'] button.providerApple,
+[data-vellira-theme='high-contrast'] button.providerApple {
+  border-color: #8e918f;
+  background: #000;
+}
+
+[data-vellira-theme='dark'] button.providerGitHubButton,
+[data-vellira-theme='high-contrast'] button.providerGitHubButton {
+  border-color: #8e918f;
+  background: #131314;
+}
+
+.providerButton:focus-visible {
+  outline: 2px solid var(--button-neutral-ring);
+  outline-offset: var(--space-1);
+}
+
+.providerButton:not(:disabled):hover {
+  box-shadow: 0 0 0 2px var(--border-muted);
+}
+
+.providerButton:not(:disabled):active {
+  box-shadow: 0 0 0 3px var(--border-strong);
+  transform: translateY(1px);
+}
+
+.providerButton img {
+  width: 100%;
+  height: 100%;
+}
+
+.providerDark {
+  display: none;
+}
+
+[data-vellira-theme='dark'] .providerLight,
+[data-vellira-theme='high-contrast'] .providerLight {
+  display: none;
+}
+
+[data-vellira-theme='dark'] .providerDark,
+[data-vellira-theme='high-contrast'] .providerDark {
+  display: block;
+}
+
+.authDivider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.authDivider span {
+  flex: 1;
+  height: 1px;
+  background: var(--border-muted);
+}
+
+.providerGitHub {
+  width: var(--space-6);
+  height: var(--space-6);
+  background: currentcolor;
+  mask: url('/brand/auth/github.svg') center / contain no-repeat;
 }
