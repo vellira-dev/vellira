@@ -112,7 +112,71 @@
 
 @media (width <= 420px) {
   .secondary {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
+}
+
+.providerRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--space-4);
+}
+
+button.providerButton {
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--space-12);
+  width: var(--space-12);
+  height: var(--space-12);
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+
+.providerButton:focus-visible {
+  outline: 2px solid var(--button-neutral-ring);
+  outline-offset: var(--space-1);
+}
+
+.providerButton:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.providerButton:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.providerButton img {
+  width: 100%;
+  height: 100%;
+}
+
+.providerDark {
+  display: none;
+}
+
+[data-vellira-theme='dark'] .providerLight,
+[data-vellira-theme='high-contrast'] .providerLight {
+  display: none;
+}
+
+[data-vellira-theme='dark'] .providerDark,
+[data-vellira-theme='high-contrast'] .providerDark {
+  display: block;
+}
+
+.authDivider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.authDivider span {
+  flex: 1;
+  height: 1px;
+  background: var(--border-muted);
 }
