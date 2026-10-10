@@ -132,7 +132,29 @@ button.providerButton {
   width: var(--space-12);
   height: var(--space-12);
   padding: 0;
-  border-radius: var(--radius-sm);
+
+  /* Official Google square: radius 4 / width 40. Scale the wrapper, not SVG paths. */
+  border-radius: 10%;
+}
+
+button.providerApple,
+button.providerGitHubButton {
+  background: #fff;
+
+  /* Brand-owned button surface, matching the supplied Google artwork boundary. */
+  border: calc(var(--space-12) / 40) solid #747775;
+}
+
+[data-vellira-theme='dark'] button.providerApple,
+[data-vellira-theme='high-contrast'] button.providerApple {
+  border-color: #8e918f;
+  background: #000;
+}
+
+[data-vellira-theme='dark'] button.providerGitHubButton,
+[data-vellira-theme='high-contrast'] button.providerGitHubButton {
+  border-color: #8e918f;
+  background: #131314;
 }
 
 .providerButton:focus-visible {

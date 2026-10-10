@@ -82,11 +82,11 @@ export function AuthProviders({
               <Tooltip.Trigger asChild>
                 <Button
                   type='button'
-                  appearance={provider === 'github' ? 'outline' : 'bare'}
+                  appearance='bare'
                   color='neutral'
                   shape='square'
                   size='lg'
-                  className={styles.providerButton}
+                  className={`${styles.providerButton} ${provider === 'apple' ? styles.providerApple : provider === 'github' ? styles.providerGitHubButton : ''}`}
                   aria-label={label}
                   disabled={disabled}
                   onClick={() => start(provider)}
