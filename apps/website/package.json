@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sync:brand": "pnpm --filter @vellira-ui/assets sync-brand apps/website/public/brand",
+    "sync:brand": "pnpm --filter @vellira-ui/assets sync-brand apps/website/public/brand apps/website/brand",
     "sync:tokens": "pnpm --filter @vellira-ui/tokens build:tokens",
     "sync:components": "pnpm --filter @vellira-ui/metadata build && pnpm --filter @vellira-ui/react build && pnpm --filter @vellira-ui/react-native build",
     "predev": "pnpm run sync:brand && pnpm run sync:tokens && pnpm run sync:icons && pnpm run sync:components",

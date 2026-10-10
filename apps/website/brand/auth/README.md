@@ -16,7 +16,7 @@ web/native icon generator. In particular Google's official artwork contains
 `@vellira-ui/assets sync-brand` copies this directory without transformation to
 `apps/website/public/brand/auth/`. The original provider trademarks/artwork remain
 subject to their respective owners' terms; the package's software license does
-not grant trademark rights. GitHub remains a canonical `@vellira-ui/icons` glyph.
+not grant trademark rights. GitHub is the byte-identical migration of the existing GitHub glyph. Website navigation and auth share this one source; the public icon export remains a frozen compatibility surface, not the website artwork authority.
 
 Do not draw a second visible button boundary around this complete artwork. Add
 accessible interaction and external focus affordances with canonical Vellira
