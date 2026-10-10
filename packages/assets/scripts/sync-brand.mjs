@@ -19,7 +19,7 @@ async function files(root, prefix = '') {
 
 // Shared Vellira artwork and app-owned external brands have separate sources.
 // Check ownership collisions before replacing any generated destination.
-export async function syncBrand({ source, destination, overlay }) {
+async function syncBrand({ source, destination, overlay }) {
   if (overlay) {
     const shared = new Set(await files(source));
     for (const path of await files(overlay)) {
