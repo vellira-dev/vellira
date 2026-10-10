@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -410,8 +410,8 @@ export function ForgotPasswordForm() {
 
       {accepted && (
         <p className={styles.message} role='status'>
-          If this account is eligible for password recovery, a reset email has
-          been sent.
+          If this account is eligible for password recovery, check your inbox
+          for a reset link.
         </p>
       )}
 
@@ -435,6 +435,7 @@ export function ForgotPasswordForm() {
 }
 
 export function ResetPasswordForm() {
+  const capturedFragment = useRef(false);
   const [token, setToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [ready, setReady] = useState(false);
@@ -443,8 +444,16 @@ export function ResetPasswordForm() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // StrictMode may replay effects after the URL has already been scrubbed.
+    // Keep the one capture only in this mounted form, never storage/history.
+    if (capturedFragment.current) return;
+    capturedFragment.current = true;
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const nextToken = fragment.get('token');
+    const tokens = fragment.getAll('token');
+    const nextToken =
+      tokens.length === 1 && tokens[0] && tokens[0].length <= 128
+        ? tokens[0]
+        : null;
 
     window.history.replaceState(null, '', window.location.pathname);
     setToken(nextToken);
@@ -466,6 +475,8 @@ export function ResetPasswordForm() {
     } catch (cause) {
       if (cause instanceof VelliraApiError) {
         if (cause.code === 'invalid_challenge') {
+          setToken(null);
+          setNewPassword('');
           setError('This reset link is invalid or has expired.');
         } else if (cause.code === 'invalid_request') {
           setError('Use a password of at least 12 characters.');
@@ -510,7 +521,7 @@ export function ResetPasswordForm() {
     return (
       <div className={styles.actions}>
         <p className={styles.error} role='alert'>
-          This reset link is missing or invalid.
+          {error ?? 'This reset link is missing or invalid.'}
         </p>
         <Button asChild appearance='outline' color='neutral'>
           <Link href='/forgot-password'>Request another reset link</Link>
