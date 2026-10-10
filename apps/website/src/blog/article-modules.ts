@@ -7,8 +7,8 @@ import controlledUncontrolledReactNativeMetadata from '../../content/blog/contro
 import crossPlatformFormVelliraMetadata from '../../content/blog/cross-platform-form-vellira/metadata.json';
 import designSystemComponentGeneratorMetadata from '../../content/blog/design-system-component-generator/metadata.json';
 import productionReadyCrossPlatformComponentMetadata from '../../content/blog/production-ready-cross-platform-component/metadata.json';
-import reactReactNativeTwoUiLibrariesMetadata from '../../content/blog/react-react-native-two-ui-libraries/metadata.json';
 import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/quality-gates-before-component-growth/metadata.json';
+import reactReactNativeTwoUiLibrariesMetadata from '../../content/blog/react-react-native-two-ui-libraries/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
 import typescriptProjectOwnershipMetadata from '../../content/blog/typescript-project-ownership/metadata.json';
 import whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata from '../../content/blog/when-developers-re-decide-ui-across-browser-and-native/metadata.json';
@@ -30,76 +30,36 @@ export interface BlogArticleMetadataRegistryEntry {
  * Keep MDX and metadata imports statically analyzable for Next.js/Turbopack
  * and Cloudflare Workers. Runtime rendering must not depend on repository fs.
  */
-const blogArticleMetadataRegistryEntries = [
-  {
-    slug: 'accessible-accordion-react-native',
-    metadata: accessibleAccordionReactNativeMetadata,
-  },
+const blogArticleMetadataRegistryEntries =
+  [
+  { slug: 'accessible-accordion-react-native', metadata: accessibleAccordionReactNativeMetadata },
   { slug: 'ai-ui-consistency', metadata: aiUiConsistencyMetadata },
-  {
-    slug: 'component-metadata-source-of-truth',
-    metadata: componentMetadataSourceOfTruthMetadata,
-  },
-  {
-    slug: 'controlled-uncontrolled-react-native',
-    metadata: controlledUncontrolledReactNativeMetadata,
-  },
-  {
-    slug: 'cross-platform-form-vellira',
-    metadata: crossPlatformFormVelliraMetadata,
-  },
-  {
-    slug: 'design-system-component-generator',
-    metadata: designSystemComponentGeneratorMetadata,
-  },
-  {
-    slug: 'production-ready-cross-platform-component',
-    metadata: productionReadyCrossPlatformComponentMetadata,
-  },
-  {
-    slug: 'quality-gates-before-component-growth',
-    metadata: qualityGatesBeforeComponentGrowthMetadata,
-  },
-  {
-    slug: 'react-react-native-two-ui-libraries',
-    metadata: reactReactNativeTwoUiLibrariesMetadata,
-  },
+  { slug: 'component-metadata-source-of-truth', metadata: componentMetadataSourceOfTruthMetadata },
+  { slug: 'controlled-uncontrolled-react-native', metadata: controlledUncontrolledReactNativeMetadata },
+  { slug: 'cross-platform-form-vellira', metadata: crossPlatformFormVelliraMetadata },
+  { slug: 'design-system-component-generator', metadata: designSystemComponentGeneratorMetadata },
+  { slug: 'production-ready-cross-platform-component', metadata: productionReadyCrossPlatformComponentMetadata },
+  { slug: 'quality-gates-before-component-growth', metadata: qualityGatesBeforeComponentGrowthMetadata },
+  { slug: 'react-react-native-two-ui-libraries', metadata: reactReactNativeTwoUiLibrariesMetadata },
   { slug: 'two-runtimes', metadata: twoRuntimesMetadata },
-  {
-    slug: 'typescript-project-ownership',
-    metadata: typescriptProjectOwnershipMetadata,
-  },
-  {
-    slug: 'when-developers-re-decide-ui-across-browser-and-native',
-    metadata: whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata,
-  },
-] as const satisfies readonly BlogArticleMetadataRegistryEntry[];
+  { slug: 'typescript-project-ownership', metadata: typescriptProjectOwnershipMetadata },
+  { slug: 'when-developers-re-decide-ui-across-browser-and-native', metadata: whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata },
+  ] as const satisfies readonly BlogArticleMetadataRegistryEntry[];
 
 const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
   {
-    'accessible-accordion-react-native': () =>
-      import('../../content/blog/accessible-accordion-react-native/article.mdx'),
-    'ai-ui-consistency': () =>
-      import('../../content/blog/ai-ui-consistency/article.mdx'),
-    'component-metadata-source-of-truth': () =>
-      import('../../content/blog/component-metadata-source-of-truth/article.mdx'),
-    'controlled-uncontrolled-react-native': () =>
-      import('../../content/blog/controlled-uncontrolled-react-native/article.mdx'),
-    'cross-platform-form-vellira': () =>
-      import('../../content/blog/cross-platform-form-vellira/article.mdx'),
-    'design-system-component-generator': () =>
-      import('../../content/blog/design-system-component-generator/article.mdx'),
-    'production-ready-cross-platform-component': () =>
-      import('../../content/blog/production-ready-cross-platform-component/article.mdx'),
-    'quality-gates-before-component-growth': () =>
-      import('../../content/blog/quality-gates-before-component-growth/article.mdx'),
-    'react-react-native-two-ui-libraries': () =>
-      import('../../content/blog/react-react-native-two-ui-libraries/article.mdx'),
+    'accessible-accordion-react-native': () => import('../../content/blog/accessible-accordion-react-native/article.mdx'),
+    'ai-ui-consistency': () => import('../../content/blog/ai-ui-consistency/article.mdx'),
+    'component-metadata-source-of-truth': () => import('../../content/blog/component-metadata-source-of-truth/article.mdx'),
+    'controlled-uncontrolled-react-native': () => import('../../content/blog/controlled-uncontrolled-react-native/article.mdx'),
+    'cross-platform-form-vellira': () => import('../../content/blog/cross-platform-form-vellira/article.mdx'),
+    'design-system-component-generator': () => import('../../content/blog/design-system-component-generator/article.mdx'),
+    'production-ready-cross-platform-component': () => import('../../content/blog/production-ready-cross-platform-component/article.mdx'),
+    'quality-gates-before-component-growth': () => import('../../content/blog/quality-gates-before-component-growth/article.mdx'),
+    'react-react-native-two-ui-libraries': () => import('../../content/blog/react-react-native-two-ui-libraries/article.mdx'),
     'two-runtimes': () => import('../../content/blog/two-runtimes/article.mdx'),
-    'typescript-project-ownership': () =>
-      import('../../content/blog/typescript-project-ownership/article.mdx'),
-    'when-developers-re-decide-ui-across-browser-and-native': () =>
-      import('../../content/blog/when-developers-re-decide-ui-across-browser-and-native/article.mdx'),
+    'typescript-project-ownership': () => import('../../content/blog/typescript-project-ownership/article.mdx'),
+    'when-developers-re-decide-ui-across-browser-and-native': () => import('../../content/blog/when-developers-re-decide-ui-across-browser-and-native/article.mdx'),
   };
 
 export function getBlogArticleMetadataRegistryEntries(): readonly BlogArticleMetadataRegistryEntry[] {
