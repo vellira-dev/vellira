@@ -64,7 +64,6 @@ it.each(['signup', 'reset'])(
     fireEvent.click(
       screen.getByRole('button', {
         name: mode === 'signup' ? 'Create account' : 'Reset password',
-        exact: true,
       })
     );
     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -78,7 +77,6 @@ it.each(['signup', 'reset'])(
     fireEvent.click(
       screen.getByRole('button', {
         name: mode === 'signup' ? 'Create account' : 'Reset password',
-        exact: true,
       })
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
