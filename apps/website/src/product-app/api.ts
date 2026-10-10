@@ -1,3 +1,5 @@
+import { connectionApiPath, type OAuthConnection } from './oauthConnection';
+
 const DEFAULT_API_BASE_URL = 'https://api.vellira.dev';
 
 export type MeResponse = {
@@ -153,4 +155,32 @@ export async function logout() {
     method: 'POST',
     headers: { 'X-CSRF-Token': csrfToken },
   });
+}
+
+export async function getOAuthConnection(connection: OAuthConnection) {
+  const result = await apiRequest<{
+    provider: string;
+    readyToConnect: boolean;
+  }>(connectionApiPath(connection));
+  if (
+    result.provider !== connection.provider ||
+    typeof result.readyToConnect !== 'boolean'
+  )
+    throw new Error('Invalid connection response');
+  return result;
+}
+export async function completeOAuthConnection(connection: OAuthConnection) {
+  const csrfToken = await getCsrfToken();
+  const result = await apiRequest<{ connected: boolean }>(
+    connectionApiPath(connection),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: '{}',
+    }
+  );
+  if (result.connected !== true) throw new Error('Invalid connection response');
 }

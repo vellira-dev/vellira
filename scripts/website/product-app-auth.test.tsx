@@ -49,13 +49,13 @@ function collision() {
   expect(screen.getByRole('alert')).toHaveTextContent(
     'A Vellira account already exists'
   );
-  expect(
-    screen.getByRole('link', { name: 'Sign in with email' })
-  ).toHaveAttribute('href', '/login');
-  expect(screen.getByRole('link', { name: 'Reset password' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
     'href',
-    '/forgot-password'
+    '/login'
   );
+  expect(
+    screen.getByRole('link', { name: 'Forgot password?' })
+  ).toHaveAttribute('href', '/forgot-password');
   expect(fetchMock).not.toHaveBeenCalled();
   expect(router.replace).not.toHaveBeenCalled();
 }
@@ -238,7 +238,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This email already has a Vellira account.'
+      'An account already exists for this email. Sign in using your existing method.'
     );
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
       'href',
