@@ -38,4 +38,4 @@ storybook-static
 **/.expo/**
 **/next-env.d.ts
 # Official provider web artwork: preserve downloaded bytes and embedded markup.
-packages/assets/brand/auth/*.svg
+apps/website/brand/**/*.svg

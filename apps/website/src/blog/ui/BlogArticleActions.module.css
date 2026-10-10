@@ -213,3 +213,37 @@
     transform: none;
   }
 }
+
+.socialBrand {
+  display: block;
+  background: currentcolor;
+  mask: var(--social-brand) center / contain no-repeat;
+}
+
+.linkedin {
+  --social-brand: url('/brand/social/linkedin.svg');
+
+  width: 14px;
+  height: 14px;
+}
+
+.x {
+  --social-brand: url('/brand/social/x.svg');
+
+  width: 13px;
+  height: 13px;
+}
+
+.facebook {
+  --social-brand: url('/brand/social/facebook.svg');
+
+  width: 15px;
+  height: 15px;
+}
+
+.reddit {
+  --social-brand: url('/brand/social/reddit.svg');
+
+  width: 15px;
+  height: 15px;
+}

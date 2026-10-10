@@ -699,6 +699,33 @@ describe('Blog V1 article experience', () => {
     expect(screen.queryByLabelText('0 likes')).not.toBeInTheDocument();
   });
 
+  it('preserves local branded sharing links when metrics are unavailable', async () => {
+    installArticleMetricsFetch(() => jsonResponse({}, 503));
+    render(<BlogArticleActions slug='two-runtimes' title='Two runtimes' />);
+    const hosts = {
+      LinkedIn: 'www.linkedin.com',
+      X: 'twitter.com',
+      Facebook: 'www.facebook.com',
+      Reddit: 'www.reddit.com',
+    };
+    for (const [name, host] of Object.entries(hosts)) {
+      const link = screen.getByRole('link', { name });
+      const url = new URL(link.getAttribute('href')!);
+      expect(url.hostname).toBe(host);
+      expect(url.search).toContain(
+        encodeURIComponent('https://vellira.dev/blog/two-runtimes')
+      );
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.querySelector('[class*=socialBrand]')).not.toBeNull();
+      expect(link.querySelector('svg')).toBeNull();
+      fireEvent.focus(link);
+      await waitFor(() =>
+        expect(screen.getByRole('tooltip')).toHaveTextContent(name)
+      );
+      fireEvent.blur(link);
+    }
+  });
+
   it('keeps Share usable independently of metrics availability', async () => {
     installArticleMetricsFetch(() => jsonResponse({}, 503));
     const writeText = vi.fn().mockResolvedValue(undefined);
