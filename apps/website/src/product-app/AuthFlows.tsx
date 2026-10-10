@@ -299,8 +299,7 @@ export function VerificationFlow() {
     try {
       await requestVerification(email.trim());
       setMessage(
-        'If this account can be verified, a new verification email has been ' +
-          'sent.'
+        'If verification is still needed, check your inbox for a new verification email.'
       );
     } catch (cause) {
       setError(

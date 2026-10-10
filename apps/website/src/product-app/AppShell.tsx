@@ -88,7 +88,10 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
     try {
       await resendCurrentVerification();
-      setVerificationMessage('Verification email sent.');
+      setVerificationMessage(
+        'If verification is still needed, check your inbox for a new verification email.'
+      );
+      await refresh();
     } catch (cause) {
       setVerificationError(
         cause instanceof VelliraApiError && cause.code === 'rate_limited'
