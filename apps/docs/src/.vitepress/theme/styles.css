@@ -703,31 +703,38 @@ body {
   }
 }
 
-/* Small verified npm release pill shared by desktop and mobile docs nav. */
+/* Quiet npm release link: match VitePress navigation, never a button/pill. */
 .vellira-docs-release {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 9px;
+  min-height: 32px;
+  padding: 0 4px;
   color: var(--vp-c-text-2);
   font-size: 12px;
   line-height: 1.2;
   text-decoration: none;
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 999px;
-  gap: 6px;
+  border-radius: 6px;
+  gap: 5px;
   white-space: nowrap;
 }
 
+.vellira-docs-release-source {
+  color: var(--vp-c-text-3);
+  font-weight: 500;
+}
+
 .vellira-docs-release strong {
-  color: var(--vp-c-brand-1);
-  font-weight: 700;
+  color: var(--vp-c-text-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .vellira-docs-release:hover {
-  color: var(--vp-c-text-1);
-  border-color: var(--vp-c-brand-2);
+  background: var(--vp-c-bg-soft);
+}
+
+.vellira-docs-release:hover strong {
+  color: var(--vp-c-brand-1);
 }
 
 .vellira-docs-release:focus-visible {
@@ -739,4 +746,8 @@ body {
   display: flex;
   padding: 14px 24px;
   border-top: 1px solid var(--vp-c-divider);
+}
+
+.vellira-docs-release-mobile:empty {
+  display: none;
 }

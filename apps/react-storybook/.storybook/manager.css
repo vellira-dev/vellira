@@ -59,25 +59,27 @@ textarea {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
-  padding: 0 9px;
+  padding: 0 4px;
   color: var(--text-secondary);
   font-size: 11px;
   text-decoration: none;
-  background: var(--surface-subtle);
-  border: 1px solid var(--border-muted);
-  border-radius: 999px;
-  gap: 6px;
+  border-radius: 6px;
+  gap: 5px;
   white-space: nowrap;
 }
 
 .velliraToolbarVersion strong {
-  color: var(--text-brand);
-  font-weight: 700;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .velliraToolbarVersion:hover {
-  color: var(--text-primary);
-  border-color: var(--text-brand);
+  background: var(--surface-hover);
+}
+
+.velliraToolbarVersion:hover strong {
+  color: var(--text-brand);
 }
 
 .velliraToolbarVersion:focus-visible {

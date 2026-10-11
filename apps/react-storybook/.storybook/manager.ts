@@ -30,11 +30,10 @@ function PublishedReleaseTool() {
 
   React.useEffect(() => observePublicRelease(setRelease), []);
 
-  const label = release
-    ? `Latest confirmed npm release v${release.version}${
-        release.stale ? ' (cached verification)' : ''
-      }`
-    : 'Latest confirmed npm release unavailable';
+  if (!release) return null;
+
+  const status = release.stale ? 'Last verified' : 'Latest verified';
+  const label = `${status} npm release v${release.version}`;
 
   return React.createElement(
     'a',
@@ -50,7 +49,7 @@ function PublishedReleaseTool() {
     React.createElement(
       'strong',
       { 'aria-live': 'polite' },
-      release ? `v${release.version}` : '—'
+      `v${release.version}`
     )
   );
 }

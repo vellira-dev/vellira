@@ -20,19 +20,14 @@ onUnmounted(() => unsubscribe());
 
 <template>
   <a
+    v-if="release"
     class="vellira-docs-release"
     href="https://www.npmjs.com/package/@vellira-ui/react"
     target="_blank"
     rel="noopener noreferrer"
-    :title="
-      release
-        ? `Latest confirmed npm version v${release.version}${release.stale ? ' (cached verification)' : ''}`
-        : 'Latest npm release unavailable'
-    "
+    :title="`npm release v${release.version}${release.stale ? ' (cached)' : ''}`"
   >
-    <span>npm</span>
-    <strong aria-live="polite">
-      {{ release ? `v${release.version}` : '—' }}
-    </strong>
+    <span class="vellira-docs-release-source">npm</span>
+    <strong aria-live="polite">v{{ release.version }}</strong>
   </a>
 </template>
