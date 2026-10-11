@@ -35,17 +35,25 @@ const headers = {
   'X-Content-Type-Options': 'nosniff',
 };
 
+// Public package metadata is readable without npm credentials. The
+// /-/package/:name/dist-tags management endpoint can require authentication
+// for scoped packages even when the package is public. Keep the same latest
+// dist-tag authority through the public abbreviated packument instead.
 async function readRegistryTag(
   packageName: string,
   fetchImpl: typeof fetch
 ): Promise<string> {
+  const escapedName = encodeURIComponent(packageName).replace(/^%40/, '@');
   let response: Response;
   try {
     response = await fetchImpl(
-      `https://registry.npmjs.org/-/package/${encodeURIComponent(packageName)}/dist-tags`,
+      `https://registry.npmjs.org/${escapedName}`,
       {
         method: 'GET',
-        headers: { Accept: 'application/json' },
+        headers: {
+          Accept:
+            'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
+        },
         cache: 'no-store',
         redirect: 'error',
         signal: AbortSignal.timeout(8000),
@@ -69,11 +77,27 @@ async function readRegistryTag(
     throw new PublicReleaseCheckError('registry_metadata_invalid');
   }
 
-  const version = (data as Record<string, unknown>).latest;
+  const metadata = data as Record<string, unknown>;
+  const tags = metadata['dist-tags'];
+  const versions = metadata.versions;
+  if (
+    metadata.name !== packageName ||
+    !tags ||
+    typeof tags !== 'object' ||
+    Array.isArray(tags) ||
+    !versions ||
+    typeof versions !== 'object' ||
+    Array.isArray(versions)
+  ) {
+    throw new PublicReleaseCheckError('registry_metadata_invalid');
+  }
+
+  const version = (tags as Record<string, unknown>).latest;
   if (
     typeof version !== 'string' ||
     !VERSION_PATTERN.test(version) ||
-    version.length > 48
+    version.length > 48 ||
+    !Object.hasOwn(versions, version)
   ) {
     throw new PublicReleaseCheckError('registry_metadata_invalid');
   }
