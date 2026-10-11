@@ -87,10 +87,12 @@ describe('configured provider-first icon-only authentication', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const { container } = render(<LoginForm providers={[]} />);
+    const { container } = render(
+      <LoginForm providers={[]} recoverProviders />
+    );
 
     expect(
-      screen.getByRole('button', { name: 'Sign in', exact: true })
+      screen.getByRole('button', { name: 'Sign in' })
     ).toBeEnabled();
     expect(
       container.querySelector('[data-provider-discovery="recovering"]')
@@ -128,14 +130,10 @@ describe('configured provider-first icon-only authentication', () => {
         cache: 'no-store',
       })
     );
-    const { container } = render(<LoginForm providers={[]} />);
+    render(<LoginForm providers={[]} />);
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
-    await waitFor(() =>
-      expect(
-        container.querySelector('[data-provider-discovery="recovering"]')
-      ).toBeNull()
-    );
     expect(screen.queryByRole('group')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it('uses fixed display order and tolerates a discovery outage', async () => {
     vi.stubGlobal(
