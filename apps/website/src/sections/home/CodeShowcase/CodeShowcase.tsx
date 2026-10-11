@@ -166,9 +166,11 @@ function renderHighlightedCode(code: string, activeLine: number) {
 
 function getCode(platform: Platform, example: ExampleName) {
   const packageName = getPackageName(platform);
+  const webStyles =
+    platform === 'react' ? "import '@vellira-ui/react/styles';\n\n" : '';
 
   if (example === 'button') {
-    return `import { Button } from '${packageName}';
+    return `${webStyles}import { Button } from '${packageName}';
 
 export function Example() {
   return (
@@ -180,7 +182,7 @@ export function Example() {
   }
 
   if (example === 'input') {
-    return `import { FormField, Input } from '${packageName}';
+    return `${webStyles}import { FormField, Input } from '${packageName}';
 
 export function Example() {
   return (
@@ -203,7 +205,7 @@ export function Example() {
   }
 
   if (example === 'modal') {
-    return `import {
+    return `${webStyles}import {
   Button,
   Modal,
   Portal,
@@ -238,7 +240,7 @@ export function Example() {
 }`;
   }
 
-  return `import {
+  return `${webStyles}import {
   Button,
   Dropdown,
 } from '${packageName}';
@@ -373,7 +375,8 @@ export function CodeShowcase() {
 
   const installCommand = getInstallCommand(platform);
   const activeLabel = exampleLabels[activeExample];
-  const activeLine = activeLineByExample[activeExample];
+  const activeLine =
+    activeLineByExample[activeExample] + (platform === 'react' ? 2 : 0);
 
   const copyText = async (
     value: string,
@@ -585,7 +588,7 @@ export function CodeShowcase() {
               </div>
 
               <div className={styles.importDifference}>
-                <span>Only the package changes</span>
+                <span>Shared intent, platform-specific setup</span>
 
                 <AnimatePresence mode='wait' initial={false}>
                   <motion.code
