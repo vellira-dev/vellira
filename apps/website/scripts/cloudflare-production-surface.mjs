@@ -12,6 +12,7 @@ export const PRODUCTION_DEPLOYMENT_PATH_PATTERNS = Object.freeze([
   'apps/react-storybook/scripts/cloudflare-navigation-soak.mjs',
   'apps/react-storybook/scripts/cloudflare-browser-diagnostics.mjs',
   'apps/react-storybook/scripts/cloudflare-browser-diagnostics.test.mjs',
+  'apps/react-storybook/scripts/cloudflare-public-release-smoke-policy.mjs',
   'packages/**',
   'package.json',
   'pnpm-lock.yaml',
