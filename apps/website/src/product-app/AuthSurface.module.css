@@ -117,12 +117,6 @@
   }
 }
 
-.providerDiscoverySlot {
-  display: grid;
-  min-height: calc(var(--space-12) + var(--space-8));
-  gap: var(--space-4);
-}
-
 .providerRow {
   display: flex;
   justify-content: center;
@@ -216,3 +210,10 @@ button.providerGitHubButton {
   background: currentcolor;
   mask: url('/brand/auth/github.svg') center / contain no-repeat;
 }
+
+.providerDiscoverySlot {
+  display: grid;
+  min-height: calc(var(--space-12) + var(--space-8));
+  gap: var(--space-4);
+}
+
