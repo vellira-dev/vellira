@@ -22,9 +22,8 @@ export function PasswordRequirements({
   const longEnough = Array.from(password).length >= 12;
   const matches = confirmation.length > 0 && confirmation === password;
   const valid = validNewPassword(password);
-  const tooLong =
-    password.length > 1024 ||
-    new TextEncoder().encode(password).length > 1024;
+  const passwordBytes = new TextEncoder().encode(password).length;
+  const tooLong = password.length > 1024 || passwordBytes > 1024;
   const complete = valid && matches;
 
   const requirements = [
