@@ -10,8 +10,179 @@ import {
   waitForRoute,
   diagnosticHeaders,
 } from './cloudflare-browser-diagnostics.mjs';
+import {
+  isExpectedPublicReleaseUnavailableResponse,
+  reconcileExpectedPublicReleaseResourceConsoleDiagnostics,
+} from './cloudflare-public-release-smoke-policy.mjs';
 
 const base = 'https://vellira-soak.test';
+
+test('website smoke matches only authorized npm 503 resource-console noise', () => {
+  const resource = base + '/api/public-release';
+  const other = base + '/api/account';
+  const failure = (url, text, label) => ({
+    url,
+    text,
+    diagnostic: label,
+  });
+  const standard503 =
+    'Failed to load resource: the server responded with a status of 503 ()';
+  const named503 =
+    'Failed to load resource: the server responded with a status of 503 (Service Unavailable)';
+  const standard502 =
+    'Failed to load resource: the server responded with a status of 502 ()';
+
+  assert.deepEqual(
+    reconcileExpectedPublicReleaseResourceConsoleDiagnostics(
+      [
+        failure(resource, standard503, 'valid-1'),
+        failure(other, standard503, 'different-endpoint'),
+        failure(resource, standard502, 'wrong-status'),
+        failure(resource, named503, 'valid-2'),
+        failure(resource, standard503, 'unexpected-extra'),
+        failure(undefined, standard503, 'missing-location'),
+      ],
+      new Map([[resource, 2]])
+    ),
+    {
+      expected: ['valid-1', 'valid-2'],
+      critical: [
+        'different-endpoint',
+        'wrong-status',
+        'unexpected-extra',
+        'missing-location',
+      ],
+    }
+  );
+  assert.deepEqual(
+    reconcileExpectedPublicReleaseResourceConsoleDiagnostics(
+      [failure(resource, standard503, 'unproven')],
+      new Map()
+    ),
+    { expected: [], critical: ['unproven'] }
+  );
+});
+
+test('npm release degradation requires exact same-origin GET fetch, Worker proof and build', () => {
+  const baseline = {
+    requestUrl: base + '/api/public-release',
+    baseOrigin: base,
+    method: 'GET',
+    resourceType: 'fetch',
+    document: false,
+    fromServiceWorker: false,
+    status: 503,
+    requestHeaders: {},
+    expectedBuildId: 'build-1',
+    responseHeaders: {
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+      'access-control-allow-origin': '*',
+      'x-vellira-public-release-state': 'unavailable',
+      'x-vellira-public-release-reason': 'packages_not_converged',
+      'x-vellira-build-id': 'build-1',
+    },
+  };
+  assert.equal(isExpectedPublicReleaseUnavailableResponse(baseline), true);
+
+  const rejected = [
+    { requestUrl: base + '/api/public-release?refresh=1' },
+    { requestUrl: base + '/api/auth/session' },
+    { requestUrl: 'https://evil.example/api/public-release' },
+    { method: 'POST' },
+    { resourceType: 'document' },
+    { document: true },
+    { fromServiceWorker: true },
+    { status: 500 },
+    { status: 502 },
+    { requestHeaders: { RSC: '1' } },
+    { requestHeaders: { 'next-router-prefetch': '1' } },
+    { responseHeaders: { ...baseline.responseHeaders, 'x-vellira-build-id': 'other-build' } },
+    { responseHeaders: { ...baseline.responseHeaders, 'content-type': 'text/html' } },
+    { responseHeaders: { ...baseline.responseHeaders, 'cache-control': 'public, max-age=60' } },
+    { responseHeaders: { ...baseline.responseHeaders, 'x-vellira-public-release-state': 'failed' } },
+    { responseHeaders: { ...baseline.responseHeaders, 'x-vellira-public-release-reason': 'unknown' } },
+    { responseHeaders: { ...baseline.responseHeaders, 'x-vellira-public-release-state': undefined } },
+  ];
+  for (const difference of rejected) {
+    assert.equal(
+      isExpectedPublicReleaseUnavailableResponse({ ...baseline, ...difference }),
+      false,
+      JSON.stringify(difference)
+    );
+  }
+});
+
+test('only verified auxiliary npm 503 is nonfatal, with failure evidence retained', async (t) => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-browser-public-release-test-')
+  );
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+  const context = await browser.newContext();
+  await context.route('**/*', (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/public-release') {
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        headers: {
+          'cache-control': 'no-store',
+          'access-control-allow-origin': '*',
+          'x-vellira-public-release-state': 'unavailable',
+          'x-vellira-public-release-reason': 'registry_unavailable',
+          'x-vellira-build-id': 'build-1',
+        },
+        body: JSON.stringify({ error: 'published_release_unavailable' }),
+      });
+    }
+    return route.fulfill({
+      contentType: 'text/html',
+      body: '<title>Fixture</title><h1>Fixture</h1>',
+    });
+  });
+  const page = await context.newPage();
+  const diagnostics = await captureDiagnostics(page, context, base, directory, {
+    expectedBuildId: 'build-1',
+  });
+  await page.goto(base + '/fixture');
+  for (let i = 0; i < 3; i += 1) {
+    const response = page.waitForResponse(
+      (item) => item.url() === base + '/api/public-release'
+    );
+    await page.evaluate(() => fetch('/api/public-release'));
+    await response;
+  }
+  await page.waitForTimeout(50);
+  assert.doesNotThrow(() => diagnostics.assertHealthy('degraded npm metadata'));
+
+  await page.evaluate(() => fetch('/api/public-release?unexpected=1'));
+  await page.waitForTimeout(50);
+  assert.throws(
+    () => diagnostics.assertHealthy('unexpected query must remain fatal'),
+    /api\/public-release\?unexpected=1/
+  );
+
+  await diagnostics.finish(null);
+  const evidence = JSON.parse(
+    await fs.readFile(path.join(directory, 'diagnostics.json'), 'utf8')
+  );
+  assert.equal(
+    evidence.events.filter((item) => item.kind === 'public-release-unavailable').length,
+    3
+  );
+  assert.equal(
+    evidence.errors.some((item) => item.url === base + '/api/public-release'),
+    false
+  );
+  assert.ok(
+    evidence.errors.some((item) => item.url === base + '/api/public-release?unexpected=1')
+  );
+});
+
 test('cache diagnostics do not persist credential headers', () => {
   assert.deepEqual(
     diagnosticHeaders({

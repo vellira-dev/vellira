@@ -25,7 +25,7 @@ function registryFixture() {
     );
     calls += 1;
 
-    if (offline) throw new Error('npm temporarily unavailable');
+    if (offline) throw new TypeError('npm temporarily unavailable');
 
     if (!versions.has(name)) {
       return Response.json({ error: 'unexpected package' }, { status: 404 });
@@ -88,6 +88,13 @@ describe('public npm release API', () => {
 
     const incomplete = await registry.GET();
     expect(incomplete.status).toBe(503);
+    expect(incomplete.headers.get('X-Vellira-Public-Release-State')).toBe(
+      'unavailable'
+    );
+    expect(incomplete.headers.get('X-Vellira-Public-Release-Reason')).toBe(
+      'packages_not_converged'
+    );
+    expect(incomplete.headers.get('Retry-After')).toBe('60');
     expect(await incomplete.json()).toEqual({
       error: 'published_release_unavailable',
     });
@@ -123,7 +130,44 @@ describe('public npm release API', () => {
   it('does not accept prerelease or malformed npm dist tags', async () => {
     const registry = registryFixture();
     registry.setVersion(publishedPackageNames[0], '2.140.0-rc.1');
-    expect((await registry.GET()).status).toBe(503);
+    const invalid = await registry.GET();
+    expect(invalid.status).toBe(503);
+    expect(invalid.headers.get('X-Vellira-Public-Release-Reason')).toBe(
+      'registry_metadata_invalid'
+    );
+  });
+
+  it('reports a safe reason for a cold npm outage without fabricated versions', async () => {
+    const registry = registryFixture();
+    registry.setOffline(true);
+
+    const unavailable = await registry.GET();
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.headers.get('Cache-Control')).toBe('no-store');
+    expect(unavailable.headers.get('X-Vellira-Public-Release-State')).toBe(
+      'unavailable'
+    );
+    expect(unavailable.headers.get('X-Vellira-Public-Release-Reason')).toBe(
+      'registry_unavailable'
+    );
+    expect(await unavailable.json()).toEqual({
+      error: 'published_release_unavailable',
+    });
+  });
+
+  it('does not disguise unexpected programming errors as npm outages', async () => {
+    let clockReads = 0;
+    const fetchImpl = (async () =>
+      Response.json({ latest: '2.139.0' })) as typeof fetch;
+    const GET = createPublicReleaseHandler({
+      fetchImpl,
+      now: () => {
+        clockReads += 1;
+        if (clockReads > 1) throw new Error('clock failure');
+        return START;
+      },
+    });
+    await expect(GET()).rejects.toThrow('clock failure');
   });
 
   it('deduplicates concurrent verification into a single six-package batch', async () => {

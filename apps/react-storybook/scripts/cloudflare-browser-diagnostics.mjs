@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { isBrowserResource404ConsoleError } from './cloudflare-blog-metrics-smoke-policy.mjs';
+import { isExpectedPublicReleaseUnavailableResponse } from './cloudflare-public-release-smoke-policy.mjs';
 import {
   isBrowserResource5xxConsoleError,
   isCloudflareEdgeGeneratedGet5xx,
@@ -67,6 +68,7 @@ export async function captureDiagnostics(
   const errors = [];
   const handled404ResponsesByUrl = new Map();
   const handledEdgeResponsesByUrl = new Map();
+  const handledPublicReleaseUnavailableByUrl = new Map();
   const deferredResource404ConsoleErrors = [];
   const deferredResource5xxConsoleErrors = [];
   const edgeFailures = [];
@@ -201,6 +203,8 @@ export async function captureDiagnostics(
           'x-vellira-build-id',
           'x-vellira-request-id',
           'x-vellira-worker-version',
+          'x-vellira-public-release-state',
+          'x-vellira-public-release-reason',
           'x-vellira-asset-source',
           'x-vellira-asset-sha256',
           'x-deployment-id',
@@ -229,6 +233,31 @@ export async function captureDiagnostics(
           requestHeaders: request.headers(),
           platformFailure: readCloudflarePlatformFailure(response),
           handled: false,
+        });
+      } else if (
+        isExpectedPublicReleaseUnavailableResponse({
+          requestUrl: event.url,
+          baseOrigin: origin,
+          method: request.method(),
+          resourceType: request.resourceType(),
+          document: request.isNavigationRequest(),
+          fromServiceWorker: response.fromServiceWorker(),
+          status: response.status(),
+          requestHeaders: request.headers(),
+          responseHeaders: headers,
+          expectedBuildId,
+        })
+      ) {
+        // Preserve the 503 as explicit evidence, but do not treat optional
+        // npm metadata as a failed page, RSC response or auth endpoint.
+        handledPublicReleaseUnavailableByUrl.set(
+          event.url,
+          (handledPublicReleaseUnavailableByUrl.get(event.url) ?? 0) + 1
+        );
+        record('public-release-unavailable', {
+          url: event.url,
+          status: event.status,
+          reason: headers['x-vellira-public-release-reason'],
         });
       } else if (response.status() === 404 && isExpected404Response?.(event)) {
         handled404ResponsesByUrl.set(
@@ -303,6 +332,14 @@ export async function captureDiagnostics(
     return unresolved;
   };
 
+  const handled5xxResponsesByUrl = () => {
+    const counts = new Map(handledEdgeResponsesByUrl);
+    for (const [url, count] of handledPublicReleaseUnavailableByUrl) {
+      counts.set(url, (counts.get(url) ?? 0) + count);
+    }
+    return counts;
+  };
+
   const unresolvedErrors = () => [
     ...errors,
     ...edgeFailures
@@ -314,7 +351,7 @@ export async function captureDiagnostics(
     ),
     ...reconcileDeferredConsoleErrors(
       deferredResource5xxConsoleErrors,
-      handledEdgeResponsesByUrl
+      handled5xxResponsesByUrl()
     ),
   ];
 
