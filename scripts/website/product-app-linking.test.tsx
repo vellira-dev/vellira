@@ -233,6 +233,7 @@ it('reuses normal password login, then separately requires an explicit CSRF-prot
   ).toHaveAttribute('target', '_blank');
   await signIn();
   const connect = await screen.findByRole('button', { name: 'Connect GitHub' });
+  expect(router.replace).not.toHaveBeenCalled();
   expect(calls.filter((c) => c.method === 'POST').map((c) => c.path)).toEqual([
     '/v1/auth/login',
   ]);
@@ -241,6 +242,8 @@ it('reuses normal password login, then separately requires an explicit CSRF-prot
   expect(
     await screen.findByRole('link', { name: 'Continue to Vellira' })
   ).toHaveAttribute('href', '/app');
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
+  expect(router.replace).toHaveBeenCalledTimes(1);
   const mutation = calls.find(
     (c) => c.path.endsWith('/link/' + id) && c.method === 'POST'
   );
@@ -287,13 +290,12 @@ it.each(['github', 'google', 'apple'] as const)(
     ready = true;
     window.history.replaceState(null, '', connectionHref({ id, provider }));
     render(<OAuthConnectionFlow />);
-    expect(
-      await screen.findByRole('button', {
-        name:
-          'Connect ' +
-          { github: 'GitHub', google: 'Google', apple: 'Apple' }[provider],
-      })
-    ).toBeEnabled();
+    const connect = await screen.findByRole('button', {
+      name:
+        'Connect ' +
+        { github: 'GitHub', google: 'Google', apple: 'Apple' }[provider],
+    });
+    expect(connect).toBeEnabled();
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
     expect(
       screen.queryByRole('button', { name: 'Continue with Google' })
@@ -301,6 +303,10 @@ it.each(['github', 'google', 'apple'] as const)(
     expect(
       screen.queryByRole('button', { name: 'Continue with Apple' })
     ).not.toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
+    fireEvent.click(connect);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
+    expect(router.replace).toHaveBeenCalledTimes(1);
   }
 );
 it.each([400, 403, 503])(
@@ -313,6 +319,7 @@ it.each([400, 403, 503])(
       await screen.findByRole('button', { name: 'Connect GitHub' })
     );
     expect(await screen.findByRole('alert')).toBeVisible();
+    expect(router.replace).not.toHaveBeenCalled();
     if (code === 400)
       expect(screen.getByRole('link', { name: 'Start again' })).toHaveAttribute(
         'href',
@@ -331,6 +338,7 @@ it.each([400, 403, 503])(
       expect(
         await screen.findByRole('link', { name: 'Continue to Vellira' })
       ).toBeVisible();
+      await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
     }
   }
 );
@@ -366,6 +374,7 @@ it('storage denial cannot prevent ordinary login and explicit completion', async
   expect(
     await screen.findByRole('link', { name: 'Continue to Vellira' })
   ).toBeVisible();
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
 });
 it('cancelling offers normal sign-in without any implicit connection mutation', async () => {
   render(<OAuthConnectionFlow />);
