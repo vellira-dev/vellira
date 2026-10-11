@@ -25,7 +25,7 @@ function registryFixture() {
     );
     calls += 1;
 
-    if (offline) throw new Error('npm temporarily unavailable');
+    if (offline) throw new TypeError('npm temporarily unavailable');
 
     if (!versions.has(name)) {
       return Response.json({ error: 'unexpected package' }, { status: 404 });
@@ -153,6 +153,21 @@ describe('public npm release API', () => {
     expect(await unavailable.json()).toEqual({
       error: 'published_release_unavailable',
     });
+  });
+
+  it('does not disguise unexpected programming errors as npm outages', async () => {
+    let clockReads = 0;
+    const fetchImpl = (async () =>
+      Response.json({ latest: '2.139.0' })) as typeof fetch;
+    const GET = createPublicReleaseHandler({
+      fetchImpl,
+      now: () => {
+        clockReads += 1;
+        if (clockReads > 1) throw new Error('clock failure');
+        return START;
+      },
+    });
+    await expect(GET()).rejects.toThrow('clock failure');
   });
 
   it('deduplicates concurrent verification into a single six-package batch', async () => {

@@ -39,16 +39,21 @@ async function readRegistryTag(
   packageName: string,
   fetchImpl: typeof fetch
 ): Promise<string> {
-  const response = await fetchImpl(
-    `https://registry.npmjs.org/-/package/${encodeURIComponent(packageName)}/dist-tags`,
-    {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-      redirect: 'error',
-      signal: AbortSignal.timeout(8000),
-    }
-  );
+  let response: Response;
+  try {
+    response = await fetchImpl(
+      `https://registry.npmjs.org/-/package/${encodeURIComponent(packageName)}/dist-tags`,
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+        redirect: 'error',
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+  } catch {
+    throw new PublicReleaseCheckError('registry_unavailable');
+  }
 
   if (!response.ok) {
     throw new PublicReleaseCheckError('registry_unavailable');
@@ -105,12 +110,10 @@ export function createPublicReleaseHandler({
       nextCheckAt = now() + refreshMs;
       return verified;
     } catch (error) {
-      // Classify the public npm verification failure without exposing upstream
-      // response bodies or credentials. Never announce a partial publication.
-      lastFailureReason =
-        error instanceof PublicReleaseCheckError
-          ? error.reason
-          : 'registry_unavailable';
+      // Only expected npm verification failures may produce the documented
+      // auxiliary 503. A programming error must remain fatal to browser gates.
+      if (!(error instanceof PublicReleaseCheckError)) throw error;
+      lastFailureReason = error.reason;
       nextCheckAt = now() + retryMs;
       return null;
     }
