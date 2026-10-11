@@ -10,9 +10,58 @@ import {
   waitForRoute,
   diagnosticHeaders,
 } from './cloudflare-browser-diagnostics.mjs';
-import { isExpectedPublicReleaseUnavailableResponse } from './cloudflare-public-release-smoke-policy.mjs';
+import {
+  isExpectedPublicReleaseUnavailableResponse,
+  reconcileExpectedPublicReleaseResourceConsoleDiagnostics,
+} from './cloudflare-public-release-smoke-policy.mjs';
 
 const base = 'https://vellira-soak.test';
+
+test('website smoke matches only authorized npm 503 resource-console noise', () => {
+  const resource = base + '/api/public-release';
+  const other = base + '/api/account';
+  const failure = (url, text, label) => ({
+    url,
+    text,
+    diagnostic: label,
+  });
+  const standard503 =
+    'Failed to load resource: the server responded with a status of 503 ()';
+  const named503 =
+    'Failed to load resource: the server responded with a status of 503 (Service Unavailable)';
+  const standard502 =
+    'Failed to load resource: the server responded with a status of 502 ()';
+
+  assert.deepEqual(
+    reconcileExpectedPublicReleaseResourceConsoleDiagnostics(
+      [
+        failure(resource, standard503, 'valid-1'),
+        failure(other, standard503, 'different-endpoint'),
+        failure(resource, standard502, 'wrong-status'),
+        failure(resource, named503, 'valid-2'),
+        failure(resource, standard503, 'unexpected-extra'),
+        failure(undefined, standard503, 'missing-location'),
+      ],
+      new Map([[resource, 2]])
+    ),
+    {
+      expected: ['valid-1', 'valid-2'],
+      critical: [
+        'different-endpoint',
+        'wrong-status',
+        'unexpected-extra',
+        'missing-location',
+      ],
+    }
+  );
+  assert.deepEqual(
+    reconcileExpectedPublicReleaseResourceConsoleDiagnostics(
+      [failure(resource, standard503, 'unproven')],
+      new Map()
+    ),
+    { expected: [], critical: ['unproven'] }
+  );
+});
 
 test('npm release degradation requires exact same-origin GET fetch, Worker proof and build', () => {
   const baseline = {

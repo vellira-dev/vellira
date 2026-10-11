@@ -22,6 +22,10 @@ import {
   resolveBlogMetricsPublicationMode,
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
 import {
+  isExpectedPublicReleaseUnavailableResponse,
+  reconcileExpectedPublicReleaseResourceConsoleDiagnostics,
+} from './cloudflare-public-release-smoke-policy.mjs';
+import {
   cloudflareEdgeReplayHeaders,
   readCloudflareDiagnosticGet,
   recoverCloudflareEdgeFailure,
@@ -64,6 +68,7 @@ const directMetricRequests = [];
 const blogMetrics404Responses = [];
 const deferredResource404ConsoleDiagnostics = [];
 const deferredResource5xxConsoleDiagnostics = [];
+const handledPublicReleaseUnavailableByUrl = new Map();
 const cloudflareEdgeGetFailures = [];
 let pageSequence = 0;
 let acceptedStagingCatalogLag = false;
@@ -168,8 +173,15 @@ function reconcileCloudflareEdgeDiagnostics() {
     }
   }
 
+  // Only a matching, documented Worker 503 can consume the corresponding
+  // Chrome resource-console error. Other 5xx messages remain critical.
+  const releaseConsoleDiagnostics =
+    reconcileExpectedPublicReleaseResourceConsoleDiagnostics(
+      deferredResource5xxConsoleDiagnostics,
+      handledPublicReleaseUnavailableByUrl
+    );
   const consoleDiagnostics = reconcileHandledCloudflareEdgeConsoleDiagnostics(
-    deferredResource5xxConsoleDiagnostics,
+    releaseConsoleDiagnostics.critical,
     cloudflareEdgeGetFailures.filter((failure) => failure.handled).length
   );
   criticalDiagnostics.push(...consoleDiagnostics.critical);
@@ -252,7 +264,11 @@ function attachPageDiagnostics(page) {
       return;
     }
     if (isBrowserResource5xxConsoleError(message.text())) {
-      deferredResource5xxConsoleDiagnostics.push(diagnostic);
+      deferredResource5xxConsoleDiagnostics.push({
+        diagnostic,
+        text: message.text(),
+        url: message.location().url,
+      });
       return;
     }
     criticalDiagnostics.push(diagnostic);
@@ -287,6 +303,37 @@ function attachPageDiagnostics(page) {
     diagnostics.push(diagnostic);
 
     const responseHeaders = response.headers();
+    const request = response.request();
+    if (
+      isExpectedPublicReleaseUnavailableResponse({
+        requestUrl: response.url(),
+        baseOrigin,
+        method: request.method(),
+        resourceType: request.resourceType(),
+        document: request.isNavigationRequest(),
+        fromServiceWorker: response.fromServiceWorker(),
+        status: response.status(),
+        requestHeaders: request.headers(),
+        responseHeaders,
+        expectedBuildId,
+      })
+    ) {
+      handledPublicReleaseUnavailableByUrl.set(
+        response.url(),
+        (handledPublicReleaseUnavailableByUrl.get(response.url()) ?? 0) + 1
+      );
+      browserEvents.push({
+        kind: 'public-release-unavailable',
+        pageId,
+        requestId: requestId(request),
+        at: Date.now(),
+        url: response.url(),
+        status: response.status(),
+        reason: responseHeaders['x-vellira-public-release-reason'],
+      });
+      return;
+    }
+
     if (
       sameOrigin(response.url()) &&
       !new URL(response.url()).pathname.startsWith('/_next/static/') &&
