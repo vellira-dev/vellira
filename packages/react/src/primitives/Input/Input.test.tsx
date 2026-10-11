@@ -417,15 +417,29 @@ describe('Input', () => {
     );
 
     expect(input?.type).toBe('password');
+    expect(revealButton?.type).toBe('button');
+    expect(
+      revealButton?.querySelector('svg[aria-hidden="true"]')
+    ).not.toBeNull();
+    expect(revealButton?.textContent).toBe('');
 
     act(() => {
       revealButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
+    const hideButton = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Hide password"]'
+    );
     expect(input?.type).toBe('text');
-    expect(
-      container.querySelector('button[aria-label="Hide password"]')
-    ).not.toBeNull();
+    expect(hideButton?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(hideButton?.textContent).toBe('');
+
+    act(() => {
+      hideButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(input?.type).toBe('password');
+    expect(input?.value).toBe('secret');
 
     unmount();
   });

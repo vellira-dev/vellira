@@ -20,6 +20,7 @@ import {
   ForgotPasswordForm,
   LoginForm,
   OAuthCallback,
+  ResetPasswordForm,
   SignupForm,
   VerificationFlow,
 } from '../../apps/website/src/product-app/AuthFlows';
@@ -445,5 +446,69 @@ describe('existing OAuth callback and account recovery', () => {
         body: JSON.stringify({ email: 'fixture@example.com' }),
       })
     );
+  });
+});
+
+describe('password visibility in Vellira auth forms', () => {
+  it('toggles login password with an accessible eye without submitting', () => {
+    render(<LoginForm />);
+    const input = screen.getByLabelText(/^Password\s*\*$/);
+    fireEvent.change(input, { target: { value: 'visible-login-canary' } });
+    expect(input).toHaveAttribute('type', 'password');
+    expect(input).toHaveAttribute('autocomplete', 'current-password');
+    const show = screen.getByRole('button', { name: 'Show password' });
+    expect(show.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(show);
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveValue('visible-login-canary');
+    const hide = screen.getByRole('button', { name: 'Hide password' });
+    fireEvent.click(hide);
+    expect(input).toHaveAttribute('type', 'password');
+    expect(input).toHaveValue('visible-login-canary');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.localStorage.length).toBe(0);
+  });
+
+  it('keeps signup password and confirmation independently revealable', () => {
+    render(<SignupForm />);
+    const password = screen.getByLabelText(/^Password\s*\*$/);
+    const confirmation = screen.getByLabelText(/^Confirm password/);
+    const controls = screen.getAllByRole('button', { name: 'Show password' });
+    expect(controls).toHaveLength(2);
+    expect(password).toHaveAttribute('type', 'password');
+    expect(confirmation).toHaveAttribute('type', 'password');
+    fireEvent.click(controls[0]);
+    expect(password).toHaveAttribute('type', 'text');
+    expect(confirmation).toHaveAttribute('type', 'password');
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(confirmation).toHaveAttribute('type', 'text');
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Hide password' })[0]
+    );
+    expect(password).toHaveAttribute('type', 'password');
+    expect(confirmation).toHaveAttribute('type', 'text');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('supports independent eye controls during password reset', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/reset-password#token=visibility-test-token'
+    );
+    render(<ResetPasswordForm />);
+    const password = await screen.findByLabelText(/^New password/);
+    const confirmation = screen.getByLabelText(/^Confirm new password/);
+    expect(
+      screen.getAllByRole('button', { name: 'Show password' })
+    ).toHaveLength(2);
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Show password' })[1]
+    );
+    expect(password).toHaveAttribute('type', 'password');
+    expect(confirmation).toHaveAttribute('type', 'text');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(confirmation).toHaveAttribute('type', 'password');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
