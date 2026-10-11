@@ -36,10 +36,11 @@ function registryFixture() {
       return Response.json({ error: 'unexpected package' }, { status: 404 });
     }
     const version = versions.get(name);
+    if (!version) throw new Error('Missing mock npm version');
     return Response.json({
       name,
       'dist-tags': { latest: version },
-      versions: { [version!]: { name, version } },
+      versions: { [version]: { name, version } },
     });
   }) as typeof fetch;
 
@@ -139,10 +140,26 @@ describe('public npm release API', () => {
 
   it('rejects malformed public packuments and unproven latest versions', async () => {
     const cases = [
-      { name: '@wrong/package', 'dist-tags': { latest: '2.139.0' }, versions: { '2.139.0': {} } },
-      { name: publishedPackageNames[0], latest: '2.139.0', versions: { '2.139.0': {} } },
-      { name: publishedPackageNames[0], 'dist-tags': { latest: '2.139.0' }, versions: {} },
-      { name: publishedPackageNames[0], 'dist-tags': { latest: '2.139.0' }, versions: [] },
+      {
+        name: '@wrong/package',
+        'dist-tags': { latest: '2.139.0' },
+        versions: { '2.139.0': {} },
+      },
+      {
+        name: publishedPackageNames[0],
+        latest: '2.139.0',
+        versions: { '2.139.0': {} },
+      },
+      {
+        name: publishedPackageNames[0],
+        'dist-tags': { latest: '2.139.0' },
+        versions: {},
+      },
+      {
+        name: publishedPackageNames[0],
+        'dist-tags': { latest: '2.139.0' },
+        versions: [],
+      },
     ];
     for (const malformed of cases) {
       const fetchImpl = (async (input: RequestInfo | URL) => {
