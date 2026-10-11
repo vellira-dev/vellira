@@ -3,6 +3,7 @@ import { BackToTop } from '@/components/navigation/BackToTop';
 import { homepageProductFacts } from '@/config/homepageProductFacts';
 import { CodeShowcase } from '@/sections/home/CodeShowcase';
 import { ComponentShowcase } from '@/sections/home/ComponentShowcase';
+import { ConsistencyStory } from '@/sections/home/ConsistencyStory';
 import { FeaturedStory } from '@/sections/home/FeaturedStory';
 import { FinalCta } from '@/sections/home/FinalCta';
 import { Hero } from '@/sections/home/Hero';
@@ -19,6 +20,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      <ConsistencyStory />
       <ComponentShowcase />
       <ThemeStudio />
       <PlatformParity />
