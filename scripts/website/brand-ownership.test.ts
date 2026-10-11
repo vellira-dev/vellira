@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -54,11 +54,10 @@ describe('external artwork ownership', () => {
           .digest('hex')
       ).toBe(digest);
     }
-    const sources = execFileSync('git', ['ls-files', 'packages/icons/svg'], {
-      cwd: root,
-      encoding: 'utf8',
+    const sources = readdirSync(join(root, 'packages/icons/svg'), {
+      recursive: true,
     });
-    expect(sources).not.toMatch(/Google|Apple/);
+    expect(sources.join('\n')).not.toMatch(/Google|Apple/);
   });
   it('retains released legacy exports while website consumers stop importing them', () => {
     for (const platform of ['web', 'native']) {
@@ -78,13 +77,11 @@ describe('external artwork ownership', () => {
       for (const brand of brands.slice(0, 6)) expect(names).toContain(brand);
       expect(names).toContain('DocsVellira');
     }
-    const paths = execFileSync('git', ['ls-files', 'apps/website/src'], {
-      cwd: root,
-      encoding: 'utf8',
+    const paths = readdirSync(join(root, 'apps/website/src'), {
+      recursive: true,
     })
-      .trim()
-      .split('\n')
-      .filter((p) => /\.[jt]sx?$/.test(p));
+      .filter((p) => /\.[jt]sx?$/.test(p))
+      .map((p) => join('apps/website/src', p));
     for (const path of paths) {
       const source = ts.createSourceFile(
         path,
