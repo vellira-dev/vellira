@@ -203,6 +203,7 @@ describe('existing OAuth callback and account recovery', () => {
   it('creates an email account and enters the app without blocking on verification', async () => {
     fetchMock.mockResolvedValue(respond({ registered: true }));
     render(<SignupForm />);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'new-user@example.com' },
     });
@@ -216,6 +217,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
     expect(router.push).not.toHaveBeenCalledWith('/verify-email');
+    expect(localStorage.getItem('vellira-auth-login-preference')).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.vellira.dev/v1/auth/register',
       expect.objectContaining({
@@ -227,6 +229,37 @@ describe('existing OAuth callback and account recovery', () => {
         }),
       })
     );
+  });
+
+  it('does not import or replace a saved login preference during signup', async () => {
+    const saved = JSON.stringify({
+      version: 2,
+      email: 'prior-login@example.com',
+      lastSuccessfulMethod: 'google',
+    });
+    localStorage.setItem('vellira-auth-login-preference', saved);
+    fetchMock.mockResolvedValue(respond({ registered: true }));
+    render(<SignupForm providers={['google', 'github']} />);
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue('');
+    expect(
+      screen.getByRole('button', { name: 'Continue with Google' })
+    ).toBeEnabled();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
+      target: { value: 'new-user@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Password\\s*\\*$/), {
+      target: { value: 'a sufficiently long password' },
+    });
+    fireEvent.change(
+      screen.getByLabelText('Confirm password', { exact: false }),
+      { target: { value: 'a sufficiently long password' } }
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
+    expect(localStorage.getItem('vellira-auth-login-preference')).toBe(saved);
   });
 
   it('recovers explicitly when signup email already has an account', async () => {
