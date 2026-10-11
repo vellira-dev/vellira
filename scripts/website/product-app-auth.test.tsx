@@ -499,9 +499,9 @@ describe('password visibility in Vellira auth forms', () => {
     render(<ResetPasswordForm />);
     const password = await screen.findByLabelText(/^New password/);
     const confirmation = screen.getByLabelText(/^Confirm new password/);
-    expect(screen.getAllByRole('button', { name: 'Show password' })).toHaveLength(
-      2
-    );
+    expect(
+      screen.getAllByRole('button', { name: 'Show password' })
+    ).toHaveLength(2);
     fireEvent.click(
       screen.getAllByRole('button', { name: 'Show password' })[1]
     );
