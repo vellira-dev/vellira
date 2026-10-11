@@ -100,7 +100,7 @@ describe('homepage product facts', () => {
   it('renders known facts directly and uses a neutral unavailable state', () => {
     expect(socialProofSource).not.toContain('AnimatedMetric');
     expect(socialProofSource).toContain("{value ?? '—'}");
-    expect(socialProofSource).toContain("{productFacts.stableRelease ?? '—'}");
+    expect(socialProofSource).toContain('<PublishedNpmVersion />');
   });
 
   it('keeps demo metrics clearly separate from Vellira product facts', () => {

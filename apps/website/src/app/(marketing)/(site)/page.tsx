@@ -30,7 +30,7 @@ export default function HomePage() {
       <QuickStart />
       <SocialProof productFacts={homepageProductFacts} />
       <FeaturedStory />
-      <Roadmap productFacts={homepageProductFacts} />
+      <Roadmap />
       <Pro />
       <FinalCta />
       <SiteFooter />

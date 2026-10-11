@@ -28,7 +28,7 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(story).toContain("not part of today's public");
   });
 
-  it('derives release labels from source facts instead of freezing old numbers', () => {
+  it('renders verified npm version slots instead of freezing old numbers', () => {
     const page = read('apps/website/src/app/(marketing)/(site)/page.tsx');
     const workflow = read(`${home}ProductionWorkflow/ProductionWorkflow.tsx`);
     const roadmap = read(`${home}Roadmap/Roadmap.tsx`);
@@ -36,10 +36,10 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(page).toContain(
       '<ProductionWorkflow productFacts={homepageProductFacts} />'
     );
-    expect(page).toContain('<Roadmap productFacts={homepageProductFacts} />');
-    expect(workflow).toContain("productFacts.stableRelease ?? '—'");
+    expect(page).toContain('<Roadmap />');
+    expect(workflow).toContain('<PublishedNpmVersion />');
     expect(workflow).toContain("productFacts.publishedPackages ?? '—'");
-    expect(roadmap).toContain("productFacts.stableRelease ?? '—'");
+    expect(roadmap).toContain('<PublishedNpmVersion />');
     expect(workflow + roadmap).not.toMatch(/v2\.18\.4|268 tests|0 errors/);
     expect(roadmap).not.toContain("version: 'Latest stable'");
   });

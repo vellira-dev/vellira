@@ -15,6 +15,7 @@ import {
 } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
+import { PublishedNpmVersion } from '@/components/release/PublishedNpmVersion';
 import type { HomepageProductFacts } from '@/config/homepageProductFacts';
 import styles from './SocialProof.module.css';
 
@@ -585,15 +586,9 @@ export function SocialProof({
                 <div className={styles.releaseMetric}>
                   <Package size={16} aria-hidden='true' />
                   <div>
-                    <span>Version in source build</span>
-                    <strong
-                      aria-label={
-                        productFacts.stableRelease === null
-                          ? 'Repository version unavailable'
-                          : undefined
-                      }
-                    >
-                      {productFacts.stableRelease ?? '—'}
+                    <span>Latest published npm version</span>
+                    <strong>
+                      <PublishedNpmVersion />
                     </strong>
                   </div>
                 </div>
