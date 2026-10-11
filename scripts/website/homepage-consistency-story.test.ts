@@ -57,6 +57,8 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(quick).toContain("@vellira-ui/react/styles");
     expect(code).toContain("@vellira-ui/react/styles");
     expect(code).toContain('platform-specific setup');
+    expect(code).toContain('Illustrative UI only');
+    expect(code).not.toContain('Workspace Pro');
     expect(parity).toContain('Exact props and interaction details');
     expect(parity).toContain('Feature parity continues to evolve.');
   });
