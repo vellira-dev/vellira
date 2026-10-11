@@ -1,5 +1,5 @@
 import { validNewPassword } from './passwordPolicy';
-import styles from './AuthSurface.module.css';
+import s from './AuthSurface.module.css';
 
 export function passwordConfirmationReady(
   password: string,
@@ -33,17 +33,17 @@ export function PasswordRequirements({
   ];
 
   return (
-    <div className={styles.passwordRequirements}>
-      <p className={styles.passwordRequirementsLabel}>Password requirements</p>
-      <ul className={styles.passwordRequirementsList}>
+    <div className={s.passwordRequirements}>
+      <p className={s.passwordRequirementsLabel}>Password requirements</p>
+      <ul className={s.passwordRequirementsList}>
         {requirements.map(({ id, label, met }) => (
           <li
             key={id}
-            className={styles.passwordRequirement}
+            className={s.passwordRequirement}
             data-met={met ? 'true' : 'false'}
-            aria-label={label + (met ? ': met' : ': not met')}
+            aria-label={`${label}: ${met ? 'met' : 'not met'}`}
           >
-            <span className={styles.passwordRequirementMark} aria-hidden='true'>
+            <span className={s.passwordRequirementMark} aria-hidden='true'>
               {met ? '✓' : '○'}
             </span>
             <span aria-hidden='true'>{label}</span>
@@ -51,11 +51,11 @@ export function PasswordRequirements({
         ))}
       </ul>
       {tooLong && (
-        <p className={styles.error} role='alert'>
+        <p className={s.error} role='alert'>
           Password is too long. Use no more than 1024 UTF-8 bytes.
         </p>
       )}
-      <span className={styles.srOnly} aria-live='polite'>
+      <span className={s.srOnly} aria-live='polite'>
         {complete
           ? 'All password requirements are met.'
           : 'Password requirements are not yet complete.'}

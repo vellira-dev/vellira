@@ -205,7 +205,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'new-user@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByLabelText(/^Password\s*\*$/), {
       target: { value: 'a sufficiently long password' },
     });
     fireEvent.change(
@@ -236,7 +236,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'existing@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByLabelText(/^Password\s*\*$/), {
       target: { value: 'a sufficiently long password' },
     });
     fireEvent.change(
@@ -328,7 +328,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'remember-me@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByLabelText(/^Password\s*\*$/), {
       target: { value: 'never-persist-this-password' },
     });
     fireEvent.click(
@@ -369,7 +369,7 @@ describe('existing OAuth callback and account recovery', () => {
     expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue(
       'saved@example.com'
     );
-    expect(screen.getByLabelText(/^Password$/)).toHaveValue('');
+    expect(screen.getByLabelText(/^Password\s*\*$/)).toHaveValue('');
   });
 
   it('preserves the saved provider without changing its accessible label or auto-starting OAuth', () => {
@@ -395,7 +395,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'fixture@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/), {
+    fireEvent.change(screen.getByLabelText(/^Password\s*\*$/), {
       target: { value: 'local-fixture-password' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));

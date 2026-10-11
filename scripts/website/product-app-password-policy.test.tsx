@@ -59,7 +59,7 @@ it.each(['signup', 'reset'])(
         target: { value: 'security-canary@example.invalid' },
       });
 
-    const passwordLabel = mode === 'signup' ? /^Password$/ : /^New password/;
+    const passwordLabel = mode === 'signup' ? /^Password\s*\*$/ : /^New password/;
     const confirmationLabel =
       mode === 'signup' ? /^Confirm password/ : /^Confirm new password/;
     const submitName = mode === 'signup' ? 'Create account' : 'Reset password';

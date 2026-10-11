@@ -35,7 +35,7 @@ it('clears a rejected password from input DOM and focuses actionable error feedb
   fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
     target: { value: 'security-canary@example.invalid' },
   });
-  const input = screen.getByLabelText(/^Password$/);
+  const input = screen.getByLabelText(/^Password\s*\*$/);
   fireEvent.change(input, { target: { value: password } });
   const submit = screen.getByRole('button', { name: 'Sign in' });
   submit.focus();
@@ -57,7 +57,7 @@ it.each(['login', 'signup'])(
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'security-canary@example.invalid' },
     });
-    const input = screen.getByLabelText(/^Password$/);
+    const input = screen.getByLabelText(/^Password\s*\*$/);
     fireEvent.change(input, { target: { value: password } });
     if (mode === 'signup')
       fireEvent.change(screen.getByLabelText(/^Confirm password/), {
