@@ -20,8 +20,8 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-      <ConsistencyStory />
       <ComponentShowcase />
+      <ConsistencyStory />
       <ThemeStudio />
       <PlatformParity />
       <ProductInterfaceDemo />

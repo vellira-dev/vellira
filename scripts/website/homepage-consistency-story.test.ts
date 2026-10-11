@@ -7,13 +7,16 @@ const read = (path: string) => readFileSync(resolve(path), 'utf8');
 const home = 'apps/website/src/sections/home/';
 
 describe('homepage consistency story and source-backed facts', () => {
-  it('connects the AI consistency article to public proof before component demos', () => {
+  it('connects the AI consistency article after tangible component proof', () => {
     const page = read('apps/website/src/app/(marketing)/(site)/page.tsx');
     const story = read(`${home}ConsistencyStory/ConsistencyStory.tsx`);
 
     expect(page).toContain('<ConsistencyStory />');
+    expect(page.indexOf('<ComponentShowcase />')).toBeLessThan(
+      page.indexOf('<ConsistencyStory />')
+    );
     expect(page.indexOf('<ConsistencyStory />')).toBeLessThan(
-      page.indexOf('<ComponentShowcase />')
+      page.indexOf('<ThemeStudio />')
     );
     expect(story).toContain('Available now');
     expect(story).toContain('Inspectable today');
