@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Button, Tooltip } from '@vellira-ui/react';
-import { getApiUrl } from './api';
+import { getApiUrl, getAuthProviders } from './api';
 import {
   prepareOAuthPreference,
   type OAuthLoginMethod,
@@ -31,6 +31,13 @@ export function AuthProviders({
   const started = useRef(false);
   const [error, setError] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [recoveredProviders, setRecoveredProviders] = useState<
+    readonly OAuthLoginMethod[]
+  >([]);
+  const [recoveringProviders, setRecoveringProviders] = useState(
+    providers.length === 0
+  );
+
   useEffect(() => {
     const restore = (event: PageTransitionEvent) => {
       if (event.persisted) {
@@ -42,10 +49,47 @@ export function AuthProviders({
     window.addEventListener('pageshow', restore);
     return () => window.removeEventListener('pageshow', restore);
   }, [onRedirecting]);
-  const available = providers.filter(
+
+  // Server-rendered discovery is preferred because it avoids a hydration jump.
+  // A Cloudflare/OpenNext runtime failure must not silently remove configured
+  // providers, so an empty initial result gets one bounded public client retry.
+  // The backend endpoint remains the sole provider-availability authority.
+  useEffect(() => {
+    if (providers.length > 0) return;
+
+    let active = true;
+    setRecoveringProviders(true);
+    void getAuthProviders()
+      .then((nextProviders) => {
+        if (active) setRecoveredProviders(nextProviders);
+      })
+      .finally(() => {
+        if (active) setRecoveringProviders(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [providers]);
+
+  const discoveredProviders =
+    providers.length > 0 ? providers : recoveredProviders;
+  const available = discoveredProviders.filter(
     (provider) => provider !== connection?.provider
   );
-  if (!available.length) return null;
+
+  if (!available.length) {
+    if (!recoveringProviders) return null;
+
+    return (
+      <div
+        className={styles.providerDiscoverySlot}
+        data-provider-discovery='recovering'
+        aria-hidden='true'
+      />
+    );
+  }
+
   const start = (provider: OAuthLoginMethod) => {
     if (started.current || disabled) return;
     started.current = true;
@@ -67,8 +111,12 @@ export function AuthProviders({
       setError(true);
     }
   };
+
   return (
-    <>
+    <div
+      className={styles.providerDiscoverySlot}
+      data-provider-discovery='resolved'
+    >
       <div
         className={styles.providerRow}
         role='group'
@@ -139,6 +187,6 @@ export function AuthProviders({
         OR
         <span />
       </div>
-    </>
+    </div>
   );
 }
