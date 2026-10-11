@@ -10,6 +10,17 @@ type VerifiedVersion = {
   verifiedAt: number;
 };
 
+type PublicReleaseFailureReason =
+  | 'registry_unavailable'
+  | 'registry_metadata_invalid'
+  | 'packages_not_converged';
+
+class PublicReleaseCheckError extends Error {
+  constructor(readonly reason: PublicReleaseFailureReason) {
+    super(reason);
+  }
+}
+
 type PublicReleaseHandlerOptions = {
   fetchImpl?: typeof fetch;
   now?: () => number;
@@ -40,12 +51,17 @@ async function readRegistryTag(
   );
 
   if (!response.ok) {
-    throw new Error('npm registry lookup failed');
+    throw new PublicReleaseCheckError('registry_unavailable');
   }
 
-  const data: unknown = await response.json();
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new PublicReleaseCheckError('registry_metadata_invalid');
+  }
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('Invalid npm dist-tags response');
+    throw new PublicReleaseCheckError('registry_metadata_invalid');
   }
 
   const version = (data as Record<string, unknown>).latest;
@@ -54,7 +70,7 @@ async function readRegistryTag(
     !VERSION_PATTERN.test(version) ||
     version.length > 48
   ) {
-    throw new Error('npm latest is not a stable release version');
+    throw new PublicReleaseCheckError('registry_metadata_invalid');
   }
 
   return version;
@@ -68,6 +84,7 @@ export function createPublicReleaseHandler({
   maxStaleMs = MAX_STALE_MS,
 }: PublicReleaseHandlerOptions = {}) {
   let latest: VerifiedVersion | null = null;
+  let lastFailureReason: PublicReleaseFailureReason = 'registry_unavailable';
   let nextCheckAt = 0;
   let pending: Promise<VerifiedVersion | null> | null = null;
 
@@ -77,7 +94,7 @@ export function createPublicReleaseHandler({
         publishedPackageNames.map((name) => readRegistryTag(name, fetchImpl))
       );
       if (new Set(versions).size !== 1) {
-        throw new Error('npm package dist-tags have not converged');
+        throw new PublicReleaseCheckError('packages_not_converged');
       }
 
       const verified: VerifiedVersion = {
@@ -87,9 +104,13 @@ export function createPublicReleaseHandler({
       latest = verified;
       nextCheckAt = now() + refreshMs;
       return verified;
-    } catch {
-      // Never announce a partially published release. Retain only a
-      // previously verified version, bounded by maxStaleMs.
+    } catch (error) {
+      // Classify the public npm verification failure without exposing upstream
+      // response bodies or credentials. Never announce a partial publication.
+      lastFailureReason =
+        error instanceof PublicReleaseCheckError
+          ? error.reason
+          : 'registry_unavailable';
       nextCheckAt = now() + retryMs;
       return null;
     }
@@ -114,6 +135,11 @@ export function createPublicReleaseHandler({
           headers: {
             ...headers,
             'Cache-Control': 'no-store',
+            'Retry-After': String(
+              Math.max(1, Math.ceil((nextCheckAt - now()) / 1000))
+            ),
+            'X-Vellira-Public-Release-State': 'unavailable',
+            'X-Vellira-Public-Release-Reason': lastFailureReason,
           },
         }
       );
