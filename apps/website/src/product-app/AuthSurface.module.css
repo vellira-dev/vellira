@@ -307,3 +307,8 @@ button.providerGitHubButton {
   white-space: nowrap;
   border: 0;
 }
+
+/* Only password sign-in needs extra space after its remember preference. */
+.loginActions {
+  margin-block-start: var(--space-3);
+}

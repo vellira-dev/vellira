@@ -386,6 +386,26 @@ try {
             await page
               .getByRole('menuitemradio', { name: theme, exact: true })
               .click();
+            if (route === '/login') {
+              const gap = await page
+                .getByRole('button', { name: 'Sign in', exact: true })
+                .evaluate((button) => {
+                  const actions = button.parentElement;
+                  const preceding = actions?.previousElementSibling;
+                  if (!actions || !preceding) return null;
+                  return (
+                    actions.getBoundingClientRect().top -
+                    preceding.getBoundingClientRect().bottom
+                  );
+                });
+              expect(gap).toBeGreaterThanOrEqual(24);
+              expect(gap).toBeLessThanOrEqual(32);
+              await expect(
+                page.getByRole('checkbox', {
+                  name: 'Save email and login method on this device',
+                })
+              ).toBeVisible();
+            } else await expect(page.getByRole('checkbox')).toHaveCount(0);
             const group = page.getByRole('group', {
               name: 'Continue with a provider',
             });
@@ -613,18 +633,13 @@ try {
     }
   );
   await run(
-    'fresh-email-signup-keeps-only-independent-preferences',
+    'fresh-email-signup-never-persists-remember-preference',
     async () => {
       const { context, page, state } = await fixture();
       try {
         await page.goto(origin + '/signup');
         await fill(page);
-        await page
-          .getByText('Save email and login method on this device', {
-            exact: true,
-          })
-          .click();
-        await expect(page.getByRole('checkbox')).toBeChecked();
+        await expect(page.getByRole('checkbox')).toHaveCount(0);
         await page
           .getByRole('button', { name: 'Create account', exact: true })
           .click();
@@ -651,11 +666,7 @@ try {
             state.requests,
           ])
         ).not.toContain(password);
-        expect(JSON.parse(snapshot.local[key])).toEqual({
-          version: 2,
-          email,
-          lastSuccessfulMethod: 'email',
-        });
+        expect(snapshot.local[key]).toBeUndefined();
         expect(
           state.calls
             .filter((c) => c.body.includes(password))
@@ -667,13 +678,53 @@ try {
         return {
           immediateUnverifiedSession: true,
           leakage: [],
-          persistedFields: ['version', 'email', 'lastSuccessfulMethod'],
+          persistedFields: [],
         };
       } finally {
         await context.close();
       }
     }
   );
+  await run('signup-oauth-respects-existing-preference-without-opt-in', async () => {
+    const { context, page, state } = await fixture();
+    const saved = JSON.stringify({
+      version: 2,
+      email: 'previous-login@example.invalid',
+      lastSuccessfulMethod: 'github',
+    });
+    try {
+      await page.goto(origin + '/signup');
+      await page.evaluate(
+        ({ key, saved }) => {
+          localStorage.setItem(key, saved);
+          sessionStorage.setItem(
+            'vellira-auth-remember-request',
+            JSON.stringify({ rememberRequested: true, requestedAt: Date.now() })
+          );
+        },
+        { key, saved }
+      );
+      await page.reload();
+      await expect(page.getByRole('checkbox')).toHaveCount(0);
+      await expect(page.getByRole('textbox', { name: 'Email' })).toHaveValue(
+        ''
+      );
+      state.oauth = 'success';
+      await page.getByRole('button', { name: 'Continue with Google' }).click();
+      await expect(page).toHaveURL(origin + '/app');
+      const preference = await page.evaluate(
+        (key) => ({
+          saved: localStorage.getItem(key),
+          pending: sessionStorage.getItem('vellira-auth-remember-request'),
+        }),
+        key
+      );
+      expect(preference).toEqual({ saved, pending: null });
+      return { priorPreferencePreserved: true, signupOptIn: false };
+    } finally {
+      await context.close();
+    }
+  });
   await run('browser-script-cannot-read-HttpOnly-session-binding', async () => {
     const { context, page } = await fixture();
     // Synthetic cookie attributes mirror the reviewed backend session contract.

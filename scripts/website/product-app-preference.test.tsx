@@ -252,7 +252,8 @@ it.each([false, true])(
       fireEvent.change(screen.getByLabelText(/^Confirm password/), {
         target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
       });
-    fireEvent.click(screen.getByRole('checkbox'));
+    if (signup) expect(screen.queryByRole('checkbox')).toBeNull();
+    else fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(
       screen.getByRole('button', {
         name: signup ? 'Create account' : 'Sign in',
