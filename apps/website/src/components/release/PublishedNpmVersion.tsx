@@ -10,7 +10,10 @@ import {
 export function PublishedNpmVersion() {
   const [release, setRelease] = useState<PublishedRelease | null>(null);
 
-  useEffect(() => observePublicRelease(setRelease), []);
+  useEffect(
+    () => observePublicRelease(setRelease, { url: '/api/public-release' }),
+    []
+  );
 
   const label = release
     ? `Latest confirmed npm version v${release.version}${

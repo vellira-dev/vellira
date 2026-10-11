@@ -21,10 +21,7 @@ function registryFixture() {
     expect(url.pathname.startsWith('/-/package/')).toBe(true);
     expect(url.pathname.endsWith('/dist-tags')).toBe(true);
     const name = decodeURIComponent(
-      url.pathname.slice(
-        '/-/package/'.length,
-        -'/dist-tags'.length
-      )
+      url.pathname.slice('/-/package/'.length, -'/dist-tags'.length)
     );
     calls += 1;
 
@@ -136,9 +133,7 @@ describe('public npm release API', () => {
       registry.GET(),
       registry.GET(),
     ]);
-    expect(results.map((response) => response.status)).toEqual([
-      200, 200, 200,
-    ]);
+    expect(results.map((response) => response.status)).toEqual([200, 200, 200]);
     expect(registry.getCalls()).toBe(6);
   });
 });

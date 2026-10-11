@@ -44,6 +44,8 @@ describe('shared npm-verified version on public sites', () => {
       '.github/workflows/deploy-website-cloudflare-production.yml'
     );
     expect(staging).toContain("needs.classify.outputs.release_sync != 'true'");
-    expect(production).toContain("needs.classify.outputs.release_sync != 'true'");
+    expect(production).toContain(
+      "needs.classify.outputs.release_sync != 'true'"
+    );
   });
 });

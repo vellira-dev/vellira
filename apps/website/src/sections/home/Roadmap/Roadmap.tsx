@@ -324,7 +324,9 @@ export function Roadmap() {
                   <span className={styles.panelEyebrow}>Latest release</span>
                   <h3>Latest published version</h3>
                   <span className={styles.releaseVersion}>
-                    <code><PublishedNpmVersion /></code>
+                    <code>
+                      <PublishedNpmVersion />
+                    </code>
                     <span className={styles.releaseBadge}>npm</span>
                   </span>
                 </div>

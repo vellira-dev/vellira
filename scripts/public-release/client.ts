@@ -1,5 +1,4 @@
-export const PUBLIC_RELEASE_API_URL =
-  'https://vellira.dev/api/public-release';
+export const PUBLIC_RELEASE_API_URL = 'https://vellira.dev/api/public-release';
 export const PUBLIC_RELEASE_REFRESH_MS = 15 * 60 * 1000;
 const MAX_STALE_MS = 24 * 60 * 60 * 1000;
 const VERSION_PATTERN = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
@@ -11,9 +10,30 @@ export type PublishedRelease = {
   stale: boolean;
 };
 
-type VersionStorage = Pick<Storage, 'getItem' | 'setItem'>;
+type VersionStorage = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+};
+
+type BrowserApi = {
+  window?: {
+    localStorage?: VersionStorage;
+    setInterval(callback: () => void, ms: number): number;
+    clearInterval(timer: number): void;
+  };
+  document?: {
+    visibilityState: string;
+    addEventListener(event: string, callback: () => void): void;
+    removeEventListener(event: string, callback: () => void): void;
+  };
+};
+
+function getBrowserApi(): BrowserApi {
+  return globalThis as unknown as BrowserApi;
+}
 
 type ReadReleaseOptions = {
+  url?: string;
   fetchImpl?: typeof fetch;
   storage?: VersionStorage | null;
   now?: () => number;
@@ -21,16 +41,13 @@ type ReadReleaseOptions = {
 
 function availableStorage(): VersionStorage | null {
   try {
-    return typeof window === 'undefined' ? null : window.localStorage;
+    return getBrowserApi().window?.localStorage ?? null;
   } catch {
     return null;
   }
 }
 
-function validateRelease(
-  value: unknown,
-  now: number
-): PublishedRelease | null {
+function validateRelease(value: unknown, now: number): PublishedRelease | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
@@ -79,9 +96,7 @@ export function readCachedPublicRelease(
 ): PublishedRelease | null {
   if (!storage) return null;
   try {
-    const value: unknown = JSON.parse(
-      storage.getItem(STORAGE_KEY) ?? 'null'
-    );
+    const value: unknown = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
     const parsed = validateRelease(value, now);
     return parsed ? { ...parsed, stale: true } : null;
   } catch {
@@ -90,12 +105,13 @@ export function readCachedPublicRelease(
 }
 
 export async function readPublicRelease({
+  url = PUBLIC_RELEASE_API_URL,
   fetchImpl = fetch,
   storage = availableStorage(),
   now = Date.now,
 }: ReadReleaseOptions = {}): Promise<PublishedRelease | null> {
   try {
-    const response = await fetchImpl(PUBLIC_RELEASE_API_URL, {
+    const response = await fetchImpl(url, {
       method: 'GET',
       credentials: 'omit',
       mode: 'cors',
@@ -124,10 +140,14 @@ export async function readPublicRelease({
 }
 
 export function observePublicRelease(
-  onChange: (release: PublishedRelease | null) => void
+  onChange: (release: PublishedRelease | null) => void,
+  { url = PUBLIC_RELEASE_API_URL }: Pick<ReadReleaseOptions, 'url'> = {}
 ): () => void {
-  if (typeof window === 'undefined') return () => {};
+  const browser = getBrowserApi();
+  if (!browser.window || !browser.document) return () => {};
 
+  const browserWindow = browser.window;
+  const browserDocument = browser.document;
   let active = true;
   let lastRequestAt = 0;
   const cached = readCachedPublicRelease();
@@ -135,13 +155,13 @@ export function observePublicRelease(
 
   const refresh = async () => {
     lastRequestAt = Date.now();
-    const release = await readPublicRelease();
+    const release = await readPublicRelease({ url });
     if (active) onChange(release);
   };
 
   const onVisibility = () => {
     if (
-      document.visibilityState === 'visible' &&
+      browserDocument.visibilityState === 'visible' &&
       Date.now() - lastRequestAt >= PUBLIC_RELEASE_REFRESH_MS
     ) {
       void refresh();
@@ -149,15 +169,15 @@ export function observePublicRelease(
   };
 
   void refresh();
-  const timer = window.setInterval(
+  const timer = browserWindow.setInterval(
     () => void refresh(),
     PUBLIC_RELEASE_REFRESH_MS
   );
-  document.addEventListener('visibilitychange', onVisibility);
+  browserDocument.addEventListener('visibilitychange', onVisibility);
 
   return () => {
     active = false;
-    window.clearInterval(timer);
-    document.removeEventListener('visibilitychange', onVisibility);
+    browserWindow.clearInterval(timer);
+    browserDocument.removeEventListener('visibilitychange', onVisibility);
   };
 }

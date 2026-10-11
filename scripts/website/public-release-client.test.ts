@@ -49,9 +49,7 @@ describe('public release browser client', () => {
         NOW
       )
     ).toBeNull();
-    expect(
-      parsePublicRelease(valid(), NOW + 25 * 60 * 60 * 1000)
-    ).toBeNull();
+    expect(parsePublicRelease(valid(), NOW + 25 * 60 * 60 * 1000)).toBeNull();
   });
 
   it('stores a confirmed version and preserves it during network failure', async () => {
@@ -71,6 +69,21 @@ describe('public release browser client', () => {
     const offline = (async () => {
       throw new Error('offline');
     }) as typeof fetch;
+    const localApi = (async (url: RequestInfo | URL) => {
+      expect(String(url)).toBe('/api/public-release');
+      return Response.json(valid());
+    }) as typeof fetch;
+    expect(
+      (
+        await readPublicRelease({
+          url: '/api/public-release',
+          fetchImpl: localApi,
+          storage,
+          now: () => NOW,
+        })
+      )?.version
+    ).toBe('2.139.0');
+
     const stale = await readPublicRelease({
       fetchImpl: offline,
       storage,
