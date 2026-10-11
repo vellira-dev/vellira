@@ -209,13 +209,17 @@ function assertNoSource(sourceKind: CliSourceKind | null) {
   }
 }
 
-
-function validateReconciliationAuthority(root: string, repository: string): string {
+function validateReconciliationAuthority(
+  root: string,
+  repository: string
+): string {
   const sha = process.env.GITHUB_SHA ?? '';
   if (
     process.env.GITHUB_REPOSITORY !== repository ||
     process.env.GITHUB_REF !== 'refs/heads/main' ||
-    !['push', 'workflow_dispatch'].includes(process.env.GITHUB_EVENT_NAME ?? '') ||
+    !['push', 'workflow_dispatch'].includes(
+      process.env.GITHUB_EVENT_NAME ?? ''
+    ) ||
     !/^[0-9a-f]{40}$/.test(sha)
   ) {
     throw new CanonicalGapError(
