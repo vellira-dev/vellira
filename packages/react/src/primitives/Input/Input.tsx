@@ -350,7 +350,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                   aria-label={
                     isPasswordRevealed ? 'Hide password' : 'Show password'
                   }
-                  aria-pressed={isPasswordRevealed}
                 >
                   {isPasswordRevealed ? (
                     <EyeOff size={18} aria-hidden='true' />
