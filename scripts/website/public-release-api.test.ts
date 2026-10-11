@@ -194,6 +194,29 @@ describe('public npm release API', () => {
     expect(response.headers.get('X-Vellira-Public-Release-Reason')).toBe(
       'registry_unavailable'
     );
+    expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
+      'http_401'
+    );
+    expect(
+      publishedPackageNames.includes(
+        response.headers.get('X-Vellira-Public-Release-Upstream-Package') as (typeof publishedPackageNames)[number]
+      )
+    ).toBe(true);
+  });
+
+  it('separates transport exceptions from HTTP errors without leaking messages', async () => {
+    const fetchImpl = (async () => {
+      throw new TypeError('secret-must-never-appear-in-response');
+    }) as typeof fetch;
+    const GET = createPublicReleaseHandler({ fetchImpl, now: () => START });
+    const response = await GET();
+    expect(response.status).toBe(503);
+    expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
+      'fetch_type_error'
+    );
+    expect(JSON.stringify([...response.headers])).not.toContain(
+      'secret-must-never-appear-in-response'
+    );
   });
 
   it('does not accept prerelease or malformed npm dist tags', async () => {

@@ -306,6 +306,8 @@ jobs:
             signal: AbortSignal.timeout(10_000),
           });
           const reason = response.headers.get('x-vellira-public-release-reason');
+          const upstream = response.headers.get('x-vellira-public-release-upstream');
+          const upstreamPackage = response.headers.get('x-vellira-public-release-upstream-package');
           const state = response.headers.get('x-vellira-public-release-state');
           const buildId = response.headers.get('x-vellira-build-id');
           const payload = await response.json();
@@ -313,6 +315,8 @@ jobs:
             kind: 'public-npm-release',
             status: response.status,
             reason,
+            upstream,
+            upstreamPackage,
             state,
             buildId,
             version: response.status === 200 ? payload?.version : null,
