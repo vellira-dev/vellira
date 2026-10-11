@@ -46,19 +46,16 @@ async function readRegistryTag(
   const escapedName = encodeURIComponent(packageName).replace(/^%40/, '@');
   let response: Response;
   try {
-    response = await fetchImpl(
-      `https://registry.npmjs.org/${escapedName}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept:
-            'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
-        },
-        cache: 'no-store',
-        redirect: 'error',
-        signal: AbortSignal.timeout(8000),
-      }
-    );
+    response = await fetchImpl(`https://registry.npmjs.org/${escapedName}`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
+      },
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(8000),
+    });
   } catch {
     throw new PublicReleaseCheckError('registry_unavailable');
   }
