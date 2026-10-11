@@ -250,7 +250,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'new-user@example.com' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password\\s*\\*$/), {
+    fireEvent.change(screen.getByLabelText(/^Password\s*\*$/), {
       target: { value: 'a sufficiently long password' },
     });
     fireEvent.change(
