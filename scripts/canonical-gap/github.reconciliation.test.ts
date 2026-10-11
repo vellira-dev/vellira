@@ -89,7 +89,7 @@ function transport(
 }
 
 describe('canonical gap exact managed issue closure transport', () => {
-  it('checks current identity and discussion before comment and not-planned PATCH', async () => {
+  it('checks identity and discussion before closing', async () => {
     const original = issue();
     const t = transport(original);
     const client = createGitHubCanonicalGapClient({
@@ -111,7 +111,7 @@ describe('canonical gap exact managed issue closure transport', () => {
     { body: 'removed trusted authority' },
     { assignees: [{ login: 'human' }] },
     { comments: ['human review is in progress'] },
-  ])('refuses drift and human work before any issue mutation: %j', async (options) => {
+  ])('refuses drift and human work: %j', async (options) => {
     const original = issue();
     const t = transport(original, options);
     const client = createGitHubCanonicalGapClient({
@@ -125,7 +125,7 @@ describe('canonical gap exact managed issue closure transport', () => {
     expect(t.methods.every((method) => method.startsWith('GET'))).toBe(true);
   });
 
-  it('does not duplicate an exact note after an interrupted closure', async () => {
+  it('deduplicates the note after an interrupted closure', async () => {
     const original = issue();
     const t = transport(original, { failFirstPatch: true });
     const client = createGitHubCanonicalGapClient({
@@ -138,15 +138,13 @@ describe('canonical gap exact managed issue closure transport', () => {
     ).rejects.toThrow(/lost response/);
     await client.closeManagedIssue?.(original, 'Reviewed exception #1569');
     expect(t.notes).toEqual(['Reviewed exception #1569']);
-    expect(t.methods.filter((method) => method.startsWith('POST'))).toHaveLength(
-      1
-    );
-    expect(t.methods.filter((method) => method.startsWith('PATCH'))).toHaveLength(
-      2
-    );
+    const posted = t.methods.filter((method) => method.startsWith('POST'));
+    expect(posted).toHaveLength(1);
+    const patched = t.methods.filter((method) => method.startsWith('PATCH'));
+    expect(patched).toHaveLength(2);
   });
 
-  it('does not reach GitHub API without an explicit mutation token', async () => {
+  it('requires a mutation token before GitHub access', async () => {
     const original = issue();
     const t = transport(original);
     const client = createGitHubCanonicalGapClient({
