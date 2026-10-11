@@ -56,7 +56,7 @@ function transport(
     const address = String(url);
     const method = init?.method ?? 'GET';
     methods.push(method + ' ' + address);
-    if (address.endsWith('/comments')) {
+    if (address.includes('/comments')) {
       if (method === 'GET') {
         return jsonResponse(notes.map((body) => ({ body })));
       }
