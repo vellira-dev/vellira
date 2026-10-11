@@ -60,8 +60,10 @@ export async function runCanonicalGapCli(
     }
     if (options.sourceKind === 'approved-exceptions') {
       const sourceSha = options.apply
-        ? (dependencies.validateReconciliationAuthority ??
-            validateReconciliationAuthority)(root, options.repository)
+        ? (
+            dependencies.validateReconciliationAuthority ??
+            validateReconciliationAuthority
+          )(root, options.repository)
         : undefined;
       const report = (dependencies.scanUiUsage ?? runVelliraUiUsageCheck)(root);
       const client = createClient(options.repository, token);
@@ -114,10 +116,7 @@ export async function runCanonicalGapCli(
 }
 
 type CliSourceKind =
-  | 'spec'
-  | 'report'
-  | 'production-report'
-  | 'approved-exceptions';
+  'spec' | 'report' | 'production-report' | 'approved-exceptions';
 
 type CliOptions = {
   repository: string;
