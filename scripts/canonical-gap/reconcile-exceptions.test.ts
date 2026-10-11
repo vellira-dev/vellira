@@ -147,7 +147,7 @@ describe('approved canonical UI exception reconciliation', () => {
     expect(client.closed).toEqual([]);
   });
 
-  it('closes the confirmed managed issue once, with precise source evidence', async () => {
+  it('closes a managed issue once with exact evidence', async () => {
     const client = new Client();
     const first = await reconcileCanonicalGapUiExceptions(report(), client, {
       apply: true,
@@ -184,7 +184,7 @@ describe('approved canonical UI exception reconciliation', () => {
     { detected: '#000' },
     { ruleId: 'vellira-ui.noncanonical-icon' as const },
     { category: 'framework-infrastructure' as const },
-  ])('requires exact provenance, not only visual similarity: %j', async (change) => {
+  ])('requires exact source provenance: %j', async (change) => {
     const client = new Client();
     const result = await reconcileCanonicalGapUiExceptions(
       report([approved(change)]),
@@ -198,10 +198,17 @@ describe('approved canonical UI exception reconciliation', () => {
   it.each([
     { state: 'closed' as const },
     { labels: ['canonical-gap', 'design-resource-gap'] },
-    { labels: ['canonical-gap', 'canonical-gap:ready', 'design-resource-gap', 'launch-blocker'] },
+    {
+      labels: [
+        'canonical-gap',
+        'canonical-gap:ready',
+        'design-resource-gap',
+        'launch-blocker',
+      ],
+    },
     { labels: [] },
     { body: '<!-- vellira-canonical-gap:v1:canonical-gap-approved-white -->' },
-  ])('never mutates closed, human-routed or marker-only work: %j', async (change) => {
+  ])('preserves closed, routed or marker-only issues: %j', async (change) => {
     const client = new Client();
     client.issues = [managed(change)];
     const result = await reconcileCanonicalGapUiExceptions(report(), client, {
@@ -212,7 +219,7 @@ describe('approved canonical UI exception reconciliation', () => {
     expect(client.closed).toEqual([]);
   });
 
-  it('never infers completion from a clean scan without approved exceptions', async () => {
+  it('does not infer completion from a clean scan', async () => {
     const client = new Client();
     const result = await reconcileCanonicalGapUiExceptions(
       report([], []),
@@ -223,7 +230,7 @@ describe('approved canonical UI exception reconciliation', () => {
     expect(client.closed).toEqual([]);
   });
 
-  it('fails closed on an incomplete report rather than treating absence as proof', async () => {
+  it('fails closed on an incomplete report', async () => {
     const client = new Client();
     const incomplete = report();
     incomplete.summary.filesScanned = 0;
