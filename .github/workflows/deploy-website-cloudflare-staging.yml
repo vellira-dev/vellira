@@ -285,6 +285,95 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
+      - name: Inspect verified npm release and registry availability
+        # Advisory for optional metadata: preserve website deployment gates.
+        # Log safe response evidence so a GREEN browser soak cannot be
+        # mistaken for verified version availability.
+        run: |
+          node --input-type=module <<'NODE'
+          const names = [
+            '@vellira-ui/core',
+            '@vellira-ui/icons',
+            '@vellira-ui/react',
+            '@vellira-ui/react-native',
+            '@vellira-ui/tokens',
+            '@vellira-ui/types',
+          ];
+          const endpoint = new URL('/api/public-release', process.env.STAGING_URL);
+          const response = await fetch(endpoint, {
+            headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000),
+          });
+          const reason = response.headers.get('x-vellira-public-release-reason');
+          const state = response.headers.get('x-vellira-public-release-state');
+          const buildId = response.headers.get('x-vellira-build-id');
+          const payload = await response.json();
+          const summary = {
+            kind: 'public-npm-release',
+            status: response.status,
+            reason,
+            state,
+            buildId,
+            version: response.status === 200 ? payload?.version : null,
+          };
+          console.log('PUBLIC_RELEASE_PROBE ' + JSON.stringify(summary));
+          if (buildId !== process.env.VELLIRA_BUILD_ID) {
+            throw new Error('npm API response does not match the staging build');
+          }
+          if (response.status === 200) {
+            if (
+              payload?.schemaVersion !== 1 ||
+              payload.source !== 'npm-dist-tags' ||
+              !/^\d+\.\d+\.\d+$/.test(payload.version) ||
+              !Array.isArray(payload.packages) ||
+              payload.packages.length !== names.length ||
+              !names.every((name) => payload.packages.includes(name))
+            ) {
+              throw new Error('npm API returned invalid verified release evidence');
+            }
+          } else if (
+            response.status === 503 &&
+            state === 'unavailable' &&
+            ['registry_unavailable', 'registry_metadata_invalid', 'packages_not_converged'].includes(reason)
+          ) {
+            console.log(
+              '::warning title=Public npm release unavailable::' +
+                'Verified release API returned 503 (' + reason + '); checking public registry tags.'
+            );
+            // Read-only diagnostic, never a substitute for Worker verification.
+            const packages = await Promise.all(
+              names.map(async (name) => {
+                const url = 'https://registry.npmjs.org/' +
+                  encodeURIComponent(name).replace(/^%40/, '@');
+                try {
+                  const registryResponse = await fetch(url, {
+                    headers: { Accept: 'application/vnd.npm.install-v1+json' },
+                    redirect: 'error',
+                    signal: AbortSignal.timeout(8_000),
+                  });
+                  if (!registryResponse.ok) {
+                    return { name, status: registryResponse.status };
+                  }
+                  const registryData = await registryResponse.json();
+                  const latest = registryData?.['dist-tags']?.latest;
+                  return {
+                    name,
+                    status: registryResponse.status,
+                    identityMatches: registryData?.name === name,
+                    latest: typeof latest === 'string' ? latest : null,
+                    versionExists: Object.hasOwn(registryData?.versions ?? {}, latest),
+                  };
+                } catch {
+                  return { name, status: 'network_error' };
+                }
+              })
+            );
+            console.log('REGISTRY_TAG_PROBE ' + JSON.stringify(packages));
+          } else {
+            throw new Error('Unexpected npm API status or missing fail-closed metadata');
+          }
+          NODE
       - name: Smoke test deployed auth provider discovery
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
