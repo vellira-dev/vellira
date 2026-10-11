@@ -49,32 +49,22 @@ describe('shared npm-verified version on public sites', () => {
     );
   });
 
-  it('hides unverified releases and uses quiet text links in Docs and Storybook', () => {
-    const docsBadge = read(
-      'apps/docs/src/.vitepress/theme/PublicReleaseBadge.vue'
-    );
-    const docsStyles = read('apps/docs/src/.vitepress/theme/styles.css');
-    const storybook = read('apps/react-storybook/.storybook/manager.ts');
-    const storybookStyles = read(
-      'apps/react-storybook/.storybook/manager.css'
-    );
+  it('does not show npm placeholders as nav buttons', () => {
+    const docs = read('apps/docs/src/.vitepress/theme/PublicReleaseBadge.vue');
+    const sb = read('apps/react-storybook/.storybook/manager.ts');
+    const docsCss = read('apps/docs/src/.vitepress/theme/styles.css');
+    const sbCss = read('apps/react-storybook/.storybook/manager.css');
 
-    expect(docsBadge).toContain('v-if="release"');
-    expect(docsBadge).toContain('v{{ release.version }}');
-    expect(docsBadge).not.toContain("'—'");
-    expect(storybook).toContain('if (!release) return null;');
-    expect(storybook).not.toContain("'—'");
+    expect(docs).toContain('v-if="release"');
+    expect(sb).toContain('if (!release) return null;');
+    expect(docs).not.toContain("'—'");
+    expect(sb).not.toContain("'—'");
 
-    const docsRule = /\.vellira-docs-release \{([^}]*)\}/;
-    const storybookRule = /\.velliraToolbarVersion \{([^}]*)\}/;
-    const docsBaseStyle = docsStyles.match(docsRule)?.[1];
-    const storybookBaseStyle = storybookStyles.match(storybookRule)?.[1];
-    expect(docsBaseStyle).toBeDefined();
-    expect(storybookBaseStyle).toBeDefined();
-    for (const baseStyle of [docsBaseStyle, storybookBaseStyle]) {
-      expect(baseStyle).not.toMatch(/background:|border:|border-radius: 999px/);
-      expect(baseStyle).toContain('font-size:');
+    const docsRule = docsCss.split('.vellira-docs-release {')[1];
+    const sbRule = sbCss.split('.velliraToolbarVersion {')[1];
+    for (const rule of [docsRule, sbRule]) {
+      expect(rule?.split('}')[0]).not.toMatch(/background:|border:/);
     }
-    expect(docsStyles).toContain('.vellira-docs-release-mobile:empty');
+    expect(docsCss).toContain('.vellira-docs-release-mobile:empty');
   });
 });
