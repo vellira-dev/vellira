@@ -2,7 +2,7 @@
   "title": "React + React Native: The Cost of Two UI Libraries",
   "description": "Using separate React and React Native UI libraries duplicates APIs, tokens, states, and maintenance. See how one shared UI foundation cuts that work.",
   "slug": "react-react-native-two-ui-libraries",
-  "publishedAt": "2026-10-10",
+  "publishedAt": "2026-10-11",
   "author": "Roman Bakurov",
   "tags": [
     "React",
@@ -11,5 +11,5 @@
     "UI Libraries",
     "Cross-Platform"
   ],
-  "draft": true
+  "draft": false
 }
