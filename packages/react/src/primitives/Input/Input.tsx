@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useId, useRef, useState } from 'react';
 
-import { Close, Search } from '@vellira-ui/icons';
+import { Close, Eye, EyeOff, Search } from '@vellira-ui/icons';
 import { controlSizes } from '@vellira-ui/tokens';
 import type { ChangeEvent, CSSProperties, InputHTMLAttributes } from 'react';
 
@@ -350,8 +350,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                   aria-label={
                     isPasswordRevealed ? 'Hide password' : 'Show password'
                   }
+                  aria-pressed={isPasswordRevealed}
                 >
-                  {isPasswordRevealed ? 'Hide' : 'Show'}
+                  {isPasswordRevealed ? (
+                    <EyeOff size={18} aria-hidden='true' />
+                  ) : (
+                    <Eye size={18} aria-hidden='true' />
+                  )}
                 </button>
               )}
 
