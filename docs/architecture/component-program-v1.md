@@ -205,3 +205,36 @@ node --import tsx scripts/component-program/cli.ts < reviewed-spec.json
 Synthetic fixtures and adversarial tests live under `scripts/component-program`.
 Existing active production candidates are not development fixtures. Human review
 and merge remain the final authority for changes to the public language.
+
+## Reason-bearing Boolean callbacks
+
+An optional state `change` decision explicitly selects `ComponentStateChangeV1`.
+Without it, the original flat value/default/change consequences, serialization and
+fingerprints remain unchanged. It is not a new API convention inferred from a
+component name.
+
+The versioned decision declares the complete state transition domain, the subset
+that emits a callback, and a finite reason domain with the transitions on which
+each reason is allowed. For example, a state may support both `to-false` and
+`to-true` while emitting `onOpenChange(open, { reason })` only for `to-false`, with
+exact reasons `action`, `dismiss` and `timeout`. Opening adds no reason and emits
+no callback under that decision. Reason order is normalized, not semantically
+significant. Changing the domain or transition policy changes Program identity.
+
+V1 is deliberately bounded to Boolean controlled or controlled/uncontrolled state.
+The original source capability, state-control module and explicit API convention
+checks still apply. Callback scope must exactly match the source platforms; Web,
+Native and shared sources are supported. Per-platform reason-domain divergence,
+uncontrolled-only reason callbacks and non-Boolean reason callbacks have no V1
+projection and fail closed. Each reason needs nonempty transition semantics;
+collectively those transitions must exactly cover the emitted subset. Declared
+state event edges must have explicit open/close targets within the state domain.
+Unqualified request-change/update edges are not guessed.
+
+Only the change consequence gains `change` and the deterministic `typeExpression`.
+The type contains the exact finite reason union; transition qualifications remain
+structured semantic data. A TypeScript type alone cannot prove when a callback
+fires. Consumers must preserve both projections and compare them against approved
+API semantics before implementation; runtime behavior still requires independent
+validation. Compiling a self-consistent new reason is not approval to replace an
+existing reviewed reason domain.
