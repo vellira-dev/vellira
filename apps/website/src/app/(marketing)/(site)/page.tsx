@@ -26,11 +26,11 @@ export default function HomePage() {
       <PlatformParity />
       <ProductInterfaceDemo />
       <CodeShowcase />
-      <ProductionWorkflow />
+      <ProductionWorkflow productFacts={homepageProductFacts} />
       <QuickStart />
       <SocialProof productFacts={homepageProductFacts} />
       <FeaturedStory />
-      <Roadmap />
+      <Roadmap productFacts={homepageProductFacts} />
       <Pro />
       <FinalCta />
       <SiteFooter />
