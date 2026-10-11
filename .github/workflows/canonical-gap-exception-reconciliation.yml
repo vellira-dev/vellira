@@ -39,6 +39,9 @@ jobs:
       - name: Install exact dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build trusted metadata dependency
+        run: pnpm --filter @vellira-ui/metadata build
+
       - name: Preview approved-exception reconciliation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
