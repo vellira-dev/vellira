@@ -76,11 +76,6 @@
   gap: var(--space-3);
 }
 
-/* Only password sign-in needs extra space after its remember preference. */
-.loginActions {
-  margin-block-start: var(--space-3);
-}
-
 .secondary {
   display: flex;
   justify-content: space-between;
@@ -311,4 +306,9 @@ button.providerGitHubButton {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Only password sign-in needs extra space after its remember preference. */
+.loginActions {
+  margin-block-start: var(--space-3);
 }
