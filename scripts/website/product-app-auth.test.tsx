@@ -482,7 +482,9 @@ describe('password visibility in Vellira auth forms', () => {
     expect(confirmation).toHaveAttribute('type', 'password');
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(confirmation).toHaveAttribute('type', 'text');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Hide password' })[0]);
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Hide password' })[0]
+    );
     expect(password).toHaveAttribute('type', 'password');
     expect(confirmation).toHaveAttribute('type', 'text');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -500,7 +502,9 @@ describe('password visibility in Vellira auth forms', () => {
     expect(screen.getAllByRole('button', { name: 'Show password' })).toHaveLength(
       2
     );
-    fireEvent.click(screen.getAllByRole('button', { name: 'Show password' })[1]);
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Show password' })[1]
+    );
     expect(password).toHaveAttribute('type', 'password');
     expect(confirmation).toHaveAttribute('type', 'text');
     fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
