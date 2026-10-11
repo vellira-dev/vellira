@@ -690,17 +690,17 @@ export function CodeShowcase() {
                     {activeExample === 'button' && (
                       <div className={styles.previewCard}>
                         <div className={styles.previewCardHeader}>
-                          <span>Checkout</span>
-                          <strong>Workspace Pro</strong>
+                          <span>Example interface</span>
+                          <strong>Sample checkout</strong>
                         </div>
 
                         <div className={styles.planSummary}>
                           <div>
-                            <span>Monthly total</span>
+                            <span>Example monthly total</span>
                             <strong>$48</strong>
                           </div>
                           <p>
-                            Includes team seats, design tokens, and support.
+                            Illustrative UI only, not a Vellira subscription offer.
                           </p>
                         </div>
 
