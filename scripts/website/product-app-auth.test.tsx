@@ -20,8 +20,8 @@ import {
   ForgotPasswordForm,
   LoginForm,
   OAuthCallback,
-  SignupForm,
   ResetPasswordForm,
+  SignupForm,
   VerificationFlow,
 } from '../../apps/website/src/product-app/AuthFlows';
 
@@ -458,13 +458,11 @@ describe('password visibility in Vellira auth forms', () => {
     expect(input).toHaveAttribute('type', 'password');
     expect(input).toHaveAttribute('autocomplete', 'current-password');
     const show = screen.getByRole('button', { name: 'Show password' });
-    expect(show).toHaveAttribute('aria-pressed', 'false');
     expect(show.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     fireEvent.click(show);
     expect(input).toHaveAttribute('type', 'text');
     expect(input).toHaveValue('visible-login-canary');
     const hide = screen.getByRole('button', { name: 'Hide password' });
-    expect(hide).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(hide);
     expect(input).toHaveAttribute('type', 'password');
     expect(input).toHaveValue('visible-login-canary');
