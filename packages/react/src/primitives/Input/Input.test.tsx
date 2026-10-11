@@ -418,7 +418,9 @@ describe('Input', () => {
 
     expect(input?.type).toBe('password');
     expect(revealButton?.type).toBe('button');
-    expect(revealButton?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(
+      revealButton?.querySelector('svg[aria-hidden="true"]')
+    ).not.toBeNull();
     expect(revealButton?.textContent).toBe('');
 
     act(() => {
