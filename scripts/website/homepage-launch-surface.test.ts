@@ -31,13 +31,11 @@ const launchCtaSource = [
 ].join('\n');
 
 describe('homepage launch positioning and navigation', () => {
-  it('states the primary React and React Native use case in the hero', () => {
+  it('connects the React and React Native use case to UI consistency', () => {
     expect(heroSource).toContain('Building for React web and React Native?');
-    expect(heroSource).toContain('Share component APIs and');
-    expect(heroSource).toContain(
-      'design tokens across both while each platform keeps a native'
-    );
-    expect(heroSource).toContain('implementation.');
+    expect(heroSource).toContain('Keep it consistent.');
+    expect(heroSource).toContain('public quality checks');
+    expect(heroSource).toContain('teams and AI create more UI.');
   });
 
   it('keeps launch CTAs on the canonical Getting Started route', () => {
