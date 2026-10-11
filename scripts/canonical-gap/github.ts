@@ -17,6 +17,7 @@ type GitHubIssueResponse = {
   html_url: string;
   labels: Array<string | { name?: string | null }>;
   pull_request?: unknown;
+  assignees?: unknown[];
 };
 
 type GitHubLabelResponse = {
@@ -144,6 +145,70 @@ export function createGitHubCanonicalGapClient(
         );
       }
       return normalizeIssue(issue, requestId);
+    },
+
+    async closeManagedIssue(issue, note) {
+      if (!options.token?.trim()) {
+        throw new CanonicalGapError(
+          'GITHUB_TOKEN is required for canonical gap GitHub mutations.'
+        );
+      }
+      const issuePath = '/repos/' + owner + '/' + repo + '/issues/' + issue.number;
+      const current = await request<GitHubIssueResponse>(issuePath, {}, true);
+      const currentBody = current.body ?? '';
+      const currentLabels = current.labels
+        .map((label) => (typeof label === 'string' ? label : label.name))
+        .filter((label): label is string => Boolean(label))
+        .sort();
+
+      if (
+        current.pull_request ||
+        current.state !== 'open' ||
+        current.title !== issue.title ||
+        currentBody !== issue.body ||
+        extractCanonicalGapRequestId(currentBody) !== issue.requestId ||
+        JSON.stringify(currentLabels) !== JSON.stringify(issue.labels) ||
+        (current.assignees?.length ?? 0) > 0
+      ) {
+        throw new CanonicalGapError(
+          'Managed canonical gap issue changed or was assigned before approved-exception closure.'
+        );
+      }
+
+      // A previous interrupted invocation may have posted the exact note
+      // without finishing the closure. Never overwrite human discussion.
+      const comments = await listAll<{ body: string }>(
+        issuePath + '/comments'
+      );
+      if (comments.some(({ body }) => body !== note)) {
+        throw new CanonicalGapError(
+          'Managed canonical gap issue has a human or conflicting discussion; review required.'
+        );
+      }
+      if (comments.length === 0) {
+        await request(
+          issuePath + '/comments',
+          { method: 'POST', body: JSON.stringify({ body: note }) },
+          true
+        );
+      }
+
+      const closed = await request<GitHubIssueResponse>(
+        issuePath,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            state: 'closed',
+            state_reason: 'not_planned',
+          }),
+        },
+        true
+      );
+      if (closed.state !== 'closed') {
+        throw new CanonicalGapError(
+          'GitHub did not confirm canonical gap issue closure.'
+        );
+      }
     },
   };
 
