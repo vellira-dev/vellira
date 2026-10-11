@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@vellira-ui/react';
+import type { OAuthLoginMethod } from './authPreference';
 import { AuthSurface } from './AuthSurface';
 import { AuthTextLink } from './AuthTextLink';
 import { LoginForm } from './AuthFlows';
@@ -20,7 +21,11 @@ import styles from './AuthSurface.module.css';
 
 type Status =
   'loading' | 'sign-in' | 'confirm' | 'complete' | 'expired' | 'retry';
-export function OAuthConnectionFlow() {
+export function OAuthConnectionFlow({
+  providers = [],
+}: {
+  providers?: readonly OAuthLoginMethod[];
+}) {
   const [connection, setConnection] = useState<OAuthConnection>();
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string>();
@@ -109,8 +114,12 @@ export function OAuthConnectionFlow() {
     : 'a login method';
   return (
     <AuthSurface
-      title={`Connect ${provider} to your Vellira account`}
-      description='Connect a login method to your existing account. No second Vellira account is created.'
+      title={
+        status === 'confirm'
+          ? `Connect ${provider} to your account?`
+          : `Connect ${provider} to your Vellira account`
+      }
+      description='No second Vellira account will be created.'
     >
       <div
         className={styles.actions}
@@ -138,11 +147,11 @@ export function OAuthConnectionFlow() {
               className={styles.message}
               tabIndex={-1}
             >
-              An account already exists for this email. Sign in using a method
-              already connected to that account, then confirm connecting{' '}
-              {provider}. Matching email alone does not connect accounts.
+              A Vellira account already exists for this email. Sign in to your
+              existing Vellira account once to connect {provider}.
             </p>
             <LoginForm
+              providers={providers}
               connection={connection}
               onAuthenticated={() => refresh(connection, true)}
             />
@@ -160,8 +169,8 @@ export function OAuthConnectionFlow() {
               className={styles.message}
               tabIndex={-1}
             >
-              Your existing account is confirmed. Connect {provider} so you can
-              use it to sign in to the same Vellira account?
+              {provider} will become another way to sign in to this same Vellira
+              account. Confirm below to connect it.
             </p>
             <Button
               onClick={() => void complete()}

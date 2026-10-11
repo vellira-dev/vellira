@@ -128,7 +128,7 @@ async function signIn() {
   fireEvent.change(screen.getByLabelText(/^Password/), {
     target: { value: password },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in and continue' }));
 }
 it('hands collision to a bounded connection locator without treating it as authentication', async () => {
   saveLoginPreference('email', 'security-canary@example.invalid');
@@ -222,7 +222,9 @@ it('reuses normal password login, then separately requires an explicit CSRF-prot
       <OAuthConnectionFlow />
     </StrictMode>
   );
-  expect(await screen.findByRole('button', { name: 'Sign in' })).toBeEnabled();
+  expect(
+    await screen.findByRole('button', { name: 'Sign in and continue' })
+  ).toBeEnabled();
   expect(
     screen.queryByRole('link', { name: 'Create account' })
   ).not.toBeInTheDocument();
@@ -262,7 +264,9 @@ it('another account or rejected password never advances to confirmation', async 
   await waitFor(() =>
     expect(calls.filter((c) => c.method === 'GET').length).toBeGreaterThan(1)
   );
-  expect(await screen.findByRole('button', { name: 'Sign in' })).toBeEnabled();
+  expect(
+    await screen.findByRole('button', { name: 'Sign in and continue' })
+  ).toBeEnabled();
   expect(
     screen.queryByRole('button', { name: 'Connect GitHub' })
   ).not.toBeInTheDocument();
@@ -315,7 +319,9 @@ it.each([400, 403, 503])(
         '/login'
       );
     else if (code === 403)
-      expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+      expect(
+        screen.getByRole('button', { name: 'Sign in and continue' })
+      ).toBeEnabled();
     else {
       expect(
         screen.getByRole('button', { name: 'Connect GitHub' })
@@ -363,9 +369,44 @@ it('storage denial cannot prevent ordinary login and explicit completion', async
 });
 it('cancelling offers normal sign-in without any implicit connection mutation', async () => {
   render(<OAuthConnectionFlow />);
-  expect(await screen.findByRole('button', { name: 'Sign in' })).toBeVisible();
+  expect(
+    await screen.findByRole('button', { name: 'Sign in and continue' })
+  ).toBeVisible();
   expect(
     screen.getByRole('link', { name: 'Cancel connection' })
   ).toHaveAttribute('href', '/login');
   expect(calls.some((c) => c.method === 'POST')).toBe(false);
+});
+
+it.each(['github', 'google', 'apple'] as const)(
+  'connection to %s offers only other configured proof methods',
+  async (provider) => {
+    window.history.replaceState(null, '', connectionHref({ id, provider }));
+    render(<OAuthConnectionFlow providers={['google', 'apple', 'github']} />);
+    await screen.findByRole('button', { name: 'Sign in and continue' });
+    const names = { github: 'GitHub', google: 'Google', apple: 'Apple' };
+    for (const method of ['google', 'apple', 'github'] as const) {
+      const button = screen.queryByRole('button', {
+        name: `Continue with ${names[method]}`,
+      });
+      if (method === provider) expect(button).toBeNull();
+      else expect(button).toBeEnabled();
+    }
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  }
+);
+it('unrecognized ownership proof returns to the existing connection with bounded recovery', async () => {
+  window.history.replaceState(
+    null,
+    '',
+    `/auth/callback?error=link_authentication_required&provider=google&link=${id}&link_provider=github`
+  );
+  render(<OAuthCallback />);
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'already connected to your existing Vellira account'
+  );
+  expect(
+    screen.getByRole('link', { name: 'Return to connection' })
+  ).toHaveAttribute('href', connectionHref(connection));
+  expect(fetchMock).not.toHaveBeenCalled();
 });
