@@ -48,4 +48,31 @@ describe('shared npm-verified version on public sites', () => {
       "needs.classify.outputs.release_sync != 'true'"
     );
   });
+
+  it('hides unverified releases and uses quiet text links in Docs and Storybook', () => {
+    const docsBadge = read(
+      'apps/docs/src/.vitepress/theme/PublicReleaseBadge.vue'
+    );
+    const docsStyles = read('apps/docs/src/.vitepress/theme/styles.css');
+    const storybook = read('apps/react-storybook/.storybook/manager.ts');
+    const storybookStyles = read(
+      'apps/react-storybook/.storybook/manager.css'
+    );
+
+    expect(docsBadge).toContain('v-if="release"');
+    expect(docsBadge).toContain('v{{ release.version }}');
+    expect(docsBadge).not.toContain("'—'");
+    expect(storybook).toContain('if (!release) return null;');
+    expect(storybook).not.toContain("'—'");
+
+    const docsBaseStyle = docsStyles.match(/\.vellira-docs-release \{([^}]*)\}/)?.[1];
+    const storybookBaseStyle = storybookStyles.match(/\.velliraToolbarVersion \{([^}]*)\}/)?.[1];
+    expect(docsBaseStyle).toBeDefined();
+    expect(storybookBaseStyle).toBeDefined();
+    for (const baseStyle of [docsBaseStyle, storybookBaseStyle]) {
+      expect(baseStyle).not.toMatch(/background:|border:|border-radius: 999px/);
+      expect(baseStyle).toContain('font-size:');
+    }
+    expect(docsStyles).toContain('.vellira-docs-release-mobile:empty');
+  });
 });
