@@ -213,12 +213,12 @@ it('does not persist without opt-in or after expired pending intent', async () =
 });
 it('prefills email independently of the last provider, and opt-out clears both', () => {
   saveLoginPreference('github', canaryEmail);
-  render(<LoginForm />);
+  render(<LoginForm providers={['github']} />);
   expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue(
     canaryEmail
   );
   expect(
-    screen.getByRole('button', { name: /GitHub · Last used/ })
+    screen.getByRole('button', { name: /Continue with GitHub/ })
   ).toBeEnabled();
   fireEvent.click(screen.getByRole('checkbox'));
   expect(localStorage.getItem(key)).toBeNull();
@@ -229,7 +229,7 @@ function ThemeAndAuth({ signup = false }: { signup?: boolean }) {
   return (
     <>
       <button onClick={() => theme.setPreference('dark')}>Change theme</button>
-      {signup ? <SignupForm /> : <LoginForm />}
+      {signup ? <SignupForm /> : <LoginForm providers={['github']} />}
     </>
   );
 }

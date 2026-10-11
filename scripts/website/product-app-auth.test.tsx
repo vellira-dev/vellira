@@ -315,7 +315,7 @@ describe('existing OAuth callback and account recovery', () => {
 
   it('remembers only email and login method when opted in', async () => {
     fetchMock.mockResolvedValue(respond({ authenticated: true }));
-    render(<LoginForm />);
+    render(<LoginForm providers={['github']} />);
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'remember-me@example.com' },
@@ -351,7 +351,7 @@ describe('existing OAuth callback and account recovery', () => {
       })
     );
 
-    render(<LoginForm />);
+    render(<LoginForm providers={['github']} />);
 
     expect(
       screen.getByRole('checkbox', {
@@ -364,17 +364,17 @@ describe('existing OAuth callback and account recovery', () => {
     expect(screen.getByLabelText('Password', { exact: false })).toHaveValue('');
   });
 
-  it('marks the saved provider as last used without auto-starting OAuth', () => {
+  it('preserves the saved provider without changing its accessible label or auto-starting OAuth', () => {
     window.localStorage.setItem(
       'vellira-auth-login-preference',
       JSON.stringify({ version: 2, lastSuccessfulMethod: 'github' })
     );
 
-    render(<LoginForm />);
+    render(<LoginForm providers={['github']} />);
 
     expect(
       screen.getByRole('button', {
-        name: 'Continue with GitHub · Last used',
+        name: 'Continue with GitHub',
       })
     ).toBeEnabled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -383,7 +383,7 @@ describe('existing OAuth callback and account recovery', () => {
 
   it('signs in through the existing password form and API', async () => {
     fetchMock.mockResolvedValue(respond({ authenticated: true }));
-    render(<LoginForm />);
+    render(<LoginForm providers={['github']} />);
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'fixture@example.com' },
     });
