@@ -23,8 +23,10 @@ type Status =
   'loading' | 'sign-in' | 'confirm' | 'complete' | 'expired' | 'retry';
 export function OAuthConnectionFlow({
   providers = [],
+  recoverProviders = false,
 }: {
   providers?: readonly OAuthLoginMethod[];
+  recoverProviders?: boolean;
 }) {
   const [connection, setConnection] = useState<OAuthConnection>();
   const [status, setStatus] = useState<Status>('loading');
@@ -152,6 +154,7 @@ export function OAuthConnectionFlow({
             </p>
             <LoginForm
               providers={providers}
+              recoverProviders={recoverProviders}
               connection={connection}
               onAuthenticated={() => refresh(connection, true)}
             />
