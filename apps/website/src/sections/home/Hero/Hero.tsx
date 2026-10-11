@@ -20,17 +20,20 @@ export function Hero() {
 
       <div className={styles.content}>
         <div className={styles.copy}>
-          <span className={styles.eyebrow}>React + React Native</span>
+          <span className={styles.eyebrow}>
+            React + React Native · Open source
+          </span>
 
           <h1 className={styles.title}>
-            Independent modules.
-            <span>One seamless system.</span>
+            Ship UI faster.
+            <span>Keep it consistent.</span>
           </h1>
 
           <p className={styles.description}>
-            Building for React web and React Native? Share component APIs and
-            design tokens across both while each platform keeps a native
-            implementation.
+            Building for React web and React Native? Start with reusable
+            components, shared design tokens and documented APIs. Vellira also
+            brings public quality checks to the work of keeping interfaces
+            coherent as teams and AI create more UI.
           </p>
 
           <div className={styles.actions}>

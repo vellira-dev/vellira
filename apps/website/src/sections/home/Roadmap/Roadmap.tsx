@@ -5,6 +5,8 @@ import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Check, Clock, Package, Success } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
+import type { HomepageProductFacts } from '@/config/homepageProductFacts';
+
 import styles from './Roadmap.module.css';
 
 const roadmapColumns = [
@@ -88,7 +90,7 @@ const releaseChanges = [
 
 const milestones = [
   {
-    version: 'Latest stable',
+    version: 'Earlier milestone',
     date: 'Jul 2026',
     title: 'Release pipeline improvements',
     detail: 'Trusted publishing and validation refinements.',
@@ -195,7 +197,11 @@ const panelItemVariants = {
   },
 };
 
-export function Roadmap() {
+export function Roadmap({
+  productFacts,
+}: {
+  productFacts: HomepageProductFacts;
+}) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -225,8 +231,9 @@ export function Roadmap() {
           </h2>
 
           <p className={styles.description}>
-            Follow what is available now, what is actively being built and where
-            Vellira is heading next.
+            The open-source foundation is available today. Broader component
+            coverage, tooling and team workflows remain in development or on the
+            roadmap.
           </p>
         </motion.header>
 
@@ -319,17 +326,17 @@ export function Roadmap() {
               <div className={styles.releaseHeader}>
                 <div>
                   <span className={styles.panelEyebrow}>Latest release</span>
-                  <h3>Current release</h3>
+                  <h3>Version in source</h3>
                   <span className={styles.releaseVersion}>
-                    <code>v2.18.4</code>
-                    <span className={styles.releaseBadge}>Stable</span>
+                    <code>{productFacts.stableRelease ?? '—'}</code>
+                    <span className={styles.releaseBadge}>Repository</span>
                   </span>
                 </div>
               </div>
 
               <p className={styles.releaseDescription}>
-                A focused release improving APIs, token consistency and the
-                production workflow around Vellira.
+                This version is read from the repository manifest used to build
+                the site. See GitHub releases for what was actually published.
               </p>
 
               <div className={styles.releaseChanges}>

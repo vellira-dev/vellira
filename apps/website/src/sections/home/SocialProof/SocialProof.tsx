@@ -31,7 +31,7 @@ const proofMetrics = [
   },
   {
     key: 'productionPlatforms',
-    label: 'Production platforms',
+    label: 'Supported runtimes',
     detail: 'React and React Native.',
   },
 ] as const;
@@ -290,17 +290,16 @@ export function SocialProof({
                   </div>
 
                   <div className={styles.lastRun}>
-                    <span title='July 28, 2026, 10:42 UTC'>
-                      <Clock size={13} aria-hidden='true' />2 minutes ago
+                    <span>
+                      <Clock size={13} aria-hidden='true' /> Pipeline example
                     </span>
                     <a
                       className={styles.commitLink}
-                      href='https://github.com/vellira-dev/vellira/commit/ca3d7a6'
+                      href='https://github.com/vellira-dev/vellira/actions/workflows/ci.yml'
                       target='_blank'
                       rel='noreferrer'
-                      aria-label='Open commit ca3d7a6 on GitHub'
                     >
-                      <code>ca3d7a6</code>
+                      View live CI
                     </a>
                   </div>
                 </div>
@@ -343,7 +342,7 @@ export function SocialProof({
                   <div className={styles.workflowStatus}>
                     <div>
                       <span className={styles.workflowKicker}>
-                        Latest workflow run
+                        Illustrative CI walkthrough
                       </span>
                       <motion.strong
                         animate={
@@ -357,8 +356,8 @@ export function SocialProof({
                         }}
                       >
                         {workflowComplete
-                          ? 'All required checks passing'
-                          : 'Validating required checks'}
+                          ? 'Example checks complete'
+                          : 'Example validation stages'}
                       </motion.strong>
                       <span>
                         Quality, build, typecheck, tests and package validation
@@ -375,7 +374,7 @@ export function SocialProof({
                     ].join(' ')}
                   >
                     <span aria-hidden='true' />
-                    {workflowComplete ? 'Success' : 'Running'}
+                    {workflowComplete ? 'Example complete' : 'Preview'}
                   </span>
                 </motion.div>
 
@@ -446,10 +445,10 @@ export function SocialProof({
 
                         <span className={styles.checkResult}>
                           {hasPassed
-                            ? 'Passed'
+                            ? 'Included'
                             : isRunning
-                              ? 'Running'
-                              : 'Queued'}
+                              ? 'Checking'
+                              : 'Next'}
                         </span>
                       </motion.div>
                     );
@@ -484,7 +483,7 @@ export function SocialProof({
 
                   <span className={styles.passingBadge}>
                     <Check size={13} aria-hidden='true' />
-                    Passing
+                    Quality gates
                   </span>
                 </div>
 
@@ -586,11 +585,11 @@ export function SocialProof({
                 <div className={styles.releaseMetric}>
                   <Package size={16} aria-hidden='true' />
                   <div>
-                    <span>Latest stable release</span>
+                    <span>Version in source build</span>
                     <strong
                       aria-label={
                         productFacts.stableRelease === null
-                          ? 'Latest stable release unavailable'
+                          ? 'Repository version unavailable'
                           : undefined
                       }
                     >

@@ -78,8 +78,9 @@ export function FinalCta() {
           </h2>
 
           <p className={styles.description}>
-            Production-ready React and React Native components, shared APIs and
-            semantic design tokens, ready for your next product.
+            Start with open-source React and React Native components, shared
+            tokens, examples and documentation. Follow the roadmap for broader
+            consistency and team tooling.
           </p>
 
           <div className={styles.actions}>

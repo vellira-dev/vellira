@@ -64,9 +64,9 @@ const sharedApi = [
   {
     icon: <ArrowLeftRight />,
     label: 'State',
-    title: 'One controlled state model',
+    title: 'Familiar controlled-state patterns',
     description:
-      'Inputs, selects, tabs, radio, and checkbox controls share the same value/change contract.',
+      'Shared state concepts make both renderers familiar. Exact props and interaction details remain platform-specific.',
   },
   {
     icon: <Grid />,
@@ -85,9 +85,9 @@ const sharedApi = [
   {
     icon: <Smartphone />,
     label: 'Feel',
-    title: 'Native-feeling platform patterns',
+    title: 'Platform-appropriate interactions',
     description:
-      'Menus, sheets, touch targets, and web overlays keep native behavior without splitting the API.',
+      'Menus, overlays and touch targets adapt to each runtime. Feature parity continues to evolve.',
   },
 ] as const;
 
@@ -158,13 +158,14 @@ export function PlatformParity() {
           <span className={styles.eyebrow}>Cross-platform by design</span>
 
           <h2 id='platform-parity-title' className={styles.title}>
-            One API.
-            <span>Two platforms.</span>
+            Shared foundations.
+            <span>Two native renderers.</span>
           </h2>
 
           <p className={styles.description}>
-            Build consistent product experiences across React and React Native
-            without maintaining two unrelated design systems.
+            React and React Native share tokens and design intent, with
+            platform-appropriate implementations. Check each component's docs
+            for the exact API and behavior supported on your target runtime.
           </p>
         </header>
 
@@ -452,8 +453,8 @@ export function PlatformParity() {
             <span className={styles.featuresLabel}>Shared contract</span>
             <h3>One state. Native rendering.</h3>
             <p>
-              The same component decisions travel between web and native while
-              each surface keeps its platform feel.
+              This synchronized preview illustrates shared state and design
+              intent. It does not claim identical behavior for every component.
             </p>
           </div>
 

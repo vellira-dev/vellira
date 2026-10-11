@@ -3,6 +3,7 @@ import { BackToTop } from '@/components/navigation/BackToTop';
 import { homepageProductFacts } from '@/config/homepageProductFacts';
 import { CodeShowcase } from '@/sections/home/CodeShowcase';
 import { ComponentShowcase } from '@/sections/home/ComponentShowcase';
+import { ConsistencyStory } from '@/sections/home/ConsistencyStory';
 import { FeaturedStory } from '@/sections/home/FeaturedStory';
 import { FinalCta } from '@/sections/home/FinalCta';
 import { Hero } from '@/sections/home/Hero';
@@ -20,15 +21,16 @@ export default function HomePage() {
     <>
       <Hero />
       <ComponentShowcase />
+      <ConsistencyStory />
       <ThemeStudio />
       <PlatformParity />
       <ProductInterfaceDemo />
       <CodeShowcase />
-      <ProductionWorkflow />
+      <ProductionWorkflow productFacts={homepageProductFacts} />
       <QuickStart />
       <SocialProof productFacts={homepageProductFacts} />
       <FeaturedStory />
-      <Roadmap />
+      <Roadmap productFacts={homepageProductFacts} />
       <Pro />
       <FinalCta />
       <SiteFooter />

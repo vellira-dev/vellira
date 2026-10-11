@@ -185,7 +185,7 @@ export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
 
         <div className={styles.bottomBar}>
           <span>© 2026 Vellira</span>
-          <span>Independent modules. One seamless system.</span>
+          <span>Ship UI faster. Keep it consistent.</span>
           <div className={styles.legalLinks}>
             <span>Built in public</span>
             <DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>

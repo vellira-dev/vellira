@@ -1182,7 +1182,7 @@ export function ComponentShowcase() {
             }}
             viewport={{ once: true }}
           >
-            Production ready • TypeScript • Tree-shakeable • Accessible
+            Real components • TypeScript • Theme-aware • Accessibility-focused
           </motion.div>
         </motion.div>
       </div>
