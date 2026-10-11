@@ -18,7 +18,7 @@
 
 .eyebrow,
 .status {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.07em;
@@ -35,7 +35,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -141,7 +141,7 @@
   align-items: center;
   align-self: flex-start;
   margin-top: auto;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
@@ -155,7 +155,7 @@
 
 .link:focus-visible,
 .footer a:focus-visible {
-  outline: 2px solid var(--color-primary-400);
+  outline: 2px solid var(--text-brand);
   outline-offset: 4px;
   border-radius: var(--radius-sm);
 }
@@ -188,7 +188,7 @@
 }
 
 .footer a:hover {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 @media (width <= 920px) {
