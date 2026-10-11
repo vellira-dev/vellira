@@ -14,6 +14,8 @@ import {
 import { Tooltip } from '@vellira-ui/react';
 import { motion, useInView, useReducedMotion } from 'motion/react';
 
+import type { HomepageProductFacts } from '@/config/homepageProductFacts';
+
 import styles from './ProductionWorkflow.module.css';
 
 const workflowSteps = [
@@ -24,7 +26,7 @@ const workflowSteps = [
     label: 'Tokens',
     title: 'Generate outputs',
     description: 'Compile semantic tokens to web and native outputs.',
-    meta: '3 themes',
+    meta: 'Shared themes',
     outputs: ['tokens.css', 'themes.ts'],
   },
   {
@@ -34,7 +36,7 @@ const workflowSteps = [
     label: 'Build',
     title: 'Compile packages',
     description: 'Build React, Native, icons and assets.',
-    meta: '8 packages',
+    meta: 'Modular',
     outputs: ['dist/', 'types/'],
   },
   {
@@ -44,8 +46,8 @@ const workflowSteps = [
     label: 'Quality',
     title: 'Validate everything',
     description: 'Run types, tests, accessibility and boundaries.',
-    meta: 'All green',
-    outputs: ['268 tests', '0 errors'],
+    meta: 'Quality gates',
+    outputs: ['Tests', 'Typechecks'],
   },
   {
     id: 'docs',
@@ -54,7 +56,7 @@ const workflowSteps = [
     label: 'Docs',
     title: 'Publish references',
     description: 'Sync Storybook, API references and examples.',
-    meta: 'Synced',
+    meta: 'References',
     outputs: ['Storybook', 'API.md'],
   },
   {
@@ -64,7 +66,7 @@ const workflowSteps = [
     label: 'Release',
     title: 'Ship to production',
     description: 'Publish packages through trusted publishing.',
-    meta: 'Ready',
+    meta: 'Gated',
     outputs: ['npm', 'GitHub'],
   },
 ] as const;
@@ -111,7 +113,11 @@ const publishTargets = [
   },
 ] as const;
 
-export function ProductionWorkflow() {
+export function ProductionWorkflow({
+  productFacts,
+}: {
+  productFacts: HomepageProductFacts;
+}) {
   const shouldReduceMotion = useReducedMotion();
   const workflowRef = useRef<HTMLDivElement>(null);
   const isWorkflowInView = useInView(workflowRef, {
@@ -146,8 +152,9 @@ export function ProductionWorkflow() {
           </h2>
 
           <p className={styles.description}>
-            Every token, component and package moves through one validated
-            release workflow before it reaches your product.
+            This illustrates the public repository workflow: shared tokens,
+            package builds, quality checks and documentation are connected
+            before a release. It is not a live CI status display.
           </p>
         </motion.header>
 
@@ -177,7 +184,7 @@ export function ProductionWorkflow() {
 
             <span className={styles.statusBadge}>
               <span aria-hidden='true' />
-              All checks passing
+              Example release flow
             </span>
           </div>
 
@@ -219,26 +226,28 @@ export function ProductionWorkflow() {
               <div className={styles.releaseHeader}>
                 <div>
                   <span className={styles.panelEyebrow}>Release summary</span>
-                  <h3>Ready to publish</h3>
+                  <h3>Version in source</h3>
                 </div>
 
-                <span className={styles.releaseVersion}>v2.18.4</span>
+                <span className={styles.releaseVersion}>
+                  {productFacts.stableRelease ?? '—'}
+                </span>
               </div>
 
               <div className={styles.releaseStats}>
                 <div>
                   <span>Packages</span>
-                  <strong>8</strong>
+                  <strong>{productFacts.publishedPackages ?? '—'}</strong>
                 </div>
 
                 <div>
                   <span>Targets</span>
-                  <strong>4</strong>
+                  <strong>{publishTargets.length}</strong>
                 </div>
 
                 <div>
                   <span>Checks</span>
-                  <strong>Passed</strong>
+                  <strong>Required</strong>
                 </div>
               </div>
 
@@ -257,7 +266,7 @@ export function ProductionWorkflow() {
                   <div key={item}>
                     <span>{item}</span>
                     <strong>
-                      <Check size={14} aria-label='Passed' />
+                      <Check size={14} aria-hidden='true' />
                     </strong>
                   </div>
                 ))}
