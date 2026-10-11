@@ -65,7 +65,7 @@ export function isExpectedPublicReleaseUnavailableResponse({
 }
 
 const browserResource503Pattern =
-  /^Failed to load resource: the server responded with a status of 503(?: \\([^)]*\\))?$/;
+  /^Failed to load resource: the server responded with a status of 503(?: \([^)]*\))?$/;
 
 // A previously verified auxiliary response may consume exactly one console
 // error from the same URL. Unmatched/unknown 5xx diagnostics are never hidden.
