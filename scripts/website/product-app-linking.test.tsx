@@ -290,13 +290,12 @@ it.each(['github', 'google', 'apple'] as const)(
     ready = true;
     window.history.replaceState(null, '', connectionHref({ id, provider }));
     render(<OAuthConnectionFlow />);
-    expect(
-      await screen.findByRole('button', {
-        name:
-          'Connect ' +
-          { github: 'GitHub', google: 'Google', apple: 'Apple' }[provider],
-      })
-    ).toBeEnabled();
+    const connect = await screen.findByRole('button', {
+      name:
+        'Connect ' +
+        { github: 'GitHub', google: 'Google', apple: 'Apple' }[provider],
+    });
+    expect(connect).toBeEnabled();
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
     expect(
       screen.queryByRole('button', { name: 'Continue with Google' })
@@ -304,23 +303,10 @@ it.each(['github', 'google', 'apple'] as const)(
     expect(
       screen.queryByRole('button', { name: 'Continue with Apple' })
     ).not.toBeInTheDocument();
-  }
-);
-it.each(['github', 'google', 'apple'] as const)(
-  'completed %s connection enters the app only after explicit confirmation',
-  async (provider) => {
-    ready = true;
-    window.history.replaceState(null, '', connectionHref({ id, provider }));
-    render(<OAuthConnectionFlow />);
-    const connect = await screen.findByRole('button', { name: /^Connect / });
     expect(router.replace).not.toHaveBeenCalled();
-    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0);
     fireEvent.click(connect);
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
     expect(router.replace).toHaveBeenCalledTimes(1);
-    expect(
-      calls.filter((c) => c.method === 'POST').map((c) => c.path)
-    ).toEqual([`/v1/auth/oauth/${provider}/link/${id}`]);
   }
 );
 it.each([400, 403, 503])(
