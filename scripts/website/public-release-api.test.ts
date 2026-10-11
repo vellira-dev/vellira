@@ -197,11 +197,9 @@ describe('public npm release API', () => {
     expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
       'http_401'
     );
-    expect(
-      publishedPackageNames.includes(
-        response.headers.get('X-Vellira-Public-Release-Upstream-Package') as (typeof publishedPackageNames)[number]
-      )
-    ).toBe(true);
+    expect(publishedPackageNames).toContain(
+      response.headers.get('X-Vellira-Public-Release-Upstream-Package')
+    );
   });
 
   it('separates transport exceptions from HTTP errors without leaking messages', async () => {

@@ -35,7 +35,7 @@ function fetchFailureCode(error: unknown): string {
   if (/cache.*(?:not implemented|unsupported)/i.test(error.message)) {
     return 'fetch_cache_option';
   }
-  if (/(?:abort.?signal|signal).*(?:unsupported|not implemented)/i.test(error.message)) {
+  if (/signal.*(?:unsupported|not implemented)/i.test(error.message)) {
     return 'fetch_signal_option';
   }
   if (/subrequest.*(?:limit|exceeded|blocked)/i.test(error.message)) {
@@ -208,7 +208,10 @@ export function createPublicReleaseHandler({
               ? { 'X-Vellira-Public-Release-Upstream': lastUpstream }
               : {}),
             ...(lastUpstreamPackage
-              ? { 'X-Vellira-Public-Release-Upstream-Package': lastUpstreamPackage }
+              ? {
+                  'X-Vellira-Public-Release-Upstream-Package':
+                    lastUpstreamPackage,
+                }
               : {}),
           },
         }
