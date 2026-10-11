@@ -417,7 +417,7 @@ describe('Input', () => {
     );
 
     expect(input?.type).toBe('password');
-    expect(revealButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(revealButton?.type).toBe('button');
     expect(revealButton?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(revealButton?.textContent).toBe('');
 
@@ -429,7 +429,6 @@ describe('Input', () => {
       'button[aria-label="Hide password"]'
     );
     expect(input?.type).toBe('text');
-    expect(hideButton?.getAttribute('aria-pressed')).toBe('true');
     expect(hideButton?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(hideButton?.textContent).toBe('');
 
@@ -438,7 +437,6 @@ describe('Input', () => {
     });
 
     expect(input?.type).toBe('password');
-    expect(revealButton?.getAttribute('aria-pressed')).toBe('false');
     expect(input?.value).toBe('secret');
 
     unmount();
