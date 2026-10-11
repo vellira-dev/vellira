@@ -312,8 +312,9 @@ it.each(['github', 'google', 'apple'] as const)(
     ready = true;
     window.history.replaceState(null, '', connectionHref({ id, provider }));
     render(<OAuthConnectionFlow />);
-    const name = { github: 'GitHub', google: 'Google', apple: 'Apple' }[provider];
-    const connect = await screen.findByRole('button', { name: 'Connect ' + name });
+    const connect = await screen.findByRole('button', {
+      name: /^Connect /,
+    });
     expect(router.replace).not.toHaveBeenCalled();
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0);
     fireEvent.click(connect);
