@@ -51,7 +51,7 @@ describe('clean-runner canonical gap reconciliation bootstrap', () => {
     );
     expect(() =>
       assertBootstrappedWorkflow(
-        workflow.replace(build, '').replace(preview, build + '\n' + preview)
+        workflow.replace(build, '').replace(apply, apply + '\n' + build)
       )
     ).toThrow(/must build the metadata/);
   });
