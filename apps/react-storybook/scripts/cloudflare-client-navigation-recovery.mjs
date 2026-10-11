@@ -110,7 +110,7 @@ export async function navigateToBlogAcrossSiteSurface({ page, navigate }) {
     let brand;
     await navigate({
       href: '/',
-      title: /^Independent modules\.\s*One seamless system\.$/,
+      title: /^Ship UI faster\.\s*Keep it consistent\.$/,
       stage: 'portal brand -> marketing home',
       prepareAttempt: async () => {
         const { surface, visible } = await inspect();
