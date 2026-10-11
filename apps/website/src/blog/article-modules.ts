@@ -12,6 +12,7 @@ import reactReactNativeTwoUiLibrariesMetadata from '../../content/blog/react-rea
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
 import typescriptProjectOwnershipMetadata from '../../content/blog/typescript-project-ownership/metadata.json';
 import whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata from '../../content/blog/when-developers-re-decide-ui-across-browser-and-native/metadata.json';
+import whenNestedModalEscapeHandlingReachesTheWrongOverlayMetadata from '../../content/blog/when-nested-modal-escape-handling-reaches-the-wrong-overlay/metadata.json';
 
 export interface BlogMDXModule {
   default: ComponentType;
@@ -73,6 +74,10 @@ const blogArticleMetadataRegistryEntries = [
     slug: 'when-developers-re-decide-ui-across-browser-and-native',
     metadata: whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata,
   },
+  {
+    slug: 'when-nested-modal-escape-handling-reaches-the-wrong-overlay',
+    metadata: whenNestedModalEscapeHandlingReachesTheWrongOverlayMetadata,
+  },
 ] as const satisfies readonly BlogArticleMetadataRegistryEntry[];
 
 const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
@@ -100,6 +105,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
       import('../../content/blog/typescript-project-ownership/article.mdx'),
     'when-developers-re-decide-ui-across-browser-and-native': () =>
       import('../../content/blog/when-developers-re-decide-ui-across-browser-and-native/article.mdx'),
+    'when-nested-modal-escape-handling-reaches-the-wrong-overlay': () =>
+      import('../../content/blog/when-nested-modal-escape-handling-reaches-the-wrong-overlay/article.mdx'),
   };
 
 export function getBlogArticleMetadataRegistryEntries(): readonly BlogArticleMetadataRegistryEntry[] {
