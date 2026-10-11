@@ -50,6 +50,43 @@ test('historical source runs all original checks without requiring later recover
   assert.ok(command.includes('apps/website/scripts/runtime.mjs'));
 });
 
+test('public npm release policy is required when imported, and its browser diagnostics are executed', (t) => {
+  const { root, write } = fixture(t);
+  const policy = `${directory}/cloudflare-public-release-smoke-policy.mjs`;
+
+  fs.writeFileSync(
+    path.join(root, `${directory}/cloudflare-website-smoke.mjs`),
+    "import './cloudflare-public-release-smoke-policy.mjs';\n"
+  );
+
+  for (const mode of ['lint', 'test']) {
+    assert.throws(
+      () => cloudflareCandidateCommand(root, mode),
+      /Required Cloudflare source check is missing:.*cloudflare-public-release-smoke-policy\.mjs/
+    );
+  }
+
+  write(policy);
+  const testCommand = cloudflareCandidateCommand(root, 'test');
+  const lintCommand = cloudflareCandidateCommand(root, 'lint');
+  assert.ok(
+    testCommand.includes(`${directory}/cloudflare-browser-diagnostics.test.mjs`)
+  );
+  assert.ok(lintCommand.includes(policy));
+});
+
+test('a public npm release policy file is checked even without an importer', (t) => {
+  const { root, write } = fixture(t);
+  const policy = `${directory}/cloudflare-public-release-smoke-policy.mjs`;
+  write(policy);
+  assert.ok(cloudflareCandidateCommand(root, 'lint').includes(policy));
+  assert.ok(
+    cloudflareCandidateCommand(root, 'test').includes(
+      `${directory}/cloudflare-browser-diagnostics.test.mjs`
+    )
+  );
+});
+
 test('every recovery module present has its test linted and executed', (t) => {
   const { root, write } = fixture(t);
   for (const name of ['edge', 'client-navigation', 'future']) {

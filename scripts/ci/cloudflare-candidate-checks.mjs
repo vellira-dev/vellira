@@ -26,6 +26,21 @@ export function cloudflareCandidateCommand(root, mode) {
     return name;
   };
   baseline.forEach((name) => requireFile(`${storybook}/${name}`));
+
+  // The public release policy arrived after the historical baseline. A
+  // candidate that contains or imports it must check it, while a historical
+  // candidate that predates the feature remains valid.
+  const publicReleasePolicy = `${storybook}/cloudflare-public-release-smoke-policy.mjs`;
+  const referencesPublicReleasePolicy = baseline.some((name) =>
+    fs
+      .readFileSync(path.join(root, storybook, name), 'utf8')
+      .includes('./cloudflare-public-release-smoke-policy.mjs')
+  );
+  const hasPublicReleasePolicy =
+    fs.existsSync(path.join(root, publicReleasePolicy)) ||
+    referencesPublicReleasePolicy;
+  if (hasPublicReleasePolicy) requireFile(publicReleasePolicy);
+
   const recovery = fs
     .readdirSync(path.join(root, storybook))
     .filter((name) => /^cloudflare-.*recovery(?:\.test)?\.mjs$/.test(name))
@@ -50,6 +65,9 @@ export function cloudflareCandidateCommand(root, mode) {
       process.execPath,
       '--test',
       `${storybook}/cloudflare-blog-metrics-smoke-policy.test.mjs`,
+      ...(hasPublicReleasePolicy
+        ? [`${storybook}/cloudflare-browser-diagnostics.test.mjs`]
+        : []),
       ...featurePolicies.filter((name) => name.endsWith('.test.mjs')),
     ];
   }
@@ -69,7 +87,9 @@ export function cloudflareCandidateCommand(root, mode) {
     requireFile('apps/website/cloudflare-worker.mjs'),
     ...family('apps/website/cloudflare'),
     ...family('apps/website/scripts'),
-    ...[...baseline, ...recovery].map((name) => `${storybook}/${name}`),
+    ...baseline.map((name) => `${storybook}/${name}`),
+    ...(hasPublicReleasePolicy ? [publicReleasePolicy] : []),
+    ...recovery.map((name) => `${storybook}/${name}`),
   ];
 }
 
