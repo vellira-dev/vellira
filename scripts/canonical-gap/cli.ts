@@ -240,6 +240,18 @@ function validateReconciliationAuthority(
       'Exception reconciliation refused a stale or dirty source checkout.'
     );
   }
+  // The triggering push can become obsolete while dependencies are installing.
+  // Confirm current remote main rather than trusting only the workflow event SHA.
+  const remote = execFileSync(
+    'git',
+    ['ls-remote', '--exit-code', 'origin', 'refs/heads/main'],
+    { cwd: root, encoding: 'utf8', timeout: 15_000 }
+  ).trim();
+  if (remote !== sha + '\trefs/heads/main') {
+    throw new CanonicalGapError(
+      'Exception reconciliation refused a superseded main revision.'
+    );
+  }
   return sha;
 }
 
