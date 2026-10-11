@@ -16,7 +16,7 @@ const compactFooter = read(
 );
 const sitemap = read('apps/website/src/app/sitemap.ts');
 const privacyStyles = read(
-  'apps/website/src/app/(marketing)/(site)/privacy/PrivacyPage.module.css'
+  'apps/website/src/components/legal/LegalDocument.module.css'
 );
 const newsletterSignup = read(
   'apps/website/src/blog/ui/NewsletterSignupForm.tsx'

@@ -4,7 +4,7 @@ import { Container } from '@/components/layout/Container';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
-import styles from './PrivacyPage.module.css';
+import styles from '@/components/legal/LegalDocument.module.css';
 
 const LAST_UPDATED = '2026-10-10';
 
@@ -129,14 +129,33 @@ export default function PrivacyPage() {
                 state, a non-reversible password hash for password accounts,
                 bounded session records, one-time verification or password-reset
                 challenge records, and the identifiers needed to map an optional
-                GitHub sign-in to the canonical Vellira account.
+                provider sign-in to the canonical Vellira account.
               </p>
               <p>
                 Raw passwords are not stored. Authentication session,
                 verification and reset secrets are stored only in protected or
-                one-way forms where applicable. GitHub OAuth access tokens are
-                used only during the sign-in exchange and are not the identity
-                or product-access authority for Vellira.
+                one-way forms where applicable. Provider OAuth access tokens and
+                ID tokens are used only during the sign-in exchange and are not
+                the identity or product-access authority for Vellira.
+              </p>
+
+              <p>
+                When Google or Apple sign-in is enabled and you choose it, that
+                provider authenticates you on its own website. Vellira receives
+                a stable provider identifier and, when available, a verified
+                email address. Apple may supply a private relay address. Vellira
+                never receives your provider password and does not attach a new
+                method to an existing account merely because email addresses
+                match. Provider availability varies with configuration. Their
+                privacy policies apply to their own services:{' '}
+                <DesignSystemLink href='https://policies.google.com/privacy'>
+                  Google
+                </DesignSystemLink>{' '}
+                and{' '}
+                <DesignSystemLink href='https://www.apple.com/legal/privacy/'>
+                  Apple
+                </DesignSystemLink>
+                .
               </p>
 
               <h3>Newsletter</h3>
