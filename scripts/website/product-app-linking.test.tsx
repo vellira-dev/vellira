@@ -320,9 +320,9 @@ it.each(['github', 'google', 'apple'] as const)(
     fireEvent.click(connect);
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
     expect(router.replace).toHaveBeenCalledTimes(1);
-    expect(calls.filter((c) => c.method === 'POST').map((c) => c.path)).toEqual([
-      `/v1/auth/oauth/${provider}/link/${id}`,
-    ]);
+    expect(
+      calls.filter((c) => c.method === 'POST').map((c) => c.path)
+    ).toEqual([`/v1/auth/oauth/${provider}/link/${id}`]);
   }
 );
 it.each([400, 403, 503])(
