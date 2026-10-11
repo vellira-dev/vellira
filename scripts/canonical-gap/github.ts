@@ -153,7 +153,8 @@ export function createGitHubCanonicalGapClient(
           'GITHUB_TOKEN is required for canonical gap GitHub mutations.'
         );
       }
-      const issuePath = '/repos/' + owner + '/' + repo + '/issues/' + issue.number;
+      const issuePath =
+        '/repos/' + owner + '/' + repo + '/issues/' + issue.number;
       const current = await request<GitHubIssueResponse>(issuePath, {}, true);
       const currentBody = current.body ?? '';
       const currentLabels = current.labels
@@ -177,9 +178,7 @@ export function createGitHubCanonicalGapClient(
 
       // A previous interrupted invocation may have posted the exact note
       // without finishing the closure. Never overwrite human discussion.
-      const comments = await listAll<{ body: string }>(
-        issuePath + '/comments'
-      );
+      const comments = await listAll<{ body: string }>(issuePath + '/comments');
       if (comments.some(({ body }) => body !== note)) {
         throw new CanonicalGapError(
           'Managed canonical gap issue has a human or conflicting discussion; review required.'
