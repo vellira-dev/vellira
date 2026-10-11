@@ -71,10 +71,12 @@ function genericAuthError(error: unknown, fallback: string) {
 
 export function LoginForm({
   providers = [],
+  recoverProviders = false,
   connection,
   onAuthenticated,
 }: {
   providers?: readonly OAuthLoginMethod[];
+  recoverProviders?: boolean;
   connection?: OAuthConnection;
   onAuthenticated?: () => Promise<void>;
 } = {}) {
@@ -142,6 +144,7 @@ export function LoginForm({
     >
       <AuthProviders
         providers={providers}
+        recoverProviders={recoverProviders}
         remember={remember}
         disabled={submitting}
         onRedirecting={setSubmitting}
@@ -219,7 +222,11 @@ export function LoginForm({
 
 export function SignupForm({
   providers = [],
-}: { providers?: readonly OAuthLoginMethod[] } = {}) {
+  recoverProviders = false,
+}: {
+  providers?: readonly OAuthLoginMethod[];
+  recoverProviders?: boolean;
+} = {}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -286,6 +293,7 @@ export function SignupForm({
     >
       <AuthProviders
         providers={providers}
+        recoverProviders={recoverProviders}
         remember={remember}
         disabled={submitting}
         onRedirecting={setSubmitting}

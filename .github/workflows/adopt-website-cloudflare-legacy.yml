@@ -203,6 +203,14 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
+      - name: Smoke test production auth provider discovery
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-auth-provider-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          AUTH_API_URL: https://api.vellira.dev
+
       - name: Verify deployed identities, freshness and immutable bytes
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
@@ -251,6 +259,7 @@ jobs:
           include-hidden-files: true
           path: |
             apps/react-storybook/test-results/cloudflare-website-smoke/
+            apps/react-storybook/test-results/cloudflare-auth-provider-smoke/
             apps/react-storybook/test-results/cloudflare-soak/
             apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
             apps/react-storybook/test-results/cloudflare-migration/summary.json

@@ -78,6 +78,8 @@ async function fixture(width = 390, denied = false, deviceScaleFactor = 1) {
     oauth: 'cancel',
     ready: false,
     expired: false,
+    providerDiscoveryAvailable: true,
+    providerDiscoveryProviders: ['google', 'apple', 'github'],
     calls: [],
     console: [],
     errors: [],
@@ -101,6 +103,10 @@ async function fixture(width = 390, denied = false, deviceScaleFactor = 1) {
           contentType: 'application/json',
           body: JSON.stringify(body),
         });
+      if (url.pathname === '/v1/auth/providers')
+        return state.providerDiscoveryAvailable
+          ? json({ providers: state.providerDiscoveryProviders })
+          : json({}, 503);
       const providerStart = url.pathname.match(
         /^\/v1\/auth\/oauth\/(github|google|apple)\/start$/
       );
@@ -277,7 +283,10 @@ try {
     async () => {
       const { context, page, state } = await fixture(320, true);
       try {
-        discoveryProviders = ['github'];
+        // Simulate the production failure mode: SSR cannot obtain provider
+        // metadata, while the browser can still reach the same public endpoint.
+        discoveryAvailable = false;
+        state.providerDiscoveryProviders = ['github'];
         await page.goto(origin + '/login');
         await expect(
           page.getByRole('button', { name: 'Continue with GitHub' })
@@ -288,8 +297,14 @@ try {
         await expect(
           page.getByRole('button', { name: 'Continue with Apple' })
         ).toHaveCount(0);
-        discoveryAvailable = false;
+
+        // If both server and browser discovery are unavailable, password auth
+        // remains usable and the temporary reserved geometry is removed.
+        state.providerDiscoveryAvailable = false;
         await page.reload();
+        await expect(
+          page.locator('[data-provider-discovery="recovering"]')
+        ).toHaveCount(0);
         await expect(
           page.getByRole('group', { name: 'Continue with a provider' })
         ).toHaveCount(0);
@@ -300,8 +315,8 @@ try {
         await expect(page).toHaveURL(origin + '/app');
         expect(state.authenticated).toBe(true);
         return {
-          availableProviderOnly: true,
-          passwordWorksDuringDiscoveryFailure: true,
+          clientRecoveryAfterServerFailure: true,
+          passwordWorksDuringFullDiscoveryFailure: true,
           storageDenied: true,
         };
       } finally {

@@ -1,10 +1,12 @@
-import { getAuthProviders } from '@/product-app/api';
+import { getAuthProviderDiscovery } from '@/product-app/api';
 import { AuthLegalFooter } from '@/product-app/AuthLegalFooter';
 import { AuthSurface } from '@/product-app/AuthSurface';
 import { SignupForm } from '@/product-app/AuthFlows';
 import { AuthTextLink } from '@/product-app/AuthTextLink';
 
 export default async function SignupPage() {
+  const discovery = await getAuthProviderDiscovery();
+
   return (
     <AuthSurface
       title='Create your Vellira account'
@@ -17,7 +19,10 @@ export default async function SignupPage() {
         </>
       }
     >
-      <SignupForm providers={await getAuthProviders()} />
+      <SignupForm
+        providers={discovery.providers}
+        recoverProviders={discovery.recoverInBrowser}
+      />
     </AuthSurface>
   );
 }
