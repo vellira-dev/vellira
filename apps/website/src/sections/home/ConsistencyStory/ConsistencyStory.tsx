@@ -29,11 +29,10 @@ export function ConsistencyStory() {
             <span>Who keeps it consistent?</span>
           </h2>
           <p className={styles.description}>
-            A component can look correct on its own and still drift from
-            the design system around it. Vellira starts with usable
-            cross-platform foundations and public quality checks.
-            The wider ambition is to make consistency easier to maintain
-            as people and AI ship more changes.
+            A component can look correct on its own and still drift from the
+            design system around it. Vellira starts with usable cross-platform
+            foundations and public quality checks. The wider ambition is to make
+            consistency easier to maintain as people and AI ship more changes.
           </p>
         </header>
 
@@ -60,8 +59,8 @@ export function ConsistencyStory() {
             <h3>Quality beyond compilation</h3>
             <p>
               Public metadata and automated checks make component expectations
-              more explicit. These are verifiable engineering controls, not
-              a claim that all UI can already be generated autonomously.
+              more explicit. These are verifiable engineering controls, not a
+              claim that all UI can already be generated autonomously.
             </p>
             <ul className={styles.list}>
               {checks.map((item) => (
@@ -80,9 +79,9 @@ export function ConsistencyStory() {
             <span className={styles.status}>In development</span>
             <h3>Keep future changes coherent</h3>
             <p>
-              Vellira is evolving toward stronger governed workflows for
-              UI changes. End-to-end autonomous production and future Pro
-              tooling are not part of today's public component packages.
+              Vellira is evolving toward stronger governed workflows for UI
+              changes. End-to-end autonomous production and future Pro tooling
+              are not part of today's public component packages.
             </p>
             <div className={styles.note}>
               The roadmap describes a direction, not a currently shipping
@@ -95,9 +94,7 @@ export function ConsistencyStory() {
         </div>
 
         <div className={styles.footer}>
-          <p>
-            Start with what ships. Inspect the source. Follow the roadmap.
-          </p>
+          <p>Start with what ships. Inspect the source. Follow the roadmap.</p>
           <Link href='https://github.com/vellira-dev/vellira'>
             View public repository <span aria-hidden='true'>→</span>
           </Link>

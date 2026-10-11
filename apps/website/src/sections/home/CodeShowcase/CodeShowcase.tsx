@@ -700,7 +700,8 @@ export function CodeShowcase() {
                             <strong>$48</strong>
                           </div>
                           <p>
-                            Illustrative UI only, not a Vellira subscription offer.
+                            Illustrative UI only, not a Vellira subscription
+                            offer.
                           </p>
                         </div>
 

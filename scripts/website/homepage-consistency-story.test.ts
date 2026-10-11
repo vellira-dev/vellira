@@ -54,8 +54,8 @@ describe('homepage consistency story and source-backed facts', () => {
     const code = read(`${home}CodeShowcase/CodeShowcase.tsx`);
     const parity = read(`${home}PlatformParity/PlatformParity.tsx`);
 
-    expect(quick).toContain("@vellira-ui/react/styles");
-    expect(code).toContain("@vellira-ui/react/styles");
+    expect(quick).toContain('@vellira-ui/react/styles');
+    expect(code).toContain('@vellira-ui/react/styles');
     expect(code).toContain('platform-specific setup');
     expect(code).toContain('Illustrative UI only');
     expect(code).not.toContain('Workspace Pro');

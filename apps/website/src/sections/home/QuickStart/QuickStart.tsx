@@ -23,8 +23,7 @@ const steps = [
     index: '02',
     label: 'Import',
     file: 'App.tsx',
-    code:
-      "import '@vellira-ui/react/styles';\nimport { Button } from '@vellira-ui/react';",
+    code: "import '@vellira-ui/react/styles';\nimport { Button } from '@vellira-ui/react';",
     language: 'tsx',
   },
   {

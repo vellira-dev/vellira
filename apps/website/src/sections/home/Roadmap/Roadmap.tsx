@@ -232,8 +232,8 @@ export function Roadmap({
 
           <p className={styles.description}>
             The open-source foundation is available today. Broader component
-            coverage, tooling and team workflows remain in development or on
-            the roadmap.
+            coverage, tooling and team workflows remain in development or on the
+            roadmap.
           </p>
         </motion.header>
 
