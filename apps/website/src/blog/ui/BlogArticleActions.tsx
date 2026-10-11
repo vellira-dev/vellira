@@ -1,19 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 
-import {
-  Check,
-  Copy,
-  Eye,
-  Facebook,
-  Heart,
-  HeartFilled,
-  LinkedIn,
-  Reddit,
-  Share,
-  X,
-} from '@vellira-ui/icons';
+import { Check, Copy, Eye, Heart, HeartFilled, Share } from '@vellira-ui/icons';
 import { Button, Portal, Tooltip } from '@vellira-ui/react';
 
 import {
@@ -37,11 +27,6 @@ const ICON_SIZES = {
   heart: 18,
   eye: 19,
   share: 18,
-
-  linkedin: 14,
-  x: 13,
-  facebook: 15,
-  reddit: 15,
 
   copy: 22,
   check: 22,
@@ -141,7 +126,10 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
         label: 'LinkedIn',
         icon: (
           <span className={styles.iconSlot}>
-            <LinkedIn size={ICON_SIZES.linkedin} aria-hidden='true' />
+            <span
+              className={`${styles.socialBrand} ${styles.linkedin}`}
+              aria-hidden='true'
+            />
           </span>
         ),
         href: buildShareUrl('https://www.linkedin.com/sharing/share-offsite/', {
@@ -152,7 +140,10 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
         label: 'X',
         icon: (
           <span className={styles.iconSlot}>
-            <X size={ICON_SIZES.x} aria-hidden='true' />
+            <span
+              className={`${styles.socialBrand} ${styles.x}`}
+              aria-hidden='true'
+            />
           </span>
         ),
         href: buildShareUrl('https://twitter.com/intent/tweet', {
@@ -164,7 +155,10 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
         label: 'Facebook',
         icon: (
           <span className={styles.iconSlot}>
-            <Facebook size={ICON_SIZES.facebook} aria-hidden='true' />
+            <span
+              className={`${styles.socialBrand} ${styles.facebook}`}
+              aria-hidden='true'
+            />
           </span>
         ),
         href: buildShareUrl('https://www.facebook.com/sharer/sharer.php', {
@@ -175,7 +169,10 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
         label: 'Reddit',
         icon: (
           <span className={styles.iconSlot}>
-            <Reddit size={ICON_SIZES.reddit} aria-hidden='true' />
+            <span
+              className={`${styles.socialBrand} ${styles.reddit}`}
+              aria-hidden='true'
+            />
           </span>
         ),
         href: buildShareUrl('https://www.reddit.com/submit', {
@@ -333,11 +330,16 @@ export function BlogArticleActions({ slug, title }: BlogArticleActionsProps) {
                   <Button
                     appearance='bare'
                     className={styles.articleIconButton}
-                    href={link.href}
-                    target='_blank'
-                    aria-label={link.label}
+                    asChild
                   >
-                    {link.icon}
+                    <Link
+                      href={link.href}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      aria-label={link.label}
+                    >
+                      {link.icon}
+                    </Link>
                   </Button>
                 </Tooltip.Trigger>
                 <Portal>

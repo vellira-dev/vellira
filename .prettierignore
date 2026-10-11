@@ -37,3 +37,5 @@ storybook-static
 **/test-results/**
 **/.expo/**
 **/next-env.d.ts
+# Official provider web artwork: preserve downloaded bytes and embedded markup.
+apps/website/brand/**/*.svg

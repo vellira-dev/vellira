@@ -69,13 +69,13 @@ export const externalNavigation = [
   {
     label: 'Storybook',
     href: 'https://storybook.vellira.dev',
-    icon: '/brand/navigation/storybook.svg',
+    icon: '/brand/integrations/storybook.svg',
     iconSize: 20,
   },
   {
     label: 'GitHub',
     href: 'https://github.com/vellira-dev/vellira',
-    icon: '/brand/navigation/github.svg',
+    icon: '/brand/auth/github.svg',
     iconSize: 19,
   },
 ] as const;

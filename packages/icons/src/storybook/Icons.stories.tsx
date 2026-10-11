@@ -245,10 +245,6 @@ const staticIconCategories = [
       'Users',
     ],
   },
-  {
-    category: 'Brand',
-    icons: ['DocsVellira', 'GitHub', 'Storybook'],
-  },
 ] satisfies Array<{ category: string; icons: StaticIconName[] }>;
 
 function renderStaticIconCategories() {

@@ -79,3 +79,16 @@ src/
 
 Source SVG assets live in `svg/`. Generated icon implementations should not be
 edited manually.
+
+## Legacy brand exports
+
+`GitHub`, `Facebook`, `LinkedIn`, `Reddit`, `X`, and `Storybook` are legacy
+third-party brand exports retained for public 2.x API compatibility. They are
+deprecated for new first-party use and are no longer advertised by the ordinary
+Icons catalog. Removal requires an explicitly planned breaking release; the
+normal web/native generator and export contract remain intact.
+
+Website branding belongs to `apps/website/brand`, not this cross-platform UI
+vocabulary. Official provider web artwork must never be passed through this
+package's React Native conversion. `DocsVellira` remains a Vellira-owned product
+mark and public export; it is documented under Product assets/Vellira.
