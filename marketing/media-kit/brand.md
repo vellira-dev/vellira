@@ -6,7 +6,7 @@ Vellira
 
 ## Tagline
 
-Independent modules. One seamless system.
+Ship UI faster. Keep it consistent.
 
 ## Short description (50 words)
 
