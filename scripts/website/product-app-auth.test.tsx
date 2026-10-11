@@ -449,7 +449,6 @@ describe('existing OAuth callback and account recovery', () => {
   });
 });
 
-
 describe('password visibility in Vellira auth forms', () => {
   it('toggles login password with an accessible eye without submitting', () => {
     render(<LoginForm />);
