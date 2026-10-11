@@ -56,6 +56,7 @@ describe('external artwork ownership', () => {
     }
     const sources = readdirSync(join(root, 'packages/icons/svg'), {
       recursive: true,
+      encoding: 'utf8',
     });
     expect(sources.join('\n')).not.toMatch(/Google|Apple/);
   });
@@ -79,6 +80,7 @@ describe('external artwork ownership', () => {
     }
     const paths = readdirSync(join(root, 'apps/website/src'), {
       recursive: true,
+      encoding: 'utf8',
     })
       .filter((p) => /\.[jt]sx?$/.test(p))
       .map((p) => join('apps/website/src', p));
