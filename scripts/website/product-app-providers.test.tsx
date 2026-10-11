@@ -78,6 +78,36 @@ describe('configured provider-first icon-only authentication', () => {
       )
     );
   });
+  it('recovers an empty server discovery once in the browser while keeping password login available', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ providers: ['github'] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container } = render(<LoginForm providers={[]} />);
+
+    expect(
+      screen.getByRole('button', { name: 'Sign in', exact: true })
+    ).toBeEnabled();
+    expect(
+      container.querySelector('[data-provider-discovery="recovering"]')
+    ).not.toBeNull();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Continue with GitHub' })
+      ).toBeEnabled()
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      container.querySelector('[data-provider-discovery="resolved"]')
+    ).not.toBeNull();
+  });
+
   it.each([
     false,
     [],
@@ -98,8 +128,13 @@ describe('configured provider-first icon-only authentication', () => {
         cache: 'no-store',
       })
     );
-    render(<LoginForm providers={[]} />);
+    const { container } = render(<LoginForm providers={[]} />);
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+    await waitFor(() =>
+      expect(
+        container.querySelector('[data-provider-discovery="recovering"]')
+      ).toBeNull()
+    );
     expect(screen.queryByRole('group')).toBeNull();
   });
   it('uses fixed display order and tolerates a discovery outage', async () => {
