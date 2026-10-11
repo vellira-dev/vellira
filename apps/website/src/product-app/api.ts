@@ -186,9 +186,32 @@ export async function completeOAuthConnection(connection: OAuthConnection) {
   if (result.connected !== true) throw new Error('Invalid connection response');
 }
 
+export type AuthProviderDiscovery = {
+  providers: OAuthLoginMethod[];
+  recoverInBrowser: boolean;
+};
+
+function parseAuthProviders(data: unknown): OAuthLoginMethod[] | null {
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    !('providers' in data) ||
+    !Array.isArray(data.providers) ||
+    data.providers.length > 3 ||
+    !data.providers.every(isOAuthLoginMethod)
+  )
+    return null;
+
+  const configured = new Set(data.providers);
+  return (['google', 'apple', 'github'] as const).filter((provider) =>
+    configured.has(provider)
+  );
+}
+
 // Server-rendered availability is presentation only. No user cookies or secrets
-// are forwarded; failure leaves email/password usable without a hydration jump.
-export async function getAuthProviders(): Promise<OAuthLoginMethod[]> {
+// are forwarded. A valid empty list is authoritative; only a failed/invalid
+// server discovery may request one bounded browser retry of the same endpoint.
+export async function getAuthProviderDiscovery(): Promise<AuthProviderDiscovery> {
   try {
     const response = await fetch(getApiUrl('/v1/auth/providers'), {
       cache: 'no-store',
@@ -196,24 +219,21 @@ export async function getAuthProviders(): Promise<OAuthLoginMethod[]> {
       redirect: 'error',
       signal: AbortSignal.timeout(1500),
     });
-    if (!response.ok) return [];
+    if (!response.ok) return { providers: [], recoverInBrowser: true };
+
     const text = await response.text();
-    if (text.length > 1024) return [];
-    const data: unknown = JSON.parse(text);
-    if (
-      !data ||
-      typeof data !== 'object' ||
-      !('providers' in data) ||
-      !Array.isArray(data.providers) ||
-      data.providers.length > 3 ||
-      !data.providers.every(isOAuthLoginMethod)
-    )
-      return [];
-    const configured = new Set(data.providers);
-    return (['google', 'apple', 'github'] as const).filter((provider) =>
-      configured.has(provider)
-    );
+    if (text.length > 1024)
+      return { providers: [], recoverInBrowser: true };
+
+    const providers = parseAuthProviders(JSON.parse(text));
+    if (!providers) return { providers: [], recoverInBrowser: true };
+
+    return { providers, recoverInBrowser: false };
   } catch {
-    return [];
+    return { providers: [], recoverInBrowser: true };
   }
+}
+
+export async function getAuthProviders(): Promise<OAuthLoginMethod[]> {
+  return (await getAuthProviderDiscovery()).providers;
 }
