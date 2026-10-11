@@ -18,6 +18,10 @@ import { AuthProviders } from './AuthProviders';
 import type { OAuthLoginMethod } from './authPreference';
 
 import { validNewPassword } from './passwordPolicy';
+import {
+  PasswordRequirements,
+  passwordConfirmationReady,
+} from './PasswordRequirements';
 
 import { AuthTextLink } from './AuthTextLink';
 import {
@@ -230,10 +234,12 @@ export function SignupForm({
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string>();
   const [accountExists, setAccountExists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(false);
+  const passwordReady = passwordConfirmationReady(password, confirmPassword);
 
   useEffect(() => {
     const saved = readSavedLoginPreference();
@@ -257,6 +263,11 @@ export function SignupForm({
       setError('Use at least 12 characters and no more than 1024 UTF-8 bytes.');
       return;
     }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setError(undefined);
     setAccountExists(false);
     setSubmitting(true);
@@ -309,11 +320,7 @@ export function SignupForm({
         />
       </FormField>
 
-      <FormField
-        label='Password'
-        description='Use at least 12 characters.'
-        required
-      >
+      <FormField label='Password' required>
         <Input
           type='password'
           autoComplete='new-password'
@@ -323,6 +330,22 @@ export function SignupForm({
           disabled={submitting}
         />
       </FormField>
+
+      <FormField label='Confirm password' required>
+        <Input
+          type='password'
+          autoComplete='new-password'
+          value={confirmPassword}
+          onValueChange={setConfirmPassword}
+          required
+          disabled={submitting}
+        />
+      </FormField>
+
+      <PasswordRequirements
+        password={password}
+        confirmation={confirmPassword}
+      />
 
       {error && (
         <p ref={errorRef} className={styles.error} role='alert' tabIndex={-1}>
@@ -354,7 +377,7 @@ export function SignupForm({
           type='submit'
           loading={submitting}
           loadingText='Creating account…'
-          disabled={submitting}
+          disabled={submitting || !passwordReady}
         >
           Create account
         </Button>
@@ -527,30 +550,121 @@ export function VerificationFlow() {
   );
 }
 
+function formatRecoveryCooldown(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+}
+
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
-  const [accepted, setAccepted] = useState(false);
+  const [acceptedEmail, setAcceptedEmail] = useState<string>();
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const cooldownActive = cooldownSeconds > 0;
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (submitting) return;
+  useEffect(() => {
+    if (!cooldownActive) return;
+    const timer = window.setTimeout(
+      () => setCooldownSeconds((value) => Math.max(0, value - 1)),
+      1000
+    );
+    return () => window.clearTimeout(timer);
+  }, [cooldownActive, cooldownSeconds]);
+
+  const sendReset = async (targetEmail: string) => {
+    if (submitting || cooldownActive) return;
 
     setError(undefined);
     setSubmitting(true);
 
     try {
-      await requestPasswordReset(email.trim());
-      setAccepted(true);
+      await requestPasswordReset(targetEmail);
+      setAcceptedEmail(targetEmail);
+      setCooldownSeconds(60);
     } catch (cause) {
-      setError(
-        genericAuthError(cause, 'Password recovery is temporarily unavailable.')
-      );
+      if (cause instanceof VelliraApiError && cause.code === 'rate_limited') {
+        setCooldownSeconds(Math.max(1, cause.retryAfterSeconds ?? 60));
+        setError('Please wait before requesting another reset email.');
+      } else {
+        setError(
+          genericAuthError(
+            cause,
+            'Password recovery is temporarily unavailable.'
+          )
+        );
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const targetEmail = email.trim();
+    if (!targetEmail) return;
+    void sendReset(targetEmail);
+  };
+
+  if (acceptedEmail) {
+    return (
+      <div className={styles.recoveryState}>
+        <div className={styles.statusCopy}>
+          <h2 className={styles.statusTitle}>Check your email</h2>
+          <p className={styles.message} role='status'>
+            If a Vellira account exists for <strong>{acceptedEmail}</strong>, we
+            sent a password reset link.
+          </p>
+          <p className={styles.message}>
+            The link expires in 30 minutes. Only the newest reset link works.
+          </p>
+        </div>
+
+        {error && (
+          <p className={styles.error} role='alert'>
+            {error}
+          </p>
+        )}
+
+        <div className={styles.actions}>
+          <Button
+            type='button'
+            appearance='outline'
+            color='neutral'
+            loading={submitting}
+            loadingText='Sending…'
+            disabled={submitting || cooldownActive}
+            onClick={() => void sendReset(acceptedEmail)}
+          >
+            {cooldownActive
+              ? `Resend email in ${formatRecoveryCooldown(cooldownSeconds)}`
+              : 'Resend email'}
+          </Button>
+          <Button
+            type='button'
+            appearance='link'
+            color='primary'
+            disabled={submitting}
+            onClick={() => {
+              setAcceptedEmail(undefined);
+              setCooldownSeconds(0);
+              setError(undefined);
+            }}
+          >
+            Use another email
+          </Button>
+        </div>
+
+        <AuthTextLink
+          href='/login'
+          iconStart={<ArrowLeft size={16} aria-hidden='true' />}
+        >
+          Back to sign in
+        </AuthTextLink>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -575,20 +689,15 @@ export function ForgotPasswordForm() {
         </p>
       )}
 
-      {accepted && (
-        <p className={styles.message} role='status'>
-          If this account is eligible for password recovery, check your inbox
-          for a reset link.
-        </p>
-      )}
-
       <Button
         type='submit'
         loading={submitting}
         loadingText='Sending…'
-        disabled={submitting}
+        disabled={submitting || cooldownActive}
       >
-        Send reset link
+        {cooldownActive
+          ? `Send reset link in ${formatRecoveryCooldown(cooldownSeconds)}`
+          : 'Send reset link'}
       </Button>
 
       <AuthTextLink
@@ -605,10 +714,12 @@ export function ResetPasswordForm() {
   const capturedFragment = useRef(false);
   const [token, setToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [ready, setReady] = useState(false);
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const passwordReady = passwordConfirmationReady(newPassword, confirmPassword);
 
   useEffect(() => {
     // StrictMode may replay effects after the URL has already been scrubbed.
@@ -635,6 +746,11 @@ export function ResetPasswordForm() {
       setError('Use at least 12 characters and no more than 1024 UTF-8 bytes.');
       return;
     }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setError(undefined);
     setSubmitting(true);
 
@@ -642,12 +758,14 @@ export function ResetPasswordForm() {
       await resetPassword(token, newPassword);
       setToken(null);
       setNewPassword('');
+      setConfirmPassword('');
       setComplete(true);
     } catch (cause) {
       if (cause instanceof VelliraApiError) {
         if (cause.code === 'invalid_challenge') {
           setToken(null);
           setNewPassword('');
+          setConfirmPassword('');
           setError('This reset link is invalid or has expired.');
         } else if (cause.code === 'invalid_request') {
           setError('Use a password of at least 12 characters.');
@@ -677,10 +795,14 @@ export function ResetPasswordForm() {
 
   if (complete) {
     return (
-      <div className={styles.actions}>
-        <p className={styles.message} role='status'>
-          Your password has been updated. Existing sessions were revoked.
-        </p>
+      <div className={styles.recoveryState}>
+        <div className={styles.statusCopy}>
+          <h2 className={styles.statusTitle}>Password updated</h2>
+          <p className={styles.message} role='status'>
+            Your password has been changed. For security, your previous sessions
+            have been signed out.
+          </p>
+        </div>
         <Button asChild>
           <Link href='/login'>Sign in</Link>
         </Button>
@@ -707,11 +829,7 @@ export function ResetPasswordForm() {
       onSubmit={handleSubmit}
       aria-busy={submitting}
     >
-      <FormField
-        label='New password'
-        description='Use at least 12 characters.'
-        required
-      >
+      <FormField label='New password' required>
         <Input
           type='password'
           autoComplete='new-password'
@@ -721,6 +839,22 @@ export function ResetPasswordForm() {
           disabled={submitting}
         />
       </FormField>
+
+      <FormField label='Confirm new password' required>
+        <Input
+          type='password'
+          autoComplete='new-password'
+          value={confirmPassword}
+          onValueChange={setConfirmPassword}
+          required
+          disabled={submitting}
+        />
+      </FormField>
+
+      <PasswordRequirements
+        password={newPassword}
+        confirmation={confirmPassword}
+      />
 
       {error && (
         <p className={styles.error} role='alert'>
@@ -732,7 +866,7 @@ export function ResetPasswordForm() {
         type='submit'
         loading={submitting}
         loadingText='Resetting password…'
-        disabled={submitting}
+        disabled={submitting || !passwordReady}
       >
         Reset password
       </Button>

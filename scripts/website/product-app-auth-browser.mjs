@@ -275,7 +275,9 @@ async function run(name, test) {
 }
 async function fill(page) {
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email);
-  await page.getByLabel(/^Password/).fill(password);
+  await page.getByLabel(/^Password$/).fill(password);
+  const confirmation = page.getByLabel(/^Confirm password/);
+  if (await confirmation.count()) await confirmation.fill(password);
 }
 try {
   await run(
@@ -571,12 +573,12 @@ try {
         state.mode = 'bad-password';
         await page.goto(origin + '/login');
         await fill(page);
-        await page.getByLabel(/^Password/).press('Enter');
+        await page.getByLabel(/^Password$/).press('Enter');
         await expect(page.getByRole('main').getByRole('alert')).toHaveText(
           'Invalid email or password.'
         );
         await expect(page.getByRole('main').getByRole('alert')).toBeFocused();
-        await expect(page.getByLabel(/^Password/)).toHaveValue('');
+        await expect(page.getByLabel(/^Password$/)).toHaveValue('');
         const snapshot = await page.evaluate(() => ({
           local: { ...localStorage },
           session: { ...sessionStorage },
@@ -794,7 +796,7 @@ try {
             })
           ).toBeVisible();
           await fill(page);
-          await page.getByLabel(/^Password/).press('Enter');
+          await page.getByLabel(/^Password$/).press('Enter');
           const connect = page.getByRole('button', {
             name: 'Connect GitHub',
             exact: true,
@@ -926,6 +928,90 @@ try {
       }
     }
   );
+  await run('password-recovery-success-state-and-resend-cooldown', async () => {
+    const { context, page, state } = await fixture(390);
+    try {
+      await page.goto(origin + '/forgot-password');
+      await page
+        .getByRole('textbox', { name: 'Email', exact: true })
+        .fill(email);
+      await page
+        .getByRole('button', { name: 'Send reset link', exact: true })
+        .click();
+
+      await expect(
+        page.getByRole('heading', { name: 'Check your email', exact: true })
+      ).toBeVisible();
+      await expect(page.getByRole('status')).toContainText(
+        'If a Vellira account exists'
+      );
+      await expect(page.getByText(/expires in 30 minutes/i)).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Resend email in 01:00' })
+      ).toBeDisabled();
+      await expect(
+        page.getByRole('button', { name: 'Use another email' })
+      ).toBeEnabled();
+      expect(
+        state.calls.filter(
+          (call) =>
+            call.path === '/v1/auth/password/forgot' && call.method === 'POST'
+        )
+      ).toHaveLength(1);
+      await audit(page);
+      return {
+        enumerationResistant: true,
+        initialCooldownSeconds: 60,
+        newestLinkCopy: true,
+      };
+    } finally {
+      await context.close();
+    }
+  });
+
+  await run('password-reset-live-requirements-and-confirmation', async () => {
+    const { context, page } = await fixture(390);
+    try {
+      await page.goto(
+        origin + '/reset-password#token=VELLIRA-CANARY-RESET-TOKEN'
+      );
+      const submit = page.getByRole('button', {
+        name: 'Reset password',
+        exact: true,
+      });
+      await page
+        .getByLabel('New password', { exact: true })
+        .fill('short-value');
+      await expect(
+        page.getByRole('listitem', {
+          name: 'At least 12 characters: not met',
+        })
+      ).toBeVisible();
+      await expect(submit).toBeDisabled();
+
+      await page.getByLabel(/^New password/).fill(password);
+      await page
+        .getByLabel('Confirm new password', { exact: true })
+        .fill(password + '-different');
+      await expect(
+        page.getByRole('listitem', { name: 'Passwords match: not met' })
+      ).toBeVisible();
+      await expect(submit).toBeDisabled();
+
+      await page
+        .getByLabel('Confirm new password', { exact: true })
+        .fill(password);
+      await expect(
+        page.getByRole('listitem', { name: 'Passwords match: met' })
+      ).toBeVisible();
+      await expect(submit).toBeEnabled();
+      await audit(page);
+      return { liveRequirements: true, confirmationRequired: true };
+    } finally {
+      await context.close();
+    }
+  });
+
   await run('expired-reset-has-direct-recovery-and-scrubs-token', async () => {
     const { context, page, state } = await fixture();
     try {
@@ -933,6 +1019,9 @@ try {
         origin + '/reset-password#token=VELLIRA-CANARY-RESET-TOKEN'
       );
       await page.getByLabel(/^New password/).fill(password);
+      await page
+        .getByLabel('Confirm new password', { exact: true })
+        .fill(password);
       await page
         .getByRole('button', { name: 'Reset password', exact: true })
         .click();

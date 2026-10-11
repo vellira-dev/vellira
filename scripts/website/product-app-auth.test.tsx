@@ -205,9 +205,13 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'new-user@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
+    fireEvent.change(screen.getByLabelText(/^Password$/), {
       target: { value: 'a sufficiently long password' },
     });
+    fireEvent.change(
+      screen.getByLabelText('Confirm password', { exact: false }),
+      { target: { value: 'a sufficiently long password' } }
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/app'));
     expect(router.push).not.toHaveBeenCalledWith('/verify-email');
@@ -232,9 +236,13 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'existing@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
+    fireEvent.change(screen.getByLabelText(/^Password$/), {
       target: { value: 'a sufficiently long password' },
     });
+    fireEvent.change(
+      screen.getByLabelText('Confirm password', { exact: false }),
+      { target: { value: 'a sufficiently long password' } }
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -320,7 +328,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'remember-me@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
+    fireEvent.change(screen.getByLabelText(/^Password$/), {
       target: { value: 'never-persist-this-password' },
     });
     fireEvent.click(
@@ -361,7 +369,7 @@ describe('existing OAuth callback and account recovery', () => {
     expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue(
       'saved@example.com'
     );
-    expect(screen.getByLabelText('Password', { exact: false })).toHaveValue('');
+    expect(screen.getByLabelText(/^Password$/)).toHaveValue('');
   });
 
   it('preserves the saved provider without changing its accessible label or auto-starting OAuth', () => {
@@ -387,7 +395,7 @@ describe('existing OAuth callback and account recovery', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'fixture@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Password', { exact: false }), {
+    fireEvent.change(screen.getByLabelText(/^Password$/), {
       target: { value: 'local-fixture-password' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -405,16 +413,30 @@ describe('existing OAuth callback and account recovery', () => {
     );
   });
 
-  it('requests recovery through the existing password-reset form and API', async () => {
+  it('moves recovery into a generic check-email state with a bounded resend cooldown', async () => {
     fetchMock.mockResolvedValue(respond({ accepted: true }));
     render(<ForgotPasswordForm />);
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: 'fixture@example.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }));
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'If this account is eligible'
+
+    expect(
+      await screen.findByRole('heading', { name: 'Check your email' })
+    ).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'If a Vellira account exists for fixture@example.com'
     );
+    expect(screen.getByText(/expires in 30 minutes/i)).toHaveTextContent(
+      'Only the newest reset link works'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Resend email in 01:00' })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Use another email' })
+    ).toBeEnabled();
+
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.vellira.dev/v1/auth/password/forgot',
       expect.objectContaining({

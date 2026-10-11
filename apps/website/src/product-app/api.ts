@@ -37,13 +37,29 @@ type ApiErrorEnvelope = {
 export class VelliraApiError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly retryAfterSeconds?: number;
 
-  constructor(status: number, code: string) {
+  constructor(status: number, code: string, retryAfterSeconds?: number) {
     super(code);
     this.name = 'VelliraApiError';
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
+}
+
+function readRetryAfterSeconds(response: Response) {
+  const value = response.headers.get('Retry-After')?.trim();
+  if (!value) return undefined;
+
+  if (/^\d+$/.test(value)) {
+    const seconds = Number(value);
+    return Number.isSafeInteger(seconds) ? Math.min(seconds, 3600) : undefined;
+  }
+
+  const at = Date.parse(value);
+  if (!Number.isFinite(at)) return undefined;
+  return Math.min(Math.max(0, Math.ceil((at - Date.now()) / 1000)), 3600);
 }
 
 export function getApiUrl(pathname: string) {
@@ -71,7 +87,11 @@ async function apiRequest<T>(pathname: string, init: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    throw new VelliraApiError(response.status, await readErrorCode(response));
+    throw new VelliraApiError(
+      response.status,
+      await readErrorCode(response),
+      readRetryAfterSeconds(response)
+    );
   }
 
   return (await response.json()) as T;

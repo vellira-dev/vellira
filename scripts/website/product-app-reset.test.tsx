@@ -45,7 +45,10 @@ afterEach(() => {
 it('expired token offers new-link recovery', async () => {
   responseCode = 'invalid_challenge';
   render(<ResetPasswordForm />);
-  fireEvent.change(screen.getByLabelText(/New password/), {
+  fireEvent.change(screen.getByLabelText(/^New password/), {
+    target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Confirm new password/), {
     target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
@@ -61,12 +64,21 @@ it('expired token offers new-link recovery', async () => {
 it('successful reset clears form and offers normal sign-in', async () => {
   responseCode = 'success';
   render(<ResetPasswordForm />);
-  fireEvent.change(screen.getByLabelText(/New password/), {
+  fireEvent.change(screen.getByLabelText(/^New password/), {
+    target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Confirm new password/), {
     target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
   await waitFor(() =>
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeNull()
+  );
+  expect(
+    screen.getByRole('heading', { name: 'Password updated' })
+  ).toBeVisible();
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'previous sessions have been signed out'
   );
   expect(document.querySelector('input[type=password]')).toBeNull();
   expect(window.location.hash).toBe('');
@@ -77,7 +89,7 @@ it('token capture survives repeated StrictMode effects', () => {
       <ResetPasswordForm />
     </StrictMode>
   );
-  expect(screen.queryByLabelText(/New password/)).not.toBeNull();
+  expect(screen.queryByLabelText(/^New password/)).not.toBeNull();
 });
 
 it.each([
@@ -95,12 +107,12 @@ it.each([
   expect(
     screen.getByRole('link', { name: 'Request another reset link' })
   ).toHaveAttribute('href', '/forgot-password');
-  expect(screen.queryByLabelText(/New password/)).toBeNull();
+  expect(screen.queryByLabelText(/^New password/)).toBeNull();
   expect(window.location.hash).toBe('');
 });
 it('refresh after URL scrubbing fails safely with new-link recovery', () => {
   const first = render(<ResetPasswordForm />);
-  expect(screen.getByLabelText(/New password/)).toBeInTheDocument();
+  expect(screen.getByLabelText(/^New password/)).toBeInTheDocument();
   first.unmount();
   render(<ResetPasswordForm />);
   expect(
@@ -111,7 +123,10 @@ it('refresh after URL scrubbing fails safely with new-link recovery', () => {
 it('temporary failure permits safe retry without exposing the token in URL/storage', async () => {
   responseCode = 'auth_unavailable';
   render(<ResetPasswordForm />);
-  fireEvent.change(screen.getByLabelText(/New password/), {
+  fireEvent.change(screen.getByLabelText(/^New password/), {
+    target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Confirm new password/), {
     target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
