@@ -20,8 +20,8 @@ describe('homepage consistency story and source-backed facts', () => {
     );
     expect(story).toContain('Available now');
     expect(story).toContain('Inspectable today');
-    const storyStyles = read(`${home}ConsistencyStory/ConsistencyStory.module.css`);
-    expect(storyStyles).toContain('color: var(--text-brand);');
+    const css = read(`${home}ConsistencyStory/ConsistencyStory.module.css`);
+    expect(css).toContain('color: var(--text-brand);');
     expect(story).toContain('In development');
     expect(story).toContain('/blog/ai-ui-consistency');
     expect(story).toContain('/blog/quality-gates-before-component-growth');

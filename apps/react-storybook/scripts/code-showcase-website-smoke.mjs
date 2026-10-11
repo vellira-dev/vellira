@@ -245,6 +245,14 @@ try {
           await expect(code).toContainText("from '@vellira-ui/react';");
           await checkSelection('Dropdown');
 
+          // Use a clean page for visual evidence. A previously opened
+          // CodeShowcase menu must not be mistaken for homepage layout.
+          await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
+          await expect(page.getByRole('menu')).toHaveCount(0);
+          await expect(
+            page.locator('[data-vellira-theme]').first()
+          ).toHaveAttribute('data-vellira-theme', colorScheme);
+
           // Review the new homepage narrative in each theme, viewport and
           // motion preference, using the same real browser as CodeShowcase.
           const story = page.locator('#why-vellira');
@@ -304,13 +312,23 @@ try {
           }
           await page.mouse.move(0, 0);
           await expect(firstStoryCard).toHaveCSS('transform', 'none');
-          await story.screenshot({
-            path: `${artifactDir}/${scenario}-consistency-story.png`,
+          // Viewport screenshots represent what a visitor can really see:
+          // a tall element screenshot can stitch sticky headers and portals.
+          const storyHeading = story.getByRole('heading', { level: 2 });
+          await storyHeading.scrollIntoViewIfNeeded();
+          await page.evaluate(() => window.scrollBy(0, -120));
+          await page.screenshot({
+            path: `${artifactDir}/${scenario}-story-top.png`,
+          });
+          await storyCards.last().scrollIntoViewIfNeeded();
+          await page.screenshot({
+            path: `${artifactDir}/${scenario}-story-bottom.png`,
           });
 
           const quickStart = page.locator('#quick-start');
           await quickStart.scrollIntoViewIfNeeded();
           const quickImport = quickStart.locator('pre code').nth(1);
+          await quickImport.scrollIntoViewIfNeeded();
           await expect(quickImport).toHaveCSS('white-space', 'pre');
           await expect(quickImport).toContainText(
             "import '@vellira-ui/react/styles';"
@@ -318,6 +336,21 @@ try {
           await expect(quickImport).toContainText(
             "import { Button } from '@vellira-ui/react';"
           );
+          // The existing motion reveal includes opacity and blur. Screenshot
+          // only after the code and all ancestor reveal layers have painted.
+          await expect
+            .poll(() =>
+              quickImport.evaluate((element) => {
+                for (let node = element; node; node = node.parentElement) {
+                  const style = getComputedStyle(node);
+                  if (Number(style.opacity) < 0.99) return false;
+                  const blur = style.filter.match(/blur\\((\\d+(?:\\.\\d+)?)px\\)/);
+                  if (blur && Number(blur[1]) > 0.1) return false;
+                }
+                return true;
+              })
+            )
+            .toBe(true);
           await quickStart.locator('pre').nth(1).screenshot({
             path: `${artifactDir}/${scenario}-quick-start-import.png`,
           });
