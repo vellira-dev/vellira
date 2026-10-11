@@ -17,12 +17,14 @@ import styles from './AuthSurface.module.css';
 
 export function AuthProviders({
   providers,
+  recoverProviders = false,
   remember,
   disabled,
   onRedirecting,
   connection,
 }: {
   providers: readonly OAuthLoginMethod[];
+  recoverProviders?: boolean;
   remember: boolean;
   disabled: boolean;
   onRedirecting: (value: boolean) => void;
@@ -34,8 +36,9 @@ export function AuthProviders({
   const [recoveredProviders, setRecoveredProviders] = useState<
     readonly OAuthLoginMethod[]
   >([]);
+  const hasServerProviders = providers.length > 0;
   const [recoveringProviders, setRecoveringProviders] = useState(
-    providers.length === 0
+    recoverProviders && !hasServerProviders
   );
 
   useEffect(() => {
@@ -55,7 +58,10 @@ export function AuthProviders({
   // providers, so an empty initial result gets one bounded public client retry.
   // The backend endpoint remains the sole provider-availability authority.
   useEffect(() => {
-    if (providers.length > 0) return;
+    if (!recoverProviders || hasServerProviders) {
+      setRecoveringProviders(false);
+      return;
+    }
 
     let active = true;
     setRecoveringProviders(true);
@@ -70,10 +76,11 @@ export function AuthProviders({
     return () => {
       active = false;
     };
-  }, [providers]);
+  }, [recoverProviders, hasServerProviders]);
 
-  const discoveredProviders =
-    providers.length > 0 ? providers : recoveredProviders;
+  const discoveredProviders = hasServerProviders
+    ? providers
+    : recoveredProviders;
   const available = discoveredProviders.filter(
     (provider) => provider !== connection?.provider
   );
