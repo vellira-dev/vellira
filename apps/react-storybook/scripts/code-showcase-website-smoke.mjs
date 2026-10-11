@@ -344,7 +344,7 @@ try {
                 for (let node = element; node; node = node.parentElement) {
                   const style = getComputedStyle(node);
                   if (Number(style.opacity) < 0.99) return false;
-                  const blur = style.filter.match(/blur\\((\\d+(?:\\.\\d+)?)px\\)/);
+                  const blur = style.filter.match(/blur\(([^)]+)\)/);
                   if (blur && Number(blur[1]) > 0.1) return false;
                 }
                 return true;
