@@ -195,7 +195,7 @@ export function LoginForm({
         disabled={submitting}
       />
 
-      <div className={styles.actions}>
+      <div className={`${styles.actions} ${styles.loginActions}`}>
         <Button
           type='submit'
           loading={submitting}
@@ -239,17 +239,8 @@ export function SignupForm({
   const [error, setError] = useState<string>();
   const [accountExists, setAccountExists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [remember, setRemember] = useState(false);
   const passwordReady = passwordConfirmationReady(password, confirmPassword);
 
-  useEffect(() => {
-    const saved = readSavedLoginPreference();
-    if (!saved) return;
-    setRemember(true);
-    if (saved.email) {
-      setEmail(saved.email);
-    }
-  }, []);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -275,7 +266,6 @@ export function SignupForm({
 
     try {
       await register(email.trim(), password);
-      rememberLogin(remember, 'email', email);
       router.replace('/app');
     } catch (cause) {
       if (cause instanceof VelliraApiError && cause.code === 'account_exists') {
@@ -306,7 +296,6 @@ export function SignupForm({
       <AuthProviders
         providers={providers}
         recoverProviders={recoverProviders}
-        remember={remember}
         disabled={submitting}
         onRedirecting={setSubmitting}
       />
@@ -362,18 +351,6 @@ export function SignupForm({
           <AuthTextLink href='/forgot-password'>Forgot password?</AuthTextLink>
         </div>
       )}
-
-      <Checkbox
-        label='Save email and login method on this device'
-        checked={remember}
-        onCheckedChange={(checked) => {
-          setRemember(checked);
-          if (!checked) {
-            clearLoginPreference();
-          }
-        }}
-        disabled={submitting}
-      />
 
       <div className={styles.actions}>
         <Button

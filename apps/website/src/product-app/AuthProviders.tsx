@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button, Tooltip } from '@vellira-ui/react';
 import { getApiUrl, getAuthProviders } from './api';
 import {
+  clearOAuthPreferenceIntent,
   prepareOAuthPreference,
   type OAuthLoginMethod,
 } from './authPreference';
@@ -25,7 +26,7 @@ export function AuthProviders({
 }: {
   providers: readonly OAuthLoginMethod[];
   recoverProviders?: boolean;
-  remember: boolean;
+  remember?: boolean;
   disabled: boolean;
   onRedirecting: (value: boolean) => void;
   connection?: OAuthConnection;
@@ -103,7 +104,10 @@ export function AuthProviders({
     setRedirecting(true);
     onRedirecting(true);
     setError(false);
-    prepareOAuthPreference(remember);
+    // Sign-up has no remember opt-in. Clear a stale pending request without
+    // overwriting a preference explicitly saved during a previous sign-in.
+    if (remember === undefined) clearOAuthPreferenceIntent();
+    else prepareOAuthPreference(remember);
     try {
       window.location.assign(
         getApiUrl(
