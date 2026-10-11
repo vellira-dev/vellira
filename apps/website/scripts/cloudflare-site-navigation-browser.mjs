@@ -26,7 +26,20 @@ export function createSiteNavigationNetworkDrain(
   const localRequestUrl = (request) => {
     try {
       const url = new URL(request.url());
-      return url.origin === origin ? url.href : null;
+      if (url.origin !== origin) return null;
+
+      // The on-demand npm version badge is a read-only auxiliary fetch.
+      // Its upstream availability does not affect the React/Next navigation
+      // contract. Still track all documents, RSC and state-changing requests.
+      if (
+        url.pathname === '/api/public-release' &&
+        url.search === '' &&
+        request.method() === 'GET' &&
+        request.resourceType() === 'fetch'
+      ) {
+        return null;
+      }
+      return url.href;
     } catch {
       return null;
     }
