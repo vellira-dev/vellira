@@ -24,7 +24,7 @@ describe('reason-bearing state callback projection', () => {
         (item) => item.kind === 'change'
       )!;
       expect(callback.typeExpression).toBe(
-        '(open: boolean, details: { reason: "action" | "dismiss" | "timeout" }) => void'
+        "(open: boolean, details: { reason: 'action' | 'dismiss' | 'timeout' }) => void"
       );
       expect(callback.change!.emitTransitions).toEqual(['to-false']);
       expect(callback.change!.transitions).toEqual(['to-false', 'to-true']);

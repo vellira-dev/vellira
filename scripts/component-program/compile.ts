@@ -829,7 +829,7 @@ export function compileComponentProgram(
           ...(state.change
             ? {
                 change: state.change,
-                typeExpression: `(${state.api}: ${valueType}, details: { reason: ${state.change.reasonDomain.values.map((reason) => JSON.stringify(reason.value)).join(' | ')} }) => void`,
+                typeExpression: `(${state.api}: ${valueType}, details: { reason: ${state.change.reasonDomain.values.map((reason) => `'${reason.value}'`).join(' | ')} }) => void`,
               }
             : {}),
         });
