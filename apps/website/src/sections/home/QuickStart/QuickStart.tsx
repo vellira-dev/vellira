@@ -23,14 +23,15 @@ const steps = [
     index: '02',
     label: 'Import',
     file: 'App.tsx',
-    code: 'import { Button } from "@vellira-ui/react";',
+    code:
+      "import '@vellira-ui/react/styles';\nimport { Button } from '@vellira-ui/react';",
     language: 'tsx',
   },
   {
     index: '03',
     label: 'Render',
     file: 'App.tsx',
-    code: '<Button>Get started</Button>',
+    code: "<Button color='primary' appearance='solid'>Get started</Button>",
     language: 'tsx',
   },
 ] as const;
@@ -236,8 +237,8 @@ export function QuickStart() {
                 <h4>Build with Vellira</h4>
 
                 <p>
-                  Accessible defaults, semantic tokens and production-ready
-                  behavior are already included.
+                  Explore real component behavior, shared tokens and
+                  accessibility-minded defaults in the public library.
                 </p>
 
                 <div className={styles.controls} aria-label='Button preview'>
