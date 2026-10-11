@@ -187,7 +187,7 @@ describe('public npm release API', () => {
 
   it('treats registry HTTP errors as unavailable, without using tokens', async () => {
     const fetchImpl = (async () =>
-      Response.json({ error: 'unauthorized' }, { status: 401 })) as typeof fetch;
+      new Response(null, { status: 401 })) as typeof fetch;
     const GET = createPublicReleaseHandler({ fetchImpl, now: () => START });
     const response = await GET();
     expect(response.status).toBe(503);
