@@ -55,6 +55,8 @@ describe('homepage consistency story and source-backed facts', () => {
     const parity = read(`${home}PlatformParity/PlatformParity.tsx`);
 
     expect(quick).toContain('@vellira-ui/react/styles');
+    const quickStyles = read(`${home}QuickStart/QuickStart.module.css`);
+    expect(quickStyles).toMatch(/\.editor code \{[^}]*white-space: pre;/s);
     expect(code).toContain('@vellira-ui/react/styles');
     expect(code).toContain('platform-specific setup');
     expect(code).toContain('Illustrative UI only');

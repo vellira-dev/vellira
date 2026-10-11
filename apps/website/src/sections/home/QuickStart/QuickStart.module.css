@@ -296,7 +296,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-md);
-  white-space: nowrap;
+  white-space: pre;
 }
 
 .editor code[data-language='shell'] {
