@@ -40,11 +40,11 @@ describe('configured provider-first icon-only authentication', () => {
         ) & Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
       expect(container.querySelector('[aria-hidden="true"]')).toBeTruthy();
-      expect(
-        screen.getByRole('checkbox', {
-          name: 'Save email and login method on this device',
-        })
-      ).toBeInTheDocument();
+      const remember = screen.queryByRole('checkbox', {
+        name: 'Save email and login method on this device',
+      });
+      if (Form === LoginForm) expect(remember).toBeInTheDocument();
+      else expect(remember).not.toBeInTheDocument();
     });
   }
   it.each(providers)(
