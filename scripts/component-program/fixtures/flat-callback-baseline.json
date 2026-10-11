@@ -1,0 +1,115 @@
+{
+  "media": {
+    "fingerprint": "component-program-v1:82f8b0dbb34218407a65755a3ed72e7ee4d82afb446528c641763a1f74db7d51",
+    "serialization": "baseline:b964276224e01818ced142c3b3a79c87f6f4fb7b5e2786a1267555bbf79fd062",
+    "api": []
+  },
+  "form": {
+    "fingerprint": "component-program-v1:39c48c503a549ea5e022a8be9c11088f9c89e7fddc7be52e665786e7e31f38ee",
+    "serialization": "baseline:eb9955dcf596fd13e0ab790b0d4ce2bc1440eadd848478585f6a6771eb32fe8a",
+    "api": [
+      {
+        "state": "text",
+        "name": "onValueChange",
+        "kind": "change",
+        "valueType": "string",
+        "required": false
+      },
+      {
+        "state": "text",
+        "name": "defaultValue",
+        "kind": "initial",
+        "valueType": "string",
+        "required": false
+      },
+      {
+        "state": "text",
+        "name": "value",
+        "kind": "value",
+        "valueType": "string",
+        "required": false
+      }
+    ]
+  },
+  "temporal": {
+    "fingerprint": "component-program-v1:0acfc3e22bb1ef3598e224658568614ba5dbd806a17e7814182a71a3caf1d5ac",
+    "serialization": "baseline:9d8c25c89a7db00d6114df8aaac034106ea7e978726beaf45ab65c7b857b21b7",
+    "api": [
+      {
+        "state": "visible",
+        "name": "onOpenChange",
+        "kind": "change",
+        "valueType": "boolean",
+        "required": false
+      },
+      {
+        "state": "visible",
+        "name": "defaultOpen",
+        "kind": "initial",
+        "valueType": "boolean",
+        "required": false
+      },
+      {
+        "state": "visible",
+        "name": "open",
+        "kind": "value",
+        "valueType": "boolean",
+        "required": false
+      }
+    ]
+  },
+  "overlay": {
+    "fingerprint": "component-program-v1:004a9704e03ee1fc016d15d14572ae03adfd41c167398a191a07d5226c7bd8e1",
+    "serialization": "baseline:029f4fd6b0337ff2237254ecc0739b1e1056952871239a7d6d8eb6fa328a6f52",
+    "api": [
+      {
+        "state": "visible",
+        "name": "onOpenChange",
+        "kind": "change",
+        "valueType": "boolean",
+        "required": false
+      },
+      {
+        "state": "visible",
+        "name": "defaultOpen",
+        "kind": "initial",
+        "valueType": "boolean",
+        "required": false
+      },
+      {
+        "state": "visible",
+        "name": "open",
+        "kind": "value",
+        "valueType": "boolean",
+        "required": false
+      }
+    ]
+  },
+  "collection": {
+    "fingerprint": "component-program-v1:3a8abc2ef30d6cf1937777c50b9c21d8125b4d85e10fd74afa7466501e558d24",
+    "serialization": "baseline:3401d377a162582de041afbe3d83614d08c2609dcbea692747abf92e0e63594e",
+    "api": [
+      {
+        "state": "selected",
+        "name": "onValueChange",
+        "kind": "change",
+        "valueType": "string",
+        "required": false
+      },
+      {
+        "state": "selected",
+        "name": "defaultValue",
+        "kind": "initial",
+        "valueType": "string",
+        "required": false
+      },
+      {
+        "state": "selected",
+        "name": "value",
+        "kind": "value",
+        "valueType": "string",
+        "required": false
+      }
+    ]
+  }
+}

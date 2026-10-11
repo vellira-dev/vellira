@@ -6,6 +6,7 @@ import {
   componentStateOwners,
   componentTransitionActions,
   type ComponentProgramDecisionsV1,
+  type ComponentStateChangeV1,
 } from '../../packages/metadata/src/componentProgram';
 
 export function record(
@@ -65,6 +66,55 @@ export function platforms(value: unknown) {
   return result.sort();
 }
 
+function booleanTransitions(value: unknown) {
+  const result = list(value, 2).map((item) =>
+    enumeration(item, ['to-false', 'to-true'] as const)
+  );
+  if (!result.length || new Set(result).size !== result.length)
+    throw new Error('Callback transitions must be non-empty and unique.');
+  return result.sort();
+}
+
+function stateChange(value: unknown): ComponentStateChangeV1 {
+  const item = record(
+    value,
+    [
+      'schemaVersion',
+      'platforms',
+      'transitions',
+      'emitTransitions',
+      'reasonDomain',
+    ],
+    'state change'
+  );
+  enumeration(item.schemaVersion, ['1']);
+  const domain = record(item.reasonDomain, ['id', 'values'], 'reason domain');
+  const values = list(domain.values, 32).map((value) => {
+    const reason = record(value, ['value', 'transitions'], 'reason');
+    return {
+      value: identifier(reason.value),
+      transitions: booleanTransitions(reason.transitions),
+    };
+  });
+  if (
+    !values.length ||
+    new Set(values.map((reason) => reason.value)).size !== values.length
+  )
+    throw new Error('Callback reason values must be non-empty and unique.');
+  return {
+    schemaVersion: '1',
+    platforms: platforms(item.platforms),
+    transitions: booleanTransitions(item.transitions),
+    emitTransitions: booleanTransitions(item.emitTransitions),
+    reasonDomain: {
+      id: identifier(domain.id),
+      values: values.sort((a, b) =>
+        a.value < b.value ? -1 : a.value > b.value ? 1 : 0
+      ),
+    },
+  };
+}
+
 export function parseComponentProgramDecisions(
   value: unknown
 ): ComponentProgramDecisionsV1 {
@@ -87,12 +137,20 @@ export function parseComponentProgramDecisions(
       };
     }),
     states: list(input.states, 32).map((value) => {
-      const item = record(value, ['id', 'domain', 'ownership', 'api'], 'state');
+      const item = record(
+        value,
+        ['id', 'domain', 'ownership', 'api', 'change'],
+        'state',
+        ['change']
+      );
       return {
         id: identifier(item.id),
         domain: enumeration(item.domain, componentStateDomains),
         ownership: enumeration(item.ownership, componentStateOwners),
         api: enumeration(item.api, componentApiConventions),
+        ...(Object.hasOwn(item, 'change')
+          ? { change: stateChange(item.change) }
+          : {}),
       };
     }),
     transitions: list(input.transitions, 128).map((value) => {

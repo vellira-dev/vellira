@@ -705,6 +705,44 @@ export function compileComponentProgram(
       const uncontrolled = ['uncontrolled', 'controlled-uncontrolled'].includes(
         state.ownership
       );
+      if (state.change) {
+        const change = state.change;
+        const represented = change.reasonDomain.values.flatMap(
+          (reason) => reason.transitions
+        );
+        // V1 follows the existing Boolean, shared-state API contract. Platform
+        // divergence and other domains require a separately defined projection.
+        if (
+          !controlled ||
+          state.domain !== 'boolean' ||
+          !subset(source.platforms, change.platforms) ||
+          !subset(change.platforms, source.platforms) ||
+          !subset(change.emitTransitions, change.transitions) ||
+          !subset(represented, change.emitTransitions) ||
+          !subset(change.emitTransitions, represented)
+        )
+          finding(
+            'invalid-composition',
+            state.id,
+            'Reason-bearing callback requires explicit Boolean ownership, exact platform scope and complete emission reasons.'
+          );
+        for (const transition of decisions.transitions.filter(
+          (item) => item.state === state.id
+        )) {
+          const target =
+            transition.action === 'close'
+              ? 'to-false'
+              : transition.action === 'open'
+                ? 'to-true'
+                : null;
+          if (!target || !change.transitions.includes(target))
+            finding(
+              'invalid-composition',
+              state.id,
+              'Reason-bearing state transition has no exact Boolean target authority.'
+            );
+        }
+      }
       if (controlled || uncontrolled) {
         if (!modules.has('state-control'))
           finding(
@@ -788,6 +826,12 @@ export function compileComponentProgram(
           kind: 'change',
           valueType,
           required: false,
+          ...(state.change
+            ? {
+                change: state.change,
+                typeExpression: `(${state.api}: ${valueType}, details: { reason: ${state.change.reasonDomain.values.map((reason) => `'${reason.value}'`).join(' | ')} }) => void`,
+              }
+            : {}),
         });
       } else if (state.api !== 'none')
         finding(

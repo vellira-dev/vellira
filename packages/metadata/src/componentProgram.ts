@@ -103,6 +103,21 @@ export type ComponentTransitionAction =
   (typeof componentTransitionActions)[number];
 export type ComponentApiConvention = (typeof componentApiConventions)[number];
 
+/** Opt-in Boolean callback semantics. Omission retains the original flat API. */
+export interface ComponentStateChangeV1 {
+  schemaVersion: '1';
+  platforms: readonly ComponentPlatform[];
+  transitions: readonly ('to-false' | 'to-true')[];
+  emitTransitions: readonly ('to-false' | 'to-true')[];
+  reasonDomain: {
+    id: string;
+    values: readonly {
+      value: string;
+      transitions: readonly ('to-false' | 'to-true')[];
+    }[];
+  };
+}
+
 export interface ComponentProgramDecisionsV1 {
   schemaVersion: '1';
   anatomy: readonly {
@@ -115,6 +130,7 @@ export interface ComponentProgramDecisionsV1 {
     domain: ComponentStateDomain;
     ownership: ComponentStateOwner;
     api: ComponentApiConvention;
+    change?: ComponentStateChangeV1;
   }[];
   transitions: readonly {
     state: string;
@@ -185,6 +201,10 @@ export interface ComponentProgramV1 {
     kind: 'value' | 'initial' | 'change';
     valueType: string;
     required: boolean;
+    /** Present only for an explicitly selected reason-bearing change API. */
+    change?: ComponentStateChangeV1;
+    /** Exact public type projection for the opt-in callback. */
+    typeExpression?: string;
   }[];
   platformPlans: readonly {
     platform: ComponentPlatform;
