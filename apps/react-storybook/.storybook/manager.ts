@@ -32,7 +32,8 @@ function PublishedReleaseTool() {
 
   if (!release) return null;
 
-  const label = `${release.stale ? 'Last verified' : 'Latest verified'} npm release v${release.version}`;
+  const status = release.stale ? 'Last verified' : 'Latest verified';
+  const label = `${status} npm release v${release.version}`;
 
   return React.createElement(
     'a',

@@ -25,11 +25,7 @@ onUnmounted(() => unsubscribe());
     href="https://www.npmjs.com/package/@vellira-ui/react"
     target="_blank"
     rel="noopener noreferrer"
-    :title="
-      release
-        ? `${release.stale ? 'Last verified' : 'Latest verified'} npm release v${release.version}`
-        : ''
-    "
+    :title="`npm release v${release.version}${release.stale ? ' (cached)' : ''}`"
   >
     <span class="vellira-docs-release-source">npm</span>
     <strong aria-live="polite">v{{ release.version }}</strong>

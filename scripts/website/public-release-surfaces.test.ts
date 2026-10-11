@@ -65,8 +65,10 @@ describe('shared npm-verified version on public sites', () => {
     expect(storybook).toContain('if (!release) return null;');
     expect(storybook).not.toContain("'—'");
 
-    const docsBaseStyle = docsStyles.match(/\.vellira-docs-release \{([^}]*)\}/)?.[1];
-    const storybookBaseStyle = storybookStyles.match(/\.velliraToolbarVersion \{([^}]*)\}/)?.[1];
+    const docsRule = /\.vellira-docs-release \{([^}]*)\}/;
+    const storybookRule = /\.velliraToolbarVersion \{([^}]*)\}/;
+    const docsBaseStyle = docsStyles.match(docsRule)?.[1];
+    const storybookBaseStyle = storybookStyles.match(storybookRule)?.[1];
     expect(docsBaseStyle).toBeDefined();
     expect(storybookBaseStyle).toBeDefined();
     for (const baseStyle of [docsBaseStyle, storybookBaseStyle]) {
