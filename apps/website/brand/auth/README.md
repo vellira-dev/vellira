@@ -21,3 +21,13 @@ not grant trademark rights. GitHub is the byte-identical migration of the existi
 Do not draw a second visible button boundary around this complete artwork. Add
 accessible interaction and external focus affordances with canonical Vellira
 controls. Theme selection chooses the supplied asset, never a CSS inversion.
+
+The website auth surface owns a permanent, narrowly scoped architectural
+exception for the six literal colors in `AuthSurface.module.css` (#1569).
+Apple's transparent outer clear space continues its official white/black
+surface into the common wrapper; its SVG is not cropped or changed. Apple and
+GitHub wrappers match Google's reference border colors and 4/40 corner radius.
+These are external-artwork presentation values, not Vellira semantic UI colors.
+The exact path/line/value exceptions remain checked by Vellira UI enforcement.
+Canonical Button and Tooltip still own interaction; external hover, focus and
+pressed affordances use Vellira tokens. No exception applies to other auth UI.

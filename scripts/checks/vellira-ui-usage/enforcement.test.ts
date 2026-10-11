@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { velliraUiUsageExceptions } from './exceptions';
+
 import { toBlockingVelliraUiUsageReport } from './enforcement';
 import type { VelliraUiUsageReport } from './types';
 
@@ -101,6 +103,14 @@ describe('Vellira UI usage blocking enforcement', () => {
         path.join(root, 'packages'),
         'dir'
       );
+      // The CLI validates every exact architectural exception against source.
+      // Include those real consumers so this isolated fixture tests rejection
+      // of its raw button rather than failing on intentionally missing files.
+      for (const file of new Set(velliraUiUsageExceptions.map((e) => e.path))) {
+        const target = path.join(root, file);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.copyFileSync(path.resolve(file), target);
+      }
       fs.writeFileSync(proofPath, source);
       const result = spawnSync(process.execPath, args, {
         cwd: root,

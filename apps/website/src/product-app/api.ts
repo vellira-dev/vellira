@@ -1,3 +1,4 @@
+import { isOAuthLoginMethod, type OAuthLoginMethod } from './authPreference';
 import { connectionApiPath, type OAuthConnection } from './oauthConnection';
 
 const DEFAULT_API_BASE_URL = 'https://api.vellira.dev';
@@ -183,4 +184,36 @@ export async function completeOAuthConnection(connection: OAuthConnection) {
     }
   );
   if (result.connected !== true) throw new Error('Invalid connection response');
+}
+
+// Server-rendered availability is presentation only. No user cookies or secrets
+// are forwarded; failure leaves email/password usable without a hydration jump.
+export async function getAuthProviders(): Promise<OAuthLoginMethod[]> {
+  try {
+    const response = await fetch(getApiUrl('/v1/auth/providers'), {
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'error',
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!response.ok) return [];
+    const text = await response.text();
+    if (text.length > 1024) return [];
+    const data: unknown = JSON.parse(text);
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      !('providers' in data) ||
+      !Array.isArray(data.providers) ||
+      data.providers.length > 3 ||
+      !data.providers.every(isOAuthLoginMethod)
+    )
+      return [];
+    const configured = new Set(data.providers);
+    return (['google', 'apple', 'github'] as const).filter((provider) =>
+      configured.has(provider)
+    );
+  } catch {
+    return [];
+  }
 }
