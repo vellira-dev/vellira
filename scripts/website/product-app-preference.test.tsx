@@ -245,9 +245,13 @@ it.each([false, true])(
     fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
       target: { value: canaryEmail },
     });
-    fireEvent.change(screen.getByLabelText(/^Password/), {
+    fireEvent.change(screen.getByLabelText(/^Password\s*\*$/), {
       target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
     });
+    if (signup)
+      fireEvent.change(screen.getByLabelText(/^Confirm password/), {
+        target: { value: 'VELLIRA-CANARY-PASSWORD-DO-NOT-LEAK-9e34c2' },
+      });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(
       screen.getByRole('button', {

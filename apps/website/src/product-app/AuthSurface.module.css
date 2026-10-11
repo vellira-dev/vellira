@@ -216,3 +216,94 @@ button.providerGitHubButton {
   min-height: calc(var(--space-12) + var(--space-8));
   gap: var(--space-4);
 }
+
+.secondary {
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.secondary a,
+.secondary .message {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.legalCopy {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.legalCopy a {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.recoveryState,
+.statusCopy,
+.passwordRequirements {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.statusTitle,
+.passwordRequirementsLabel,
+.passwordRequirementsList {
+  margin: 0;
+}
+
+.statusTitle {
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  line-height: 1.3;
+}
+
+.passwordRequirements {
+  gap: var(--space-2);
+}
+
+.passwordRequirementsLabel {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.passwordRequirementsList {
+  display: grid;
+  padding: 0;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.passwordRequirement {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.passwordRequirement[data-met='true'] {
+  color: var(--form-field-helper-text-success-fg);
+}
+
+.passwordRequirementMark {
+  display: inline-grid;
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: 0 0 var(--space-4);
+  place-items: center;
+  font-weight: var(--font-weight-semibold);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

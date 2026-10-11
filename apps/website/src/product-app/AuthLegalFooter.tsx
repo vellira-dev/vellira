@@ -1,7 +1,8 @@
 import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+import styles from './AuthSurface.module.css';
 export function AuthLegalFooter() {
   return (
-    <p>
+    <p className={styles.legalCopy}>
       By continuing, you agree to Vellira&apos;s{' '}
       <DesignSystemLink
         href='/terms'

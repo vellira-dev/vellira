@@ -50,35 +50,61 @@ it.each([
   expect(validNewPassword(password)).toBe(valid);
 });
 it.each(['signup', 'reset'])(
-  '%s rejects a UTF-16-long but scalar-short password before submission',
+  '%s exposes live scalar policy and confirmation before submission',
   async (mode) => {
     render(mode === 'signup' ? <SignupForm /> : <ResetPasswordForm />);
+
     if (mode === 'signup')
       fireEvent.change(screen.getByRole('textbox', { name: 'Email' }), {
         target: { value: 'security-canary@example.invalid' },
       });
-    fireEvent.change(
-      screen.getByLabelText(mode === 'signup' ? /^Password/ : /^New password/),
-      { target: { value: '😀'.repeat(6) } }
-    );
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: mode === 'signup' ? 'Create account' : 'Reset password',
+
+    const passwordLabel =
+      mode === 'signup' ? /^Password\s*\*$/ : /^New password/;
+    const confirmationLabel =
+      mode === 'signup' ? /^Confirm password/ : /^Confirm new password/;
+    const submitName = mode === 'signup' ? 'Create account' : 'Reset password';
+    const submit = screen.getByRole('button', { name: submitName });
+
+    fireEvent.change(screen.getByLabelText(passwordLabel), {
+      target: { value: '😀'.repeat(6) },
+    });
+
+    expect(
+      screen.getByRole('listitem', {
+        name: 'At least 12 characters: not met',
       })
-    );
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'at least 12 characters'
-    );
+    ).toBeVisible();
+    expect(submit).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
-    fireEvent.change(
-      screen.getByLabelText(mode === 'signup' ? /^Password/ : /^New password/),
-      { target: { value: '😀'.repeat(12) } }
-    );
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: mode === 'signup' ? 'Create account' : 'Reset password',
+
+    fireEvent.change(screen.getByLabelText(passwordLabel), {
+      target: { value: '😀'.repeat(12) },
+    });
+    fireEvent.change(screen.getByLabelText(confirmationLabel), {
+      target: { value: 'different-but-long-enough' },
+    });
+
+    expect(
+      screen.getByRole('listitem', {
+        name: 'At least 12 characters: met',
       })
-    );
+    ).toBeVisible();
+    expect(
+      screen.getByRole('listitem', { name: 'Passwords match: not met' })
+    ).toBeVisible();
+    expect(submit).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(confirmationLabel), {
+      target: { value: '😀'.repeat(12) },
+    });
+
+    expect(
+      screen.getByRole('listitem', { name: 'Passwords match: met' })
+    ).toBeVisible();
+    expect(submit).toBeEnabled();
+
+    fireEvent.click(submit);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body[mode === 'signup' ? 'password' : 'newPassword']).toBe(
