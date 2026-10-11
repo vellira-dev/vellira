@@ -14,6 +14,7 @@ import {
 import { Tooltip } from '@vellira-ui/react';
 import { motion, useInView, useReducedMotion } from 'motion/react';
 
+import { PublishedNpmVersion } from '@/components/release/PublishedNpmVersion';
 import type { HomepageProductFacts } from '@/config/homepageProductFacts';
 
 import styles from './ProductionWorkflow.module.css';
@@ -226,11 +227,11 @@ export function ProductionWorkflow({
               <div className={styles.releaseHeader}>
                 <div>
                   <span className={styles.panelEyebrow}>Release summary</span>
-                  <h3>Version in source</h3>
+                  <h3>Latest npm version</h3>
                 </div>
 
                 <span className={styles.releaseVersion}>
-                  {productFacts.stableRelease ?? '—'}
+                  <PublishedNpmVersion />
                 </span>
               </div>
 

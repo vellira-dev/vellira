@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Check, Clock, Package, Success } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
-import type { HomepageProductFacts } from '@/config/homepageProductFacts';
+import { PublishedNpmVersion } from '@/components/release/PublishedNpmVersion';
 
 import styles from './Roadmap.module.css';
 
@@ -197,11 +197,7 @@ const panelItemVariants = {
   },
 };
 
-export function Roadmap({
-  productFacts,
-}: {
-  productFacts: HomepageProductFacts;
-}) {
+export function Roadmap() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -326,17 +322,19 @@ export function Roadmap({
               <div className={styles.releaseHeader}>
                 <div>
                   <span className={styles.panelEyebrow}>Latest release</span>
-                  <h3>Version in source</h3>
+                  <h3>Latest published version</h3>
                   <span className={styles.releaseVersion}>
-                    <code>{productFacts.stableRelease ?? '—'}</code>
-                    <span className={styles.releaseBadge}>Repository</span>
+                    <code>
+                      <PublishedNpmVersion />
+                    </code>
+                    <span className={styles.releaseBadge}>npm</span>
                   </span>
                 </div>
               </div>
 
               <p className={styles.releaseDescription}>
-                This version is read from the repository manifest used to build
-                the site. See GitHub releases for what was actually published.
+                The npm version is verified against all six public packages.
+                This can update independently of the website deployment.
               </p>
 
               <div className={styles.releaseChanges}>

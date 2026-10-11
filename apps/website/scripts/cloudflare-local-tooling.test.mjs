@@ -393,6 +393,58 @@ test('site navigation drains only same-origin requests before teardown', async (
   assert.equal(handlers.size, 0);
 });
 
+test('site navigation excludes only exact read-only public release fetch', async () => {
+  const handlers = new Map();
+  const page = {
+    on(event, handler) {
+      handlers.set(event, handler);
+    },
+    off(event, handler) {
+      if (handlers.get(event) === handler) handlers.delete(event);
+    },
+  };
+  const networkDrain = createSiteNavigationNetworkDrain(
+    page,
+    'https://vellira.test',
+    { quietMs: 0, pollMs: 1 }
+  );
+
+  const auxiliary = {
+    url: () => 'https://vellira.test/api/public-release',
+    method: () => 'GET',
+    resourceType: () => 'fetch',
+    failure: () => null,
+  };
+  // The auxiliary read may have a slow or unavailable external source.
+  // It must not block same-document navigation when still pending.
+  handlers.get('request')(auxiliary);
+  await networkDrain.drain(50);
+
+  const shouldDrain = [
+    ['/api/public-release?x=1', 'GET', 'fetch'],
+    ['/api/public-release', 'POST', 'fetch'],
+    ['/api/public-release', 'GET', 'document'],
+    ['/api/blog-metrics/metrics', 'GET', 'fetch'],
+    ['/', 'GET', 'document'],
+  ];
+  for (const [pathname, method, resourceType] of shouldDrain) {
+    const request = {
+      url: () => `https://vellira.test${pathname}`,
+      method: () => method,
+      resourceType: () => resourceType,
+      failure: () => null,
+    };
+    handlers.get('request')(request);
+    // Each other request is still part of the protected drain.
+    await assert.rejects(networkDrain.drain(3), /Timed out draining/);
+    handlers.get('requestfinished')(request);
+    await networkDrain.drain(50);
+  }
+  assert.deepEqual(networkDrain.failures(), []);
+  networkDrain.dispose();
+  assert.equal(handlers.size, 0);
+});
+
 test('site navigation records local request failures without waiting on external traffic', async () => {
   const handlers = new Map();
   const page = {

@@ -17,7 +17,8 @@
     "src/.vitepress/**/*.ts",
     "src/.vitepress/**/*.tsx",
     "vitest.config.ts",
-    "../../packages/metadata/src/**/*.ts"
+    "../../packages/metadata/src/**/*.ts",
+    "../../scripts/public-release/client.ts"
   ],
   "exclude": ["node_modules", "dist", "src/.vitepress/dist"]
 }

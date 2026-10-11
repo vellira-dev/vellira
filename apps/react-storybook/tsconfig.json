@@ -18,7 +18,8 @@
     "*.ts",
     "*.tsx",
     "*.mts",
-    "*.cts"
+    "*.cts",
+    "../../scripts/public-release/client.ts"
   ],
   "exclude": ["node_modules", "dist", "storybook-static"]
 }
