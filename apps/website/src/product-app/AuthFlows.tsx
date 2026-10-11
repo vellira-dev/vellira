@@ -168,6 +168,7 @@ export function LoginForm({
       <FormField label='Password' required>
         <Input
           type='password'
+          revealPassword
           autoComplete='current-password'
           value={password}
           onValueChange={setPassword}
@@ -323,6 +324,7 @@ export function SignupForm({
       <FormField label='Password' required>
         <Input
           type='password'
+          revealPassword
           autoComplete='new-password'
           value={password}
           onValueChange={setPassword}
@@ -334,6 +336,7 @@ export function SignupForm({
       <FormField label='Confirm password' required>
         <Input
           type='password'
+          revealPassword
           autoComplete='new-password'
           value={confirmPassword}
           onValueChange={setConfirmPassword}
@@ -832,6 +835,7 @@ export function ResetPasswordForm() {
       <FormField label='New password' required>
         <Input
           type='password'
+          revealPassword
           autoComplete='new-password'
           value={newPassword}
           onValueChange={setNewPassword}
@@ -843,6 +847,7 @@ export function ResetPasswordForm() {
       <FormField label='Confirm new password' required>
         <Input
           type='password'
+          revealPassword
           autoComplete='new-password'
           value={confirmPassword}
           onValueChange={setConfirmPassword}
