@@ -97,6 +97,11 @@ export interface CanonicalGapIssueClient {
   createIssue(
     input: CanonicalGapIssueMutationInput
   ): Promise<CanonicalGapManagedIssue>;
+  /** Optional mutation used only by the approved-exception reconciliation path. */
+  closeManagedIssue?(
+    issue: CanonicalGapManagedIssue,
+    note: string
+  ): Promise<void>;
 }
 export class CanonicalGapError extends Error {
   override name = 'CanonicalGapError';

@@ -1,7 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { runVelliraUiUsageCheck } from '../checks/vellira-ui-usage/checker';
+import type { VelliraUiUsageReport } from '../checks/vellira-ui-usage/types';
 import { createGitHubCanonicalGapClient } from './github';
 import {
   applyCanonicalGaps,
@@ -9,6 +12,7 @@ import {
   runCanonicalGapPlan,
 } from './orchestrator';
 import { canonicalGapRequestsFromComponentProductionReport } from './production-adapter';
+import { reconcileCanonicalGapUiExceptions } from './reconcile-exceptions';
 import {
   CANONICAL_GAP_SCHEMA_VERSION,
   CanonicalGapError,
@@ -21,6 +25,8 @@ export type CanonicalGapCliDependencies = {
   root?: string;
   token?: string;
   readFile?: (filePath: string) => string;
+  scanUiUsage?: (root: string) => VelliraUiUsageReport;
+  validateReconciliationAuthority?: (root: string, repo: string) => string;
   createClient?: (
     repository: string,
     token?: string
@@ -51,6 +57,26 @@ export async function runCanonicalGapCli(
       throw new CanonicalGapError(
         'GITHUB_TOKEN is required for canonical gap apply mode.'
       );
+    }
+    if (options.sourceKind === 'approved-exceptions') {
+      const sourceSha = options.apply
+        ? (
+            dependencies.validateReconciliationAuthority ??
+            validateReconciliationAuthority
+          )(root, options.repository)
+        : undefined;
+      const report = (dependencies.scanUiUsage ?? runVelliraUiUsageCheck)(root);
+      const client = createClient(options.repository, token);
+      const result = await reconcileCanonicalGapUiExceptions(report, client, {
+        apply: options.apply,
+        sourceSha,
+      });
+      write(JSON.stringify(result, null, 2));
+      return 0;
+    }
+
+    if (!options.sourcePath) {
+      throw new CanonicalGapError('Missing canonical gap source path.');
     }
     const sourcePath = path.resolve(root, options.sourcePath);
     const raw = JSON.parse(readFile(sourcePath)) as unknown;
@@ -89,12 +115,13 @@ export async function runCanonicalGapCli(
   }
 }
 
-type CliSourceKind = 'spec' | 'report' | 'production-report';
+type CliSourceKind =
+  'spec' | 'report' | 'production-report' | 'approved-exceptions';
 
 type CliOptions = {
   repository: string;
   sourceKind: CliSourceKind;
-  sourcePath: string;
+  sourcePath: string | null;
   apply: boolean;
   launchCritical: boolean;
 };
@@ -122,6 +149,9 @@ function parseArgs(args: readonly string[]): CliOptions {
       assertNoSource(sourceKind);
       sourceKind = 'production-report';
       sourcePath = requiredArgument(args, ++index, '--production-report');
+    } else if (argument === '--reconcile-exceptions') {
+      assertNoSource(sourceKind);
+      sourceKind = 'approved-exceptions';
     } else if (argument === '--apply') {
       apply = true;
     } else if (argument === '--launch-critical') {
@@ -138,9 +168,14 @@ function parseArgs(args: readonly string[]): CliOptions {
       'Canonical gap CLI requires --repo owner/name.'
     );
   }
-  if (!sourceKind || !sourcePath) {
+  if (!sourceKind || (sourceKind !== 'approved-exceptions' && !sourcePath)) {
     throw new CanonicalGapError(
-      'Canonical gap CLI requires exactly one of --spec, --report, or --production-report.'
+      'Canonical gap CLI requires exactly one of --spec, --report, --production-report, or --reconcile-exceptions.'
+    );
+  }
+  if (sourceKind === 'approved-exceptions' && launchCritical) {
+    throw new CanonicalGapError(
+      'Approved-exception reconciliation does not accept launch-critical routing.'
     );
   }
 
@@ -171,6 +206,53 @@ function assertNoSource(sourceKind: CliSourceKind | null) {
       'Canonical gap CLI accepts exactly one source input.'
     );
   }
+}
+
+function validateReconciliationAuthority(
+  root: string,
+  repository: string
+): string {
+  const sha = process.env.GITHUB_SHA ?? '';
+  if (
+    process.env.GITHUB_REPOSITORY !== repository ||
+    process.env.GITHUB_REF !== 'refs/heads/main' ||
+    !['push', 'workflow_dispatch'].includes(
+      process.env.GITHUB_EVENT_NAME ?? ''
+    ) ||
+    !/^[0-9a-f]{40}$/.test(sha)
+  ) {
+    throw new CanonicalGapError(
+      'Exception reconciliation writes require a GitHub main-branch event with exact repository identity.'
+    );
+  }
+
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: root,
+    encoding: 'utf8',
+  }).trim();
+  const modified = execFileSync(
+    'git',
+    ['status', '--porcelain', '--untracked-files=no'],
+    { cwd: root, encoding: 'utf8' }
+  ).trim();
+  if (head !== sha || modified.length !== 0) {
+    throw new CanonicalGapError(
+      'Exception reconciliation refused a stale or dirty source checkout.'
+    );
+  }
+  // The triggering push can become obsolete while dependencies are installing.
+  // Confirm current remote main rather than trusting only the workflow event SHA.
+  const remote = execFileSync(
+    'git',
+    ['ls-remote', '--exit-code', 'origin', 'refs/heads/main'],
+    { cwd: root, encoding: 'utf8', timeout: 15_000 }
+  ).trim();
+  if (remote !== sha + '\trefs/heads/main') {
+    throw new CanonicalGapError(
+      'Exception reconciliation refused a superseded main revision.'
+    );
+  }
+  return sha;
 }
 
 const currentModule = pathToFileURL(process.argv[1] ?? '').href;
