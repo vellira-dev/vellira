@@ -7,6 +7,7 @@ const storybook = 'apps/react-storybook/scripts';
 const baseline = [
   'cloudflare-browser-diagnostics.mjs',
   'cloudflare-browser-diagnostics.test.mjs',
+  'cloudflare-public-release-smoke-policy.mjs',
   'cloudflare-blog-metrics-smoke-policy.mjs',
   'cloudflare-blog-metrics-smoke-policy.test.mjs',
   'cloudflare-navigation-soak.mjs',
@@ -50,6 +51,7 @@ export function cloudflareCandidateCommand(root, mode) {
       process.execPath,
       '--test',
       `${storybook}/cloudflare-blog-metrics-smoke-policy.test.mjs`,
+      `${storybook}/cloudflare-browser-diagnostics.test.mjs`,
       ...featurePolicies.filter((name) => name.endsWith('.test.mjs')),
     ];
   }
