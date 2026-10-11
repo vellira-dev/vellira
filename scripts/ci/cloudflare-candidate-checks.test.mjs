@@ -56,13 +56,13 @@ test('public npm release policy is required when imported, and its browser diagn
 
   fs.writeFileSync(
     path.join(root, `${directory}/cloudflare-website-smoke.mjs`),
-    "import './cloudflare-public-release-smoke-policy.mjs';\\n"
+    "import './cloudflare-public-release-smoke-policy.mjs';\n"
   );
 
   for (const mode of ['lint', 'test']) {
     assert.throws(
       () => cloudflareCandidateCommand(root, mode),
-      /Required Cloudflare source check is missing:.*cloudflare-public-release-smoke-policy\\.mjs/
+      /Required Cloudflare source check is missing:.*cloudflare-public-release-smoke-policy\.mjs/
     );
   }
 
