@@ -1,2 +1,2 @@
 export const SITE_DESCRIPTION =
-  'Accessible React and React Native design system with shared tokens, theming, TypeScript APIs, and Storybook.';
+  'Open-source React and React Native components with shared design tokens, documented APIs and public quality checks. Build more consistent interfaces.';
