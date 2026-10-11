@@ -43,7 +43,11 @@ const COMMIT_SHA = /^[0-9a-f]{40}$/;
 export async function reconcileCanonicalGapUiExceptions(
   report: VelliraUiUsageReport,
   client: CanonicalGapIssueClient,
-  options: { apply: boolean; sourceSha?: string }
+  options: {
+    apply: boolean;
+    sourceSha?: string;
+    assertCurrentSource?: () => string;
+  }
 ): Promise<CanonicalGapExceptionReconcileResult> {
   assertCompleteUiReport(report);
   if (
@@ -107,6 +111,14 @@ export async function reconcileCanonicalGapUiExceptions(
   const results: CanonicalGapExceptionReconcileResult['results'][number][] = [];
   for (const { issue, exception } of matches) {
     if (options.apply) {
+      if (
+        options.assertCurrentSource &&
+        options.assertCurrentSource() !== options.sourceSha
+      ) {
+        throw new CanonicalGapError(
+          'Exception reconciliation refused to mutate after main revision drift.'
+        );
+      }
       const note = [
         '## Canonical gap resolution — approved UI exception',
         '',
