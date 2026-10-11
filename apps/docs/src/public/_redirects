@@ -1,0 +1,3 @@
+# Legacy documentation routes kept as permanent redirects to canonical pages.
+/getting-started /start/getting-started 301
+/getting-started/ /start/getting-started 301

@@ -20,6 +20,7 @@ export type ButtonPaletteConfig = {
   hoverBg: string;
   hoverFg: string;
   hoverBorder?: string;
+  linkHoverFg?: string;
 
   pressedBg: string;
   pressedFg: string;
@@ -44,6 +45,7 @@ export const createButtonIntentPalette = ({
   hoverBg,
   hoverFg,
   hoverBorder = border,
+  linkHoverFg = hoverFg,
   pressedBg,
   pressedFg,
   pressedBorder = border,
@@ -116,7 +118,7 @@ export const createButtonIntentPalette = ({
       },
       hover: {
         ...transparent,
-        fg: hoverFg,
+        fg: linkHoverFg,
       },
       pressed: {
         ...transparent,

@@ -1,6 +1,6 @@
 ---
 title: Vellira Icons
-description: Cross-platform icon library for React and React Native with static and animated icons.
+description: Explore Vellira's React and React Native icon library with static and animated icons, accessibility guidance, sizing, tree shaking, and usage examples.
 ---
 
 # Vellira Icons

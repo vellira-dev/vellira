@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { qualityFindingSourcePaths } from './finding-path';
 
 import type { ComponentCompletenessResult } from '../checks/component-completeness/types';
 import type { ComponentQualityRunResult } from '../checks/component-quality/types';
@@ -396,42 +397,7 @@ function completenessStageFromResults(
   };
 }
 
-function qualityFindingPath(
-  evidence: readonly string[] | undefined
-): string | undefined {
-  for (const item of evidence ?? []) {
-    const rawCandidate = item.split(' — ', 1)[0]?.trim();
-
-    if (!rawCandidate) {
-      continue;
-    }
-
-    const withoutLocation = rawCandidate.replace(/:\d+(?::\d+)?$/, '');
-
-    if (/\s/.test(withoutLocation) || withoutLocation.includes(':')) {
-      continue;
-    }
-    const normalized = path.posix.normalize(
-      withoutLocation.replaceAll('\\', '/')
-    );
-
-    if (
-      normalized === '..' ||
-      normalized.startsWith('../') ||
-      normalized.startsWith('/') ||
-      !normalized.includes('/') ||
-      !/\.[a-z0-9]+$/i.test(normalized)
-    ) {
-      continue;
-    }
-
-    return normalized;
-  }
-
-  return undefined;
-}
-
-function qualityStageFromResult(
+export function qualityStageFromResult(
   input: ComponentProductionInputV1,
   result: ComponentQualityRunResult
 ): ComponentProductionStageResult {
@@ -465,34 +431,36 @@ function qualityStageFromResult(
         return [];
       }
 
-      const findingPath = qualityFindingPath(finding.evidence);
+      const ownedPaths = qualityFindingSourcePaths(
+        finding.ruleId,
+        finding.evidence
+      );
 
-      return [
-        {
-          id: [
-            'quality',
-            normalizeId(component.componentName),
-            finding.platform ?? 'shared',
-            finding.ruleId,
-          ].join(':'),
-          stage: 'quality',
-          severity: finding.status === 'fail' ? 'blocking' : 'warning',
-          message:
-            finding.message ??
-            `${component.componentName} quality rule "${finding.ruleId}" returned ${finding.status}.`,
-          ...(finding.platform
-            ? {
-                platform: finding.platform,
-              }
-            : {}),
-          ...(findingPath
-            ? {
-                path: findingPath,
-              }
-            : {}),
-          ruleId: finding.ruleId,
-        },
-      ];
+      return ownedPaths.map((findingPath) => ({
+        id: [
+          'quality',
+          normalizeId(component.componentName),
+          finding.platform ?? 'shared',
+          finding.ruleId,
+          ...(ownedPaths.length > 1 ? [findingPath] : []),
+        ].join(':'),
+        stage: 'quality',
+        severity: finding.status === 'fail' ? 'blocking' : 'warning',
+        message:
+          finding.message ??
+          `${component.componentName} quality rule "${finding.ruleId}" returned ${finding.status}.`,
+        ...(finding.platform
+          ? {
+              platform: finding.platform,
+            }
+          : {}),
+        ...(findingPath
+          ? {
+              path: findingPath,
+            }
+          : {}),
+        ruleId: finding.ruleId,
+      }));
     }
   );
 

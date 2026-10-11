@@ -1,80 +1,55 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import postcss from 'postcss';
 import { describe, it } from 'vitest';
 
-const stylesheet = postcss.parse(
-  readFileSync(
-    path.resolve(
-      process.cwd(),
+const root = process.cwd();
+const read = (relativePath: string) =>
+  readFileSync(path.resolve(root, relativePath), 'utf8');
+
+describe('Blog design-system link contract', () => {
+  it('renders MDX prose links through Vellira UI', () => {
+    const mdxComponents = read('apps/website/mdx-components.tsx');
+    const bridge = read('apps/website/src/blog/ui/BlogDesignSystemLink.tsx');
+    const sharedLink = read(
+      'apps/website/src/components/navigation/DesignSystemLink.tsx'
+    );
+
+    assert.match(mdxComponents, /a: BlogDesignSystemLink/u);
+    assert.match(bridge, /DesignSystemLink as BlogDesignSystemLink/u);
+    assert.match(sharedLink, /from '@vellira-ui\/react'/u);
+    assert.match(sharedLink, /appearance = 'link'/u);
+    assert.match(sharedLink, /<Button/u);
+  });
+
+  it('does not re-implement text-link interaction states in website CSS', () => {
+    const articleStyles = read(
       'apps/website/src/blog/ui/BlogExperience.module.css'
-    ),
-    'utf8'
-  )
-);
+    );
+    const newsletterStyles = read(
+      'apps/website/src/blog/ui/BlogNewsletterSignup.module.css'
+    );
 
-function declarations(selector: string): Record<string, string> {
-  const values: Record<string, string> = {};
-  stylesheet.walkRules((rule) => {
-    if (rule.parent?.type === 'root' && rule.selectors.includes(selector)) {
-      rule.walkDecls((declaration) => {
-        assert.equal(Boolean(declaration.important), false);
-        values[declaration.prop] = declaration.value;
-      });
+    assert.doesNotMatch(articleStyles, /\.articleBody a/u);
+    assert.doesNotMatch(newsletterStyles, /\.privacyNote a/u);
+  });
+
+  it('routes article navigation and share links through Vellira UI', () => {
+    const sources = [
+      'apps/website/src/blog/ui/BlogArticleView.tsx',
+      'apps/website/src/blog/ui/BlogContinueReading.tsx',
+      'apps/website/src/blog/ui/BlogIndex.tsx',
+      'apps/website/src/blog/ui/NewsletterSignupForm.tsx',
+    ];
+
+    for (const relativePath of sources) {
+      const source = read(relativePath);
+      assert.doesNotMatch(source, /from 'next\/link'/u);
+      assert.match(source, /BlogDesignSystemLink/u);
     }
-  });
-  return values;
-}
 
-describe('Blog prose link interaction states', () => {
-  it('uses canonical semantic colors instead of a fixed palette color', () => {
-    assert.equal(declarations('.articleBody a').color, 'var(--text-brand)');
-    assert.equal(
-      declarations('.articleBody a:hover').color,
-      'var(--text-interactive-hover)'
-    );
-    assert.equal(
-      declarations('.articleBody a:active').color,
-      'var(--text-interactive-pressed)'
-    );
-  });
-
-  it('underlines only on hover or keyboard focus', () => {
-    const normal = declarations('.articleBody a');
-    const hover = declarations('.articleBody a:hover');
-    const focus = declarations('.articleBody a:focus-visible');
-    assert.equal(normal['text-decoration-line'], 'none');
-    assert.equal(hover['text-decoration-line'], 'underline');
-    assert.equal(focus['text-decoration-line'], 'underline');
-    assert.equal(normal['text-decoration-thickness'], '1px');
-    assert.equal(hover['text-decoration-thickness'], '0.5px');
-    assert.equal(focus['text-decoration-thickness'], '0.5px');
-    assert.equal(focus.color, hover.color);
-    assert.equal(
-      focus.outline,
-      'var(--focus-ring-width) solid var(--focus-ring-color)'
-    );
-  });
-
-  it('removes transition motion without removing interactive feedback', () => {
-    let transition: string | undefined;
-    stylesheet.walkAtRules('media', (media) => {
-      if (media.params !== '(prefers-reduced-motion: reduce)') {
-        return;
-      }
-      media.walkRules((rule) => {
-        if (rule.selectors.includes('.articleBody a')) {
-          rule.walkDecls('transition', (declaration) => {
-            transition = declaration.value;
-          });
-        }
-      });
-    });
-    assert.equal(transition, 'none');
-    assert.notEqual(
-      declarations('.articleBody a:hover').color,
-      declarations('.articleBody a').color
-    );
+    const actions = read('apps/website/src/blog/ui/BlogArticleActions.tsx');
+    assert.doesNotMatch(actions, /<a\b/u);
+    assert.match(actions, /<Button[\s\S]*href=\{link\.href\}/u);
   });
 });

@@ -72,3 +72,20 @@ Examples:
 - Web-only overlay positioning/focus props are not exposed on React Native when unsupported.
 - React Native presentation/virtualization props remain native-specific where the platform requires them.
 - Platform-specific props must not appear in generated demos, usage code, examples, API sections, or playground controls for unsupported platforms.
+
+## Required preview props
+
+Required scalar props in generated catalog previews and examples are explicitly
+materialized from configured metadata defaults when the preview has not supplied
+them. Platform defaults take precedence over shared defaults; explicit JSX props
+and children retain precedence. Optional defaults are not copied into previews.
+This does not change the component API or imply that callers may omit required
+props. Missing defaults and complex values still require explicit preview metadata;
+the generator does not invent sample data or callbacks. Production readiness also
+requires the real website consumer typecheck, beyond projection freshness.
+
+When the production validator runs from a separately pinned tooling checkout,
+its fixed read-only projection check and audit commands execute that checkout's
+generator against the candidate working directory. Package builds and consumer
+typechecks still execute the exact candidate source. No tooling files are copied
+into the candidate, and ordinary same-checkout validation is unchanged.

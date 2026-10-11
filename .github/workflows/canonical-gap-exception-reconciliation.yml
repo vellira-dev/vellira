@@ -1,0 +1,54 @@
+name: Canonical Gap Approved Exception Reconciliation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/checks/vellira-ui-usage/exceptions.ts'
+      - 'scripts/canonical-gap/**'
+      - '.github/workflows/canonical-gap-exception-reconciliation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: canonical-gap-exceptions-main
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Reconcile approved canonical UI exceptions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Preview approved-exception reconciliation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          pnpm exec tsx scripts/canonical-gap/cli.ts
+          --repo vellira-dev/vellira --reconcile-exceptions
+
+      - name: Apply bounded reconciliation on exact main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          pnpm exec tsx scripts/canonical-gap/cli.ts
+          --repo vellira-dev/vellira --reconcile-exceptions --apply

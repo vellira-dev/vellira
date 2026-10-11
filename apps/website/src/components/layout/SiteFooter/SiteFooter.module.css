@@ -302,6 +302,13 @@
   gap: var(--space-3);
 }
 
+.legalLinks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
 @media (width <= 980px) {
   .container {
     grid-template-columns: 1fr;

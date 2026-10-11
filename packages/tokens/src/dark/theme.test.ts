@@ -156,3 +156,38 @@ describe('high contrast theme', () => {
     );
   });
 });
+
+describe('neutral outline button borders', () => {
+  it('uses semantic border progression in light and dark themes', () => {
+    for (const theme of [lightTheme, darkTheme]) {
+      expect(theme.components.button.neutral.outline.default.border).toBe(
+        theme.semantic.border.muted
+      );
+      expect(theme.components.button.neutral.outline.hover.border).toBe(
+        theme.semantic.border.default
+      );
+      expect(theme.components.button.neutral.outline.pressed.border).toBe(
+        theme.semantic.border.strong
+      );
+    }
+  });
+
+  it('keeps the high-contrast neutral outline contract intentionally strong', () => {
+    expect(
+      highContrastTheme.components.button.neutral.outline.default.border
+    ).toBe(highContrastTheme.colors.grayBlue[200]);
+    expect(
+      highContrastTheme.components.button.neutral.outline.hover.border
+    ).toBe(highContrastTheme.colors.gray[200]);
+  });
+});
+
+describe('button link interaction', () => {
+  it('keeps primary link hover visibly distinct from the default state', () => {
+    for (const theme of [lightTheme, darkTheme]) {
+      expect(theme.components.button.primary.link.hover.fg).not.toBe(
+        theme.components.button.primary.link.default.fg
+      );
+    }
+  });
+});

@@ -186,38 +186,11 @@
 .cardLink {
   position: relative;
   z-index: 1;
-  display: inline-flex;
-  align-items: center;
   width: fit-content;
   min-height: 44px;
   margin-top: auto;
-  color: var(--text-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  text-decoration: none;
-  gap: var(--space-2);
-  transition: color 160ms ease;
-}
-
-.cardLink::after {
-  content: '→';
-  transition: transform 160ms ease;
-}
-
-.cardLink:hover {
-  color: var(--text-brand);
-}
-
-.cardLink:hover::after {
-  transform: translateX(4px);
-}
-
-.cardLink:focus-visible,
-.backLink:focus-visible,
-.articleBody a:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--space-1);
-  border-radius: var(--radius-sm);
 }
 
 .emptyState {
@@ -262,24 +235,10 @@
 }
 
 .backLink {
-  display: inline-flex;
-  align-items: center;
   width: fit-content;
   min-height: 40px;
-  color: var(--text-secondary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  text-decoration: none;
-  gap: var(--space-2);
-  transition: color 160ms ease;
-}
-
-.backLink::before {
-  content: '←';
-}
-
-.backLink:hover {
-  color: var(--text-primary);
 }
 
 .articleHeader h1 {
@@ -352,25 +311,6 @@
 
 .articleBody li + li {
   margin-top: 0.45em;
-}
-
-.articleBody a {
-  color: var(--text-brand);
-  text-decoration-line: none;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  transition: color 160ms ease;
-}
-
-.articleBody a:hover,
-.articleBody a:focus-visible {
-  color: var(--text-interactive-hover);
-  text-decoration-line: underline;
-  text-decoration-thickness: 0.5px;
-}
-
-.articleBody a:active {
-  color: var(--text-interactive-pressed);
 }
 
 .articleBody strong {
@@ -494,9 +434,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .articleCard,
-  .articleCard::before,
-  .cardLink::after,
-  .articleBody a {
+  .articleCard::before {
     transition: none;
   }
 

@@ -68,7 +68,7 @@ jobs:
           node scripts/ci/release-sync-contract.mjs \
             --base "$base_sha" \
             --head "$CANDIDATE_SHA" \
-            --verify-merged
+            --classify-merged
 
   candidate:
     name: Qualify immutable production candidate
@@ -315,6 +315,9 @@ jobs:
       - name: Verify cache, identity, and immutable archive contracts
         run: pnpm test:cloudflare-cache
 
+      - name: Install Chromium for browser smoke
+        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
+
       - name: Verify actual OpenNext runtime before remote archive or activation
         run: |
           node apps/website/scripts/cloudflare-populate-local-cache.mjs wrangler.production.jsonc
@@ -442,18 +445,25 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
+      - name: Smoke test production auth provider discovery
+        run: >-
+          pnpm --filter @vellira-ui/react-storybook exec node
+          scripts/cloudflare-auth-provider-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
+          AUTH_API_URL: https://api.vellira.dev
+
       - name: Verify deployed identities, freshness and immutable bytes
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
 
-      - name: Install Chromium for browser smoke
-        run: pnpm --filter @vellira-ui/react-storybook exec playwright install chromium
-
       - name: Test browser forensic diagnostics
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
+          scripts/cloudflare-edge-recovery.test.mjs
+          scripts/cloudflare-client-navigation-recovery.test.mjs
 
       - name: Verify production component explorer browser geometry
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
@@ -476,7 +486,7 @@ jobs:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production static chunk integrity
-        if: ${{ !cancelled() && steps.worker-deploy.outcome == 'success' }}
+        if: ${{ success() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
@@ -491,12 +501,15 @@ jobs:
           retention-days: 7
           include-hidden-files: true
           path: |
+            apps/react-storybook/test-results/cloudflare-website-smoke/
+            apps/react-storybook/test-results/cloudflare-auth-provider-smoke/
             apps/react-storybook/test-results/cloudflare-soak/
             apps/react-storybook/test-results/cloudflare-migration/*/evidence.json
             apps/react-storybook/test-results/cloudflare-migration/summary.json
             apps/react-storybook/test-results/cloudflare-migration/*.log
             apps/website/.open-next/asset-audit*.json
             apps/website/.open-next/archive-evidence.json
+            apps/website/.open-next/route-cache-evidence.json
             apps/website/.open-next/vellira-build.json
             apps/website/.open-next/runtime-contract.json
             apps/website/.open-next/local-runtime-contract.json

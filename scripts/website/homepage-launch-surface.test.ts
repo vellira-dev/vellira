@@ -52,6 +52,11 @@ describe('homepage launch positioning and navigation', () => {
     );
   });
 
+  it('does not expose unfinished account access from the public header', () => {
+    expect(headerSource).not.toContain("href='/login'");
+    expect(headerSource).not.toContain('Sign in');
+  });
+
   it('keeps primary public navigation on canonical destinations', () => {
     expect(navigationSource).toContain("href: '/components'");
     expect(navigationSource).toContain("href: 'https://docs.vellira.dev'");

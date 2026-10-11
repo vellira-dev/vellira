@@ -33,6 +33,7 @@ const primary = createButtonPalette({
   hoverFg: colors.primary[800],
   hoverBg: colors.primary[100],
   hoverBorder: colors.primary[500],
+  linkHoverFg: colors.primary[500],
 
   pressedFg: colors.primary[900],
   pressedBg: colors.primary[200],
@@ -60,15 +61,15 @@ const neutral = createButtonPalette({
   },
   fg: colors.vellira[600],
   bg: colors.vellira[100],
-  border: colors.vellira[400],
+  border: border.muted,
 
   hoverFg: colors.vellira[700],
   hoverBg: colors.vellira[200],
-  hoverBorder: colors.vellira[500],
+  hoverBorder: border.default,
 
   pressedFg: colors.vellira[800],
   pressedBg: colors.vellira[300],
-  pressedBorder: colors.vellira[600],
+  pressedBorder: border.strong,
 });
 
 const success = createButtonPalette({

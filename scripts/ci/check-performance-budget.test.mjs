@@ -21,6 +21,7 @@ import {
 } from './run-affected-workspaces.mjs';
 import {
   RELEASE_SYNC_MANIFESTS,
+  classifyMergedReleaseSyncShape,
   isReleaseSyncFileSet,
   verifyMergedReleaseSyncDocuments,
   verifyReleaseSyncDocuments,
@@ -139,6 +140,56 @@ test('release-sync semantic contract permits version-only bot changes', () => {
         author: 'vellira-release-sync[bot]',
       }),
     /only permits the version field/
+  );
+});
+
+test('merged release-sync classifier falls back to full deployment for security merge commits', () => {
+  const baseSha = '1'.repeat(40);
+  const releaseParent = '2'.repeat(40);
+
+  assert.deepEqual(
+    classifyMergedReleaseSyncShape({
+      baseSha,
+      parents: [baseSha, releaseParent],
+      files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml'],
+    }),
+    {
+      releaseSync: false,
+      reason: 'non-linear-or-base-mismatch',
+      files: ['pnpm-lock.yaml', 'pnpm-workspace.yaml'],
+    }
+  );
+});
+
+test('merged release-sync classifier admits only the exact linear manifest set', () => {
+  const baseSha = '1'.repeat(40);
+
+  assert.deepEqual(
+    classifyMergedReleaseSyncShape({
+      baseSha,
+      parents: [baseSha],
+      files: RELEASE_SYNC_MANIFESTS,
+    }),
+    {
+      releaseSync: true,
+      reason: 'candidate',
+      files: [...RELEASE_SYNC_MANIFESTS].sort((left, right) =>
+        left.localeCompare(right)
+      ),
+    }
+  );
+
+  assert.deepEqual(
+    classifyMergedReleaseSyncShape({
+      baseSha,
+      parents: [baseSha],
+      files: ['pnpm-lock.yaml'],
+    }),
+    {
+      releaseSync: false,
+      reason: 'file-set-mismatch',
+      files: ['pnpm-lock.yaml'],
+    }
   );
 });
 

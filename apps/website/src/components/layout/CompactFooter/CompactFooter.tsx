@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+
 import styles from './CompactFooter.module.css';
 
 export function CompactFooter() {
@@ -13,6 +15,8 @@ export function CompactFooter() {
         <Link href='https://storybook.vellira.dev'>Storybook</Link>
 
         <Link href='https://github.com/vellira-dev/vellira'>GitHub</Link>
+
+        <DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>
       </nav>
     </footer>
   );

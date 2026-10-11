@@ -60,7 +60,7 @@ export function AiUiConsistencyDiagram({
           <div className={styles.iconFrame}>
             <Image
               src={aiVisual}
-              alt=''
+              alt='AI generating interface variations'
               className={styles.stageVisual}
               sizes='54px'
             />
@@ -77,7 +77,7 @@ export function AiUiConsistencyDiagram({
           <div className={styles.iconFrame}>
             <Image
               src={componentsVisual}
-              alt=''
+              alt='Growing set of UI components and changes'
               className={styles.stageVisual}
               sizes='54px'
             />
@@ -95,7 +95,7 @@ export function AiUiConsistencyDiagram({
           <div className={styles.iconFrame}>
             <Image
               src={coordinationVisual}
-              alt=''
+              alt='Coordination pressure across UI work'
               className={styles.stageVisual}
               sizes='54px'
             />
@@ -125,7 +125,7 @@ export function AiUiConsistencyDiagram({
         <div className={styles.hub}>
           <Image
             src='/brand/icons/logo-icon-gradient.svg'
-            alt=''
+            alt='Vellira logo'
             width={50}
             height={50}
             className={styles.logoMark}
@@ -139,7 +139,7 @@ export function AiUiConsistencyDiagram({
           <div className={styles.iconFrame}>
             <Image
               src={coherentSystemVisual}
-              alt=''
+              alt='One coherent cross-platform UI system'
               className={styles.stageVisual}
               sizes='54px'
             />

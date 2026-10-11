@@ -1,5 +1,12 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { chromium } from '@playwright/test';
+import { boundedBrowserRead } from './cloudflare-browser-diagnostics.mjs';
 import { captureBrowserJson } from './cloudflare-browser-json.mjs';
+import {
+  destinationEdgeFailures,
+  runRecoverableClientNavigation,
+} from './cloudflare-client-navigation-recovery.mjs';
 
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
@@ -14,6 +21,15 @@ import {
   reconcileHandledBlogMetrics404ConsoleDiagnostics,
   resolveBlogMetricsPublicationMode,
 } from './cloudflare-blog-metrics-smoke-policy.mjs';
+import {
+  cloudflareEdgeReplayHeaders,
+  readCloudflareDiagnosticGet,
+  recoverCloudflareEdgeFailure,
+  readCloudflarePlatformFailure,
+  isBrowserResource5xxConsoleError,
+  isCloudflareEdgeGeneratedGet5xx,
+  reconcileHandledCloudflareEdgeConsoleDiagnostics,
+} from './cloudflare-edge-recovery.mjs';
 
 const baseUrl = process.env.WEBSITE_URL;
 const metricsApiBaseUrl = 'https://api.vellira.dev';
@@ -23,6 +39,11 @@ const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
 );
 const aggregateMetricsMaxAttempts = 8;
 const aggregateMetricsRetryDelayMs = 12_000;
+const edgeRecoveryMaxAttempts = 3;
+const edgeRecoveryDelayMs = 1_500;
+const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
+
+if (!expectedBuildId) throw new Error('VELLIRA_BUILD_ID is required.');
 
 if (!baseUrl) {
   throw new Error('WEBSITE_URL is required.');
@@ -34,11 +55,17 @@ const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
 const diagnostics = [];
+const browserEvents = [];
+const artifactDirectory = path.resolve('test-results/cloudflare-website-smoke');
+await fs.mkdir(artifactDirectory, { recursive: true });
 const criticalDiagnostics = [];
 const vercelRuntimeRequests = [];
 const directMetricRequests = [];
 const blogMetrics404Responses = [];
 const deferredResource404ConsoleDiagnostics = [];
+const deferredResource5xxConsoleDiagnostics = [];
+const cloudflareEdgeGetFailures = [];
+let pageSequence = 0;
 let acceptedStagingCatalogLag = false;
 let acceptedStagingCandidateOnlySlugs = [];
 
@@ -105,8 +132,97 @@ function markProvenStagingCatalogLag404sHandled(candidateOnlySlugs) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function edgeFailuresSince(index) {
+  return cloudflareEdgeGetFailures
+    .slice(index)
+    .filter((failure) => !failure.handled);
+}
+
+async function recoverCloudflareEdgeFailures(failures, stage) {
+  if (failures.length === 0) return false;
+
+  for (const failure of failures) {
+    const result = await recoverCloudflareEdgeFailure(failure, {
+      expectedBuildId,
+    });
+    diagnostics.push(
+      `edge-recovery during ${stage}: ${failure.url} ${JSON.stringify(result)}`
+    );
+    if (!result.recovered) return false;
+    console.log(
+      `Recovered transient Cloudflare edge GET during ${stage}: ${failure.url} (attempts ${result.attempts})`
+    );
+  }
+
+  return true;
+}
+
+function reconcileCloudflareEdgeDiagnostics() {
+  for (const failure of cloudflareEdgeGetFailures) {
+    if (!failure.handled && !criticalDiagnostics.includes(failure.diagnostic)) {
+      criticalDiagnostics.push(failure.diagnostic);
+    }
+  }
+
+  const consoleDiagnostics = reconcileHandledCloudflareEdgeConsoleDiagnostics(
+    deferredResource5xxConsoleDiagnostics,
+    cloudflareEdgeGetFailures.filter((failure) => failure.handled).length
+  );
+  criticalDiagnostics.push(...consoleDiagnostics.critical);
+}
+
 function attachPageDiagnostics(page) {
+  const pageId = `page-${++pageSequence}`;
+  const requestIds = new WeakMap();
+  let requestSequence = 0;
+  const requestId = (request) => {
+    if (!requestIds.has(request))
+      requestIds.set(request, `${pageId}-${++requestSequence}`);
+    return requestIds.get(request);
+  };
+  void page
+    .context()
+    .newCDPSession(page)
+    .then(async (cdp) => {
+      cdp.on('Network.requestWillBeSent', (event) => {
+        if (sameOrigin(event.request.url))
+          browserEvents.push({
+            kind: 'initiator',
+            at: Date.now(),
+            pageId,
+            requestId: event.requestId,
+            url: event.request.url,
+            method: event.request.method,
+            loaderId: event.loaderId,
+            resourceType: event.type,
+            initiator: event.initiator,
+          });
+      });
+      await cdp.send('Network.enable');
+    })
+    .catch((error) =>
+      browserEvents.push({
+        kind: 'cdp-unavailable',
+        pageId,
+        error: String(error),
+      })
+    );
   page.on('request', (request) => {
+    if (sameOrigin(request.url()))
+      browserEvents.push({
+        kind: 'request',
+        pageId,
+        requestId: requestId(request),
+        resourceType: request.resourceType(),
+        at: Date.now(),
+        page: page.url(),
+        url: request.url(),
+        method: request.method(),
+      });
     if (isObsoleteVercelRuntimeRequest(request.url())) {
       const diagnostic = `obsolete Vercel runtime request: ${request.url()}`;
       diagnostics.push(diagnostic);
@@ -135,6 +251,10 @@ function attachPageDiagnostics(page) {
       deferredResource404ConsoleDiagnostics.push(diagnostic);
       return;
     }
+    if (isBrowserResource5xxConsoleError(message.text())) {
+      deferredResource5xxConsoleDiagnostics.push(diagnostic);
+      return;
+    }
     criticalDiagnostics.push(diagnostic);
   });
 
@@ -145,6 +265,18 @@ function attachPageDiagnostics(page) {
   });
 
   page.on('response', (response) => {
+    if (sameOrigin(response.url()))
+      browserEvents.push({
+        kind: 'response',
+        pageId,
+        requestId: requestId(response.request()),
+        resourceType: response.request().resourceType(),
+        at: Date.now(),
+        page: page.url(),
+        url: response.url(),
+        method: response.request().method(),
+        status: response.status(),
+      });
     if (response.status() < 400) {
       return;
     }
@@ -153,6 +285,29 @@ function attachPageDiagnostics(page) {
       `response: ${response.status()} ${response.request().method()} ` +
       response.url();
     diagnostics.push(diagnostic);
+
+    const responseHeaders = response.headers();
+    if (
+      sameOrigin(response.url()) &&
+      !new URL(response.url()).pathname.startsWith('/_next/static/') &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: responseHeaders,
+      })
+    ) {
+      cloudflareEdgeGetFailures.push({
+        diagnostic,
+        url: response.url(),
+        status: response.status(),
+        method: response.request().method(),
+        headers: responseHeaders,
+        platformFailure: readCloudflarePlatformFailure(response),
+        requestHeaders: response.request().headers(),
+        handled: false,
+      });
+      return;
+    }
 
     if (response.status() === 404) {
       const method = response.request().method();
@@ -188,6 +343,17 @@ function attachPageDiagnostics(page) {
   });
 
   page.on('requestfailed', (request) => {
+    if (sameOrigin(request.url()))
+      browserEvents.push({
+        kind: 'requestfailed',
+        pageId,
+        requestId: requestId(request),
+        at: Date.now(),
+        page: page.url(),
+        url: request.url(),
+        method: request.method(),
+        error: request.failure()?.errorText,
+      });
     if (!sameOrigin(request.url()) || isExpectedNavigationAbort(request)) {
       return;
     }
@@ -203,10 +369,39 @@ function attachPageDiagnostics(page) {
 attachPageDiagnostics(page);
 
 async function goto(path) {
-  await page.goto(`${baseUrl}${path}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
+  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
+    const edgeStart = cloudflareEdgeGetFailures.length;
+    const response = await page.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    if (response && response.status() < 400) return response;
+
+    const failures = destinationEdgeFailures(
+      edgeFailuresSince(edgeStart),
+      path
+    );
+    if (
+      response &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: response.headers(),
+      }) &&
+      attempt < edgeRecoveryMaxAttempts &&
+      (await recoverCloudflareEdgeFailures(failures, `navigation ${path}`))
+    ) {
+      await sleep(edgeRecoveryDelayMs);
+      continue;
+    }
+
+    throw new Error(
+      `Document navigation failed for ${path}: HTTP ${response?.status() ?? 'no-response'}`
+    );
+  }
+
+  throw new Error(`Document navigation did not recover for ${path}.`);
 }
 
 async function loadHomePage() {
@@ -231,36 +426,30 @@ async function probeBlogAggregateResponse(url) {
   // expose the non-2xx status before the streamed body finishes, which made the
   // deployment smoke wait until the job-level timeout. APIRequestContext gives
   // this diagnostic read an explicit bound instead.
-  const response = await context.request.get(url, {
-    failOnStatusCode: false,
-    headers: { 'Cache-Control': 'no-cache' },
-    timeout: 10_000,
-  });
-
-  try {
-    return {
+  return readCloudflareDiagnosticGet(
+    { url, expectedBuildId, retryEdge5xx: true },
+    async (response) => ({
       status: response.status(),
       errorCode: parseBlogMetricsErrorCode(await readJsonResponse(response)),
-    };
-  } finally {
-    await response.dispose();
-  }
+    })
+  );
 }
 
 async function fetchBlogPublicationSlugs(url, label) {
-  const response = await context.request.get(url, {
-    failOnStatusCode: false,
-    headers: { 'Cache-Control': 'no-cache' },
-    timeout: 10_000,
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `${label} request failed with ${response.status()} at ${url}.`
-    );
-  }
-
-  return parseBlogPublicationManifest(await response.json(), label);
+  return readCloudflareDiagnosticGet(
+    {
+      url,
+      ...(sameOrigin(url) ? { expectedBuildId, retryEdge5xx: true } : {}),
+    },
+    async (response) => {
+      if (!response.ok()) {
+        throw new Error(
+          `${label} request failed with ${response.status()} at ${url}.`
+        );
+      }
+      return parseBlogPublicationManifest(await response.json(), label);
+    }
+  );
 }
 
 function isValidBlogMetricsItem(item) {
@@ -283,18 +472,17 @@ async function verifyProductionCatalogAggregateProxy(productionSlugs) {
   }
 
   const url = new URL(buildBlogMetricsBatchPath(productionSlugs), baseUrl);
-  const response = await context.request.get(url.toString(), {
-    failOnStatusCode: false,
-    timeout: 10_000,
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `Production-catalog metrics proxy failed with ${response.status()}.`
-    );
-  }
-
-  const payload = await response.json();
+  const payload = await readCloudflareDiagnosticGet(
+    { url: url.toString(), expectedBuildId, retryEdge5xx: true },
+    async (response) => {
+      if (!response.ok()) {
+        throw new Error(
+          `Production-catalog metrics proxy failed with ${response.status()}.`
+        );
+      }
+      return response.json();
+    }
+  );
   if (!Array.isArray(payload?.items)) {
     throw new Error(
       'Production-catalog metrics proxy returned an invalid payload.'
@@ -398,6 +586,30 @@ async function verifyBlogIndexMetricsProxy() {
       return;
     }
 
+    const edgeFailures = destinationEdgeFailures(
+      edgeFailuresSince(0),
+      response.url()
+    );
+    if (
+      edgeFailures.length > 0 &&
+      isCloudflareEdgeGeneratedGet5xx({
+        status: response.status(),
+        method: response.request().method(),
+        headers: response.headers(),
+      })
+    ) {
+      if (
+        attempt < aggregateMetricsMaxAttempts &&
+        (await recoverCloudflareEdgeFailures(
+          edgeFailures,
+          'aggregate metrics browser render'
+        ))
+      ) {
+        continue;
+      }
+      throw new Error('Blog aggregate metrics edge recovery failed.');
+    }
+
     const probe = await probeBlogAggregateResponse(response.url());
 
     if (
@@ -472,15 +684,56 @@ async function verifyBlogIndexMetricsProxy() {
   throw new Error('Blog aggregate metrics proxy did not converge.');
 }
 
+async function performRecoverableClientNavigation({
+  startPath,
+  href,
+  stage,
+  prepare,
+  click,
+  assertReady,
+}) {
+  return runRecoverableClientNavigation({
+    stage,
+    maxAttempts: edgeRecoveryMaxAttempts,
+    prepareAttempt: async () => {
+      await goto(startPath);
+      await prepare?.();
+    },
+    runAttempt: async () => {
+      await click();
+      await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
+      await assertReady();
+    },
+    failureCursor: () => cloudflareEdgeGetFailures.length,
+    failuresSince: (cursor) =>
+      criticalDiagnostics.length === 0
+        ? destinationEdgeFailures(edgeFailuresSince(cursor), href)
+        : [],
+    recoverFailures: recoverCloudflareEdgeFailures,
+    beforeRetry: async (attempt) => {
+      console.log(
+        `Retrying client navigation after transient Cloudflare edge failure during ${stage} (attempt ${attempt}/${edgeRecoveryMaxAttempts})`
+      );
+      await sleep(edgeRecoveryDelayMs);
+    },
+  });
+}
+
 async function navigateByLink(startPath, href, expectedText) {
-  await goto(startPath);
-  const link = page.locator(`a[href="${href}"]`).first();
-  await link.waitFor({ state: 'visible', timeout: 15_000 });
-  await link.click();
-  await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-  await page.getByText(expectedText, { exact: false }).first().waitFor({
-    state: 'visible',
-    timeout: 15_000,
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `client navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const link = page.locator(`a[href="${href}"]`).first();
+      await link.waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () => page.locator(`a[href="${href}"]`).first().click(),
+    assertReady: () =>
+      page.getByText(expectedText, { exact: false }).first().waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      }),
   });
   console.log(`OK client navigation ${startPath} -> ${href}`);
 }
@@ -501,40 +754,94 @@ async function loadArticleWithActorMetrics(
   likeUrl,
   viewUrl
 ) {
-  const [likeStateResponse, viewResponse] = await observeActorJson(
-    [
-      { url: likeUrl, method: 'GET' },
-      { url: viewUrl, method: 'POST' },
-    ],
-    () =>
-      page.goto(`${baseUrl}${articlePath}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 15_000,
-      }),
-    15_000,
-    { document: 'next' }
-  );
+  for (let attempt = 1; attempt <= edgeRecoveryMaxAttempts; attempt += 1) {
+    const edgeStart = cloudflareEdgeGetFailures.length;
+    let mutationObserved = false;
+    const observeMutation = (request) => {
+      if (
+        sameOrigin(request.url()) &&
+        !['GET', 'HEAD', 'OPTIONS'].includes(request.method())
+      )
+        mutationObserved = true;
+    };
+    page.on('request', observeMutation);
 
-  if (
-    likeStateResponse.status < 200 ||
-    likeStateResponse.status >= 300 ||
-    viewResponse.status < 200 ||
-    viewResponse.status >= 300
-  ) {
-    throw new Error(
-      `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
-        `view=${viewResponse.status}`
-    );
+    try {
+      const [likeStateResponse, viewResponse] = await observeActorJson(
+        [
+          { url: likeUrl, method: 'GET' },
+          { url: viewUrl, method: 'POST' },
+        ],
+        async () => {
+          const response = await page.goto(`${baseUrl}${articlePath}`, {
+            waitUntil: 'commit',
+            timeout: 15_000,
+          });
+          if (
+            !response ||
+            response.status() !== 200 ||
+            response.headers()['x-vellira-build-id'] !== expectedBuildId
+          ) {
+            throw new Error(
+              `Actor document readiness failed: status=${response?.status()} build=${response?.headers()['x-vellira-build-id']}`
+            );
+          }
+          await page
+            .getByRole('heading', { level: 1 })
+            .waitFor({ state: 'visible', timeout: 15_000 });
+          if (new URL(page.url()).pathname !== articlePath)
+            throw new Error('Actor document readiness reached the wrong route');
+        },
+        15_000,
+        { document: 'next', deferFetchUntilReady: true }
+      );
+
+      if (
+        likeStateResponse.status < 200 ||
+        likeStateResponse.status >= 300 ||
+        viewResponse.status < 200 ||
+        viewResponse.status >= 300
+      ) {
+        throw new Error(
+          `Blog metrics bootstrap failed: like=${likeStateResponse.status} ` +
+            `view=${viewResponse.status}`
+        );
+      }
+
+      const likeState = likeStateResponse.payload;
+      const viewWrite = viewResponse.payload;
+
+      if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
+        throw new Error('Blog metrics bootstrap returned an invalid payload.');
+      }
+
+      return { likeState, viewWrite };
+    } catch (error) {
+      const failures = destinationEdgeFailures(
+        edgeFailuresSince(edgeStart),
+        articlePath
+      );
+      if (
+        !mutationObserved &&
+        error.metricsPhase !== 'metrics' &&
+        criticalDiagnostics.length === 0 &&
+        attempt < edgeRecoveryMaxAttempts &&
+        (await recoverCloudflareEdgeFailures(
+          failures,
+          `actor bootstrap ${articlePath}`
+        ))
+      ) {
+        await sleep(edgeRecoveryDelayMs);
+        continue;
+      }
+
+      throw error;
+    } finally {
+      page.off('request', observeMutation);
+    }
   }
 
-  const likeState = likeStateResponse.payload;
-  const viewWrite = viewResponse.payload;
-
-  if (typeof likeState?.liked !== 'boolean' || !viewWrite?.metrics) {
-    throw new Error('Blog metrics bootstrap returned an invalid payload.');
-  }
-
-  return { likeState, viewWrite };
+  throw new Error(`Blog actor bootstrap did not recover for ${articlePath}.`);
 }
 
 async function verifyBlogActorContinuity() {
@@ -546,10 +853,21 @@ async function verifyBlogActorContinuity() {
   // Start the actor journey in an untouched context, not by clearing cookies
   // under a previous article's still-running hydration requests.
   const context = await browser.newContext();
+  let actorPage;
   try {
     const page = await context.newPage();
+    actorPage = page;
     attachPageDiagnostics(page);
-    const observeActorJson = await captureBrowserJson(page, baseUrl);
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+    });
+    const observeActorJson = await captureBrowserJson(page, baseUrl, {
+      gateBootstrap: true,
+      record: (kind, data) =>
+        browserEvents.push({ kind, at: Date.now(), page: 'actor', ...data }),
+    });
 
     const first = await loadArticleWithActorMetrics(
       page,
@@ -674,7 +992,24 @@ async function verifyBlogActorContinuity() {
       'OK actor continuity: repeated reloads preserve like and same-day view/like are no-ops'
     );
   } finally {
-    await context.close();
+    try {
+      if (actorPage)
+        await fs.writeFile(
+          path.join(artifactDirectory, 'actor-page.html'),
+          await boundedBrowserRead(
+            () => actorPage.content(),
+            'actor failure HTML'
+          ).catch(String)
+        );
+    } finally {
+      try {
+        await context.tracing.stop({
+          path: path.join(artifactDirectory, 'actor-trace.zip'),
+        });
+      } finally {
+        await context.close();
+      }
+    }
   }
 }
 
@@ -718,42 +1053,73 @@ async function navigateViaContinueReading() {
     'section[aria-labelledby="blog-continue-reading-heading"]'
   );
   await section.waitFor({ state: 'visible', timeout: 15_000 });
-  const link = section.locator('a[href^="/blog/"]').first();
-  await link.waitFor({ state: 'visible', timeout: 15_000 });
+  const initialLink = section.locator('a[href^="/blog/"]').first();
+  await initialLink.waitFor({ state: 'visible', timeout: 15_000 });
 
-  const href = await link.getAttribute('href');
-  const expectedTitle = (await link.locator('h3').innerText()).trim();
+  const href = await initialLink.getAttribute('href');
+  const expectedTitle = (await initialLink.locator('h3').innerText()).trim();
   if (!href || href === startPath || !expectedTitle) {
     throw new Error(
       `Invalid Continue reading target: href=${href} title=${expectedTitle}`
     );
   }
 
-  await link.click();
-  await page.waitForURL(`${baseUrl}${href}`, { timeout: 15_000 });
-  await page
-    .getByRole('heading', { level: 1, name: expectedTitle })
-    .waitFor({ state: 'visible', timeout: 15_000 });
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `Continue reading ${startPath} -> ${href}`,
+    prepare: async () => {
+      const link = page
+        .locator('section[aria-labelledby="blog-continue-reading-heading"]')
+        .locator(`a[href="${href}"]`)
+        .first();
+      await link.waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('section[aria-labelledby="blog-continue-reading-heading"]')
+        .locator(`a[href="${href}"]`)
+        .first()
+        .click(),
+    assertReady: () =>
+      page
+        .getByRole('heading', { level: 1, name: expectedTitle })
+        .waitFor({ state: 'visible', timeout: 15_000 }),
+  });
   console.log(`OK Continue reading navigation ${startPath} -> ${href}`);
 }
 
 async function navigateWithinComponentSidebar() {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await goto('/components/switch');
-  const sidebar = page
-    .locator('aside[aria-label="Component navigation"]')
-    .first();
-  await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
-  const checkboxLink = sidebar.locator('a[href="/components/checkbox"]');
-  await checkboxLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await checkboxLink.click();
-  await page.waitForURL(`${baseUrl}/components/checkbox`, {
-    timeout: 15_000,
+  const startPath = '/components/switch';
+  const href = '/components/checkbox';
+
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `desktop component navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const sidebar = page
+        .locator('aside[aria-label="Component navigation"]')
+        .first();
+      await sidebar.waitFor({ state: 'visible', timeout: 15_000 });
+      await sidebar
+        .locator(`a[href="${href}"]`)
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('aside[aria-label="Component navigation"]')
+        .first()
+        .locator(`a[href="${href}"]`)
+        .click(),
+    assertReady: () =>
+      page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      }),
   });
-  await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
+
   console.log(
     'OK desktop component sidebar navigation /components/switch -> /components/checkbox'
   );
@@ -761,27 +1127,63 @@ async function navigateWithinComponentSidebar() {
 
 async function navigateWithinMobileComponentSidebar() {
   await page.setViewportSize({ width: 670, height: 900 });
-  await goto('/components/switch');
-  const trigger = page.getByRole('button', {
-    name: 'Open component navigation',
+  const startPath = '/components/switch';
+  const href = '/components/checkbox';
+
+  await performRecoverableClientNavigation({
+    startPath,
+    href,
+    stage: `mobile component navigation ${startPath} -> ${href}`,
+    prepare: async () => {
+      const trigger = page.getByRole('button', {
+        name: 'Open component navigation',
+      });
+      await trigger.waitFor({ state: 'visible', timeout: 15_000 });
+      await trigger.click();
+      const mobileSidebar = page.locator('#component-navigation');
+      await mobileSidebar.waitFor({ state: 'visible', timeout: 15_000 });
+      await mobileSidebar
+        .locator(`a[href="${href}"]`)
+        .waitFor({ state: 'visible', timeout: 15_000 });
+    },
+    click: () =>
+      page
+        .locator('#component-navigation')
+        .locator(`a[href="${href}"]`)
+        .click(),
+    assertReady: async () => {
+      await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+      await page
+        .locator('#component-navigation')
+        .waitFor({ state: 'hidden', timeout: 15_000 });
+    },
   });
-  await trigger.waitFor({ state: 'visible', timeout: 15_000 });
-  await trigger.click();
-  const mobileSidebar = page.locator('#component-navigation');
-  await mobileSidebar.waitFor({ state: 'visible', timeout: 15_000 });
-  const checkboxLink = mobileSidebar.locator('a[href="/components/checkbox"]');
-  await checkboxLink.waitFor({ state: 'visible', timeout: 15_000 });
-  await checkboxLink.click();
-  await page.waitForURL(`${baseUrl}/components/checkbox`, {
-    timeout: 15_000,
-  });
-  await page.getByRole('heading', { level: 1, name: 'Checkbox' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
-  await mobileSidebar.waitFor({ state: 'hidden', timeout: 15_000 });
+
   console.log(
     'OK mobile component navigation /components/switch -> /components/checkbox and overlay closed'
+  );
+}
+
+async function writeRecoveryEvidence() {
+  await fs.writeFile(
+    path.join(artifactDirectory, 'edge-recovery.json'),
+    JSON.stringify(
+      {
+        expectedBuildId,
+        finalUrl: page.url(),
+        diagnostics,
+        browserEvents,
+        failures: cloudflareEdgeGetFailures.map((failure) => ({
+          ...failure,
+          requestHeaders: cloudflareEdgeReplayHeaders(failure.requestHeaders),
+        })),
+      },
+      null,
+      2
+    )
   );
 }
 
@@ -822,6 +1224,15 @@ try {
     }
   }
 
+  const backgroundEdgeFailures = edgeFailuresSince(0);
+  if (backgroundEdgeFailures.length > 0) {
+    await recoverCloudflareEdgeFailures(
+      backgroundEdgeFailures,
+      'final background browser diagnostics'
+    );
+  }
+  reconcileCloudflareEdgeDiagnostics();
+
   const reconciledResource404Diagnostics =
     reconcileHandledBlogMetrics404ConsoleDiagnostics(
       deferredResource404ConsoleDiagnostics,
@@ -850,12 +1261,14 @@ try {
   for (const diagnostic of diagnostics) {
     console.error(diagnostic);
   }
+  process.exitCode = 1;
+}
+
+if (!process.exitCode) {
+  for (const diagnostic of diagnostics) console.log(diagnostic);
+}
+try {
+  await writeRecoveryEvidence();
+} finally {
   await browser.close();
-  process.exit(1);
 }
-
-for (const diagnostic of diagnostics) {
-  console.log(diagnostic);
-}
-
-await browser.close();

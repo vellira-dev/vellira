@@ -29,6 +29,7 @@ import {
 import { buildPlaygroundArtifacts } from './renderers/playground';
 import { updateComponentRegistry } from './renderers/registry';
 import { renderUsage } from './renderers/usage';
+import { resolveCatalogPreviewProps } from './renderers/required-props';
 import {
   buildSemanticMetadataDecisionAuthority,
   semanticMetadataDecisionRequired,
@@ -355,7 +356,10 @@ const generatedPageModel = buildGeneratedPageModel({
   slug,
   platforms,
   discovery: componentConfig.discovery,
-  catalogPreview: componentConfig.catalogPreview,
+  catalogPreview: resolveCatalogPreviewProps({
+    componentConfig,
+    reactApiProps,
+  }),
   reactStaticDemoProps,
   nativeStaticDemoProps,
   reactDemoChildren,

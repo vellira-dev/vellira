@@ -8,6 +8,7 @@ import crossPlatformFormVelliraMetadata from '../../content/blog/cross-platform-
 import designSystemComponentGeneratorMetadata from '../../content/blog/design-system-component-generator/metadata.json';
 import productionReadyCrossPlatformComponentMetadata from '../../content/blog/production-ready-cross-platform-component/metadata.json';
 import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/quality-gates-before-component-growth/metadata.json';
+import reactReactNativeTwoUiLibrariesMetadata from '../../content/blog/react-react-native-two-ui-libraries/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
 import typescriptProjectOwnershipMetadata from '../../content/blog/typescript-project-ownership/metadata.json';
 import whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata from '../../content/blog/when-developers-re-decide-ui-across-browser-and-native/metadata.json';
@@ -59,6 +60,10 @@ const blogArticleMetadataRegistryEntries = [
     slug: 'quality-gates-before-component-growth',
     metadata: qualityGatesBeforeComponentGrowthMetadata,
   },
+  {
+    slug: 'react-react-native-two-ui-libraries',
+    metadata: reactReactNativeTwoUiLibrariesMetadata,
+  },
   { slug: 'two-runtimes', metadata: twoRuntimesMetadata },
   {
     slug: 'typescript-project-ownership',
@@ -88,6 +93,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
       import('../../content/blog/production-ready-cross-platform-component/article.mdx'),
     'quality-gates-before-component-growth': () =>
       import('../../content/blog/quality-gates-before-component-growth/article.mdx'),
+    'react-react-native-two-ui-libraries': () =>
+      import('../../content/blog/react-react-native-two-ui-libraries/article.mdx'),
     'two-runtimes': () => import('../../content/blog/two-runtimes/article.mdx'),
     'typescript-project-ownership': () =>
       import('../../content/blog/typescript-project-ownership/article.mdx'),

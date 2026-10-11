@@ -197,7 +197,7 @@
   }
 }
 
-@media (width <= 1100px) {
+@media (width <= 1280px) {
   .root {
     width: 180px;
   }

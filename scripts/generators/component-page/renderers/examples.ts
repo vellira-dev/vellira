@@ -2,6 +2,7 @@ import { toLabel, toTemplateLiteral, toTsString } from '../helpers/format';
 import type { ComponentPageMetadata } from '../metadata/metadata';
 import type { ExtractedProp, GeneratedExample, Platform } from '../model/types';
 import type { ComponentProfile } from '../profiles/profiles';
+import { withRequiredMetadataDefaults } from './required-props';
 import {
   indentBlock,
   normalizePropFragments,
@@ -284,11 +285,17 @@ export function renderExamples(params: {
               : '',
           ].filter(Boolean);
 
-    return normalizePropFragments([
-      inheritedDemoProps,
-      ...shortcutProps,
-      ...metadataProps,
-    ]);
+    return withRequiredMetadataDefaults({
+      componentConfig,
+      platform,
+      apiProps: getApiProps(platform),
+      fragments: normalizePropFragments([
+        inheritedDemoProps,
+        ...shortcutProps,
+        ...metadataProps,
+      ]),
+      children: getExampleChildren(platform, example),
+    });
   }
 
   function createExampleJsx(

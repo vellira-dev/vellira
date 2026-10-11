@@ -123,6 +123,25 @@ describe('Button', () => {
     }
   });
 
+  it('distinguishes leading and trailing icon slots for interaction motion', () => {
+    const { container, root } = renderButton({
+      children: 'Navigate',
+      iconStart: <svg data-testid='leading-icon' />,
+      iconEnd: <svg data-testid='trailing-icon' />,
+    });
+
+    expect(
+      container.querySelector('[data-testid="leading-icon"]')?.parentElement
+        ?.className
+    ).toContain(styles.iconStart);
+    expect(
+      container.querySelector('[data-testid="trailing-icon"]')?.parentElement
+        ?.className
+    ).toContain(styles.iconEnd);
+
+    act(() => root.unmount());
+  });
+
   it('renders left and right icons', () => {
     const { container, root } = renderButton({
       children: 'Save',

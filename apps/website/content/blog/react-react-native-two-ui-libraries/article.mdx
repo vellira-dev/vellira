@@ -1,0 +1,406 @@
+One product.
+
+One brand.
+
+One set of users, settings, forms, errors, states, and actions.
+
+But when a product has a React web app and a React Native mobile app, many teams make the same decision twice: they choose one UI library for the web and another UI library for mobile.
+
+That can be a perfectly reasonable way to start.
+
+The hidden cost appears later.
+
+It is not the cost of installing two packages once. It is the cost of reconciling two UI systems every time the product changes.
+
+## Two libraries mean two sets of UI decisions
+
+Consider a normal settings screen.
+
+A user can update a display name, choose a language, enable notifications, switch themes, save changes, and delete an account.
+
+The UI probably needs something close to:
+
+```text
+Input
+Select
+Switch
+RadioGroup
+Button
+Modal
+```
+
+The web team can build that screen with a good React UI library.
+
+The mobile team can build the same product surface with a good React Native UI library.
+
+The problem is not that either library is bad.
+
+The problem is that each library brings its own product vocabulary:
+
+| Decision | Web library | Mobile library |
+| --- | --- | --- |
+| Button variants | System A | System B |
+| Semantic colors | System A | System B |
+| Loading state | System A | System B |
+| Input validation | System A | System B |
+| Select API | System A | System B |
+| Modal behavior | System A | System B |
+| Theme tokens | System A | System B |
+| Accessibility conventions | System A | System B |
+
+Now the team owns two answers to many of the same UI questions.
+
+That is where duplication begins.
+
+Not necessarily duplicated code.
+
+Duplicated **decisions**.
+
+## The first screen is rarely the expensive part
+
+The first web settings screen may take a day.
+
+The mobile version may take another day.
+
+Nothing looks alarming.
+
+Then the product changes.
+
+A new loading state is added to Save.
+
+Both systems need it.
+
+The design team changes control sizes.
+
+Both systems need an update.
+
+A new semantic danger color is introduced.
+
+Both systems need it.
+
+Select gets search.
+
+Both systems need it.
+
+Validation behavior changes.
+
+Both systems need it.
+
+Dark mode expands into more surfaces.
+
+Both systems need it.
+
+Soon issue descriptions start to sound familiar:
+
+> Web is done. Now we need the mobile version.
+
+Or:
+
+> Mobile behaves differently here. We should align it with web.
+
+Or:
+
+> This library does not expose the same prop, so we need an adapter.
+
+Each task is small.
+
+The total cost is not.
+
+The real cost of using two independent UI libraries is the coordination work that repeats after almost every meaningful UI change.
+
+## Teams often build a third UI layer by accident
+
+Once the differences become annoying, teams usually start normalizing them.
+
+A custom `Button` wraps the web library.
+
+Then another wrapper is created for React Native.
+
+The same happens for `Input`, `Select`, and `Modal`.
+
+Shared token names are introduced.
+
+Props are mapped.
+
+Theme values are translated.
+
+Platform-specific exceptions accumulate.
+
+The architecture starts to look like this:
+
+```text
+Product
+   ↓
+Internal UI layer
+   ↓
+Web UI library        Mobile UI library
+```
+
+The team originally chose two third-party libraries to avoid building a design system.
+
+A year later, it has built an internal design system anyway.
+
+Except now that system also depends on two other systems.
+
+It has to be documented, tested, upgraded, and maintained.
+
+## The answer is not identical code everywhere
+
+React and React Native are different runtimes.
+
+That difference should not be hidden.
+
+A Select on a desktop browser may naturally open as an anchored popover with keyboard navigation.
+
+On a phone, the same product choice may be better presented as a sheet or modal.
+
+A web Modal has to care about browser focus management, Escape behavior, and ARIA.
+
+A native Modal has different interaction and screen-reader behavior.
+
+Trying to force the same implementation onto both platforms can make the abstraction worse.
+
+A better goal is:
+
+> **One product UI model, with platform-appropriate implementations.**
+
+That distinction matters.
+
+The team should not have to redefine what a Button, Select, or validation state means just because the runtime changed.
+
+The runtime should decide how that meaning is expressed.
+
+## What developers should be able to learn once
+
+If a developer already understands the Button in your product, moving from web to mobile should not require learning a second product vocabulary.
+
+They should already recognize concepts such as:
+
+```text
+appearance
+color
+size
+loading
+disabled
+```
+
+The same principle applies to Input, Select, Modal, Switch, and other common UI primitives.
+
+The implementation can differ.
+
+The product meaning should stay familiar.
+
+That is the boundary Vellira is designed around:
+
+```text
+              Shared UI foundation
+                       ↓
+            ┌──────────┴──────────┐
+            ↓                     ↓
+         React               React Native
+      browser APIs           native APIs
+        DOM + CSS            native views
+        keyboard                 touch
+          ARIA              native a11y
+```
+
+Share what a product team wants to define once.
+
+Keep platform behavior platform-native.
+
+## A concrete example: Select
+
+On React, Vellira can expose a familiar value-selection model:
+
+```tsx
+import { Select } from '@vellira-ui/react';
+
+<Select
+  label='Country'
+  value={country}
+  onValueChange={setCountry}
+>
+  <Select.Item value='fr'>France</Select.Item>
+  <Select.Item value='de'>Germany</Select.Item>
+</Select>
+```
+
+In React Native, the product model remains recognizable:
+
+```tsx
+import { Select } from '@vellira-ui/react-native';
+
+<Select
+  label='Country'
+  value={country}
+  onValueChange={setCountry}
+>
+  <Select.Item value='fr' label='France' />
+  <Select.Item value='de' label='Germany' />
+</Select>
+```
+
+The presentations do not have to be identical.
+
+The web version can use browser-appropriate dropdown behavior and keyboard interaction.
+
+The native version can use mobile presentations such as a sheet, modal, or popover.
+
+The important part is that the team does not redesign the concept of value selection for the second platform.
+
+The React and React Native implementations remain different where the runtimes are different.
+
+The product API stays familiar where the product is the same.
+
+## Shared design tokens solve the same problem visually
+
+Two unrelated UI libraries often bring two unrelated design languages.
+
+One system may call semantic colors:
+
+```text
+primary
+neutral
+danger
+```
+
+Another may use:
+
+```text
+brand
+gray
+critical
+```
+
+Spacing scales differ.
+
+Radius values differ.
+
+Theme structures differ.
+
+So teams add mappings.
+
+Vellira uses a shared design-token foundation for semantic color, surfaces, text, borders, focus, status, spacing, radius, and component states.
+
+On the web, those decisions can be consumed through generated CSS variables.
+
+In React Native, they are available through theme objects.
+
+Again, the goal is not identical rendering machinery.
+
+It is one design language.
+
+You can inspect the current token system in the [Vellira design token documentation](https://docs.vellira.dev/design-system/tokens).
+
+## Why this cost compounds over time
+
+Adding one Button state is small.
+
+But with two independent UI systems, that change may touch two component APIs, two implementations, two test suites, two documentation surfaces, and perhaps two internal wrappers.
+
+Now multiply that by:
+
+- new components;
+- new states;
+- accessibility fixes;
+- theme changes;
+- redesigns;
+- new developers;
+- new product surfaces;
+- several years of maintenance.
+
+The cost of two UI libraries is not two `npm install` commands.
+
+It is the cost of keeping them aligned after every product change.
+
+For a single-platform application, that trade-off may not matter.
+
+For a product that deliberately ships on React and React Native, it can become a permanent engineering tax.
+
+## Where Vellira is different
+
+If you only need a React component library, there are many mature options.
+
+The same is true for React Native.
+
+Vellira is aimed at a narrower problem:
+
+> **One product built with React and React Native should not require two independent product UI systems.**
+
+Vellira already ships separate renderer packages for both runtimes:
+
+### React
+
+```bash
+pnpm add @vellira-ui/react
+```
+
+### React Native
+
+```bash
+pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
+```
+
+Both packages expose a growing set of familiar product primitives including Button, Input, Select, Switch, Modal, FormField, Tabs, Dropdown, RadioGroup, and others.
+
+The implementations remain platform-specific.
+
+The component concepts, shared tokens, and API vocabulary stay aligned wherever that alignment makes sense.
+
+You can browse the current [component documentation](https://docs.vellira.dev), inspect the interactive examples in [Storybook](https://storybook.vellira.dev), or review the implementation on [GitHub](https://github.com/vellira-dev/vellira).
+
+## Do not migrate everything to test the idea
+
+You do not need to replace your entire design system to see whether this model helps.
+
+Choose one small surface that already exists on both web and mobile.
+
+Settings, login, profile, onboarding, or billing are good candidates.
+
+Then pick one duplicated primitive:
+
+```text
+Button
+Input
+Select
+Switch
+Modal
+```
+
+Try the corresponding Vellira component in both applications.
+
+The useful question is not:
+
+> Does the web code look exactly like the mobile code?
+
+It should not always.
+
+Ask instead:
+
+> If this product UI changes tomorrow, how many decisions will we have to make twice?
+
+If that number gets smaller, the shared foundation is already doing useful work.
+
+## Choose the UI foundation once
+
+A React app has many good UI-library choices.
+
+A React Native app does too.
+
+But when one product lives on both platforms, the long-term decision is bigger than which library is easiest to install today.
+
+It is how many times your team wants to make the same UI decisions over the next several years.
+
+You can choose two independent systems and continuously reconcile them.
+
+You can build and maintain an abstraction layer on top.
+
+Or you can start with a UI foundation designed for both runtimes.
+
+That is what Vellira is for.
+
+**One product. Two runtimes. One shared UI foundation.**
+
+Start small: try the same [Vellira component](https://docs.vellira.dev) in React and React Native and see how much product vocabulary you no longer have to duplicate.
+
+If your team already maintains both React and React Native, which component or UI pattern causes the most duplicated work today?

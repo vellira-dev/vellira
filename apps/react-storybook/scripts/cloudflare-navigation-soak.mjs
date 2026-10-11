@@ -1,10 +1,17 @@
 /* global window */
+import { readCloudflareDiagnosticGet } from './cloudflare-edge-recovery.mjs';
 import { chromium } from '@playwright/test';
 import path from 'node:path';
 import {
   captureDiagnostics,
+  boundedBrowserRead,
   waitForRoute,
 } from './cloudflare-browser-diagnostics.mjs';
+import {
+  isRecoveredDocumentFallback,
+  isSafeClientNavigationReplay,
+  navigateToBlogAcrossSiteSurface,
+} from './cloudflare-client-navigation-recovery.mjs';
 import {
   BLOG_METRICS_PUBLICATION_MODE_STAGING_CANDIDATE,
   candidateOnlyBlogSlugs,
@@ -16,6 +23,8 @@ import {
 const baseUrl = process.env.WEBSITE_URL;
 if (!baseUrl) throw new Error('WEBSITE_URL is required.');
 const baseOrigin = new URL(baseUrl).origin;
+const expectedBuildId = process.env.VELLIRA_BUILD_ID?.trim();
+if (!expectedBuildId) throw new Error('VELLIRA_BUILD_ID is required.');
 const productionBlogManifestUrl = 'https://vellira.dev/blog/manifest.json';
 const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
   process.env.BLOG_METRICS_PUBLICATION_MODE
@@ -24,14 +33,34 @@ const blogMetricsPublicationMode = resolveBlogMetricsPublicationMode(
 // cross the observed 300-second router stale-time within one browser document.
 const rounds = Number(process.env.SOAK_ROUNDS ?? 15);
 const dwellMs = Number(process.env.SOAK_DWELL_MS ?? 1_000);
+const routerStaleTimeMs = Number(
+  process.env.SOAK_ROUTER_STALE_TIME_MS ?? 300_000
+);
+const maxRecoveredDocumentFallbacks = Number(
+  process.env.SOAK_MAX_DOCUMENT_FALLBACKS ?? 3
+);
+const navigationRetryMaxAttempts = Number(
+  process.env.SOAK_NAVIGATION_RETRY_MAX_ATTEMPTS ?? 3
+);
+const navigationRetryDelayMs = Number(
+  process.env.SOAK_NAVIGATION_RETRY_DELAY_MS ?? 1_500
+);
 if (
   !Number.isInteger(rounds) ||
   rounds < 1 ||
   !Number.isFinite(dwellMs) ||
-  dwellMs < 0
+  dwellMs < 0 ||
+  !Number.isFinite(routerStaleTimeMs) ||
+  routerStaleTimeMs <= 0 ||
+  !Number.isInteger(maxRecoveredDocumentFallbacks) ||
+  maxRecoveredDocumentFallbacks < 0 ||
+  !Number.isInteger(navigationRetryMaxAttempts) ||
+  navigationRetryMaxAttempts < 1 ||
+  !Number.isFinite(navigationRetryDelayMs) ||
+  navigationRetryDelayMs < 0
 ) {
   throw new Error(
-    'SOAK_ROUNDS must be positive and SOAK_DWELL_MS nonnegative.'
+    'SOAK_ROUNDS must be positive, SOAK_DWELL_MS nonnegative, SOAK_ROUTER_STALE_TIME_MS positive, SOAK_MAX_DOCUMENT_FALLBACKS a nonnegative integer, SOAK_NAVIGATION_RETRY_MAX_ATTEMPTS positive and SOAK_NAVIGATION_RETRY_DELAY_MS nonnegative.'
   );
 }
 const browser = await chromium.launch();
@@ -44,19 +73,22 @@ const directory = path.resolve(
 );
 
 async function fetchBlogPublicationSlugs(url, label) {
-  const response = await context.request.get(url, {
-    failOnStatusCode: false,
-    headers: { 'Cache-Control': 'no-cache' },
-    timeout: 10_000,
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `${label} request failed with ${response.status()} at ${url}.`
-    );
-  }
-
-  return parseBlogPublicationManifest(await response.json(), label);
+  return readCloudflareDiagnosticGet(
+    {
+      url,
+      ...(new URL(url).origin === baseOrigin
+        ? { expectedBuildId, retryEdge5xx: true }
+        : {}),
+    },
+    async (response) => {
+      if (!response.ok()) {
+        throw new Error(
+          `${label} request failed with ${response.status()} at ${url}.`
+        );
+      }
+      return parseBlogPublicationManifest(await response.json(), label);
+    }
+  );
 }
 
 async function resolveCandidateOnlyStagingBlogSlugs() {
@@ -81,29 +113,32 @@ async function resolveCandidateOnlyStagingBlogSlugs() {
   return candidateOnlyBlogSlugs(candidateSlugs, productionSlugs);
 }
 
-const candidateOnlyStagingBlogSlugs =
-  await resolveCandidateOnlyStagingBlogSlugs();
-if (candidateOnlyStagingBlogSlugs.length > 0) {
-  console.log(
-    `OK navigation soak expected staging publication catalog lag for candidate-only slugs: ${candidateOnlyStagingBlogSlugs.join(', ')}`
-  );
-}
-const diagnostics = await captureDiagnostics(page, context, baseUrl, directory, {
-  isExpected404Response:
-    candidateOnlyStagingBlogSlugs.length > 0
-      ? (response) =>
-          isExpectedStagingCandidateBlogMetricsRequest({
-            requestUrl: response.url,
-            method: response.method,
-            baseOrigin,
-            candidateOnlySlugs: candidateOnlyStagingBlogSlugs,
-          })
-      : undefined,
-});
+let candidateOnlyStagingBlogSlugs = [];
+const diagnostics = await captureDiagnostics(
+  page,
+  context,
+  baseUrl,
+  directory,
+  {
+    isExpected404Response: (response) =>
+      isExpectedStagingCandidateBlogMetricsRequest({
+        requestUrl: response.url,
+        method: response.method,
+        baseOrigin,
+        candidateOnlySlugs: candidateOnlyStagingBlogSlugs,
+      }),
+  }
+);
+
 const sidebarSelector = 'aside[aria-label="Component navigation"]';
 const rscCachePolicyFailures = [];
 let observedRscResponses = 0;
 let documentToken;
+let documentIdentity = null;
+let documentTokenStartedAt = 0;
+let documentSequence = 0;
+let latestDocumentResponse = null;
+let recoveredDocumentFallbacks = 0;
 
 function isRscRequest(request) {
   const headers = request.headers();
@@ -125,11 +160,19 @@ function assertRscCachePolicy(label) {
 
 page.on('response', (response) => {
   const url = new URL(response.url());
-  if (
-    url.origin !== baseOrigin ||
-    response.status() >= 400 ||
-    !isRscRequest(response.request())
-  ) {
+  if (url.origin !== baseOrigin) return;
+
+  if (response.request().isNavigationRequest()) {
+    documentSequence += 1;
+    latestDocumentResponse = {
+      sequence: documentSequence,
+      url: response.url(),
+      status: response.status(),
+      headers: response.headers(),
+    };
+  }
+
+  if (response.status() >= 400 || !isRscRequest(response.request())) {
     return;
   }
 
@@ -148,23 +191,184 @@ page.on('response', (response) => {
   }
 });
 
-async function ready(href, title) {
-  await waitForRoute(page, diagnostics, baseUrl, href, title);
-  if (
-    documentToken &&
-    (await page.evaluate(() => window.__velliraSoakDocument)) !== documentToken
-  ) {
-    throw new Error(`Client navigation replaced the document at ${href}`);
+async function seedDocumentContinuity() {
+  const identity = diagnostics.documentIdentity();
+  if (identity.available) {
+    documentIdentity = identity;
+    documentToken = undefined;
+  } else {
+    documentIdentity = null;
+    documentToken = await boundedBrowserRead(
+      () =>
+        page.evaluate(
+          () => (window.__velliraSoakDocument = crypto.randomUUID())
+        ),
+      'seed soak document token'
+    );
   }
+  documentTokenStartedAt = Date.now();
+}
+
+async function ready(
+  href,
+  title,
+  {
+    edgeCursor = null,
+    documentCursor = null,
+    allowRecoveredDocumentFallback = false,
+  } = {}
+) {
+  await waitForRoute(page, diagnostics, baseUrl, href, title);
+
+  let documentReplaced = false;
+  if (documentIdentity?.available) {
+    const currentIdentity = diagnostics.documentIdentity();
+    documentReplaced =
+      !currentIdentity.available ||
+      currentIdentity.loaderId !== documentIdentity.loaderId ||
+      currentIdentity.generation !== documentIdentity.generation;
+  } else if (documentToken) {
+    const currentToken = await boundedBrowserRead(
+      () => page.evaluate(() => window.__velliraSoakDocument),
+      'soak document continuity'
+    );
+    documentReplaced = currentToken !== documentToken;
+  }
+
+  if (documentReplaced) {
+    const edgeRecovered =
+      allowRecoveredDocumentFallback &&
+      Number.isInteger(edgeCursor) &&
+      diagnostics.recoveredDestinationEdgeFailureSince(edgeCursor, href);
+    const recoveredFallback = isRecoveredDocumentFallback({
+      href,
+      baseUrl,
+      expectedBuildId,
+      edgeRecovered,
+      documentResponse: latestDocumentResponse,
+      previousDocumentSequence: documentCursor,
+    });
+
+    if (!recoveredFallback) {
+      throw new Error(`Client navigation replaced the document at ${href}`);
+    }
+
+    recoveredDocumentFallbacks += 1;
+    if (recoveredDocumentFallbacks > maxRecoveredDocumentFallbacks) {
+      throw new Error(
+        `Recovered document fallback limit exceeded at ${href}: ${recoveredDocumentFallbacks}/${maxRecoveredDocumentFallbacks}`
+      );
+    }
+
+    diagnostics.record('recovered-document-fallback', {
+      href,
+      sequence: latestDocumentResponse.sequence,
+      recoveredDocumentFallbacks,
+    });
+    console.log(
+      `Recovered Next document fallback after transient destination edge failure at ${href} (${recoveredDocumentFallbacks}/${maxRecoveredDocumentFallbacks})`
+    );
+    await seedDocumentContinuity();
+  }
+
   await page.waitForTimeout(dwellMs);
+  await diagnostics.recoverEdgeFailures(`settled ${href}`);
   diagnostics.assertHealthy(`settled ${href}`);
   assertRscCachePolicy(`settled ${href}`);
 }
 
-async function click(link, href, title) {
-  diagnostics.record('navigation', { href, title });
-  await link.click({ timeout: 15_000 });
-  await ready(href, title);
+async function runRecoverableSoakNavigation({
+  href,
+  title,
+  stage,
+  prepareAttempt,
+  action,
+}) {
+  const startPath = new URL(page.url()).pathname;
+
+  for (let attempt = 1; attempt <= navigationRetryMaxAttempts; attempt += 1) {
+    await prepareAttempt?.(attempt);
+    diagnostics.record('navigation', { href, title, stage, attempt });
+    const edgeCursor = diagnostics.edgeFailureCursor();
+    const documentCursor = documentSequence;
+    const attemptDocumentIdentity = diagnostics.documentIdentity();
+    const attemptDocumentToken = documentToken;
+
+    try {
+      await action();
+      await ready(href, title, {
+        edgeCursor,
+        documentCursor,
+        allowRecoveredDocumentFallback: true,
+      });
+      return;
+    } catch (error) {
+      const edgeRecovered = diagnostics.recoveredDestinationEdgeFailureSince(
+        edgeCursor,
+        href
+      );
+      const currentDocumentIdentity = diagnostics.documentIdentity();
+      const identityProofAvailable =
+        attemptDocumentIdentity.available && currentDocumentIdentity.available;
+      const currentDocumentToken =
+        !identityProofAvailable && attemptDocumentToken
+          ? await boundedBrowserRead(
+              () => page.evaluate(() => window.__velliraSoakDocument),
+              'soak replay document token'
+            ).catch((error) => {
+              diagnostics.record('document-token-unavailable', {
+                href,
+                error: String(error),
+              });
+              return null;
+            })
+          : null;
+      const safeReplay = isSafeClientNavigationReplay({
+        baseUrl,
+        startPath,
+        currentUrl: page.url(),
+        expectedDocumentToken: attemptDocumentToken,
+        currentDocumentToken,
+        expectedDocumentIdentity: attemptDocumentIdentity,
+        currentDocumentIdentity,
+        edgeRecovered,
+      });
+
+      if (attempt >= navigationRetryMaxAttempts || !safeReplay) {
+        throw error;
+      }
+
+      diagnostics.record('navigation-retry', {
+        href,
+        title,
+        stage,
+        attempt: attempt + 1,
+      });
+      console.log(
+        `Retrying soak navigation after recovered destination edge failure during ${stage} (attempt ${attempt + 1}/${navigationRetryMaxAttempts})`
+      );
+      await page.waitForTimeout(navigationRetryDelayMs);
+    }
+  }
+
+  throw new Error(`Soak navigation did not recover during ${stage}.`);
+}
+
+async function click(link, href, title, { prepareAttempt } = {}) {
+  await runRecoverableSoakNavigation({
+    href,
+    title,
+    stage: `click ${new URL(page.url()).pathname} -> ${href}`,
+    prepareAttempt,
+    action: () => link.click({ timeout: 15_000 }),
+  });
+}
+
+async function navigateToBlogIndex() {
+  await navigateToBlogAcrossSiteSurface({
+    page,
+    navigate: runRecoverableSoakNavigation,
+  });
 }
 
 async function components() {
@@ -205,7 +409,7 @@ async function components() {
 }
 
 async function blog() {
-  await click(page.locator('header a[href="/blog"]').first(), '/blog', 'Blog');
+  await navigateToBlogIndex();
   const targets = await page
     .locator('main a[href^="/blog/"]')
     .evaluateAll((links) =>
@@ -231,9 +435,14 @@ async function blog() {
   for (let round = 1; round <= rounds; round++) {
     for (const { href, title } of targets) {
       await click(page.locator(`main a[href="${href}"]`).first(), href, title);
-      // History preserves the loaded runtime/router caches, unlike page.goto('/blog').
-      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 15_000 });
-      await ready('/blog', 'Blog');
+      // Use the canonical article back link so retrying the action cannot
+      // advance browser history twice. This remains a client navigation and
+      // preserves the loaded router/runtime caches unlike page.goto('/blog').
+      await click(
+        page.locator('main a[href="/blog"]').first(),
+        '/blog',
+        'Blog'
+      );
     }
     await diagnostics.anchor(`blog round ${round}`);
     console.log(`OK blog round ${round}/${rounds}: ${targets.length} routes`);
@@ -242,6 +451,12 @@ async function blog() {
 
 let failure;
 try {
+  candidateOnlyStagingBlogSlugs = await resolveCandidateOnlyStagingBlogSlugs();
+  if (candidateOnlyStagingBlogSlugs.length > 0) {
+    console.log(
+      `OK navigation soak expected staging publication catalog lag for candidate-only slugs: ${candidateOnlyStagingBlogSlugs.join(', ')}`
+    );
+  }
   await diagnostics.anchor('start');
   const response = await page.goto(
     new URL('/components/switch', baseUrl).href,
@@ -267,17 +482,21 @@ try {
   ) {
     throw new Error('Document freshness policy is missing');
   }
-  if (!headers['x-vellira-build-id'] || !headers['x-vellira-request-id']) {
-    throw new Error('Document deployment diagnostics are missing');
+  if (
+    headers['x-vellira-build-id'] !== expectedBuildId ||
+    !headers['x-vellira-request-id']
+  ) {
+    throw new Error(
+      'Document deployment identity does not match expected build'
+    );
   }
   await ready('/components/switch', 'Switch');
 
-  documentToken = await page.evaluate(
-    () => (window.__velliraSoakDocument = crypto.randomUUID())
-  );
+  await seedDocumentContinuity();
   await components();
   await blog();
   await page.waitForTimeout(5_000);
+  await diagnostics.recoverEdgeFailures('final preload settle');
   diagnostics.assertHealthy('final preload settle');
   assertRscCachePolicy('final preload settle');
   if (observedRscResponses === 0) {
@@ -285,6 +504,15 @@ try {
       'Navigation soak observed no RSC responses; cache-policy gate was vacuous'
     );
   }
+  const continuousDocumentMs = Date.now() - documentTokenStartedAt;
+  if (continuousDocumentMs <= routerStaleTimeMs) {
+    throw new Error(
+      `Navigation soak did not preserve one document beyond router stale-time after recovery: ${continuousDocumentMs}ms <= ${routerStaleTimeMs}ms`
+    );
+  }
+  console.log(
+    `OK document continuity exceeded router stale-time: ${continuousDocumentMs}ms > ${routerStaleTimeMs}ms; recovered fallbacks=${recoveredDocumentFallbacks}`
+  );
 } catch (error) {
   failure = error;
   console.error(`Cloudflare navigation soak failed at ${page.url()}`, error);
@@ -292,11 +520,12 @@ try {
 } finally {
   try {
     await diagnostics.finish(failure);
+    await diagnostics.recoverEdgeFailures('diagnostic capture settle');
     diagnostics.assertHealthy('diagnostic capture settle');
     assertRscCachePolicy('diagnostic capture settle');
     if (!failure) {
       console.log(
-        `OK Cloudflare navigation soak: transparent one-shot cache migration, no delayed /_next/static asset failures; ${observedRscResponses} RSC responses were browser-no-store`
+        `OK Cloudflare navigation soak: transparent one-shot cache migration, no delayed /_next/static asset failures; ${observedRscResponses} RSC responses were browser-no-store; recovered document fallbacks=${recoveredDocumentFallbacks}`
       );
     }
   } finally {

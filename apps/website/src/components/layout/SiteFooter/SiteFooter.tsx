@@ -8,6 +8,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { ArrowLeftRight, ArrowRight, Check } from '@vellira-ui/icons';
 import { useTheme } from '@vellira-ui/react';
 import { Container } from '@/components/layout/Container';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from './SiteFooter.module.css';
 
@@ -185,7 +186,10 @@ export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
         <div className={styles.bottomBar}>
           <span>© 2026 Vellira</span>
           <span>Independent modules. One seamless system.</span>
-          <span>Built in public</span>
+          <div className={styles.legalLinks}>
+            <span>Built in public</span>
+            <DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>
+          </div>
         </div>
       </Container>
     </footer>

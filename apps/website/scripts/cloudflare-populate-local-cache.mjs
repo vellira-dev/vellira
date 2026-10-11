@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { prepareRouteCache } from './cloudflare-route-cache.mjs';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -81,6 +82,7 @@ export async function populateLocalCache(
   { env = process.env, execute = spawnSync } = {}
 ) {
   return withLocalCacheConfig(configPath, (localPath) => {
+    prepareRouteCache(path.dirname(path.resolve(root, configPath)));
     // Only local preparation is exposed; no arbitrary command/flag passthrough.
     const args = [
       'exec',

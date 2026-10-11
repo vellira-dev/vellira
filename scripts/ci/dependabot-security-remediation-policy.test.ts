@@ -32,10 +32,17 @@ describe('Dependabot security remediation workflow policy', () => {
 
   it('keeps mutation bounded to pnpm security authority', async () => {
     const source = await readFile(remediationWorkflowPath, 'utf8');
+    const availabilityIndex = source.indexOf(
+      'Reconcile patched-release registry availability'
+    );
     const fixIndex = source.indexOf('Generate bounded pnpm security override');
     const diffIndex = source.indexOf('validate-working-tree');
+    const reconcileIndex = source.indexOf(
+      'Reconcile generated override authority'
+    );
+    const gapIndex = source.indexOf('Materialize Dependabot audit gaps');
     const auditIndex = source.indexOf(
-      'Prove no in-scope registry advisory remains'
+      'Prove authorized registry advisories are closed'
     );
     const tokenIndex = source.indexOf(
       'Create short-lived remediation GitHub App token'
@@ -48,8 +55,11 @@ describe('Dependabot security remediation workflow policy', () => {
     );
     const branchIndex = source.indexOf('Publish canonical remediation branch');
 
-    expect(fixIndex).toBeGreaterThan(-1);
-    expect(diffIndex).toBeGreaterThan(fixIndex);
+    expect(availabilityIndex).toBeGreaterThan(-1);
+    expect(fixIndex).toBeGreaterThan(availabilityIndex);
+    expect(reconcileIndex).toBeGreaterThan(fixIndex);
+    expect(gapIndex).toBeGreaterThan(reconcileIndex);
+    expect(diffIndex).toBeGreaterThan(gapIndex);
     expect(auditIndex).toBeGreaterThan(diffIndex);
     expect(artifactIndex).toBeGreaterThan(auditIndex);
     expect(tokenIndex).toBeGreaterThan(artifactIndex);
@@ -63,6 +73,12 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).not.toContain('pnpm audit --fix --dev');
     expect(source).toContain('--fix=override');
     expect(source).toContain('--ignore-unfixable');
+    expect(source).toContain('reconcile-generated-workspace');
+    expect(source).toContain('generated-override-reconciliation.json');
+    expect(source).toContain('verify-plan-audit');
+    expect(source).toContain('materialize-audit-gaps');
+    expect(source).toContain('audit-gap-materializations.json');
+    expect(source).toContain('verify-remediated-audit');
     expect(source).toContain(
       'Runtime alerts remain outside this bounded fallback.'
     );
@@ -70,6 +86,15 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(source).toContain('--plan .security-remediation/plan.json');
     expect(source).toContain('runtime-ignores');
     expect(source).toContain('runtime-audit-ignores.json');
+    expect(source).toContain('registry-unavailable-patches.json');
+    expect(source).toContain('blockedByRegistryAvailability');
+    expect(source).toContain("steps.plan.outputs.fixable_packages != '0' &&");
+    expect(source).toContain(
+      "steps.availability.outputs.resolvable_packages != '0'"
+    );
+    expect(source).toContain(
+      'Registry-unavailable patched releases remain open'
+    );
     expect(source).toContain('steps.plan.outputs.fixable_packages');
     expect(source).toContain(
       'Package authority: exact fixable development-scope Dependabot plan'
@@ -85,6 +110,7 @@ describe('Dependabot security remediation workflow policy', () => {
       'authorizedPackages: validation.authorizedPackages'
     );
     expect(source).toContain('changedPackages: validation.changedPackages');
+    expect(source).toContain('auditGapMaterializations');
     expect(source).toContain('include-hidden-files: true');
     expect(source).toContain('if-no-files-found: error');
     expect(source).not.toContain('gh pr merge');
@@ -141,6 +167,7 @@ describe('Dependabot security remediation workflow policy', () => {
   it('authenticates remediation PRs before auto-merge metadata', async () => {
     const remediationSource = await readFile(remediationWorkflowPath, 'utf8');
     const metadataSource = await readFile(metadataWorkflowPath, 'utf8');
+    const autoMergeSource = await readFile(autoMergeWorkflowPath, 'utf8');
 
     expect(remediationSource).toContain(
       'Publish immutable remediation candidate'
@@ -164,13 +191,18 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain(
       'Security remediation source run does not match the exact candidate base'
     );
+    expect(metadataSource).toContain('candidate_base_sha=');
+    expect(metadataSource).toContain('candidate_head_sha=');
+    expect(metadataSource).toContain(
+      'steps.envelope.outputs.candidate_base_sha'
+    );
     expect(metadataSource).toContain('run.head_sha !== expectedBaseSha');
     expect(metadataSource).toContain('run.path !==');
     expect(metadataSource).toContain(
       "'.github/workflows/dependabot-security-remediation.yml'"
     );
     expect(metadataSource).toContain(
-      'Security remediation candidate artifact does not authenticate this PR head'
+      'Security remediation candidate artifact does not authenticate the immutable source candidate'
     );
     expect(metadataSource).toContain('scope=(development)');
     expect(metadataSource).toContain(
@@ -184,11 +216,45 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(metadataSource).toContain('candidate.authorizedPackages');
     expect(metadataSource).toContain('candidate.changedPackages');
     expect(metadataSource).toContain('candidate.ignoredRuntimeGhsas');
-    expect(metadataSource).toContain("jq -r '.ignoredRuntimeGhsas[]'");
+    expect(metadataSource).toContain('candidate.registryUnavailablePatches');
+    expect(metadataSource).toContain('candidate.auditGapMaterializations');
     expect(metadataSource).toContain(
-      'Prove in-scope registry advisories are closed by the candidate'
+      'Revalidate registry-unavailable patched releases'
     );
-    expect(metadataSource).toContain('--ignore-unfixable');
+    expect(metadataSource).toContain('.registryUnavailablePatches[]');
+    expect(metadataSource).toContain('registryUnavailablePatches:');
+    expect(autoMergeSource).toContain('decision.registryUnavailablePatches');
+    expect(autoMergeSource).toContain(
+      'Registry-unavailable remediation authority changed before merge'
+    );
+    expect(autoMergeSource).toContain(
+      'Revalidate registry-unavailable patched releases before merge'
+    );
+    expect(autoMergeSource).toContain(
+      'Patched release became available before merge'
+    );
+    expect(autoMergeSource).toContain('decision.auditGapMaterializations');
+    expect(metadataSource).toContain(
+      'sourceCandidateBaseSha: candidate.baseSha'
+    );
+    expect(metadataSource).toContain(
+      'sourceCandidateHeadSha: candidate.headSha'
+    );
+    expect(autoMergeSource).toContain('decision.sourceCandidateBaseSha');
+    expect(autoMergeSource).toContain('decision.sourceCandidateHeadSha');
+    expect(autoMergeSource).toContain(
+      'run.head_sha !== decision.sourceCandidateBaseSha'
+    );
+    expect(autoMergeSource).toContain(
+      'Dependabot audit-gap authority changed before merge'
+    );
+    expect(metadataSource).toContain(
+      'Prove authenticated registry advisories are closed'
+    );
+    expect(metadataSource).toContain('verify-remediated-audit');
+    expect(metadataSource).toContain(
+      '--audit /tmp/security-remediation-source/audit-current.json'
+    );
     expect(metadataSource).toContain(
       '--audit-level ${{ steps.envelope.outputs.audit_level }}'
     );
@@ -240,6 +306,15 @@ describe('Dependabot security remediation workflow policy', () => {
     expect(autoMergeSource).toContain('compare/$before_sha...$base_sha');
     expect(autoMergeSource).toContain("decision.sourceEvent === 'push' &&");
     expect(autoMergeSource).toContain("decision.auditLevel !== 'low'");
+    expect(remediationSource).toContain(
+      'scripts/ci/dependabot-auto-merge-policy.test.ts'
+    );
+    expect(metadataSource).toContain(
+      'scripts/ci/dependabot-auto-merge-policy.test.ts'
+    );
+    expect(autoMergeSource).toContain(
+      'scripts/ci/dependabot-auto-merge-policy.test.ts'
+    );
   });
 
   it('reconciles alert tracker after dependency changes', async () => {

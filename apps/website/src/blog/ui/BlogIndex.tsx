@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Button, Input, Popover } from '@vellira-ui/react';
@@ -15,6 +14,7 @@ import {
   normalizeBlogTopicValue,
   selectCommonBlogTopicOptions,
 } from '../topicFilters';
+import { BlogDesignSystemLink } from './BlogDesignSystemLink';
 import { BlogMetricsDisplay } from './BlogMetricsDisplay';
 import { formatBlogDate } from './formatBlogDate';
 import { BlogNewsletterSignup } from './BlogNewsletterSignup';
@@ -439,14 +439,15 @@ export function BlogIndex({ articles, metricsBySlug = {} }: BlogIndexProps) {
                         ))}
                       </div>
 
-                      <Link
+                      <BlogDesignSystemLink
                         href={`/blog/${article.slug}`}
                         prefetch={false}
+                        direction='forward'
                         className={styles.cardLink}
                         aria-label={`Read ${article.title}`}
                       >
                         Read article
-                      </Link>
+                      </BlogDesignSystemLink>
                     </article>
                   ))}
                 </div>

@@ -71,9 +71,42 @@ $button-appearances: solid, outline, ghost, soft, link;
   }
 }
 
+.button.link {
+  height: auto;
+  padding-inline: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  border: 0;
+  border-radius: var(--radius-sm);
+  overflow: visible;
+}
+
+.button.link .icon {
+  transition:
+    color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.button.link:not(:disabled, .loading):hover .iconStart,
+.button.link:not(:disabled, .loading):active .iconStart {
+  transform: translateX(-4px);
+}
+
+.button.link:not(:disabled, .loading):hover .iconEnd,
+.button.link:not(:disabled, .loading):active .iconEnd {
+  transform: translateX(4px);
+}
+
 @each $color in $button-colors {
+  .button.link.#{$color}:not(:disabled, .loading) {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
   .button.link.#{$color}:not(:disabled, .loading):hover,
   .button.link.#{$color}:not(:disabled, .loading):active {
+    text-decoration-line: underline;
     transform: none;
   }
 }
@@ -224,6 +257,7 @@ $button-appearances: solid, outline, ghost, soft, link;
 @media (prefers-reduced-motion: reduce) {
   .button,
   .button::after,
+  .button .icon,
   .spinner {
     transition: none;
     animation: none;
@@ -233,6 +267,11 @@ $button-appearances: solid, outline, ghost, soft, link;
     @each $color in $button-colors {
       .button.#{$appearance}.#{$color}:not(:disabled, .loading):hover,
       .button.#{$appearance}.#{$color}:not(:disabled, .loading):active {
+        transform: none;
+      }
+
+      .button.#{$appearance}.#{$color}:not(:disabled, .loading):hover .icon,
+      .button.#{$appearance}.#{$color}:not(:disabled, .loading):active .icon {
         transform: none;
       }
     }

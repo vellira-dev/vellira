@@ -119,10 +119,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout consumer proof at exact candidate
+      - name: Checkout current consumer harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ needs.candidate.outputs.candidate_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up consumer Node.js
@@ -138,6 +138,7 @@ jobs:
 
       - name: Validate clean Vite consumer
         env:
+          VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
           VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
           VELLIRA_CANDIDATE_DIR: .candidate-artifacts
           VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/vite-consumer.json
@@ -158,10 +159,10 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Checkout consumer proof at exact candidate
+      - name: Checkout current consumer harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ needs.candidate.outputs.candidate_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up consumer Node.js
@@ -177,6 +178,7 @@ jobs:
 
       - name: Validate clean Next.js consumer
         env:
+          VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
           VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
           VELLIRA_CANDIDATE_DIR: .candidate-artifacts
           VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/next-consumer.json
@@ -197,10 +199,10 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - name: Checkout consumer proof at exact candidate
+      - name: Checkout current consumer harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ needs.candidate.outputs.candidate_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up consumer Node.js
@@ -216,6 +218,7 @@ jobs:
 
       - name: Validate clean Expo consumer
         env:
+          VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
           VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
           VELLIRA_CANDIDATE_DIR: .candidate-artifacts
           VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/expo-consumer.json

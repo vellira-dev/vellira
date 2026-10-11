@@ -262,16 +262,30 @@ export async function validateComponentProductionCandidate(params: {
     input: params.input,
   });
 
-  const finalValidation = runFinalValidation({
-    root: params.root,
-    input: params.input,
-    commandStatuses: commandValidation.commandStatuses,
-  });
-  const blockingStage = [
+  const preliminaryStages = [
     ...commandValidation.stages,
     ...structuredValidation.stages,
-    ...finalValidation.stages,
-  ].find((stage) => stage.status !== 'passed');
+  ];
+  const preliminaryBlockingStage = preliminaryStages.find(
+    (stage) => stage.status !== 'passed'
+  );
+  const finalValidation = preliminaryBlockingStage
+    ? {
+        stages: FINAL_VALIDATION_STAGE_IDS.map((id) =>
+          skippedStage(
+            id,
+            'Final certification was deferred because candidate validation did not pass.'
+          )
+        ),
+      }
+    : runFinalValidation({
+        root: params.root,
+        input: params.input,
+        commandStatuses: commandValidation.commandStatuses,
+      });
+  const blockingStage = [...preliminaryStages, ...finalValidation.stages].find(
+    (stage) => stage.status !== 'passed'
+  );
 
   if (blockingStage || !runReviewBundle) {
     return {

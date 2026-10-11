@@ -34,6 +34,9 @@ describe('component production validation dependency policy', () => {
     expect(
       componentProductionCommandDependencies('canonical-web-visual')
     ).toEqual(['react-storybook-build']);
+    expect(componentProductionCommandDependencies('website-typecheck')).toEqual(
+      ['react-build', 'react-native-build']
+    );
     expect(componentProductionCommandDependencies('web-smoke')).toEqual([
       'react-build',
     ]);
