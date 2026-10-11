@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@vellira-ui/react';
 import type { OAuthLoginMethod } from './authPreference';
 import { AuthSurface } from './AuthSurface';
@@ -28,6 +29,7 @@ export function OAuthConnectionFlow({
   providers?: readonly OAuthLoginMethod[];
   recoverProviders?: boolean;
 }) {
+  const router = useRouter();
   const [connection, setConnection] = useState<OAuthConnection>();
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string>();
@@ -85,9 +87,11 @@ export function OAuthConnectionFlow({
     if (!connection || submitting) return;
     setSubmitting(true);
     setError(undefined);
+    let connected = false;
     try {
       await completeOAuthConnection(connection);
       setStatus('complete');
+      connected = true;
     } catch (cause) {
       if (cause instanceof VelliraApiError && cause.code === 'link_invalid')
         setStatus('expired');
@@ -110,6 +114,9 @@ export function OAuthConnectionFlow({
     } finally {
       setSubmitting(false);
     }
+    // Only a completed, CSRF-protected connection may enter the app.
+    // The success link remains a fallback if client navigation is interrupted.
+    if (connected) router.replace('/app');
   };
   const provider = connection
     ? oauthProviderName(connection.provider)
