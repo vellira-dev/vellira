@@ -87,13 +87,9 @@ describe('configured provider-first icon-only authentication', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const { container } = render(
-      <LoginForm providers={[]} recoverProviders />
-    );
+    const { container } = render(<LoginForm providers={[]} recoverProviders />);
 
-    expect(
-      screen.getByRole('button', { name: 'Sign in' })
-    ).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
     expect(
       container.querySelector('[data-provider-discovery="recovering"]')
     ).not.toBeNull();

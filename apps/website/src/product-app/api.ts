@@ -222,8 +222,7 @@ export async function getAuthProviderDiscovery(): Promise<AuthProviderDiscovery>
     if (!response.ok) return { providers: [], recoverInBrowser: true };
 
     const text = await response.text();
-    if (text.length > 1024)
-      return { providers: [], recoverInBrowser: true };
+    if (text.length > 1024) return { providers: [], recoverInBrowser: true };
 
     const providers = parseAuthProviders(JSON.parse(text));
     if (!providers) return { providers: [], recoverInBrowser: true };
