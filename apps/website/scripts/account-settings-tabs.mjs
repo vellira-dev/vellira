@@ -72,6 +72,44 @@ try {
 
   await selectTab('Appearance', 'appearance');
   await page.getByRole('heading', { name: 'Appearance' }).waitFor();
+  const themeLayout = await page.evaluate(() => {
+    const group = document.querySelector('[role="radiogroup"]');
+    const cards = group?.querySelectorAll('input[type="radio"]');
+    if (!group || !cards || cards.length !== 4) {
+      throw new Error('Expected all four canonical theme radio choices');
+    }
+
+    const bounds = Array.from(cards, (radio) =>
+      radio.closest('label')?.getBoundingClientRect()
+    );
+    if (bounds.some((box) => !box)) throw new Error('Theme card missing');
+    const first = bounds[0];
+    const last = bounds[bounds.length - 1];
+    const parent = group.getBoundingClientRect();
+    return {
+      tops: bounds.map((box) => box.top),
+      center: (first.left + last.right) / 2,
+      parentCenter: parent.left + parent.width / 2,
+      widths: bounds.map((box) => box.width),
+      labels: Array.from(cards, (radio) => {
+        const label = radio.closest('label')?.querySelector('span:last-child');
+        return label ? window.getComputedStyle(label).whiteSpace : null;
+      }),
+    };
+  });
+  assert.ok(
+    themeLayout.tops.every((top) => Math.abs(top - themeLayout.tops[0]) <= 1),
+    'All four themes must stay in a single row'
+  );
+  assert.ok(
+    Math.abs(themeLayout.center - themeLayout.parentCenter) <= 2,
+    'Theme choices must be horizontally centered'
+  );
+  assert.ok(
+    themeLayout.widths.every((width) => width >= 180),
+    'Theme cards must be wide enough for High contrast'
+  );
+
   await page.getByText('Dark', { exact: true }).click();
   assert.equal(
     await page.getByRole('radio', { name: 'Dark', exact: true }).isChecked(),
