@@ -61,7 +61,7 @@ describe('shared npm-verified version on public sites', () => {
     );
 
     expect(version).toContain("checked ? 'Unavailable' : 'Checking…'");
-    expect(version).toContain("release ? `v${release.version}`");
+    expect(version).toContain('release ? `v${release.version}`');
     expect(version).toContain('data-release-state=');
 
     for (const [css, selector] of [

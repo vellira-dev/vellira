@@ -31,12 +31,14 @@ export function PublishedNpmVersion() {
       ? 'Latest confirmed npm version unavailable'
       : 'Checking latest confirmed npm version';
 
+  const state = release ? 'verified' : checked ? 'unavailable' : 'loading';
+
   return (
     <span
       aria-label={label}
       title={label}
       aria-live='polite'
-      data-release-state={release ? 'verified' : checked ? 'unavailable' : 'loading'}
+      data-release-state={state}
     >
       {release ? `v${release.version}` : checked ? 'Unavailable' : 'Checking…'}
     </span>
