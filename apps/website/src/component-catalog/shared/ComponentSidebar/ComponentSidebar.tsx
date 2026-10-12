@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid } from '@vellira-ui/icons';
 
 import {
   Sidebar,
@@ -25,16 +24,6 @@ export function ComponentSidebar({
 
   return (
     <Sidebar ariaLabel='Component navigation'>
-      {fromWorkspace && (
-        <SidebarGroup label='Workspace'>
-          <SidebarItem>
-            <Link href='/app' onClick={onNavigate}>
-              <Grid size={18} aria-hidden='true' />
-              <span>Overview</span>
-            </Link>
-          </SidebarItem>
-        </SidebarGroup>
-      )}
       {componentGroups.map((group) => (
         <SidebarGroup key={group.category} label={group.label}>
           {group.components.map((component) => (
