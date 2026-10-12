@@ -104,6 +104,7 @@
 }
 
 .mobileMenuTrigger,
+.portalTabletMenuTrigger,
 .mobileNavigationLayer,
 .mobileGlobalClose {
   display: none;
@@ -250,8 +251,20 @@
 /* Component navigation itself becomes a drawer at 1100px, while the
    marketing site's primary navigation needs its own 1280px breakpoint. */
 @media (width > 1100px) and (width <= 1280px) {
-  .mobileAction {
+  /* Components' own drawer is not available above 1100px. Public portal
+     pages therefore expose the real SiteHeader menu, in the same rightmost
+     location as the marketing header, rather than leaving users stranded. */
+  .mobileAction,
+  .mobileGlobalClose {
     display: none;
+  }
+
+  .portalTabletMenuTrigger {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    order: 100;
+    margin-inline-start: auto;
   }
 }
 
