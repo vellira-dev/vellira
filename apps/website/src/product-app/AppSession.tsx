@@ -80,6 +80,14 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (localPreview) {
+      setMe(previewUser);
+      setWorkspace(previewWorkspace);
+      setError(null);
+      setStatus('ready');
+      return;
+    }
+
     setStatus('loading');
     setError(null);
 
@@ -112,6 +120,11 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const signOut = useCallback(async () => {
+    if (localPreview) {
+      router.replace('/login');
+      return;
+    }
+
     try {
       await logout();
     } catch (cause) {
