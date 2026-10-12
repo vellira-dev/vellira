@@ -176,7 +176,7 @@ try {
     const heading = list?.querySelector('h2');
     const link = list?.querySelector('a[href*="/components/button"]');
     const name = link?.querySelector('span');
-    const workspace = panel?.querySelector('a[href="/app"]');
+    const workspace = panel?.querySelector('button[class*="mainNavigationButton"]');
     if (!panel || !heading || !link || !name || !workspace) {
       throw new Error('Mobile Components navigation elements missing');
     }
@@ -203,10 +203,10 @@ try {
   );
 
   const mobileReturn = page.locator('#component-navigation')
-    .getByRole('link', { name: 'Back to workspace', exact: true });
+    .getByRole('button', { name: 'Back to workspace', exact: true });
   await mobileReturn.waitFor();
   assert.equal(
-    await page.getByRole('link', { name: 'Back to workspace' }).count(),
+    await page.getByRole('button', { name: 'Back to workspace' }).count(),
     1,
     'Mobile Back to workspace must exist once, inside the component menu'
   );
@@ -216,10 +216,26 @@ try {
     0,
     'No Back to workspace button may appear in the Components page content'
   );
+  const originalUrl = page.url();
   await mobileReturn.click();
+  const workspaceMenu = page.getByRole('dialog', {
+    name: 'Workspace navigation',
+  });
+  await workspaceMenu.waitFor();
+  assert.equal(
+    page.url(),
+    originalUrl,
+    'Back must open the main workspace menu without changing the URL'
+  );
+  assert.equal(
+    await page.locator('#component-navigation').count(),
+    0,
+    'Components drawer closes as the workspace menu opens'
+  );
+  await workspaceMenu.getByRole('link', { name: 'Overview' }).click();
   await page.waitForURL('**/app');
 
-  console.log('OK Core Components: exactly one Back inside menu; none in page; public routes unchanged');
+  console.log('OK Core Components: nested mobile Back switches to main menu in-place, public routes unchanged');
 } finally {
   await page.close();
   await context.close();
