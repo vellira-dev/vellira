@@ -83,11 +83,23 @@ try {
       'Mobile product theme belongs only in Settings -> Appearance'
     );
 
+    assert.equal(
+      await page.locator('#app-mobile-navigation').count(),
+      0,
+      'Closed workspace menu must be unmounted, just like Components'
+    );
     await open.click();
     const drawer = page.getByRole('dialog', {
       name: 'Workspace navigation',
     });
     await drawer.waitFor();
+    assert.equal(
+      await drawer.evaluate((node) =>
+        node.getAnimations().some((animation) => animation.playState === 'running')
+      ),
+      false,
+      'Workspace menu must appear immediately, not slide in on open'
+    );
     const openedLogo = await drawer
       .getByRole('link', { name: 'Vellira workspace' })
       .locator('img')
@@ -149,6 +161,11 @@ try {
 
     await page.keyboard.press('Escape');
     await drawer.waitFor({ state: 'hidden' });
+    assert.equal(
+      await page.locator('#app-mobile-navigation').count(),
+      0,
+      'Closing workspace menu must unmount the overlay like Components'
+    );
     await page.waitForFunction(() => document.body.style.overflow === '');
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
@@ -188,9 +205,21 @@ try {
         Math.abs(componentButton.height - appTrigger.height) <= 1,
       'Workspace and Components must use the same Menu button geometry'
     );
+    assert.equal(
+      await page.locator('#component-navigation').count(),
+      0,
+      'Closed Components drawer must be unmounted'
+    );
     await componentTrigger.click();
     const componentsDrawer = page.locator('#component-navigation');
     await componentsDrawer.waitFor();
+    assert.equal(
+      await componentsDrawer.locator('..').evaluate((node) =>
+        node.getAnimations().some((animation) => animation.playState === 'running')
+      ),
+      false,
+      'Components opens without slide animation, as does workspace'
+    );
     const contextualOpenedLogo = await componentsDrawer
       .locator('..')
       .getByRole('link', { name: 'Vellira home' })
@@ -305,7 +334,7 @@ try {
   const publicHeader = await headerGeometry(page.locator('header').first());
   sameChrome(desktopApp, publicHeader, 'Product / public SiteHeader');
 
-  console.log('OK shared header/Menu and stable brand size when opening Workspace/Components at 1100/768/390/320px');
+  console.log('OK shared header/Menu, instant opening parity, unmounted closed overlays, and stable brand sizing at 1100/768/390/320px');
 } finally {
   await page.close();
   await context.close();
