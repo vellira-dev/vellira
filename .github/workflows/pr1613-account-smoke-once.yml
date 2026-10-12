@@ -73,3 +73,24 @@ jobs:
             tail -n 200 /tmp/vellira-account-preview.log
             exit 1
           fi
+
+      - name: Prove contextual catalog session boundary without preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir apps/website exec next dev -p 3002 --hostname 127.0.0.1 > /tmp/vellira-auth-boundary.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for i in $(seq 1 120); do
+            if curl -fsS --max-time 10 -o /dev/null http://127.0.0.1:3002/components; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "true" ]; then
+            tail -n 150 /tmp/vellira-auth-boundary.log
+            exit 1
+          fi
+          WEBSITE_URL=http://127.0.0.1:3002 pnpm --dir apps/website run test:account-catalog-session-boundary
