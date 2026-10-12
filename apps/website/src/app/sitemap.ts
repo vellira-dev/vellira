@@ -6,11 +6,15 @@ import { webComponents } from '@/component-catalog';
 
 const SITE_URL = 'https://vellira.dev';
 
+// Only supply lastModified when a page has an authoritative content update date.
+// A new build or deployment is not a significant content edit. Google can
+// ignore untrustworthy sitemap timestamps, so omit them for live index and
+// component pages until their real modification dates are available.
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const componentPages: MetadataRoute.Sitemap = webComponents.map(
     (component) => ({
       url: `${SITE_URL}/components/${component.slug}`,
-      lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
     })
@@ -21,14 +25,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: SITE_URL,
-      lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
 
     {
       url: `${SITE_URL}/components`,
-      lastModified: new Date(),
       changeFrequency: 'weekly' as const,
       priority: 0.9,
     },

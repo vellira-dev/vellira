@@ -379,6 +379,16 @@ describe('component generator', () => {
     expect(result.createdFiles).toHaveLength(23);
     expect(result.createdFiles).toContain(websiteCreatedFile);
     expect(result.updatedFiles).toContain(websiteUpdatedFile);
+
+    // The base component must not add the ## heading twice when its root
+    // API section has the same title.
+    for (const platform of ['react', 'react-native']) {
+      const apiDoc = fs.readFileSync(
+        path.join(root, 'packages', platform, 'API.md'),
+        'utf8'
+      );
+      expect(apiDoc.match(/^## Avatar$/gm)).toHaveLength(1);
+    }
     expect(result.updatedFiles).toContain(
       getComponentTokenArchitectureRegistrationFile(root)
     );
