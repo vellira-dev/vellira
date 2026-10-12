@@ -45,7 +45,8 @@ export function ComponentNavigationProvider({
   const previousPathname = useRef(pathname);
   const [open, setOpen] = useState(false);
   const [mainOpen, setMainOpen] = useState(false);
-  const [workspaceContextRequested, setWorkspaceContextRequested] = useState(false);
+  const [workspaceContextRequested, setWorkspaceContextRequested] =
+    useState(false);
   const [workspaceSessionReady, setWorkspaceSessionReady] = useState(false);
   // Query parameters request a layout; only the canonical session can grant it.
   const fromWorkspace = workspaceContextRequested && workspaceSessionReady;
