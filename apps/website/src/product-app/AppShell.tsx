@@ -215,28 +215,31 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 export function AppHome() {
-  const { workspace } = useAppSession();
-
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
-        <p className={styles.eyebrow}>Get started</p>
+        <p className={styles.eyebrow}>Your workspace · Get started</p>
         <h1>Start building with Vellira</h1>
-        <p className={styles.lead}>
-          Your cross-platform UI foundation. Explore the components and
-          installation guide to start building consistent interfaces.
-        </p>
+        <p className={styles.lead}>Your cross-platform UI foundation.</p>
       </header>
 
-      <section className={styles.settingsSection} aria-labelledby='getting-started-heading'>
-        <div>
-          <p className={styles.sectionLabel}>Vellira Core</p>
-          <h2 id='getting-started-heading'>Get started</h2>
-        </div>
+      <section className={styles.startPanel} aria-labelledby='getting-started-heading'>
+        <h2 id='getting-started-heading'>Get started</h2>
         <div className={styles.resourceList}>
-          <a href='/components' className={styles.resourceLink}>
-            <span><strong>Explore components</strong><small>Browse the available component library.</small></span>
-            <span aria-hidden='true'>→</span>
+          <Link href='/components' className={styles.resourceLink}>
+            <span aria-hidden='true' className={styles.resourceIcon}>◎</span>
+            <span>Explore the component library</span>
+            <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
+          </Link>
+          <a
+            href='https://docs.vellira.dev/start/getting-started'
+            className={styles.resourceLink}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <span aria-hidden='true' className={styles.resourceIcon}>›_</span>
+            <span>Install Vellira Core</span>
+            <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
           </a>
           <a
             href='https://docs.vellira.dev/start/getting-started'
@@ -244,36 +247,16 @@ export function AppHome() {
             target='_blank'
             rel='noopener noreferrer'
           >
-            <span><strong>Install Vellira Core</strong><small>Follow the current installation instructions.</small></span>
-            <span aria-hidden='true'>↗</span>
-          </a>
-          <a
-            href='https://docs.vellira.dev/start/getting-started'
-            className={styles.resourceLink}
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            <span><strong>Read the getting-started guide</strong><small>Learn the recommended setup and usage.</small></span>
-            <span aria-hidden='true'>↗</span>
+            <span aria-hidden='true' className={styles.resourceIcon}>▤</span>
+            <span>Follow the getting-started guide</span>
+            <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
           </a>
         </div>
       </section>
-
-      {workspace && (
-        <section className={styles.settingsSection} aria-labelledby='workspace-heading'>
-          <div>
-            <p className={styles.sectionLabel}>Current workspace</p>
-            <h2 id='workspace-heading'>{workspace.name}</h2>
-          </div>
-          <dl className={styles.settingsList}>
-            <div><dt>Status</dt><dd>{workspace.status}</dd></div>
-            <div><dt>Your role</dt><dd>{workspace.membership.role}</dd></div>
-          </dl>
-          <Button asChild appearance='outline' color='neutral'>
-            <Link href='/app/settings'>Account settings</Link>
-          </Button>
-        </section>
-      )}
+      <section className={styles.proNote} aria-label='Additional workflows'>
+        <h2>Build more with Pro</h2>
+        <p>Discover advanced UI production workflows when available.</p>
+      </section>
     </div>
   );
 }
