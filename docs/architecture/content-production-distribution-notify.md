@@ -5,6 +5,12 @@ Owner: vellira-internal #839.
 The public notification workflow does not alter Cloudflare deployment.
 It only sends immutable workflow run identity after verified production.
 
+GitHub's production workflow `head_sha` can differ from the immutable
+staging commit actually deployed. The notifier therefore reads the active
+`https://vellira.dev/__vellira_runtime` build identity and requires it to
+end with the exact production run ID and attempt. It derives the deployed
+candidate SHA from that verified build ID, **not** from the workflow checkout.
+
 The private Content Distribution workflow independently verifies the public
 production run, successful deployment job, active build identity and live
 canonical article before preparing reviewable channel variants.
