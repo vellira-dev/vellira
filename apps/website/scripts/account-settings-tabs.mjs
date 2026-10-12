@@ -72,6 +72,17 @@ try {
 
   await selectTab('Appearance', 'appearance');
   await page.getByRole('heading', { name: 'Appearance' }).waitFor();
+  // Canonical Radio animates the initially selected System control with
+  // radio-pop (transform: scale), temporarily altering getBoundingClientRect
+  // even though its layout gap stays exactly 16px. Measure settled geometry.
+  await page.waitForFunction(() => {
+    const controls = Array.from(
+      document.querySelectorAll('[role="radiogroup"] input:checked + span')
+    );
+    return controls.length === 1 && controls.every((control) =>
+      control.getAnimations().every((animation) => animation.playState !== 'running')
+    );
+  });
   const themeLayout = await page.evaluate(() => {
     const group = document.querySelector('[role="radiogroup"]');
     const cards = group?.querySelectorAll('input[type="radio"]');
