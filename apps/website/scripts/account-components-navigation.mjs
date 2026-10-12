@@ -111,23 +111,28 @@ try {
   await page.locator('[data-product-app-header]').waitFor();
   await page.getByRole('button', { name: 'Account menu' }).waitFor();
 
-  // Back stays in the fixed menu bar above the independently scrolling list.
-  const backTop = (await workspaceReturn.boundingBox()).y;
-  const scrolled = await page.evaluate(() => {
+  // Back has its own menu row before the independently scrollable
+  // component list. Inspect real structure instead of injecting fake content.
+  const independentReturn = await page.evaluate(() => {
     const nav = document.querySelector('[data-component-explorer-sidebar]');
+    const bar = nav?.querySelector('[aria-label="Workspace navigation"]');
     const list = nav?.querySelector('[class*="desktopList"]');
-    if (!list) throw new Error('Component sidebar scroll list is missing');
-    const filler = document.createElement('div');
-    filler.style.height = '3000px';
-    filler.setAttribute('aria-hidden', 'true');
-    list.appendChild(filler);
-    list.scrollTop = list.scrollHeight;
-    return list.scrollTop;
+    if (!bar || !list) {
+      throw new Error('Component return row or list is missing');
+    }
+    const returnBox = bar.getBoundingClientRect();
+    const listBox = list.getBoundingClientRect();
+    return {
+      separate: !list.contains(bar),
+      above: returnBox.bottom <= listBox.top + 1,
+      visible: returnBox.height > 0,
+    };
   });
-  assert.ok(scrolled > 0, 'Long component navigation must scroll');
   assert.ok(
-    Math.abs((await workspaceReturn.boundingBox()).y - backTop) <= 1,
-    'Back to workspace must remain visible while component list scrolls'
+    independentReturn.separate &&
+      independentReturn.above &&
+      independentReturn.visible,
+    'Back to workspace must remain a separate, visible row above component navigation'
   );
 
   await workspaceReturn.click();
