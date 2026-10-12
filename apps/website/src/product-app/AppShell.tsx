@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 import { Warning, Grid, Platforms, Docs, ChevronLeft, ChevronRight, Menu, Close } from '@vellira-ui/icons';
@@ -13,6 +14,7 @@ import { AppHeader, AppMobileAccountActions } from './AppHeader';
 import { EmailVerificationResend } from './EmailVerificationResend';
 
 import styles from './AppShell.module.css';
+import componentDrawerStyles from '@/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.module.css';
 
 function activeHref(pathname: string) {
   return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
@@ -128,7 +130,9 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    mobilePanelRef.current?.querySelector<HTMLElement>('a[href]')?.focus();
+    mobilePanelRef.current
+      ?.querySelector<HTMLButtonElement>('button[aria-label="Close workspace navigation"]')
+      ?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -203,28 +207,18 @@ function AppShellContent({ children }: { children: ReactNode }) {
             appearance='ghost'
             className={styles.mobileNavigationTrigger}
             iconOnly
-            iconStart={
-              mobileMenuOpen ? (
-                <Close size={22} aria-hidden='true' />
-              ) : (
-                <Menu size={22} aria-hidden='true' />
-              )
-            }
-            aria-label={
-              mobileMenuOpen
-                ? 'Close workspace navigation'
-                : 'Open workspace navigation'
-            }
+            iconStart={<Menu size={22} aria-hidden='true' />}
+            aria-label='Open workspace navigation'
             aria-expanded={mobileMenuOpen}
             aria-controls='app-mobile-navigation'
-            onClick={() => setMobileMenuOpen((previous) => !previous)}
+            onClick={() => setMobileMenuOpen(true)}
           />
         }
       />
       <div
         className={[
-          styles.mobileNavigationLayer,
-          mobileMenuOpen ? styles.mobileNavigationLayerOpen : null,
+          componentDrawerStyles.mobileLayer,
+          mobileMenuOpen ? componentDrawerStyles.mobileLayerOpen : null,
         ]
           .filter(Boolean)
           .join(' ')}
@@ -234,7 +228,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
         <Button
           appearance='bare'
           type='button'
-          className={styles.mobileNavigationBackdrop}
+          className={componentDrawerStyles.backdrop}
           aria-label='Dismiss workspace navigation'
           onClick={() => {
             setMobileMenuOpen(false);
@@ -244,21 +238,56 @@ function AppShellContent({ children }: { children: ReactNode }) {
         <div
           ref={mobilePanelRef}
           id='app-mobile-navigation'
-          className={styles.mobileNavigationSurface}
+          className={componentDrawerStyles.mobileSurface}
           role='dialog'
           aria-modal='true'
           aria-label='Workspace navigation'
         >
-          <AppNavigation
-            collapsed={false}
-            mobile
-            onNavigate={() => setMobileMenuOpen(false)}
-          />
-          {mobileMenuOpen && (
-            <AppMobileAccountActions
-              onNavigate={() => setMobileMenuOpen(false)}
+          <div className={componentDrawerStyles.mobileHeader}>
+            <Link
+              href='/app'
+              className={componentDrawerStyles.mobileBrand}
+              aria-label='Vellira workspace'
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Image
+                src='/brand/logos/logo-gradient.svg'
+                alt='Vellira'
+                width={100}
+                height={32}
+              />
+            </Link>
+            <Button
+              type='button'
+              size='sm'
+              appearance='ghost'
+              shape='square'
+              iconOnly
+              className={styles.mobileDrawerClose}
+              iconStart={<Close size={22} aria-hidden='true' />}
+              aria-label='Close workspace navigation'
+              onClick={() => {
+                setMobileMenuOpen(false);
+                mobileMenuTriggerRef.current?.focus();
+              }}
             />
-          )}
+          </div>
+          <div className={componentDrawerStyles.mobilePanel}>
+            <div className={componentDrawerStyles.mobilePanelContent}>
+              <AppNavigation
+                collapsed={false}
+                mobile
+                onNavigate={() => setMobileMenuOpen(false)}
+              />
+            </div>
+            {mobileMenuOpen && (
+              <div className={styles.mobileAccountFooter}>
+                <AppMobileAccountActions
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
