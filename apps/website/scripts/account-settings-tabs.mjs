@@ -37,6 +37,20 @@ try {
   const settings = page.locator('[data-account-settings]');
   await settings.waitFor();
   await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+
+  const verification = page.getByText('Verified', { exact: true });
+  await verification.waitFor();
+  assert.equal(
+    await verification.locator('..').locator('svg').count(),
+    1,
+    'Verified must be paired with the canonical check-in-circle icon'
+  );
+  await page.getByText('Time zone (device)', { exact: true }).waitFor();
+  const detectedTimeZone = await page.evaluate(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
+  await page.getByText(detectedTimeZone, { exact: true }).waitFor();
+
   assert.equal(
     await page.getByRole('tablist', { name: 'Account settings sections' }).count(),
     1
