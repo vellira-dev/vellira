@@ -100,6 +100,37 @@
   width: 100%;
 }
 
+.sidebarResources {
+  display: grid;
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-muted);
+  gap: var(--space-4);
+}
+
+.sidebarCaption {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sidebarResources a {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.sidebarResources a:hover {
+  color: var(--text-primary);
+}
+
+.sidebarResources a:focus-visible {
+  outline: 2px solid var(--text-brand);
+  outline-offset: 4px;
+}
+
 .mobileNavigation,
 .mobileNavigationRow {
   display: none;
