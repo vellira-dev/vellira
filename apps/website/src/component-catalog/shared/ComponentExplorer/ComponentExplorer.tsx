@@ -25,7 +25,13 @@ export function ComponentExplorer({
         </div>
 
         <div className={styles.mainColumn} data-component-explorer-main>
-          <div className={[styles.content, indexMode ? styles.indexContent : null].filter(Boolean).join(' ')}>{children}</div>
+          <div
+            className={[styles.content, indexMode ? styles.indexContent : null]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {children}
+          </div>
 
           {footer}
         </div>
