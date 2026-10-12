@@ -66,7 +66,7 @@ try {
   await page.getByRole('link', { name: 'Recover password' }).waitFor();
 
   await selectTab('Workspace', 'workspace');
-  await page.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
+  await settings.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
   await page.getByText('Preview workspace').waitFor();
   await page.getByText('owner', { exact: true }).waitFor();
 
