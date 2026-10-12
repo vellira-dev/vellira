@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { Warning, User, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
-import { Button, Dropdown, Select } from '@vellira-ui/react';
+import { Button, Dropdown, Portal, Select, Tooltip } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
@@ -34,40 +34,41 @@ function AppNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
   return (
     <>
       <nav className={styles.desktopNavigation} aria-label='Vellira app'>
-        <div className={styles.sidebarToggleRow}>
-          {!collapsed && <span className={styles.sidebarTitle}>Navigation</span>}
-          <Button
-            appearance='ghost'
-            color='neutral'
-            size='sm'
-            iconOnly
-            iconStart={collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={!collapsed}
-            onClick={onToggle}
-          />
-        </div>
         <Sidebar ariaLabel='Account navigation'>
           <SidebarGroup label={collapsed ? '' : 'Workspace'}>
             <SidebarItem active={value === '/app'}>
-              <Link title={collapsed ? 'Overview' : undefined} href='/app' aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
+              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/app' aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
                 <span className={styles.navEntry}><Grid size={18} aria-hidden='true' />{!collapsed && <span>Overview</span>}</span>
-              </Link>
+              </Link></Tooltip.Trigger><Portal><Tooltip.Content>Overview</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
           </SidebarGroup>
           <SidebarGroup label={collapsed ? '' : 'Resources'}>
             <SidebarItem>
-              <Link title={collapsed ? 'Components' : undefined} href='/components' aria-label={collapsed ? 'Components' : undefined}>
+              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/components' aria-label={collapsed ? 'Components' : undefined}>
                 <span className={styles.navEntry}><Platforms size={18} aria-hidden='true' />{!collapsed && <span>Components ↗</span>}</span>
-              </Link>
+              </Link></Tooltip.Trigger><Portal><Tooltip.Content>Components</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
             <SidebarItem>
-              <a title={collapsed ? 'Docs' : undefined} aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>
+              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><a aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>
                 <span className={styles.navEntry}><Docs size={18} aria-hidden='true' />{!collapsed && <span>Docs ↗</span>}</span>
-              </a>
+              </a></Tooltip.Trigger><Portal><Tooltip.Content>Docs</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
           </SidebarGroup>
         </Sidebar>
+        <div className={styles.sidebarToggleRow}>
+          <Button
+            appearance='ghost'
+            color='neutral'
+            size='sm'
+            iconStart={collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            iconOnly={collapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            onClick={onToggle}
+          >
+            {!collapsed && 'Collapse sidebar'}
+          </Button>
+        </div>
       </nav>
 
       <div className={styles.mobileNavigation}>
