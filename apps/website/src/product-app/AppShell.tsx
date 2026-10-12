@@ -27,6 +27,7 @@ import {
 } from '@/components/navigation/Sidebar';
 import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
 import { HeaderMenuButton } from '@/components/layout/HeaderChrome/HeaderMenuButton';
+import { trapNavigationTab } from '@/components/navigation/trapNavigationTab';
 
 import { AppSessionProvider, useAppSession } from './AppSession';
 import { AppHeader, AppMobileAccountActions } from './AppHeader';
@@ -193,24 +194,7 @@ export function AppWorkspaceMobileMenu({
         focusTrigger();
         return;
       }
-      if (event.key !== 'Tab') return;
-
-      const focusable = Array.from(
-        panelRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled])'
-        ) ?? []
-      );
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!first || !last) return;
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapNavigationTab(event, panelRef.current);
     };
 
     const handleResize = () => {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef } from 'react';
 
 import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
+import { trapNavigationTab } from '@/components/navigation/trapNavigationTab';
 
 import { ComponentSidebar } from '../ComponentSidebar';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
@@ -51,23 +52,7 @@ export function ComponentNavigationShell({
         closeAndRestoreFocus();
         return;
       }
-      if (event.key !== 'Tab') return;
-
-      const focusable = Array.from(
-        surfaceRef.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled])'
-        ) ?? []
-      );
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapNavigationTab(event, surfaceRef.current);
     };
 
     const previousOverflow = document.body.style.overflow;
