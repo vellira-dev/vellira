@@ -184,7 +184,9 @@
   .mobilePanelContent {
     flex: 1;
     min-height: 0;
-    padding-inline: var(--space-4);
+    /* Left gutter here, right gutter owned by canonical Sidebar.inner. */
+    padding-left: var(--space-4);
+    padding-right: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
