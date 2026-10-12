@@ -1,0 +1,69 @@
+name: PR 1613 Account Browser Acceptance (temporary)
+
+on:
+  push:
+    branches:
+      - feat/core-account-overview-v1
+    paths:
+      - .github/workflows/pr1613-account-smoke-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  account-smokes:
+    name: Account and Components mobile browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/core-account-overview-v1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.22.2
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare canonical website packages and icons
+        run: pnpm --dir apps/website run predev
+      - name: Execute browser acceptance against a real dev preview
+        env:
+          NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir apps/website exec next dev -p 3001 --hostname 127.0.0.1 > /tmp/vellira-account-preview.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for i in $(seq 1 120); do
+            if curl -fsS --max-time 10 -o /dev/null http://127.0.0.1:3001/app; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "true" ]; then
+            tail -n 150 /tmp/vellira-account-preview.log
+            exit 1
+          fi
+
+          result=0
+          for suite in \
+            account-sidebar-geometry \
+            account-components-navigation \
+            account-mobile-navigation \
+            account-header-menu \
+            account-settings-tabs; do
+            echo "::group::$suite"
+            WEBSITE_URL=http://127.0.0.1:3001 pnpm --dir apps/website run "test:$suite" || result=1
+            echo "::endgroup::"
+          done
+          if [ "$result" -ne 0 ]; then
+            echo 'Browser acceptance failed. Recent dev-server output:'
+            tail -n 200 /tmp/vellira-account-preview.log
+            exit 1
+          fi
