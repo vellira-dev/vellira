@@ -391,19 +391,15 @@
 
 .releaseHeader code {
   display: inline-flex;
-  padding: 3px 12px;
   color: var(--color-primary-500);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   font-weight: 700;
-  background: color-mix(
-    in srgb,
-    var(--color-primary-500) 8%,
-    var(--surface-default)
-  );
-  border: 1px solid
-    color-mix(in srgb, var(--color-primary-500) 20%, var(--border-muted));
-  border-radius: var(--radius-full);
+}
+
+.releaseHeader code [data-release-state='unavailable'],
+.releaseHeader code [data-release-state='loading'] {
+  color: var(--text-muted);
 }
 
 .releaseVersion {
@@ -414,7 +410,6 @@
   gap: 8px;
 }
 
-.releaseBadge,
 .updatedBadge {
   display: inline-flex;
   align-items: center;
@@ -430,16 +425,9 @@
 .releaseBadge {
   flex: 0 0 auto;
   color: var(--color-success-600);
-  background: color-mix(
-    in srgb,
-    var(--color-success-500) 8%,
-    var(--surface-default)
-  );
-  border-color: color-mix(
-    in srgb,
-    var(--color-success-500) 22%,
-    var(--border-muted)
-  );
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .releaseDescription {
