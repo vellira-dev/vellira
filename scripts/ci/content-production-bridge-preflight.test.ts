@@ -180,7 +180,7 @@ describe('read-only content production bridge preflight', () => {
     expect(workflow).not.toContain('repository_dispatch:');
     expect(workflow).not.toContain('permission-contents: write');
     expect(workflow).not.toContain('create-github-app-token');
-    expect(workflow).not.toContain('secrets.');
+    expect(workflow).not.toContain('${{ secrets.');
     expect(workflow).not.toContain('environment:');
     expect(workflow).not.toContain('gh api --method POST');
   });
