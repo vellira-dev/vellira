@@ -88,8 +88,46 @@ jobs:
             exit 0
           }
 
+          # GitHub workflow_run.head_sha is the workflow checkout, which may
+          # DIFFER from the immutable candidate actually deployed to Cloudflare.
+          # Read the production runtime's active build, bound to this exact run.
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --max-time 15 --header 'Cache-Control: no-cache' \
+            'https://vellira.dev/__vellira_runtime' > "$RUNNER_TEMP/live-runtime.json"
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          runtime = json.loads(
+              Path(os.environ['RUNNER_TEMP'], 'live-runtime.json').read_text(encoding='utf-8')
+          )
+          if not isinstance(runtime, dict):
+              raise SystemExit('Live production runtime response is invalid.')
+          if not isinstance(runtime.get('workerVersion'), str) or not runtime['workerVersion']:
+              raise SystemExit('Live production Worker version is missing.')
+          run_id = os.environ['SOURCE_RUN_ID']
+          attempt = os.environ['SOURCE_RUN_ATTEMPT']
+          build_id = runtime.get('buildId')
+          if not isinstance(build_id, str):
+              raise SystemExit('Live production build identity is missing.')
+          matched = re.fullmatch(
+              rf'([0-9a-f]{{40}})-{re.escape(run_id)}-{re.escape(attempt)}',
+              build_id,
+          )
+          if matched is None:
+              raise SystemExit(
+                  'Active production build does not correspond to the verified run and attempt.'
+              )
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+              output.write(f'candidate-sha={matched.group(1)}\n')
+              output.write(f'build-id={build_id}\n')
+          PY
+
           echo 'eligible=true' >> "$GITHUB_OUTPUT"
-          echo 'Verified production handoff is eligible; no publication authorization was granted.'
+          echo 'Verified live deployment identity; no publication authorization was granted.'
 
       - name: Create short-lived repository-scoped private dispatch token
         id: dispatch-token
@@ -107,12 +145,14 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
-          CANDIDATE_SHA: ${{ github.event.workflow_run.head_sha }}
+          CANDIDATE_SHA: ${{ steps.source.outputs.candidate-sha }}
+          BUILD_ID: ${{ steps.source.outputs.build-id }}
           PRODUCTION_RUN_ID: ${{ github.event.workflow_run.id }}
           PRODUCTION_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: |
           set -euo pipefail
-          build_id="$CANDIDATE_SHA-$PRODUCTION_RUN_ID-$PRODUCTION_RUN_ATTEMPT"
+          expected_build_id="$CANDIDATE_SHA-$PRODUCTION_RUN_ID-$PRODUCTION_RUN_ATTEMPT"
+          test "$expected_build_id" = "$BUILD_ID"
           gh api --method POST \
             -H 'Accept: application/vnd.github+json' \
             'repos/vellira-dev/vellira-internal/dispatches' \
@@ -121,7 +161,7 @@ jobs:
             -F "client_payload[runId]=$PRODUCTION_RUN_ID" \
             -F "client_payload[runAttempt]=$PRODUCTION_RUN_ATTEMPT" \
             -f "client_payload[candidateSha]=$CANDIDATE_SHA" \
-            -f "client_payload[buildId]=$build_id"
+            -f "client_payload[buildId]=$BUILD_ID"
 
           printf 'Handoff submitted for verified production run %s attempt %s.\n' \
             "$PRODUCTION_RUN_ID" "$PRODUCTION_RUN_ATTEMPT" >> "$GITHUB_STEP_SUMMARY"
