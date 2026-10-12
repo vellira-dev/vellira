@@ -125,6 +125,17 @@
     align-items: center;
   }
 
+  /* Shared HeaderChrome has one right-action row. On tablet/phone the
+     marketing Menu is the final visible action, never the first icon. */
+  .mobileMenuTrigger {
+    order: 100;
+    margin-inline-start: auto;
+  }
+
+  .authActions {
+    display: none;
+  }
+
   .mobileNavigationLayer {
     position: fixed;
     inset: var(--site-header-height) 0 0;
