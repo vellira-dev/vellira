@@ -39,12 +39,10 @@ export function AppHeader({
       </Link>
 
       <div className={styles.headerContext}>
-        <ThemeSwitcher />
-        {mobileAction && (
-          <div className={styles.mobileHeaderAction}>{mobileAction}</div>
-        )}
-        {status === 'ready' && (
-          <Dropdown color='neutral' placement='bottom-end'>
+        <div className={styles.desktopHeaderActions}>
+          <ThemeSwitcher />
+          {status === 'ready' && (
+            <Dropdown color='neutral' placement='bottom-end'>
             <Dropdown.Trigger asChild>
               <Button
                 appearance='ghost'
@@ -91,9 +89,75 @@ export function AppHeader({
                 Sign out
               </Dropdown.Item>
             </Dropdown.Content>
-          </Dropdown>
+            </Dropdown>
+          )}
+        </div>
+        {mobileAction && (
+          <div className={styles.mobileHeaderAction}>{mobileAction}</div>
         )}
       </div>
     </header>
+  );
+}
+
+
+/** Account actions in the same mobile drawer used by the workspace Sidebar.
+ * Presentation comes from the canonical session; backend still authorizes.
+ * The theme dropdown remains the existing WebsiteThemeContext-backed control.
+ */
+export function AppMobileAccountActions({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
+  const { status, workspace, signOut } = useAppSession();
+  const [signingOut, setSigningOut] = useState(false);
+
+  return (
+    <div className={styles.mobileDrawerAccount}>
+      {status === 'ready' && (
+        <section className={styles.mobileAccountLinks} aria-label='Account'>
+          <h2 className={styles.mobileAccountHeading}>Account</h2>
+          <Link
+            href='/app/settings'
+            className={styles.mobileAccountLink}
+            onClick={onNavigate}
+          >
+            <Settings size={18} aria-hidden='true' />
+            <span>Account settings</span>
+          </Link>
+          {workspace?.membership.role === 'owner' && (
+            <Link
+              href='/app/settings/billing'
+              className={styles.mobileAccountLink}
+              onClick={onNavigate}
+            >
+              <CreditCard size={18} aria-hidden='true' />
+              <span>Billing</span>
+            </Link>
+          )}
+          <Button
+            appearance='bare'
+            type='button'
+            className={styles.mobileSignOut}
+            disabled={signingOut}
+            onClick={() => {
+              if (signingOut) return;
+              setSigningOut(true);
+              onNavigate?.();
+              void signOut().finally(() => setSigningOut(false));
+            }}
+          >
+            <Exit size={18} aria-hidden='true' />
+            <span>{signingOut ? 'Signing out…' : 'Sign out'}</span>
+          </Button>
+        </section>
+      )}
+
+      <div className={styles.mobileDrawerFooter}>
+        <span className={styles.mobileThemeCaption}>Appearance</span>
+        <ThemeSwitcher />
+      </div>
+    </div>
   );
 }
