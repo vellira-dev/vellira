@@ -56,12 +56,9 @@ jobs:
           fi
 
           result=0
-          for suite in \
-            account-sidebar-geometry \
-            account-components-navigation \
-            account-mobile-navigation \
-            account-header-menu \
-            account-settings-tabs; do
+          # Focused geometry diagnosis; four navigation suites passed on
+          # the prior exact-head browser run and are rerun before cleanup.
+          for suite in account-settings-tabs; do
             echo "::group::$suite"
             WEBSITE_URL=http://127.0.0.1:3001 pnpm --dir apps/website run "test:$suite" || result=1
             echo "::endgroup::"
