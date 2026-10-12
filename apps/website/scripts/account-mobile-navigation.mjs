@@ -43,6 +43,11 @@ try {
       'Opened drawer must lock document scrolling'
     );
     assert.equal(
+      await page.locator('main').evaluate((main) => main.inert),
+      true,
+      'Background content must not accept focus while modal navigation is open'
+    );
+    assert.equal(
       await page.locator('[data-product-app-header]')
         .getByRole('button', { name: 'Close workspace navigation' })
         .getAttribute('aria-expanded'),
@@ -67,8 +72,9 @@ try {
     await page.getByRole('button', { name: 'Open workspace navigation' }).click();
     await dialog.waitFor();
     if (width > 340) {
-      const backdrop = page.locator('button[aria-label="Close workspace navigation"]')
-        .filter({ visible: true }).last();
+      const backdrop = page.locator(
+        'button[aria-label="Close workspace navigation"]'
+      ).last();
       await backdrop.click({ position: { x: width - 10, y: 400 } });
     } else {
       // At 320px the slide-out fills the entire width: no outside backdrop.
