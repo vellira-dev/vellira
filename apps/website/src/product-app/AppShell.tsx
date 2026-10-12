@@ -159,6 +159,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}>
       <AppHeader
+        onAccountNavigate={() => setMobileMenuOpen(false)}
         mobileAction={
           <Button
             ref={mobileMenuTriggerRef}
