@@ -87,7 +87,7 @@
   top: var(--site-header-height);
   align-self: start;
   min-height: calc(100vh - var(--site-header-height));
-  padding: var(--space-6) var(--space-4);
+  padding: 0 var(--space-3);
   background: var(--surface-canvas);
 }
 
