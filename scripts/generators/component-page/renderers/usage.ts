@@ -36,6 +36,13 @@ export function renderUsage(params: {
     return new RegExp(`(^|\\s)${propName}\\s*=`).test(source);
   }
 
+  function encodeStaticShortcut(name: string, value: string) {
+    // Static preview strings are markup, not trusted JSX source. Keep the
+    // existing concise single-quoted form for safe literals.
+    return /['\r\n\t&<>{}]/.test(value)
+      ? `${name}={${JSON.stringify(value)}}`
+      : `${name}='${value}'`;
+  }
   const controlledProps = new Set(playgroundProps.map((prop) => prop.name));
 
   function createUsageStaticProps(platform: Platform) {
@@ -48,13 +55,13 @@ export function renderUsage(params: {
         !controlledProps.has('label') &&
         hasApiProp(platform, 'label') &&
         !hasPropBinding(demoProps, 'label')
-          ? `label='${componentConfig.demo.label}'`
+          ? encodeStaticShortcut('label', componentConfig.demo.label)
           : null,
         componentConfig.demo?.description &&
         !controlledProps.has('description') &&
         hasApiProp(platform, 'description') &&
         !hasPropBinding(demoProps, 'description')
-          ? `description='${componentConfig.demo.description}'`
+          ? encodeStaticShortcut('description', componentConfig.demo.description)`
           : null,
       ].filter((prop): prop is string => Boolean(prop))
     )

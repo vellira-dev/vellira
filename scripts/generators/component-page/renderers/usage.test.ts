@@ -170,6 +170,21 @@ describe('renderUsage', () => {
     expect(result.content).toContain('JSON.stringify(value.description)');
   });
 
+  it('escapes apostrophes and entities in static demo shortcuts', () => {
+    const generated = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: { label: "O'Connor", description: 'One & two' },
+      },
+      playgroundProps: [],
+      reactApiProps: [label, description],
+      nativeApiProps: [label, description],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(generated.content).toContain("label={\"O'Connor\"}");
+    expect(generated.content).toContain('description={"One & two"}');
+  });
   it('does not emit unsupported or duplicate demo shortcut props', () => {
     const unsupported = renderUsage({
       componentName: 'Accordion',
@@ -508,13 +523,19 @@ describe('renderUsage', () => {
     expect(rendered).toContain('fallback={"JD"}');
     expect(rendered).toContain('size={"sm"}');
 
-    const parsed = ts.createSourceFile(
-      'usage-example.tsx',
-      rendered,
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TSX
-    );
-    expect(parsed.parseDiagnostics).toHaveLength(0);
+    const parsed = ts.transpileModule(rendered, {
+      fileName: 'usage-example.tsx',
+      reportDiagnostics: true,
+      compilerOptions: {
+        jsx: ts.JsxEmit.Preserve,
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    });
+    expect(
+      parsed.diagnostics?.filter(
+        (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error
+      )
+    ).toHaveLength(0);
   });
 });
