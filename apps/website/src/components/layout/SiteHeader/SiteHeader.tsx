@@ -315,7 +315,7 @@ export function SiteHeader({
             appearance='bare'
             type='button'
             className={styles.mobileNavigationBackdrop}
-            aria-label='Close navigation'
+            aria-label='Dismiss navigation'
             onClick={() => setResolvedMobileMenuOpen(false)}
           />
 
