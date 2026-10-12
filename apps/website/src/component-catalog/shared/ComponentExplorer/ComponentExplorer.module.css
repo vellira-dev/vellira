@@ -68,9 +68,6 @@
 }
 
 .content.indexContent {
-  --components-toolbar-sticky-top: 0px;
-  --components-toolbar-background: var(--surface-canvas);
-
   width: 100%;
   max-width: none;
   padding: 0;
@@ -79,10 +76,6 @@
 
 @media (width <= 1100px) {
   /* Below the explorer breakpoint the document, not mainColumn, scrolls. */
-  .content.indexContent {
-    --components-toolbar-sticky-top: var(--site-header-height);
-  }
-
   .container {
     width: 100%;
     max-width: none;
