@@ -8,7 +8,7 @@ import { ComponentSidebar } from '../ComponentSidebar';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
 import { ArrowLeft } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
-import { AppMobileAccountActions } from '@/product-app/AppHeader';
+
 
 import styles from './ComponentNavigationShell.module.css';
 
@@ -52,14 +52,6 @@ export function ComponentNavigationShell({
     <>
       {!mobileOnly && (
         <div className={styles.desktop}>
-          {fromWorkspace && (
-            <nav className={styles.workspaceReturn} aria-label='Workspace navigation'>
-              <Link href='/app' className={styles.workspaceReturnLink}>
-                <ArrowLeft size={16} aria-hidden='true' />
-                <span>Back to workspace</span>
-              </Link>
-            </nav>
-          )}
           <div className={styles.desktopList}>
             <ComponentSidebar activeSlug={activeSlug} />
           </div>
@@ -78,7 +70,10 @@ export function ComponentNavigationShell({
 
           <div className={styles.mobileSurface}>
             <div className={styles.mobileHeader}>
-              <Link href='/' className={styles.mobileBrand}>
+              <Link
+                href={fromWorkspace ? '/app' : '/'}
+                className={styles.mobileBrand}
+              >
                 <Image
                   src='/brand/logos/logo-gradient.svg'
                   alt='Vellira'
@@ -95,13 +90,8 @@ export function ComponentNavigationShell({
               className={styles.mobilePanel}
               aria-label='Component navigation'
             >
-              <div className={styles.mainNavigation}>
-                {fromWorkspace ? (
-                  <Link href='/app' className={styles.mainNavigationButton}>
-                    <ArrowLeft size={16} aria-hidden='true' />
-                    <span>Back to workspace</span>
-                  </Link>
-                ) : (
+              {!fromWorkspace && (
+                <div className={styles.mainNavigation}>
                   <Button
                     appearance='bare'
                     type='button'
@@ -111,17 +101,15 @@ export function ComponentNavigationShell({
                     <ArrowLeft size={16} aria-hidden='true' />
                     <span>Main navigation</span>
                   </Button>
-                )}
-              </div>
-
-              <div className={styles.mobilePanelContent}>
-                <ComponentSidebar activeSlug={activeSlug} />
-              </div>
-              {fromWorkspace && (
-                <div className={styles.workspaceMobileAccount}>
-                  <AppMobileAccountActions onNavigate={closeNavigation} />
                 </div>
               )}
+
+              <div className={styles.mobilePanelContent}>
+                <ComponentSidebar
+                  activeSlug={activeSlug}
+                  onNavigate={closeNavigation}
+                />
+              </div>
             </aside>
           </div>
         </div>
