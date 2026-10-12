@@ -5,15 +5,18 @@ import { HeaderMenuButton } from '@/components/layout/HeaderChrome/HeaderMenuBut
 import { useComponentNavigation } from '../ComponentNavigationProvider';
 
 export function ComponentNavigationTrigger() {
-  const { open, toggleNavigation } = useComponentNavigation();
+  const { open, mainOpen, toggleNavigation, closeMainNavigation } =
+    useComponentNavigation();
 
   return (
     <HeaderMenuButton
-      open={open}
-      onToggle={toggleNavigation}
-      controls='component-navigation'
+      open={open || mainOpen}
+      onToggle={mainOpen ? closeMainNavigation : toggleNavigation}
+      controls={mainOpen ? 'app-mobile-navigation' : 'component-navigation'}
       openLabel='Open component navigation'
-      closeLabel='Close component navigation'
+      closeLabel={
+        mainOpen ? 'Close workspace navigation' : 'Close component navigation'
+      }
     />
   );
 }
