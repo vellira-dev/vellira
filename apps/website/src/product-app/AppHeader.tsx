@@ -51,12 +51,6 @@ export function AppHeader({ mobileAction }: { mobileAction?: ReactNode } = {}) {
             </Dropdown.Trigger>
             <Dropdown.Content>
               <Dropdown.Item
-                icon={<User size={16} aria-hidden='true' />}
-                onSelect={() => router.push('/app/settings#account-state')}
-              >
-                Profile
-              </Dropdown.Item>
-              <Dropdown.Item
                 icon={<Settings size={16} aria-hidden='true' />}
                 onSelect={() => router.push('/app/settings')}
               >
