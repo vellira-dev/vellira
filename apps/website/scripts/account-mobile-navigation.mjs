@@ -50,6 +50,13 @@ try {
     }
     await dialog.getByRole('button', { name: 'Sign out' }).waitFor();
     await dialog.getByRole('button', { name: /^Theme:/ }).waitFor();
+    if (width === 390) {
+      // Theme dropdown is portal-backed. Its sheet must remain on top of the
+      // mobile drawer/backdrop and be genuinely clickable, not just present.
+      await dialog.getByRole('button', { name: /^Theme:/ }).click();
+      await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+      await dialog.getByRole('button', { name: 'Theme: Dark' }).waitFor();
+    }
     assert.equal(
       await productHeader.getByRole('button', { name: 'Close workspace navigation' }).count(),
       1,
@@ -74,6 +81,11 @@ try {
 
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
+    assert.equal(
+      await page.getByRole('menuitemradio').count(),
+      0,
+      'Closing the mobile drawer must also unmount any nested theme dropdown'
+    );
     assert.equal(
       await page.evaluate(() => document.body.style.overflow),
       '',
