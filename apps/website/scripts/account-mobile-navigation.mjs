@@ -381,6 +381,29 @@ try {
         ) <= 2,
       `Site mobile Menu must be right-aligned at ${width}px`
     );
+    const adjacentControls = await siteHeader.evaluate((node) => {
+      const menu = node.querySelector(
+        '[class*="mobileMenuTrigger"] button'
+      );
+      const external = node.querySelector('[class*="externalActions"]');
+      const search = node.querySelector('[class*="headerSearch"]');
+      const previous = external && getComputedStyle(external).display !== 'none'
+        ? external
+        : search;
+      if (!menu || !previous) {
+        throw new Error('Public SiteHeader mobile actions are missing');
+      }
+      return {
+        gap:
+          menu.getBoundingClientRect().left -
+          previous.getBoundingClientRect().right,
+        searchLeft: search?.getBoundingClientRect().left,
+      };
+    });
+    assert.ok(
+      Math.abs(adjacentControls.gap - 24) <= 1,
+      `SiteHeader last action must sit exactly 24px before Menu at ${width}px (actual ${adjacentControls.gap})`
+    );
     const siteHeaderCta = siteHeader.locator('[class*="authActions"]');
     assert.equal(
       await siteHeaderCta.isVisible(),
@@ -419,6 +442,21 @@ try {
     const siteMenuBox = await publicMenu.boundingBox();
     const containerPadding = await portalHeader.evaluate((node) =>
       Number.parseFloat(getComputedStyle(node.firstElementChild).paddingRight)
+    );
+    const portalAdjacent = await portalHeader.evaluate((node) => {
+      const menu = node.querySelector(
+        '[class*="portalTabletMenuTrigger"] button'
+      );
+      const external = node.querySelector('[class*="externalActions"]');
+      if (!menu || !external) {
+        throw new Error('Portal tablet actions are missing');
+      }
+      return menu.getBoundingClientRect().left -
+        external.getBoundingClientRect().right;
+    });
+    assert.ok(
+      Math.abs(portalAdjacent - 24) <= 1,
+      `Portal tablet last action must sit 24px before Menu at ${width}px`
     );
     const portalRight = await portalHeader.evaluate((node) =>
       node.getBoundingClientRect().right
