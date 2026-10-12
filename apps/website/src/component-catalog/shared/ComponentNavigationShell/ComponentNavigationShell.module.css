@@ -5,6 +5,36 @@
   height: 100%;
 }
 
+.workspaceReturn {
+  flex: none;
+  padding: var(--space-4) var(--space-4) var(--space-3) 0;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--surface-panel);
+}
+
+.workspaceReturnLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding-inline: 10px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  gap: var(--space-2);
+}
+
+.workspaceReturnLink:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-brand) 5%, transparent);
+}
+
+.workspaceReturnLink:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
 .desktopList {
   flex: 1;
   min-height: 0;
