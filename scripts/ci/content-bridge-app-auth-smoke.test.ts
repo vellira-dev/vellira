@@ -52,7 +52,9 @@ describe('Content Bridge GitHub App credential smoke', () => {
     );
     expect(workflow).not.toContain('--method POST');
     expect(workflow).not.toContain('gh api --method PUT');
-    expect(workflow).not.toContain('repos/vellira-dev/vellira-internal/dispatches');
+    expect(workflow).not.toContain(
+      'repos/vellira-dev/vellira-internal/dispatches'
+    );
     expect(workflow).not.toContain('create-pull-request');
     expect(workflow).not.toContain('wrangler');
     expect(workflow).not.toContain('checkout@');
