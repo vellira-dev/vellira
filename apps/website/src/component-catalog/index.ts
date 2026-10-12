@@ -1,6 +1,7 @@
 export { ComponentsPageHero } from './shared/ComponentsPageHero';
 export { ComponentSidebar } from './shared/ComponentSidebar';
 export { ComponentExplorer } from './shared/ComponentExplorer';
+export { ComponentsIndexExperience } from './shared/ComponentsIndexExperience/ComponentsIndexExperience';
 export { ComponentHeader } from './shared/ComponentHeader';
 export { ComponentsHeader } from './shared/ComponentsHeader';
 export { ComponentPlayground } from './shared/ComponentPlayground';
