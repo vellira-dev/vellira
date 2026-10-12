@@ -76,6 +76,38 @@ try {
   });
   aligned(logoAlignment.brandLeft, logoAlignment.iconLeft, 'brand/nav icon baseline');
 
+  const headingAlignment = await page.evaluate(() => {
+    const nav = document.querySelector(
+      '#app-sidebar-navigation aside[aria-label="Account navigation"]'
+    );
+    const icon = nav?.querySelector('a[href="/app"] svg');
+    const docsLink = nav?.querySelector('a[href*="docs.vellira.dev"]');
+    const headings = nav?.querySelectorAll('h2');
+    if (!icon || !docsLink || headings?.length !== 2) {
+      throw new Error('Account navigation headings or icon missing');
+    }
+    return {
+      iconLeft: icon.getBoundingClientRect().left,
+      positions: Array.from(headings, (heading) => {
+        const range = document.createRange();
+        range.selectNodeContents(heading);
+        return {
+          left: range.getBoundingClientRect().left,
+          color: getComputedStyle(heading).color,
+        };
+      }),
+      inactiveColor: getComputedStyle(docsLink).color,
+    };
+  });
+  for (const heading of headingAlignment.positions) {
+    aligned(heading.left, headingAlignment.iconLeft, 'account group/icon baseline');
+    assert.notEqual(
+      heading.color,
+      headingAlignment.inactiveColor,
+      'Group labels must be quieter than ordinary menu items'
+    );
+  }
+
   const expandedInsets = await page.evaluate(() => {
     const nav = document.querySelector('#app-sidebar-navigation');
     const item = nav?.querySelector('a[href="/app"]');
