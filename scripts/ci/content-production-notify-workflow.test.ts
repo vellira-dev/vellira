@@ -2,12 +2,15 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync(
-  new URL('../../.github/workflows/content-production-distribution-notify.yml', import.meta.url),
+  new URL(
+    '../../.github/workflows/content-production-distribution-notify.yml',
+    import.meta.url
+  ),
   'utf8'
 );
 
 describe('verified production distribution notification', () => {
-  it('accepts only a successful, completed main production workflow and deploy job', () => {
+  it('requires successful main production deployment', () => {
     expect(workflow).toContain(
       "workflows: ['Deploy Website Cloudflare Production']"
     );
@@ -19,13 +22,15 @@ describe('verified production distribution notification', () => {
     expect(workflow).toContain(
       "vars.VELLIRA_CONTENT_PRODUCTION_BRIDGE_ENABLED == 'true'"
     );
-    expect(workflow).toContain('Deploy and verify approved production candidate');
+    expect(workflow).toContain(
+      'Deploy and verify approved production candidate'
+    );
     expect(workflow).toContain('.run_attempt == $run_attempt');
     expect(workflow).toContain('.status == "completed"');
     expect(workflow).toContain('.conclusion == "success"');
   });
 
-  it('obtains actual deployed candidate from live build, not run checkout SHA', () => {
+  it('uses the deployed build rather than workflow checkout SHA', () => {
     expect(workflow).toContain('https://vellira.dev/__vellira_runtime');
     expect(workflow).toContain('live-runtime.json');
     expect(workflow).toContain("run_id = os.environ['SOURCE_RUN_ID']");
@@ -41,7 +46,9 @@ describe('verified production distribution notification', () => {
   });
 
   it('keeps authorization and credentials scoped to the notification boundary', () => {
-    expect(workflow).toContain('permissions:\n  actions: read\n  contents: read');
+    expect(workflow).toContain(
+      'permissions:\n  actions: read\n  contents: read'
+    );
     expect(workflow).toContain('environment: content-production-notification');
     expect(workflow).toContain(
       'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1'
@@ -67,8 +74,6 @@ describe('verified production distribution notification', () => {
     ]) {
       expect(workflow).toContain(`client_payload[${field}]`);
     }
-    expect(workflow).not.toMatch(
-      /approved_gate_ids|publication_id|approvedBy/
-    );
+    expect(workflow).not.toMatch(/approved_gate_ids|publication_id|approvedBy/);
   });
 });
