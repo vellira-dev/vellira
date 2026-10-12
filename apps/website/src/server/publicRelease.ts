@@ -16,9 +16,32 @@ type PublicReleaseFailureReason =
   | 'packages_not_converged';
 
 class PublicReleaseCheckError extends Error {
-  constructor(readonly reason: PublicReleaseFailureReason) {
+  constructor(
+    readonly reason: PublicReleaseFailureReason,
+    readonly upstream: string | null = null,
+    readonly packageName: string | null = null
+  ) {
     super(reason);
   }
+}
+
+// Only bounded, credential-free classifications may be shown in public
+// response headers. Never echo an upstream body or arbitrary exception text.
+function fetchFailureCode(error: unknown): string {
+  if (!(error instanceof Error)) return 'fetch_other_error';
+  if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+    return 'fetch_timeout';
+  }
+  if (/cache.*(?:not implemented|unsupported)/i.test(error.message)) {
+    return 'fetch_cache_option';
+  }
+  if (/signal.*(?:unsupported|not implemented)/i.test(error.message)) {
+    return 'fetch_signal_option';
+  }
+  if (/subrequest.*(?:limit|exceeded|blocked)/i.test(error.message)) {
+    return 'fetch_subrequest_rejected';
+  }
+  return error.name === 'TypeError' ? 'fetch_type_error' : 'fetch_other_error';
 }
 
 type PublicReleaseHandlerOptions = {
@@ -35,28 +58,46 @@ const headers = {
   'X-Content-Type-Options': 'nosniff',
 };
 
+// Public package metadata is readable without npm credentials. The
+// /-/package/:name/dist-tags management endpoint can require authentication
+// for scoped packages even when the package is public. Keep the same latest
+// dist-tag authority through the public abbreviated packument instead.
 async function readRegistryTag(
   packageName: string,
   fetchImpl: typeof fetch
 ): Promise<string> {
+  const escapedName = encodeURIComponent(packageName).replace(/^%40/, '@');
   let response: Response;
   try {
-    response = await fetchImpl(
-      `https://registry.npmjs.org/-/package/${encodeURIComponent(packageName)}/dist-tags`,
-      {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-        redirect: 'error',
-        signal: AbortSignal.timeout(8000),
-      }
+    response = await fetchImpl(`https://registry.npmjs.org/${escapedName}`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
+      },
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (error) {
+    throw new PublicReleaseCheckError(
+      'registry_unavailable',
+      fetchFailureCode(error),
+      packageName
     );
-  } catch {
-    throw new PublicReleaseCheckError('registry_unavailable');
   }
 
   if (!response.ok) {
-    throw new PublicReleaseCheckError('registry_unavailable');
+    const status = response.status;
+    const upstream =
+      Number.isSafeInteger(status) && status >= 400 && status <= 599
+        ? `http_${status}`
+        : 'http_other';
+    throw new PublicReleaseCheckError(
+      'registry_unavailable',
+      upstream,
+      packageName
+    );
   }
 
   let data: unknown;
@@ -69,11 +110,27 @@ async function readRegistryTag(
     throw new PublicReleaseCheckError('registry_metadata_invalid');
   }
 
-  const version = (data as Record<string, unknown>).latest;
+  const metadata = data as Record<string, unknown>;
+  const tags = metadata['dist-tags'];
+  const versions = metadata.versions;
+  if (
+    metadata.name !== packageName ||
+    !tags ||
+    typeof tags !== 'object' ||
+    Array.isArray(tags) ||
+    !versions ||
+    typeof versions !== 'object' ||
+    Array.isArray(versions)
+  ) {
+    throw new PublicReleaseCheckError('registry_metadata_invalid');
+  }
+
+  const version = (tags as Record<string, unknown>).latest;
   if (
     typeof version !== 'string' ||
     !VERSION_PATTERN.test(version) ||
-    version.length > 48
+    version.length > 48 ||
+    !Object.hasOwn(versions, version)
   ) {
     throw new PublicReleaseCheckError('registry_metadata_invalid');
   }
@@ -90,6 +147,8 @@ export function createPublicReleaseHandler({
 }: PublicReleaseHandlerOptions = {}) {
   let latest: VerifiedVersion | null = null;
   let lastFailureReason: PublicReleaseFailureReason = 'registry_unavailable';
+  let lastUpstream: string | null = null;
+  let lastUpstreamPackage: string | null = null;
   let nextCheckAt = 0;
   let pending: Promise<VerifiedVersion | null> | null = null;
 
@@ -114,6 +173,8 @@ export function createPublicReleaseHandler({
       // auxiliary 503. A programming error must remain fatal to browser gates.
       if (!(error instanceof PublicReleaseCheckError)) throw error;
       lastFailureReason = error.reason;
+      lastUpstream = error.upstream;
+      lastUpstreamPackage = error.packageName;
       nextCheckAt = now() + retryMs;
       return null;
     }
@@ -143,6 +204,15 @@ export function createPublicReleaseHandler({
             ),
             'X-Vellira-Public-Release-State': 'unavailable',
             'X-Vellira-Public-Release-Reason': lastFailureReason,
+            ...(lastUpstream
+              ? { 'X-Vellira-Public-Release-Upstream': lastUpstream }
+              : {}),
+            ...(lastUpstreamPackage
+              ? {
+                  'X-Vellira-Public-Release-Upstream-Package':
+                    lastUpstreamPackage,
+                }
+              : {}),
           },
         }
       );
