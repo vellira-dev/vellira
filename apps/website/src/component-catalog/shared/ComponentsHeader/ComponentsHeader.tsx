@@ -14,8 +14,12 @@ import { useComponentNavigation } from '../ComponentNavigationProvider';
 // authenticated product header. No second session or account authority.
 function WorkspaceComponentsHeader() {
   const { status } = useAppSession();
-  const { mainOpen, setMainNavigationOpen, openNavigation, setWorkspaceSessionReady } =
-    useComponentNavigation();
+  const {
+    mainOpen,
+    setMainNavigationOpen,
+    openNavigation,
+    setWorkspaceSessionReady,
+  } = useComponentNavigation();
 
   useEffect(() => {
     setWorkspaceSessionReady(status === 'ready');
