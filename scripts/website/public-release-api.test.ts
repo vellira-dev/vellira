@@ -15,14 +15,19 @@ function registryFixture() {
     publishedPackageNames.map((name) => [name, '2.139.0'])
   );
 
-  const fetchImpl = (async (input: RequestInfo | URL) => {
+  const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     expect(url.origin).toBe('https://registry.npmjs.org');
-    expect(url.pathname.startsWith('/-/package/')).toBe(true);
-    expect(url.pathname.endsWith('/dist-tags')).toBe(true);
-    const name = decodeURIComponent(
-      url.pathname.slice('/-/package/'.length, -'/dist-tags'.length)
-    );
+    expect(url.pathname.startsWith('/@vellira-ui%2F')).toBe(true);
+    expect(url.pathname).not.toContain('/-/package/');
+    expect(url.pathname).not.toContain('/dist-tags');
+    expect(init?.method).toBe('GET');
+    expect(init?.headers).toMatchObject({
+      Accept:
+        'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
+    });
+    expect(init?.redirect).toBe('error');
+    const name = decodeURIComponent(url.pathname.slice(1));
     calls += 1;
 
     if (offline) throw new TypeError('npm temporarily unavailable');
@@ -30,7 +35,13 @@ function registryFixture() {
     if (!versions.has(name)) {
       return Response.json({ error: 'unexpected package' }, { status: 404 });
     }
-    return Response.json({ latest: versions.get(name) });
+    const version = versions.get(name);
+    if (!version) throw new Error('Missing mock npm version');
+    return Response.json({
+      name,
+      'dist-tags': { latest: version },
+      versions: { [version]: { name, version } },
+    });
   }) as typeof fetch;
 
   const GET = createPublicReleaseHandler({
@@ -127,6 +138,85 @@ describe('public npm release API', () => {
     expect(expired.headers.get('Cache-Control')).toBe('no-store');
   });
 
+  it('rejects malformed public packuments and unproven latest versions', async () => {
+    const cases = [
+      {
+        name: '@wrong/package',
+        'dist-tags': { latest: '2.139.0' },
+        versions: { '2.139.0': {} },
+      },
+      {
+        name: publishedPackageNames[0],
+        latest: '2.139.0',
+        versions: { '2.139.0': {} },
+      },
+      {
+        name: publishedPackageNames[0],
+        'dist-tags': { latest: '2.139.0' },
+        versions: {},
+      },
+      {
+        name: publishedPackageNames[0],
+        'dist-tags': { latest: '2.139.0' },
+        versions: [],
+      },
+    ];
+    for (const malformed of cases) {
+      const fetchImpl = (async (input: RequestInfo | URL) => {
+        const name = decodeURIComponent(
+          new URL(String(input)).pathname.slice(1)
+        );
+        return Response.json(
+          name === publishedPackageNames[0]
+            ? malformed
+            : {
+                name,
+                'dist-tags': { latest: '2.139.0' },
+                versions: { '2.139.0': { name, version: '2.139.0' } },
+              }
+        );
+      }) as typeof fetch;
+      const GET = createPublicReleaseHandler({ fetchImpl, now: () => START });
+      const response = await GET();
+      expect(response.status).toBe(503);
+      expect(response.headers.get('X-Vellira-Public-Release-Reason')).toBe(
+        'registry_metadata_invalid'
+      );
+    }
+  });
+
+  it('treats registry HTTP errors as unavailable, without using tokens', async () => {
+    const fetchImpl = (async () =>
+      new Response(null, { status: 401 })) as typeof fetch;
+    const GET = createPublicReleaseHandler({ fetchImpl, now: () => START });
+    const response = await GET();
+    expect(response.status).toBe(503);
+    expect(response.headers.get('X-Vellira-Public-Release-Reason')).toBe(
+      'registry_unavailable'
+    );
+    expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
+      'http_401'
+    );
+    expect(publishedPackageNames).toContain(
+      response.headers.get('X-Vellira-Public-Release-Upstream-Package')
+    );
+  });
+
+  it('separates transport exceptions from HTTP errors without leaking messages', async () => {
+    const fetchImpl = (async () => {
+      throw new TypeError('secret-must-never-appear-in-response');
+    }) as typeof fetch;
+    const GET = createPublicReleaseHandler({ fetchImpl, now: () => START });
+    const response = await GET();
+    expect(response.status).toBe(503);
+    expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
+      'fetch_type_error'
+    );
+    expect(JSON.stringify([...response.headers])).not.toContain(
+      'secret-must-never-appear-in-response'
+    );
+  });
+
   it('does not accept prerelease or malformed npm dist tags', async () => {
     const registry = registryFixture();
     registry.setVersion(publishedPackageNames[0], '2.140.0-rc.1');
@@ -157,8 +247,14 @@ describe('public npm release API', () => {
 
   it('does not disguise unexpected programming errors as npm outages', async () => {
     let clockReads = 0;
-    const fetchImpl = (async () =>
-      Response.json({ latest: '2.139.0' })) as typeof fetch;
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const name = decodeURIComponent(new URL(String(input)).pathname.slice(1));
+      return Response.json({
+        name,
+        'dist-tags': { latest: '2.139.0' },
+        versions: { '2.139.0': { name, version: '2.139.0' } },
+      });
+    }) as typeof fetch;
     const GET = createPublicReleaseHandler({
       fetchImpl,
       now: () => {
