@@ -693,7 +693,7 @@
   }
 
   .drawerNavigation {
-    flex: 1;
+    flex: none;
     min-height: 0;
   }
 
