@@ -294,6 +294,17 @@
   transition: padding 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Let the active row interpolate with the rail instead of jumping at the
+   moment the collapsed state changes. Component catalog rows are unaffected. */
+.desktopNavigation aside section nav > div > a {
+  box-sizing: border-box;
+  width: 100%;
+  transition:
+    width 240ms cubic-bezier(0.2, 0, 0, 1),
+    color 140ms ease,
+    background 140ms ease;
+}
+
 .shell[data-sidebar-collapsed='true'] .navEntry {
   justify-content: center;
   gap: 0;
@@ -579,7 +590,8 @@
   .desktopNavigation aside > div,
   .navLabel,
   .toggleLabel,
-  .navTrailing {
+  .navTrailing,
+  .desktopNavigation aside section nav > div > a {
     transition: none;
   }
 }
