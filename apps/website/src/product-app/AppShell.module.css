@@ -1,5 +1,5 @@
 .shell {
-  --app-navigation-width: 248px;
+  --app-navigation-width: var(--explorer-sidebar-width);
 
   min-height: 100vh;
   color: var(--text-primary);
@@ -78,7 +78,7 @@
 
 .body {
   display: grid;
-  grid-template-columns: var(--app-navigation-width) minmax(0, 1fr);
+  grid-template-columns: calc(var(--site-gutter) + var(--app-navigation-width)) minmax(0, 1fr);
   min-height: calc(100vh - var(--site-header-height));
 }
 
@@ -87,8 +87,10 @@
   top: var(--site-header-height);
   align-self: start;
   min-height: calc(100vh - var(--site-header-height));
-  padding: 0 var(--space-3);
-  background: var(--surface-canvas);
+  min-width: 0;
+  padding: 0 0 0 var(--site-gutter);
+  background: var(--surface-panel);
+  border-right: 1px solid var(--border-muted);
 }
 
 .desktopNavigation {
@@ -138,6 +140,7 @@
   width: 100%;
   max-width: 1200px;
   padding: var(--space-8) var(--site-gutter) var(--space-12);
+  background: var(--surface-canvas);
 }
 
 .statusPage {
@@ -380,6 +383,10 @@
 
   .sidebar {
     display: none;
+  }
+
+  .body {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .mobileNavigationRow {
