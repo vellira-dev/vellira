@@ -29,9 +29,10 @@ export function ComponentNavigationShell({
 
   const closeAndRestoreFocus = useCallback(() => {
     closeNavigation();
-    document.querySelector<HTMLButtonElement>(
+    const trigger = document.querySelector<HTMLButtonElement>(
       '[aria-controls="component-navigation"]'
-    )?.focus();
+    );
+    trigger?.focus();
   }, [closeNavigation]);
 
   useEffect(() => {
@@ -39,9 +40,10 @@ export function ComponentNavigationShell({
 
     // Workspace -> Components replaces the focused workspace link. Give the
     // next drawer an explicit focus target rather than falling back to <body>.
-    surfaceRef.current?.querySelector<HTMLElement>(
+    const primaryAction = surfaceRef.current?.querySelector<HTMLElement>(
       'button[class*="mainNavigationButton"]'
-    )?.focus();
+    );
+    primaryAction?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {

@@ -227,6 +227,33 @@ try {
       'Catalog content must be inert while the Components drawer is open'
     );
     assert.equal(
+      await page.evaluate(() => {
+        const background = document.querySelector(
+          '[data-components-content-boundary] a[href]'
+        );
+        if (!background) throw new Error('Catalog background link missing');
+        background.focus();
+        return document.activeElement === background;
+      }),
+      false,
+      'Inert catalog links must not be focusable behind the open drawer'
+    );
+    await page.keyboard.press('Escape');
+    await componentsDrawer.waitFor({ state: 'hidden' });
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
+      'Open component navigation',
+      'Escape must restore focus to the Components menu trigger'
+    );
+    assert.equal(
+      await page.locator('[data-components-content-boundary]')
+        .evaluate((element) => element.inert),
+      false,
+      'Closing the Components drawer must restore catalog interactivity'
+    );
+    await componentTrigger.click();
+    await componentsDrawer.waitFor();
+    assert.equal(
       await componentsDrawer.locator('..').evaluate((node) =>
         node.getAnimations().some((animation) => animation.playState === 'running')
       ),

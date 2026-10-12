@@ -114,7 +114,83 @@ try {
       await context.close();
     }
   }
-  console.log('OK catalog session boundary: anonymous, authenticated and same-path history context');
+  // Hold the canonical account response until after a catalog click, proving
+  // that a requested URL survives routing before session approval is known.
+  const delayedContext = await browser.newContext();
+  let releaseMe = () => {};
+  let meStarted = () => {};
+  const pendingMe = new Promise((resolve) => {
+    releaseMe = resolve;
+  });
+  const requestedMe = new Promise((resolve) => {
+    meStarted = resolve;
+  });
+  const delayedCalls = [];
+  await delayedContext.route('**/v1/**', async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    delayedCalls.push({ pathname, method: request.method() });
+    const headers = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': new URL(baseUrl).origin,
+      'Access-Control-Allow-Credentials': 'true',
+    };
+    if (request.method() !== 'GET') {
+      throw new Error(`Unexpected mutation during delayed auth: ${pathname}`);
+    }
+    if (pathname === '/v1/me') {
+      meStarted();
+      await pendingMe;
+      await route.fulfill({
+        status: 200,
+        headers,
+        body: '{"user":{"id":"test-user","status":"active","emailVerified":true}}',
+      });
+    } else if (pathname === '/v1/workspaces') {
+      await route.fulfill({
+        status: 200,
+        headers,
+        body: JSON.stringify({
+          workspaces: [{
+            id: '00000000-0000-4000-8000-000000000123',
+            name: 'Test workspace',
+            status: 'active',
+            membership: { role: 'owner' },
+          }],
+        }),
+      });
+    } else {
+      await route.fulfill({ status: 404, headers, body: '{"error":{"code":"not_found"}}' });
+    }
+  });
+  const delayedPage = await delayedContext.newPage();
+  delayedPage.setDefaultTimeout(15_000);
+  try {
+    await delayedPage.goto(new URL('/components?from=app', baseUrl).toString());
+    await requestedMe;
+    await delayedPage.locator(
+      'a[class*="card"][href="/components/button?from=app"]'
+    ).click();
+    await delayedPage.waitForURL('**/components/button?from=app');
+    assert.equal(
+      await delayedPage.locator('[data-product-app-header]').count(),
+      0,
+      'Unauthenticated/loading catalog must not render product controls'
+    );
+    releaseMe();
+    await delayedPage.locator('[data-product-app-header]').waitFor();
+    await delayedPage.getByRole('link', { name: 'Back to workspace' }).waitFor();
+    assert.ok(
+      !delayedCalls.some((request) => request.method !== 'GET'),
+      'Catalog navigation must never initiate a backend mutation'
+    );
+  } finally {
+    releaseMe();
+    await delayedPage.close();
+    await delayedContext.close();
+  }
+
+  console.log('OK catalog session boundary: anonymous, query-only history, delayed canonical session and context retention');
 } finally {
   await browser.close();
 }

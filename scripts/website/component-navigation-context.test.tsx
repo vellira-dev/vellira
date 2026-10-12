@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const navigation = vi.hoisted(() => ({ search: 'from=app' }));
@@ -14,7 +20,10 @@ vi.mock(
   () => ({ ComponentCatalogPreview: () => null })
 );
 
-import { ComponentNavigationProvider, useComponentNavigation } from '../../apps/website/src/component-catalog/shared/ComponentNavigationProvider';
+import {
+  ComponentNavigationProvider,
+  useComponentNavigation,
+} from '../../apps/website/src/component-catalog/shared/ComponentNavigationProvider';
 import { ComponentsCatalog } from '../../apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog';
 import { ComponentSidebar } from '../../apps/website/src/component-catalog/shared/ComponentSidebar/ComponentSidebar';
 
@@ -28,7 +37,9 @@ function StateProbe() {
     useComponentNavigation();
   return (
     <>
-      <output data-testid='context-requested'>{String(workspaceContextRequested)}</output>
+      <output data-testid='context-requested'>
+        {String(workspaceContextRequested)}
+      </output>
       <output data-testid='context-granted'>{String(fromWorkspace)}</output>
       <button type='button' onClick={() => setWorkspaceSessionReady(true)}>
         Canonical session ready
@@ -53,26 +64,30 @@ function componentLink(selector: string) {
   return link?.getAttribute('href');
 }
 
-it('preserves the explicit workspace URL through catalog links before session readiness', async () => {
+it('keeps requested catalog links while session is loading', async () => {
   render(<CatalogFixture />);
   await waitFor(() =>
     expect(screen.getByTestId('context-requested')).toHaveTextContent('true')
   );
   expect(screen.getByTestId('context-granted')).toHaveTextContent('false');
   expect(
-    componentLink('aside[aria-label="Component navigation"] a[href*="/components/button"]')
+    componentLink(
+      'aside[aria-label="Component navigation"] a[href*="/components/button"]'
+    )
   ).toBe('/components/button?from=app');
   expect(
     componentLink('a[class*="card"][href*="/components/button"]')
   ).toBe('/components/button?from=app');
 });
 
-it('reacts to same-path query changes and never carries authorization across context resets', async () => {
+it('updates same-path query without carrying session authority', async () => {
   const view = render(<CatalogFixture />);
   await waitFor(() =>
     expect(screen.getByTestId('context-requested')).toHaveTextContent('true')
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Canonical session ready' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Canonical session ready' })
+  );
   expect(screen.getByTestId('context-granted')).toHaveTextContent('true');
 
   navigation.search = '';
