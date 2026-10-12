@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { User } from '@vellira-ui/icons';
+import { CreditCard, Exit, Settings, User } from '@vellira-ui/icons';
 import { Button, Dropdown } from '@vellira-ui/react';
 
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
@@ -33,9 +33,6 @@ export function AppHeader({ mobileAction }: { mobileAction?: ReactNode } = {}) {
       </Link>
 
       <div className={styles.headerContext}>
-        {status === 'ready' && workspace && (
-          <span className={styles.workspaceName}>{workspace.name}</span>
-        )}
         <ThemeSwitcher />
         {mobileAction && (
           <div className={styles.mobileHeaderAction}>{mobileAction}</div>
@@ -53,12 +50,30 @@ export function AppHeader({ mobileAction }: { mobileAction?: ReactNode } = {}) {
               />
             </Dropdown.Trigger>
             <Dropdown.Content>
-              <Dropdown.Item onSelect={() => router.push('/app/settings')}>
+              <Dropdown.Item
+                icon={<User size={16} aria-hidden='true' />}
+                onSelect={() => router.push('/app/settings#account-state')}
+              >
+                Profile
+              </Dropdown.Item>
+              <Dropdown.Item
+                icon={<Settings size={16} aria-hidden='true' />}
+                onSelect={() => router.push('/app/settings')}
+              >
                 Account settings
               </Dropdown.Item>
+              {workspace?.membership.role === 'owner' && (
+                <Dropdown.Item
+                  icon={<CreditCard size={16} aria-hidden='true' />}
+                  onSelect={() => router.push('/app/settings/billing')}
+                >
+                  Billing
+                </Dropdown.Item>
+              )}
               <Dropdown.Separator />
               <Dropdown.Item
                 color='danger'
+                icon={<Exit size={16} aria-hidden='true' />}
                 disabled={signingOut}
                 onSelect={() => {
                   if (signingOut) return;
