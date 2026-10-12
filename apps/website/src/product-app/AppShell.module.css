@@ -113,6 +113,7 @@
 }
 
 .shell[data-sidebar-collapsed='true'] .navTrailing {
+  width: 0;
   opacity: 0;
   transform: translateX(-6px);
 }
@@ -165,6 +166,7 @@
 
 .shell[data-sidebar-collapsed='true'] .sidebar section nav > div > a {
   justify-content: center;
+  gap: 0;
   padding: 0;
   width: 44px;
   min-height: 44px;
@@ -294,6 +296,7 @@
 
 .shell[data-sidebar-collapsed='true'] .navEntry {
   justify-content: center;
+  gap: 0;
 }
 
 .navigationTabs {
