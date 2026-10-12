@@ -26,7 +26,7 @@ function registryFixture() {
       Accept:
         'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
     });
-    expect(init?.redirect).toBe('error');
+    expect(init?.redirect).toBe('manual');
     const name = decodeURIComponent(url.pathname.slice(1));
     calls += 1;
 
@@ -183,6 +183,48 @@ describe('public npm release API', () => {
         'registry_metadata_invalid'
       );
     }
+  });
+
+  it.each([301, 302, 307, 308])(
+    'rejects HTTP %i redirects without following any destination',
+    async (status) => {
+      const fetchImpl: typeof fetch = async (input, init) => {
+        expect(new URL(String(input)).hostname).toBe('registry.npmjs.org');
+        expect(init?.redirect).toBe('manual');
+        return Response.redirect('https://untrusted.example/redirect', status);
+      };
+      const GET = createPublicReleaseHandler({
+        fetchImpl,
+        now: () => START,
+      });
+      const response = await GET();
+      expect(response.status).toBe(503);
+      expect(response.headers.get('X-Vellira-Public-Release-Reason')).toBe(
+        'registry_unavailable'
+      );
+      expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
+        'redirect_rejected'
+      );
+      expect(response.headers.has('location')).toBe(false);
+    }
+  );
+
+  it('rejects responses from an already redirected fetch', async () => {
+    const fetchImpl = (async () => {
+      const response = Response.json({
+        name: publishedPackageNames[0],
+        'dist-tags': { latest: '2.139.0' },
+        versions: { '2.139.0': {} },
+      });
+      Object.defineProperty(response, 'redirected', { value: true });
+      return response;
+    }) as typeof fetch;
+    const GET = createPublicReleaseHandler({ fetchImpl, now: () => START });
+    const response = await GET();
+    expect(response.status).toBe(503);
+    expect(response.headers.get('X-Vellira-Public-Release-Upstream')).toBe(
+      'redirect_rejected'
+    );
   });
 
   it('treats registry HTTP errors as unavailable, without using tokens', async () => {
