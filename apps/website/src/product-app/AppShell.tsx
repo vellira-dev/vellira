@@ -17,6 +17,7 @@ import styles from './AppShell.module.css';
 
 const navigation = [
   { label: 'Overview', href: '/app' },
+  { label: 'Components', href: '/components?from=app' },
   { label: 'Settings', href: '/app/settings' },
 ] as const;
 
@@ -41,13 +42,27 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
                 <span className={styles.navEntry}><Grid size={18} aria-hidden='true' />{!collapsed && <span>Overview</span>}</span>
               </Link></Tooltip.Trigger><Portal><Tooltip.Content>Overview</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
+            <SidebarItem>
+              <Tooltip placement='right' disabled={!collapsed}>
+                <Tooltip.Trigger asChild>
+                  <Link
+                    href='/components?from=app'
+                    aria-label={collapsed ? 'Components' : undefined}
+                  >
+                    <span className={styles.navEntry}>
+                      <Platforms size={18} aria-hidden='true' />
+                      {!collapsed && <span>Components</span>}
+                    </span>
+                    {!collapsed && <ChevronRight size={16} aria-hidden='true' />}
+                  </Link>
+                </Tooltip.Trigger>
+                <Portal>
+                  <Tooltip.Content>Components</Tooltip.Content>
+                </Portal>
+              </Tooltip>
+            </SidebarItem>
           </SidebarGroup>
           <SidebarGroup label={collapsed ? '' : 'Resources'}>
-            <SidebarItem>
-              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/components' aria-label={collapsed ? 'Components' : undefined}>
-                <span className={styles.navEntry}><Platforms size={18} aria-hidden='true' />{!collapsed && <span>Components ↗</span>}</span>
-              </Link></Tooltip.Trigger><Portal><Tooltip.Content>Components</Tooltip.Content></Portal></Tooltip>
-            </SidebarItem>
             <SidebarItem>
               <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><a aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>
                 <span className={styles.navEntry}><Docs size={18} aria-hidden='true' />{!collapsed && <span>Docs ↗</span>}</span>
@@ -277,7 +292,7 @@ export function AppHome() {
       <section className={styles.startPanel} aria-labelledby='getting-started-heading'>
         <h2 id='getting-started-heading'>Get started</h2>
         <div className={styles.resourceList}>
-          <Link href='/components' className={styles.resourceLink}>
+          <Link href='/components?from=app' className={styles.resourceLink}>
             <span aria-hidden='true' className={styles.resourceIcon}>◎</span>
             <span>Explore the component library</span>
             <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
