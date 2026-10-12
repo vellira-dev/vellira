@@ -75,3 +75,112 @@ test('legacy getting-started routes permanently redirect to canonical docs', asy
     redirects.includes('/getting-started/ /start/getting-started 301')
   );
 });
+
+
+test('Search Console legacy docs URLs have unique permanent same-origin redirects', async () => {
+  const source = await read('apps/docs/src/public/_redirects');
+  const routes = source.split(/\\r?\\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+  const entries = routes.map((line) => {
+    const parts = line.split(/\\s+/);
+    assert.equal(parts.length, 3, `invalid redirect: ${line}`);
+    assert.equal(parts[2], '301');
+    assert.ok(parts[0].startsWith('/') && parts[1].startsWith('/'));
+    return parts;
+  });
+  const bySource = new Map(entries.map(([source, target]) => [source, target]));
+  assert.equal(bySource.size, entries.length, 'duplicate legacy redirect source');
+  const expected = [
+    [
+        "/getting-started",
+        "/start/getting-started"
+    ],
+    [
+        "/project-sites",
+        "/start/project-sites"
+    ],
+    [
+        "/component-examples",
+        "/start/component-overview"
+    ],
+    [
+        "/production",
+        "/start/production"
+    ],
+    [
+        "/native",
+        "/react-native/"
+    ],
+    [
+        "/web",
+        "/react/"
+    ],
+    [
+        "/tokens",
+        "/design-system/tokens"
+    ],
+    [
+        "/accessibility",
+        "/design-system/accessibility"
+    ],
+    [
+        "/theme-architecture",
+        "/design-system/theme-architecture"
+    ],
+    [
+        "/contributing",
+        "/project/contributing"
+    ],
+    [
+        "/react/radio",
+        "/react/radio-group"
+    ],
+    [
+        "/components",
+        "/react/"
+    ],
+    [
+        "/components/select",
+        "/react/select"
+    ],
+    [
+        "/components/checkbox",
+        "/react/checkbox"
+    ],
+    [
+        "/components/button",
+        "/react/button"
+    ],
+    [
+        "/components/tabs",
+        "/react/tabs"
+    ],
+    [
+        "/components/form-field",
+        "/react/form-field"
+    ],
+    [
+        "/components/radio-group",
+        "/react/radio-group"
+    ],
+    [
+        "/components/theme-provider",
+        "/react/theme-provider"
+    ],
+    [
+        "/components/modal",
+        "/react/modal"
+    ],
+    [
+        "/components/dropdown",
+        "/react/dropdown"
+    ]
+];
+  for (const [source, target] of expected) {
+    assert.equal(bySource.get(source), target, `missing redirect for ${source}`);
+    assert.equal(bySource.get(`${source}/`), target, `missing trailing slash redirect for ${source}`);
+  }
+  assert.equal(bySource.size, expected.length * 2);
+  for (const source of bySource.keys()) {
+    assert.ok(!source.startsWith('/_next/') && !source.startsWith('/cdn-cgi/') && !source.startsWith('/api/'));
+  }
+});
