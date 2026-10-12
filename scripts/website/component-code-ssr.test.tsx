@@ -1,10 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { ComponentCodeBlock } from '../../apps/website/src/component-catalog/shared/ComponentCodeBlock';
+import { ComponentCodeBlock } from '@/component-catalog/shared/ComponentCodeBlock';
 
 describe('component examples in initial HTML', () => {
-  it('exposes a usable TypeScript example before client-side highlighting', () => {
+  it('server-renders TypeScript examples before highlighting', () => {
     const example = [
       "import { Checkbox } from '@vellira-ui/react';",
       "<Checkbox checked={selected} onCheckedChange={setSelected} />",
