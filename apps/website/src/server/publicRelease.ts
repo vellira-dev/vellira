@@ -76,13 +76,25 @@ async function readRegistryTag(
           'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
       },
       cache: 'no-store',
-      redirect: 'error',
+      // workerd does not implement redirect: 'error'. Manual + explicit
+      // rejection below preserves the no-redirect security boundary.
+      redirect: 'manual',
       signal: AbortSignal.timeout(8000),
     });
   } catch (error) {
     throw new PublicReleaseCheckError(
       'registry_unavailable',
       fetchFailureCode(error),
+      packageName
+    );
+  }
+
+  // Never follow npm redirects or trust data from a different origin. In
+  // workerd, manual is the supported replacement for redirect: 'error'.
+  if ((response.status >= 300 && response.status < 400) || response.redirected) {
+    throw new PublicReleaseCheckError(
+      'registry_unavailable',
+      'redirect_rejected',
       packageName
     );
   }
