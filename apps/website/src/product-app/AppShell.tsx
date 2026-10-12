@@ -26,7 +26,7 @@ function activeHref(pathname: string): NavigationHref {
   return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
 }
 
-function AppNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+function AppNavigation({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const value = activeHref(pathname);
@@ -55,20 +55,6 @@ function AppNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
             </SidebarItem>
           </SidebarGroup>
         </Sidebar>
-        <div className={styles.sidebarToggleRow}>
-          <Button
-            appearance='ghost'
-            color='neutral'
-            size='sm'
-            iconStart={collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            iconOnly={collapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={!collapsed}
-            onClick={onToggle}
-          >
-            {!collapsed && 'Collapse sidebar'}
-          </Button>
-        </div>
       </nav>
 
       <div className={styles.mobileNavigation}>
@@ -237,7 +223,21 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          <AppNavigation collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((previous) => !previous)} />
+          <AppNavigation collapsed={sidebarCollapsed} />
+          <div className={styles.sidebarToggleRow}>
+            <Button
+              appearance='ghost'
+              color='neutral'
+              size='sm'
+              iconStart={sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              iconOnly={sidebarCollapsed}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!sidebarCollapsed}
+              onClick={() => setSidebarCollapsed((previous) => !previous)}
+            >
+              {!sidebarCollapsed && 'Collapse sidebar'}
+            </Button>
+          </div>
         </aside>
 
         <div className={styles.mobileNavigationRow}>
