@@ -34,19 +34,19 @@ function createButtonCode(
   const children = platform === 'react' ? `  Add item` : `  Add item`;
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   if (value.appearance !== 'solid') {
-    props.push(`appearance='${value.appearance}'`);
+    props.push(`appearance={${JSON.stringify(value.appearance)}}`);
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   if (value.shape !== 'pill') {
-    props.push(`shape='${value.shape}'`);
+    props.push(`shape={${JSON.stringify(value.shape)}}`);
   }
 
   if (value.fullWidth) {
@@ -58,7 +58,7 @@ function createButtonCode(
   }
 
   if (value.loadingText) {
-    props.push(`loadingText='${value.loadingText}'`);
+    props.push(`loadingText={${JSON.stringify(value.loadingText)}}`);
   }
 
   if (value.disabled) {

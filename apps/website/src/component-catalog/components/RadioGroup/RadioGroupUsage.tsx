@@ -41,7 +41,7 @@ function createRadioGroupCode(
   <RadioGroup.Item value='enterprise' label='Enterprise' />`;
 
   if (value.value) {
-    props.push(`value='${value.value}'`);
+    props.push(`value={${JSON.stringify(value.value)}}`);
   }
 
   if (value.disabled) {
@@ -57,15 +57,15 @@ function createRadioGroupCode(
   }
 
   if (value.orientation !== 'vertical') {
-    props.push(`orientation='${value.orientation}'`);
+    props.push(`orientation={${JSON.stringify(value.orientation)}}`);
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   const propsText = props.length === 0 ? '' : `\n  ${props.join('\n  ')}\n`;

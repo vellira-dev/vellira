@@ -31,27 +31,25 @@ function createTextareaCode(
   const children = platform === 'react' ? `` : ``;
 
   if (value.label) {
-    props.push(`label='${value.label}'`);
+    props.push(`label={${JSON.stringify(value.label)}}`);
   }
 
   if (value.description) {
-    props.push(`description='${value.description}'`);
+    props.push(`description={${JSON.stringify(value.description)}}`);
   }
 
   if (value.error) {
-    props.push(`error='${value.error}'`);
+    props.push(`error={${JSON.stringify(value.error)}}`);
   }
 
   if (value.placeholder) {
-    props.push(`placeholder='${value.placeholder}'`);
+    props.push(`placeholder={${JSON.stringify(value.placeholder)}}`);
   }
 
-  if (value.size !== 'sm') {
-    props.push(`size='${value.size}'`);
-  }
+  props.push(`size={${JSON.stringify(value.size)}}`);
 
   if (value.value) {
-    props.push(`value='${value.value}'`);
+    props.push(`value={${JSON.stringify(value.value)}}`);
   }
 
   if (value.disabled) {

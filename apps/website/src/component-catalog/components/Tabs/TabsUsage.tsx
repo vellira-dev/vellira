@@ -68,23 +68,23 @@ function createTabsCode(
   </Tabs.Content>`;
 
   if (value.value) {
-    props.push(`value='${value.value}'`);
+    props.push(`value={${JSON.stringify(value.value)}}`);
   }
 
   if (value.orientation !== 'horizontal') {
-    props.push(`orientation='${value.orientation}'`);
+    props.push(`orientation={${JSON.stringify(value.orientation)}}`);
   }
 
   if (platform === 'react' && value.activationMode !== 'automatic') {
-    props.push(`activationMode='${value.activationMode}'`);
+    props.push(`activationMode={${JSON.stringify(value.activationMode)}}`);
   }
 
-  if (platform === 'react' && value.dir !== 'ltr') {
-    props.push(`dir='${value.dir}'`);
+  if (platform === 'react') {
+    props.push(`dir={${JSON.stringify(value.dir)}}`);
   }
 
-  if (platform === 'react' && value.loop) {
-    props.push('loop');
+  if (platform === 'react' && value.loop !== true) {
+    props.push(`loop={${value.loop}}`);
   }
 
   if (value.keepMounted) {
@@ -96,20 +96,18 @@ function createTabsCode(
   }
 
   if (value.variant !== 'line') {
-    props.push(`variant='${value.variant}'`);
+    props.push(`variant={${JSON.stringify(value.variant)}}`);
   }
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
-  if (value.mode !== 'tabs') {
-    props.push(`mode='${value.mode}'`);
-  }
+  props.push(`mode={${JSON.stringify(value.mode)}}`);
 
   if (value.disabled) {
     props.push('disabled');

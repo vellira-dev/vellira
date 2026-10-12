@@ -184,3 +184,22 @@ test('Search Console legacy docs URLs have unique permanent same-origin redirect
     assert.ok(!source.startsWith('/_next/') && !source.startsWith('/cdn-cgi/') && !source.startsWith('/api/'));
   }
 });
+
+
+test('public sitemap keeps meaningful modification timestamps, not build-time dates', async () => {
+  const [sitemap, blogSeo] = await Promise.all([
+    read('apps/website/src/app/sitemap.ts'),
+    read('apps/website/src/blog/seo.ts'),
+  ]);
+
+  // Index and component pages have no authoritative per-page update timestamp.
+  assert.doesNotMatch(sitemap, /lastModified:\s*new Date\(\s*\)/);
+  assert.doesNotMatch(sitemap, /Date\.now\(\)/);
+  assert.match(sitemap, /webComponents\.map\(/);
+  assert.match(sitemap, /changeFrequency:\s*'weekly'/);
+
+  // Preserve dates backed by content, including legal pages and blog metadata.
+  assert.match(sitemap, /lastModified:\s*new Date\('2026-10-10'\)/);
+  assert.match(blogSeo, /latestArticle\.updatedAt \?\? latestArticle\.publishedAt/);
+  assert.match(blogSeo, /article\.updatedAt \?\? article\.publishedAt/);
+});

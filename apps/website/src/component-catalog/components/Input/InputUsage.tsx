@@ -26,35 +26,32 @@ function createInputCode(
   const packageName =
     platform === 'react' ? '@vellira-ui/react' : '@vellira-ui/react-native';
 
-  const props: string[] =
-    platform === 'react'
-      ? [`label='Email'`, `description='Used for account notifications.'`]
-      : [`label='Email'`, `description='Used for account notifications.'`];
+  const props: string[] = platform === 'react' ? [] : [];
 
   const children = platform === 'react' ? `` : ``;
 
   if (value.label) {
-    props.push(`label='${value.label}'`);
+    props.push(`label={${JSON.stringify(value.label)}}`);
   }
 
   if (value.description) {
-    props.push(`description='${value.description}'`);
+    props.push(`description={${JSON.stringify(value.description)}}`);
   }
 
   if (value.placeholder) {
-    props.push(`placeholder='${value.placeholder}'`);
+    props.push(`placeholder={${JSON.stringify(value.placeholder)}}`);
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   if (value.variant !== 'outline') {
-    props.push(`variant='${value.variant}'`);
+    props.push(`variant={${JSON.stringify(value.variant)}}`);
   }
 
   if (value.disabled) {
@@ -90,7 +87,7 @@ function createInputCode(
   }
 
   if (value.error) {
-    props.push(`error='${value.error}'`);
+    props.push(`error={${JSON.stringify(value.error)}}`);
   }
 
   const propsText = props.length === 0 ? '' : `\n  ${props.join('\n  ')}\n`;
