@@ -26,14 +26,14 @@ function activeHref(pathname: string): NavigationHref {
   return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
 }
 
-function AppNavigation({ collapsed }: { collapsed: boolean }) {
+function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; navigationId?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const value = activeHref(pathname);
 
   return (
     <>
-      <nav id='app-sidebar-navigation' className={styles.desktopNavigation} aria-label='Vellira app'>
+      <nav id={navigationId} className={styles.desktopNavigation} aria-label='Vellira app'>
         <Sidebar ariaLabel='Account navigation'>
           <SidebarGroup label={collapsed ? '' : 'Workspace'}>
             <SidebarItem active={value === '/app'}>
@@ -223,7 +223,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          <AppNavigation collapsed={sidebarCollapsed} />
+          <AppNavigation collapsed={sidebarCollapsed} navigationId='app-sidebar-navigation' />
           <div className={styles.sidebarToggleRow}>
             <Button
               appearance='bare'
