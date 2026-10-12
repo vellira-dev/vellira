@@ -38,44 +38,78 @@ function AppNavigation({
       className={mobile ? styles.drawerNavigation : styles.desktopNavigation}
       aria-label={mobile ? 'Mobile workspace navigation' : 'Vellira app'}
     >
-        <Sidebar ariaLabel='Account navigation'>
-          <SidebarGroup label='Workspace'>
-            <SidebarItem active={value === '/app'}>
-              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/app' onClick={onNavigate} aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
-                <span className={styles.navEntry}><Grid size={18} aria-hidden='true' /><span className={styles.navLabel}>Overview</span></span>
-              </Link></Tooltip.Trigger><Portal><Tooltip.Content>Overview</Tooltip.Content></Portal></Tooltip>
-            </SidebarItem>
-            <SidebarItem>
-              <Tooltip placement='right' disabled={!collapsed}>
-                <Tooltip.Trigger asChild>
-                  <Link
-                    href='/components?from=app'
-                    onClick={onNavigate}
-                    aria-label={collapsed ? 'Components' : undefined}
-                  >
-                    <span className={styles.navEntry}>
-                      <Platforms size={18} aria-hidden='true' />
-                      <span className={styles.navLabel}>Components</span>
-                    </span>
-                    <ChevronRight className={styles.navTrailing} size={16} aria-hidden='true' />
-                  </Link>
-                </Tooltip.Trigger>
-                <Portal>
-                  <Tooltip.Content>Components</Tooltip.Content>
-                </Portal>
-              </Tooltip>
-            </SidebarItem>
-          </SidebarGroup>
-          <SidebarGroup label='Resources'>
-            <SidebarItem>
-              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><a aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer' onClick={onNavigate}>
-                <span className={styles.navEntry}><Docs size={18} aria-hidden='true' /><span className={styles.navLabel}>Docs ↗</span></span>
-              </a></Tooltip.Trigger><Portal><Tooltip.Content>Docs</Tooltip.Content></Portal></Tooltip>
-            </SidebarItem>
-          </SidebarGroup>
-        </Sidebar>
+      <Sidebar ariaLabel='Account navigation'>
+        <SidebarGroup label='Workspace'>
+          <SidebarItem active={value === '/app'}>
+            <Tooltip placement='right' disabled={!collapsed}>
+              <Tooltip.Trigger asChild>
+                <Link
+                  href='/app'
+                  onClick={onNavigate}
+                  aria-label={collapsed ? 'Overview' : undefined}
+                  aria-current={value === '/app' ? 'page' : undefined}
+                >
+                  <span className={styles.navEntry}>
+                    <Grid size={18} aria-hidden='true' />
+                    <span className={styles.navLabel}>Overview</span>
+                  </span>
+                </Link>
+              </Tooltip.Trigger>
+              <Portal>
+                <Tooltip.Content>Overview</Tooltip.Content>
+              </Portal>
+            </Tooltip>
+          </SidebarItem>
+          <SidebarItem>
+            <Tooltip placement='right' disabled={!collapsed}>
+              <Tooltip.Trigger asChild>
+                <Link
+                  href='/components?from=app'
+                  onClick={onNavigate}
+                  aria-label={collapsed ? 'Components' : undefined}
+                >
+                  <span className={styles.navEntry}>
+                    <Platforms size={18} aria-hidden='true' />
+                    <span className={styles.navLabel}>Components</span>
+                  </span>
+                  <ChevronRight
+                    className={styles.navTrailing}
+                    size={16}
+                    aria-hidden='true'
+                  />
+                </Link>
+              </Tooltip.Trigger>
+              <Portal>
+                <Tooltip.Content>Components</Tooltip.Content>
+              </Portal>
+            </Tooltip>
+          </SidebarItem>
+        </SidebarGroup>
+        <SidebarGroup label='Resources'>
+          <SidebarItem>
+            <Tooltip placement='right' disabled={!collapsed}>
+              <Tooltip.Trigger asChild>
+                <a
+                  href='https://docs.vellira.dev/start/getting-started'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  onClick={onNavigate}
+                  aria-label={collapsed ? 'Docs' : undefined}
+                >
+                  <span className={styles.navEntry}>
+                    <Docs size={18} aria-hidden='true' />
+                    <span className={styles.navLabel}>Docs ↗</span>
+                  </span>
+                </a>
+              </Tooltip.Trigger>
+              <Portal>
+                <Tooltip.Content>Docs</Tooltip.Content>
+              </Portal>
+            </Tooltip>
+          </SidebarItem>
+        </SidebarGroup>
+      </Sidebar>
     </nav>
-
   );
 }
 
