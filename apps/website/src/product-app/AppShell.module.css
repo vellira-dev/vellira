@@ -182,10 +182,10 @@
   align-items: center;
   min-height: var(--site-header-height);
   padding-inline: var(--site-gutter);
-  /* Match the leading edge of the first navigation icon. In a workspace-
-     origin catalog the fallback matches the component explorer's gutter. */
+  /* The app sidebar and workspace-origin Components catalog share a 16px
+     gutter and a 10px item inset. Align the wordmark to the first icon. */
   padding-inline-start: calc(
-    var(--app-navigation-start-inset, var(--site-gutter)) + 10px
+    var(--app-navigation-start-inset, var(--space-4)) + 10px
   );
   background: var(--surface-canvas);
   border-bottom: 1px solid var(--border-muted);
