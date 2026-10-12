@@ -394,7 +394,9 @@ describe('renderUsage', () => {
       getDemoProps: () => '',
     });
     expect(result.content).toContain('if (value.placeholder)');
-    expect(result.content).not.toContain("value.placeholder !== 'Runtime placeholder'");
+    expect(result.content).not.toContain(
+      "value.placeholder !== 'Runtime placeholder'"
+    );
   });
 
   it('preserves required select values even when equal to metadata defaults', () => {
@@ -492,7 +494,8 @@ describe('renderUsage', () => {
       },
     }).outputText;
 
-    const unsafeName = "O'Connor\nLine two \u0060tag\u0060 \x24{attack} {braces} \"quote\"";
+    const unsafeName =
+      'O\'Connor\nLine two \u0060tag\u0060 \x24{attack} {braces} "quote"';
     const rendered = runInNewContext(
       executable + '\ncreateIdentityBadgeCode(platform, value)',
       {

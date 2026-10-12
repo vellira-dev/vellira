@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { generateApiDocs } from '../../generate-api-docs';
 import { generateComponentDocs } from '../component-docs/generate-component-docs';
-import { createComponentDocsContractFromPlan } from './docs';
+import {
+  createComponentDocsContractFromPlan,
+  normalizeGeneratedApiRootHeading,
+} from './docs';
 import { checkComponentDocumentationContract } from './documentation-contract';
 import { createComponentGenerationPlan } from './plan';
 
@@ -49,6 +52,36 @@ describe('component documentation contract check', () => {
     expect(react?.description).not.toBe(native?.description);
   });
 
+  it('removes only duplicate generated headings without touching authored content', () => {
+    const id = 'web.IdentityBadgeProps.IdentityBadge';
+    const marker = '<!-- api-docgen:start ' + id + ' -->';
+    const input = [
+      '# API',
+      '',
+      '## Other',
+      '',
+      'Author-provided section.',
+      '',
+      '## IdentityBadge',
+      '',
+      '## IdentityBadge',
+      '',
+      marker,
+      '| Prop | Type |',
+    ].join('\n');
+    const normalized = normalizeGeneratedApiRootHeading(
+      input,
+      'IdentityBadge',
+      id
+    );
+    expect(normalized.match(/^## IdentityBadge$/gm)).toHaveLength(1);
+    expect(normalized).toContain('Author-provided section.');
+    expect(
+      normalizeGeneratedApiRootHeading(normalized, 'IdentityBadge', id)
+    ).toBe(normalized);
+    const authored = input.replace(marker, '<!-- authored only -->');
+    expect(normalizeGeneratedApiRootHeading(authored, 'IdentityBadge', id)).toBe(authored);
+  });
   it('checks dynamic API sections and generated docs without writing them', async () => {
     vi.mocked(generateApiDocs).mockResolvedValue({
       status: 'up-to-date',

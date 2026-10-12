@@ -45,7 +45,7 @@ function createSelectCode(
   <Select.Item value='vue' label='Vue' />
   <Select.Item value='svelte' label='Svelte' />`;
 
-  if (value.placeholder !== 'Select...') {
+  if (value.placeholder) {
     props.push(`placeholder={${JSON.stringify(value.placeholder)}}`);
   }
 

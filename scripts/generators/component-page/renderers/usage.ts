@@ -262,7 +262,10 @@ function Example() {
         `(platform === 'react-native' || ${differentFromOmissionDefault()})`
       );
     }
-    return emit(statement, required ? undefined : differentFromOmissionDefault());
+    return emit(
+      statement,
+      required ? undefined : differentFromOmissionDefault()
+    );
   }
 
   const dynamicPropHandlers = playgroundProps
