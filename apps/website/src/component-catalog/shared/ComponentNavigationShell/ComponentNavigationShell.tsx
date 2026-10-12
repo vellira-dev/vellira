@@ -8,6 +8,7 @@ import { ComponentSidebar } from '../ComponentSidebar';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
 import { ArrowLeft } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
+import { AppMobileAccountActions } from '@/product-app/AppHeader';
 
 import styles from './ComponentNavigationShell.module.css';
 
@@ -116,6 +117,11 @@ export function ComponentNavigationShell({
               <div className={styles.mobilePanelContent}>
                 <ComponentSidebar activeSlug={activeSlug} />
               </div>
+              {fromWorkspace && (
+                <div className={styles.workspaceMobileAccount}>
+                  <AppMobileAccountActions onNavigate={closeNavigation} />
+                </div>
+              )}
             </aside>
           </div>
         </div>
