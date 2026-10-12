@@ -139,7 +139,14 @@ try {
     themeLayout.items.every(
       (item) => Math.abs(item.radioToIconGap - 16) <= 1
     ),
-    'Radio to theme-icon spacing must be exactly 16px'
+    `Radio to theme-icon spacing must be exactly 16px. Measurements: ${JSON.stringify(
+      themeLayout.items.map(({ radioToIconGap, circleInset, iconInset, width }) => ({
+        gap: radioToIconGap,
+        circleInset,
+        iconInset,
+        width,
+      }))
+    )}`
   );
   assert.ok(
     themeLayout.items.every(
