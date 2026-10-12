@@ -26,10 +26,7 @@ function createFormFieldCode(
   const packageName =
     platform === 'react' ? '@vellira-ui/react' : '@vellira-ui/react-native';
 
-  const props: string[] =
-    platform === 'react'
-      ? [`label='Email'`, `description='Used for account notifications.'`]
-      : [`label='Email'`, `description='Used for account notifications.'`];
+  const props: string[] = platform === 'react' ? [] : [];
 
   const children =
     platform === 'react'
