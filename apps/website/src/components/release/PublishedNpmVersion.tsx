@@ -9,9 +9,17 @@ import {
 
 export function PublishedNpmVersion() {
   const [release, setRelease] = useState<PublishedRelease | null>(null);
+  const [checked, setChecked] = useState(false);
 
   useEffect(
-    () => observePublicRelease(setRelease, { url: '/api/public-release' }),
+    () =>
+      observePublicRelease(
+        (next) => {
+          setRelease(next);
+          setChecked(true);
+        },
+        { url: '/api/public-release' }
+      ),
     []
   );
 
@@ -19,11 +27,18 @@ export function PublishedNpmVersion() {
     ? `Latest confirmed npm version v${release.version}${
         release.stale ? ' (cached verification)' : ''
       }`
-    : 'Latest confirmed npm version unavailable';
+    : checked
+      ? 'Latest confirmed npm version unavailable'
+      : 'Checking latest confirmed npm version';
 
   return (
-    <span aria-label={label} title={label} aria-live='polite'>
-      {release ? `v${release.version}` : '—'}
+    <span
+      aria-label={label}
+      title={label}
+      aria-live='polite'
+      data-release-state={release ? 'verified' : checked ? 'unavailable' : 'loading'}
+    >
+      {release ? `v${release.version}` : checked ? 'Unavailable' : 'Checking…'}
     </span>
   );
 }

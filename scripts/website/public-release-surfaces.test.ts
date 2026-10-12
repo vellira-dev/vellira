@@ -49,6 +49,32 @@ describe('shared npm-verified version on public sites', () => {
     );
   });
 
+  it('shows homepage npm state without empty pill decorations', () => {
+    const version = read(
+      'apps/website/src/components/release/PublishedNpmVersion.tsx'
+    );
+    const workflowCss = read(
+      'apps/website/src/sections/home/ProductionWorkflow/ProductionWorkflow.module.css'
+    );
+    const roadmapCss = read(
+      'apps/website/src/sections/home/Roadmap/Roadmap.module.css'
+    );
+
+    expect(version).toContain("checked ? 'Unavailable' : 'Checking…'");
+    expect(version).toContain("release ? `v${release.version}`");
+    expect(version).toContain('data-release-state=');
+
+    for (const [css, selector] of [
+      [workflowCss, '.releaseVersion {'],
+      [roadmapCss, '.releaseHeader code {'],
+      [roadmapCss, '.releaseBadge {'],
+    ]) {
+      const rule = css.split(selector)[1]?.split('}')[0];
+      expect(rule).toBeDefined();
+      expect(rule).not.toMatch(/background:|border:|border-radius:|padding:/);
+    }
+  });
+
   it('does not show npm placeholders as nav buttons', () => {
     const docs = read('apps/docs/src/.vitepress/theme/PublicReleaseBadge.vue');
     const sb = read('apps/react-storybook/.storybook/manager.ts');
