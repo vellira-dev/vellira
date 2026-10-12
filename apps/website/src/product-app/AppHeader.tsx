@@ -15,7 +15,13 @@ import styles from './AppShell.module.css';
 
 // One canonical product header on /app and on workspace-origin component
 // browsing. It uses the same session and account actions in both places.
-export function AppHeader({ mobileAction }: { mobileAction?: ReactNode } = {}) {
+export function AppHeader({
+  mobileAction,
+  onAccountNavigate,
+}: {
+  mobileAction?: ReactNode;
+  onAccountNavigate?: () => void;
+} = {}) {
   const router = useRouter();
   const { status, workspace, signOut } = useAppSession();
   const [signingOut, setSigningOut] = useState(false);
@@ -52,14 +58,20 @@ export function AppHeader({ mobileAction }: { mobileAction?: ReactNode } = {}) {
             <Dropdown.Content>
               <Dropdown.Item
                 icon={<Settings size={16} aria-hidden='true' />}
-                onSelect={() => router.push('/app/settings')}
+                onSelect={() => {
+                  onAccountNavigate?.();
+                  router.push('/app/settings');
+                }}
               >
                 Account settings
               </Dropdown.Item>
               {workspace?.membership.role === 'owner' && (
                 <Dropdown.Item
                   icon={<CreditCard size={16} aria-hidden='true' />}
-                  onSelect={() => router.push('/app/settings/billing')}
+                  onSelect={() => {
+                    onAccountNavigate?.();
+                    router.push('/app/settings/billing');
+                  }}
                 >
                   Billing
                 </Dropdown.Item>
@@ -72,6 +84,7 @@ export function AppHeader({ mobileAction }: { mobileAction?: ReactNode } = {}) {
                 onSelect={() => {
                   if (signingOut) return;
                   setSigningOut(true);
+                  onAccountNavigate?.();
                   void signOut().finally(() => setSigningOut(false));
                 }}
               >
