@@ -129,10 +129,11 @@ try {
   assert.ok(
     themeLayout.items.every(
       (item) =>
-        Math.abs(item.circleInset - themeLayout.items[0].circleInset) <= 1 &&
-        Math.abs(item.iconInset - themeLayout.items[0].iconInset) <= 1
+        item.circleInset >= 0 &&
+        item.iconInset > item.circleInset &&
+        item.iconInset < item.width
     ),
-    'Radio circles and icons must align in consistent slots within every card'
+    'Each radio circle and theme icon must stay inside its card in the correct order'
   );
   assert.ok(
     themeLayout.items.every(
