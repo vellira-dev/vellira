@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: 22.22.2
       - run: pnpm install --frozen-lockfile
+      - name: Build prerequisite workspaces through the canonical Turbo graph
+        run: pnpm exec turbo run build --filter='@vellira-ui/website^...'
       - name: Prepare canonical website packages and icons
         run: pnpm --dir apps/website run predev
       - name: Execute browser acceptance against a real dev preview
