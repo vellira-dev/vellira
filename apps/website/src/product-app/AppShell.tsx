@@ -241,7 +241,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className={styles.body}>
+      <div className={styles.body} inert={mobileMenuOpen}>
         <aside className={styles.sidebar}>
           <AppNavigation collapsed={sidebarCollapsed} navigationId='app-sidebar-navigation' />
           <div className={styles.sidebarToggleRow}>
