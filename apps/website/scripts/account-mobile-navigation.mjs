@@ -394,6 +394,47 @@ try {
     await siteMenu.waitFor();
   }
 
+  // Portal Components pages retain their desktop explorer above 1100px,
+  // while SiteHeader hides primary navigation at <=1280px. Ensure these
+  // in-between tablet widths expose the marketing menu (including Blog).
+  for (const width of [1280, 1200]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(new URL('/components/button', baseUrl).toString());
+    const portalHeader = page.locator('header').first();
+    const publicMenu = portalHeader.getByRole('button', {
+      name: 'Open navigation',
+    });
+    await publicMenu.waitFor();
+    assert.ok(
+      await publicMenu.isVisible(),
+      `Portal must expose site navigation at ${width}px`
+    );
+    assert.equal(
+      await portalHeader.getByRole('button', {
+        name: 'Open component navigation',
+      }).isVisible().catch(() => false),
+      false,
+      'A component-only trigger must not open a hidden drawer at tablet width'
+    );
+    const siteMenuBox = await publicMenu.boundingBox();
+    const containerPadding = await portalHeader.evaluate((node) =>
+      Number.parseFloat(getComputedStyle(node.firstElementChild).paddingRight)
+    );
+    const portalRight = await portalHeader.evaluate((node) =>
+      node.getBoundingClientRect().right
+    );
+    assert.ok(
+      siteMenuBox &&
+        Math.abs(portalRight - siteMenuBox.x - siteMenuBox.width - containerPadding) <= 2,
+      `Portal tablet Menu must be right-aligned at ${width}px`
+    );
+    await publicMenu.click();
+    const blog = portalHeader.getByRole('link', { name: 'Blog' });
+    await blog.waitFor();
+    await blog.click();
+    await page.waitForURL('**/blog');
+  }
+
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto(new URL('/app', baseUrl).toString());
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
