@@ -10,6 +10,7 @@ import { Button, Radio, RadioGroup, Tabs } from '@vellira-ui/react';
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 import { useAppSession } from './AppSession';
 import { BillingPanel } from './BillingSettings';
+import { EmailVerificationResend } from './EmailVerificationResend';
 
 import styles from './AccountSettings.module.css';
 
@@ -82,7 +83,7 @@ function AccountPanel() {
         </div>
         <div className={styles.detailRow}>
           <dt>Email verification</dt>
-          <dd>
+          <dd className={styles.emailVerificationActions}>
             {me ? (
               <span
                 className={[
@@ -102,6 +103,7 @@ function AccountPanel() {
             ) : (
               'Unavailable'
             )}
+            {me && !me.emailVerified && <EmailVerificationResend />}
           </dd>
         </div>
         <div className={styles.detailRow}>
