@@ -21,15 +21,21 @@
   align-items: center;
   justify-content: flex-end;
   min-height: 56px;
-  margin-top: auto;
-  padding: var(--space-2);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: calc(var(--site-gutter) + var(--app-navigation-width));
+  padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--border-muted);
   background: var(--surface-panel);
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebarToggleRow {
   justify-content: center;
-  padding-inline: 0;
+  width: var(--app-collapsed-width);
+  padding-inline: var(--space-2);
 }
 
 .navEntry {
@@ -164,6 +170,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding-bottom: 72px;
 }
 
 .shell[data-sidebar-collapsed='true'] .navEntry {
