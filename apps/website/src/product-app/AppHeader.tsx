@@ -28,67 +28,67 @@ export function AppHeader({
 
   return (
     <HeaderChrome brandHref='/app' dataProductAppHeader>
-        <div className={styles.desktopHeaderActions}>
-          <ThemeSwitcher />
-          {status === 'ready' && (
-            <Dropdown color='neutral' placement='bottom-end'>
-              <Dropdown.Trigger asChild>
-                <Button
-                  appearance='ghost'
-                  color='neutral'
-                  size='sm'
-                  iconOnly
-                  iconStart={<User size={20} aria-hidden='true' />}
-                  aria-label='Account menu'
-                />
-              </Dropdown.Trigger>
-              <Dropdown.Content>
+      <div className={styles.desktopHeaderActions}>
+        <ThemeSwitcher />
+        {status === 'ready' && (
+          <Dropdown color='neutral' placement='bottom-end'>
+            <Dropdown.Trigger asChild>
+              <Button
+                appearance='ghost'
+                color='neutral'
+                size='sm'
+                iconOnly
+                iconStart={<User size={20} aria-hidden='true' />}
+                aria-label='Account menu'
+              />
+            </Dropdown.Trigger>
+            <Dropdown.Content>
+              <Dropdown.Item
+                icon={<Settings size={16} aria-hidden='true' />}
+                onSelect={() => {
+                  onAccountNavigate?.();
+                  router.push('/app/settings');
+                }}
+              >
+                Account settings
+              </Dropdown.Item>
+              {workspace?.membership.role === 'owner' && (
                 <Dropdown.Item
-                  icon={<Settings size={16} aria-hidden='true' />}
+                  icon={<CreditCard size={16} aria-hidden='true' />}
                   onSelect={() => {
                     onAccountNavigate?.();
-                    router.push('/app/settings');
+                    router.push('/app/settings/billing');
                   }}
                 >
-                  Account settings
+                  Billing
                 </Dropdown.Item>
-                {workspace?.membership.role === 'owner' && (
-                  <Dropdown.Item
-                    icon={<CreditCard size={16} aria-hidden='true' />}
-                    onSelect={() => {
-                      onAccountNavigate?.();
-                      router.push('/app/settings/billing');
-                    }}
-                  >
-                    Billing
-                  </Dropdown.Item>
-                )}
-                <Dropdown.Separator />
-                <Dropdown.Item
-                  color='danger'
-                  icon={<Exit size={16} aria-hidden='true' />}
-                  disabled={signingOut}
-                  onSelect={() => {
-                    if (signingOut) return;
-                    setSigningOut(true);
-                    onAccountNavigate?.();
-                    void signOut().finally(() => setSigningOut(false));
-                  }}
-                >
-                  Sign out
-                </Dropdown.Item>
-              </Dropdown.Content>
-            </Dropdown>
-          )}
-        </div>
-        {mobileAction && (
-          <div className={styles.mobileHeaderAction}>{mobileAction}</div>
+              )}
+              <Dropdown.Separator />
+              <Dropdown.Item
+                color='danger'
+                icon={<Exit size={16} aria-hidden='true' />}
+                disabled={signingOut}
+                onSelect={() => {
+                  if (signingOut) return;
+                  setSigningOut(true);
+                  onAccountNavigate?.();
+                  void signOut().finally(() => setSigningOut(false));
+                }}
+              >
+                Sign out
+              </Dropdown.Item>
+            </Dropdown.Content>
+          </Dropdown>
         )}
+      </div>
+      {mobileAction && (
+        <div className={styles.mobileHeaderAction}>{mobileAction}</div>
+      )}
     </HeaderChrome>
   );
 }
 
-/** Account actions shared by the app and workspace-origin Components drawer.
+/** Account actions shown exclusively inside the authenticated workspace menu.
  * Presentation comes from the canonical session; backend still authorizes.
  * Appearance is available exclusively in Settings on mobile.
  */
@@ -140,7 +140,6 @@ export function AppMobileAccountActions({
           </Button>
         </section>
       )}
-
     </div>
   );
 }
