@@ -59,7 +59,11 @@ export function BillingPanel() {
     void getWorkspaceBilling(workspaceId)
       .then(({ subscription }) => {
         if (!disposed) {
-          setResult({ workspaceId, revision, state: { kind: 'ready', subscription } });
+          setResult({
+            workspaceId,
+            revision,
+            state: { kind: 'ready', subscription },
+          });
         }
       })
       .catch((cause: unknown) => {
