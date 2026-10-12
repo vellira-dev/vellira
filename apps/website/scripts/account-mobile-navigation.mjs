@@ -60,6 +60,11 @@ try {
 
     const header = page.locator('[data-product-app-header]');
     const appChrome = await headerGeometry(header);
+    const appLogo = await header
+      .getByRole('link', { name: 'Vellira home' })
+      .locator('img')
+      .boundingBox();
+    assert.ok(appLogo, 'Header logo must be measurable');
     const open = header.getByRole('button', {
       name: 'Open workspace navigation',
     });
@@ -83,6 +88,16 @@ try {
       name: 'Workspace navigation',
     });
     await drawer.waitFor();
+    const openedLogo = await drawer
+      .getByRole('link', { name: 'Vellira workspace' })
+      .locator('img')
+      .boundingBox();
+    assert.ok(openedLogo, 'Opened drawer must render the canonical brand');
+    assert.ok(
+      Math.abs(openedLogo.width - appLogo.width) <= 1 &&
+        Math.abs(openedLogo.height - appLogo.height) <= 1,
+      `Workspace logo must not resize on menu open at ${width}px`
+    );
     assert.equal(
       await drawer.getByRole('button', { name: 'Close workspace navigation' }).count(),
       0,
@@ -176,6 +191,17 @@ try {
     await componentTrigger.click();
     const componentsDrawer = page.locator('#component-navigation');
     await componentsDrawer.waitFor();
+    const contextualOpenedLogo = await componentsDrawer
+      .locator('..')
+      .getByRole('link', { name: 'Vellira home' })
+      .locator('img')
+      .boundingBox();
+    assert.ok(contextualOpenedLogo, 'Components drawer logo must be measurable');
+    assert.ok(
+      Math.abs(contextualOpenedLogo.width - contextual.brandWidth) <= 1 &&
+        Math.abs(contextualOpenedLogo.height - appLogo.height) <= 1,
+      `Components logo must not resize on menu open at ${width}px`
+    );
     const contextualSurfaceClass = await componentsDrawer.evaluate(
       (node) => node.parentElement?.classList[0]
     );
@@ -254,7 +280,7 @@ try {
   const publicHeader = await headerGeometry(page.locator('header').first());
   sameChrome(desktopApp, publicHeader, 'Product / public SiteHeader');
 
-  console.log('OK shared header/Menu and Components-style mobile navigation (1100/768/390/320px)');
+  console.log('OK shared header/Menu and stable brand size when opening Workspace/Components at 1100/768/390/320px');
 } finally {
   await page.close();
   await context.close();
