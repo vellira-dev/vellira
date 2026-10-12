@@ -1,0 +1,76 @@
+name: Content Bridge GitHub App Auth Smoke
+
+# A manual credential check, not a publishing or notification workflow.
+# Keep the existing production notifier and deployment workflows unchanged.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: content-bridge-github-app-auth-smoke
+  cancel-in-progress: false
+
+jobs:
+  app-auth-smoke:
+    name: Verify protected App token and sole private repository scope
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: content-production-notification
+
+    steps:
+      - name: Confirm repository bridge switch is explicitly enabled
+        shell: bash
+        env:
+          BRIDGE_ENABLED: ${{ vars.VELLIRA_CONTENT_PRODUCTION_BRIDGE_ENABLED || 'false' }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          if [ "$BRIDGE_ENABLED" != 'true' ]; then
+            echo 'Repository-level bridge flag is disabled or missing.' >&2
+            exit 1
+          fi
+
+      - name: Mint short-lived single-repository GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.VELLIRA_CONTENT_BRIDGE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.VELLIRA_CONTENT_BRIDGE_APP_PRIVATE_KEY }}
+          owner: vellira-dev
+          repositories: vellira-internal
+          permission-contents: write
+
+      - name: Verify installation token scope without any writes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+
+          # A scoped installation token must see exactly one repository.
+          gh api --method GET 'installation/repositories?per_page=100' > "$RUNNER_TEMP/bridge-app-repositories.json"
+          jq --exit-status '
+            .total_count == 1 and
+            (.repositories | length) == 1 and
+            .repositories[0].full_name == "vellira-dev/vellira-internal" and
+            .repositories[0].private == true
+          ' "$RUNNER_TEMP/bridge-app-repositories.json" > /dev/null
+
+          # Prove the same token can read the actual private receiver workflow.
+          gh api --method GET             'repos/vellira-dev/vellira-internal/contents/.github/workflows/content-distribution.yml'             --jq '.path == ".github/workflows/content-distribution.yml"'             | grep -Fx 'true' > /dev/null
+
+          {
+            echo '# Content Bridge App credential smoke'
+            echo ''
+            echo '- Repository bridge flag: **enabled**'
+            echo '- Protected Environment token mint: **passed**'
+            echo '- Installation token scope: **vellira-dev/vellira-internal only**'
+            echo '- Private receiver workflow read: **passed**'
+            echo '- Repository dispatch: **NOT SENT**'
+            echo '- Website deployment: **NOT TRIGGERED**'
+            echo '- Editorial approval and external publication: **NOT AUTHORIZED**'
+          } >> "$GITHUB_STEP_SUMMARY"
