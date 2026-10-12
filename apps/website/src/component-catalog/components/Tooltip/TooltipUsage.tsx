@@ -60,7 +60,7 @@ function createTooltipCode(
   <Tooltip.Content withArrow>Helpful contextual label.</Tooltip.Content>`;
 
   if (value.placement !== 'top') {
-    props.push(`placement='${value.placement}'`);
+    props.push(`placement={${JSON.stringify(value.placement)}}`);
   }
 
   if (value.disabled) {

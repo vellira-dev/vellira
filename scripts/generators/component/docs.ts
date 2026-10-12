@@ -274,7 +274,7 @@ export async function generateComponentDocumentation(params: {
     throw new Error(validation.errors.join('\n'));
   }
 
-  ensureApiDocPlaceholders(plan);
+  const placeholderChanges = ensureApiDocPlaceholders(plan);
 
   const apiResult = await generateApiDocs({
     rootDir: root,
@@ -291,11 +291,12 @@ export async function generateComponentDocumentation(params: {
     ),
   });
 
-  updatedFiles.push(
-    ...apiResult.changedFiles
-      .map((filePath) => path.join(root, filePath))
-      .filter((filePath) => !updatedFiles.includes(filePath))
-  );
+  for (const filePath of [
+    ...placeholderChanges,
+    ...apiResult.changedFiles.map((changed) => path.join(root, changed)),
+  ]) {
+    if (!updatedFiles.includes(filePath)) updatedFiles.push(filePath);
+  }
 
   const docsResult = await generateComponentDocs({
     root,
@@ -354,7 +355,23 @@ export function getGeneratedApiDocSections(plan: ComponentGenerationPlan) {
   );
 }
 
+export function normalizeGeneratedApiRootHeading(
+  content: string,
+  componentName: string,
+  sectionId: string
+) {
+  const newline = content.includes('\r\n') ? '\r\n' : '\n';
+  const heading = `## ${componentName}${newline}${newline}`;
+  const marker = `<!-- api-docgen:start ${sectionId} -->`;
+  const duplicate = heading + heading + marker;
+  let normalized = content;
+  while (normalized.includes(duplicate)) {
+    normalized = normalized.replaceAll(duplicate, heading + marker);
+  }
+  return normalized;
+}
 function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
+  const changedPaths: string[] = [];
   for (const target of plan.targets) {
     const platform = target.packageName;
     const apiDocPath = getComponentApiDocsTargets(plan).find(
@@ -365,11 +382,25 @@ function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
       throw new Error(`Missing API documentation file: ${apiDocPath}`);
     }
 
-    const content = fs.readFileSync(apiDocPath, 'utf8');
+    const original = fs.readFileSync(apiDocPath, 'utf8');
     const sections = getGeneratedApiDocSections({
       ...plan,
       targets: [target],
     });
+    let content = original;
+    for (const item of sections) {
+      if (item.heading === `## ${plan.componentName}`) {
+        content = normalizeGeneratedApiRootHeading(
+          content,
+          plan.componentName,
+          item.id
+        );
+      }
+    }
+    if (original !== content) {
+      fs.writeFileSync(apiDocPath, content);
+      changedPaths.push(apiDocPath);
+    }
     const missingSections = sections.filter(
       (apiSection) =>
         !content.includes(`<!-- api-docgen:start ${apiSection.id} -->`)
@@ -382,7 +413,10 @@ function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
     const hasComponentHeading = content
       .split(/\r?\n/)
       .some((line) => line.trim() === `## ${plan.componentName}`);
+    // The section builder already writes the missing component heading above.
+    // A single-part root API heading may have the very same text.
     const hasHeading = (heading: string) =>
+      heading === `## ${plan.componentName}` ||
       content.split(/\r?\n/).some((line) => line.trim() === heading);
 
     const placeholderContent = [
@@ -404,7 +438,9 @@ function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
       apiDocPath,
       `${content.trimEnd()}\n\n${placeholderContent}\n`
     );
+    if (!changedPaths.includes(apiDocPath)) changedPaths.push(apiDocPath);
   }
+  return changedPaths;
 }
 
 function storybookTitle(plan: ComponentGenerationPlan) {
