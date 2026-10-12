@@ -185,8 +185,6 @@ export function SiteHeader({
     <HeaderChrome
       brandHref='/'
       headerClassName={navigationOpen ? styles.navigationOpen : undefined}
-      containerClassName={styles.container}
-      actionsClassName={styles.headerRight}
     >
           <div className={styles.headerSearch}>
             <HeaderSearch />
