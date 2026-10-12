@@ -9,7 +9,7 @@ describe('component examples in initial HTML', () => {
   it('server-renders TypeScript examples before highlighting', () => {
     const example = [
       "import { Checkbox } from '@vellira-ui/react';",
-      "<Checkbox checked={selected} onCheckedChange={setSelected} />",
+      '<Checkbox checked={selected} onCheckedChange={setSelected} />',
     ].join('\n');
 
     const html = renderToStaticMarkup(<ComponentCodeBlock code={example} />);
