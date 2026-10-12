@@ -97,6 +97,7 @@ try {
         width: card.width,
         circleInset: circle.left - card.left,
         iconInset: iconBox.left - card.left,
+        radioToIconGap: iconBox.left - circle.right,
         cardCenterY: card.top + card.height / 2,
         circleCenterY: circle.top + circle.height / 2,
         iconCenterY: iconBox.top + iconBox.height / 2,
@@ -132,6 +133,12 @@ try {
         Math.abs(item.iconInset - themeLayout.items[0].iconInset) <= 1
     ),
     'Radio circles and icons must align in consistent slots within every card'
+  );
+  assert.ok(
+    themeLayout.items.every(
+      (item) => Math.abs(item.radioToIconGap - 16) <= 1
+    ),
+    'Radio to theme-icon spacing must be exactly 16px'
   );
   assert.ok(
     themeLayout.items.every(
