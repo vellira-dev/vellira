@@ -261,7 +261,7 @@
   padding-bottom: 72px;
 }
 
-.desktopNavigation > :global(aside) {
+.desktopNavigation > aside {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
