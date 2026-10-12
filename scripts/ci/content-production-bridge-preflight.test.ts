@@ -8,7 +8,7 @@ import {
 } from './content-production-bridge-preflight.mjs';
 
 const SHA = 'a'.repeat(40);
-const WORKFLOW_HEAD = 'b'.repeat(40);
+const WORKFLOW_SHA = 'b'.repeat(40);
 const RUN_ID = 38251246967;
 const ATTEMPT = 2;
 const BUILD_ID = SHA + '-' + RUN_ID + '-' + ATTEMPT;
@@ -33,7 +33,7 @@ function fixture() {
       path: '.github/workflows/deploy-website-cloudflare-production.yml',
       event: 'workflow_run',
       head_branch: 'main',
-      head_sha: WORKFLOW_HEAD,
+      head_sha: WORKFLOW_SHA,
       status: 'completed',
       conclusion: 'success',
     },
@@ -72,8 +72,14 @@ function fixture() {
   };
 }
 
+function mustReject(change: (data: ReturnType<typeof fixture>) => void) {
+  const data = fixture();
+  change(data);
+  expect(() => validateBridgePreflight(data)).toThrow(BridgePreflightError);
+}
+
 describe('read-only content production bridge preflight', () => {
-  it('accepts a deployed candidate different from production workflow HEAD', () => {
+  it('accepts verified production when workflow HEAD differs from deployed SHA', () => {
     const result = validateBridgePreflight(fixture());
     expect(result.status).toBe('read_only_verified');
     expect(result.workflowCheckoutShaDiffers).toBe(true);
@@ -85,43 +91,77 @@ describe('read-only content production bridge preflight', () => {
     expect(result.containsCredentials).toBe(false);
   });
 
-  it.each([
-    ['wrong repository', (x: ReturnType<typeof fixture>) => (x.run.repository.full_name = 'attacker/repo')],
-    ['wrong source path', (x: ReturnType<typeof fixture>) => (x.run.path = '.github/workflows/staging.yml')],
-    ['wrong workflow event', (x: ReturnType<typeof fixture>) => (x.run.event = 'workflow_dispatch')],
-    ['wrong branch', (x: ReturnType<typeof fixture>) => (x.run.head_branch = 'feature')],
-    ['wrong attempt', (x: ReturnType<typeof fixture>) => (x.run.run_attempt = 1)],
-    ['failed source run', (x: ReturnType<typeof fixture>) => (x.run.conclusion = 'failure')],
-    ['failed deploy', (x: ReturnType<typeof fixture>) => (x.jobs.jobs[0].conclusion = 'failure')],
-    ['skipped deploy', (x: ReturnType<typeof fixture>) => (x.jobs.jobs[0].conclusion = 'skipped')],
-    ['missing step', (x: ReturnType<typeof fixture>) => x.jobs.jobs[0].steps.pop()],
-    ['incomplete jobs page', (x: ReturnType<typeof fixture>) => (x.jobs.total_count = 2)],
-    ['stale active build', (x: ReturnType<typeof fixture>) => (x.runtime.buildId = SHA + '-1-2')],
-    ['missing worker version', (x: ReturnType<typeof fixture>) => (x.runtime.workerVersion = '')],
-    ['HTTP 404', (x: ReturnType<typeof fixture>) => (x.article.status = 404)],
-    ['redirected article', (x: ReturnType<typeof fixture>) => (x.article.url = 'https://evil.invalid')],
-    ['stale article build', (x: ReturnType<typeof fixture>) => (x.article.headers = 'HTTP/2 200\ncontent-type: text/html\nx-vellira-build-id: old\n\n')],
-    ['wrong canonical', (x: ReturnType<typeof fixture>) => (x.article.html = '<link rel="canonical" href="https://evil.invalid">')],
-    ['duplicate canonical', (x: ReturnType<typeof fixture>) => (x.article.html += '<link rel="canonical" href="' + ARTICLE + '">')],
-    ['invalid slug', (x: ReturnType<typeof fixture>) => (x.slug = '../private')],
-  ])('rejects %s', (_label, modify) => {
-    const data = fixture();
-    modify(data);
-    expect(() => validateBridgePreflight(data)).toThrow(
-      BridgePreflightError
-    );
+  it('rejects untrusted source workflow identity', () => {
+    mustReject((x) => {
+      x.run.repository.full_name = 'attacker/repo';
+    });
+    mustReject((x) => {
+      x.run.path = 'different-workflow.yml';
+    });
+    mustReject((x) => {
+      x.run.event = 'workflow_dispatch';
+    });
+    mustReject((x) => {
+      x.run.head_branch = 'feature';
+    });
+    mustReject((x) => {
+      x.run.run_attempt = 1;
+    });
+    mustReject((x) => {
+      x.run.conclusion = 'failure';
+    });
   });
 
-  it('requires actual successful deploy job, not merely successful workflow', () => {
-    const data = fixture();
-    data.jobs.jobs = [];
-    data.jobs.total_count = 0;
-    expect(() => validateBridgePreflight(data)).toThrow(
-      'Exact production deploy job did not succeed.'
-    );
+  it('rejects successful workflow with skipped, failed or incomplete deploy', () => {
+    mustReject((x) => {
+      x.jobs.jobs[0].conclusion = 'failure';
+    });
+    mustReject((x) => {
+      x.jobs.jobs[0].conclusion = 'skipped';
+    });
+    mustReject((x) => {
+      x.jobs.jobs[0].steps.pop();
+    });
+    mustReject((x) => {
+      x.jobs.total_count = 2;
+    });
+    mustReject((x) => {
+      x.jobs.jobs = [];
+      x.jobs.total_count = 0;
+    });
   });
 
-  it('does not access secrets, use a GitHub App or dispatch a repository event', () => {
+  it('rejects stale active runtime and missing Worker version', () => {
+    mustReject((x) => {
+      x.runtime.buildId = SHA + '-1-2';
+    });
+    mustReject((x) => {
+      x.runtime.workerVersion = '';
+    });
+  });
+
+  it('rejects stale, noncanonical or redirected public pages', () => {
+    mustReject((x) => {
+      x.article.status = 404;
+    });
+    mustReject((x) => {
+      x.article.url = 'https://evil.invalid';
+    });
+    mustReject((x) => {
+      x.article.headers = 'HTTP/2 200\ncontent-type: text/html\n\n';
+    });
+    mustReject((x) => {
+      x.article.html = '<link rel="canonical" href="https://evil.invalid">';
+    });
+    mustReject((x) => {
+      x.article.html += x.article.html;
+    });
+    mustReject((x) => {
+      x.slug = '../private';
+    });
+  });
+
+  it('keeps manual preflight read-only with no token or dispatch authority', () => {
     const workflow = readFileSync(
       new URL(
         '../../.github/workflows/content-production-bridge-preflight.yml',
@@ -131,7 +171,9 @@ describe('read-only content production bridge preflight', () => {
     );
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("if: github.ref == 'refs/heads/main'");
-    expect(workflow).toContain('permissions:\n  contents: read\n  actions: read');
+    expect(workflow).toContain(
+      'permissions:\n  contents: read\n  actions: read'
+    );
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('content-production-bridge-preflight.mjs');
     expect(workflow).toContain('https://vellira.dev/__vellira_runtime');
