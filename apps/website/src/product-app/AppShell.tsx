@@ -15,7 +15,7 @@ import { resendCurrentVerification, VelliraApiError } from './api';
 import styles from './AppShell.module.css';
 
 const navigation = [
-  { label: 'Home', href: '/app' },
+  { label: 'Overview', href: '/app' },
   { label: 'Settings', href: '/app/settings' },
 ] as const;
 
@@ -49,6 +49,11 @@ function AppNavigation() {
             <Tabs.Indicator />
           </Tabs.List>
         </Tabs>
+        <div className={styles.sidebarResources} aria-label='Resources'>
+          <span className={styles.sidebarCaption}>Resources</span>
+          <Link href='/components'>Components <span aria-hidden='true'>↗</span></Link>
+          <a href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>Docs <span aria-hidden='true'>↗</span></a>
+        </div>
       </nav>
 
       <div className={styles.mobileNavigation}>
@@ -332,6 +337,16 @@ export function SettingsGeneral() {
             <dd>{workspace?.membership.role}</dd>
           </div>
         </dl>
+      </section>
+
+      <section className={styles.settingsSection} aria-labelledby='security-state'>
+        <div>
+          <h2 id='security-state'>Security &amp; sign-in</h2>
+          <p>Use the existing password recovery flow if you need to regain access to your account.</p>
+        </div>
+        <Button asChild appearance='outline' color='neutral'>
+          <Link href='/forgot-password'>Password recovery</Link>
+        </Button>
       </section>
 
       <section className={styles.settingsSection} aria-labelledby='appearance-state'>
