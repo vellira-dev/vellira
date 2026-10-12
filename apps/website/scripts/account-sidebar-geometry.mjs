@@ -158,7 +158,7 @@ try {
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const reducedMotion = await page.evaluate(() => {
-    const node = document.querySelector('[data-sidebar-collapsed] > div');
+    const node = document.querySelector('[data-sidebar-collapsed] > div:last-child');
     if (!node) throw new Error('Sidebar grid missing');
     return getComputedStyle(node).transitionDuration;
   });
