@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { Contrast, Moon, Sun, System, User } from '@vellira-ui/icons';
+import { Contrast, Error, Moon, Success, Sun, System, User } from '@vellira-ui/icons';
 import { Button, Radio, RadioGroup, Tabs } from '@vellira-ui/react';
 
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
@@ -36,8 +37,27 @@ const themeOptions = [
   { value: 'high-contrast', label: 'High contrast', icon: Contrast },
 ] as const;
 
+function subscribeToDeviceTimeZone() {
+  // Timezone is a read-only browser fact until a profile preference API exists.
+  return () => {};
+}
+
+function readDeviceTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unavailable';
+}
+
+function readServerTimeZone(): string | null {
+  // Keep initial HTML and hydration equal; browser data is resolved afterward.
+  return null;
+}
+
 function AccountPanel() {
   const { me } = useAppSession();
+  const deviceTimeZone = useSyncExternalStore(
+    subscribeToDeviceTimeZone,
+    readDeviceTimeZone,
+    readServerTimeZone
+  );
 
   return (
     <section className={styles.panelContent} aria-labelledby='account-state'>
@@ -62,11 +82,36 @@ function AccountPanel() {
         </div>
         <div className={styles.detailRow}>
           <dt>Email verification</dt>
-          <dd>{me?.emailVerified ? 'Verified' : 'Pending verification'}</dd>
+          <dd>
+            {me ? (
+              <span
+                className={[
+                  styles.verificationStatus,
+                  me.emailVerified
+                    ? styles.verificationVerified
+                    : styles.verificationUnverified,
+                ].join(' ')}
+              >
+                {me.emailVerified ? (
+                  <Success size={18} aria-hidden='true' />
+                ) : (
+                  <Error size={18} aria-hidden='true' />
+                )}
+                <span>{me.emailVerified ? 'Verified' : 'Not verified'}</span>
+              </span>
+            ) : (
+              'Unavailable'
+            )}
+          </dd>
+        </div>
+        <div className={styles.detailRow}>
+          <dt>Time zone (device)</dt>
+          <dd>{deviceTimeZone ?? 'Detecting…'}</dd>
         </div>
       </dl>
       <p className={styles.helper}>
-        Workspace membership and role are shown separately under Workspace.
+        This time zone is detected from your device, not saved to your Vellira
+        account. Workspace details are managed separately under Workspace.
       </p>
     </section>
   );
