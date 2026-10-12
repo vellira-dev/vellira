@@ -1,0 +1,87 @@
+/* One source of truth for the site and authenticated app header geometry.
+   The site may add top navigation, but all page contexts use the same
+   brand, spacing, typography inheritance and action alignment. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-dropdown);
+  width: 100%;
+  background: var(--surface-canvas);
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  min-height: var(--site-header-height);
+  padding-inline: calc(var(--space-4) + 10px);
+}
+
+.brand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.brand img {
+  display: block;
+  flex: none;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+  height: var(--site-header-height);
+  gap: var(--space-5);
+}
+
+@media (width <= 1280px) {
+  .actions {
+    gap: var(--space-3);
+  }
+}
+
+@media (width <= 900px) {
+  .actions {
+    gap: var(--space-2);
+  }
+}
+
+@media (width <= 640px) {
+  .container {
+    display: flex;
+    gap: var(--space-2);
+    padding-inline: var(--site-gutter);
+  }
+
+  .brand {
+    margin-right: auto;
+  }
+
+  .brand img {
+    width: 92px;
+    height: auto;
+  }
+
+  .actions {
+    flex: none;
+    width: auto;
+    gap: var(--space-1);
+  }
+}
+
+@media (width <= 380px) {
+  .container {
+    gap: var(--space-1);
+  }
+
+  .brand img {
+    width: 84px;
+  }
+}
