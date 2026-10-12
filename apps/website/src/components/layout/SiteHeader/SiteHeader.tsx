@@ -204,6 +204,22 @@ export function SiteHeader({
         </div>
       )}
 
+      {/* Between the marketing (1280px) and Components (1100px) breakpoints,
+          portal pages still need a visible route into site navigation. */}
+      {variant === 'portal' && (
+        <div className={styles.portalTabletMenuTrigger}>
+          <HeaderMenuButton
+            open={resolvedMobileMenuOpen}
+            controls='mobile-site-navigation'
+            openLabel='Open navigation'
+            closeLabel='Close navigation'
+            onToggle={() =>
+              setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)
+            }
+          />
+        </div>
+      )}
+
       <nav className={styles.navigation} aria-label='Primary navigation'>
         <Tabs
           mode='navigation'
