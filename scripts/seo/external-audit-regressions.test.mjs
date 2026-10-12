@@ -79,9 +79,9 @@ test('legacy getting-started routes permanently redirect to canonical docs', asy
 
 test('Search Console legacy docs URLs have unique permanent same-origin redirects', async () => {
   const source = await read('apps/docs/src/public/_redirects');
-  const routes = source.split(/\\r?\\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+  const routes = source.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
   const entries = routes.map((line) => {
-    const parts = line.split(/\\s+/);
+    const parts = line.split(/\s+/);
     assert.equal(parts.length, 3, `invalid redirect: ${line}`);
     assert.equal(parts[2], '301');
     assert.ok(parts[0].startsWith('/') && parts[1].startsWith('/'));
