@@ -1,0 +1,9 @@
+{
+  "title": "When Nested Modal Escape Handling Reaches the Wrong Overlay",
+  "description": "A nested Popover can turn Escape handling, focus return, and overlay dismissal into an edge case when each layered interaction owns its rules separately.",
+  "slug": "when-nested-modal-escape-handling-reaches-the-wrong-overlay",
+  "publishedAt": "2026-10-11",
+  "author": "Roman Bakurov",
+  "tags": ["Design Systems", "React"],
+  "draft": false
+}
