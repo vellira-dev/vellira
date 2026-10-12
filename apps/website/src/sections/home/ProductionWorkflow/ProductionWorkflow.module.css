@@ -406,20 +406,16 @@
 .releaseVersion {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  padding: 0 var(--space-3);
   color: var(--color-primary-500);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  background: color-mix(
-    in srgb,
-    var(--color-primary-500) 8%,
-    var(--surface-default)
-  );
-  border: 1px solid
-    color-mix(in srgb, var(--color-primary-500) 22%, var(--border-muted));
-  border-radius: var(--radius-full);
+  line-height: 1.5;
+}
+
+.releaseVersion [data-release-state='unavailable'],
+.releaseVersion [data-release-state='loading'] {
+  color: var(--text-muted);
 }
 
 .releaseStats {
