@@ -213,6 +213,19 @@ try {
     await componentTrigger.click();
     const componentsDrawer = page.locator('#component-navigation');
     await componentsDrawer.waitFor();
+    await page.waitForFunction(() => document.activeElement?.textContent?.includes('Back to workspace'));
+    assert.equal(
+      await componentsDrawer.getByRole('button', { name: 'Back to workspace' })
+        .evaluate((element) => document.activeElement === element),
+      true,
+      'Workspace -> Components must focus the new drawer action'
+    );
+    assert.equal(
+      await page.locator('[data-components-content-boundary]')
+        .evaluate((element) => element.inert),
+      true,
+      'Catalog content must be inert while the Components drawer is open'
+    );
     assert.equal(
       await componentsDrawer.locator('..').evaluate((node) =>
         node.getAnimations().some((animation) => animation.playState === 'running')
@@ -278,6 +291,18 @@ try {
     });
     await workspaceMenu.waitFor();
     assert.equal(
+      await page.locator('[data-components-content-boundary]')
+        .evaluate((element) => element.inert),
+      true,
+      'Catalog content must remain inert behind Workspace modal'
+    );
+    assert.equal(
+      await workspaceMenu.getByRole('link', { name: 'Vellira workspace' })
+        .evaluate((element) => document.activeElement === element),
+      true,
+      'Components -> Workspace must move focus into the new modal'
+    );
+    assert.equal(
       page.url(),
       nestedUrl,
       'Back must switch to the main workspace menu without navigating'
@@ -294,6 +319,12 @@ try {
     // same nested drawer and preserve the current component URL.
     await workspaceMenu.getByRole('link', { name: 'Components' }).click();
     await componentsDrawer.waitFor();
+    assert.equal(
+      await componentsDrawer.getByRole('button', { name: 'Back to workspace' })
+        .evaluate((element) => document.activeElement === element),
+      true,
+      'Workspace -> Components must restore focus to the new Back action'
+    );
     assert.equal(
       page.url(),
       nestedUrl,

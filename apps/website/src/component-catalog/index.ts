@@ -2,6 +2,7 @@ export { ComponentsPageHero } from './shared/ComponentsPageHero';
 export { ComponentSidebar } from './shared/ComponentSidebar';
 export { ComponentExplorer } from './shared/ComponentExplorer';
 export { ComponentsIndexExperience } from './shared/ComponentsIndexExperience/ComponentsIndexExperience';
+export { ComponentsContentBoundary } from './shared/ComponentsContentBoundary/ComponentsContentBoundary';
 export { ComponentHeader } from './shared/ComponentHeader';
 export { ComponentsHeader } from './shared/ComponentsHeader';
 export { ComponentPlayground } from './shared/ComponentPlayground';

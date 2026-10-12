@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
 
@@ -25,20 +25,50 @@ export function ComponentNavigationShell({
 }: ComponentNavigationShellProps) {
   const { open, closeNavigation, switchToMainNavigation, fromWorkspace } =
     useComponentNavigation();
+  const surfaceRef = useRef<HTMLDivElement>(null);
+
+  const closeAndRestoreFocus = useCallback(() => {
+    closeNavigation();
+    document.querySelector<HTMLButtonElement>(
+      '[aria-controls="component-navigation"]'
+    )?.focus();
+  }, [closeNavigation]);
 
   useEffect(() => {
-    if (desktopOnly || !open) {
-      return;
-    }
+    if (desktopOnly || !open) return;
+
+    // Workspace -> Components replaces the focused workspace link. Give the
+    // next drawer an explicit focus target rather than falling back to <body>.
+    surfaceRef.current?.querySelector<HTMLElement>(
+      'button[class*="mainNavigationButton"]'
+    )?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        closeNavigation();
+        event.preventDefault();
+        closeAndRestoreFocus();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = Array.from(
+        surfaceRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])'
+        ) ?? []
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
     const previousOverflow = document.body.style.overflow;
-
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleKeyDown);
 
@@ -46,7 +76,7 @@ export function ComponentNavigationShell({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [closeNavigation, desktopOnly, open]);
+  }, [closeAndRestoreFocus, desktopOnly, open]);
 
   return (
     <>
@@ -76,10 +106,10 @@ export function ComponentNavigationShell({
             type='button'
             className={styles.backdrop}
             aria-label='Close component navigation'
-            onClick={closeNavigation}
+            onClick={closeAndRestoreFocus}
           />
 
-          <div className={styles.mobileSurface}>
+          <div ref={surfaceRef} className={styles.mobileSurface}>
             <div className={styles.mobileHeader}>
               <HeaderBrand
                 href={fromWorkspace ? '/app' : '/'}

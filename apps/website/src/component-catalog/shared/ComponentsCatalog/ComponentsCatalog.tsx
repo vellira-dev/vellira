@@ -19,7 +19,7 @@ import styles from './ComponentsCatalog.module.css';
 type PlatformFilter = 'all' | 'react' | 'react-native';
 
 export function ComponentsCatalog() {
-  const { fromWorkspace } = useComponentNavigation();
+  const { workspaceContextRequested } = useComponentNavigation();
   const searchId = useId();
   const [query, setQuery] = useState('');
   const [platform, setPlatform] = useState<PlatformFilter>('all');
@@ -163,7 +163,7 @@ export function ComponentsCatalog() {
                   {group.components.map((component) => (
                     <Link
                       key={component.slug}
-                      href={`/components/${component.slug}${fromWorkspace ? '?from=app' : ''}`}
+                      href={`/components/${component.slug}${workspaceContextRequested ? '?from=app' : ''}`}
                       className={styles.card}
                     >
                       <div className={styles.cardHeader}>

@@ -1,4 +1,4 @@
-/* global document */
+/* global document, window */
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 
@@ -74,6 +74,29 @@ try {
         await page.locator('[data-product-app-header]').waitFor();
         await page.getByRole('link', { name: 'Back to workspace' }).waitFor();
         await page.locator('[data-component-explorer-sidebar]').waitFor();
+
+        // Next soft-navigation must react to query-only history mutations
+        // even though the persistent Components pathname does not change.
+        await page.evaluate(() => window.history.pushState(null, '', '/components'));
+        await page.waitForFunction(() =>
+          document.querySelector('[data-product-app-header]') === null
+        );
+        await page.waitForFunction(() =>
+          document.querySelector('[data-component-explorer-sidebar]') === null
+        );
+        assert.equal(
+          await page.locator('a[href="/components/button"]').count() > 0,
+          true,
+          'Removing from=app must restore plain public links'
+        );
+        await page.goBack();
+        await page.locator('[data-product-app-header]').waitFor();
+        await page.getByRole('link', { name: 'Back to workspace' }).waitFor();
+        assert.equal(
+          await page.locator('a[href="/components/button?from=app"]').count() > 0,
+          true,
+          'Back navigation must restore requested catalog links'
+        );
       } else {
         await page.waitForFunction(() =>
           document.querySelector('[data-product-app-header]') === null
@@ -91,7 +114,7 @@ try {
       await context.close();
     }
   }
-  console.log('OK catalog session boundary: anonymous public and authenticated workspace contexts');
+  console.log('OK catalog session boundary: anonymous, authenticated and same-path history context');
 } finally {
   await browser.close();
 }

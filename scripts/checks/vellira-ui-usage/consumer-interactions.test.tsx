@@ -26,6 +26,7 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
   usePathname: () => '/components',
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@/component-catalog', () => ({
   webComponents: [

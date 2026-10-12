@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import {
   ComponentNavigationProvider,
   ComponentNavigationShell,
+  ComponentsContentBoundary,
   ComponentsHeader,
 } from '@/component-catalog';
 
@@ -15,7 +16,7 @@ export default function ComponentsLayout({ children }: ComponentsLayoutProps) {
     <ComponentNavigationProvider>
       <ComponentsHeader />
       <ComponentNavigationShell mobileOnly />
-      {children}
+      <ComponentsContentBoundary>{children}</ComponentsContentBoundary>
     </ComponentNavigationProvider>
   );
 }

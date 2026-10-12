@@ -1,7 +1,8 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
+  Suspense,
   createContext,
   useCallback,
   useContext,
@@ -38,6 +39,23 @@ type ComponentNavigationProviderProps = {
   children: ReactNode;
 };
 
+// The URL reader is intentionally the only component behind Suspense:
+// the public component catalog must retain its server-rendered HTML.
+function WorkspaceContextUrlObserver({
+  onChange,
+}: {
+  onChange: (requested: boolean) => void;
+}) {
+  const searchParams = useSearchParams();
+  const requested = searchParams?.get('from') === 'app';
+
+  useEffect(() => {
+    onChange(requested);
+  }, [onChange, requested]);
+
+  return null;
+}
+
 export function ComponentNavigationProvider({
   children,
 }: ComponentNavigationProviderProps) {
@@ -51,17 +69,16 @@ export function ComponentNavigationProvider({
   // Query parameters request a layout; only the canonical session can grant it.
   const fromWorkspace = workspaceContextRequested && workspaceSessionReady;
 
-  // A public catalog deep link remains standalone unless a user deliberately
-  // entered via /components?from=app. Preserve that context across sibling
-  // component routes without storing any account/session data.
-  useEffect(() => {
-    // Route navigation away from ?from=app must restore the public catalog.
-    // Do not persist account-only presentation on subsequent ordinary links.
-    const requested =
-      new URLSearchParams(window.location.search).get('from') === 'app';
+  // Query-only navigation and browser history must invalidate layout context
+  // just like a pathname change. This is never an authentication decision.
+  const syncWorkspaceContext = useCallback((requested: boolean) => {
     setWorkspaceContextRequested(requested);
-    if (!requested) setWorkspaceSessionReady(false);
-  }, [pathname]);
+    if (!requested) {
+      setWorkspaceSessionReady(false);
+      setOpen(false);
+      setMainOpen(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (previousPathname.current === pathname) {
@@ -141,6 +158,9 @@ export function ComponentNavigationProvider({
 
   return (
     <ComponentNavigationContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <WorkspaceContextUrlObserver onChange={syncWorkspaceContext} />
+      </Suspense>
       {children}
     </ComponentNavigationContext.Provider>
   );

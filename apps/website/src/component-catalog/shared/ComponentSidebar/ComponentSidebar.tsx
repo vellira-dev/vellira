@@ -20,7 +20,7 @@ export function ComponentSidebar({
   activeSlug,
   onNavigate,
 }: ComponentSidebarProps) {
-  const { fromWorkspace } = useComponentNavigation();
+  const { workspaceContextRequested } = useComponentNavigation();
 
   return (
     <Sidebar ariaLabel='Component navigation'>
@@ -32,7 +32,7 @@ export function ComponentSidebar({
               active={component.slug === activeSlug}
             >
               <Link
-                href={`/components/${component.slug}${fromWorkspace ? '?from=app' : ''}`}
+                href={`/components/${component.slug}${workspaceContextRequested ? '?from=app' : ''}`}
                 prefetch={false}
                 aria-current={
                   component.slug === activeSlug ? 'page' : undefined
