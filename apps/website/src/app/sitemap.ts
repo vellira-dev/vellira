@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const componentPages: MetadataRoute.Sitemap = webComponents.map(
     (component) => ({
       url: `${SITE_URL}/components/${component.slug}`,
-            changeFrequency: 'weekly',
+      changeFrequency: 'weekly',
       priority: 0.8,
     })
   );
@@ -25,13 +25,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: SITE_URL,
-            changeFrequency: 'weekly',
+      changeFrequency: 'weekly',
       priority: 1,
     },
 
     {
       url: `${SITE_URL}/components`,
-            changeFrequency: 'weekly' as const,
+      changeFrequency: 'weekly' as const,
       priority: 0.9,
     },
 
