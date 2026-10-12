@@ -21,7 +21,7 @@ import {
   type Workspace,
 } from './api';
 
-type SessionStatus = 'loading' | 'ready' | 'error';
+type SessionStatus = 'loading' | 'ready' | 'error' | 'unauthenticated';
 
 type AppSessionValue = {
   status: SessionStatus;
@@ -72,7 +72,15 @@ function safeLoadError(error: unknown) {
   return 'Vellira could not load your account. Please try again.';
 }
 
-export function AppSessionProvider({ children }: { children: ReactNode }) {
+export function AppSessionProvider({
+  children,
+  redirectOnUnauthorized = true,
+  bootstrapIfMissing = true,
+}: {
+  children: ReactNode;
+  redirectOnUnauthorized?: boolean;
+  bootstrapIfMissing?: boolean;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState<SessionStatus>('loading');
   const [me, setMe] = useState<MeResponse['user'] | null>(null);
@@ -97,7 +105,9 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
       const workspaceList = await listWorkspaces();
       const workspace =
         workspaceList.workspaces[0] ??
-        (await bootstrapPersonalWorkspace()).workspace;
+        (bootstrapIfMissing
+          ? (await bootstrapPersonalWorkspace()).workspace
+          : null);
 
       setMe(meResponse.user);
       setWorkspace(workspace);
@@ -106,14 +116,19 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
       if (cause instanceof VelliraApiError && cause.status === 401) {
         setMe(null);
         setWorkspace(null);
-        router.replace('/login');
+        if (redirectOnUnauthorized) {
+          router.replace('/login');
+        } else {
+          // Public catalog routes remain available without a user session.
+          setStatus('unauthenticated');
+        }
         return;
       }
 
       setError(safeLoadError(cause));
       setStatus('error');
     }
-  }, [router]);
+  }, [bootstrapIfMissing, redirectOnUnauthorized, router]);
 
   useEffect(() => {
     void refresh();
