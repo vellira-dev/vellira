@@ -15,15 +15,15 @@ export function PublishedNpmVersion() {
     []
   );
 
-  const label = release
-    ? `Latest confirmed npm version v${release.version}${
-        release.stale ? ' (cached verification)' : ''
-      }`
-    : 'Latest confirmed npm version unavailable';
+  if (!release) return null;
+
+  const label = `Latest confirmed npm version v${release.version}${
+    release.stale ? ' (cached verification)' : ''
+  }`;
 
   return (
     <span aria-label={label} title={label} aria-live='polite'>
-      {release ? `v${release.version}` : '—'}
+      {`v${release.version}`}
     </span>
   );
 }
