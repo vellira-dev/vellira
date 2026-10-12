@@ -240,7 +240,7 @@ try {
       'Workspace and Components must reuse the same sliding surface'
     );
 
-    const componentBack = componentsDrawer.getByRole('link', {
+    const componentBack = componentsDrawer.getByRole('button', {
       name: 'Back to workspace',
       exact: true,
     });
@@ -257,9 +257,9 @@ try {
       'The Components page hero must not contain a second Back link'
     );
     assert.equal(
-      await page.getByRole('link', { name: 'Back to workspace' }).count(),
+      await page.getByRole('button', { name: 'Back to workspace' }).count(),
       1,
-      'Exactly one Back to workspace link belongs inside the mobile menu'
+      'Exactly one Back to workspace action belongs inside the component menu'
     );
     assert.equal(
       await componentsDrawer.getByRole('link', { name: 'Account settings' }).count(),
@@ -271,7 +271,39 @@ try {
       0,
       'Component navigation must not include appearance controls'
     );
+    const nestedUrl = page.url();
     await componentBack.click();
+    const workspaceMenu = page.getByRole('dialog', {
+      name: 'Workspace navigation',
+    });
+    await workspaceMenu.waitFor();
+    assert.equal(
+      page.url(),
+      nestedUrl,
+      'Back must switch to the main workspace menu without navigating'
+    );
+    assert.equal(
+      await page.locator('#component-navigation').count(),
+      0,
+      'Component drawer must close when the main workspace menu opens'
+    );
+    await workspaceMenu.getByRole('link', { name: 'Overview' }).waitFor();
+    await workspaceMenu.getByRole('link', { name: 'Account settings' }).waitFor();
+
+    // Switching into Components from the workspace menu must return to the
+    // same nested drawer and preserve the current component URL.
+    await workspaceMenu.getByRole('link', { name: 'Components' }).click();
+    await componentsDrawer.waitFor();
+    assert.equal(
+      page.url(),
+      nestedUrl,
+      'Components menu should reopen without reloading the catalog page'
+    );
+    await componentsDrawer.getByRole('button', {
+      name: 'Back to workspace',
+    }).click();
+    await workspaceMenu.waitFor();
+    await workspaceMenu.getByRole('link', { name: 'Overview' }).click();
     await page.waitForURL('**/app');
 
     if (width === 390) {
