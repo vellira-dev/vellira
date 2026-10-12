@@ -631,6 +631,12 @@
     border-bottom: 1px solid var(--border-muted);
   }
 
+  /* AppNavigation provides two presentations. On mobile show only its
+     canonical Select, not a second desktop sidebar below the header. */
+  .mobileNavigationRow .desktopNavigation {
+    display: none;
+  }
+
   .mobileNavigationRow .mobileNavigation {
     display: block;
   }
