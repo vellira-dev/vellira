@@ -34,6 +34,25 @@ type AppSessionValue = {
 
 const AppSessionContext = createContext<AppSessionValue | null>(null);
 
+// Local UI review only. Never enabled in a production build, regardless of
+// public environment configuration. This does not authenticate API requests.
+const localPreview =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1';
+
+const previewUser: MeResponse['user'] = {
+  id: 'local-preview-user',
+  status: 'active',
+  emailVerified: true,
+};
+
+const previewWorkspace: Workspace = {
+  id: 'local-preview-workspace',
+  name: 'Preview workspace',
+  status: 'active',
+  membership: { role: 'owner' },
+};
+
 function safeLoadError(error: unknown) {
   if (
     error instanceof VelliraApiError &&
