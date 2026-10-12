@@ -1,8 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect } from 'react';
+
+import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
 
 import { ComponentSidebar } from '../ComponentSidebar';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
@@ -78,19 +79,10 @@ export function ComponentNavigationShell({
 
           <div className={styles.mobileSurface}>
             <div className={styles.mobileHeader}>
-              <Link
+              <HeaderBrand
                 href={fromWorkspace ? '/app' : '/'}
                 className={styles.mobileBrand}
-              >
-                <Image
-                  src='/brand/logos/logo-gradient.svg'
-                  alt='Vellira'
-                  width={100}
-                  height={32}
-                  preload
-                  fetchPriority='high'
-                />
-              </Link>
+              />
             </div>
 
             <aside
