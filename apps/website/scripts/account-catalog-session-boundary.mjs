@@ -118,12 +118,8 @@ try {
   // that a requested URL survives routing before session approval is known.
   const delayedContext = await browser.newContext();
   let releaseMe = () => {};
-  let meStarted = () => {};
   const pendingMe = new Promise((resolve) => {
     releaseMe = resolve;
-  });
-  const requestedMe = new Promise((resolve) => {
-    meStarted = resolve;
   });
   const delayedCalls = [];
   await delayedContext.route('**/v1/**', async (route) => {
@@ -139,7 +135,6 @@ try {
       throw new Error(`Unexpected mutation during delayed auth: ${pathname}`);
     }
     if (pathname === '/v1/me') {
-      meStarted();
       await pendingMe;
       await route.fulfill({
         status: 200,
@@ -166,6 +161,10 @@ try {
   const delayedPage = await delayedContext.newPage();
   delayedPage.setDefaultTimeout(15_000);
   try {
+    const requestedMe = delayedPage.waitForRequest(
+      (request) => new URL(request.url()).pathname === '/v1/me',
+      { timeout: 15_000 }
+    );
     await delayedPage.goto(new URL('/components?from=app', baseUrl).toString());
     await requestedMe;
     await delayedPage.locator(
