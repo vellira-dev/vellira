@@ -141,7 +141,11 @@ function AnimatedThemeIcon({ data }: AnimatedThemeIconProps) {
   return <span ref={containerRef} className={styles.icon} aria-hidden='true' />;
 }
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({
+  insideModalNavigation = false,
+}: {
+  insideModalNavigation?: boolean;
+} = {}) {
   const { preference, setPreference } = useWebsiteThemeContext();
 
   const activeOption =
@@ -162,7 +166,14 @@ export function ThemeSwitcher() {
         </Button>
       </Dropdown.Trigger>
 
-      <Dropdown.Content className={styles.content}>
+      <Dropdown.Content
+        className={[
+          styles.content,
+          insideModalNavigation ? styles.aboveNavigation : null,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <Dropdown.RadioGroup
           value={preference}
           onValueChange={(value) => {
