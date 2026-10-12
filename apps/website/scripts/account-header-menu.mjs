@@ -37,7 +37,8 @@ try {
 
   await page.getByRole('menuitem', { name: 'Billing' }).click();
   await page.waitForURL('**/app/settings/billing');
-  await page.getByRole('heading', { name: 'Billing' }).waitFor();
+  await page.getByRole('tab', { name: 'Billing' }).waitFor();
+  await page.getByRole('heading', { name: 'Subscription' }).waitFor();
   await page.getByText('Billing information is not connected in local UI preview.', {
     exact: false,
   }).waitFor();
