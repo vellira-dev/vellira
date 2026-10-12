@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { AppHeader } from '@/product-app/AppHeader';
@@ -14,8 +14,13 @@ import { useComponentNavigation } from '../ComponentNavigationProvider';
 // authenticated product header. No second session or account authority.
 function WorkspaceComponentsHeader() {
   const { status } = useAppSession();
-  const { mainOpen, setMainNavigationOpen, openNavigation } =
+  const { mainOpen, setMainNavigationOpen, openNavigation, setWorkspaceSessionReady } =
     useComponentNavigation();
+
+  useEffect(() => {
+    setWorkspaceSessionReady(status === 'ready');
+    return () => setWorkspaceSessionReady(false);
+  }, [status, setWorkspaceSessionReady]);
   const closeWorkspaceNavigation = useCallback(
     () => setMainNavigationOpen(false),
     [setMainNavigationOpen]
@@ -45,10 +50,10 @@ function WorkspaceComponentsHeader() {
 }
 
 export function ComponentsHeader() {
-  const { fromWorkspace, mainOpen, setMainNavigationOpen } =
+  const { workspaceContextRequested, mainOpen, setMainNavigationOpen } =
     useComponentNavigation();
 
-  if (fromWorkspace) {
+  if (workspaceContextRequested) {
     return (
       <AppSessionProvider
         redirectOnUnauthorized={false}
