@@ -17,6 +17,8 @@ type ComponentNavigationContextValue = {
   mainOpen: boolean;
   // Navigation context only, never identity or entitlement authority.
   fromWorkspace: boolean;
+  workspaceContextRequested: boolean;
+  setWorkspaceSessionReady: (ready: boolean) => void;
 
   openNavigation: () => void;
   closeNavigation: () => void;
@@ -43,7 +45,10 @@ export function ComponentNavigationProvider({
   const previousPathname = useRef(pathname);
   const [open, setOpen] = useState(false);
   const [mainOpen, setMainOpen] = useState(false);
-  const [fromWorkspace, setFromWorkspace] = useState(false);
+  const [workspaceContextRequested, setWorkspaceContextRequested] = useState(false);
+  const [workspaceSessionReady, setWorkspaceSessionReady] = useState(false);
+  // Query parameters request a layout; only the canonical session can grant it.
+  const fromWorkspace = workspaceContextRequested && workspaceSessionReady;
 
   // A public catalog deep link remains standalone unless a user deliberately
   // entered via /components?from=app. Preserve that context across sibling
@@ -51,9 +56,9 @@ export function ComponentNavigationProvider({
   useEffect(() => {
     // Route navigation away from ?from=app must restore the public catalog.
     // Do not persist account-only presentation on subsequent ordinary links.
-    setFromWorkspace(
-      new URLSearchParams(window.location.search).get('from') === 'app'
-    );
+    const requested = new URLSearchParams(window.location.search).get('from') === 'app';
+    setWorkspaceContextRequested(requested);
+    if (!requested) setWorkspaceSessionReady(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -104,6 +109,8 @@ export function ComponentNavigationProvider({
       open,
       mainOpen,
       fromWorkspace,
+      workspaceContextRequested,
+      setWorkspaceSessionReady,
 
       openNavigation,
       closeNavigation,
@@ -120,6 +127,7 @@ export function ComponentNavigationProvider({
       closeNavigation,
       mainOpen,
       fromWorkspace,
+      workspaceContextRequested,
       open,
       openMainNavigation,
       openNavigation,
