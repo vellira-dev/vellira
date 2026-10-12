@@ -221,7 +221,8 @@
 .themeChoice > span:last-child {
   display: flex;
   flex: 0 0 122px;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: center;
   min-width: 0;
 }
 
