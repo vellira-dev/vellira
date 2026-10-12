@@ -175,6 +175,13 @@ export function changedPathsFromCompare(comparison) {
   return [...new Set(paths)].sort();
 }
 
+export class ProductionCandidateSupersededError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ProductionCandidateSupersededError';
+  }
+}
+
 export async function assessFreshProductionCandidate({
   configPath,
   candidateSource,
@@ -253,11 +260,11 @@ export async function assessFreshProductionCandidate({
     relevantPaths = [];
   }
 
-  assert.equal(
-    relevantPaths.length,
-    0,
-    `Production candidate ${candidateSha} is stale; current main is ${mainSha} and deployment-relevant paths changed: ${relevantPaths.slice(0, 12).join(', ')}`
-  );
+  if (relevantPaths.length > 0) {
+    throw new ProductionCandidateSupersededError(
+      `Production candidate ${candidateSha} is stale; current main is ${mainSha} and deployment-relevant paths changed: ${relevantPaths.slice(0, 12).join(', ')}`
+    );
+  }
 
   return {
     checked: true,
