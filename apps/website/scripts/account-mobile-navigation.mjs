@@ -352,6 +352,48 @@ try {
     'Public Components logo must retain the exact header size after opening its menu'
   );
 
+  // The public site uses the same HeaderChrome but has a marketing-only
+  // top navigation. Tablet/mobile Menu must be the RIGHTMOST visible action;
+  // its Get started header CTA must be hidden at the same breakpoint.
+  for (const width of [1280, 1200, 1100, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto(new URL('/', baseUrl).toString());
+    const siteHeader = page.locator('header').first();
+    const siteMenu = siteHeader.getByRole('button', {
+      name: 'Open navigation',
+    });
+    await siteMenu.waitFor();
+    assert.equal(await siteMenu.isVisible(), true);
+    const menuBox = await siteMenu.boundingBox();
+    const headerGeometry = await siteHeader.evaluate((node) => {
+      const container = node.firstElementChild;
+      if (!container) throw new Error('SiteHeader container missing');
+      return {
+        right: container.getBoundingClientRect().right,
+        gutter: Number.parseFloat(getComputedStyle(container).paddingRight),
+      };
+    });
+    assert.ok(
+      menuBox &&
+        Math.abs(
+          headerGeometry.right - menuBox.x - menuBox.width -
+          headerGeometry.gutter
+        ) <= 2,
+      `Site mobile Menu must be right-aligned at ${width}px`
+    );
+    const siteHeaderCta = siteHeader.locator('[class*="authActions"]');
+    assert.equal(
+      await siteHeaderCta.isVisible(),
+      false,
+      `Get started header CTA must be hidden at ${width}px`
+    );
+
+    await siteMenu.click();
+    await siteHeader.getByRole('button', { name: 'Close navigation' }).waitFor();
+    await siteHeader.getByRole('button', { name: 'Close navigation' }).first().click();
+    await siteMenu.waitFor();
+  }
+
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto(new URL('/app', baseUrl).toString());
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
