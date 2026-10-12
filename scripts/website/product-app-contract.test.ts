@@ -229,7 +229,10 @@ describe('Vellira App first-party UI contract', () => {
     );
 
     const resend = fs.readFileSync(
-      path.join(root, 'apps/website/src/product-app/EmailVerificationResend.tsx'),
+      path.join(
+        root,
+        'apps/website/src/product-app/EmailVerificationResend.tsx'
+      ),
       'utf8'
     );
 

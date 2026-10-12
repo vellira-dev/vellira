@@ -60,8 +60,11 @@ function siteSurfaceFixture({
     {
       primary: width > 1280,
       mobile: width <= 1280 && menuOpen,
-      marketing: width <= 1280 && variant === 'marketing' && !menuOpen,
-      portal: width <= 1280 && variant === 'portal' && !menuOpen,
+      marketing:
+        width <= 1280 &&
+        (variant === 'marketing' || (variant === 'portal' && width > 1100)) &&
+        !menuOpen,
+      portal: width <= 1100 && variant === 'portal' && !menuOpen,
       brand: true,
     }[name];
   let failedHref;
@@ -76,7 +79,7 @@ function siteSurfaceFixture({
         assert.notEqual(
           name,
           'portal',
-          '1280px component drawer cannot expose global links'
+          'component drawer cannot expose global links'
         );
         if (name === 'mobile')
           assert.ok(
@@ -113,7 +116,7 @@ function siteSurfaceFixture({
       return {
         getByRole: (role, options) => {
           assert.equal(role, 'link');
-          assert.equal(options.name, 'Vellira');
+          assert.equal(options.name, 'Vellira home');
           return control('brand');
         },
       };
@@ -192,8 +195,21 @@ for (const width of [1440, 1280, 390]) {
   });
 }
 
-test('portal at 1280px uses two client route hops through the visible brand', async () => {
+test('portal at 1280px reaches Blog through the visible marketing menu', async () => {
   const fixture = siteSurfaceFixture({ variant: 'portal' });
+  await surfaceNavigation(fixture);
+  assert.deepEqual(
+    fixture.events.filter((e) => e.startsWith('click:')),
+    ['click:marketing', 'click:mobile']
+  );
+  assert.deepEqual(
+    fixture.events.filter((e) => e.startsWith('navigation:')),
+    ['navigation:/blog']
+  );
+});
+
+test('portal at 1100px reaches the marketing menu through the shared brand', async () => {
+  const fixture = siteSurfaceFixture({ variant: 'portal', width: 1100 });
   await surfaceNavigation(fixture);
   assert.deepEqual(
     fixture.events.filter((e) => e.startsWith('click:')),
@@ -207,7 +223,7 @@ test('portal at 1280px uses two client route hops through the visible brand', as
 
 for (const href of ['/', '/blog']) {
   test(`portal retry prepares the ${href} action again after recovered edge failure`, async () => {
-    const fixture = siteSurfaceFixture({ variant: 'portal' });
+    const fixture = siteSurfaceFixture({ variant: 'portal', width: 1100 });
     fixture.failOnce(href);
     await surfaceNavigation(fixture, { recovered: true });
     const clicks = fixture.events.filter((e) => e.startsWith('click:'));
@@ -229,6 +245,16 @@ for (const href of ['/', '/blog']) {
     }
   });
 }
+
+test('portal at 1280px retries direct Blog navigation only after recovered failure', async () => {
+  const fixture = siteSurfaceFixture({ variant: 'portal' });
+  fixture.failOnce('/blog');
+  await surfaceNavigation(fixture, { recovered: true });
+  assert.deepEqual(
+    fixture.events.filter((e) => e.startsWith('click:')),
+    ['click:marketing', 'click:mobile', 'click:marketing', 'click:mobile']
+  );
+});
 
 test('missing visible site path fails closed with layout diagnostics', async () => {
   const fixture = siteSurfaceFixture({ variant: 'portal', missing: true });
