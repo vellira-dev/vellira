@@ -38,9 +38,7 @@ describe('Content Bridge GitHub App credential smoke', () => {
     expect(workflow).toContain('repositories: vellira-internal');
     expect(workflow).toContain('owner: vellira-dev');
     expect(workflow).toContain('permission-contents: write');
-    expect(workflow).toContain(
-      'installation/repositories?per_page=100'
-    );
+    expect(workflow).toContain('installation/repositories?per_page=100');
     expect(workflow).toContain('.total_count == 1');
     expect(workflow).toContain(
       '.repositories[0].full_name == "vellira-dev/vellira-internal"'
