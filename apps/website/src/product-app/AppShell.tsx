@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { Warning, User } from '@vellira-ui/icons';
+import { Warning, User, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
 import { Button, Dropdown, Select } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
@@ -26,7 +26,7 @@ function activeHref(pathname: string): NavigationHref {
   return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
 }
 
-function AppNavigation() {
+function AppNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const value = activeHref(pathname);
@@ -34,16 +34,37 @@ function AppNavigation() {
   return (
     <>
       <nav className={styles.desktopNavigation} aria-label='Vellira app'>
+        <div className={styles.sidebarToggleRow}>
+          {!collapsed && <span className={styles.sidebarTitle}>Navigation</span>}
+          <Button
+            appearance='ghost'
+            color='neutral'
+            size='sm'
+            iconOnly
+            iconStart={collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            onClick={onToggle}
+          />
+        </div>
         <Sidebar ariaLabel='Account navigation'>
-          <SidebarGroup label='Workspace'>
+          <SidebarGroup label={collapsed ? '' : 'Workspace'}>
             <SidebarItem active={value === '/app'}>
-              <Link href='/app' aria-current={value === '/app' ? 'page' : undefined}>Overview</Link>
+              <Link title={collapsed ? 'Overview' : undefined} href='/app' aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
+                <span className={styles.navEntry}><Grid size={18} aria-hidden='true' />{!collapsed && <span>Overview</span>}</span>
+              </Link>
             </SidebarItem>
           </SidebarGroup>
-          <SidebarGroup label='Resources'>
-            <SidebarItem><Link href='/components'>Components ↗</Link></SidebarItem>
+          <SidebarGroup label={collapsed ? '' : 'Resources'}>
             <SidebarItem>
-              <a href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>Docs ↗</a>
+              <Link title={collapsed ? 'Components' : undefined} href='/components' aria-label={collapsed ? 'Components' : undefined}>
+                <span className={styles.navEntry}><Platforms size={18} aria-hidden='true' />{!collapsed && <span>Components ↗</span>}</span>
+              </Link>
+            </SidebarItem>
+            <SidebarItem>
+              <a title={collapsed ? 'Docs' : undefined} aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>
+                <span className={styles.navEntry}><Docs size={18} aria-hidden='true' />{!collapsed && <span>Docs ↗</span>}</span>
+              </a>
             </SidebarItem>
           </SidebarGroup>
         </Sidebar>
@@ -76,6 +97,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [resendingVerification, setResendingVerification] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<string>();
   const [verificationError, setVerificationError] = useState<string>();
 
@@ -124,7 +146,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}>
       <header className={styles.header}>
         <Link href='/app' className={styles.brand} aria-label='Vellira home'>
           <Image
@@ -214,7 +236,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          <AppNavigation />
+          <AppNavigation collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((previous) => !previous)} />
         </aside>
 
         <div className={styles.mobileNavigationRow}>
