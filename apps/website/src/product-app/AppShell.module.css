@@ -138,15 +138,6 @@
   }
 }
 
-.workspaceName {
-  max-width: 32ch;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .verificationBanner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -385,6 +376,16 @@
   gap: var(--space-4);
 }
 
+.settingsContent {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.settingsContent strong {
+  font-weight: var(--font-weight-semibold);
+}
+
 .details div,
 .settingsList div {
   display: grid;
@@ -487,10 +488,6 @@
 @media (width <= 760px) {
   .header {
     padding-inline: var(--space-4);
-  }
-
-  .workspaceName {
-    display: none;
   }
 
   .verificationBanner {
