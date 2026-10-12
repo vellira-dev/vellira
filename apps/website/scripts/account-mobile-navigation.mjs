@@ -66,9 +66,15 @@ try {
 
     await page.getByRole('button', { name: 'Open workspace navigation' }).click();
     await dialog.waitFor();
-    await page.getByRole('button', { name: 'Close workspace navigation' }).last().click({
-      position: { x: 10, y: 10 },
-    });
+    if (width > 340) {
+      const backdrop = page.locator('button[aria-label="Close workspace navigation"]')
+        .filter({ visible: true }).last();
+      await backdrop.click({ position: { x: width - 10, y: 400 } });
+    } else {
+      // At 320px the slide-out fills the entire width: no outside backdrop.
+      await page.locator('[data-product-app-header]')
+        .getByRole('button', { name: 'Close workspace navigation' }).click();
+    }
     await dialog.waitFor({ state: 'hidden' });
 
     await page.getByRole('button', { name: 'Open workspace navigation' }).click();
@@ -79,7 +85,8 @@ try {
     await page.getByRole('button', { name: 'Account menu' }).waitFor();
 
     await page.getByRole('button', { name: 'Open component navigation' }).click();
-    await page.getByRole('link', { name: 'Back to workspace' }).last().click();
+    await page.locator('#component-navigation')
+      .getByRole('link', { name: 'Back to workspace' }).click();
     await page.waitForURL('**/app');
     await page.getByRole('button', { name: 'Open workspace navigation' }).waitFor();
     assert.equal(
