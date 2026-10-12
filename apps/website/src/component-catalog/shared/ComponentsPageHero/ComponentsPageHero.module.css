@@ -39,7 +39,7 @@
   display: none;
 }
 
-@media (width <= 720px) {
+@media (width <= 1100px) {
   .mobileWorkspaceReturn {
     display: inline-flex;
     align-items: center;
@@ -65,6 +65,9 @@
   }
 
 
+}
+
+@media (width <= 720px) {
   .description {
     white-space: normal;
   }
