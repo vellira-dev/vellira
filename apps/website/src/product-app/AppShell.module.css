@@ -1,6 +1,8 @@
 .shell {
   --app-navigation-width: var(--explorer-sidebar-width);
   --app-collapsed-width: 76px;
+  --app-navigation-start-inset: 16px;
+  --app-navigation-end-inset: 16px;
 
   min-height: 100vh;
   color: var(--text-primary);
@@ -25,7 +27,8 @@
   align-items: center;
   width: calc(var(--site-gutter) + var(--app-navigation-width));
   min-height: 60px;
-  padding: var(--space-2) 28px var(--space-2) var(--site-gutter);
+  padding: var(--space-2) var(--app-navigation-end-inset) var(--space-2)
+    var(--app-navigation-start-inset);
   border-top: 1px solid var(--border-muted);
   border-right: 1px solid var(--border-muted);
   background: var(--surface-panel);
@@ -90,9 +93,23 @@
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebar section + section {
+  position: relative;
   margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-muted);
+  padding-top: var(--space-4);
+  border-top: 0;
+}
+
+/* A short centered divider, approximately the width of a navigation icon. */
+.shell[data-sidebar-collapsed='true'] .sidebar section + section::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 24px;
+  height: 1px;
+  background: var(--border-muted);
+  transform: translateX(-50%);
+  content: '';
+  pointer-events: none;
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebar section nav > div > a {
@@ -189,7 +206,7 @@
   min-width: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
-  padding: 0 0 0 var(--site-gutter);
+  padding: 0 0 0 var(--app-navigation-start-inset);
   background: var(--surface-panel);
   border-right: 1px solid var(--border-muted);
 }
@@ -208,6 +225,12 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-bottom: 72px;
+}
+
+/* Scope the tighter horizontal insets to the account sidebar only.
+   Public ComponentSidebar geometry stays untouched. */
+.desktopNavigation aside > div {
+  padding-right: var(--app-navigation-end-inset);
 }
 
 .shell[data-sidebar-collapsed='true'] .navEntry {
