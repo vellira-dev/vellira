@@ -7,7 +7,7 @@
 
 .workspaceReturn {
   flex: none;
-  padding: var(--space-4) 28px var(--space-3) 0;
+  padding: var(--space-4) var(--space-4) var(--space-3) 0;
   border-bottom: 1px solid var(--border-muted);
   background: var(--surface-panel);
 }
@@ -149,7 +149,7 @@
   .mobilePanel {
     flex: 1;
     min-height: 0;
-    padding-left: var(--site-gutter);
+    padding-left: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -177,14 +177,14 @@
 
   .mainNavigation {
     display: flex;
-    padding: var(--space-3) 0;
+    padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--border-muted);
   }
 
   .mobilePanelContent {
     flex: 1;
     min-height: 0;
-    padding-left: var(--site-gutter);
+    padding-inline: var(--space-4);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
