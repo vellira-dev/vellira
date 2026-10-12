@@ -66,8 +66,7 @@ function AccountPanel() {
         </div>
       </dl>
       <p className={styles.helper}>
-        Profile editing becomes available when your account supports verified
-        profile details. Workspace membership is managed separately.
+        Workspace membership and role are shown separately under Workspace.
       </p>
     </section>
   );
