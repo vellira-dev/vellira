@@ -145,6 +145,13 @@ function AppShellContent({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      {process.env.NODE_ENV === 'development' &&
+        process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1' && (
+          <div className={styles.verificationBanner} role='status'>
+            Local UI preview — sample account data. No backend session or real account actions.
+          </div>
+        )}
+
       {me && !me.emailVerified && (
         <div className={styles.verificationBanner} role='status'>
           <Warning size={20} aria-hidden='true' />
