@@ -19,6 +19,7 @@
     "deploy:opennext": "node scripts/cloudflare-deploy.mjs",
     "test:component-explorer-geometry": "node scripts/component-explorer-geometry.mjs",
     "test:account-sidebar-geometry": "node scripts/account-sidebar-geometry.mjs",
+    "test:account-mobile-navigation": "node scripts/account-mobile-navigation.mjs",
     "test:account-components-navigation": "node scripts/account-components-navigation.mjs",
     "test:account-header-menu": "node scripts/account-header-menu.mjs",
     "test:account-settings-tabs": "node scripts/account-settings-tabs.mjs",
