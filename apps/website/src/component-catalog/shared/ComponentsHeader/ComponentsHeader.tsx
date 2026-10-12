@@ -21,7 +21,7 @@ function WorkspaceComponentsHeader() {
     [setMainNavigationOpen]
   );
 
-  if (status === 'unauthenticated' || status === 'error') {
+  if (status !== 'ready') {
     return (
       <SiteHeader
         variant='portal'
