@@ -68,8 +68,14 @@ try {
     componentGutters.itemColor,
     'Component group heading must be muted relative to menu items'
   );
-  const back = page.getByRole('link', { name: 'Back to workspace' });
-  await back.waitFor();
+  const workspaceLink = page.locator('[data-component-explorer-sidebar]')
+    .getByRole('link', { name: 'Overview', exact: true });
+  await workspaceLink.waitFor();
+  assert.equal(
+    await page.getByRole('link', { name: 'Back to workspace' }).count(),
+    0,
+    'Standalone Back-to-workspace must not duplicate the menu link'
+  );
 
   // Workspace context must preserve the same real product header + avatar menu.
   await page.locator('[data-product-app-header]').waitFor();
@@ -95,13 +101,13 @@ try {
     .getByRole('link', { name: 'Button', exact: true })
     .click();
   await page.waitForURL('**/components/button?from=app');
-  await back.waitFor();
+  await workspaceLink.waitFor();
   await page.locator('[data-product-app-header]').waitFor();
   await page.getByRole('button', { name: 'Account menu' }).waitFor();
 
-  // Back stays above the independently scrollable component list.
-  const topBefore = (await back.boundingBox()).y;
-  await page.evaluate(() => {
+  // One scrollable ComponentSidebar owns all navigation. There is no
+  // fixed, duplicate Back-to-workspace action above the component list.
+  const scrolled = await page.evaluate(() => {
     const nav = document.querySelector('[data-component-explorer-sidebar]');
     const list = nav?.querySelector('[class*="desktopList"]');
     if (!list) throw new Error('Component sidebar scroll list is missing');
@@ -110,11 +116,13 @@ try {
     filler.setAttribute('aria-hidden', 'true');
     list.appendChild(filler);
     list.scrollTop = list.scrollHeight;
+    const distance = list.scrollTop;
+    list.scrollTop = 0;
+    return distance;
   });
-  const topAfter = (await back.boundingBox()).y;
-  assert.ok(Math.abs(topBefore - topAfter) <= 1, 'Back must not scroll with the list');
+  assert.ok(scrolled > 0, 'Long component navigation must scroll');
 
-  await back.click();
+  await workspaceLink.click();
   await page.waitForURL('**/app');
   await page.getByRole('heading', { name: 'Start building with Vellira' }).waitFor();
 
@@ -145,7 +153,13 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL('/components/button?from=app', baseUrl).toString());
   await page.locator('[data-product-app-header]').waitFor();
-  await page.getByRole('button', { name: 'Account menu' }).waitFor();
+  await page.getByRole('button', { name: 'Open component navigation' }).waitFor();
+  assert.equal(
+    await page.locator('[data-product-app-header]')
+      .getByRole('button', { name: 'Account menu' }).count(),
+    0,
+    'The contextual product header must not show avatar controls on mobile'
+  );
   await page.getByRole('button', { name: 'Open component navigation' }).click();
 
   const mobileGutters = await page.evaluate(() => {
@@ -154,8 +168,8 @@ try {
     const heading = list?.querySelector('h2');
     const link = list?.querySelector('a[href*="/components/button"]');
     const name = link?.querySelector('span');
-    const back = panel?.querySelector('a[href="/app"]');
-    if (!panel || !heading || !link || !name || !back) {
+    const workspace = panel?.querySelector('a[href="/app"]');
+    if (!panel || !heading || !link || !name || !workspace) {
       throw new Error('Mobile Components navigation elements missing');
     }
     const titleText = document.createRange();
@@ -164,7 +178,7 @@ try {
       menuLeft: panel.getBoundingClientRect().left,
       headingLeft: titleText.getBoundingClientRect().left,
       nameLeft: name.getBoundingClientRect().left,
-      backIconLeft: back.querySelector('svg')?.getBoundingClientRect().left,
+      workspaceIconLeft: workspace.querySelector('svg')?.getBoundingClientRect().left,
     };
   });
   assert.ok(
@@ -176,16 +190,22 @@ try {
     'Mobile component menu must use 16px inset plus the canonical 10px item inset'
   );
   assert.ok(
-    Math.abs(mobileGutters.backIconLeft - mobileGutters.nameLeft) <= 1,
-    'Mobile Back-to-workspace icon must share the component navigation baseline'
+    Math.abs(mobileGutters.workspaceIconLeft - mobileGutters.nameLeft) <= 1,
+    'Mobile Workspace icon must share the component navigation baseline'
   );
 
-  const mobileReturn = page.getByRole('link', { name: 'Back to workspace' });
+  const mobileReturn = page.locator('#component-navigation')
+    .getByRole('link', { name: 'Overview', exact: true });
   await mobileReturn.waitFor();
+  assert.equal(
+    await page.getByRole('link', { name: 'Back to workspace' }).count(),
+    0,
+    'No redundant Back-to-workspace action on mobile'
+  );
   await mobileReturn.click();
   await page.waitForURL('**/app');
 
-  console.log('OK Core Components drill-down, direct public routes, desktop/mobile return');
+  console.log('OK Core Components drill-down, canonical header, no duplicate Back, desktop/mobile Workspace link');
 } finally {
   await page.close();
   await context.close();
