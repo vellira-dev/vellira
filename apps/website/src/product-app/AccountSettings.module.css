@@ -213,8 +213,22 @@
    text now align at identical x coordinates, while the whole cluster remains
    visually centered inside the fixed-width card. */
 .themeChoice > span:last-child {
+  display: flex;
   flex: 0 0 130px;
+  align-items: center;
   min-width: 0;
+}
+
+/* The standard Radio offsets its control for text-baseline alignment.
+   Theme cards instead align the native circle, icon and text on one
+   vertical centerline inside the card. */
+.themeChoice > input + span {
+  margin-top: 0;
+}
+
+.themeChoice > span:last-child > span {
+  display: flex;
+  align-items: center;
 }
 
 .themeChoice:hover {
@@ -232,7 +246,7 @@
 }
 
 .themeLabel {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   flex-wrap: nowrap;
   white-space: nowrap;
