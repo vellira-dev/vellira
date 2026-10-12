@@ -8,7 +8,7 @@ describe('component examples in initial HTML', () => {
     const example = [
       "import { Checkbox } from '@vellira-ui/react';",
       "<Checkbox checked={selected} onCheckedChange={setSelected} />",
-    ].join('\\n');
+    ].join('\n');
 
     const html = renderToStaticMarkup(<ComponentCodeBlock code={example} />);
 
