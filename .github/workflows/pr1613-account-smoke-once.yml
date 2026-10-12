@@ -74,7 +74,7 @@ jobs:
             exit 1
           fi
 
-      # Bind mocked account and billing checks to completed canonical API reads.
+      # Bind mocked account and billing checks to canonical API reads; retry is explicit.
       - name: Prove contextual catalog session boundary without preview
         shell: bash
         run: |
