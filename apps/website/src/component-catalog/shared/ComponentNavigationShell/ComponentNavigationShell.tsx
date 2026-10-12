@@ -10,7 +10,6 @@ import { useComponentNavigation } from '../ComponentNavigationProvider';
 import { ArrowLeft } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
-
 import styles from './ComponentNavigationShell.module.css';
 
 type ComponentNavigationShellProps = {
@@ -54,7 +53,10 @@ export function ComponentNavigationShell({
       {!mobileOnly && (
         <div className={styles.desktop}>
           {fromWorkspace && (
-            <nav className={styles.workspaceReturn} aria-label='Workspace navigation'>
+            <nav
+              className={styles.workspaceReturn}
+              aria-label='Workspace navigation'
+            >
               <Link href='/app' className={styles.workspaceReturnLink}>
                 <ArrowLeft size={16} aria-hidden='true' />
                 <span>Back to workspace</span>

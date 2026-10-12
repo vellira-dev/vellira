@@ -195,7 +195,6 @@ export function AppSessionProvider({
     };
   }, [me, refresh, status]);
 
-
   const signOut = useCallback(async () => {
     if (localAccountPreview) {
       router.replace('/login');

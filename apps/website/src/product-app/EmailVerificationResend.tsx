@@ -11,11 +11,7 @@ import styles from './EmailVerificationResend.module.css';
 
 // Shared by Account and the unverified email banner. Never simulates an API
 // success or contacts production while using development-only fixture data.
-export function EmailVerificationResend({
-  className,
-}: {
-  className?: string;
-}) {
+export function EmailVerificationResend({ className }: { className?: string }) {
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();

@@ -40,15 +40,15 @@
    the centered inner padding of the standard Button appearance. */
 .sidebarToggleButton {
   display: inline-flex;
-  align-items: center;
   justify-content: flex-start;
+  align-items: center;
   width: 100%;
-  min-height: 36px;
   padding: 0 10px;
-  border-radius: 8px;
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
   text-align: left;
+  border-radius: 8px;
+  min-height: 36px;
 }
 
 .sidebarToggleButton:hover {
@@ -102,7 +102,9 @@
 .navTrailing {
   flex: none;
   opacity: 1;
-  transition: opacity 160ms ease, transform 240ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 240ms ease;
 }
 
 .shell[data-sidebar-collapsed='true'] .navLabel,
@@ -166,9 +168,9 @@
 
 .shell[data-sidebar-collapsed='true'] .sidebar section nav > div > a {
   justify-content: center;
-  gap: 0;
-  padding: 0;
   width: 44px;
+  padding: 0;
+  gap: 0;
   min-height: 44px;
   margin-inline: auto;
 }
@@ -234,7 +236,9 @@
 
 .body {
   display: grid;
-  grid-template-columns: calc(var(--site-gutter) + var(--app-navigation-width)) minmax(0, 1fr);
+  grid-template-columns:
+    calc(var(--site-gutter) + var(--app-navigation-width))
+    minmax(0, 1fr);
   min-height: calc(100vh - var(--site-header-height));
   transition: grid-template-columns 240ms cubic-bezier(0.2, 0, 0, 1);
 }
@@ -242,15 +246,15 @@
 .sidebar {
   position: sticky;
   top: var(--site-header-height);
-  align-self: start;
-  height: calc(100dvh - var(--site-header-height));
-  min-width: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  height: calc(100dvh - var(--site-header-height));
   padding: 0 0 0 var(--app-navigation-start-inset);
   background: var(--surface-panel);
-  border-right: 1px solid var(--border-muted);
   transition: padding-inline-start 240ms cubic-bezier(0.2, 0, 0, 1);
+  align-self: start;
+  min-width: 0;
+  grid-template-rows: minmax(0, 1fr);
+  border-right: 1px solid var(--border-muted);
 }
 
 .desktopNavigation {
@@ -481,9 +485,9 @@
 .startPanel {
   display: grid;
   padding: var(--space-5);
+  background: var(--surface-default);
   border: 1px solid var(--border-muted);
   border-radius: var(--radius-lg);
-  background: var(--surface-default);
   gap: var(--space-3);
 }
 
@@ -515,11 +519,11 @@
 
 .resourceIcon {
   display: inline-grid;
-  place-items: center;
   width: 22px;
   height: 22px;
-  font-size: var(--font-size-md);
   color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  place-items: center;
 }
 
 .resourceArrow {

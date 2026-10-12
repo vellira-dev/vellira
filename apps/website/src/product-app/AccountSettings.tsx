@@ -4,7 +4,15 @@ import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { Contrast, Error, Moon, Success, Sun, System, User } from '@vellira-ui/icons';
+import {
+  Contrast,
+  Error,
+  Moon,
+  Success,
+  Sun,
+  System,
+  User,
+} from '@vellira-ui/icons';
 import { Button, Radio, RadioGroup, Tabs } from '@vellira-ui/react';
 
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
@@ -15,11 +23,7 @@ import { EmailVerificationResend } from './EmailVerificationResend';
 import styles from './AccountSettings.module.css';
 
 export type SettingsSection =
-  | 'account'
-  | 'security'
-  | 'workspace'
-  | 'appearance'
-  | 'billing';
+  'account' | 'security' | 'workspace' | 'appearance' | 'billing';
 
 export function isSettingsSection(value: unknown): value is SettingsSection {
   return (
@@ -133,7 +137,9 @@ function SecurityPanel() {
       <div className={styles.settingRow}>
         <div className={styles.settingCopy}>
           <h3>Password recovery</h3>
-          <p>Request a reset link if you need to change or recover your password.</p>
+          <p>
+            Request a reset link if you need to change or recover your password.
+          </p>
         </div>
         <Button appearance='outline' color='neutral' size='sm' asChild>
           <Link href='/forgot-password'>Recover password</Link>

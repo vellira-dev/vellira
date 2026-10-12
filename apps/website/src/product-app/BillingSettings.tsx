@@ -80,16 +80,20 @@ export function BillingPanel() {
   }, [isOwner, revision, workspaceId]);
 
   // Never render another workspace's commercial data during a workspace change.
-  const state: BillingState = !isOwner || !workspaceId
-    ? { kind: 'denied' }
-    : localPreview
-      ? { kind: 'preview' }
-      : result.workspaceId === workspaceId
-        ? result.state
-        : { kind: 'loading' };
+  const state: BillingState =
+    !isOwner || !workspaceId
+      ? { kind: 'denied' }
+      : localPreview
+        ? { kind: 'preview' }
+        : result.workspaceId === workspaceId
+          ? result.state
+          : { kind: 'loading' };
 
   return (
-    <section className={styles.panelContent} aria-labelledby='billing-status-title'>
+    <section
+      className={styles.panelContent}
+      aria-labelledby='billing-status-title'
+    >
       <div className={styles.sectionIntro}>
         <h2 id='billing-status-title' className={styles.sectionTitle}>
           Subscription
@@ -107,8 +111,8 @@ export function BillingPanel() {
 
       {state.kind === 'preview' && (
         <p className={styles.description} role='status'>
-          Billing information is not connected in local UI preview. Sign in
-          with a real account to review your workspace subscription.
+          Billing information is not connected in local UI preview. Sign in with
+          a real account to review your workspace subscription.
         </p>
       )}
 
@@ -152,7 +156,9 @@ export function BillingPanel() {
           {formatBillingDate(state.subscription.currentPeriodStart) && (
             <div className={styles.detailRow}>
               <dt>Current period starts</dt>
-              <dd>{formatBillingDate(state.subscription.currentPeriodStart)}</dd>
+              <dd>
+                {formatBillingDate(state.subscription.currentPeriodStart)}
+              </dd>
             </div>
           )}
           {formatBillingDate(state.subscription.currentPeriodEnd) && (

@@ -1,12 +1,30 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Warning, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
+import {
+  Warning,
+  Grid,
+  Platforms,
+  Docs,
+  ChevronLeft,
+  ChevronRight,
+} from '@vellira-ui/icons';
 import { Button, Portal, Tooltip } from '@vellira-ui/react';
-import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
+import {
+  Sidebar,
+  SidebarGroup,
+  SidebarItem,
+} from '@/components/navigation/Sidebar';
 import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
 import { HeaderMenuButton } from '@/components/layout/HeaderChrome/HeaderMenuButton';
 
@@ -278,7 +296,10 @@ function AppShellContent({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={styles.shell} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}>
+    <div
+      className={styles.shell}
+      data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}
+    >
       <AppHeader
         onAccountNavigate={closeMobileMenu}
         mobileAction={
@@ -301,7 +322,8 @@ function AppShellContent({ children }: { children: ReactNode }) {
       {process.env.NODE_ENV === 'development' &&
         process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1' && (
           <div className={styles.verificationBanner} role='status'>
-            Local UI preview — sample account data. No backend session or real account actions.
+            Local UI preview — sample account data. No backend session or real
+            account actions.
           </div>
         )}
 
@@ -320,14 +342,19 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
       <div className={styles.body} inert={mobileMenuOpen}>
         <aside className={styles.sidebar}>
-          <AppNavigation collapsed={sidebarCollapsed} navigationId='app-sidebar-navigation' />
+          <AppNavigation
+            collapsed={sidebarCollapsed}
+            navigationId='app-sidebar-navigation'
+          />
           <div className={styles.sidebarToggleRow}>
             <Button
               appearance='bare'
               color='neutral'
               size='sm'
               className={styles.sidebarToggleButton}
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={
+                sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+              }
               aria-controls='app-sidebar-navigation'
               aria-expanded={!sidebarCollapsed}
               onClick={() => setSidebarCollapsed((previous) => !previous)}
@@ -367,13 +394,20 @@ export function AppHome() {
         <p className={styles.lead}>Your cross-platform UI foundation.</p>
       </header>
 
-      <section className={styles.startPanel} aria-labelledby='getting-started-heading'>
+      <section
+        className={styles.startPanel}
+        aria-labelledby='getting-started-heading'
+      >
         <h2 id='getting-started-heading'>Get started</h2>
         <div className={styles.resourceList}>
           <Link href='/components?from=app' className={styles.resourceLink}>
-            <span aria-hidden='true' className={styles.resourceIcon}>◎</span>
+            <span aria-hidden='true' className={styles.resourceIcon}>
+              ◎
+            </span>
             <span>Explore the component library</span>
-            <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
+            <span aria-hidden='true' className={styles.resourceArrow}>
+              ↗
+            </span>
           </Link>
           <a
             href='https://docs.vellira.dev/start/getting-started'
@@ -381,9 +415,13 @@ export function AppHome() {
             target='_blank'
             rel='noopener noreferrer'
           >
-            <span aria-hidden='true' className={styles.resourceIcon}>›_</span>
+            <span aria-hidden='true' className={styles.resourceIcon}>
+              ›_
+            </span>
             <span>Install Vellira Core</span>
-            <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
+            <span aria-hidden='true' className={styles.resourceArrow}>
+              ↗
+            </span>
           </a>
           <a
             href='https://docs.vellira.dev/start/getting-started'
@@ -391,9 +429,13 @@ export function AppHome() {
             target='_blank'
             rel='noopener noreferrer'
           >
-            <span aria-hidden='true' className={styles.resourceIcon}>▤</span>
+            <span aria-hidden='true' className={styles.resourceIcon}>
+              ▤
+            </span>
             <span>Follow the getting-started guide</span>
-            <span aria-hidden='true' className={styles.resourceArrow}>↗</span>
+            <span aria-hidden='true' className={styles.resourceArrow}>
+              ↗
+            </span>
           </a>
         </div>
       </section>
@@ -404,4 +446,3 @@ export function AppHome() {
     </div>
   );
 }
-

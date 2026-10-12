@@ -197,9 +197,7 @@ export function SiteHeader({
             controls='mobile-site-navigation'
             openLabel='Open navigation'
             closeLabel='Close navigation'
-            onToggle={() =>
-              setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)
-            }
+            onToggle={() => setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)}
           />
         </div>
       )}
@@ -213,9 +211,7 @@ export function SiteHeader({
             controls='mobile-site-navigation'
             openLabel='Open navigation'
             closeLabel='Close navigation'
-            onToggle={() =>
-              setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)
-            }
+            onToggle={() => setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)}
           />
         </div>
       )}
@@ -249,9 +245,7 @@ export function SiteHeader({
                   <span>{item.label}</span>
 
                   {'badge' in item && (
-                    <span className={styles.navigationBadge}>
-                      {item.badge}
-                    </span>
+                    <span className={styles.navigationBadge}>{item.badge}</span>
                   )}
                 </Link>
               </Tabs.Trigger>
@@ -311,9 +305,7 @@ export function SiteHeader({
         <div
           className={[
             styles.mobileNavigationLayer,
-            resolvedMobileMenuOpen
-              ? styles.mobileNavigationLayerOpen
-              : null,
+            resolvedMobileMenuOpen ? styles.mobileNavigationLayerOpen : null,
           ]
             .filter(Boolean)
             .join(' ')}
@@ -327,10 +319,7 @@ export function SiteHeader({
             onClick={() => setResolvedMobileMenuOpen(false)}
           />
 
-          <div
-            id='mobile-site-navigation'
-            className={styles.mobileNavigation}
-          >
+          <div id='mobile-site-navigation' className={styles.mobileNavigation}>
             <nav
               className={styles.mobileNavigationLinks}
               aria-label='Mobile navigation'
@@ -356,20 +345,14 @@ export function SiteHeader({
                   <span>{item.label}</span>
 
                   {'badge' in item && item.badge && (
-                    <span className={styles.navigationBadge}>
-                      {item.badge}
-                    </span>
+                    <span className={styles.navigationBadge}>{item.badge}</span>
                   )}
                 </Link>
               ))}
             </nav>
 
             <div className={styles.mobileNavigationActions}>
-              <Button
-                asChild
-                size='sm'
-                className={styles.mobileNavigationCta}
-              >
+              <Button asChild size='sm' className={styles.mobileNavigationCta}>
                 <a
                   href='https://docs.vellira.dev/start/getting-started'
                   onClick={() => setResolvedMobileMenuOpen(false)}

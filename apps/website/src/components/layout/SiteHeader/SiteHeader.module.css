@@ -130,6 +130,7 @@
      marketing Menu is the final visible action, never the first icon. */
   .mobileMenuTrigger {
     order: 100;
+
     /* HeaderChrome gap is 12px at this breakpoint. Add only what is
        needed for an exact 24px distance from the preceding action. */
     margin-inline-start: calc(24px - var(--space-3));
@@ -327,4 +328,3 @@
     margin-inline: auto;
   }
 }
-
