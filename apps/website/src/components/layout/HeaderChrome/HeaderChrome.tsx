@@ -11,15 +11,11 @@ import styles from './HeaderChrome.module.css';
 export function HeaderChrome({
   brandHref,
   children,
-  containerClassName,
-  actionsClassName,
   headerClassName,
   dataProductAppHeader = false,
 }: {
   brandHref: string;
   children: ReactNode;
-  containerClassName?: string;
-  actionsClassName?: string;
   headerClassName?: string;
   dataProductAppHeader?: boolean;
 }) {
@@ -28,11 +24,7 @@ export function HeaderChrome({
       className={[styles.header, headerClassName].filter(Boolean).join(' ')}
       data-product-app-header={dataProductAppHeader ? '' : undefined}
     >
-      <div
-        className={[styles.container, containerClassName]
-          .filter(Boolean)
-          .join(' ')}
-      >
+      <div className={styles.container}>
         <Link
           href={brandHref}
           className={styles.brand}
@@ -46,13 +38,7 @@ export function HeaderChrome({
             preload
           />
         </Link>
-        <div
-          className={[styles.actions, actionsClassName]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {children}
-        </div>
+        <div className={styles.actions}>{children}</div>
       </div>
     </header>
   );
