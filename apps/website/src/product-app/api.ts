@@ -146,6 +146,28 @@ export function listWorkspaces() {
   return apiRequest<WorkspacesResponse>('/v1/workspaces');
 }
 
+export type WorkspaceSubscription = {
+  productKey: string;
+  planKey: string;
+  status: 'pending' | 'trialing' | 'active' | 'past_due' | 'paused' | 'ended';
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  scheduledEndAt: string | null;
+  endedAt: string | null;
+};
+
+export type WorkspaceBillingResponse = {
+  subscription: WorkspaceSubscription | null;
+};
+
+// A read-only, provider-neutral workspace billing view. The backend checks
+// billing.read on every request; frontend role controls are presentation only.
+export function getWorkspaceBilling(workspaceId: string) {
+  return apiRequest<WorkspaceBillingResponse>(
+    `/v1/workspaces/${encodeURIComponent(workspaceId)}/billing`
+  );
+}
+
 export async function getCsrfToken() {
   const response = await apiRequest<{ csrfToken: string }>('/v1/auth/csrf');
   return response.csrfToken;
