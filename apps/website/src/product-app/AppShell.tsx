@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { Warning, UserRound } from '@vellira-ui/icons';
+import { Warning, User } from '@vellira-ui/icons';
 import { Button, Dropdown, Select } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
@@ -146,7 +146,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 color='neutral'
                 size='sm'
                 iconOnly
-                iconStart={<UserRound size={20} aria-hidden='true' />}
+                iconStart={<User size={20} aria-hidden='true' />}
                 aria-label='Account menu'
               />
             </Dropdown.Trigger>
