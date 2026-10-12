@@ -17,6 +17,15 @@ test('notifier waits for an already completed successful production workflow', (
   assert.match(workflow, /\.run_attempt == \$run_attempt/);
   assert.match(workflow, /\.status == "completed"/);
   assert.match(workflow, /\.conclusion == "success"/);
+  assert.match(workflow, /https:\/\/vellira\.dev\/__vellira_runtime/);
+  assert.match(workflow, /live-runtime\.json/);
+  assert.match(workflow, /run_id = os\.environ\['SOURCE_RUN_ID'\]/);
+  assert.match(workflow, /attempt = os\.environ\['SOURCE_RUN_ATTEMPT'\]/);
+  assert.match(workflow, /candidate-sha=\{matched\.group\(1\)\}/);
+  assert.doesNotMatch(
+    workflow,
+    /CANDIDATE_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/
+  );
 });
 
 test('notifier has isolated short-lived private-repo credentials', () => {
