@@ -61,18 +61,54 @@ try {
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
 
   assertGeometry(await measure('Collapse sidebar'), 'expanded');
+  const expandedInsets = await page.evaluate(() => {
+    const nav = document.querySelector('#app-sidebar-navigation');
+    const item = nav?.querySelector('a[href="/app"]');
+    const panel = nav?.closest('aside');
+    if (!item || !panel) throw new Error('Expanded account sidebar missing');
+    const link = item.getBoundingClientRect();
+    const outer = panel.getBoundingClientRect();
+    return {
+      left: link.left - outer.left,
+      right: outer.right - link.right,
+    };
+  });
+  assert.ok(
+    expandedInsets.left >= 10 && expandedInsets.left <= 20,
+    `Expanded sidebar left inset too large: ${expandedInsets.left}`
+  );
+  assert.ok(
+    expandedInsets.right >= 10 && expandedInsets.right <= 20,
+    `Expanded sidebar right inset too large: ${expandedInsets.right}`
+  );
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();
   await page.getByRole('button', { name: 'Expand sidebar' }).waitFor();
   assertGeometry(await measure('Expand sidebar'), 'collapsed');
 
   const groupDivider = await page
     .locator('#app-sidebar-navigation aside[aria-label="Account navigation"] section + section')
-    .evaluate((section) => ({
-      width: Number.parseFloat(getComputedStyle(section).borderTopWidth),
-      style: getComputedStyle(section).borderTopStyle,
-    }));
-  assert.equal(groupDivider.style, 'solid', 'Collapsed groups must have a divider');
-  assert.ok(groupDivider.width >= 1, 'Collapsed group divider must remain visible');
+    .evaluate((section) => {
+      const line = getComputedStyle(section, '::before');
+      const parent = section.getBoundingClientRect();
+      const width = Number.parseFloat(line.width);
+      return {
+        width,
+        center: parent.left + parent.width / 2,
+        lineCenter: parent.left + parent.width / 2,
+        display: line.content,
+        color: line.backgroundColor,
+      };
+    });
+  assert.ok(
+    groupDivider.width >= 18 && groupDivider.width <= 28,
+    'Collapsed separator must be a short, icon-width horizontal line'
+  );
+  assert.notEqual(groupDivider.display, 'none', 'Divider pseudo-element must exist');
+  assert.notEqual(
+    groupDivider.color,
+    'rgba(0, 0, 0, 0)',
+    'Collapsed separator must be painted'
+  );
 
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
