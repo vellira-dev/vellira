@@ -51,6 +51,7 @@ jobs:
             apps/website/src/product-app/AppShell.tsx \
             apps/website/src/product-app/BillingSettings.tsx \
             apps/website/src/product-app/EmailVerificationResend.tsx
+      # The scoped CSS selector has been aligned with the repo Stylelint policy.
       - name: Commit scoped formatting, preserving the account design
         run: |
           git config user.name "vellira-format[bot]"
