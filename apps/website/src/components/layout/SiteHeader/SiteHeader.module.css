@@ -236,6 +236,14 @@
   }
 }
 
+/* Component navigation itself becomes a drawer at 1100px, while the
+   marketing site's primary navigation needs its own 1280px breakpoint. */
+@media (width > 1100px) and (width <= 1280px) {
+  .mobileAction {
+    display: none;
+  }
+}
+
 @media (width <= 900px) {
   .externalActions {
     gap: var(--space-2);
