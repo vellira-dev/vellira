@@ -266,6 +266,31 @@ try {
     );
   }
 
+  // The public Components catalog also uses the exact same mobile brand.
+  // Opening its drawer must not replace the 92px mobile header logo with
+  // the former hard-coded 100px image.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL('/components/button', baseUrl).toString());
+  const publicHeaderLogo = await page.locator('header').first()
+    .getByRole('link', { name: 'Vellira home' })
+    .locator('img')
+    .boundingBox();
+  assert.ok(publicHeaderLogo);
+  await page.getByRole('button', { name: 'Open component navigation' }).click();
+  const publicComponentsDrawer = page.locator('#component-navigation');
+  await publicComponentsDrawer.waitFor();
+  const publicDrawerLogo = await publicComponentsDrawer
+    .locator('..')
+    .getByRole('link', { name: 'Vellira home' })
+    .locator('img')
+    .boundingBox();
+  assert.ok(publicDrawerLogo);
+  assert.ok(
+    Math.abs(publicDrawerLogo.width - publicHeaderLogo.width) <= 1 &&
+      Math.abs(publicDrawerLogo.height - publicHeaderLogo.height) <= 1,
+    'Public Components logo must retain the exact header size after opening its menu'
+  );
+
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto(new URL('/app', baseUrl).toString());
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
