@@ -5,10 +5,16 @@
 
 .toolbar {
   position: sticky;
-  top: var(--site-header-height);
+  /* Marketing scrolls in the document beneath the SiteHeader. The authenticated
+     catalog scrolls in ComponentExplorer.mainColumn, beneath an external header:
+     its sticky top must therefore be zero relative to that scroll container. */
+  top: var(--components-toolbar-sticky-top, var(--site-header-height));
   z-index: calc(var(--z-index-dropdown) - 2);
   margin-bottom: 44px;
-  background: color-mix(in srgb, var(--surface-canvas) 88%, transparent);
+  background: var(
+    --components-toolbar-background,
+    color-mix(in srgb, var(--surface-canvas) 88%, transparent)
+  );
   backdrop-filter: blur(16px);
 }
 
