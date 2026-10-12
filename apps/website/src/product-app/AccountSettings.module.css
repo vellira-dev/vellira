@@ -179,7 +179,7 @@
 .themeGroup > div:last-child {
   display: flex;
   flex-flow: row nowrap;
-  justify-content: safe center;
+  justify-content: flex-start;
   align-items: stretch;
   max-width: 100%;
   padding-block: var(--space-2);
@@ -207,6 +207,14 @@
   transition:
     background-color 160ms ease,
     border-color 160ms ease;
+}
+
+/* Reserve the same label slot in every card. The radio, icon and
+   text now align at identical x coordinates, while the whole cluster remains
+   visually centered inside the fixed-width card. */
+.themeChoice > span:last-child {
+  flex: 0 0 130px;
+  min-width: 0;
 }
 
 .themeChoice:hover {
