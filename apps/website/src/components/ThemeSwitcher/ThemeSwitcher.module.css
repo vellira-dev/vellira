@@ -12,12 +12,6 @@
   width: 220px;
 }
 
-/* Dropdown is rendered in a Portal; a mobile drawer sits at modal z-index.
-   Only the theme control *inside* that drawer gets elevated above it. */
-.aboveNavigation.aboveNavigation {
-  z-index: calc(var(--z-index-modal) + 1);
-}
-
 .item {
   min-height: 36px;
 }
