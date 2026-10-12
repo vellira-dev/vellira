@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState, useEffect, type CSSProperties } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -11,7 +10,9 @@ import type { SiteHeaderProps } from './types';
 import { Button, Tabs } from '@vellira-ui/react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { HeaderSearch } from './HeaderSearch';
-import { Close, Menu } from '@vellira-ui/icons';
+import { Close } from '@vellira-ui/icons';
+import { HeaderChrome } from '@/components/layout/HeaderChrome/HeaderChrome';
+import { HeaderMenuButton } from '@/components/layout/HeaderChrome/HeaderMenuButton';
 
 import styles from './SiteHeader.module.css';
 
@@ -181,44 +182,28 @@ export function SiteHeader({
   const hasMobileNavigation = variant === 'marketing' || variant === 'portal';
 
   return (
-    <header
-      className={[styles.header, navigationOpen ? styles.navigationOpen : null]
-        .filter(Boolean)
-        .join(' ')}
+    <HeaderChrome
+      brandHref='/'
+      headerClassName={navigationOpen ? styles.navigationOpen : undefined}
+      containerClassName={styles.container}
+      actionsClassName={styles.headerRight}
     >
-      <div className={styles.container}>
-        <Link href='/' prefetch className={styles.brand}>
-          <Image
-            src='/brand/logos/logo-gradient.svg'
-            alt='Vellira'
-            width={100}
-            height={32}
-            preload
-            fetchPriority='high'
-          />
-        </Link>
-
-        <div className={styles.headerRight}>
           <div className={styles.headerSearch}>
             <HeaderSearch />
           </div>
 
           {variant === 'marketing' && (
-            <Button
-              type='button'
-              size='sm'
-              appearance='ghost'
-              shape='square'
-              iconOnly
-              className={styles.mobileMenuTrigger}
-              aria-label={
-                resolvedMobileMenuOpen ? 'Close navigation' : 'Open navigation'
-              }
-              aria-expanded={resolvedMobileMenuOpen}
-              aria-controls='mobile-site-navigation'
-              iconStart={resolvedMobileMenuOpen ? <Close /> : <Menu />}
-              onClick={() => setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)}
-            />
+            <div className={styles.mobileMenuTrigger}>
+              <HeaderMenuButton
+                open={resolvedMobileMenuOpen}
+                controls='mobile-site-navigation'
+                openLabel='Open navigation'
+                closeLabel='Close navigation'
+                onToggle={() =>
+                  setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)
+                }
+              />
+            </div>
           )}
 
           <nav className={styles.navigation} aria-label='Primary navigation'>
@@ -452,9 +437,7 @@ export function SiteHeader({
               </a>
             </Button>
           </div>
-        </div>
-      </div>
-    </header>
+    </HeaderChrome>
   );
 }
 
