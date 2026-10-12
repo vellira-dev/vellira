@@ -382,7 +382,10 @@ function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
     const hasComponentHeading = content
       .split(/\r?\n/)
       .some((line) => line.trim() === `## ${plan.componentName}`);
+    // The section builder already writes the missing component heading above.
+    // A single-part root API heading may have the very same text.
     const hasHeading = (heading: string) =>
+      heading === `## ${plan.componentName}` ||
       content.split(/\r?\n/).some((line) => line.trim() === heading);
 
     const placeholderContent = [
