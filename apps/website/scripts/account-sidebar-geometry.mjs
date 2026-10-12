@@ -65,6 +65,15 @@ try {
   await page.getByRole('button', { name: 'Expand sidebar' }).waitFor();
   assertGeometry(await measure('Expand sidebar'), 'collapsed');
 
+  const groupDivider = await page
+    .locator('#app-sidebar-navigation aside[aria-label="Account navigation"] section + section')
+    .evaluate((section) => ({
+      width: Number.parseFloat(getComputedStyle(section).borderTopWidth),
+      style: getComputedStyle(section).borderTopStyle,
+    }));
+  assert.equal(groupDivider.style, 'solid', 'Collapsed groups must have a divider');
+  assert.ok(groupDivider.width >= 1, 'Collapsed group divider must remain visible');
+
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
 
