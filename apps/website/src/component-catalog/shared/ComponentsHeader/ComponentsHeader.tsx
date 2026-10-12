@@ -1,7 +1,10 @@
 'use client';
 
+import { useCallback } from 'react';
+
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { AppHeader } from '@/product-app/AppHeader';
+import { AppWorkspaceMobileMenu } from '@/product-app/AppShell';
 import { AppSessionProvider, useAppSession } from '@/product-app/AppSession';
 
 import { ComponentNavigationTrigger } from '../ComponentNavigationTrigger';
@@ -11,7 +14,12 @@ import { useComponentNavigation } from '../ComponentNavigationProvider';
 // authenticated product header. No second session or account authority.
 function WorkspaceComponentsHeader() {
   const { status } = useAppSession();
-  const { mainOpen, setMainNavigationOpen } = useComponentNavigation();
+  const { mainOpen, setMainNavigationOpen, openNavigation } =
+    useComponentNavigation();
+  const closeWorkspaceNavigation = useCallback(
+    () => setMainNavigationOpen(false),
+    [setMainNavigationOpen]
+  );
 
   if (status === 'unauthenticated' || status === 'error') {
     return (
@@ -24,7 +32,16 @@ function WorkspaceComponentsHeader() {
     );
   }
 
-  return <AppHeader mobileAction={<ComponentNavigationTrigger />} />;
+  return (
+    <>
+      <AppHeader mobileAction={<ComponentNavigationTrigger />} />
+      <AppWorkspaceMobileMenu
+        open={mainOpen}
+        onClose={closeWorkspaceNavigation}
+        onComponentsSwitch={openNavigation}
+      />
+    </>
+  );
 }
 
 export function ComponentsHeader() {
