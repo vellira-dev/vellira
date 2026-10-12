@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { CreditCard, Exit, Settings, User } from '@vellira-ui/icons';
 import { Button, Dropdown } from '@vellira-ui/react';
 
+import { HeaderChrome } from '@/components/layout/HeaderChrome/HeaderChrome';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { useAppSession } from './AppSession';
 
@@ -27,18 +27,7 @@ export function AppHeader({
   const [signingOut, setSigningOut] = useState(false);
 
   return (
-    <header className={styles.header} data-product-app-header>
-      <Link href='/app' className={styles.brand} aria-label='Vellira home'>
-        <Image
-          src='/brand/logos/logo-gradient.svg'
-          alt='Vellira'
-          width={100}
-          height={32}
-          preload
-        />
-      </Link>
-
-      <div className={styles.headerContext}>
+    <HeaderChrome brandHref='/app' dataProductAppHeader>
         <div className={styles.desktopHeaderActions}>
           <ThemeSwitcher />
           {status === 'ready' && (
@@ -95,8 +84,7 @@ export function AppHeader({
         {mobileAction && (
           <div className={styles.mobileHeaderAction}>{mobileAction}</div>
         )}
-      </div>
-    </header>
+    </HeaderChrome>
   );
 }
 
