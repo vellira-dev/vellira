@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
-import { Warning, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
-import { Button, Portal, Select, Tooltip } from '@vellira-ui/react';
+import { Warning, Grid, Platforms, Docs, ChevronLeft, ChevronRight, Menu, Close } from '@vellira-ui/icons';
+import { Button, Portal, Tooltip } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
 import { AppSessionProvider, useAppSession } from './AppSession';
@@ -14,30 +14,34 @@ import { EmailVerificationResend } from './EmailVerificationResend';
 
 import styles from './AppShell.module.css';
 
-const navigation = [
-  { label: 'Overview', href: '/app' },
-  { label: 'Components', href: '/components?from=app' },
-  { label: 'Settings', href: '/app/settings' },
-] as const;
-
-type NavigationHref = (typeof navigation)[number]['href'];
-
-function activeHref(pathname: string): NavigationHref {
+function activeHref(pathname: string) {
   return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
 }
 
-function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; navigationId?: string }) {
+function AppNavigation({
+  collapsed,
+  navigationId,
+  mobile = false,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  navigationId?: string;
+  mobile?: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
-  const router = useRouter();
   const value = activeHref(pathname);
 
   return (
-    <>
-      <nav id={navigationId} className={styles.desktopNavigation} aria-label='Vellira app'>
+    <nav
+      id={navigationId}
+      className={mobile ? styles.drawerNavigation : styles.desktopNavigation}
+      aria-label={mobile ? 'Mobile workspace navigation' : 'Vellira app'}
+    >
         <Sidebar ariaLabel='Account navigation'>
           <SidebarGroup label='Workspace'>
             <SidebarItem active={value === '/app'}>
-              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/app' aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
+              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/app' onClick={onNavigate} aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
                 <span className={styles.navEntry}><Grid size={18} aria-hidden='true' /><span className={styles.navLabel}>Overview</span></span>
               </Link></Tooltip.Trigger><Portal><Tooltip.Content>Overview</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
@@ -46,6 +50,7 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
                 <Tooltip.Trigger asChild>
                   <Link
                     href='/components?from=app'
+                    onClick={onNavigate}
                     aria-label={collapsed ? 'Components' : undefined}
                   >
                     <span className={styles.navEntry}>
@@ -63,33 +68,14 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
           </SidebarGroup>
           <SidebarGroup label='Resources'>
             <SidebarItem>
-              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><a aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>
+              <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><a aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer' onClick={onNavigate}>
                 <span className={styles.navEntry}><Docs size={18} aria-hidden='true' /><span className={styles.navLabel}>Docs ↗</span></span>
               </a></Tooltip.Trigger><Portal><Tooltip.Content>Docs</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
           </SidebarGroup>
         </Sidebar>
-      </nav>
+    </nav>
 
-      <div className={styles.mobileNavigation}>
-        <Select
-          aria-label='Vellira app section'
-          value={value}
-          onValueChange={(nextValue) => {
-            if (nextValue) {
-              router.push(nextValue as NavigationHref);
-            }
-          }}
-          matchTriggerWidth
-        >
-          {navigation.map((item) => (
-            <Select.Item key={item.href} value={item.href}>
-              {item.label}
-            </Select.Item>
-          ))}
-        </Select>
-      </div>
-    </>
   );
 }
 
