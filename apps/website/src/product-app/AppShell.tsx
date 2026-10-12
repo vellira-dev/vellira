@@ -208,47 +208,60 @@ export function AppHome() {
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
-        <p className={styles.eyebrow}>Vellira App</p>
-        <h1>Build consistent product interfaces with Vellira.</h1>
+        <p className={styles.eyebrow}>Get started</p>
+        <h1>Start building with Vellira</h1>
         <p className={styles.lead}>
-          Your account is connected. Start with the public Vellira Core today;
-          additional product capabilities appear here only when they are ready
-          for real use.
+          Your cross-platform UI foundation. Explore the components and
+          installation guide to start building consistent interfaces.
         </p>
-
-        <div className={styles.actions}>
-          <Button asChild>
-            <Link href='/components'>Browse components</Link>
-          </Button>
-          <Button asChild appearance='outline' color='neutral'>
-            <a
-              href='https://docs.vellira.dev/start/getting-started'
-              target='_blank'
-              rel='noreferrer noopener'
-            >
-              Read the docs
-            </a>
-          </Button>
-        </div>
       </header>
 
-      <section className={styles.section} aria-labelledby='workspace-heading'>
+      <section className={styles.settingsSection} aria-labelledby='getting-started-heading'>
         <div>
-          <p className={styles.sectionLabel}>Workspace</p>
-          <h2 id='workspace-heading'>{workspace?.name}</h2>
+          <p className={styles.sectionLabel}>Vellira Core</p>
+          <h2 id='getting-started-heading'>Get started</h2>
         </div>
-
-        <dl className={styles.details}>
-          <div>
-            <dt>Status</dt>
-            <dd>{workspace?.status}</dd>
-          </div>
-          <div>
-            <dt>Role</dt>
-            <dd>{workspace?.membership.role}</dd>
-          </div>
-        </dl>
+        <div className={styles.resourceList}>
+          <a href='/components' className={styles.resourceLink}>
+            <span><strong>Explore components</strong><small>Browse the available component library.</small></span>
+            <span aria-hidden='true'>→</span>
+          </a>
+          <a
+            href='https://docs.vellira.dev/start/getting-started'
+            className={styles.resourceLink}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <span><strong>Install Vellira Core</strong><small>Follow the current installation instructions.</small></span>
+            <span aria-hidden='true'>↗</span>
+          </a>
+          <a
+            href='https://docs.vellira.dev/start/getting-started'
+            className={styles.resourceLink}
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <span><strong>Read the getting-started guide</strong><small>Learn the recommended setup and usage.</small></span>
+            <span aria-hidden='true'>↗</span>
+          </a>
+        </div>
       </section>
+
+      {workspace && (
+        <section className={styles.settingsSection} aria-labelledby='workspace-heading'>
+          <div>
+            <p className={styles.sectionLabel}>Current workspace</p>
+            <h2 id='workspace-heading'>{workspace.name}</h2>
+          </div>
+          <dl className={styles.settingsList}>
+            <div><dt>Status</dt><dd>{workspace.status}</dd></div>
+            <div><dt>Your role</dt><dd>{workspace.membership.role}</dd></div>
+          </dl>
+          <Button asChild appearance='outline' color='neutral'>
+            <Link href='/app/settings'>Account settings</Link>
+          </Button>
+        </section>
+      )}
     </div>
   );
 }
@@ -269,7 +282,7 @@ export function SettingsGeneral() {
     <div className={styles.page}>
       <header className={styles.settingsHeader}>
         <p className={styles.eyebrow}>Settings</p>
-        <h1>General</h1>
+        <h1>Account settings</h1>
         <p>
           Review the canonical account and workspace context available to this
           Vellira session.
@@ -312,6 +325,13 @@ export function SettingsGeneral() {
             <dd>{workspace?.membership.role}</dd>
           </div>
         </dl>
+      </section>
+
+      <section className={styles.settingsSection} aria-labelledby='appearance-state'>
+        <div>
+          <h2 id='appearance-state'>Appearance</h2>
+          <p>Change between light, dark and system appearance using the theme control in the header.</p>
+        </div>
       </section>
 
       <section
