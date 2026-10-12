@@ -22,6 +22,7 @@
     "test:account-mobile-navigation": "node scripts/account-mobile-navigation.mjs",
     "test:account-components-navigation": "node scripts/account-components-navigation.mjs",
     "test:account-catalog-session-boundary": "node scripts/account-catalog-session-boundary.mjs",
+    "test:account-billing-session-boundary": "node scripts/account-billing-session-boundary.mjs",
     "test:account-header-menu": "node scripts/account-header-menu.mjs",
     "test:account-settings-tabs": "node scripts/account-settings-tabs.mjs",
     "test:account-email-verification-preview": "node scripts/account-email-verification-preview.mjs",
