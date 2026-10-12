@@ -42,12 +42,12 @@ try {
     exact: false,
   }).waitFor();
 
-  await page.getByRole('link', { name: 'Back to account settings' }).click();
-  await page.waitForURL('**/app/settings');
+  await page.getByRole('tab', { name: 'Account' }).click();
+  await page.waitForURL('**/app/settings?section=account');
   await page.locator('[data-product-app-header]').getByRole('button', { name: 'Account menu' }).click();
   await page.getByRole('menuitem', { name: 'Profile' }).click();
   await page.waitForURL('**/app/settings#account-state');
-  await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Your account' }).waitFor();
 
   await page.goto(new URL('/components?from=app', baseUrl).toString());
   const catalogHeader = page.locator('[data-product-app-header]');
