@@ -15,6 +15,8 @@ import {
 type ComponentNavigationContextValue = {
   open: boolean;
   mainOpen: boolean;
+  // Navigation context only, never identity or entitlement authority.
+  fromWorkspace: boolean;
 
   openNavigation: () => void;
   closeNavigation: () => void;
@@ -41,6 +43,16 @@ export function ComponentNavigationProvider({
   const previousPathname = useRef(pathname);
   const [open, setOpen] = useState(false);
   const [mainOpen, setMainOpen] = useState(false);
+  const [fromWorkspace, setFromWorkspace] = useState(false);
+
+  // A public catalog deep link remains standalone unless a user deliberately
+  // entered via /components?from=app. Preserve that context across sibling
+  // component routes without storing any account/session data.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('from') === 'app') {
+      setFromWorkspace(true);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (previousPathname.current === pathname) {
@@ -89,6 +101,7 @@ export function ComponentNavigationProvider({
     () => ({
       open,
       mainOpen,
+      fromWorkspace,
 
       openNavigation,
       closeNavigation,
@@ -104,6 +117,7 @@ export function ComponentNavigationProvider({
       closeMainNavigation,
       closeNavigation,
       mainOpen,
+      fromWorkspace,
       open,
       openMainNavigation,
       openNavigation,
