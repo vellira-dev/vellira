@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { BillingSettings } from '@/product-app/BillingSettings';
+import { SettingsGeneral } from '@/product-app/AccountSettings';
 
 export const metadata: Metadata = {
   title: 'Billing | Vellira',
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function VelliraBillingSettingsPage() {
-  return <BillingSettings />;
+  return <SettingsGeneral section='billing' />;
 }
