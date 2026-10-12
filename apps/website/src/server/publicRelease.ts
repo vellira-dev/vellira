@@ -91,7 +91,10 @@ async function readRegistryTag(
 
   // Never follow npm redirects or trust data from a different origin. In
   // workerd, manual is the supported replacement for redirect: 'error'.
-  if ((response.status >= 300 && response.status < 400) || response.redirected) {
+  if (
+    (response.status >= 300 && response.status < 400) ||
+    response.redirected
+  ) {
     throw new PublicReleaseCheckError(
       'registry_unavailable',
       'redirect_rejected',

@@ -188,11 +188,11 @@ describe('public npm release API', () => {
   it.each([301, 302, 307, 308])(
     'rejects HTTP %i redirects without following any destination',
     async (status) => {
-      const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const fetchImpl: typeof fetch = async (input, init) => {
         expect(new URL(String(input)).hostname).toBe('registry.npmjs.org');
         expect(init?.redirect).toBe('manual');
         return Response.redirect('https://untrusted.example/redirect', status);
-      }) as typeof fetch;
+      };
       const GET = createPublicReleaseHandler({
         fetchImpl,
         now: () => START,
@@ -209,7 +209,7 @@ describe('public npm release API', () => {
     }
   );
 
-  it('rejects a fetch implementation that already followed a redirect', async () => {
+  it('rejects responses from an already redirected fetch', async () => {
     const fetchImpl = (async () => {
       const response = Response.json({
         name: publishedPackageNames[0],
