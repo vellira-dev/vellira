@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -125,39 +125,55 @@ function AppNavigation({
   );
 }
 
-function AppShellContent({ children }: { children: ReactNode }) {
-  const { status, me, error, refresh } = useAppSession();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
-  const mobilePanelRef = useRef<HTMLDivElement>(null);
+/** The canonical authenticated mobile navigation overlay, shared by /app
+ * and Components opened from the workspace. Changing between the component
+ * drawer and this drawer never requires navigating to another page.
+ */
+export function AppWorkspaceMobileMenu({
+  open,
+  onClose,
+  triggerRef,
+  onComponentsSwitch,
+}: {
+  open: boolean;
+  onClose: () => void;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+  onComponentsSwitch?: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Mirrors the existing website/component mobile-navigation behavior:
-  // one modal drawer, Escape/backdrop dismissal, body-scroll lock and
-  // keyboard focus within the open navigation. No second route tree.
+  const focusTrigger = useCallback(() => {
+    const trigger =
+      triggerRef?.current ??
+      document.querySelector<HTMLButtonElement>(
+        '[aria-controls="app-mobile-navigation"]'
+      );
+    trigger?.focus();
+  }, [triggerRef]);
+
   useEffect(() => {
-    if (!mobileMenuOpen) return;
+    if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    mobilePanelRef.current?.querySelector<HTMLElement>('a[href]')?.focus();
+    panelRef.current?.querySelector<HTMLElement>('a[href]')?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setMobileMenuOpen(false);
-        mobileMenuTriggerRef.current?.focus();
+        onClose();
+        focusTrigger();
         return;
       }
       if (event.key !== 'Tab') return;
 
-      const links = Array.from(
-        mobilePanelRef.current?.querySelectorAll<HTMLElement>(
+      const focusable = Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled])'
         ) ?? []
       );
-      const first = links[0];
-      const last = links[links.length - 1];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
       if (!first || !last) return;
 
       if (event.shiftKey && document.activeElement === first) {
@@ -170,17 +186,76 @@ function AppShellContent({ children }: { children: ReactNode }) {
     };
 
     const handleResize = () => {
-      if (window.innerWidth > 1100) setMobileMenuOpen(false);
+      if (window.innerWidth > 1100) onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleResize);
-
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
     };
-  }, [mobileMenuOpen]);
+  }, [open, onClose, focusTrigger]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className={[
+        componentDrawerStyles.mobileLayer,
+        componentDrawerStyles.mobileLayerOpen,
+      ].join(' ')}
+    >
+      <Button
+        appearance='bare'
+        type='button'
+        className={componentDrawerStyles.backdrop}
+        aria-label='Dismiss workspace navigation'
+        onClick={() => {
+          onClose();
+          focusTrigger();
+        }}
+      />
+      <div
+        ref={panelRef}
+        id='app-mobile-navigation'
+        className={componentDrawerStyles.mobileSurface}
+        role='dialog'
+        aria-modal='true'
+        aria-label='Workspace navigation'
+      >
+        <div className={componentDrawerStyles.mobileHeader}>
+          <HeaderBrand
+            href='/app'
+            className={componentDrawerStyles.mobileBrand}
+            ariaLabel='Vellira workspace'
+            onClick={onClose}
+          />
+        </div>
+        <div className={componentDrawerStyles.mobilePanel}>
+          <div className={componentDrawerStyles.mobilePanelContent}>
+            <AppNavigation
+              collapsed={false}
+              mobile
+              onNavigate={onClose}
+              onComponentsSwitch={onComponentsSwitch}
+            />
+          </div>
+          <div className={styles.mobileAccountFooter}>
+            <AppMobileAccountActions onNavigate={onClose} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AppShellContent({ children }: { children: ReactNode }) {
+  const { status, me, error, refresh } = useAppSession();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   if (status === 'loading') {
     return (
@@ -205,7 +280,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}>
       <AppHeader
-        onAccountNavigate={() => setMobileMenuOpen(false)}
+        onAccountNavigate={closeMobileMenu}
         mobileAction={
           <HeaderMenuButton
             ref={mobileMenuTriggerRef}
@@ -217,56 +292,11 @@ function AppShellContent({ children }: { children: ReactNode }) {
           />
         }
       />
-      {mobileMenuOpen && (
-        <div
-          className={[
-            componentDrawerStyles.mobileLayer,
-            componentDrawerStyles.mobileLayerOpen,
-          ].join(' ')}
-        >
-          <Button
-            appearance='bare'
-            type='button'
-            className={componentDrawerStyles.backdrop}
-            aria-label='Dismiss workspace navigation'
-            onClick={() => {
-              setMobileMenuOpen(false);
-              mobileMenuTriggerRef.current?.focus();
-            }}
-          />
-          <div
-            ref={mobilePanelRef}
-            id='app-mobile-navigation'
-            className={componentDrawerStyles.mobileSurface}
-            role='dialog'
-            aria-modal='true'
-            aria-label='Workspace navigation'
-          >
-            <div className={componentDrawerStyles.mobileHeader}>
-              <HeaderBrand
-                href='/app'
-                className={componentDrawerStyles.mobileBrand}
-                ariaLabel='Vellira workspace'
-                onClick={() => setMobileMenuOpen(false)}
-              />
-            </div>
-            <div className={componentDrawerStyles.mobilePanel}>
-              <div className={componentDrawerStyles.mobilePanelContent}>
-                <AppNavigation
-                  collapsed={false}
-                  mobile
-                  onNavigate={() => setMobileMenuOpen(false)}
-                />
-              </div>
-              <div className={styles.mobileAccountFooter}>
-                <AppMobileAccountActions
-                  onNavigate={() => setMobileMenuOpen(false)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AppWorkspaceMobileMenu
+        open={mobileMenuOpen}
+        onClose={closeMobileMenu}
+        triggerRef={mobileMenuTriggerRef}
+      />
 
       {process.env.NODE_ENV === 'development' &&
         process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1' && (
