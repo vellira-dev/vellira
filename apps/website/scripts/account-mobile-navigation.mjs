@@ -185,11 +185,26 @@ try {
       'Workspace and Components must reuse the same sliding surface'
     );
 
-    await componentsDrawer.getByRole('link', { name: 'Overview' }).waitFor();
+    const componentBack = componentsDrawer.getByRole('link', {
+      name: 'Back to workspace',
+      exact: true,
+    });
+    await componentBack.waitFor();
     assert.equal(
-      await componentsDrawer.getByRole('link', { name: 'Back to workspace' }).count(),
+      await componentsDrawer.getByRole('link', { name: 'Overview' }).count(),
       0,
-      'Back-to-workspace bar must not duplicate the Sidebar navigation'
+      'The malformed Overview row must not appear in Components'
+    );
+    assert.equal(
+      await page.locator('[data-component-explorer-main]')
+        .getByRole('link', { name: 'Back to workspace' }).count(),
+      0,
+      'The Components page hero must not contain a second Back link'
+    );
+    assert.equal(
+      await page.getByRole('link', { name: 'Back to workspace' }).count(),
+      1,
+      'Exactly one Back to workspace link belongs inside the mobile menu'
     );
     assert.equal(
       await componentsDrawer.getByRole('link', { name: 'Account settings' }).count(),
@@ -201,7 +216,7 @@ try {
       0,
       'Component navigation must not include appearance controls'
     );
-    await componentsDrawer.getByRole('link', { name: 'Overview' }).click();
+    await componentBack.click();
     await page.waitForURL('**/app');
 
     if (width === 390) {
