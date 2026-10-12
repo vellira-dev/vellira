@@ -1,5 +1,5 @@
 .shell {
-  --app-navigation-width: 280px;
+  --app-navigation-width: 248px;
 
   min-height: 100vh;
   color: var(--text-primary);
@@ -107,8 +107,8 @@
 
 .content {
   width: 100%;
-  max-width: var(--site-max-width);
-  padding: var(--space-10) var(--site-gutter) var(--space-16);
+  max-width: 1200px;
+  padding: var(--space-8) var(--site-gutter) var(--space-12);
 }
 
 .statusPage {
@@ -139,8 +139,8 @@
 
 .page {
   display: grid;
-  max-width: 960px;
-  gap: var(--space-12);
+  max-width: 1040px;
+  gap: var(--space-8);
 }
 
 .hero,
@@ -173,8 +173,8 @@
 .hero h1,
 .settingsHeader h1 {
   max-width: 780px;
-  font-size: clamp(36px, 5vw, 64px);
-  line-height: 1;
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1.15;
   letter-spacing: -0.045em;
 }
 
@@ -201,7 +201,7 @@
 .section,
 .settingsSection {
   display: grid;
-  padding-top: var(--space-8);
+  padding-top: var(--space-6);
   border-top: 1px solid var(--border-muted);
   gap: var(--space-6);
 }
@@ -330,12 +330,12 @@
   }
 
   .page {
-    gap: var(--space-10);
+    gap: var(--space-8);
   }
 
   .hero h1,
   .settingsHeader h1 {
-    font-size: clamp(34px, 11vw, 48px);
+    font-size: clamp(28px, 7vw, 34px);
   }
 
   .lead {
