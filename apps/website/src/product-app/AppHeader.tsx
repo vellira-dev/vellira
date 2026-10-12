@@ -100,9 +100,9 @@ export function AppHeader({
   );
 }
 
-/** Account actions in the same mobile drawer used by the workspace Sidebar.
+/** Account actions shared by the app and workspace-origin Components drawer.
  * Presentation comes from the canonical session; backend still authorizes.
- * The theme dropdown remains the existing WebsiteThemeContext-backed control.
+ * Appearance is available exclusively in Settings on mobile.
  */
 export function AppMobileAccountActions({
   onNavigate,
@@ -153,10 +153,6 @@ export function AppMobileAccountActions({
         </section>
       )}
 
-      <div className={styles.mobileDrawerFooter}>
-        <span className={styles.mobileThemeCaption}>Appearance</span>
-        <ThemeSwitcher insideModalNavigation />
-      </div>
     </div>
   );
 }
