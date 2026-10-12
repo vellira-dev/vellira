@@ -147,6 +147,39 @@ try {
   await page.locator('[data-product-app-header]').waitFor();
   await page.getByRole('button', { name: 'Account menu' }).waitFor();
   await page.getByRole('button', { name: 'Open component navigation' }).click();
+
+  const mobileGutters = await page.evaluate(() => {
+    const panel = document.querySelector('#component-navigation');
+    const list = panel?.querySelector('aside[aria-label="Component navigation"]');
+    const heading = list?.querySelector('h2');
+    const link = list?.querySelector('a[href*="/components/button"]');
+    const name = link?.querySelector('span');
+    const back = panel?.querySelector('a[href="/app"]');
+    if (!panel || !heading || !link || !name || !back) {
+      throw new Error('Mobile Components navigation elements missing');
+    }
+    const titleText = document.createRange();
+    titleText.selectNodeContents(heading);
+    return {
+      menuLeft: panel.getBoundingClientRect().left,
+      headingLeft: titleText.getBoundingClientRect().left,
+      nameLeft: name.getBoundingClientRect().left,
+      backIconLeft: back.querySelector('svg')?.getBoundingClientRect().left,
+    };
+  });
+  assert.ok(
+    Math.abs(mobileGutters.headingLeft - mobileGutters.nameLeft) <= 1,
+    'Mobile component heading must align with its item labels'
+  );
+  assert.ok(
+    Math.abs(mobileGutters.nameLeft - mobileGutters.menuLeft - 26) <= 1,
+    'Mobile component menu must use 16px inset plus the canonical 10px item inset'
+  );
+  assert.ok(
+    Math.abs(mobileGutters.backIconLeft - mobileGutters.nameLeft) <= 1,
+    'Mobile Back-to-workspace icon must share the component navigation baseline'
+  );
+
   const mobileReturn = page.getByRole('link', { name: 'Back to workspace' });
   await mobileReturn.waitFor();
   await mobileReturn.click();
