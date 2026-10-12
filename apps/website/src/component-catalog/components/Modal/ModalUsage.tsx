@@ -77,24 +77,22 @@ function createModalCode(
     props.push('open');
   }
 
-  if (value.closeOnOutsidePress) {
-    props.push('closeOnOutsidePress');
+  if (value.closeOnOutsidePress !== true) {
+    props.push(`closeOnOutsidePress={${value.closeOnOutsidePress}}`);
   }
 
-  if (value.closeOnEscape) {
-    props.push('closeOnEscape');
+  if (value.closeOnEscape !== true) {
+    props.push(`closeOnEscape={${value.closeOnEscape}}`);
   }
 
   if (value.animation !== 'scale') {
-    props.push(`animation='${value.animation}'`);
+    props.push(`animation={${JSON.stringify(value.animation)}}`);
   }
 
-  if (value.easing !== 'standard') {
-    props.push(`easing='${value.easing}'`);
-  }
+  props.push(`easing={${JSON.stringify(value.easing)}}`);
 
-  if (value.restoreFocus) {
-    props.push('restoreFocus');
+  if (value.restoreFocus !== true) {
+    props.push(`restoreFocus={${value.restoreFocus}}`);
   }
 
   const propsText = props.length === 0 ? '' : `\n  ${props.join('\n  ')}\n`;

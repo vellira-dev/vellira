@@ -26,6 +26,24 @@ function cleanApiType(type: string) {
     .trim();
 }
 
+export function getApiDefaultValue(
+  prop: ExtractedProp,
+  componentConfig: ComponentPageMetadata,
+  platform: Platform
+) {
+  // Required props cannot be omitted. A configured preview example is not
+  // an actual runtime default, even when the sample renders successfully.
+  if (prop.required) return undefined;
+
+  const sharedValue = componentConfig.defaults?.shared?.[prop.name];
+  const platformValue =
+    platform === 'react'
+      ? componentConfig.defaults?.react?.[prop.name]
+      : componentConfig.defaults?.native?.[prop.name];
+  const value = platformValue ?? sharedValue;
+  if (value === undefined) return undefined;
+  return typeof value === 'string' ? toTsString(value) : String(value);
+}
 export function buildApiFile(params: {
   root: string;
   componentName: string;
@@ -77,27 +95,6 @@ export function buildApiFile(params: {
     return cleanApiType(apiProp.type);
   }
 
-  function getApiDefaultValue(prop: ExtractedProp, platform: Platform) {
-    const sharedValue = componentConfig.defaults?.shared?.[prop.name];
-
-    const platformValue =
-      platform === 'react'
-        ? componentConfig.defaults?.react?.[prop.name]
-        : componentConfig.defaults?.native?.[prop.name];
-
-    const value = platformValue ?? sharedValue;
-
-    if (value === undefined) {
-      return undefined;
-    }
-
-    if (typeof value === 'string') {
-      return `'${value}'`;
-    }
-
-    return String(value);
-  }
-
   function getFallbackApiDescription(prop: ExtractedProp, platform: Platform) {
     if (!isExternalProp(prop)) {
       return `Prop for ${componentName}.`;
@@ -120,7 +117,11 @@ export function buildApiFile(params: {
   ) {
     return props
       .map((prop) => {
-        const defaultValue = getApiDefaultValue(prop, platform);
+        const defaultValue = getApiDefaultValue(
+          prop,
+          componentConfig,
+          platform
+        );
         const sharedProp = getSharedProp(prop);
 
         const description =

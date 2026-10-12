@@ -48,19 +48,19 @@ function createCheckboxCode(
   }
 
   if (value.error) {
-    props.push(`error='${value.error}'`);
+    props.push(`error={${JSON.stringify(value.error)}}`);
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   if (value.labelPosition !== 'end') {
-    props.push(`labelPosition='${value.labelPosition}'`);
+    props.push(`labelPosition={${JSON.stringify(value.labelPosition)}}`);
   }
 
   const propsText = props.length === 0 ? '' : `\n  ${props.join('\n  ')}\n`;
