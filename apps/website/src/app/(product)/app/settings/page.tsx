@@ -1,5 +1,19 @@
-import { SettingsGeneral } from '@/product-app/AppShell';
+import { SettingsGeneral } from '@/product-app/AccountSettings';
 
-export default function VelliraSettingsPage() {
-  return <SettingsGeneral />;
+type SettingsPageProps = {
+  searchParams: Promise<{ section?: string | string[] }>;
+};
+
+export default async function VelliraSettingsPage({
+  searchParams,
+}: SettingsPageProps) {
+  const { section: requested } = await searchParams;
+  const section =
+    requested === 'security' ||
+    requested === 'workspace' ||
+    requested === 'appearance'
+      ? requested
+      : 'account';
+
+  return <SettingsGeneral section={section} />;
 }
