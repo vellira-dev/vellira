@@ -344,8 +344,7 @@
   outline-offset: 4px;
 }
 
-.mobileNavigation,
-.mobileNavigationRow {
+.mobileNavigationLayer {
   display: none;
 }
 
@@ -591,8 +590,95 @@
   .navLabel,
   .toggleLabel,
   .navTrailing,
-  .desktopNavigation aside section nav > div > a {
+  .desktopNavigation aside section nav > div > a,
+  .mobileNavigationLayer,
+  .mobileNavigationBackdrop,
+  .mobileNavigationSurface {
     transition: none;
+  }
+}
+
+@media (width <= 1100px) {
+  /* Match the component catalog breakpoint: no compressed desktop sidebar
+     or anonymous Select selector on tablet/phone. */
+  .body,
+  .shell[data-sidebar-collapsed='true'] .body {
+    display: block;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobileNavigationLayer {
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
+    z-index: var(--z-index-modal);
+    display: block;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear var(--portal-navigation-duration);
+  }
+
+  .mobileNavigationLayerOpen {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .mobileNavigationBackdrop {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    background: color-mix(in srgb, var(--text-primary) 48%, transparent);
+    border: 0;
+    opacity: 0;
+    transition: opacity var(--portal-navigation-duration)
+      var(--portal-navigation-easing);
+  }
+
+  .mobileNavigationLayerOpen .mobileNavigationBackdrop {
+    opacity: 1;
+  }
+
+  .mobileNavigationSurface {
+    position: absolute;
+    inset: 0 auto 0 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: min(calc(var(--explorer-sidebar-width) + var(--space-4)), 100vw);
+    min-height: 0;
+    padding: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--surface-panel);
+    border-right: 1px solid var(--border-muted);
+    transform: translateX(-100%);
+    transition: transform var(--portal-navigation-duration)
+      var(--portal-navigation-easing);
+  }
+
+  .mobileNavigationLayerOpen .mobileNavigationSurface {
+    transform: translateX(0);
+  }
+
+  .drawerNavigation {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .drawerNavigation aside > div {
+    padding: var(--space-6) var(--space-4) var(--space-8);
+  }
+
+  .drawerNavigation aside section nav > div > a {
+    min-height: 44px;
+  }
+
+  .content {
+    width: 100%;
+    max-width: none;
   }
 }
 
@@ -609,36 +695,6 @@
   .verificationAction {
     grid-column: 1 / -1;
     justify-self: start;
-  }
-
-  .body,
-  .shell[data-sidebar-collapsed='true'] .body {
-    display: block;
-  }
-
-  .sidebar {
-    display: none;
-  }
-
-  .body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .mobileNavigationRow {
-    display: block;
-    padding: var(--space-4);
-    background: var(--surface-default);
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  /* AppNavigation provides two presentations. On mobile show only its
-     canonical Select, not a second desktop sidebar below the header. */
-  .mobileNavigationRow .desktopNavigation {
-    display: none;
-  }
-
-  .mobileNavigationRow .mobileNavigation {
-    display: block;
   }
 
   .content {
