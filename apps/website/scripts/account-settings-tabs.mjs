@@ -83,11 +83,13 @@ try {
       const wrapper = radio.closest('label');
       const control = wrapper?.querySelector('input + span');
       const icon = wrapper?.querySelector('svg');
+      const text = icon?.nextElementSibling;
       const card = wrapper?.getBoundingClientRect();
       const circle = control?.getBoundingClientRect();
       const iconBox = icon?.getBoundingClientRect();
-      if (!card || !circle || !iconBox) {
-        throw new Error('Theme choice, radio circle or icon is missing');
+      const textBox = text?.getBoundingClientRect();
+      if (!card || !circle || !iconBox || !textBox) {
+        throw new Error('Theme choice, radio circle, icon or label is missing');
       }
       return {
         left: card.left,
@@ -95,8 +97,10 @@ try {
         width: card.width,
         circleInset: circle.left - card.left,
         iconInset: iconBox.left - card.left,
+        cardCenterY: card.top + card.height / 2,
         circleCenterY: circle.top + circle.height / 2,
         iconCenterY: iconBox.top + iconBox.height / 2,
+        textCenterY: textBox.top + textBox.height / 2,
       };
     });
     return {
@@ -131,9 +135,12 @@ try {
   );
   assert.ok(
     themeLayout.items.every(
-      (item) => Math.abs(item.circleCenterY - item.iconCenterY) <= 4
+      (item) =>
+        Math.abs(item.circleCenterY - item.iconCenterY) <= 2 &&
+        Math.abs(item.iconCenterY - item.textCenterY) <= 2 &&
+        Math.abs(item.cardCenterY - item.iconCenterY) <= 2
     ),
-    'Each radio and theme icon must share a common vertical centerline'
+    'Radio circle, theme icon and text must share the vertical center of every card'
   );
 
   await page.getByText('Dark', { exact: true }).click();
