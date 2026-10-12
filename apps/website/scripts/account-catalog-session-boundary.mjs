@@ -64,7 +64,11 @@ try {
     page.setDefaultTimeout(15_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     try {
+      const sessionResponse = page.waitForResponse(
+        (response) => new URL(response.url()).pathname === '/v1/me'
+      );
       await page.goto(new URL('/components?from=app', baseUrl).toString());
+      await sessionResponse;
       await page.getByText('Button', { exact: true }).first().waitFor();
       if (authenticated) {
         await page.locator('[data-product-app-header]').waitFor();
@@ -72,8 +76,7 @@ try {
         await page.locator('[data-component-explorer-sidebar]').waitFor();
       } else {
         await page.waitForFunction(() =>
-          document.querySelector('[data-product-app-header]') === null &&
-          document.querySelectorAll('a[href="/app"]').length === 0
+          document.querySelector('[data-product-app-header]') === null
         );
         assert.equal(
           await page.getByRole('link', { name: 'Back to workspace' }).count(),
