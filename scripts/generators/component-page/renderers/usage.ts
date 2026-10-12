@@ -61,7 +61,7 @@ export function renderUsage(params: {
         !controlledProps.has('description') &&
         hasApiProp(platform, 'description') &&
         !hasPropBinding(demoProps, 'description')
-          ? encodeStaticShortcut('description', componentConfig.demo.description)`
+          ? encodeStaticShortcut('description', componentConfig.demo.description)
           : null,
       ].filter((prop): prop is string => Boolean(prop))
     )
