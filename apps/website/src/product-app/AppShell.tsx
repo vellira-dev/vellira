@@ -235,7 +235,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
           appearance='bare'
           type='button'
           className={styles.mobileNavigationBackdrop}
-          aria-label='Close workspace navigation'
+          aria-label='Dismiss workspace navigation'
           onClick={() => {
             setMobileMenuOpen(false);
             mobileMenuTriggerRef.current?.focus();
