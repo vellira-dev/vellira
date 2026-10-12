@@ -144,6 +144,29 @@ describe('renderUsage', () => {
     );
   });
 
+  it('does not duplicate a controlled label or description in copyable JSX', () => {
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: {
+          label: 'Profile',
+          description: 'Owner',
+          initialValues: { label: 'Profile', description: 'Owner' },
+        },
+      },
+      playgroundProps: [label, description],
+      reactApiProps: [label, description],
+      nativeApiProps: [label, description],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+
+    expect(result.content).not.toContain("label='Profile'");
+    expect(result.content).not.toContain("description='Owner'");
+    expect(result.content).toContain('JSON.stringify(value.label)');
+    expect(result.content).toContain('JSON.stringify(value.description)');
+  });
+
   it('does not emit unsupported or duplicate demo shortcut props', () => {
     const unsupported = renderUsage({
       componentName: 'Accordion',

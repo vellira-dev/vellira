@@ -36,6 +36,8 @@ export function renderUsage(params: {
     return new RegExp(`(^|\\s)${propName}\\s*=`).test(source);
   }
 
+  const controlledProps = new Set(playgroundProps.map((prop) => prop.name));
+
   function createUsageStaticProps(platform: Platform) {
     const demoProps = getDemoProps(platform);
 
@@ -43,11 +45,13 @@ export function renderUsage(params: {
       [
         demoProps || null,
         componentConfig.demo?.label &&
+        !controlledProps.has('label') &&
         hasApiProp(platform, 'label') &&
         !hasPropBinding(demoProps, 'label')
           ? `label='${componentConfig.demo.label}'`
           : null,
         componentConfig.demo?.description &&
+        !controlledProps.has('description') &&
         hasApiProp(platform, 'description') &&
         !hasPropBinding(demoProps, 'description')
           ? `description='${componentConfig.demo.description}'`
