@@ -52,6 +52,14 @@ export function ComponentNavigationShell({
     <>
       {!mobileOnly && (
         <div className={styles.desktop}>
+          {fromWorkspace && (
+            <nav className={styles.workspaceReturn} aria-label='Workspace navigation'>
+              <Link href='/app' className={styles.workspaceReturnLink}>
+                <ArrowLeft size={16} aria-hidden='true' />
+                <span>Back to workspace</span>
+              </Link>
+            </nav>
+          )}
           <div className={styles.desktopList}>
             <ComponentSidebar activeSlug={activeSlug} />
           </div>
@@ -90,8 +98,17 @@ export function ComponentNavigationShell({
               className={styles.mobilePanel}
               aria-label='Component navigation'
             >
-              {!fromWorkspace && (
-                <div className={styles.mainNavigation}>
+              <div className={styles.mainNavigation}>
+                {fromWorkspace ? (
+                  <Link
+                    href='/app'
+                    className={styles.mainNavigationButton}
+                    onClick={closeNavigation}
+                  >
+                    <ArrowLeft size={16} aria-hidden='true' />
+                    <span>Back to workspace</span>
+                  </Link>
+                ) : (
                   <Button
                     appearance='bare'
                     type='button'
@@ -101,8 +118,8 @@ export function ComponentNavigationShell({
                     <ArrowLeft size={16} aria-hidden='true' />
                     <span>Main navigation</span>
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className={styles.mobilePanelContent}>
                 <ComponentSidebar
