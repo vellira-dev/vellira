@@ -31,8 +31,8 @@ jobs:
         run: pnpm exec turbo run build --filter='@vellira-ui/website^...'
       - name: Prepare canonical website packages and icons
         run: pnpm --dir apps/website run predev
-      # Regression retry: expanded Sidebar links must remain enabled; mobile
-      # account navigation and Settings Workspace headings are scoped correctly.
+      # Final browser retry: navigation is enabled; site backdrop has a
+      # distinct name; scroll and appearance checks assert real invariants.
       - name: Execute browser acceptance against a real dev preview
         env:
           NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW: '1'
