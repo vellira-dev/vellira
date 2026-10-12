@@ -49,9 +49,11 @@ export function ComponentNavigationProvider({
   // entered via /components?from=app. Preserve that context across sibling
   // component routes without storing any account/session data.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('from') === 'app') {
-      setFromWorkspace(true);
-    }
+    // Route navigation away from ?from=app must restore the public catalog.
+    // Do not persist account-only presentation on subsequent ordinary links.
+    setFromWorkspace(
+      new URLSearchParams(window.location.search).get('from') === 'app'
+    );
   }, [pathname]);
 
   useEffect(() => {
