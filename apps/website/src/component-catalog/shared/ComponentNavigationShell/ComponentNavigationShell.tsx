@@ -92,14 +92,15 @@ export function ComponentNavigationShell({
             >
               <div className={styles.mainNavigation}>
                 {fromWorkspace ? (
-                  <Link
-                    href='/app'
+                  <Button
+                    appearance='bare'
+                    type='button'
                     className={styles.mainNavigationButton}
-                    onClick={closeNavigation}
+                    onClick={switchToMainNavigation}
                   >
                     <ArrowLeft size={16} aria-hidden='true' />
                     <span>Back to workspace</span>
-                  </Link>
+                  </Button>
                 ) : (
                   <Button
                     appearance='bare'
