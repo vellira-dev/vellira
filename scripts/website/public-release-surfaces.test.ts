@@ -49,7 +49,7 @@ describe('shared npm-verified version on public sites', () => {
     );
   });
 
-  it('shows homepage npm state without empty pill decorations', () => {
+  it('only shows verified homepage npm versions without pill decorations', () => {
     const version = read(
       'apps/website/src/components/release/PublishedNpmVersion.tsx'
     );
@@ -60,9 +60,10 @@ describe('shared npm-verified version on public sites', () => {
       'apps/website/src/sections/home/Roadmap/Roadmap.module.css'
     );
 
-    expect(version).toContain("checked ? 'Unavailable' : 'Checking…'");
-    expect(version).toContain('release ? `v${release.version}`');
-    expect(version).toContain('data-release-state=');
+    expect(version).toContain('if (!release) return null;');
+    expect(version).toContain('`v${release.version}`');
+    expect(version).not.toContain('Checking…');
+    expect(version).not.toContain('Unavailable');
 
     for (const [css, selector] of [
       [workflowCss, '.releaseVersion {'],
