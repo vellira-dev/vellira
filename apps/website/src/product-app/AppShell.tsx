@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { Warning, User, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
-import { Button, Dropdown, Portal, Select, Tooltip } from '@vellira-ui/react';
+import { Warning, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
+import { Button, Portal, Select, Tooltip } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
-import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { AppSessionProvider, useAppSession } from './AppSession';
+import { AppHeader } from './AppHeader';
 import { resendCurrentVerification, VelliraApiError } from './api';
 
 import styles from './AppShell.module.css';
@@ -95,10 +94,8 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
 }
 
 function AppShellContent({ children }: { children: ReactNode }) {
-  const { status, me, workspace, error, refresh, signOut } = useAppSession();
-  const router = useRouter();
+  const { status, me, error, refresh } = useAppSession();
   const [resendingVerification, setResendingVerification] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<string>();
   const [verificationError, setVerificationError] = useState<string>();
@@ -149,51 +146,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
   return (
     <div className={styles.shell} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}>
-      <header className={styles.header}>
-        <Link href='/app' className={styles.brand} aria-label='Vellira home'>
-          <Image
-            src='/brand/logos/logo-gradient.svg'
-            alt='Vellira'
-            width={100}
-            height={32}
-            preload
-          />
-        </Link>
-
-        <div className={styles.headerContext}>
-          <span className={styles.workspaceName}>{workspace?.name}</span>
-          <ThemeSwitcher />
-          <Dropdown color='neutral' placement='bottom-end'>
-            <Dropdown.Trigger asChild>
-              <Button
-                appearance='ghost'
-                color='neutral'
-                size='sm'
-                iconOnly
-                iconStart={<User size={20} aria-hidden='true' />}
-                aria-label='Account menu'
-              />
-            </Dropdown.Trigger>
-            <Dropdown.Content>
-              <Dropdown.Item onSelect={() => router.push('/app/settings')}>
-                Account settings
-              </Dropdown.Item>
-              <Dropdown.Separator />
-              <Dropdown.Item
-                color='danger'
-                disabled={signingOut}
-                onSelect={() => {
-                  if (signingOut) return;
-                  setSigningOut(true);
-                  void signOut().finally(() => setSigningOut(false));
-                }}
-              >
-                Sign out
-              </Dropdown.Item>
-            </Dropdown.Content>
-          </Dropdown>
-        </div>
-      </header>
+      <AppHeader />
 
       {process.env.NODE_ENV === 'development' &&
         process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1' && (
