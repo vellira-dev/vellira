@@ -38,6 +38,9 @@ jobs:
             apps/website/src/product-app/AppShell.tsx \
             apps/website/src/product-app/BillingSettings.tsx \
             apps/website/src/product-app/EmailVerificationResend.tsx
+          # CSS formatting in this large app shell needs a second canonical pass.
+          # Check immediately afterward so we never commit non-idempotent output.
+          pnpm exec prettier --write apps/website/src/product-app/AppShell.module.css
           pnpm exec prettier --check \
             apps/website/src/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.tsx \
             apps/website/src/components/layout/SiteHeader/SiteHeader.module.css \
