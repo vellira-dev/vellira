@@ -22,6 +22,8 @@
     "test:account-components-navigation": "node scripts/account-components-navigation.mjs",
     "test:account-header-menu": "node scripts/account-header-menu.mjs",
     "test:account-settings-tabs": "node scripts/account-settings-tabs.mjs",
+    "test:account-email-verification-preview": "node scripts/account-email-verification-preview.mjs",
+    "test:account-verification-tab-refresh": "node scripts/account-verification-tab-refresh.mjs",
     "sync:icons": "pnpm --filter @vellira-ui/icons build"
   },
   "dependencies": {
