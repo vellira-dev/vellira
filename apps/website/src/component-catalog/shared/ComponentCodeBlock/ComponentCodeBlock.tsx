@@ -11,11 +11,13 @@ import styles from './ComponentCodeBlock.module.css';
 type ComponentCodeBlockProps = {
   code: string;
   language?: 'tsx';
+  copyEnabled?: boolean;
 };
 
 export function ComponentCodeBlock({
   code,
   language = 'tsx',
+  copyEnabled = true,
 }: ComponentCodeBlockProps) {
   const [copied, setCopied] = useState(false);
   const [html, setHtml] = useState('');
@@ -48,6 +50,7 @@ export function ComponentCodeBlock({
   }, [code, language]);
 
   const copyCode = async () => {
+    if (!copyEnabled) return;
     await navigator.clipboard.writeText(code);
 
     setCopied(true);
@@ -67,6 +70,7 @@ export function ComponentCodeBlock({
           type='button'
           className={styles.copy}
           onClick={copyCode}
+          disabled={!copyEnabled}
         >
           {copied ? 'Copied' : 'Copy'}
         </Button>

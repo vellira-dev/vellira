@@ -166,6 +166,105 @@ function Example() {
 \${children}
 </${componentName}>\`;`;
 
+  function omissionDefault(prop: ExtractedProp, platform: Platform) {
+    return (
+      (platform === 'react'
+        ? componentConfig.defaults?.react?.[prop.name]
+        : componentConfig.defaults?.native?.[prop.name]) ??
+      componentConfig.defaults?.shared?.[prop.name]
+    );
+  }
+
+  function renderDynamicProp(prop: ExtractedProp) {
+    const react = reactApiProps.find((candidate) => candidate.name === prop.name);
+    const native = nativeApiProps.find((candidate) => candidate.name === prop.name);
+    const onReact = Boolean(react);
+    const onNative = Boolean(native);
+    const platformGuard = onReact && onNative
+      ? ''
+      : onReact
+        ? "platform === 'react'"
+        : "platform === 'react-native'";
+    const value = `value.${prop.name}`;
+    const reactDefault = omissionDefault(prop, 'react');
+    const nativeDefault = omissionDefault(prop, 'react-native');
+
+    function differentFromOmissionDefault() {
+      const compare = (known: string | number | boolean | undefined) =>
+        known === undefined ? 'true' : `${value} !== ${toTsLiteral(known)}`;
+      if (onReact && onNative) {
+        if (reactDefault === nativeDefault) return compare(reactDefault);
+        return `(platform === 'react' ? ${compare(reactDefault)} : ${compare(nativeDefault)})`;
+      }
+      return compare(onReact ? reactDefault : nativeDefault);
+    }
+
+    function emit(statement: string, condition?: string) {
+      const checks = [platformGuard, condition].filter(
+        (part): part is string => Boolean(part) && part !== 'true'
+      );
+      return checks.length
+        ? `  if (${checks.join(' && ')}) {\n    ${statement}\n  }`
+        : `  ${statement}`;
+    }
+
+    const required = Boolean(react?.required || native?.required);
+    if (prop.kind === 'boolean') {
+      if (required || reactDefault === true || nativeDefault === true) {
+        const statement = `props.push(\`${prop.name}={\${${value}}}\`);`;
+        return emit(statement, required ? undefined : differentFromOmissionDefault());
+      }
+      return emit(`props.push('${prop.name}');`, value);
+    }
+
+    if (prop.kind === 'string') {
+      // Serialize the actual string as a JSX expression, not an unescaped
+      // quoted attribute. Quotes, apostrophes, braces and newlines stay safe.
+      const statement = `props.push(\`${prop.name}={\${JSON.stringify(${value})}}\`);`;
+      if (required) {
+        const requiredOnlyOnOnePlatform =
+          (react?.required && native && !native.required) ||
+          (native?.required && react && !react.required);
+        const condition = requiredOnlyOnOnePlatform
+          ? `(${react?.required ? "platform === 'react'" : "platform === 'react-native'"} || ${value})`
+          : undefined;
+        return emit(statement, condition);
+      }
+      // A cleared optional string must still override a nonempty default.
+      if (reactDefault || nativeDefault) return emit(statement, differentFromOmissionDefault());
+      return emit(statement, value);
+    }
+
+    // Selects and numbers must not be omitted simply because the current
+    // playground value equals the demo initial value. Only a configured
+    // omission default may justify leaving that value out of copied JSX.
+    const statement = `props.push(\`${prop.name}={\${JSON.stringify(${value})}}\`);`;
+    return emit(statement, differentFromOmissionDefault());
+  }
+
+  const dynamicPropHandlers = playgroundProps.map(renderDynamicProp).join('\n\n');
+  const requiredStringControls = playgroundProps.flatMap((prop) => {
+    if (prop.kind !== 'string') return [];
+    const onReact = reactApiProps.some(
+      (candidate) => candidate.name === prop.name && candidate.required
+    );
+    const onNative = nativeApiProps.some(
+      (candidate) => candidate.name === prop.name && candidate.required
+    );
+    if (!onReact && !onNative) return [];
+    const platform = onReact && onNative
+      ? ''
+      : onReact
+        ? "platform === 'react' && "
+        : "platform === 'react-native' && ";
+    return [`(${platform}!value.${prop.name}.trim())`];
+  });
+  const missingRequiredDeclaration = requiredStringControls.length
+    ? `  const hasMissingRequiredValue = ${requiredStringControls.join(' || ')};\n\n`
+    : '';
+  const codeBlock = requiredStringControls.length
+    ? `      {hasMissingRequiredValue && (\n        <p role='alert' className={styles.description}>\n          Complete the required fields before copying this example.\n        </p>\n      )}\n      <ComponentCodeBlock code={code} copyEnabled={!hasMissingRequiredValue} />`
+    : '      <ComponentCodeBlock code={code} />';
   const content = `${generatedFileHeader}'use client';
 
 import type { ComponentPlatform } from '../../types';
@@ -197,53 +296,7 @@ ${nativeUsageStaticProps}
       ? ${toTemplateLiteral(reactUsageChildren)}
       : ${toTemplateLiteral(nativeUsageChildren)};
 
-${playgroundProps
-  .map((prop) => {
-    const supportedOnReact = reactApiPropNames.has(prop.name);
-    const supportedOnNative = nativeApiPropNames.has(prop.name);
-
-    const platformGuard =
-      supportedOnReact && supportedOnNative
-        ? ''
-        : supportedOnReact
-          ? `platform === 'react' && `
-          : `platform === 'react-native' && `;
-
-    const initialValue = componentConfig.demo?.initialValues?.[prop.name];
-
-    if (prop.kind === 'boolean') {
-      return `  if (${platformGuard}value.${prop.name}) {
-    props.push('${prop.name}');
-  }`;
-    }
-
-    if (prop.kind === 'string') {
-      return `  if (${platformGuard}value.${prop.name}) {
-    props.push(\`${prop.name}='\${value.${prop.name}}'\`);
-  }`;
-    }
-
-    if (prop.kind === 'number') {
-      return `  if (${platformGuard}value.${prop.name} !== ${toTsLiteral(
-        initialValue ?? 0
-      )}) {
-    props.push(\`${prop.name}={\${value.${prop.name}}}\`);
-  }`;
-    }
-
-    if (prop.kind === 'select') {
-      return `  if (${platformGuard}value.${prop.name} !== ${toTsLiteral(
-        initialValue ?? prop.options[0] ?? ''
-      )}) {
-    props.push(\`${prop.name}='\${value.${prop.name}}'\`);
-  }`;
-    }
-
-    return `  if (${platformGuard}value.${prop.name}) {
-    props.push(\`${prop.name}='\${value.${prop.name}}'\`);
-  }`;
-  })
-  .join('\n\n')}
+${dynamicPropHandlers}
 
   const propsText =
     props.length === 0 ? '' : \`\\n  \${props.join('\\n  ')}\\n\`;
@@ -253,7 +306,7 @@ ${setupAwareCode}
 export function ${componentName}Usage({
   platform,
 }: ${componentName}UsageProps) {
-${demoStateUsage}  const code = create${componentName}Code(platform${usageValueArgument});
+${demoStateUsage}${missingRequiredDeclaration}  const code = create${componentName}Code(platform${usageValueArgument});
 
   return (
     <section className={styles.root}>
@@ -266,7 +319,7 @@ ${demoStateUsage}  const code = create${componentName}Code(platform${usageValueA
         </p>
       </div>
 
-      <ComponentCodeBlock code={code} />
+${codeBlock}
     </section>
   );
 }

@@ -72,6 +72,10 @@ const componentConfig = {
       loop: true,
     },
   },
+  defaults: {
+    shared: { orientation: 'horizontal' },
+    react: { activationMode: 'automatic', dir: 'ltr' },
+  },
 } satisfies ComponentPageMetadata;
 
 describe('renderUsage', () => {
@@ -239,5 +243,103 @@ describe('renderUsage', () => {
     expect(result.content).toContain(
       "return `import { Example } from '${packageName}';"
     );
+  });
+
+  it('uses the omission default, not the initial playground selection', () => {
+    const size: ExtractedProp = {
+      name: 'size',
+      kind: 'select',
+      type: "'sm' | 'md' | 'lg'",
+      options: ['sm', 'md', 'lg'],
+      required: false,
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: { initialValues: { size: 'sm' } },
+        defaults: { shared: { size: 'md' } },
+      },
+      playgroundProps: [size],
+      reactApiProps: [size],
+      nativeApiProps: [size],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain("if (value.size !== 'md')");
+    expect(result.content).not.toContain("value.size !== 'sm'");
+    expect(result.content).toContain('JSON.stringify(value.size)');
+  });
+
+  it('always represents required strings and disables copying invalid empty controls', () => {
+    const name: ExtractedProp = {
+      name: 'name',
+      kind: 'string',
+      type: 'string',
+      required: true,
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: { defaults: { shared: { name: 'Sample user' } } },
+      playgroundProps: [name],
+      reactApiProps: [name],
+      nativeApiProps: [name],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain('JSON.stringify(value.name)');
+    expect(result.content).toContain('!value.name.trim()');
+    expect(result.content).toContain('copyEnabled={!hasMissingRequiredValue}');
+    expect(result.content).toContain("role='alert'");
+    expect(result.content).not.toContain('if (value.name)');
+  });
+
+  it('uses distinct platform omission defaults without losing selected values', () => {
+    const placement: ExtractedProp = {
+      name: 'placement',
+      kind: 'select',
+      type: "'top' | 'bottom'",
+      options: ['top', 'bottom'],
+      required: false,
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: { initialValues: { placement: 'bottom' } },
+        defaults: {
+          react: { placement: 'bottom' },
+          native: { placement: 'top' },
+        },
+      },
+      playgroundProps: [placement],
+      reactApiProps: [placement],
+      nativeApiProps: [placement],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain("platform === 'react' ? value.placement !== 'bottom' : value.placement !== 'top'");
+  });
+
+  it('does not treat an unknown default as the current demo value', () => {
+    const amount: ExtractedProp = {
+      name: 'amount',
+      kind: 'number',
+      type: 'number',
+      required: false,
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: { demo: { initialValues: { amount: 0 } } },
+      playgroundProps: [amount],
+      reactApiProps: [amount],
+      nativeApiProps: [amount],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain('props.push(`amount={${JSON.stringify(value.amount)}}`);');
+    expect(result.content).not.toContain('value.amount !== 0');
   });
 });
