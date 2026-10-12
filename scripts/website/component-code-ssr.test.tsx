@@ -1,9 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import {
-  ComponentCodeBlock,
-} from '@/component-catalog/shared/ComponentCodeBlock';
+import { ComponentCodeBlock } from '@/component-catalog/shared/ComponentCodeBlock';
 
 describe('component examples in initial HTML', () => {
   it('server-renders TypeScript examples before highlighting', () => {
