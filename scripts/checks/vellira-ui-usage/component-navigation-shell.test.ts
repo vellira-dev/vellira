@@ -51,7 +51,8 @@ function navigationControls() {
   }
 
   visit(sourceFile);
-  expect(controls).toHaveLength(2);
+  // The backdrop and the two mutually exclusive main-navigation branches.
+  expect(controls).toHaveLength(3);
   return controls;
 }
 
@@ -101,7 +102,7 @@ describe('ComponentNavigationShell canonical controls', () => {
       (finding) => finding.ruleId === 'vellira-ui.existing-component-bypass'
     );
 
-    expect(bypasses).toHaveLength(2);
+    expect(bypasses).toHaveLength(3);
     expect(bypasses.every(({ detected }) => detected === 'button')).toBe(true);
   });
 });

@@ -23,6 +23,7 @@ export function HeaderBrand({
   return (
     <Link
       href={href}
+      prefetch
       className={[styles.brand, className].filter(Boolean).join(' ')}
       aria-label={ariaLabel}
       onClick={onClick}

@@ -42,10 +42,10 @@ export async function runRecoverableClientNavigation({
   throw new Error(`Client navigation did not recover during ${stage}.`);
 }
 
-// SiteHeader's compact breakpoint is 1280px, but the component drawer is
-// available only through 1100px. At 1280px the portal's canonical global exit
-// is its Next Link brand. Each route hop must use the caller's same-document,
-// destination-specific recovery contract; opening a menu is preparation only.
+// The 1101-1280px Components portal now exposes the marketing navigation
+// directly; at 1100px and below the component drawer uses its shared brand
+// link to reach the main site. Each hop retains the caller's same-document,
+// destination-specific recovery contract; menu opening is preparation only.
 export async function navigateToBlogAcrossSiteSurface({ page, navigate }) {
   const controls = () => ({
     primary: page
@@ -63,7 +63,7 @@ export async function navigateToBlogAcrossSiteSurface({ page, navigate }) {
       exact: true,
     }),
     brand: page.locator('header').getByRole('link', {
-      name: 'Vellira',
+      name: 'Vellira home',
       exact: true,
     }),
   });

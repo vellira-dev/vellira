@@ -7,6 +7,10 @@ const siteHeaderSource = readFileSync(
   resolve('apps/website/src/components/layout/SiteHeader/SiteHeader.tsx'),
   'utf8'
 );
+const headerChromeSource = readFileSync(
+  resolve('apps/website/src/components/layout/HeaderChrome/HeaderChrome.tsx'),
+  'utf8'
+);
 const siteFooterSource = readFileSync(
   resolve('apps/website/src/components/layout/SiteFooter/SiteFooter.tsx'),
   'utf8'
@@ -20,9 +24,8 @@ describe('site navigation prefetch policy', () => {
     const footerSectionPrefetch =
       "prefetch={link.href.startsWith('/#') ? false : undefined}";
 
-    expect(siteHeaderSource).toContain(
-      "<Link href='/' prefetch className={styles.brand}>"
-    );
+    expect(siteHeaderSource).toContain("brandHref='/'");
+    expect(headerChromeSource).toMatch(/<Link\s+href=\{href\}\s+prefetch\b/u);
     expect(siteHeaderSource).not.toContain('router.prefetch(');
     expect(siteHeaderSource).toContain(desktopPagePrefetch);
     expect(siteHeaderSource).toContain(mobileSectionPrefetch);

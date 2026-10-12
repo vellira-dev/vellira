@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ComponentsCatalog } from '../../../apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog';
+import { ComponentNavigationProvider } from '../../../apps/website/src/component-catalog/shared/ComponentNavigationProvider/ComponentNavigationProvider';
 import {
   PlaygroundControlGroup,
   PlaygroundNumberInput,
@@ -22,7 +23,10 @@ import {
 import { HeaderSearch } from '../../../apps/website/src/components/layout/SiteHeader/HeaderSearch/HeaderSearch';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => '/components',
+}));
 vi.mock('@/component-catalog', () => ({
   webComponents: [
     {
@@ -162,7 +166,11 @@ describe('canonical first-party input and button behavior', () => {
   });
 
   it('preserves catalog filtering, empty state and one-action reset', () => {
-    render(<ComponentsCatalog />);
+    render(
+      <ComponentNavigationProvider>
+        <ComponentsCatalog />
+      </ComponentNavigationProvider>
+    );
     const search = screen.getByRole('searchbox', { name: 'Search components' });
     expect(search).toHaveAttribute('autocomplete', 'on');
     fireEvent.change(search, { target: { value: 'does-not-exist' } });

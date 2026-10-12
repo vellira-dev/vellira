@@ -124,7 +124,7 @@ export async function verifySiteNavigationSurfaces(baseUrl) {
       { width: 1440, start: '/', hops: ['/blog'] },
       { width: 1280, start: '/', hops: ['/blog'] },
       { width: 390, start: '/', hops: ['/blog'] },
-      { width: 1280, start: '/components/tooltip', hops: ['/', '/blog'] },
+      { width: 1280, start: '/components/tooltip', hops: ['/blog'] },
     ]) {
       const context = await browser.newContext({
         viewport: { width, height: 900 },
@@ -154,8 +154,18 @@ export async function verifySiteNavigationSurfaces(baseUrl) {
           assert.equal(
             await page
               .getByRole('button', { name: 'Open navigation', exact: true })
-              .count(),
-            0
+              .isVisible(),
+            true,
+            'The tablet portal must expose the marketing menu directly.'
+          );
+          assert.equal(
+            await page
+              .getByRole('button', {
+                name: 'Open component navigation',
+                exact: true,
+              })
+              .isVisible(),
+            false
           );
           assert.equal(
             await page
