@@ -94,3 +94,4 @@ jobs:
             exit 1
           fi
           WEBSITE_URL=http://127.0.0.1:3002 pnpm --dir apps/website run test:account-catalog-session-boundary
+          WEBSITE_URL=http://127.0.0.1:3002 pnpm --dir apps/website run test:account-billing-session-boundary
