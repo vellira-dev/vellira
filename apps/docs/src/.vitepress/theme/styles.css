@@ -708,7 +708,8 @@ body {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
-  padding: 0 4px;
+  margin-inline-start: 20px;
+  padding: 0;
   color: var(--vp-c-text-2);
   font-size: 12px;
   line-height: 1.2;
@@ -746,6 +747,10 @@ body {
   display: flex;
   padding: 14px 24px;
   border-top: 1px solid var(--vp-c-divider);
+}
+
+.vellira-docs-release-mobile .vellira-docs-release {
+  margin-inline-start: 0;
 }
 
 .vellira-docs-release-mobile:empty {
