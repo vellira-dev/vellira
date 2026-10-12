@@ -79,35 +79,61 @@ try {
       throw new Error('Expected all four canonical theme radio choices');
     }
 
-    const bounds = Array.from(cards, (radio) =>
-      radio.closest('label')?.getBoundingClientRect()
-    );
-    if (bounds.some((box) => !box)) throw new Error('Theme card missing');
-    const first = bounds[0];
-    const last = bounds[bounds.length - 1];
-    const parent = group.getBoundingClientRect();
+    const items = Array.from(cards, (radio) => {
+      const wrapper = radio.closest('label');
+      const control = wrapper?.querySelector('input + span');
+      const icon = wrapper?.querySelector('svg');
+      const card = wrapper?.getBoundingClientRect();
+      const circle = control?.getBoundingClientRect();
+      const iconBox = icon?.getBoundingClientRect();
+      if (!card || !circle || !iconBox) {
+        throw new Error('Theme choice, radio circle or icon is missing');
+      }
+      return {
+        left: card.left,
+        top: card.top,
+        width: card.width,
+        circleInset: circle.left - card.left,
+        iconInset: iconBox.left - card.left,
+        circleCenterY: circle.top + circle.height / 2,
+        iconCenterY: iconBox.top + iconBox.height / 2,
+      };
+    });
     return {
-      tops: bounds.map((box) => box.top),
-      center: (first.left + last.right) / 2,
-      parentCenter: parent.left + parent.width / 2,
-      widths: bounds.map((box) => box.width),
-      labels: Array.from(cards, (radio) => {
-        const label = radio.closest('label')?.querySelector('span:last-child');
-        return label ? window.getComputedStyle(label).whiteSpace : null;
-      }),
+      items,
+      groupLeft: group.getBoundingClientRect().left,
     };
   });
+
   assert.ok(
-    themeLayout.tops.every((top) => Math.abs(top - themeLayout.tops[0]) <= 1),
-    'All four themes must stay in a single row'
+    Math.abs(themeLayout.items[0].left - themeLayout.groupLeft) <= 1,
+    'Theme cards must begin at the left edge of the Theme group'
   );
   assert.ok(
-    Math.abs(themeLayout.center - themeLayout.parentCenter) <= 2,
-    'Theme choices must be horizontally centered'
+    themeLayout.items.every(
+      (item) => Math.abs(item.top - themeLayout.items[0].top) <= 1
+    ),
+    'All four themes must stay in one row'
   );
   assert.ok(
-    themeLayout.widths.every((width) => width >= 180),
-    'Theme cards must be wide enough for High contrast'
+    themeLayout.items.every(
+      (item) => Math.abs(item.width - themeLayout.items[0].width) <= 1
+    ),
+    'All four theme cards must have equal widths'
+  );
+  assert.ok(
+    themeLayout.items.every(
+      (item) =>
+        Math.abs(item.circleInset - themeLayout.items[0].circleInset) <= 1 &&
+        Math.abs(item.iconInset - themeLayout.items[0].iconInset) <= 1
+    ),
+    'Radio circles and icons must align in consistent slots within every card'
+  );
+  assert.ok(
+    themeLayout.items.every(
+      (item) => Math.abs(item.circleCenterY - item.iconCenterY) <= 4
+    ),
+    'Each radio and theme icon must share a common vertical centerline'
   );
 
   await page.getByText('Dark', { exact: true }).click();
