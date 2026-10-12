@@ -39,6 +39,31 @@ function activeHref(pathname: string) {
   return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
 }
 
+/** A disabled Tooltip.Trigger would disable its asChild Link.
+ * Expanded navigation must render a plain accessible link; only the collapsed
+ * icon rail needs the tooltip.
+ */
+function CollapsedNavTooltip({
+  collapsed,
+  label,
+  children,
+}: {
+  collapsed: boolean;
+  label: string;
+  children: ReactNode;
+}) {
+  if (!collapsed) return <>{children}</>;
+
+  return (
+    <Tooltip placement='right'>
+      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+      <Portal>
+        <Tooltip.Content>{label}</Tooltip.Content>
+      </Portal>
+    </Tooltip>
+  );
+}
+
 function AppNavigation({
   collapsed,
   navigationId,
@@ -64,78 +89,63 @@ function AppNavigation({
       <Sidebar ariaLabel='Account navigation'>
         <SidebarGroup label='Workspace'>
           <SidebarItem active={value === '/app'}>
-            <Tooltip placement='right' disabled={!collapsed}>
-              <Tooltip.Trigger asChild>
-                <Link
-                  href='/app'
-                  onClick={onNavigate}
-                  aria-label={collapsed ? 'Overview' : undefined}
-                  aria-current={value === '/app' ? 'page' : undefined}
-                >
-                  <span className={styles.navEntry}>
-                    <Grid size={18} aria-hidden='true' />
-                    <span className={styles.navLabel}>Overview</span>
-                  </span>
-                </Link>
-              </Tooltip.Trigger>
-              <Portal>
-                <Tooltip.Content>Overview</Tooltip.Content>
-              </Portal>
-            </Tooltip>
+            <CollapsedNavTooltip collapsed={collapsed} label='Overview'>
+              <Link
+                href='/app'
+                onClick={onNavigate}
+                aria-label={collapsed ? 'Overview' : undefined}
+                aria-current={value === '/app' ? 'page' : undefined}
+              >
+                <span className={styles.navEntry}>
+                  <Grid size={18} aria-hidden='true' />
+                  <span className={styles.navLabel}>Overview</span>
+                </span>
+              </Link>
+            </CollapsedNavTooltip>
           </SidebarItem>
           <SidebarItem>
-            <Tooltip placement='right' disabled={!collapsed}>
-              <Tooltip.Trigger asChild>
-                <Link
-                  href='/components?from=app'
-                  onClick={(event) => {
-                    if (onComponentsSwitch) {
-                      event.preventDefault();
-                      onComponentsSwitch();
-                    } else {
-                      onNavigate?.();
-                    }
-                  }}
-                  aria-label={collapsed ? 'Components' : undefined}
-                >
-                  <span className={styles.navEntry}>
-                    <Platforms size={18} aria-hidden='true' />
-                    <span className={styles.navLabel}>Components</span>
-                  </span>
-                  <ChevronRight
-                    className={styles.navTrailing}
-                    size={16}
-                    aria-hidden='true'
-                  />
-                </Link>
-              </Tooltip.Trigger>
-              <Portal>
-                <Tooltip.Content>Components</Tooltip.Content>
-              </Portal>
-            </Tooltip>
+            <CollapsedNavTooltip collapsed={collapsed} label='Components'>
+              <Link
+                href='/components?from=app'
+                onClick={(event) => {
+                  if (onComponentsSwitch) {
+                    event.preventDefault();
+                    onComponentsSwitch();
+                  } else {
+                    onNavigate?.();
+                  }
+                }}
+                aria-label={collapsed ? 'Components' : undefined}
+              >
+                <span className={styles.navEntry}>
+                  <Platforms size={18} aria-hidden='true' />
+                  <span className={styles.navLabel}>Components</span>
+                </span>
+                <ChevronRight
+                  className={styles.navTrailing}
+                  size={16}
+                  aria-hidden='true'
+                />
+              </Link>
+            </CollapsedNavTooltip>
           </SidebarItem>
         </SidebarGroup>
         <SidebarGroup label='Resources'>
           <SidebarItem>
-            <Tooltip placement='right' disabled={!collapsed}>
-              <Tooltip.Trigger asChild>
-                <a
-                  href='https://docs.vellira.dev/start/getting-started'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  onClick={onNavigate}
-                  aria-label={collapsed ? 'Docs' : undefined}
-                >
-                  <span className={styles.navEntry}>
-                    <Docs size={18} aria-hidden='true' />
-                    <span className={styles.navLabel}>Docs ↗</span>
-                  </span>
-                </a>
-              </Tooltip.Trigger>
-              <Portal>
-                <Tooltip.Content>Docs</Tooltip.Content>
-              </Portal>
-            </Tooltip>
+            <CollapsedNavTooltip collapsed={collapsed} label='Docs'>
+              <a
+                href='https://docs.vellira.dev/start/getting-started'
+                target='_blank'
+                rel='noopener noreferrer'
+                onClick={onNavigate}
+                aria-label={collapsed ? 'Docs' : undefined}
+              >
+                <span className={styles.navEntry}>
+                  <Docs size={18} aria-hidden='true' />
+                  <span className={styles.navLabel}>Docs ↗</span>
+                </span>
+              </a>
+            </CollapsedNavTooltip>
           </SidebarItem>
         </SidebarGroup>
       </Sidebar>
