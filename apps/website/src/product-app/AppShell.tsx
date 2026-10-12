@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 import { Warning, Grid, Platforms, Docs, ChevronLeft, ChevronRight } from '@vellira-ui/icons';
 import { Button, Portal, Tooltip } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
+import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
 import { HeaderMenuButton } from '@/components/layout/HeaderChrome/HeaderMenuButton';
 
 import { AppSessionProvider, useAppSession } from './AppSession';
@@ -237,19 +237,12 @@ function AppShellContent({ children }: { children: ReactNode }) {
           aria-label='Workspace navigation'
         >
           <div className={componentDrawerStyles.mobileHeader}>
-            <Link
+            <HeaderBrand
               href='/app'
               className={componentDrawerStyles.mobileBrand}
-              aria-label='Vellira workspace'
+              ariaLabel='Vellira workspace'
               onClick={() => setMobileMenuOpen(false)}
-            >
-              <Image
-                src='/brand/logos/logo-gradient.svg'
-                alt='Vellira'
-                width={100}
-                height={32}
-              />
-            </Link>
+            />
           </div>
           <div className={componentDrawerStyles.mobilePanel}>
             <div className={componentDrawerStyles.mobilePanelContent}>
