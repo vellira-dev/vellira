@@ -56,8 +56,8 @@ jobs:
           fi
 
           result=0
-          # Full five-suite final acceptance after correcting the selected
-          # radio's transient animation in the theme geometry probe.
+          # Exact-head final acceptance after replacing unregistered
+          # catalog sticky-toolbar custom properties with scoped CSS selectors.
           for suite in \
             account-sidebar-geometry \
             account-components-navigation \
