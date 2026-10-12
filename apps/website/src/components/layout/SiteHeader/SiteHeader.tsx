@@ -186,255 +186,255 @@ export function SiteHeader({
       brandHref='/'
       headerClassName={navigationOpen ? styles.navigationOpen : undefined}
     >
-          <div className={styles.headerSearch}>
-            <HeaderSearch />
-          </div>
+      <div className={styles.headerSearch}>
+        <HeaderSearch />
+      </div>
 
-          {variant === 'marketing' && (
-            <div className={styles.mobileMenuTrigger}>
-              <HeaderMenuButton
-                open={resolvedMobileMenuOpen}
-                controls='mobile-site-navigation'
-                openLabel='Open navigation'
-                closeLabel='Close navigation'
-                onToggle={() =>
-                  setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)
-                }
-              />
-            </div>
-          )}
+      {variant === 'marketing' && (
+        <div className={styles.mobileMenuTrigger}>
+          <HeaderMenuButton
+            open={resolvedMobileMenuOpen}
+            controls='mobile-site-navigation'
+            openLabel='Open navigation'
+            closeLabel='Close navigation'
+            onToggle={() =>
+              setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)
+            }
+          />
+        </div>
+      )}
 
-          <nav className={styles.navigation} aria-label='Primary navigation'>
-            <Tabs
-              mode='navigation'
-              value={navigationValue}
-              onValueChange={setActiveHref}
-              variant='line'
-              size='sm'
-              className={styles.navigationTabs}
-            >
-              <Tabs.List className={styles.navigationList}>
-                {marketingNavigation.map((item) => (
-                  <Tabs.Trigger key={item.label} value={item.href} asChild>
-                    <Link
-                      href={item.href}
-                      prefetch={item.type === 'page'}
-                      className={styles.navigationLink}
-                      onClick={(event) => {
-                        if (item.type !== 'section' || pathname !== '/') {
-                          return;
-                        }
+      <nav className={styles.navigation} aria-label='Primary navigation'>
+        <Tabs
+          mode='navigation'
+          value={navigationValue}
+          onValueChange={setActiveHref}
+          variant='line'
+          size='sm'
+          className={styles.navigationTabs}
+        >
+          <Tabs.List className={styles.navigationList}>
+            {marketingNavigation.map((item) => (
+              <Tabs.Trigger key={item.label} value={item.href} asChild>
+                <Link
+                  href={item.href}
+                  prefetch={item.type === 'page'}
+                  className={styles.navigationLink}
+                  onClick={(event) => {
+                    if (item.type !== 'section' || pathname !== '/') {
+                      return;
+                    }
 
-                        event.preventDefault();
-                        setActiveHref(item.href);
-                        scrollToAnchor(item.hash);
-                      }}
-                    >
-                      <span>{item.label}</span>
+                    event.preventDefault();
+                    setActiveHref(item.href);
+                    scrollToAnchor(item.hash);
+                  }}
+                >
+                  <span>{item.label}</span>
 
-                      {'badge' in item && (
-                        <span className={styles.navigationBadge}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </Tabs.Trigger>
-                ))}
+                  {'badge' in item && (
+                    <span className={styles.navigationBadge}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              </Tabs.Trigger>
+            ))}
 
-                <Tabs.Indicator />
-              </Tabs.List>
-            </Tabs>
-          </nav>
+            <Tabs.Indicator />
+          </Tabs.List>
+        </Tabs>
+      </nav>
 
-          <div className={styles.actions}>
-            <div className={styles.themeAction}>
-              <ThemeSwitcher />
-            </div>
-          </div>
+      <div className={styles.actions}>
+        <div className={styles.themeAction}>
+          <ThemeSwitcher />
+        </div>
+      </div>
 
-          <div className={styles.externalActions}>
-            {externalNavigation.map((link) => (
-              <Button
-                key={link.label}
-                asChild
-                size='sm'
-                appearance='ghost'
-                shape='square'
-                iconOnly
-                className={styles.externalAction}
+      <div className={styles.externalActions}>
+        {externalNavigation.map((link) => (
+          <Button
+            key={link.label}
+            asChild
+            size='sm'
+            appearance='ghost'
+            shape='square'
+            iconOnly
+            className={styles.externalAction}
+            style={
+              {
+                '--icon-size': '24px',
+              } as CSSProperties
+            }
+            iconStart={
+              <span
+                className={styles.actionIcon}
                 style={
                   {
-                    '--icon-size': '24px',
+                    '--action-icon': `url(${link.icon})`,
+                    '--action-icon-size': `${link.iconSize}px`,
                   } as CSSProperties
                 }
-                iconStart={
-                  <span
-                    className={styles.actionIcon}
-                    style={
-                      {
-                        '--action-icon': `url(${link.icon})`,
-                        '--action-icon-size': `${link.iconSize}px`,
-                      } as CSSProperties
+                aria-hidden='true'
+              />
+            }
+          >
+            <a
+              href={link.href}
+              target='_blank'
+              rel='noreferrer noopener'
+              aria-label={link.label}
+              title={link.label}
+            />
+          </Button>
+        ))}
+      </div>
+
+      {hasMobileNavigation && (
+        <div
+          className={[
+            styles.mobileNavigationLayer,
+            resolvedMobileMenuOpen
+              ? styles.mobileNavigationLayerOpen
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          inert={!resolvedMobileMenuOpen}
+        >
+          <Button
+            appearance='bare'
+            type='button'
+            className={styles.mobileNavigationBackdrop}
+            aria-label='Close navigation'
+            onClick={() => setResolvedMobileMenuOpen(false)}
+          />
+
+          <div
+            id='mobile-site-navigation'
+            className={styles.mobileNavigation}
+          >
+            <nav
+              className={styles.mobileNavigationLinks}
+              aria-label='Mobile navigation'
+            >
+              {marketingNavigation.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  prefetch={item.type === 'section' ? false : undefined}
+                  className={styles.mobileNavigationLink}
+                  onClick={(event) => {
+                    setResolvedMobileMenuOpen(false);
+
+                    if (item.type !== 'section' || pathname !== '/') {
+                      return;
                     }
-                    aria-hidden='true'
-                  />
-                }
+
+                    event.preventDefault();
+                    setActiveHref(item.href);
+                    scrollToAnchor(item.hash);
+                  }}
+                >
+                  <span>{item.label}</span>
+
+                  {'badge' in item && item.badge && (
+                    <span className={styles.navigationBadge}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </nav>
+
+            <div className={styles.mobileNavigationActions}>
+              <Button
+                asChild
+                size='sm'
+                className={styles.mobileNavigationCta}
               >
                 <a
-                  href={link.href}
-                  target='_blank'
-                  rel='noreferrer noopener'
-                  aria-label={link.label}
-                  title={link.label}
-                />
-              </Button>
-            ))}
-          </div>
-
-          {hasMobileNavigation && (
-            <div
-              className={[
-                styles.mobileNavigationLayer,
-                resolvedMobileMenuOpen
-                  ? styles.mobileNavigationLayerOpen
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              inert={!resolvedMobileMenuOpen}
-            >
-              <Button
-                appearance='bare'
-                type='button'
-                className={styles.mobileNavigationBackdrop}
-                aria-label='Close navigation'
-                onClick={() => setResolvedMobileMenuOpen(false)}
-              />
-
-              <div
-                id='mobile-site-navigation'
-                className={styles.mobileNavigation}
-              >
-                <nav
-                  className={styles.mobileNavigationLinks}
-                  aria-label='Mobile navigation'
+                  href='https://docs.vellira.dev/start/getting-started'
+                  onClick={() => setResolvedMobileMenuOpen(false)}
                 >
-                  {marketingNavigation.map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      prefetch={item.type === 'section' ? false : undefined}
-                      className={styles.mobileNavigationLink}
-                      onClick={(event) => {
-                        setResolvedMobileMenuOpen(false);
+                  Get started
+                </a>
+              </Button>
+            </div>
 
-                        if (item.type !== 'section' || pathname !== '/') {
-                          return;
-                        }
+            <div className={styles.mobileNavigationFooter}>
+              <ThemeSwitcher />
 
-                        event.preventDefault();
-                        setActiveHref(item.href);
-                        scrollToAnchor(item.hash);
-                      }}
-                    >
-                      <span>{item.label}</span>
-
-                      {'badge' in item && item.badge && (
-                        <span className={styles.navigationBadge}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
-                </nav>
-
-                <div className={styles.mobileNavigationActions}>
+              <div className={styles.mobileExternalLinks}>
+                {externalNavigation.map((link) => (
                   <Button
+                    key={link.label}
                     asChild
                     size='sm'
-                    className={styles.mobileNavigationCta}
-                  >
-                    <a
-                      href='https://docs.vellira.dev/start/getting-started'
-                      onClick={() => setResolvedMobileMenuOpen(false)}
-                    >
-                      Get started
-                    </a>
-                  </Button>
-                </div>
-
-                <div className={styles.mobileNavigationFooter}>
-                  <ThemeSwitcher />
-
-                  <div className={styles.mobileExternalLinks}>
-                    {externalNavigation.map((link) => (
-                      <Button
-                        key={link.label}
-                        asChild
-                        size='sm'
-                        appearance='ghost'
-                        shape='square'
-                        iconOnly
+                    appearance='ghost'
+                    shape='square'
+                    iconOnly
+                    style={
+                      {
+                        '--icon-size': '22px',
+                      } as CSSProperties
+                    }
+                    iconStart={
+                      <span
+                        className={styles.actionIcon}
                         style={
                           {
-                            '--icon-size': '22px',
+                            '--action-icon': `url(${link.icon})`,
+                            '--action-icon-size': `${link.iconSize}px`,
                           } as CSSProperties
                         }
-                        iconStart={
-                          <span
-                            className={styles.actionIcon}
-                            style={
-                              {
-                                '--action-icon': `url(${link.icon})`,
-                                '--action-icon-size': `${link.iconSize}px`,
-                              } as CSSProperties
-                            }
-                            aria-hidden='true'
-                          />
-                        }
-                      >
-                        <a
-                          href={link.href}
-                          target='_blank'
-                          rel='noreferrer noopener'
-                          aria-label={link.label}
-                          title={link.label}
-                        />
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                        aria-hidden='true'
+                      />
+                    }
+                  >
+                    <a
+                      href={link.href}
+                      target='_blank'
+                      rel='noreferrer noopener'
+                      aria-label={link.label}
+                      title={link.label}
+                    />
+                  </Button>
+                ))}
               </div>
             </div>
-          )}
-
-          {mobileAction && !resolvedMobileMenuOpen && (
-            <div className={styles.mobileAction}>{mobileAction}</div>
-          )}
-
-          {resolvedMobileMenuOpen && variant !== 'marketing' && (
-            <Button
-              type='button'
-              size='sm'
-              appearance='ghost'
-              shape='square'
-              iconOnly
-              className={styles.mobileGlobalClose}
-              aria-label='Close navigation'
-              aria-expanded='true'
-              aria-controls='mobile-site-navigation'
-              onClick={() => setResolvedMobileMenuOpen(false)}
-              iconStart={<Close />}
-            />
-          )}
-
-          <div className={styles.authActions}>
-            <Button asChild size='sm' className={styles.ctaButton}>
-              <a href='https://docs.vellira.dev/start/getting-started'>
-                Get started
-              </a>
-            </Button>
           </div>
+        </div>
+      )}
+
+      {mobileAction && !resolvedMobileMenuOpen && (
+        <div className={styles.mobileAction}>{mobileAction}</div>
+      )}
+
+      {resolvedMobileMenuOpen && variant !== 'marketing' && (
+        <Button
+          type='button'
+          size='sm'
+          appearance='ghost'
+          shape='square'
+          iconOnly
+          className={styles.mobileGlobalClose}
+          aria-label='Close navigation'
+          aria-expanded='true'
+          aria-controls='mobile-site-navigation'
+          onClick={() => setResolvedMobileMenuOpen(false)}
+          iconStart={<Close />}
+        />
+      )}
+
+      <div className={styles.authActions}>
+        <Button asChild size='sm' className={styles.ctaButton}>
+          <a href='https://docs.vellira.dev/start/getting-started'>
+            Get started
+          </a>
+        </Button>
+      </div>
     </HeaderChrome>
   );
 }
