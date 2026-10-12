@@ -21,6 +21,11 @@ type BillingState =
   | { kind: 'denied' }
   | { kind: 'error' };
 
+type WorkspaceBillingState = {
+  workspaceId: string | undefined;
+  state: BillingState;
+};
+
 const localPreview =
   process.env.NODE_ENV === 'development' &&
   process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1';
@@ -41,35 +46,32 @@ export function BillingSettings() {
   const workspaceId = workspace?.id;
   const isOwner = workspace?.membership.role === 'owner';
   const [revision, setRevision] = useState(0);
-  const [state, setState] = useState<BillingState>({ kind: 'loading' });
+  const [result, setResult] = useState<WorkspaceBillingState>({
+    workspaceId: undefined,
+    state: { kind: 'loading' },
+  });
 
   useEffect(() => {
+    if (!workspaceId || !isOwner || localPreview) return;
+
     let disposed = false;
-
-    if (!workspaceId || !isOwner) {
-      setState({ kind: 'denied' });
-      return;
-    }
-
-    if (localPreview) {
-      setState({ kind: 'preview' });
-      return;
-    }
-
-    setState({ kind: 'loading' });
-
     void getWorkspaceBilling(workspaceId)
       .then(({ subscription }) => {
-        if (!disposed) setState({ kind: 'ready', subscription });
+        if (!disposed) {
+          setResult({ workspaceId, state: { kind: 'ready', subscription } });
+        }
       })
       .catch((cause: unknown) => {
         if (disposed) return;
-        setState({
-          kind:
-            cause instanceof VelliraApiError &&
-            (cause.code === 'permission_denied' || cause.status === 403)
-              ? 'denied'
-              : 'error',
+        setResult({
+          workspaceId,
+          state: {
+            kind:
+              cause instanceof VelliraApiError &&
+              (cause.code === 'permission_denied' || cause.status === 403)
+                ? 'denied'
+                : 'error',
+          },
         });
       });
 
@@ -77,6 +79,15 @@ export function BillingSettings() {
       disposed = true;
     };
   }, [isOwner, revision, workspaceId]);
+
+  // Never render another workspace's commercial data during a workspace change.
+  const state: BillingState = !isOwner || !workspaceId
+    ? { kind: 'denied' }
+    : localPreview
+      ? { kind: 'preview' }
+      : result.workspaceId === workspaceId
+        ? result.state
+        : { kind: 'loading' };
 
   return (
     <div className={styles.page}>
@@ -118,7 +129,10 @@ export function BillingSettings() {
             <Button
               appearance='outline'
               color='neutral'
-              onClick={() => setRevision((value) => value + 1)}
+              onClick={() => {
+                setResult({ workspaceId, state: { kind: 'loading' } });
+                setRevision((value) => value + 1);
+              }}
             >
               Try again
             </Button>
