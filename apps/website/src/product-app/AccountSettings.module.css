@@ -1,0 +1,254 @@
+.root {
+  display: grid;
+  width: min(100%, 960px);
+  gap: var(--space-8);
+}
+
+.pageHeader {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pageHeader h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(28px, 3vw, 34px);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.pageHeader p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+}
+
+.tabs {
+  min-width: 0;
+}
+
+.panelContent {
+  display: grid;
+  gap: var(--space-6);
+  padding-top: var(--space-8);
+}
+
+.sectionIntro {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.description,
+.helper {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.helper {
+  max-width: 68ch;
+}
+
+.identityRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.identityRow > div:last-child {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.identityIcon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+}
+
+.detailList {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--border-muted);
+}
+
+.detailRow {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  align-items: baseline;
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--border-muted);
+  gap: var(--space-4);
+}
+
+.detailRow dt {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.detailRow dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--border-muted);
+  border-bottom: 1px solid var(--border-muted);
+  gap: var(--space-5);
+}
+
+.settingCopy {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.settingCopy h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+}
+
+.settingCopy p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.themeGroup {
+  max-width: 100%;
+}
+
+.themeChoice {
+  align-items: center;
+  width: 170px;
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-lg);
+  background: var(--surface-default);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.themeChoice:hover {
+  background: var(--surface-subtle);
+}
+
+.themeChoice:has(input:checked) {
+  background: color-mix(in srgb, var(--text-brand) 6%, var(--surface-default));
+  border-color: var(--text-brand);
+}
+
+.themeChoice:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+.themeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.themeLabel svg {
+  flex: none;
+}
+
+.permissionNotice {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--text-primary);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.billingBody {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+}
+
+.billingBody p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.billingBody strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (width <= 650px) {
+  .root {
+    gap: var(--space-6);
+  }
+
+  .panelContent {
+    padding-top: var(--space-6);
+  }
+
+  .settingRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .detailRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .themeChoice {
+    width: 160px;
+  }
+}
+
+@media (width <= 390px) {
+  .themeChoice {
+    width: 140px;
+    min-height: 76px;
+    padding-inline: var(--space-2);
+  }
+
+  .themeLabel {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .themeChoice {
+    transition: none;
+  }
+}
