@@ -182,7 +182,7 @@ describe('renderUsage', () => {
       generatedFileHeader: '',
       getDemoProps: () => '',
     });
-    expect(generated.content).toContain("label={\"O'Connor\"}");
+    expect(generated.content).toContain('label={"O\'Connor"}');
     expect(generated.content).toContain('description={"One & two"}');
   });
   it('does not emit unsupported or duplicate demo shortcut props', () => {

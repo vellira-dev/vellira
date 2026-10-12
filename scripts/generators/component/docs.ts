@@ -390,7 +390,11 @@ function ensureApiDocPlaceholders(plan: ComponentGenerationPlan) {
     let content = original;
     for (const item of sections) {
       if (item.heading === `## ${plan.componentName}`) {
-        content = normalizeGeneratedApiRootHeading(content, plan.componentName, item.id);
+        content = normalizeGeneratedApiRootHeading(
+          content,
+          plan.componentName,
+          item.id
+        );
       }
     }
     if (original !== content) {

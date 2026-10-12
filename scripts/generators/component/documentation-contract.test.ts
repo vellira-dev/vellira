@@ -80,7 +80,9 @@ describe('component documentation contract check', () => {
       normalizeGeneratedApiRootHeading(normalized, 'IdentityBadge', id)
     ).toBe(normalized);
     const authored = input.replace(marker, '<!-- authored only -->');
-    expect(normalizeGeneratedApiRootHeading(authored, 'IdentityBadge', id)).toBe(authored);
+    expect(
+      normalizeGeneratedApiRootHeading(authored, 'IdentityBadge', id)
+    ).toBe(authored);
   });
   it('checks dynamic API sections and generated docs without writing them', async () => {
     vi.mocked(generateApiDocs).mockResolvedValue({
