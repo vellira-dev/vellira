@@ -155,7 +155,7 @@ export function AppMobileAccountActions({
 
       <div className={styles.mobileDrawerFooter}>
         <span className={styles.mobileThemeCaption}>Appearance</span>
-        <ThemeSwitcher />
+        <ThemeSwitcher insideModalNavigation />
       </div>
     </div>
   );
