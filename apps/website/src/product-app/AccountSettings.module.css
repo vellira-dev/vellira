@@ -113,6 +113,13 @@
   font-weight: var(--font-weight-medium);
 }
 
+.emailVerificationActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+}
+
 .verificationStatus {
   display: inline-flex;
   align-items: center;
