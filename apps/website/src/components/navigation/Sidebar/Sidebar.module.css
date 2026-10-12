@@ -3,7 +3,8 @@
 }
 
 .inner {
-  padding: 32px 28px 48px 0;
+  /* Shared 16px trailing gutter across the Core app and component catalog. */
+  padding: 32px var(--space-4) 48px 0;
 }
 
 .group + .group {
@@ -12,7 +13,10 @@
 
 .groupLabel {
   margin: 0 0 8px;
-  color: var(--text-secondary);
+  /* Match the leading edge of each SidebarItem's text/icon (10px inset).
+     Muted hierarchy is deliberately two steps below a selected item. */
+  padding-inline-start: 10px;
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   font-weight: 600;
   line-height: 1.4;
