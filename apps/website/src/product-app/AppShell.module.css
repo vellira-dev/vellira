@@ -35,8 +35,9 @@
 
 .shell[data-sidebar-collapsed='true'] .sidebarToggleRow {
   width: var(--app-collapsed-width);
-  justify-content: center;
-  padding-inline: 0;
+  justify-content: flex-start;
+  padding-left: 20px;
+  padding-right: 0;
 }
 
 .navEntry {
