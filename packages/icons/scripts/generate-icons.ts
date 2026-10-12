@@ -52,7 +52,7 @@ function withIconProps(code: string, native: boolean): string {
   const nextCode = native
     ? code
         .replace(/\s+xmlns=['"]http:\/\/www\.w3\.org\/2000\/svg['"]/g, '')
-        .replace(/\s+xmlnsXlink=['\"][^'\"]+['\"]/g, '')
+        .replace(/\s+xmlnsXlink=['"][^'"]+['"]/g, '')
         .replace(
           'import type { SvgProps } from "react-native-svg";',
           `import type { SvgProps } from "react-native-svg";
@@ -69,7 +69,7 @@ type IconProps = SvgProps & {
     : code
         // HTML elements inside SVG foreignObject inherit the XHTML namespace.
         // React div props do not accept the SVG source xmlns attribute.
-        .replace(/\s+xmlns=['\"]http:\/\/www\.w3\.org\/1999\/xhtml['\"]/g, '')
+        .replace(/\s+xmlns=['"]http:\/\/www\.w3\.org\/1999\/xhtml['"]/g, '')
         .replace(
           'import type { SVGProps } from "react";',
           `import type { SVGProps } from "react";
