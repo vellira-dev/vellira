@@ -33,7 +33,7 @@ function AppNavigation({ collapsed }: { collapsed: boolean }) {
 
   return (
     <>
-      <nav className={styles.desktopNavigation} aria-label='Vellira app'>
+      <nav id='app-sidebar-navigation' className={styles.desktopNavigation} aria-label='Vellira app'>
         <Sidebar ariaLabel='Account navigation'>
           <SidebarGroup label={collapsed ? '' : 'Workspace'}>
             <SidebarItem active={value === '/app'}>
@@ -226,22 +226,29 @@ function AppShellContent({ children }: { children: ReactNode }) {
           <AppNavigation collapsed={sidebarCollapsed} />
           <div className={styles.sidebarToggleRow}>
             <Button
-              appearance='ghost'
+              appearance='bare'
               color='neutral'
               size='sm'
-              iconStart={sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-              iconOnly={sidebarCollapsed}
+              className={styles.sidebarToggleButton}
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-controls='app-sidebar-navigation'
               aria-expanded={!sidebarCollapsed}
               onClick={() => setSidebarCollapsed((previous) => !previous)}
             >
-              {!sidebarCollapsed && 'Collapse sidebar'}
+              <span className={styles.navEntry}>
+                {sidebarCollapsed ? (
+                  <ChevronRight size={18} aria-hidden='true' />
+                ) : (
+                  <ChevronLeft size={18} aria-hidden='true' />
+                )}
+                {!sidebarCollapsed && <span>Collapse sidebar</span>}
+              </span>
             </Button>
           </div>
         </aside>
 
         <div className={styles.mobileNavigationRow}>
-          <AppNavigation />
+          <AppNavigation collapsed={false} />
         </div>
 
         <main className={styles.content}>{children}</main>
