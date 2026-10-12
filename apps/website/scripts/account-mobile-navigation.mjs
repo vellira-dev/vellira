@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { chromium } from '@playwright/test';
 
-// Start the website in development-only account preview, then supply WEBSITE_URL.
+// Start website in local account preview and set WEBSITE_URL to its origin.
 const baseUrl = process.env.WEBSITE_URL;
 if (!baseUrl) throw new Error('WEBSITE_URL is required.');
 
@@ -12,8 +12,44 @@ const context = await browser.newContext();
 const page = await context.newPage();
 page.setDefaultTimeout(15_000);
 
-async function waitForUnlockedScroll() {
-  await page.waitForFunction(() => document.body.style.overflow === '');
+async function headerGeometry(header) {
+  return header.evaluate((element) => {
+    const container = element.firstElementChild;
+    const brand = element.querySelector('a[aria-label="Vellira home"] img');
+    const actions = container?.lastElementChild;
+    if (!brand || !container || !actions) {
+      throw new Error('Canonical header chrome is missing');
+    }
+    const headerBox = element.getBoundingClientRect();
+    return {
+      chromeClass: element.classList[0],
+      containerClass: container.classList[0],
+      actionsClass: actions.classList[0],
+      brandX: brand.getBoundingClientRect().x,
+      headerHeight: headerBox.height,
+      brandWidth: brand.getBoundingClientRect().width,
+    };
+  });
+}
+
+function sameChrome(left, right, label) {
+  assert.equal(left.chromeClass, right.chromeClass, `${label}: shared header`);
+  assert.equal(
+    left.containerClass,
+    right.containerClass,
+    `${label}: shared container`
+  );
+  assert.equal(
+    left.actionsClass,
+    right.actionsClass,
+    `${label}: shared action alignment`
+  );
+  for (const key of ['brandX', 'headerHeight', 'brandWidth']) {
+    assert.ok(
+      Math.abs(left[key] - right[key]) <= 1,
+      `${label}: ${key} must match (actual ${left[key]} vs ${right[key]})`
+    );
+  }
 }
 
 try {
@@ -23,20 +59,23 @@ try {
     await page.getByText('Local UI preview', { exact: false }).waitFor();
 
     const header = page.locator('[data-product-app-header]');
+    const appChrome = await headerGeometry(header);
     const open = header.getByRole('button', {
       name: 'Open workspace navigation',
     });
     await open.waitFor();
-    assert.equal(await open.isVisible(), true);
+    assert.ok(await open.isVisible());
+    const appTrigger = await open.boundingBox();
+    assert.ok(appTrigger && appTrigger.width >= 44 && appTrigger.height >= 44);
     assert.equal(
       await header.getByRole('button', { name: 'Account menu' }).count(),
       0,
-      'Avatar must not occupy the mobile header'
+      'Account avatar is hidden in the mobile header'
     );
     assert.equal(
       await header.getByRole('button', { name: /^Theme:/ }).count(),
       0,
-      'Theme is only in Settings -> Appearance on mobile'
+      'Mobile product theme belongs only in Settings -> Appearance'
     );
 
     await open.click();
@@ -44,17 +83,11 @@ try {
       name: 'Workspace navigation',
     });
     await drawer.waitFor();
-    const close = drawer.getByRole('button', {
-      name: 'Close workspace navigation',
-    });
-    await close.waitFor();
-    assert.equal(await close.count(), 1, 'Exactly one in-drawer X');
-    const closeBox = await close.boundingBox();
-    assert.ok(
-      closeBox && closeBox.width >= 44 && closeBox.height >= 44,
-      'The X needs a 44x44px touch target'
+    assert.equal(
+      await drawer.getByRole('button', { name: 'Close workspace navigation' }).count(),
+      0,
+      'Account drawer must not invent an extra X absent from Components'
     );
-
     await drawer.getByRole('link', { name: 'Vellira workspace' }).waitFor();
     for (const name of [
       'Overview',
@@ -63,55 +96,61 @@ try {
       'Account settings',
       'Billing',
     ]) {
-      await drawer.getByRole('link', { name: new RegExp(name) }).waitFor();
+      await drawer.getByRole('link', { name: name, exact: name !== 'Docs' }).waitFor();
     }
     await drawer.getByRole('button', { name: 'Sign out' }).waitFor();
     assert.equal(
-      await drawer.getByText('Appearance', { exact: true }).count(),
-      0,
-      'No Appearance item may exist in mobile navigation'
-    );
-    assert.equal(
       await drawer.getByRole('button', { name: /^Theme:/ }).count(),
       0,
-      'No ThemeSwitcher may exist in the mobile drawer'
+      'Appearance controls must not appear inside account navigation'
     );
+
+    const separator = await page.locator('[class*="mobileAccountFooter"]')
+      .evaluate((element) => {
+        const rule = getComputedStyle(element, '::before');
+        return {
+          left: Number.parseFloat(rule.left),
+          width: Number.parseFloat(rule.width),
+          parentWidth: element.getBoundingClientRect().width,
+        };
+      });
+    assert.ok(Math.abs(separator.left - 26) <= 1, 'Account divider begins at icon baseline');
+    assert.ok(separator.width < separator.parentWidth - 26);
+
     assert.equal(
       await page.evaluate(() => document.body.style.overflow),
       'hidden',
-      'Opening the overlay must lock background scrolling'
+      'Open drawer locks page scrolling'
     );
     assert.equal(
       await page.locator('main').evaluate((node) => Boolean(node.closest('[inert]'))),
       true,
-      'Main content must be inert while the drawer is open'
+      'Page content must be inert during navigation'
     );
 
-    // Both account and component drawers use the same imported surface style.
-    const workspaceSurfaceClass = await drawer.getAttribute('class');
+    const workspaceSurfaceClass = await drawer.evaluate(
+      (node) => node.classList[0]
+    );
 
     await page.keyboard.press('Escape');
     await drawer.waitFor({ state: 'hidden' });
-    await waitForUnlockedScroll();
+    await page.waitForFunction(() => document.body.style.overflow === '');
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
       'Open workspace navigation',
-      'Escape must return focus to the trigger'
+      'Escape must restore keyboard focus to the Menu trigger'
     );
 
     await open.click();
     await drawer.waitFor();
-    await close.click();
-    await drawer.waitFor({ state: 'hidden' });
-
-    await open.click();
-    await drawer.waitFor();
-    if (width > 340) {
+    // If the drawer occupies the entire screen, Escape remains available.
+    const panelWidth = (await drawer.boundingBox()).width;
+    if (panelWidth < width - 10) {
       await page.getByRole('button', {
         name: 'Dismiss workspace navigation',
-      }).click({ position: { x: width - 10, y: 400 } });
+      }).click({ position: { x: width - 6, y: 400 } });
     } else {
-      await close.click();
+      await page.keyboard.press('Escape');
     }
     await drawer.waitFor({ state: 'hidden' });
 
@@ -119,40 +158,50 @@ try {
     await drawer.getByRole('link', { name: 'Components' }).click();
     await page.waitForURL('**/components?from=app');
     await page.locator('[data-product-app-header]').waitFor();
+    const contextual = await headerGeometry(
+      page.locator('[data-product-app-header]')
+    );
+    sameChrome(appChrome, contextual, 'App / contextual Components');
+
+    const componentTrigger = page.getByRole('button', {
+      name: 'Open component navigation',
+    });
+    const componentButton = await componentTrigger.boundingBox();
+    assert.ok(componentButton && componentButton.width >= 44);
+    assert.ok(
+      Math.abs(componentButton.width - appTrigger.width) <= 1 &&
+        Math.abs(componentButton.height - appTrigger.height) <= 1,
+      'Workspace and Components must use the same Menu button geometry'
+    );
+    await componentTrigger.click();
+    const componentsDrawer = page.locator('#component-navigation');
+    await componentsDrawer.waitFor();
+    const contextualSurfaceClass = await componentsDrawer.evaluate(
+      (node) => node.parentElement?.classList[0]
+    );
     assert.equal(
-      await page.locator('[data-product-app-header]')
-        .getByRole('button', { name: /^Theme:/ }).count(),
-      0,
-      'Contextual Components header must not expose mobile theme'
+      contextualSurfaceClass,
+      workspaceSurfaceClass,
+      'Workspace and Components must reuse the same sliding surface'
     );
 
-    await page.getByRole('button', { name: 'Open component navigation' }).click();
-    const componentNav = page.locator('#component-navigation');
-    await componentNav.waitFor();
-    const componentSurfaceClass = await componentNav.evaluate(
-      (node) => node.parentElement?.className
-    );
+    await componentsDrawer.getByRole('link', { name: 'Overview' }).waitFor();
     assert.equal(
-      workspaceSurfaceClass,
-      componentSurfaceClass,
-      'Account must use exactly the same sliding surface CSS as Components'
-    );
-    await componentNav.getByRole('link', { name: 'Account settings' }).waitFor();
-    await componentNav.getByRole('link', { name: 'Billing' }).waitFor();
-    await componentNav.getByRole('button', { name: 'Sign out' }).waitFor();
-    assert.equal(
-      await componentNav.getByText('Appearance', { exact: true }).count(),
+      await componentsDrawer.getByRole('link', { name: 'Back to workspace' }).count(),
       0,
-      'Contextual Components menu must also omit Appearance'
+      'Back-to-workspace bar must not duplicate the Sidebar navigation'
     );
     assert.equal(
-      await componentNav.getByRole('button', { name: /^Theme:/ }).count(),
+      await componentsDrawer.getByRole('link', { name: 'Account settings' }).count(),
       0,
-      'Contextual Components menu must omit ThemeSwitcher'
+      'Component navigation must not include account actions'
     );
-    await componentNav.getByRole('link', {
-      name: 'Back to workspace',
-    }).click();
+    assert.equal(
+      await componentsDrawer.getByRole('button', { name: /^Theme:/ }).count(),
+      0,
+      'Component navigation must not include appearance controls'
+    );
+    await componentsDrawer.getByRole('link', { name: 'Overview' }).click();
     await page.waitForURL('**/app');
 
     if (width === 390) {
@@ -164,7 +213,6 @@ try {
       }).getByRole('link', { name: 'Account settings' }).click();
       await page.waitForURL('**/app/settings');
       await page.getByRole('tab', { name: 'Appearance' }).click();
-      await page.getByRole('heading', { name: 'Appearance' }).waitFor();
       await page.getByRole('radio', { name: 'Dark' }).waitFor();
     }
 
@@ -173,7 +221,7 @@ try {
         () => document.documentElement.scrollWidth > window.innerWidth
       ),
       false,
-      `No horizontal overflow at ${width}px`
+      `Navigation must not overflow a ${width}px viewport`
     );
   }
 
@@ -184,16 +232,14 @@ try {
     .getByRole('button', { name: 'Account menu' }).waitFor();
   await page.locator('[data-product-app-header]')
     .getByRole('button', { name: /^Theme:/ }).waitFor();
-  assert.equal(
-    await page.getByRole('button', {
-      name: 'Open workspace navigation',
-      includeHidden: true,
-    }).isVisible(),
-    false,
-    'Desktop must retain its original sidebar and header actions'
-  );
+  const desktopApp = await headerGeometry(page.locator('[data-product-app-header]'));
 
-  console.log('OK mobile account: Components drawer parity; no theme; X, links, Escape, backdrop and Settings Appearance');
+  await page.goto(new URL('/components/button', baseUrl).toString());
+  await page.locator('[data-component-explorer]').waitFor();
+  const publicHeader = await headerGeometry(page.locator('header').first());
+  sameChrome(desktopApp, publicHeader, 'Product / public SiteHeader');
+
+  console.log('OK shared header/Menu and Components-style mobile navigation (1100/768/390/320px)');
 } finally {
   await page.close();
   await context.close();
