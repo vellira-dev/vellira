@@ -70,7 +70,7 @@ try {
         await page.getByRole('button', { name: 'Try again' }).click();
         await page.getByText('Loading billing information…').waitFor();
         assert.equal(await page.getByText('Billing information is temporarily unavailable.').count(), 0);
-        await page.getByText('No subscription').waitFor();
+        await page.getByText('No subscription', { exact: true }).waitFor();
         assert.ok(billingReads >= 2, 'Owner retry must issue a new read');
       }
       assert.equal(mutations, 0, 'Read-only settings must never mutate account or billing');
