@@ -68,13 +68,19 @@ try {
     componentGutters.itemColor,
     'Component group heading must be muted relative to menu items'
   );
-  const workspaceLink = page.locator('[data-component-explorer-sidebar]')
-    .getByRole('link', { name: 'Overview', exact: true });
-  await workspaceLink.waitFor();
+  const workspaceReturn = page.locator('[data-component-explorer-sidebar]')
+    .getByRole('link', { name: 'Back to workspace', exact: true });
+  await workspaceReturn.waitFor();
   assert.equal(
     await page.getByRole('link', { name: 'Back to workspace' }).count(),
+    1,
+    'There must be exactly one Back link inside desktop component navigation'
+  );
+  assert.equal(
+    await page.locator('[data-component-explorer-main]')
+      .getByRole('link', { name: 'Back to workspace' }).count(),
     0,
-    'Standalone Back-to-workspace must not duplicate the menu link'
+    'Components page hero must not duplicate Back to workspace'
   );
 
   // Workspace context must preserve the same real product header + avatar menu.
@@ -101,12 +107,12 @@ try {
     .getByRole('link', { name: 'Button', exact: true })
     .click();
   await page.waitForURL('**/components/button?from=app');
-  await workspaceLink.waitFor();
+  await workspaceReturn.waitFor();
   await page.locator('[data-product-app-header]').waitFor();
   await page.getByRole('button', { name: 'Account menu' }).waitFor();
 
-  // One scrollable ComponentSidebar owns all navigation. There is no
-  // fixed, duplicate Back-to-workspace action above the component list.
+  // Back stays in the fixed menu bar above the independently scrolling list.
+  const backTop = (await workspaceReturn.boundingBox()).y;
   const scrolled = await page.evaluate(() => {
     const nav = document.querySelector('[data-component-explorer-sidebar]');
     const list = nav?.querySelector('[class*="desktopList"]');
@@ -116,13 +122,15 @@ try {
     filler.setAttribute('aria-hidden', 'true');
     list.appendChild(filler);
     list.scrollTop = list.scrollHeight;
-    const distance = list.scrollTop;
-    list.scrollTop = 0;
-    return distance;
+    return list.scrollTop;
   });
   assert.ok(scrolled > 0, 'Long component navigation must scroll');
+  assert.ok(
+    Math.abs((await workspaceReturn.boundingBox()).y - backTop) <= 1,
+    'Back to workspace must remain visible while component list scrolls'
+  );
 
-  await workspaceLink.click();
+  await workspaceReturn.click();
   await page.waitForURL('**/app');
   await page.getByRole('heading', { name: 'Start building with Vellira' }).waitFor();
 
@@ -191,21 +199,27 @@ try {
   );
   assert.ok(
     Math.abs(mobileGutters.workspaceIconLeft - mobileGutters.nameLeft) <= 1,
-    'Mobile Workspace icon must share the component navigation baseline'
+    'Mobile Back arrow must align with component item labels'
   );
 
   const mobileReturn = page.locator('#component-navigation')
-    .getByRole('link', { name: 'Overview', exact: true });
+    .getByRole('link', { name: 'Back to workspace', exact: true });
   await mobileReturn.waitFor();
   assert.equal(
     await page.getByRole('link', { name: 'Back to workspace' }).count(),
+    1,
+    'Mobile Back to workspace must exist once, inside the component menu'
+  );
+  assert.equal(
+    await page.locator('[data-component-explorer-main]')
+      .getByRole('link', { name: 'Back to workspace' }).count(),
     0,
-    'No redundant Back-to-workspace action on mobile'
+    'No Back to workspace button may appear in the Components page content'
   );
   await mobileReturn.click();
   await page.waitForURL('**/app');
 
-  console.log('OK Core Components drill-down, canonical header, no duplicate Back, desktop/mobile Workspace link');
+  console.log('OK Core Components: exactly one Back inside menu; none in page; public routes unchanged');
 } finally {
   await page.close();
   await context.close();
