@@ -360,7 +360,9 @@ test('deployment workflows keep archive preflight before remote build and mutati
     assert.ok(preflightIndex >= 0);
     const preflight = steps[preflightIndex];
     assert.ok(
-      !preflight.includes('continue-on-error:') && !preflight.includes('if:')
+      !preflight.includes('continue-on-error:') &&
+        (target === 'staging' ||
+          preflight.includes("if: steps.preflight.outputs.superseded != 'true'"))
     );
     for (const required of [
       'WEBSITE_URL:',

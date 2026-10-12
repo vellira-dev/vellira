@@ -461,6 +461,8 @@ test('dedicated workflow keeps every normal build/browser gate and target serial
   const runs = steps.map((step) => step.run).filter(Boolean);
   const promotionOnlyNormalSteps = new Set([
     'Verify exact production candidate checkout',
+    'Supersede obsolete candidate before costly production build',
+    'Recheck candidate after build, before remote mutation',
     'Verify immutable production candidate before mutation',
     'Record production promotion provenance',
   ]);
