@@ -22,6 +22,7 @@ type BillingState =
 
 type WorkspaceBillingState = {
   workspaceId: string | undefined;
+  revision: number;
   state: BillingState;
 };
 
@@ -47,6 +48,7 @@ export function BillingPanel() {
   const [revision, setRevision] = useState(0);
   const [result, setResult] = useState<WorkspaceBillingState>({
     workspaceId: undefined,
+    revision: 0,
     state: { kind: 'loading' },
   });
 
@@ -57,13 +59,14 @@ export function BillingPanel() {
     void getWorkspaceBilling(workspaceId)
       .then(({ subscription }) => {
         if (!disposed) {
-          setResult({ workspaceId, state: { kind: 'ready', subscription } });
+          setResult({ workspaceId, revision, state: { kind: 'ready', subscription } });
         }
       })
       .catch((cause: unknown) => {
         if (disposed) return;
         setResult({
           workspaceId,
+          revision,
           state: {
             kind:
               cause instanceof VelliraApiError &&
@@ -85,7 +88,7 @@ export function BillingPanel() {
       ? { kind: 'denied' }
       : localPreview
         ? { kind: 'preview' }
-        : result.workspaceId === workspaceId
+        : result.workspaceId === workspaceId && result.revision === revision
           ? result.state
           : { kind: 'loading' };
 
@@ -131,7 +134,6 @@ export function BillingPanel() {
             appearance='outline'
             color='neutral'
             onClick={() => {
-              setResult({ workspaceId, state: { kind: 'loading' } });
               setRevision((value) => value + 1);
             }}
           >
