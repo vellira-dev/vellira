@@ -43,7 +43,7 @@ try {
       'Opened drawer must lock document scrolling'
     );
     assert.equal(
-      await page.locator('main').evaluate((main) => main.inert),
+      await page.locator('main').evaluate((main) => main.closest('[inert]') !== null),
       true,
       'Background content must not accept focus while modal navigation is open'
     );
