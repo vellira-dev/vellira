@@ -209,9 +209,8 @@
     border-color 160ms ease;
 }
 
-/* Reserve the same label slot in every card. The radio, icon and
-   text now align at identical x coordinates, while the whole cluster remains
-   visually centered inside the fixed-width card. */
+/* Reserve the same label slot in every card, with no extra centering
+   offset before the icon: the radio-to-icon gap is exactly 16px. */
 /* Exact space from the native radio circle to its theme icon. Keep this
    scoped to Appearance so other Vellira Radio instances are unaffected. */
 .themeGroup .themeChoice {
@@ -222,7 +221,7 @@
   display: flex;
   flex: 0 0 122px;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 0;
 }
 
