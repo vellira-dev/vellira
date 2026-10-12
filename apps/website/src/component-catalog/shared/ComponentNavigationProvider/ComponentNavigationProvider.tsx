@@ -56,7 +56,8 @@ export function ComponentNavigationProvider({
   useEffect(() => {
     // Route navigation away from ?from=app must restore the public catalog.
     // Do not persist account-only presentation on subsequent ordinary links.
-    const requested = new URLSearchParams(window.location.search).get('from') === 'app';
+    const requested =
+      new URLSearchParams(window.location.search).get('from') === 'app';
     setWorkspaceContextRequested(requested);
     if (!requested) setWorkspaceSessionReady(false);
   }, [pathname]);
