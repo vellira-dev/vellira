@@ -12,30 +12,27 @@
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebar {
-  padding-inline: var(--space-2);
+  padding-left: var(--space-2);
+  padding-right: 0;
 }
 
 .sidebarToggleRow {
   display: flex;
-  flex: none;
   align-items: center;
   justify-content: flex-start;
+  flex-shrink: 0;
   min-height: 56px;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  z-index: 2;
+  min-width: 0;
   box-sizing: border-box;
-  width: calc(var(--site-gutter) + var(--app-navigation-width));
-  padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--site-gutter) + 10px);
+  width: 100%;
+  padding: var(--space-2) var(--space-3) var(--space-2) 10px;
   border-top: 1px solid var(--border-muted);
   background: var(--surface-panel);
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebarToggleRow {
-  justify-content: flex-start;
-  width: var(--app-collapsed-width);
-  padding-inline: var(--space-3);
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .navEntry {
@@ -151,18 +148,18 @@
   align-self: start;
   height: calc(100dvh - var(--site-header-height));
   min-width: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   padding: 0 0 0 var(--site-gutter);
   background: var(--surface-panel);
   border-right: 1px solid var(--border-muted);
 }
 
 .desktopNavigation {
-  display: flex;
-  flex: 1;
+  display: block;
   min-height: 0;
-  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .desktopNavigation > :global(aside) {
