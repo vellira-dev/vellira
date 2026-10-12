@@ -25,7 +25,7 @@ try {
   );
 
   await header.getByRole('button', { name: 'Account menu' }).click();
-  for (const name of ['Profile', 'Account settings', 'Billing', 'Sign out']) {
+  for (const name of ['Account settings', 'Billing', 'Sign out']) {
     const item = page.getByRole('menuitem', { name, exact: true });
     await item.waitFor();
     assert.equal(
@@ -45,9 +45,10 @@ try {
 
   await page.getByRole('tab', { name: 'Account' }).click();
   await page.waitForURL('**/app/settings?section=account');
-  await page.locator('[data-product-app-header]').getByRole('button', { name: 'Account menu' }).click();
-  await page.getByRole('menuitem', { name: 'Profile' }).click();
-  await page.waitForURL('**/app/settings#account-state');
+  await page.locator('[data-product-app-header]')
+    .getByRole('button', { name: 'Account menu' }).click();
+  await page.getByRole('menuitem', { name: 'Account settings' }).click();
+  await page.waitForURL('**/app/settings');
   await page.getByRole('heading', { name: 'Your account' }).waitFor();
 
   await page.goto(new URL('/components?from=app', baseUrl).toString());
@@ -64,7 +65,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL('/app', baseUrl).toString());
   await page.locator('[data-product-app-header]').getByRole('button', { name: 'Account menu' }).click();
-  await page.getByRole('menuitem', { name: 'Profile' }).waitFor();
+  await page.getByRole('menuitem', { name: 'Account settings' }).waitFor();
   console.log('OK account header/menu: icon actions, billing preview, profile and responsive context');
 } finally {
   await page.close();
