@@ -2,7 +2,7 @@
 
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { AppHeader } from '@/product-app/AppHeader';
-import { useAppSession } from '@/product-app/AppSession';
+import { AppSessionProvider, useAppSession } from '@/product-app/AppSession';
 
 import { ComponentNavigationTrigger } from '../ComponentNavigationTrigger';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
@@ -31,7 +31,16 @@ export function ComponentsHeader() {
   const { fromWorkspace, mainOpen, setMainNavigationOpen } =
     useComponentNavigation();
 
-  if (fromWorkspace) return <WorkspaceComponentsHeader />;
+  if (fromWorkspace) {
+    return (
+      <AppSessionProvider
+        redirectOnUnauthorized={false}
+        bootstrapIfMissing={false}
+      >
+        <WorkspaceComponentsHeader />
+      </AppSessionProvider>
+    );
+  }
 
   return (
     <SiteHeader
