@@ -31,12 +31,33 @@ try {
   const back = page.getByRole('link', { name: 'Back to workspace' });
   await back.waitFor();
 
+  // Workspace context must preserve the same real product header + avatar menu.
+  await page.locator('[data-product-app-header]').waitFor();
+  await page.getByRole('button', { name: 'Account menu' }).waitFor();
+
+  // Catalog content owns a nested scroll container. The filter bar must pin
+  // directly beneath the product header, not 68px lower over the cards.
+  await page.locator('[data-component-explorer-main]').evaluate((element) => {
+    element.scrollTop = 550;
+  });
+  await page.waitForFunction(() => {
+    const toolbar = document.querySelector('[data-component-catalog-toolbar]');
+    const header = document.querySelector('[data-product-app-header]');
+    const main = document.querySelector('[data-component-explorer-main]');
+    if (!toolbar || !header || !main || main.scrollTop < 400) return false;
+    const toolbarTop = toolbar.getBoundingClientRect().top;
+    const headerBottom = header.getBoundingClientRect().bottom;
+    return Math.abs(toolbarTop - headerBottom) <= 2;
+  });
+
   await page
     .locator('[data-component-explorer-sidebar]')
     .getByRole('link', { name: 'Button', exact: true })
     .click();
   await page.waitForURL('**/components/button?from=app');
   await back.waitFor();
+  await page.locator('[data-product-app-header]').waitFor();
+  await page.getByRole('button', { name: 'Account menu' }).waitFor();
 
   // Back stays above the independently scrollable component list.
   const topBefore = (await back.boundingBox()).y;
@@ -63,6 +84,11 @@ try {
   await publicPage.goto(new URL('/components/button', baseUrl).toString());
   await publicPage.locator('[data-component-explorer-sidebar]').waitFor();
   assert.equal(
+    await publicPage.locator('[data-product-app-header]').count(),
+    0,
+    'Direct public component pages must retain the marketing header'
+  );
+  assert.equal(
     await publicPage.getByRole('link', { name: 'Back to workspace' }).count(),
     0,
     'Public deep link must remain independent from the account'
@@ -78,6 +104,8 @@ try {
   // At mobile widths the return is available inside the existing component menu.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL('/components/button?from=app', baseUrl).toString());
+  await page.locator('[data-product-app-header]').waitFor();
+  await page.getByRole('button', { name: 'Account menu' }).waitFor();
   await page.getByRole('button', { name: 'Open component navigation' }).click();
   const mobileReturn = page.getByRole('link', { name: 'Back to workspace' });
   await mobileReturn.waitFor();
