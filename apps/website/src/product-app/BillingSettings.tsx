@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 
 import { Button } from '@vellira-ui/react';
 
@@ -12,7 +11,7 @@ import {
 } from './api';
 import { useAppSession } from './AppSession';
 
-import styles from './AppShell.module.css';
+import styles from './AccountSettings.module.css';
 
 type BillingState =
   | { kind: 'loading' }
@@ -41,7 +40,7 @@ function formatBillingDate(value: string | null) {
 
 // This is deliberately a *read* view. Checkout, invoices and cancellation
 // require separate reviewed operations; no frontend plan grants Pro access.
-export function BillingSettings() {
+export function BillingPanel() {
   const { workspace } = useAppSession();
   const workspaceId = workspace?.id;
   const isOwner = workspace?.membership.role === 'owner';
@@ -90,103 +89,92 @@ export function BillingSettings() {
         : { kind: 'loading' };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.settingsHeader}>
-        <p className={styles.eyebrow}>Account settings</p>
-        <h1>Billing</h1>
-        <p>Review the current billing state of your workspace.</p>
-      </header>
-
-      <section
-        className={styles.settingsSection}
-        aria-labelledby='billing-status-title'
-      >
-        <h2 id='billing-status-title'>Subscription</h2>
-
-        {state.kind === 'loading' && (
-          <p role='status'>Loading billing information…</p>
-        )}
-
-        {state.kind === 'preview' && (
-          <p role='status'>
-            Billing information is not connected in local UI preview. Sign in
-            with a real account to review your workspace subscription.
-          </p>
-        )}
-
-        {state.kind === 'denied' && (
-          <p role='alert'>
-            Only an authorized workspace owner can view billing information.
-          </p>
-        )}
-
-        {state.kind === 'error' && (
-          <div className={styles.settingsContent}>
-            <p role='alert'>
-              Billing information is temporarily unavailable. Please try
-              again.
-            </p>
-            <Button
-              appearance='outline'
-              color='neutral'
-              onClick={() => {
-                setResult({ workspaceId, state: { kind: 'loading' } });
-                setRevision((value) => value + 1);
-              }}
-            >
-              Try again
-            </Button>
-          </div>
-        )}
-
-        {state.kind === 'ready' && !state.subscription && (
-          <div className={styles.settingsContent}>
-            <strong>No subscription</strong>
-            <p>There is no subscription associated with this workspace.</p>
-          </div>
-        )}
-
-        {state.kind === 'ready' && state.subscription && (
-          <dl className={styles.settingsList}>
-            <div>
-              <dt>Subscription status</dt>
-              <dd>{state.subscription.status.replaceAll('_', ' ')}</dd>
-            </div>
-            {formatBillingDate(state.subscription.currentPeriodStart) && (
-              <div>
-                <dt>Current period starts</dt>
-                <dd>
-                  {formatBillingDate(state.subscription.currentPeriodStart)}
-                </dd>
-              </div>
-            )}
-            {formatBillingDate(state.subscription.currentPeriodEnd) && (
-              <div>
-                <dt>Current period ends</dt>
-                <dd>{formatBillingDate(state.subscription.currentPeriodEnd)}</dd>
-              </div>
-            )}
-            {formatBillingDate(state.subscription.scheduledEndAt) && (
-              <div>
-                <dt>Scheduled end</dt>
-                <dd>{formatBillingDate(state.subscription.scheduledEndAt)}</dd>
-              </div>
-            )}
-            {formatBillingDate(state.subscription.endedAt) && (
-              <div>
-                <dt>Ended on</dt>
-                <dd>{formatBillingDate(state.subscription.endedAt)}</dd>
-              </div>
-            )}
-          </dl>
-        )}
-      </section>
-
-      <div className={styles.actions}>
-        <Button asChild appearance='outline' color='neutral'>
-          <Link href='/app/settings'>Back to account settings</Link>
-        </Button>
+    <section className={styles.panelContent} aria-labelledby='billing-status-title'>
+      <div className={styles.sectionIntro}>
+        <h2 id='billing-status-title' className={styles.sectionTitle}>
+          Subscription
+        </h2>
+        <p className={styles.description}>
+          Billing details from your current workspace.
+        </p>
       </div>
-    </div>
+
+      {state.kind === 'loading' && (
+        <p className={styles.description} role='status'>
+          Loading billing information…
+        </p>
+      )}
+
+      {state.kind === 'preview' && (
+        <p className={styles.description} role='status'>
+          Billing information is not connected in local UI preview. Sign in
+          with a real account to review your workspace subscription.
+        </p>
+      )}
+
+      {state.kind === 'denied' && (
+        <p className={styles.description} role='alert'>
+          Only an authorized workspace owner can view billing information.
+        </p>
+      )}
+
+      {state.kind === 'error' && (
+        <div className={styles.billingBody}>
+          <p role='alert'>
+            Billing information is temporarily unavailable. Please try again.
+          </p>
+          <Button
+            appearance='outline'
+            color='neutral'
+            onClick={() => {
+              setResult({ workspaceId, state: { kind: 'loading' } });
+              setRevision((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      )}
+
+      {state.kind === 'ready' && !state.subscription && (
+        <div className={styles.billingBody}>
+          <strong>No subscription</strong>
+          <p>There is no subscription associated with this workspace.</p>
+        </div>
+      )}
+
+      {state.kind === 'ready' && state.subscription && (
+        <dl className={styles.detailList}>
+          <div className={styles.detailRow}>
+            <dt>Subscription status</dt>
+            <dd>{state.subscription.status.replaceAll('_', ' ')}</dd>
+          </div>
+          {formatBillingDate(state.subscription.currentPeriodStart) && (
+            <div className={styles.detailRow}>
+              <dt>Current period starts</dt>
+              <dd>{formatBillingDate(state.subscription.currentPeriodStart)}</dd>
+            </div>
+          )}
+          {formatBillingDate(state.subscription.currentPeriodEnd) && (
+            <div className={styles.detailRow}>
+              <dt>Current period ends</dt>
+              <dd>{formatBillingDate(state.subscription.currentPeriodEnd)}</dd>
+            </div>
+          )}
+          {formatBillingDate(state.subscription.scheduledEndAt) && (
+            <div className={styles.detailRow}>
+              <dt>Scheduled end</dt>
+              <dd>{formatBillingDate(state.subscription.scheduledEndAt)}</dd>
+            </div>
+          )}
+          {formatBillingDate(state.subscription.endedAt) && (
+            <div className={styles.detailRow}>
+              <dt>Ended on</dt>
+              <dd>{formatBillingDate(state.subscription.endedAt)}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </section>
   );
 }
