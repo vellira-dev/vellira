@@ -35,10 +35,10 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
     <>
       <nav id={navigationId} className={styles.desktopNavigation} aria-label='Vellira app'>
         <Sidebar ariaLabel='Account navigation'>
-          <SidebarGroup label={collapsed ? '' : 'Workspace'}>
+          <SidebarGroup label='Workspace'>
             <SidebarItem active={value === '/app'}>
               <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><Link href='/app' aria-label={collapsed ? 'Overview' : undefined} aria-current={value === '/app' ? 'page' : undefined}>
-                <span className={styles.navEntry}><Grid size={18} aria-hidden='true' />{!collapsed && <span>Overview</span>}</span>
+                <span className={styles.navEntry}><Grid size={18} aria-hidden='true' /><span className={styles.navLabel}>Overview</span></span>
               </Link></Tooltip.Trigger><Portal><Tooltip.Content>Overview</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
             <SidebarItem>
@@ -50,9 +50,9 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
                   >
                     <span className={styles.navEntry}>
                       <Platforms size={18} aria-hidden='true' />
-                      {!collapsed && <span>Components</span>}
+                      <span className={styles.navLabel}>Components</span>
                     </span>
-                    {!collapsed && <ChevronRight size={16} aria-hidden='true' />}
+                    <ChevronRight className={styles.navTrailing} size={16} aria-hidden='true' />
                   </Link>
                 </Tooltip.Trigger>
                 <Portal>
@@ -61,10 +61,10 @@ function AppNavigation({ collapsed, navigationId }: { collapsed: boolean; naviga
               </Tooltip>
             </SidebarItem>
           </SidebarGroup>
-          <SidebarGroup label={collapsed ? '' : 'Resources'}>
+          <SidebarGroup label='Resources'>
             <SidebarItem>
               <Tooltip placement='right' disabled={!collapsed}><Tooltip.Trigger asChild><a aria-label={collapsed ? 'Docs' : undefined} href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>
-                <span className={styles.navEntry}><Docs size={18} aria-hidden='true' />{!collapsed && <span>Docs ↗</span>}</span>
+                <span className={styles.navEntry}><Docs size={18} aria-hidden='true' /><span className={styles.navLabel}>Docs ↗</span></span>
               </a></Tooltip.Trigger><Portal><Tooltip.Content>Docs</Tooltip.Content></Portal></Tooltip>
             </SidebarItem>
           </SidebarGroup>
@@ -161,7 +161,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 ) : (
                   <ChevronLeft size={18} aria-hidden='true' />
                 )}
-                {!sidebarCollapsed && <span>Collapse sidebar</span>}
+                <span className={styles.toggleLabel}>Collapse sidebar</span>
               </span>
             </Button>
           </div>
