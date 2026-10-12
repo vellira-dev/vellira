@@ -254,9 +254,11 @@ function AppShellContent({ children }: { children: ReactNode }) {
             mobile
             onNavigate={() => setMobileMenuOpen(false)}
           />
-          <AppMobileAccountActions
-            onNavigate={() => setMobileMenuOpen(false)}
-          />
+          {mobileMenuOpen && (
+            <AppMobileAccountActions
+              onNavigate={() => setMobileMenuOpen(false)}
+            />
+          )}
         </div>
       </div>
 
