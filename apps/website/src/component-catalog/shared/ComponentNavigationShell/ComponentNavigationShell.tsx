@@ -22,7 +22,7 @@ export function ComponentNavigationShell({
   mobileOnly = false,
   desktopOnly = false,
 }: ComponentNavigationShellProps) {
-  const { open, closeNavigation, switchToMainNavigation } =
+  const { open, closeNavigation, switchToMainNavigation, fromWorkspace } =
     useComponentNavigation();
 
   useEffect(() => {
@@ -51,7 +51,17 @@ export function ComponentNavigationShell({
     <>
       {!mobileOnly && (
         <div className={styles.desktop}>
-          <ComponentSidebar activeSlug={activeSlug} />
+          {fromWorkspace && (
+            <nav className={styles.workspaceReturn} aria-label='Workspace navigation'>
+              <Link href='/app' className={styles.workspaceReturnLink}>
+                <ArrowLeft size={16} aria-hidden='true' />
+                <span>Back to workspace</span>
+              </Link>
+            </nav>
+          )}
+          <div className={styles.desktopList}>
+            <ComponentSidebar activeSlug={activeSlug} />
+          </div>
         </div>
       )}
 
@@ -85,15 +95,22 @@ export function ComponentNavigationShell({
               aria-label='Component navigation'
             >
               <div className={styles.mainNavigation}>
-                <Button
-                  appearance='bare'
-                  type='button'
-                  className={styles.mainNavigationButton}
-                  onClick={switchToMainNavigation}
-                >
-                  <ArrowLeft size={16} aria-hidden='true' />
-                  <span>Main navigation</span>
-                </Button>
+                {fromWorkspace ? (
+                  <Link href='/app' className={styles.mainNavigationButton}>
+                    <ArrowLeft size={16} aria-hidden='true' />
+                    <span>Back to workspace</span>
+                  </Link>
+                ) : (
+                  <Button
+                    appearance='bare'
+                    type='button'
+                    className={styles.mainNavigationButton}
+                    onClick={switchToMainNavigation}
+                  >
+                    <ArrowLeft size={16} aria-hidden='true' />
+                    <span>Main navigation</span>
+                  </Button>
+                )}
               </div>
 
               <div className={styles.mobilePanelContent}>
