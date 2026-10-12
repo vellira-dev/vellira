@@ -61,6 +61,21 @@ try {
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
 
   assertGeometry(await measure('Collapse sidebar'), 'expanded');
+  const logoAlignment = await page.evaluate(() => {
+    const brand = document.querySelector(
+      '[data-product-app-header] a[aria-label="Vellira home"] img'
+    );
+    const icon = document.querySelector(
+      '#app-sidebar-navigation aside[aria-label="Account navigation"] a[href="/app"] svg'
+    );
+    if (!brand || !icon) throw new Error('Brand or first nav icon missing');
+    return {
+      brandLeft: brand.getBoundingClientRect().left,
+      iconLeft: icon.getBoundingClientRect().left,
+    };
+  });
+  aligned(logoAlignment.brandLeft, logoAlignment.iconLeft, 'brand/nav icon baseline');
+
   const expandedInsets = await page.evaluate(() => {
     const nav = document.querySelector('#app-sidebar-navigation');
     const item = nav?.querySelector('a[href="/app"]');
@@ -83,6 +98,14 @@ try {
   );
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();
   await page.getByRole('button', { name: 'Expand sidebar' }).waitFor();
+  await page.waitForFunction(() => {
+    const toggle = document.querySelector('button[aria-label="Expand sidebar"]');
+    const nav = document.querySelector('#app-sidebar-navigation');
+    const icon = nav?.querySelector('a[href="/app"] svg');
+    if (!toggle || !icon) return false;
+    return Math.abs(toggle.querySelector('svg').getBoundingClientRect().left -
+      icon.getBoundingClientRect().left) <= 1;
+  });
   assertGeometry(await measure('Expand sidebar'), 'collapsed');
 
   const groupDivider = await page
@@ -112,6 +135,13 @@ try {
 
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
   await page.getByRole('button', { name: 'Collapse sidebar' }).waitFor();
+  await page.waitForFunction(() => {
+    const toggle = document.querySelector('button[aria-label="Collapse sidebar"]');
+    const icon = document.querySelector('#app-sidebar-navigation a[href="/app"] svg');
+    if (!toggle || !icon) return false;
+    return Math.abs(toggle.querySelector('svg').getBoundingClientRect().left -
+      icon.getBoundingClientRect().left) <= 1;
+  });
 
   const scroll = await page.evaluate(() => {
     const navigation = document.querySelector('#app-sidebar-navigation');
@@ -125,6 +155,15 @@ try {
   });
   assert.ok(scroll > 0, 'Long navigation must scroll independently');
   assertGeometry(await measure('Collapse sidebar'), 'expanded after scroll');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reducedMotion = await page.evaluate(() => {
+    const node = document.querySelector('[data-sidebar-collapsed] > div');
+    if (!node) throw new Error('Sidebar grid missing');
+    return getComputedStyle(node).transitionDuration;
+  });
+  assert.equal(reducedMotion, '0s', 'Reduced-motion users must not see the sidebar animation');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(
