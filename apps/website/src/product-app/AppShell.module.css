@@ -32,6 +32,7 @@
   border-top: 1px solid var(--border-muted);
   border-right: 1px solid var(--border-muted);
   background: var(--surface-panel);
+  transition: width 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Match the catalog SidebarItem link: same 10px inset, 36px row, and icon slot.
@@ -84,12 +85,62 @@
   flex-shrink: 0;
 }
 
+.navLabel,
+.toggleLabel {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    max-width 240ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 160ms ease,
+    transform 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.navTrailing {
+  flex: none;
+  opacity: 1;
+  transition: opacity 160ms ease, transform 240ms ease;
+}
+
+.shell[data-sidebar-collapsed='true'] .navLabel,
+.shell[data-sidebar-collapsed='true'] .toggleLabel {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.shell[data-sidebar-collapsed='true'] .navTrailing {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.sidebar h2 {
+  max-height: 32px;
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    max-height 240ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 160ms ease,
+    margin-bottom 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 .shell[data-sidebar-collapsed='true'] .sidebar h2 {
-  display: none;
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebar aside > div {
   padding: var(--space-3) 0;
+}
+
+.sidebar section + section {
+  transition:
+    margin-top 240ms cubic-bezier(0.2, 0, 0, 1),
+    padding-top 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .shell[data-sidebar-collapsed='true'] .sidebar section + section {
@@ -129,6 +180,11 @@
   align-items: center;
   min-height: var(--site-header-height);
   padding-inline: var(--site-gutter);
+  /* Match the leading edge of the first navigation icon. In a workspace-
+     origin catalog the fallback matches the component explorer's gutter. */
+  padding-inline-start: calc(
+    var(--app-navigation-start-inset, var(--site-gutter)) + 10px
+  );
   background: var(--surface-canvas);
   border-bottom: 1px solid var(--border-muted);
 }
@@ -196,6 +252,7 @@
   display: grid;
   grid-template-columns: calc(var(--site-gutter) + var(--app-navigation-width)) minmax(0, 1fr);
   min-height: calc(100vh - var(--site-header-height));
+  transition: grid-template-columns 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .sidebar {
@@ -209,6 +266,7 @@
   padding: 0 0 0 var(--app-navigation-start-inset);
   background: var(--surface-panel);
   border-right: 1px solid var(--border-muted);
+  transition: padding-inline-start 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .desktopNavigation {
@@ -231,6 +289,7 @@
    Public ComponentSidebar geometry stays untouched. */
 .desktopNavigation aside > div {
   padding-right: var(--app-navigation-end-inset);
+  transition: padding 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .shell[data-sidebar-collapsed='true'] .navEntry {
@@ -506,6 +565,20 @@
   margin: 0;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body,
+  .sidebar,
+  .sidebarToggleRow,
+  .sidebar h2,
+  .sidebar section + section,
+  .desktopNavigation aside > div,
+  .navLabel,
+  .toggleLabel,
+  .navTrailing {
+    transition: none;
+  }
 }
 
 @media (width <= 760px) {
