@@ -64,9 +64,18 @@ try {
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL('/app', baseUrl).toString());
-  await page.locator('[data-product-app-header]').getByRole('button', { name: 'Account menu' }).click();
-  await page.getByRole('menuitem', { name: 'Account settings' }).waitFor();
-  console.log('OK account header/menu: icon actions, billing preview, profile and responsive context');
+  await page.locator('[data-product-app-header]')
+    .getByRole('button', { name: 'Open workspace navigation' }).click();
+  const mobileMenu = page.getByRole('dialog', {
+    name: 'Workspace navigation',
+  });
+  await mobileMenu.getByRole('link', { name: 'Account settings' }).waitFor();
+  await mobileMenu.getByRole('link', { name: 'Billing' }).waitFor();
+  await mobileMenu.getByRole('button', { name: 'Sign out' }).waitFor();
+  await mobileMenu.getByRole('link', { name: 'Account settings' }).click();
+  await page.waitForURL('**/app/settings');
+
+  console.log('OK account header/menu: desktop dropdown and mobile workspace actions');
 } finally {
   await page.close();
   await context.close();
