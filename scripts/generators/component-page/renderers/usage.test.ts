@@ -1,3 +1,6 @@
+import { runInNewContext } from 'node:vm';
+
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { renderUsage } from './usage';
@@ -440,5 +443,75 @@ describe('renderUsage', () => {
       getDemoProps: () => '',
     });
     expect(result.content).toContain("platform === 'react' ||");
+  });
+
+  it('executes generated snippets and checks hostile strings as real JSX', () => {
+    const name: ExtractedProp = {
+      name: 'name',
+      kind: 'string',
+      required: true,
+      type: 'string',
+      description: '',
+    };
+    const fallback: ExtractedProp = {
+      name: 'fallback',
+      kind: 'string',
+      required: true,
+      type: 'string',
+      description: '',
+    };
+    const size: ExtractedProp = {
+      name: 'size',
+      kind: 'select',
+      required: false,
+      type: "'sm' | 'md' | 'lg'",
+      options: ['sm', 'md', 'lg'],
+      description: '',
+    };
+    const content = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: { initialValues: { size: 'sm' } },
+        defaults: { shared: { size: 'md' } },
+      },
+      playgroundProps: [name, fallback, size],
+      reactApiProps: [name, fallback, size],
+      nativeApiProps: [name, fallback, size],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    }).content;
+    const start = content.indexOf('function createIdentityBadgeCode(');
+    const end = content.indexOf('export function IdentityBadgeUsage', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const executable = ts.transpileModule(content.slice(start, end), {
+      compilerOptions: {
+        module: ts.ModuleKind.None,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText;
+
+    const unsafeName = "O'Connor\nLine two \u0060tag\u0060 \x24{attack} {braces} \"quote\"";
+    const rendered = runInNewContext(
+      executable + '\ncreateIdentityBadgeCode(platform, value)',
+      {
+        platform: 'react-native',
+        value: { name: unsafeName, fallback: 'JD', size: 'sm' },
+      }
+    ) as string;
+
+    expect(rendered).toContain('name={' + JSON.stringify(unsafeName) + '}');
+    expect(rendered).toContain('fallback={"JD"}');
+    expect(rendered).toContain('size={"sm"}');
+
+    const parsed = ts.createSourceFile(
+      'usage-example.tsx',
+      rendered,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX
+    );
+    expect(parsed.parseDiagnostics).toHaveLength(0);
   });
 });
