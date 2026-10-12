@@ -236,6 +236,10 @@ export default defineConfig({
       {
         text: 'Project',
         items: [
+          {
+            text: 'Component Production',
+            link: '/project/component-production',
+          },
           { text: 'Quality', link: '/project/quality' },
           { text: 'Contributing', link: '/project/contributing' },
         ],
