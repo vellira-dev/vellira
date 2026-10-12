@@ -1,3 +1,45 @@
 # Legacy documentation routes kept as permanent redirects to canonical pages.
+# Source: Google Search Console 404 drilldown, 2026-10-12.
+# Do not redirect missing static assets, API paths or Cloudflare service URLs.
 /getting-started /start/getting-started 301
 /getting-started/ /start/getting-started 301
+/project-sites /start/project-sites 301
+/project-sites/ /start/project-sites 301
+/component-examples /start/component-overview 301
+/component-examples/ /start/component-overview 301
+/production /start/production 301
+/production/ /start/production 301
+/native /react-native/ 301
+/native/ /react-native/ 301
+/web /react/ 301
+/web/ /react/ 301
+/tokens /design-system/tokens 301
+/tokens/ /design-system/tokens 301
+/accessibility /design-system/accessibility 301
+/accessibility/ /design-system/accessibility 301
+/theme-architecture /design-system/theme-architecture 301
+/theme-architecture/ /design-system/theme-architecture 301
+/contributing /project/contributing 301
+/contributing/ /project/contributing 301
+/react/radio /react/radio-group 301
+/react/radio/ /react/radio-group 301
+/components /react/ 301
+/components/ /react/ 301
+/components/select /react/select 301
+/components/select/ /react/select 301
+/components/checkbox /react/checkbox 301
+/components/checkbox/ /react/checkbox 301
+/components/button /react/button 301
+/components/button/ /react/button 301
+/components/tabs /react/tabs 301
+/components/tabs/ /react/tabs 301
+/components/form-field /react/form-field 301
+/components/form-field/ /react/form-field 301
+/components/radio-group /react/radio-group 301
+/components/radio-group/ /react/radio-group 301
+/components/theme-provider /react/theme-provider 301
+/components/theme-provider/ /react/theme-provider 301
+/components/modal /react/modal 301
+/components/modal/ /react/modal 301
+/components/dropdown /react/dropdown 301
+/components/dropdown/ /react/dropdown 301
