@@ -195,7 +195,7 @@
     display: inline-flex;
     align-items: center;
     width: fit-content;
-    padding: 0 var(--space-2);
+    padding: 0 10px;
     color: var(--text-secondary);
     font: inherit;
     font-size: var(--font-size-sm);
