@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { ComponentCodeBlock } from '@/component-catalog/shared/ComponentCodeBlock';
+import {
+  ComponentCodeBlock,
+} from '@/component-catalog/shared/ComponentCodeBlock';
 
 describe('component examples in initial HTML', () => {
   it('server-renders TypeScript examples before highlighting', () => {
@@ -17,7 +19,7 @@ describe('component examples in initial HTML', () => {
     expect(html).toContain('onCheckedChange');
     expect(html).toContain('setSelected');
     expect(html).toContain('Copy');
-    // Rendering must be readable without JavaScript; Shiki can enhance it later.
+    // Keep code readable without JavaScript; Shiki enhances it later.
     expect(html).not.toContain('shiki');
   });
 
