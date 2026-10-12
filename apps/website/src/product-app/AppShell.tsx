@@ -9,7 +9,7 @@ import { Button, Portal, Tooltip } from '@vellira-ui/react';
 import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
 import { AppSessionProvider, useAppSession } from './AppSession';
-import { AppHeader } from './AppHeader';
+import { AppHeader, AppMobileAccountActions } from './AppHeader';
 import { EmailVerificationResend } from './EmailVerificationResend';
 
 import styles from './AppShell.module.css';
@@ -201,6 +201,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
             size='sm'
             shape='square'
             appearance='ghost'
+            className={styles.mobileNavigationTrigger}
             iconOnly
             iconStart={
               mobileMenuOpen ? (
@@ -251,6 +252,9 @@ function AppShellContent({ children }: { children: ReactNode }) {
           <AppNavigation
             collapsed={false}
             mobile
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
+          <AppMobileAccountActions
             onNavigate={() => setMobileMenuOpen(false)}
           />
         </div>
