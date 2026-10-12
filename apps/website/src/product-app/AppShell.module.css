@@ -173,30 +173,6 @@
   margin-inline: auto;
 }
 
-.header {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-index-dropdown);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: var(--site-header-height);
-  padding-inline: var(--site-gutter);
-  /* The app sidebar and workspace-origin Components catalog share a 16px
-     gutter and a 10px item inset. Align the wordmark to the first icon. */
-  padding-inline-start: calc(
-    var(--app-navigation-start-inset, var(--space-4)) + 10px
-  );
-  background: var(--surface-canvas);
-  border-bottom: 1px solid var(--border-muted);
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-}
-
-.headerContext,
 .desktopHeaderActions {
   display: flex;
   align-items: center;
@@ -721,10 +697,6 @@
 }
 
 @media (width <= 760px) {
-  .header {
-    padding-inline: var(--space-4);
-  }
-
   .verificationBanner {
     grid-template-columns: auto minmax(0, 1fr);
     padding-inline: var(--space-4);
