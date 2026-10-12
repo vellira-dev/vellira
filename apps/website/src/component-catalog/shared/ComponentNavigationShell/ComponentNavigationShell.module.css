@@ -191,6 +191,12 @@
     overscroll-behavior: contain;
   }
 
+  .workspaceMobileAccount {
+    flex: none;
+    min-width: 0;
+    border-top: 1px solid var(--border-muted);
+  }
+
   .mainNavigationButton {
     display: inline-flex;
     align-items: center;
