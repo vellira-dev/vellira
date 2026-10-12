@@ -56,9 +56,14 @@ jobs:
           fi
 
           result=0
-          # Focused geometry diagnosis; four navigation suites passed on
-          # the prior exact-head browser run and are rerun before cleanup.
-          for suite in account-settings-tabs; do
+          # Full five-suite final acceptance after correcting the selected
+          # radio's transient animation in the theme geometry probe.
+          for suite in \
+            account-sidebar-geometry \
+            account-components-navigation \
+            account-mobile-navigation \
+            account-header-menu \
+            account-settings-tabs; do
             echo "::group::$suite"
             WEBSITE_URL=http://127.0.0.1:3001 pnpm --dir apps/website run "test:$suite" || result=1
             echo "::endgroup::"
