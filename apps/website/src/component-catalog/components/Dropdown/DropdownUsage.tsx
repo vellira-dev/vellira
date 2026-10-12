@@ -54,11 +54,11 @@ function createDropdownCode(
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   if (value.disabled) {
@@ -69,8 +69,8 @@ function createDropdownCode(
     props.push('loading');
   }
 
-  if (value.closeOnSelect) {
-    props.push('closeOnSelect');
+  if (value.closeOnSelect !== true) {
+    props.push(`closeOnSelect={${value.closeOnSelect}}`);
   }
 
   if (value.searchable) {
@@ -82,11 +82,13 @@ function createDropdownCode(
   }
 
   if (value.searchValue) {
-    props.push(`searchValue='${value.searchValue}'`);
+    props.push(`searchValue={${JSON.stringify(value.searchValue)}}`);
   }
 
   if (value.searchPlaceholder) {
-    props.push(`searchPlaceholder='${value.searchPlaceholder}'`);
+    props.push(
+      `searchPlaceholder={${JSON.stringify(value.searchPlaceholder)}}`
+    );
   }
 
   const propsText = props.length === 0 ? '' : `\n  ${props.join('\n  ')}\n`;
