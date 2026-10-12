@@ -591,11 +591,25 @@
   }
 
   .mobileAccountFooter {
+    position: relative;
     flex: none;
     min-width: 0;
-    padding-block: var(--space-2) max(var(--space-2), env(safe-area-inset-bottom));
+    padding-block: calc(var(--space-2) + 1px)
+      max(var(--space-2), env(safe-area-inset-bottom));
     background: var(--surface-panel);
-    border-top: 1px solid var(--border-muted);
+  }
+
+  /* End the Account separator at the same 26px leading baseline as
+     the menu icons; do not run it against the edge of the drawer. */
+  .mobileAccountFooter::before {
+    position: absolute;
+    top: 0;
+    right: var(--space-4);
+    left: calc(var(--space-4) + 10px);
+    height: 1px;
+    background: var(--border-muted);
+    content: '';
+    pointer-events: none;
   }
 
   .mobileDrawerAccount {
