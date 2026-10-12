@@ -26,11 +26,13 @@ function AppNavigation({
   navigationId,
   mobile = false,
   onNavigate,
+  onComponentsSwitch,
 }: {
   collapsed: boolean;
   navigationId?: string;
   mobile?: boolean;
   onNavigate?: () => void;
+  onComponentsSwitch?: () => void;
 }) {
   const pathname = usePathname();
   const value = activeHref(pathname);
@@ -68,7 +70,14 @@ function AppNavigation({
               <Tooltip.Trigger asChild>
                 <Link
                   href='/components?from=app'
-                  onClick={onNavigate}
+                  onClick={(event) => {
+                    if (onComponentsSwitch) {
+                      event.preventDefault();
+                      onComponentsSwitch();
+                    } else {
+                      onNavigate?.();
+                    }
+                  }}
                   aria-label={collapsed ? 'Components' : undefined}
                 >
                   <span className={styles.navEntry}>
