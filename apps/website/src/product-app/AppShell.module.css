@@ -196,7 +196,8 @@
   align-items: center;
 }
 
-.headerContext {
+.headerContext,
+.desktopHeaderActions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -206,7 +207,34 @@
   display: none;
 }
 
+/* Use the same single header control for Menu and Close: it never jumps to
+   another position when the drawer opens. 44px is the touch target. */
+.mobileNavigationTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-lg);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.mobileNavigationTrigger[aria-expanded='true'] {
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+}
+
+.mobileNavigationTrigger:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
 @media (width <= 1100px) {
+  /* As on SiteHeader: theme and identity move into the mobile navigation. */
+  .desktopHeaderActions {
+    display: none;
+  }
+
   .mobileHeaderAction {
     display: inline-flex;
     align-items: center;
@@ -593,7 +621,8 @@
   .desktopNavigation aside section nav > div > a,
   .mobileNavigationLayer,
   .mobileNavigationBackdrop,
-  .mobileNavigationSurface {
+  .mobileNavigationSurface,
+  .mobileNavigationTrigger {
     transition: none;
   }
 }
@@ -674,6 +703,83 @@
 
   .drawerNavigation aside section nav > div > a {
     min-height: 44px;
+  }
+
+  .mobileDrawerAccount {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .mobileAccountLinks {
+    padding-inline: var(--space-4);
+  }
+
+  .mobileAccountHeading {
+    margin: 0 0 var(--space-2);
+    padding-inline-start: 10px;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .mobileAccountLink,
+  .mobileSignOut {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    gap: var(--space-3);
+    cursor: pointer;
+  }
+
+  .mobileAccountLink:hover,
+  .mobileSignOut:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--text-brand) 5%, transparent);
+  }
+
+  .mobileAccountLink:focus-visible,
+  .mobileSignOut:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  .mobileAccountLink svg,
+  .mobileSignOut svg {
+    flex-shrink: 0;
+  }
+
+  .mobileDrawerFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    margin-top: auto;
+    padding: var(--space-4) calc(var(--space-4) + 10px);
+    border-top: 1px solid var(--border-muted);
+    background: var(--surface-panel);
+    gap: var(--space-3);
+  }
+
+  .mobileThemeCaption {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
   }
 
   .content {
