@@ -117,7 +117,11 @@ export function buildApiFile(params: {
   ) {
     return props
       .map((prop) => {
-        const defaultValue = getApiDefaultValue(prop, componentConfig, platform);
+        const defaultValue = getApiDefaultValue(
+          prop,
+          componentConfig,
+          platform
+        );
         const sharedProp = getSharedProp(prop);
 
         const description =

@@ -176,15 +176,20 @@ function Example() {
   }
 
   function renderDynamicProp(prop: ExtractedProp) {
-    const react = reactApiProps.find((candidate) => candidate.name === prop.name);
-    const native = nativeApiProps.find((candidate) => candidate.name === prop.name);
+    const react = reactApiProps.find(
+      (candidate) => candidate.name === prop.name
+    );
+    const native = nativeApiProps.find(
+      (candidate) => candidate.name === prop.name
+    );
     const onReact = Boolean(react);
     const onNative = Boolean(native);
-    const platformGuard = onReact && onNative
-      ? ''
-      : onReact
-        ? "platform === 'react'"
-        : "platform === 'react-native'";
+    const platformGuard =
+      onReact && onNative
+        ? ''
+        : onReact
+          ? "platform === 'react'"
+          : "platform === 'react-native'";
     const value = `value.${prop.name}`;
     const reactDefault = omissionDefault(prop, 'react');
     const nativeDefault = omissionDefault(prop, 'react-native');
@@ -212,7 +217,10 @@ function Example() {
     if (prop.kind === 'boolean') {
       if (required || reactDefault === true || nativeDefault === true) {
         const statement = `props.push(\`${prop.name}={\${${value}}}\`);`;
-        return emit(statement, required ? undefined : differentFromOmissionDefault());
+        return emit(
+          statement,
+          required ? undefined : differentFromOmissionDefault()
+        );
       }
       return emit(`props.push('${prop.name}');`, value);
     }
@@ -231,7 +239,8 @@ function Example() {
         return emit(statement, condition);
       }
       // A cleared optional string must still override a nonempty default.
-      if (reactDefault || nativeDefault) return emit(statement, differentFromOmissionDefault());
+      if (reactDefault || nativeDefault)
+        return emit(statement, differentFromOmissionDefault());
       return emit(statement, value);
     }
 
@@ -242,7 +251,9 @@ function Example() {
     return emit(statement, differentFromOmissionDefault());
   }
 
-  const dynamicPropHandlers = playgroundProps.map(renderDynamicProp).join('\n\n');
+  const dynamicPropHandlers = playgroundProps
+    .map(renderDynamicProp)
+    .join('\n\n');
   const requiredStringControls = playgroundProps.flatMap((prop) => {
     if (prop.kind !== 'string') return [];
     const onReact = reactApiProps.some(
@@ -252,11 +263,12 @@ function Example() {
       (candidate) => candidate.name === prop.name && candidate.required
     );
     if (!onReact && !onNative) return [];
-    const platform = onReact && onNative
-      ? ''
-      : onReact
-        ? "platform === 'react' && "
-        : "platform === 'react-native' && ";
+    const platform =
+      onReact && onNative
+        ? ''
+        : onReact
+          ? "platform === 'react' && "
+          : "platform === 'react-native' && ";
     return [`(${platform}!value.${prop.name}.trim())`];
   });
   const missingRequiredDeclaration = requiredStringControls.length

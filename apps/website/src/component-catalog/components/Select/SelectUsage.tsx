@@ -45,20 +45,20 @@ function createSelectCode(
   <Select.Item value='vue' label='Vue' />
   <Select.Item value='svelte' label='Svelte' />`;
 
-  if (value.placeholder) {
-    props.push(`placeholder='${value.placeholder}'`);
+  if (value.placeholder !== 'Select...') {
+    props.push(`placeholder={${JSON.stringify(value.placeholder)}}`);
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   if (value.color !== 'primary') {
-    props.push(`color='${value.color}'`);
+    props.push(`color={${JSON.stringify(value.color)}}`);
   }
 
   if (value.variant !== 'outline') {
-    props.push(`variant='${value.variant}'`);
+    props.push(`variant={${JSON.stringify(value.variant)}}`);
   }
 
   if (value.invalid) {
@@ -78,7 +78,7 @@ function createSelectCode(
   }
 
   if (value.error) {
-    props.push(`error='${value.error}'`);
+    props.push(`error={${JSON.stringify(value.error)}}`);
   }
 
   if (value.disabled) {

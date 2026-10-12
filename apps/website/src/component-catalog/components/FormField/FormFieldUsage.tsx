@@ -37,27 +37,27 @@ function createFormFieldCode(
       : `  <NativeInput placeholder='name@company.com' />`;
 
   if (value.label) {
-    props.push(`label='${value.label}'`);
+    props.push(`label={${JSON.stringify(value.label)}}`);
   }
 
   if (value.description) {
-    props.push(`description='${value.description}'`);
+    props.push(`description={${JSON.stringify(value.description)}}`);
   }
 
   if (value.error) {
-    props.push(`error='${value.error}'`);
+    props.push(`error={${JSON.stringify(value.error)}}`);
   }
 
   if (value.message) {
-    props.push(`message='${value.message}'`);
+    props.push(`message={${JSON.stringify(value.message)}}`);
   }
 
   if (value.messageTone !== 'neutral') {
-    props.push(`messageTone='${value.messageTone}'`);
+    props.push(`messageTone={${JSON.stringify(value.messageTone)}}`);
   }
 
   if (value.messageLive !== 'off') {
-    props.push(`messageLive='${value.messageLive}'`);
+    props.push(`messageLive={${JSON.stringify(value.messageLive)}}`);
   }
 
   if (value.required) {
@@ -73,7 +73,7 @@ function createFormFieldCode(
   }
 
   if (value.size !== 'md') {
-    props.push(`size='${value.size}'`);
+    props.push(`size={${JSON.stringify(value.size)}}`);
   }
 
   const propsText = props.length === 0 ? '' : `\n  ${props.join('\n  ')}\n`;

@@ -319,7 +319,9 @@ describe('renderUsage', () => {
       generatedFileHeader: '',
       getDemoProps: () => '',
     });
-    expect(result.content).toContain("platform === 'react' ? value.placement !== 'bottom' : value.placement !== 'top'");
+    expect(result.content).toContain(
+      "platform === 'react' ? value.placement !== 'bottom' : value.placement !== 'top'"
+    );
   });
 
   it('does not treat an unknown default as the current demo value', () => {
@@ -339,7 +341,9 @@ describe('renderUsage', () => {
       generatedFileHeader: '',
       getDemoProps: () => '',
     });
-    expect(result.content).toContain('props.push(`amount={${JSON.stringify(value.amount)}}`);');
+    expect(result.content).toContain(
+      'props.push(`amount={${JSON.stringify(value.amount)}}`);'
+    );
     expect(result.content).not.toContain('value.amount !== 0');
   });
 });
