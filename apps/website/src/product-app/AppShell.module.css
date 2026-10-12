@@ -632,6 +632,11 @@
     display: none;
   }
 
+  .drawerNavigation {
+    display: block;
+    min-width: 0;
+  }
+
   .mobileDrawerClose {
     flex: none;
     box-sizing: border-box;
