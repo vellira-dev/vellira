@@ -58,9 +58,17 @@ try {
 
   await selectTab('Appearance', 'appearance');
   await page.getByRole('heading', { name: 'Appearance' }).waitFor();
-  await page.getByRole('radio', { name: 'Dark', exact: true }).check();
+  await page.getByText('Dark', { exact: true }).click();
+  assert.equal(
+    await page.getByRole('radio', { name: 'Dark', exact: true }).isChecked(),
+    true
+  );
   await page.getByRole('button', { name: 'Theme: Dark' }).waitFor();
-  await page.getByRole('radio', { name: 'System', exact: true }).check();
+  await page.getByText('System', { exact: true }).click();
+  assert.equal(
+    await page.getByRole('radio', { name: 'System', exact: true }).isChecked(),
+    true
+  );
   await page.getByRole('button', { name: 'Theme: System' }).waitFor();
   await page.getByRole('radio', { name: 'High contrast', exact: true }).waitFor();
 
