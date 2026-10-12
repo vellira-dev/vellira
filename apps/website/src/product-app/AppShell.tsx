@@ -208,60 +208,56 @@ function AppShellContent({ children }: { children: ReactNode }) {
           />
         }
       />
-      <div
-        className={[
-          componentDrawerStyles.mobileLayer,
-          mobileMenuOpen ? componentDrawerStyles.mobileLayerOpen : null,
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        inert={!mobileMenuOpen}
-        aria-hidden={!mobileMenuOpen}
-      >
-        <Button
-          appearance='bare'
-          type='button'
-          className={componentDrawerStyles.backdrop}
-          aria-label='Dismiss workspace navigation'
-          onClick={() => {
-            setMobileMenuOpen(false);
-            mobileMenuTriggerRef.current?.focus();
-          }}
-        />
+      {mobileMenuOpen && (
         <div
-          ref={mobilePanelRef}
-          id='app-mobile-navigation'
-          className={componentDrawerStyles.mobileSurface}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Workspace navigation'
+          className={[
+            componentDrawerStyles.mobileLayer,
+            componentDrawerStyles.mobileLayerOpen,
+          ].join(' ')}
         >
-          <div className={componentDrawerStyles.mobileHeader}>
-            <HeaderBrand
-              href='/app'
-              className={componentDrawerStyles.mobileBrand}
-              ariaLabel='Vellira workspace'
-              onClick={() => setMobileMenuOpen(false)}
-            />
-          </div>
-          <div className={componentDrawerStyles.mobilePanel}>
-            <div className={componentDrawerStyles.mobilePanelContent}>
-              <AppNavigation
-                collapsed={false}
-                mobile
-                onNavigate={() => setMobileMenuOpen(false)}
+          <Button
+            appearance='bare'
+            type='button'
+            className={componentDrawerStyles.backdrop}
+            aria-label='Dismiss workspace navigation'
+            onClick={() => {
+              setMobileMenuOpen(false);
+              mobileMenuTriggerRef.current?.focus();
+            }}
+          />
+          <div
+            ref={mobilePanelRef}
+            id='app-mobile-navigation'
+            className={componentDrawerStyles.mobileSurface}
+            role='dialog'
+            aria-modal='true'
+            aria-label='Workspace navigation'
+          >
+            <div className={componentDrawerStyles.mobileHeader}>
+              <HeaderBrand
+                href='/app'
+                className={componentDrawerStyles.mobileBrand}
+                ariaLabel='Vellira workspace'
+                onClick={() => setMobileMenuOpen(false)}
               />
             </div>
-            {mobileMenuOpen && (
+            <div className={componentDrawerStyles.mobilePanel}>
+              <div className={componentDrawerStyles.mobilePanelContent}>
+                <AppNavigation
+                  collapsed={false}
+                  mobile
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
+              </div>
               <div className={styles.mobileAccountFooter}>
                 <AppMobileAccountActions
                   onNavigate={() => setMobileMenuOpen(false)}
                 />
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {process.env.NODE_ENV === 'development' &&
         process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1' && (
