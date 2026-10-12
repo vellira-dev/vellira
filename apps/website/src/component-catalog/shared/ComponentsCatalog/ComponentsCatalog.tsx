@@ -81,7 +81,7 @@ export function ComponentsCatalog() {
   return (
     <section className={styles.root}>
       <Container size='wide'>
-        <div className={styles.toolbar}>
+        <div className={styles.toolbar} data-component-catalog-toolbar>
           <div className={styles.toolbarInner}>
             <div className={styles.search}>
               <label htmlFor={searchId} className={styles.searchLabel}>
