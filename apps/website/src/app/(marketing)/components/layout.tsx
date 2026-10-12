@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { ComponentsAccountBoundary } from '@/component-catalog/shared/ComponentsAccountBoundary/ComponentsAccountBoundary';
+
 import {
   ComponentNavigationProvider,
   ComponentNavigationShell,
@@ -13,9 +15,10 @@ interface ComponentsLayoutProps {
 export default function ComponentsLayout({ children }: ComponentsLayoutProps) {
   return (
     <ComponentNavigationProvider>
-      <ComponentsHeader />
-
-      <ComponentNavigationShell mobileOnly />
+      <ComponentsAccountBoundary>
+        <ComponentsHeader />
+        <ComponentNavigationShell mobileOnly />
+      </ComponentsAccountBoundary>
       {children}
     </ComponentNavigationProvider>
   );
