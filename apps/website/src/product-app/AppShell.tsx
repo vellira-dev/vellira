@@ -5,8 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { Warning } from '@vellira-ui/icons';
-import { Button, Select, Tabs } from '@vellira-ui/react';
+import { Warning, UserRound } from '@vellira-ui/icons';
+import { Button, Dropdown, Select } from '@vellira-ui/react';
+import { Sidebar, SidebarGroup, SidebarItem } from '@/components/navigation/Sidebar';
 
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { AppSessionProvider, useAppSession } from './AppSession';
@@ -33,27 +34,19 @@ function AppNavigation() {
   return (
     <>
       <nav className={styles.desktopNavigation} aria-label='Vellira app'>
-        <Tabs
-          mode='navigation'
-          orientation='vertical'
-          value={value}
-          variant='line'
-          className={styles.navigationTabs}
-        >
-          <Tabs.List>
-            {navigation.map((item) => (
-              <Tabs.Trigger key={item.href} value={item.href} asChild>
-                <Link href={item.href}>{item.label}</Link>
-              </Tabs.Trigger>
-            ))}
-            <Tabs.Indicator />
-          </Tabs.List>
-        </Tabs>
-        <div className={styles.sidebarResources} aria-label='Resources'>
-          <span className={styles.sidebarCaption}>Resources</span>
-          <Link href='/components'>Components <span aria-hidden='true'>↗</span></Link>
-          <a href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>Docs <span aria-hidden='true'>↗</span></a>
-        </div>
+        <Sidebar ariaLabel='Account navigation'>
+          <SidebarGroup label='Workspace'>
+            <SidebarItem active={value === '/app'}>
+              <Link href='/app' aria-current={value === '/app' ? 'page' : undefined}>Overview</Link>
+            </SidebarItem>
+          </SidebarGroup>
+          <SidebarGroup label='Resources'>
+            <SidebarItem><Link href='/components'>Components ↗</Link></SidebarItem>
+            <SidebarItem>
+              <a href='https://docs.vellira.dev/start/getting-started' target='_blank' rel='noopener noreferrer'>Docs ↗</a>
+            </SidebarItem>
+          </SidebarGroup>
+        </Sidebar>
       </nav>
 
       <div className={styles.mobileNavigation}>
@@ -79,8 +72,10 @@ function AppNavigation() {
 }
 
 function AppShellContent({ children }: { children: ReactNode }) {
-  const { status, me, workspace, error, refresh } = useAppSession();
+  const { status, me, workspace, error, refresh, signOut } = useAppSession();
+  const router = useRouter();
   const [resendingVerification, setResendingVerification] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<string>();
   const [verificationError, setVerificationError] = useState<string>();
 
@@ -144,9 +139,35 @@ function AppShellContent({ children }: { children: ReactNode }) {
         <div className={styles.headerContext}>
           <span className={styles.workspaceName}>{workspace?.name}</span>
           <ThemeSwitcher />
-          <Button asChild size='sm' appearance='ghost' color='neutral'>
-            <Link href='/app/settings'>Account</Link>
-          </Button>
+          <Dropdown color='neutral' placement='bottom-end'>
+            <Dropdown.Trigger asChild>
+              <Button
+                appearance='ghost'
+                color='neutral'
+                size='sm'
+                iconOnly
+                iconStart={<UserRound size={20} aria-hidden='true' />}
+                aria-label='Account menu'
+              />
+            </Dropdown.Trigger>
+            <Dropdown.Content>
+              <Dropdown.Item onSelect={() => router.push('/app/settings')}>
+                Account settings
+              </Dropdown.Item>
+              <Dropdown.Separator />
+              <Dropdown.Item
+                color='danger'
+                disabled={signingOut}
+                onSelect={() => {
+                  if (signingOut) return;
+                  setSigningOut(true);
+                  void signOut().finally(() => setSigningOut(false));
+                }}
+              >
+                Sign out
+              </Dropdown.Item>
+            </Dropdown.Content>
+          </Dropdown>
         </div>
       </header>
 
