@@ -40,6 +40,23 @@ describe('getApiDefaultValue', () => {
     expect(getApiDefaultValue(size, meta, 'react-native')).toBe("'md'");
   });
 
+  it('escapes apostrophes in optional defaults', () => {
+    const optionalLabel: ExtractedProp = {
+      name: 'label',
+      kind: 'string',
+      required: false,
+      type: 'string',
+      description: '',
+    };
+    expect(
+      getApiDefaultValue(
+        optionalLabel,
+        { defaults: { shared: { label: "O'Connor" } } },
+        'react'
+      )
+    ).toBe("'O\\'Connor'");
+  });
+
   it('makes no claim without configured default metadata', () => {
     expect(getApiDefaultValue(size, {}, 'react')).toBeUndefined();
   });

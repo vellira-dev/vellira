@@ -42,7 +42,7 @@ export function getApiDefaultValue(
       : componentConfig.defaults?.native?.[prop.name];
   const value = platformValue ?? sharedValue;
   if (value === undefined) return undefined;
-  return typeof value === 'string' ? `'${value}'` : String(value);
+  return typeof value === 'string' ? toTsString(value) : String(value);
 }
 export function buildApiFile(params: {
   root: string;

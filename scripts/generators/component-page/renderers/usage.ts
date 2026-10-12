@@ -107,8 +107,6 @@ export function renderUsage(params: {
   const reactPlatformSetup = createPlatformSetup('react');
   const nativePlatformSetup = createPlatformSetup('react-native');
   const hasPlatformSetup = Boolean(reactPlatformSetup || nativePlatformSetup);
-  const reactApiPropNames = new Set(reactApiProps.map((prop) => prop.name));
-  const nativeApiPropNames = new Set(nativeApiProps.map((prop) => prop.name));
   const hasPlaygroundState = playgroundProps.length > 0;
   const usageValueParameter = hasPlaygroundState
     ? `,\n  value: ${componentName}PlaygroundValue`
@@ -242,17 +240,29 @@ function Example() {
           : undefined;
         return emit(statement, condition);
       }
-      // A cleared optional string must still override a nonempty default.
-      if (reactDefault || nativeDefault)
-        return emit(statement, differentFromOmissionDefault());
+      // Playground maps an empty optional string to undefined. Copying an
+      // explicit empty value would break parity with the visible preview.
       return emit(statement, value);
     }
 
-    // Selects and numbers must not be omitted simply because the current
-    // playground value equals the demo initial value. Only a configured
-    // omission default may justify leaving that value out of copied JSX.
+    // Never use a demo's initial value as omission authority. Required
+    // numeric/select values must be serialized even if configured metadata
+    // happens to have the same value.
     const statement = `props.push(\`${prop.name}={\${JSON.stringify(${value})}}\`);`;
-    return emit(statement, differentFromOmissionDefault());
+    if (react?.required && native?.required) return emit(statement);
+    if (react?.required && onNative) {
+      return emit(
+        statement,
+        `(platform === 'react' || ${differentFromOmissionDefault()})`
+      );
+    }
+    if (native?.required && onReact) {
+      return emit(
+        statement,
+        `(platform === 'react-native' || ${differentFromOmissionDefault()})`
+      );
+    }
+    return emit(statement, required ? undefined : differentFromOmissionDefault());
   }
 
   const dynamicPropHandlers = playgroundProps

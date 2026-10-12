@@ -369,4 +369,76 @@ describe('renderUsage', () => {
     );
     expect(result.content).not.toContain('value.amount !== 0');
   });
+
+  it('omits a cleared optional string, matching the playground undefined binding', () => {
+    const placeholder: ExtractedProp = {
+      name: 'placeholder',
+      kind: 'string',
+      required: false,
+      type: 'string',
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: { initialValues: { placeholder: 'Sample' } },
+        defaults: { shared: { placeholder: 'Runtime placeholder' } },
+      },
+      playgroundProps: [placeholder],
+      reactApiProps: [placeholder],
+      nativeApiProps: [placeholder],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain('if (value.placeholder)');
+    expect(result.content).not.toContain("value.placeholder !== 'Runtime placeholder'");
+  });
+
+  it('preserves required select values even when equal to metadata defaults', () => {
+    const mode: ExtractedProp = {
+      name: 'mode',
+      kind: 'select',
+      options: ['enabled', 'disabled'],
+      required: true,
+      type: "'enabled' | 'disabled'",
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        demo: { initialValues: { mode: 'enabled' } },
+        defaults: { shared: { mode: 'enabled' } },
+      },
+      playgroundProps: [mode],
+      reactApiProps: [mode],
+      nativeApiProps: [mode],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain('JSON.stringify(value.mode)');
+    expect(result.content).not.toContain("value.mode !== 'enabled'");
+  });
+
+  it('honors required select on one platform and optional on the other', () => {
+    const mode: ExtractedProp = {
+      name: 'mode',
+      kind: 'select',
+      options: ['enabled', 'disabled'],
+      required: true,
+      type: "'enabled' | 'disabled'",
+      description: '',
+    };
+    const result = renderUsage({
+      componentName: 'IdentityBadge',
+      componentConfig: {
+        defaults: { react: { mode: 'enabled' }, native: { mode: 'disabled' } },
+      },
+      playgroundProps: [mode],
+      reactApiProps: [mode],
+      nativeApiProps: [{ ...mode, required: false }],
+      generatedFileHeader: '',
+      getDemoProps: () => '',
+    });
+    expect(result.content).toContain("platform === 'react' ||");
+  });
 });
