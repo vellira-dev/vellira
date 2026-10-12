@@ -1,4 +1,4 @@
-/* global document */
+/* global document, getComputedStyle */
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 
@@ -25,9 +25,49 @@ try {
     (await overview.boundingBox()).y < (await components.boundingBox()).y,
     'Components must appear directly below Overview in primary app navigation'
   );
+  const appIconBaseline = (await overview.locator('svg').boundingBox()).x;
   await components.click();
   await page.waitForURL('**/components?from=app');
   await page.locator('[data-component-explorer-sidebar]').waitFor();
+  const componentGutters = await page.evaluate(() => {
+    const panel = document.querySelector('[data-component-explorer-sidebar]');
+    const heading = panel?.querySelector(
+      'aside[aria-label="Component navigation"] h2'
+    );
+    const buttonLink = panel?.querySelector('a[href*="/components/button"]');
+    const buttonName = buttonLink?.querySelector('span');
+    if (!panel || !heading || !buttonLink || !buttonName) {
+      throw new Error('Component sidebar label or Button link missing');
+    }
+    const text = document.createRange();
+    text.selectNodeContents(heading);
+    return {
+      headingLeft: text.getBoundingClientRect().left,
+      itemLeft: buttonName.getBoundingClientRect().left,
+      rightInset:
+        panel.getBoundingClientRect().right -
+        buttonLink.getBoundingClientRect().right,
+      labelColor: getComputedStyle(heading).color,
+      itemColor: getComputedStyle(buttonLink).color,
+    };
+  });
+  assert.ok(
+    Math.abs(componentGutters.headingLeft - componentGutters.itemLeft) <= 1,
+    'Component group headings must align with component names'
+  );
+  assert.ok(
+    Math.abs(componentGutters.itemLeft - appIconBaseline) <= 1,
+    'App and component catalogs must share the same navigation baseline'
+  );
+  assert.ok(
+    Math.abs(componentGutters.rightInset - 16) <= 1,
+    'Component sidebar must share the 16px trailing inset'
+  );
+  assert.notEqual(
+    componentGutters.labelColor,
+    componentGutters.itemColor,
+    'Component group heading must be muted relative to menu items'
+  );
   const back = page.getByRole('link', { name: 'Back to workspace' });
   await back.waitFor();
 
