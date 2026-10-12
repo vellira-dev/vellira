@@ -1,0 +1,169 @@
+name: Notify Verified Content Production
+
+# Separate from Cloudflare deployment: notification failures cannot roll back or
+# change the verified production candidate. All publication remains human-gated.
+on:
+  workflow_run:
+    workflows: ['Deploy Website Cloudflare Production']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: content-production-notify-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Handoff verified production source to private Content Distribution
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      vars.VELLIRA_CONTENT_PRODUCTION_BRIDGE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: content-production-notification
+
+    steps:
+      - name: Recheck completed source run and exact successful deployment
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REPOSITORY: ${{ github.event.workflow_run.repository.full_name }}
+          SOURCE_PATH: ${{ github.event.workflow_run.path }}
+          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
+          SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          echo 'eligible=false' >> "$GITHUB_OUTPUT"
+          if [ "$SOURCE_REPOSITORY" != 'vellira-dev/vellira' ] ||
+             [ "$SOURCE_PATH" != '.github/workflows/deploy-website-cloudflare-production.yml' ] ||
+             [ "$SOURCE_EVENT" != 'workflow_run' ] ||
+             [ "$SOURCE_BRANCH" != 'main' ] ||
+             ! [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] ||
+             ! [[ "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ]] ||
+             ! [[ "$SOURCE_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'Source run is not an eligible normal production deployment.'
+            exit 0
+          fi
+
+          gh api "repos/vellira-dev/vellira/actions/runs/$SOURCE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          gh api \
+            "repos/vellira-dev/vellira/actions/runs/$SOURCE_RUN_ID/attempts/$SOURCE_RUN_ATTEMPT/jobs?per_page=100" \
+            > "$RUNNER_TEMP/source-jobs.json"
+
+          jq -e \
+            --argjson run_id "$SOURCE_RUN_ID" \
+            --argjson run_attempt "$SOURCE_RUN_ATTEMPT" \
+            --arg sha "$SOURCE_SHA" '
+            .repository.full_name == "vellira-dev/vellira" and
+            .path == ".github/workflows/deploy-website-cloudflare-production.yml" and
+            .event == "workflow_run" and
+            .head_branch == "main" and
+            .head_sha == $sha and
+            .id == $run_id and
+            .run_attempt == $run_attempt and
+            .status == "completed" and
+            .conclusion == "success"
+          ' "$RUNNER_TEMP/source-run.json" > /dev/null || {
+            echo 'The source workflow did not pass exact run verification.'
+            exit 0
+          }
+
+          jq -e --argjson run_id "$SOURCE_RUN_ID" '
+            [.jobs[] | select(
+              .name == "Deploy and verify approved production candidate" and
+              .run_id == $run_id and
+              .status == "completed" and
+              .conclusion == "success"
+            )] | length == 1
+          ' "$RUNNER_TEMP/source-jobs.json" > /dev/null || {
+            echo 'The exact production deployment job did not succeed.'
+            exit 0
+          }
+
+          # GitHub workflow_run.head_sha is the workflow checkout, which may
+          # DIFFER from the immutable candidate actually deployed to Cloudflare.
+          # Read the production runtime's active build, bound to this exact run.
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --max-time 15 --header 'Cache-Control: no-cache' \
+            'https://vellira.dev/__vellira_runtime' > "$RUNNER_TEMP/live-runtime.json"
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          runtime = json.loads(
+              Path(os.environ['RUNNER_TEMP'], 'live-runtime.json').read_text(encoding='utf-8')
+          )
+          if not isinstance(runtime, dict):
+              raise SystemExit('Live production runtime response is invalid.')
+          if not isinstance(runtime.get('workerVersion'), str) or not runtime['workerVersion']:
+              raise SystemExit('Live production Worker version is missing.')
+          run_id = os.environ['SOURCE_RUN_ID']
+          attempt = os.environ['SOURCE_RUN_ATTEMPT']
+          build_id = runtime.get('buildId')
+          if not isinstance(build_id, str):
+              raise SystemExit('Live production build identity is missing.')
+          matched = re.fullmatch(
+              rf'([0-9a-f]{{40}})-{re.escape(run_id)}-{re.escape(attempt)}',
+              build_id,
+          )
+          if matched is None:
+              raise SystemExit(
+                  'Active production build does not correspond to the verified run and attempt.'
+              )
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+              output.write(f'candidate-sha={matched.group(1)}\n')
+              output.write(f'build-id={build_id}\n')
+          PY
+
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          echo 'Verified live deployment identity; no publication authorization was granted.'
+
+      - name: Create short-lived repository-scoped private dispatch token
+        id: dispatch-token
+        if: steps.source.outputs.eligible == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.VELLIRA_CONTENT_BRIDGE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.VELLIRA_CONTENT_BRIDGE_APP_PRIVATE_KEY }}
+          owner: vellira-dev
+          repositories: vellira-internal
+          permission-contents: write
+
+      - name: Dispatch immutable deployment reference (not external publishing)
+        if: steps.source.outputs.eligible == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+          CANDIDATE_SHA: ${{ steps.source.outputs.candidate-sha }}
+          BUILD_ID: ${{ steps.source.outputs.build-id }}
+          PRODUCTION_RUN_ID: ${{ github.event.workflow_run.id }}
+          PRODUCTION_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          expected_build_id="$CANDIDATE_SHA-$PRODUCTION_RUN_ID-$PRODUCTION_RUN_ATTEMPT"
+          test "$expected_build_id" = "$BUILD_ID"
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            'repos/vellira-dev/vellira-internal/dispatches' \
+            -f event_type='vellira-canonical-production-verified-v1' \
+            -F 'client_payload[schemaVersion]=1' \
+            -F "client_payload[runId]=$PRODUCTION_RUN_ID" \
+            -F "client_payload[runAttempt]=$PRODUCTION_RUN_ATTEMPT" \
+            -f "client_payload[candidateSha]=$CANDIDATE_SHA" \
+            -f "client_payload[buildId]=$BUILD_ID"
+
+          printf 'Handoff submitted for verified production run %s attempt %s.\n' \
+            "$PRODUCTION_RUN_ID" "$PRODUCTION_RUN_ATTEMPT" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Private consumer independently validates source run, deploy job and live build.'
+          echo 'This workflow cannot approve channel content or call any external publisher.'

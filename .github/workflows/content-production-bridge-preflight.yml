@@ -1,0 +1,91 @@
+name: Content Production Bridge Preflight
+
+# Manually prove a completed, CURRENT production deployment without mutation.
+# This workflow deliberately cannot notify the private repository or publish.
+on:
+  workflow_dispatch:
+    inputs:
+      production_run_id:
+        description: Exact successful public production run ID (e.g. 38251246967).
+        type: string
+        required: true
+      production_run_attempt:
+        description: Exact successful attempt (e.g. 2).
+        type: string
+        required: true
+        default: '1'
+      article_slug:
+        description: Existing public article to verify (no slashes).
+        type: string
+        required: true
+        default: two-runtimes
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: content-production-bridge-preflight
+  cancel-in-progress: false
+
+jobs:
+  read-only-proof:
+    name: Verify live production run and canonical article without writes
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout trusted public main without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Collect read-only immutable production evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_RUN_ID: ${{ inputs.production_run_id }}
+          PRODUCTION_RUN_ATTEMPT: ${{ inputs.production_run_attempt }}
+          CANONICAL_ARTICLE_SLUG: ${{ inputs.article_slug }}
+        run: |
+          set -euo pipefail
+          [[ "$PRODUCTION_RUN_ID" =~ ^[1-9][0-9]{0,14}$ ]]
+          [[ "$PRODUCTION_RUN_ATTEMPT" =~ ^[1-9][0-9]{0,5}$ ]]
+          [[ "$CANONICAL_ARTICLE_SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+
+          gh api             "repos/vellira-dev/vellira/actions/runs/$PRODUCTION_RUN_ID"             > "$RUNNER_TEMP/bridge-production-run.json"
+          gh api             "repos/vellira-dev/vellira/actions/runs/$PRODUCTION_RUN_ID/attempts/$PRODUCTION_RUN_ATTEMPT/jobs?per_page=100"             > "$RUNNER_TEMP/bridge-production-jobs.json"
+
+          curl --fail --silent --show-error --retry 3 --retry-delay 2             --max-time 15 --header 'Cache-Control: no-cache'             'https://vellira.dev/__vellira_runtime'             > "$RUNNER_TEMP/bridge-production-runtime.json"
+
+          curl --fail --silent --show-error --retry 3 --retry-delay 2             --max-time 15 --max-filesize 3000000             --header 'Accept: text/html' --header 'Cache-Control: no-cache'             --dump-header "$RUNNER_TEMP/bridge-article-headers.txt"             --output "$RUNNER_TEMP/bridge-article.html"             --write-out '%{http_code}\n%{url_effective}\n'             "https://vellira.dev/blog/$CANONICAL_ARTICLE_SLUG"             > "$RUNNER_TEMP/bridge-article-meta.txt"
+
+      - name: Validate actual deployed build, exact run and canonical page
+        shell: bash
+        env:
+          PRODUCTION_RUN_ID: ${{ inputs.production_run_id }}
+          PRODUCTION_RUN_ATTEMPT: ${{ inputs.production_run_attempt }}
+          CANONICAL_ARTICLE_SLUG: ${{ inputs.article_slug }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/content-production-bridge-preflight.mjs
+
+      - name: State protected activation requirements without accessing secrets
+        if: always()
+        shell: bash
+        env:
+          BRIDGE_ENABLED: ${{ vars.VELLIRA_CONTENT_PRODUCTION_BRIDGE_ENABLED || 'false' }}
+        run: |
+          {
+            echo '## Activation'
+            if [ "$BRIDGE_ENABLED" = 'true' ]; then
+              echo '- Repository bridge flag: **enabled**'
+            else
+              echo '- Repository bridge flag: **disabled or unset**'
+            fi
+            echo '- This read-only workflow never queries or exposes App secrets.'
+            echo '- Create/protect environment and scope a dedicated App before enabling.'
+            echo '- No website deployment, repository dispatch or external publish happened.'
+          } >> "$GITHUB_STEP_SUMMARY"
