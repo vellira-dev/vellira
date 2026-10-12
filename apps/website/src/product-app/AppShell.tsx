@@ -82,6 +82,59 @@ function AppNavigation({
 function AppShellContent({ children }: { children: ReactNode }) {
   const { status, me, error, refresh } = useAppSession();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobilePanelRef = useRef<HTMLDivElement>(null);
+
+  // Mirrors the existing website/component mobile-navigation behavior:
+  // one modal drawer, Escape/backdrop dismissal, body-scroll lock and
+  // keyboard focus within the open navigation. No second route tree.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobilePanelRef.current?.querySelector<HTMLElement>('a[href]')?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMobileMenuOpen(false);
+        mobileMenuTriggerRef.current?.focus();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const links = Array.from(
+        mobilePanelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])'
+        ) ?? []
+      );
+      const first = links[0];
+      const last = links[links.length - 1];
+      if (!first || !last) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const handleResize = () => {
+      if (window.innerWidth > 1100) setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [mobileMenuOpen]);
 
   if (status === 'loading') {
     return (
@@ -105,7 +158,68 @@ function AppShellContent({ children }: { children: ReactNode }) {
 
   return (
     <div className={styles.shell} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}>
-      <AppHeader />
+      <AppHeader
+        mobileAction={
+          <Button
+            ref={mobileMenuTriggerRef}
+            type='button'
+            size='sm'
+            shape='square'
+            appearance='ghost'
+            iconOnly
+            iconStart={
+              mobileMenuOpen ? (
+                <Close size={22} aria-hidden='true' />
+              ) : (
+                <Menu size={22} aria-hidden='true' />
+              )
+            }
+            aria-label={
+              mobileMenuOpen
+                ? 'Close workspace navigation'
+                : 'Open workspace navigation'
+            }
+            aria-expanded={mobileMenuOpen}
+            aria-controls='app-mobile-navigation'
+            onClick={() => setMobileMenuOpen((previous) => !previous)}
+          />
+        }
+      />
+      <div
+        className={[
+          styles.mobileNavigationLayer,
+          mobileMenuOpen ? styles.mobileNavigationLayerOpen : null,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        inert={!mobileMenuOpen}
+        aria-hidden={!mobileMenuOpen}
+      >
+        <Button
+          appearance='bare'
+          type='button'
+          className={styles.mobileNavigationBackdrop}
+          aria-label='Close workspace navigation'
+          onClick={() => {
+            setMobileMenuOpen(false);
+            mobileMenuTriggerRef.current?.focus();
+          }}
+        />
+        <div
+          ref={mobilePanelRef}
+          id='app-mobile-navigation'
+          className={styles.mobileNavigationSurface}
+          role='dialog'
+          aria-modal='true'
+          aria-label='Workspace navigation'
+        >
+          <AppNavigation
+            collapsed={false}
+            mobile
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
+        </div>
+      </div>
 
       {process.env.NODE_ENV === 'development' &&
         process.env.NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW === '1' && (
@@ -152,10 +266,6 @@ function AppShellContent({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </aside>
-
-        <div className={styles.mobileNavigationRow}>
-          <AppNavigation collapsed={false} />
-        </div>
 
         <main className={styles.content}>{children}</main>
       </div>
