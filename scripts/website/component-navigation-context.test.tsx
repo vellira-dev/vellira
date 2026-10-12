@@ -10,10 +10,10 @@ import {
 } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-const navigation = vi.hoisted(() => ({ search: 'from=app' }));
+const route = vi.hoisted(() => ({ search: 'from=app' }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/components',
-  useSearchParams: () => new URLSearchParams(navigation.search),
+  useSearchParams: () => new URLSearchParams(route.search),
 }));
 vi.mock(
   '../../apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentCatalogPreview',
@@ -29,20 +29,23 @@ import { ComponentSidebar } from '../../apps/website/src/component-catalog/share
 
 afterEach(() => {
   cleanup();
-  navigation.search = 'from=app';
+  route.search = 'from=app';
 });
 
 function StateProbe() {
-  const { workspaceContextRequested, fromWorkspace, setWorkspaceSessionReady } =
-    useComponentNavigation();
+  const context = useComponentNavigation();
+  const requested = String(context.workspaceContextRequested);
+  const granted = String(context.fromWorkspace);
+
   return (
     <>
-      <output data-testid='context-requested'>
-        {String(workspaceContextRequested)}
-      </output>
-      <output data-testid='context-granted'>{String(fromWorkspace)}</output>
-      <button type='button' onClick={() => setWorkspaceSessionReady(true)}>
-        Canonical session ready
+      <output data-testid='requested'>{requested}</output>
+      <output data-testid='granted'>{granted}</output>
+      <button
+        type='button'
+        onClick={() => context.setWorkspaceSessionReady(true)}
+      >
+        Session ready
       </button>
     </>
   );
@@ -58,55 +61,44 @@ function CatalogFixture() {
   );
 }
 
-function componentLink(selector: string) {
-  const link = document.querySelector<HTMLAnchorElement>(selector);
-  expect(link).not.toBeNull();
-  return link?.getAttribute('href');
+function expectButtonLinks(href: string) {
+  const links = document.querySelectorAll('a[href^="/components/button"]');
+  expect(links.length).toBeGreaterThan(1);
+  for (const link of links) {
+    expect(link.getAttribute('href')).toBe(href);
+  }
 }
 
-it('keeps requested catalog links while session is loading', async () => {
+it('preserves requested links during session loading', async () => {
   render(<CatalogFixture />);
-  await waitFor(() =>
-    expect(screen.getByTestId('context-requested')).toHaveTextContent('true')
-  );
-  expect(screen.getByTestId('context-granted')).toHaveTextContent('false');
-  expect(
-    componentLink(
-      'aside[aria-label="Component navigation"] a[href*="/components/button"]'
-    )
-  ).toBe('/components/button?from=app');
-  expect(
-    componentLink('a[class*="card"][href*="/components/button"]')
-  ).toBe('/components/button?from=app');
+  await waitFor(() => {
+    expect(screen.getByTestId('requested')).toHaveTextContent('true');
+  });
+  expect(screen.getByTestId('granted')).toHaveTextContent('false');
+  expectButtonLinks('/components/button?from=app');
 });
 
-it('updates same-path query without carrying session authority', async () => {
+it('reacts to same-path query without carrying session authority', async () => {
   const view = render(<CatalogFixture />);
-  await waitFor(() =>
-    expect(screen.getByTestId('context-requested')).toHaveTextContent('true')
-  );
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Canonical session ready' })
-  );
-  expect(screen.getByTestId('context-granted')).toHaveTextContent('true');
+  await waitFor(() => {
+    expect(screen.getByTestId('requested')).toHaveTextContent('true');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Session ready' }));
+  expect(screen.getByTestId('granted')).toHaveTextContent('true');
 
-  navigation.search = '';
+  route.search = '';
   view.rerender(<CatalogFixture />);
-  await waitFor(() =>
-    expect(screen.getByTestId('context-requested')).toHaveTextContent('false')
-  );
-  expect(screen.getByTestId('context-granted')).toHaveTextContent('false');
-  expect(
-    componentLink('a[class*="card"][href*="/components/button"]')
-  ).toBe('/components/button');
+  await waitFor(() => {
+    expect(screen.getByTestId('requested')).toHaveTextContent('false');
+  });
+  expect(screen.getByTestId('granted')).toHaveTextContent('false');
+  expectButtonLinks('/components/button');
 
-  navigation.search = 'from=app';
+  route.search = 'from=app';
   view.rerender(<CatalogFixture />);
-  await waitFor(() =>
-    expect(screen.getByTestId('context-requested')).toHaveTextContent('true')
-  );
-  expect(screen.getByTestId('context-granted')).toHaveTextContent('false');
-  expect(
-    componentLink('a[class*="card"][href*="/components/button"]')
-  ).toBe('/components/button?from=app');
+  await waitFor(() => {
+    expect(screen.getByTestId('requested')).toHaveTextContent('true');
+  });
+  expect(screen.getByTestId('granted')).toHaveTextContent('false');
+  expectButtonLinks('/components/button?from=app');
 });
