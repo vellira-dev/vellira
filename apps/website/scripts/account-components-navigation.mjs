@@ -228,6 +228,18 @@ try {
   });
   await workspaceMenu.waitFor();
   assert.equal(
+    await workspaceMenu.getByRole('link', { name: 'Overview' })
+      .getAttribute('aria-current'),
+    null,
+    'Overview must not be current on a component detail route'
+  );
+  assert.equal(
+    await workspaceMenu.getByRole('link', { name: 'Components' })
+      .getAttribute('aria-current'),
+    'location',
+    'A component detail route must activate the Components section'
+  );
+  assert.equal(
     page.url(),
     originalUrl,
     'Back must open the main workspace menu without changing the URL'

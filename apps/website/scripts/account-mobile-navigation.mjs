@@ -403,8 +403,8 @@ try {
     assert.equal(
       await workspaceMenu.getByRole('link', { name: 'Components' })
         .getAttribute('aria-current'),
-      'location',
-      'Components is the active workspace section on a detail route'
+      'page',
+      'The Components landing page is the current workspace page'
     );
     await workspaceMenu.getByRole('link', { name: 'Account settings' }).waitFor();
 
