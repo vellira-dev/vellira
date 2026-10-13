@@ -1,6 +1,56 @@
 import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Button for explicit actions such as saving, submitting a form, or opening a menu.',
+    description:
+      'Accessible React and React Native actions with Vellira Button: appearances, semantic colors, sizes, loading states, icons, links, and composition.',
+    whenToUse: [
+      'Choose Button for an action; use a semantic link for navigation.',
+      'Use appearance and color to communicate action hierarchy and intent.',
+      'For asynchronous actions, use loading and loadingText to signal progress.',
+      'Give icon-only controls accessible names; the icon itself is not a label.',
+    ],
+    patterns: [
+      {
+        id: 'async-action',
+        title: 'Save or submit',
+        description: 'Use loading and loadingText while an action is pending.',
+      },
+      {
+        id: 'action-hierarchy',
+        title: 'Primary and secondary actions',
+        description:
+          'Pair solid primary actions with quieter outline or ghost actions.',
+      },
+      {
+        id: 'icon-only',
+        title: 'Accessible icon-only buttons',
+        description:
+          'Keep a concise accessible label when visible text is absent.',
+      },
+      {
+        id: 'navigation',
+        title: 'Link-like buttons',
+        description:
+          'On React, use href or asChild to preserve link semantics.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'React Button supports onClick for actions and href or asChild for link semantics.',
+        'For an icon-only web action, use aria-label or aria-labelledby.',
+      ],
+      'react-native': [
+        'React Native Button handles native actions through onPress, not DOM onClick.',
+        'Use accessibilityLabel for icon-only native actions; web ARIA rules do not transfer.',
+      ],
+    },
+    missingEvidence: [],
+  },
+
   react: {
     children: 'Add item',
     demoProps: `iconStart={<Plus />}

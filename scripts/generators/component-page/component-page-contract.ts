@@ -74,6 +74,9 @@ const {
   ).href
 );
 
+const buttonMetadata = read('components/Button/metadata.ts');
+const inputMetadata = read('components/Input/metadata.ts');
+const componentPresentation = read('registry/componentPresentation.ts');
 const buttonExamples = read('components/Button/ButtonExamples.tsx');
 const buttonDemo = read('components/Button/ButtonDemo.tsx');
 const nativeButtonDemo = read('components/Button/NativeButtonDemo.tsx');
@@ -204,6 +207,47 @@ assertIncludes(
   checkboxPlaygroundSchema,
   "options: ['end', 'start']",
   'Checkbox orders labelPosition controls end before start'
+);
+
+assertIncludes(
+  buttonMetadata,
+  'Use Button for explicit actions',
+  'Button discovery intent is authored in metadata'
+);
+assertIncludes(
+  inputMetadata,
+  'Use Input for short free-form text',
+  'Input discovery intent is authored in metadata'
+);
+assertIncludes(
+  componentPages,
+  'Use Button for explicit actions',
+  'Button discovery reaches the generated component page'
+);
+assertIncludes(
+  componentPages,
+  'Use Input for short free-form text',
+  'Input discovery reaches the generated component page'
+);
+assertIncludes(
+  componentPages,
+  'Use Select or RadioGroup for fixed choices',
+  'Input discovery distinguishes text entry from fixed selection'
+);
+assertIncludes(
+  componentPages,
+  'React Native Button handles native actions through onPress',
+  'Button discovery preserves the native interaction boundary'
+);
+assertIncludes(
+  componentPages,
+  'React Input supports browser input types',
+  'Input discovery preserves the web interaction boundary'
+);
+assertIncludes(
+  componentPresentation,
+  'Accessible React and React Native text inputs with labels',
+  'Input public search description describes supported developer use cases'
 );
 
 assertIncludes(buttonExamples, "title: 'Icons'", 'Button icon example exists');
