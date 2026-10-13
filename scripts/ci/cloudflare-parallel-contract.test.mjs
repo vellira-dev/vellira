@@ -55,7 +55,6 @@ test('CI performance inventory measures both Cloudflare worker lanes and the sta
   assert.ok(jobs.has('Cloudflare cache and multi-deployment browser contracts'));
 });
 
-
 test('full-path public browser suites overlap without dropping affected-path coverage', () => {
   const ci = jobBlock('ci');
   const parallelStart = ci.indexOf('- name: Parallel public website browser regressions');
