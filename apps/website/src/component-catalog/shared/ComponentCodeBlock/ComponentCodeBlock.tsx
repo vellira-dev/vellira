@@ -76,7 +76,18 @@ export function ComponentCodeBlock({
         </Button>
       </div>
 
-      <div className={styles.code} dangerouslySetInnerHTML={{ __html: html }} />
+      {html ? (
+        <div
+          className={styles.code}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <div className={styles.code}>
+          <pre>
+            <code>{code}</code>
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

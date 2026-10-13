@@ -94,18 +94,77 @@ does not match the surrounding product language.
 />
 ```
 
-### Mixed Selection
+### Select All with an Indeterminate React Checkbox
 
-Use `indeterminate` when a parent row represents a partial child selection.
+A select-all checkbox summarizes a group: unchecked when none are selected,
+indeterminate when only some are selected, and checked when every item is
+selected. Keep the selected item IDs as the single source of truth. Derive
+`checked` and `indeterminate` instead of saving an independent third value.
+
+The example below is a complete React pattern, including the individual
+checkboxes that control the mixed state. It uses the existing Vellira
+`checked` and `onCheckedChange` API without adding a form library.
 
 ```tsx
-<Checkbox
-  checked={allSelected}
-  indeterminate={someSelected && !allSelected}
-  onCheckedChange={toggleAll}
-  label='Select all projects'
-/>
+import { useState } from 'react';
+import { Checkbox } from '@vellira-ui/react';
+
+const PROJECTS = [
+  { id: 'design', name: 'Design system' },
+  { id: 'docs', name: 'Documentation' },
+  { id: 'website', name: 'Website' },
+] as const;
+
+type ProjectId = (typeof PROJECTS)[number]['id'];
+
+export function ProjectSelection() {
+  const [selectedIds, setSelectedIds] = useState<ProjectId[]>(['design']);
+  const allSelected = selectedIds.length === PROJECTS.length;
+  const someSelected = selectedIds.length > 0;
+
+  function toggleAll(checked: boolean) {
+    setSelectedIds(checked ? PROJECTS.map((project) => project.id) : []);
+  }
+
+  function toggleOne(id: ProjectId, checked: boolean) {
+    setSelectedIds((current) =>
+      checked
+        ? current.includes(id)
+          ? current
+          : [...current, id]
+        : current.filter((value) => value !== id)
+    );
+  }
+
+  return (
+    <fieldset>
+      <legend>Projects</legend>
+      <Checkbox
+        label='Select all projects'
+        checked={allSelected}
+        indeterminate={someSelected && !allSelected}
+        onCheckedChange={toggleAll}
+      />
+      {PROJECTS.map((project) => (
+        <Checkbox
+          key={project.id}
+          label={project.name}
+          checked={selectedIds.includes(project.id)}
+          onCheckedChange={(checked) => toggleOne(project.id, checked)}
+        />
+      ))}
+    </fieldset>
+  );
+}
 ```
+
+The mixed indicator represents **partial selection**, not a third submitted
+checkbox value. If the parent does not need to coordinate the rows,
+`defaultChecked` may be simpler than controlled state. For mutually exclusive
+choices, use [RadioGroup](/react/radio-group) instead.
+
+Try the [live Checkbox playground](https://vellira.dev/components/checkbox)
+or compare the [React Native Checkbox](/react-native/checkbox) API.
 
 ### Error State
 
