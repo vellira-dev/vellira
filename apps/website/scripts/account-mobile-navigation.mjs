@@ -462,12 +462,24 @@ try {
   // the former hard-coded 100px image.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL('/components/button', baseUrl).toString());
+  // Avoid clicking server-rendered controls before the cold development route
+  // has loaded and hydrated its first client navigation bundle.
+  await page.waitForLoadState('networkidle');
   const publicHeaderLogo = await page.locator('header').first()
     .getByRole('link', { name: 'Vellira home' })
     .locator('img')
     .boundingBox();
   assert.ok(publicHeaderLogo);
-  await page.getByRole('button', { name: 'Open component navigation' }).click();
+  const publicTrigger = page.getByRole('button', {
+    name: 'Open component navigation',
+  });
+  await publicTrigger.click();
+  await page.waitForFunction(() => {
+    const trigger = document.querySelector(
+      '[aria-controls="component-navigation"]'
+    );
+    return trigger?.getAttribute('aria-expanded') === 'true';
+  });
   const publicComponentsDrawer = page.locator('#component-navigation');
   await publicComponentsDrawer.waitFor();
   const publicDrawerLogo = await publicComponentsDrawer

@@ -8,6 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const route = vi.hoisted(() => ({ search: 'from=app' }));
@@ -60,6 +61,26 @@ function CatalogFixture() {
     </ComponentNavigationProvider>
   );
 }
+
+function OpeningPublicDrawer() {
+  const { open, openNavigation } = useComponentNavigation();
+  useLayoutEffect(() => {
+    openNavigation();
+  }, [openNavigation]);
+  return <output data-testid='public-drawer-open'>{String(open)}</output>;
+}
+
+it('does not dismiss an early public drawer on initial URL reconciliation', async () => {
+  route.search = '';
+  render(
+    <ComponentNavigationProvider>
+      <OpeningPublicDrawer />
+    </ComponentNavigationProvider>
+  );
+  await waitFor(() => {
+    expect(screen.getByTestId('public-drawer-open')).toHaveTextContent('true');
+  });
+});
 
 function expectButtonLinks(href: string) {
   const links = document.querySelectorAll('a[href^="/components/button"]');

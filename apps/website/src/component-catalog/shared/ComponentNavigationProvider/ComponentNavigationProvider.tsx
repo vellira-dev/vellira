@@ -61,6 +61,7 @@ export function ComponentNavigationProvider({
 }: ComponentNavigationProviderProps) {
   const pathname = usePathname();
   const previousPathname = useRef(pathname);
+  const previousWorkspaceContextRequested = useRef<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [mainOpen, setMainOpen] = useState(false);
   const [workspaceContextRequested, setWorkspaceContextRequested] =
@@ -72,12 +73,18 @@ export function ComponentNavigationProvider({
   // Query-only navigation and browser history must invalidate layout context
   // just like a pathname change. This is never an authentication decision.
   const syncWorkspaceContext = useCallback((requested: boolean) => {
+    const previous = previousWorkspaceContextRequested.current;
+    if (previous === requested) return;
+    previousWorkspaceContextRequested.current = requested;
     setWorkspaceContextRequested(requested);
-    if (!requested) {
-      setWorkspaceSessionReady(false);
+
+    // Initial URL reconciliation must not undo a just-opened public drawer.
+    // Only an actual query-only context change dismisses existing menus.
+    if (previous !== null) {
       setOpen(false);
       setMainOpen(false);
     }
+    if (!requested) setWorkspaceSessionReady(false);
   }, []);
 
   useEffect(() => {
