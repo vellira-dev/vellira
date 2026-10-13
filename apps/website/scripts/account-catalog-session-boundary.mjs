@@ -189,7 +189,127 @@ try {
     await delayedContext.close();
   }
 
-  console.log('OK catalog session boundary: anonymous, query-only history, delayed canonical session and context retention');
+
+  // Real /app -> /components soft navigation with a deliberately slow second
+  // GET /v1/me. Track every rendered frame, not just the final settled state:
+  // marketing navigation must never become visible between product headers.
+  const transitionContext = await browser.newContext();
+  let sessionRequests = 0;
+  let releaseVerification = () => {};
+  let signalVerification = () => {};
+  const verificationGate = new Promise((resolve) => {
+    releaseVerification = resolve;
+  });
+  const verificationStarted = new Promise((resolve) => {
+    signalVerification = resolve;
+  });
+  await transitionContext.route('**/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    assert.equal(route.request().method(), 'GET', 'Catalog transition cannot mutate the API');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': new URL(baseUrl).origin,
+      'Access-Control-Allow-Credentials': 'true',
+    };
+    if (pathname === '/v1/me') {
+      sessionRequests += 1;
+      if (sessionRequests === 2) {
+        signalVerification();
+        await verificationGate;
+      }
+      await route.fulfill({
+        status: 200,
+        headers,
+        body: '{"user":{"id":"test-user","status":"active","emailVerified":true}}',
+      });
+    } else if (pathname === '/v1/workspaces') {
+      await route.fulfill({
+        status: 200,
+        headers,
+        body: '{"workspaces":[{"id":"00000000-0000-4000-8000-000000000123","name":"Test workspace","status":"active","membership":{"role":"owner"}}]}',
+      });
+    } else {
+      await route.fulfill({
+        status: 404,
+        headers,
+        body: '{"error":{"code":"not_found"}}',
+      });
+    }
+  });
+  const transitionPage = await transitionContext.newPage();
+  transitionPage.setDefaultTimeout(15_000);
+  try {
+    await transitionPage.setViewportSize({ width: 1440, height: 900 });
+    await transitionPage.goto(new URL('/app', baseUrl).toString());
+    await transitionPage.locator('[data-product-app-header]').waitFor();
+    await transitionPage.evaluate(() => {
+      window.__workspacePaintProbe = { siteFrames: 0, frames: 0 };
+      const sample = () => {
+        const probe = window.__workspacePaintProbe;
+        if (!probe || probe.frames > 3600) return;
+        if (document.querySelector('header nav[aria-label="Primary navigation"]')) {
+          probe.siteFrames += 1;
+        }
+        probe.frames += 1;
+        window.requestAnimationFrame(sample);
+      };
+      window.requestAnimationFrame(sample);
+    });
+
+    await transitionPage.locator('#app-sidebar-navigation')
+      .getByRole('link', { name: 'Components' }).click();
+    await transitionPage.waitForURL('**/components?from=app');
+    await verificationStarted;
+    await transitionPage.locator('[data-component-explorer]').waitFor();
+    assert.equal(
+      await transitionPage.locator('header nav[aria-label="Primary navigation"]').count(),
+      0,
+      'No public header while workspace verification is pending'
+    );
+    assert.equal(
+      await transitionPage.locator('[data-product-app-header]').count(),
+      0,
+      'Product authentication marker requires a canonical verified session'
+    );
+    assert.equal(
+      await transitionPage.getByRole('button', { name: 'Account menu' }).count(),
+      0,
+      'Do not expose account controls during workspace verification'
+    );
+    assert.equal(
+      await transitionPage.getByRole('link', { name: 'Back to workspace' }).count(),
+      0,
+      'Do not expose workspace affordances before canonical verification'
+    );
+    const pendingHeader = await transitionPage.locator('header').first().boundingBox();
+    assert.ok(pendingHeader);
+
+    releaseVerification();
+    await transitionPage.locator('[data-product-app-header]').waitFor();
+    await transitionPage.getByRole('link', { name: 'Back to workspace' }).waitFor();
+    const readyHeader = await transitionPage.locator('[data-product-app-header]').boundingBox();
+    assert.ok(readyHeader);
+    assert.ok(
+      Math.abs(pendingHeader.height - readyHeader.height) <= 1,
+      'The header must not resize when workspace session becomes ready'
+    );
+    assert.equal(
+      await transitionPage.locator('[data-component-explorer]').count(),
+      1,
+      'The catalog must not switch between marketing and explorer layouts'
+    );
+    assert.equal(
+      await transitionPage.evaluate(() => window.__workspacePaintProbe?.siteFrames),
+      0,
+      'No painted frame may show public navigation during workspace transition'
+    );
+  } finally {
+    releaseVerification();
+    await transitionPage.close();
+    await transitionContext.close();
+  }
+
+  console.log('OK catalog session boundary: public/denied/query history, delayed session, no workspace header flash');
 } finally {
   await browser.close();
 }
