@@ -124,13 +124,13 @@ export function SiteHeader({
 
     const handleResize = () => {
       if (window.innerWidth <= 1280) return;
-      const menu = document.getElementById('mobile-site-navigation');
-      if (menu?.contains(document.activeElement)) {
-        const brand = document.querySelector<HTMLAnchorElement>(
-          'header a[aria-label="Vellira home"]'
-        );
-        brand?.focus();
-      }
+      // CSS can hide the drawer and move focus to <body> before this event.
+      // Always park focus on a visible header action when an open menu
+      // becomes unavailable at its responsive breakpoint.
+      const brand = document.querySelector<HTMLAnchorElement>(
+        'header a[aria-label="Vellira home"]'
+      );
+      brand?.focus();
       setResolvedMobileMenuOpen(false);
     };
 

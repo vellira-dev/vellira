@@ -180,6 +180,12 @@ try {
         false,
         'Workspace resize must restore page interactivity'
       );
+      assert.equal(
+        await header.getByRole('link', { name: 'Vellira home' })
+          .evaluate((element) => document.activeElement === element),
+        true,
+        'Workspace resize must place focus on the visible header brand'
+      );
       await page.setViewportSize({ width, height: 850 });
       await open.click();
       await drawer.waitFor();
@@ -545,6 +551,12 @@ try {
         );
         return trigger?.getAttribute('aria-expanded') === 'false';
       });
+      assert.equal(
+        await siteHeader.getByRole('link', { name: 'Vellira home' })
+          .evaluate((element) => document.activeElement === element),
+        true,
+        'Marketing resize must place focus on the visible header brand'
+      );
       await page.setViewportSize({ width, height: 850 });
       await siteMenu.click();
     }
@@ -612,6 +624,12 @@ try {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.waitForFunction(() =>
         document.querySelector('[data-components-content-boundary]')?.inert === false
+      );
+      assert.equal(
+        await portalHeader.getByRole('link', { name: 'Vellira home' })
+          .evaluate((element) => document.activeElement === element),
+        true,
+        'Portal resize must place focus on the visible header brand'
       );
       assert.equal(
         await page.locator('a[href="/components/button"]').first()
