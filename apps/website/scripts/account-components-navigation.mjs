@@ -1,0 +1,260 @@
+/* global document, getComputedStyle */
+import assert from 'node:assert/strict';
+import { chromium } from '@playwright/test';
+
+// Run against a development-only account preview:
+// NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW=1 pnpm --filter @vellira-ui/website exec next dev -p 3001
+// WEBSITE_URL=http://localhost:3001 pnpm --filter @vellira-ui/website test:account-components-navigation
+const baseUrl = process.env.WEBSITE_URL;
+if (!baseUrl) throw new Error('WEBSITE_URL is required.');
+
+const browser = await chromium.launch();
+const context = await browser.newContext();
+const page = await context.newPage();
+page.setDefaultTimeout(15_000);
+
+try {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL('/app', baseUrl).toString());
+  await page.getByText('Local UI preview', { exact: false }).waitFor();
+
+  const nav = page.locator('#app-sidebar-navigation');
+  const overview = nav.getByRole('link', { name: 'Overview' });
+  const components = nav.getByRole('link', { name: 'Components' });
+  assert.ok(
+    (await overview.boundingBox()).y < (await components.boundingBox()).y,
+    'Components must appear directly below Overview in primary app navigation'
+  );
+  const appIconBaseline = (await overview.locator('svg').boundingBox()).x;
+  await components.click();
+  await page.waitForURL('**/components?from=app');
+  await page.locator('[data-component-explorer-sidebar]').waitFor();
+  const componentGutters = await page.evaluate(() => {
+    const panel = document.querySelector('[data-component-explorer-sidebar]');
+    const heading = panel?.querySelector(
+      'aside[aria-label="Component navigation"] h2'
+    );
+    const buttonLink = panel?.querySelector('a[href*="/components/button"]');
+    const buttonName = buttonLink?.querySelector('span');
+    if (!panel || !heading || !buttonLink || !buttonName) {
+      throw new Error('Component sidebar label or Button link missing');
+    }
+    const text = document.createRange();
+    text.selectNodeContents(heading);
+    return {
+      headingLeft: text.getBoundingClientRect().left,
+      itemLeft: buttonName.getBoundingClientRect().left,
+      rightInset:
+        panel.getBoundingClientRect().right -
+        buttonLink.getBoundingClientRect().right,
+      labelColor: getComputedStyle(heading).color,
+      itemColor: getComputedStyle(buttonLink).color,
+    };
+  });
+  assert.ok(
+    Math.abs(componentGutters.headingLeft - componentGutters.itemLeft) <= 1,
+    'Component group headings must align with component names'
+  );
+  assert.ok(
+    Math.abs(componentGutters.itemLeft - appIconBaseline) <= 1,
+    'App and component catalogs must share the same navigation baseline'
+  );
+  assert.ok(
+    Math.abs(componentGutters.rightInset - 16) <= 1,
+    'Component sidebar must share the 16px trailing inset'
+  );
+  assert.notEqual(
+    componentGutters.labelColor,
+    componentGutters.itemColor,
+    'Component group heading must be muted relative to menu items'
+  );
+  const workspaceReturn = page.locator('[data-component-explorer-sidebar]')
+    .getByRole('link', { name: 'Back to workspace', exact: true });
+  await workspaceReturn.waitFor();
+  assert.equal(
+    await page.getByRole('link', { name: 'Back to workspace' }).count(),
+    1,
+    'There must be exactly one Back link inside desktop component navigation'
+  );
+  assert.equal(
+    await page.locator('[data-component-explorer-main]')
+      .getByRole('link', { name: 'Back to workspace' }).count(),
+    0,
+    'Components page hero must not duplicate Back to workspace'
+  );
+
+  // Workspace context must preserve the same real product header + avatar menu.
+  await page.locator('[data-product-app-header]').waitFor();
+  await page.getByRole('button', { name: 'Account menu' }).waitFor();
+
+  // Catalog content owns a nested scroll container. The filter bar must pin
+  // directly beneath the product header, not 68px lower over the cards.
+  await page.locator('[data-component-explorer-main]').evaluate((element) => {
+    element.scrollTop = 550;
+  });
+  await page.waitForFunction(() => {
+    const toolbar = document.querySelector('[data-component-catalog-toolbar]');
+    const header = document.querySelector('[data-product-app-header]');
+    const main = document.querySelector('[data-component-explorer-main]');
+    if (!toolbar || !header || !main || main.scrollTop < 400) return false;
+    const toolbarTop = toolbar.getBoundingClientRect().top;
+    const headerBottom = header.getBoundingClientRect().bottom;
+    return Math.abs(toolbarTop - headerBottom) <= 2;
+  });
+
+  await page
+    .locator('[data-component-explorer-sidebar]')
+    .getByRole('link', { name: 'Button', exact: true })
+    .click();
+  await page.waitForURL('**/components/button?from=app');
+  await workspaceReturn.waitFor();
+  await page.locator('[data-product-app-header]').waitFor();
+  await page.getByRole('button', { name: 'Account menu' }).waitFor();
+
+  // Back has its own menu row before the independently scrollable
+  // component list. Inspect real structure instead of injecting fake content.
+  const independentReturn = await page.evaluate(() => {
+    const nav = document.querySelector('[data-component-explorer-sidebar]');
+    const bar = nav?.querySelector('[aria-label="Workspace navigation"]');
+    const list = nav?.querySelector('[class*="desktopList"]');
+    if (!bar || !list) {
+      throw new Error('Component return row or list is missing');
+    }
+    const returnBox = bar.getBoundingClientRect();
+    const listBox = list.getBoundingClientRect();
+    return {
+      separate: !list.contains(bar),
+      above: returnBox.bottom <= listBox.top + 1,
+      visible: returnBox.height > 0,
+    };
+  });
+  assert.ok(
+    independentReturn.separate &&
+      independentReturn.above &&
+      independentReturn.visible,
+    'Back to workspace must remain a separate, visible row above component navigation'
+  );
+
+  await workspaceReturn.click();
+  await page.waitForURL('**/app');
+  await page.getByRole('heading', { name: 'Start building with Vellira' }).waitFor();
+
+  // No account-only affordances on directly opened public routes.
+  const publicPage = await context.newPage();
+  await publicPage.setViewportSize({ width: 1440, height: 900 });
+  await publicPage.goto(new URL('/components/button', baseUrl).toString());
+  await publicPage.locator('[data-component-explorer-sidebar]').waitFor();
+  assert.equal(
+    await publicPage.locator('[data-product-app-header]').count(),
+    0,
+    'Direct public component pages must retain the marketing header'
+  );
+  assert.equal(
+    await publicPage.getByRole('link', { name: 'Back to workspace' }).count(),
+    0,
+    'Public deep link must remain independent from the account'
+  );
+  await publicPage.goto(new URL('/components', baseUrl).toString());
+  assert.equal(
+    await publicPage.locator('[data-component-explorer]').count(),
+    0,
+    'Direct catalog landing page must keep its existing public layout'
+  );
+  await publicPage.close();
+
+  // At mobile widths the return is available inside the existing component menu.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL('/components/button?from=app', baseUrl).toString());
+  await page.locator('[data-product-app-header]').waitFor();
+  await page.getByRole('button', { name: 'Open component navigation' }).waitFor();
+  assert.equal(
+    await page.locator('[data-product-app-header]')
+      .getByRole('button', { name: 'Account menu' }).count(),
+    0,
+    'The contextual product header must not show avatar controls on mobile'
+  );
+  await page.getByRole('button', { name: 'Open component navigation' }).click();
+
+  const mobileGutters = await page.evaluate(() => {
+    const panel = document.querySelector('#component-navigation');
+    const list = panel?.querySelector('aside[aria-label="Component navigation"]');
+    const heading = list?.querySelector('h2');
+    const link = list?.querySelector('a[href*="/components/button"]');
+    const name = link?.querySelector('span');
+    const workspace = panel?.querySelector('button[class*="mainNavigationButton"]');
+    if (!panel || !heading || !link || !name || !workspace) {
+      throw new Error('Mobile Components navigation elements missing');
+    }
+    const titleText = document.createRange();
+    titleText.selectNodeContents(heading);
+    return {
+      menuLeft: panel.getBoundingClientRect().left,
+      headingLeft: titleText.getBoundingClientRect().left,
+      nameLeft: name.getBoundingClientRect().left,
+      workspaceIconLeft: workspace.querySelector('svg')?.getBoundingClientRect().left,
+    };
+  });
+  assert.ok(
+    Math.abs(mobileGutters.headingLeft - mobileGutters.nameLeft) <= 1,
+    'Mobile component heading must align with its item labels'
+  );
+  assert.ok(
+    Math.abs(mobileGutters.nameLeft - mobileGutters.menuLeft - 26) <= 1,
+    'Mobile component menu must use 16px inset plus the canonical 10px item inset'
+  );
+  assert.ok(
+    Math.abs(mobileGutters.workspaceIconLeft - mobileGutters.nameLeft) <= 1,
+    'Mobile Back arrow must align with component item labels'
+  );
+
+  const mobileReturn = page.locator('#component-navigation')
+    .getByRole('button', { name: 'Back to workspace', exact: true });
+  await mobileReturn.waitFor();
+  assert.equal(
+    await page.getByRole('button', { name: 'Back to workspace' }).count(),
+    1,
+    'Mobile Back to workspace must exist once, inside the component menu'
+  );
+  assert.equal(
+    await page.locator('[data-component-explorer-main]')
+      .getByRole('link', { name: 'Back to workspace' }).count(),
+    0,
+    'No Back to workspace button may appear in the Components page content'
+  );
+  const originalUrl = page.url();
+  await mobileReturn.click();
+  const workspaceMenu = page.getByRole('dialog', {
+    name: 'Workspace navigation',
+  });
+  await workspaceMenu.waitFor();
+  assert.equal(
+    await workspaceMenu.getByRole('link', { name: 'Overview' })
+      .getAttribute('aria-current'),
+    null,
+    'Overview must not be current on a component detail route'
+  );
+  assert.equal(
+    await workspaceMenu.getByRole('link', { name: 'Components' })
+      .getAttribute('aria-current'),
+    'location',
+    'A component detail route must activate the Components section'
+  );
+  assert.equal(
+    page.url(),
+    originalUrl,
+    'Back must open the main workspace menu without changing the URL'
+  );
+  assert.equal(
+    await page.locator('#component-navigation').count(),
+    0,
+    'Components drawer closes as the workspace menu opens'
+  );
+  await workspaceMenu.getByRole('link', { name: 'Overview' }).click();
+  await page.waitForURL('**/app');
+
+  console.log('OK Core Components: nested mobile Back switches to main menu in-place, public routes unchanged');
+} finally {
+  await page.close();
+  await context.close();
+  await browser.close();
+}

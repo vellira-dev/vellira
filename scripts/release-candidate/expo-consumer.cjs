@@ -94,7 +94,7 @@ function createFixture(candidate) {
       playgroundPackage.dependencies?.['@react-native-picker/picker'],
       '@react-native-picker/picker'
     ),
-    expo: '57.0.27',
+    expo: '57.0.28',
     react: '19.2.3',
     'react-native': exactVersion(
       playgroundPackage.dependencies?.['react-native'],

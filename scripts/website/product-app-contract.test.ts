@@ -228,11 +228,21 @@ describe('Vellira App first-party UI contract', () => {
       'utf8'
     );
 
+    const resend = fs.readFileSync(
+      path.join(
+        root,
+        'apps/website/src/product-app/EmailVerificationResend.tsx'
+      ),
+      'utf8'
+    );
+
     expect(appSession).not.toContain("router.replace('/verify-email')");
     expect(appShell).toContain('Email not verified');
-    expect(appShell).toContain('resendCurrentVerification');
+    expect(appShell).toContain('<EmailVerificationResend');
+    expect(resend).toContain('resendCurrentVerification');
     expect(appShell).not.toContain("href='/verify-email'");
-    expect(appShell).toContain('Resend verification email');
+    expect(resend).toContain('Resend verification email');
+    expect(resend).toContain('disabled={sending || localAccountPreview}');
     expect(authFlows).toContain("router.replace('/app')");
     expect(authFlows).not.toContain("router.push('/verify-email')");
   });

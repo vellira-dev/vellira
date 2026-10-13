@@ -1,42 +1,200 @@
 .shell {
-  --app-navigation-width: 280px;
+  --app-navigation-width: var(--explorer-sidebar-width);
+  --app-collapsed-width: 76px;
+  --app-navigation-start-inset: 16px;
+  --app-navigation-end-inset: 16px;
 
   min-height: 100vh;
   color: var(--text-primary);
   background: var(--surface-canvas);
 }
 
-.header {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-index-dropdown);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: var(--site-header-height);
-  padding-inline: var(--site-gutter);
-  background: var(--surface-canvas);
-  border-bottom: 1px solid var(--border-muted);
+.shell[data-sidebar-collapsed='true'] .body {
+  grid-template-columns: var(--app-collapsed-width) minmax(0, 1fr);
 }
 
-.brand {
+.shell[data-sidebar-collapsed='true'] .sidebar {
+  padding-inline: 0;
+}
+
+.sidebarToggleRow {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: calc(var(--site-gutter) + var(--app-navigation-width));
+  min-height: 60px;
+  padding: var(--space-2) var(--app-navigation-end-inset) var(--space-2)
+    var(--app-navigation-start-inset);
+  border-top: 1px solid var(--border-muted);
+  border-right: 1px solid var(--border-muted);
+  background: var(--surface-panel);
+  transition: width 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Match the catalog SidebarItem link: same 10px inset, 36px row, and icon slot.
+   The canonical bare Button retains keyboard/button semantics without adding
+   the centered inner padding of the standard Button appearance. */
+.sidebarToggleButton {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  border-radius: 8px;
+  min-height: 36px;
+}
+
+.sidebarToggleButton:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-brand) 5%, transparent);
+}
+
+.sidebarToggleButton:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebarToggleRow {
+  width: var(--app-collapsed-width);
+  padding-inline: 0;
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebarToggleButton {
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  margin-inline: auto;
+  padding: 0;
+}
+
+.navEntry {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  gap: var(--space-3);
 }
 
-.headerContext {
+.navEntry svg {
+  flex-shrink: 0;
+}
+
+.navLabel,
+.toggleLabel {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    max-width 240ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 160ms ease,
+    transform 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.navTrailing {
+  flex: none;
+  opacity: 1;
+  transition:
+    opacity 160ms ease,
+    transform 240ms ease;
+}
+
+.shell[data-sidebar-collapsed='true'] .navLabel,
+.shell[data-sidebar-collapsed='true'] .toggleLabel {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.shell[data-sidebar-collapsed='true'] .navTrailing {
+  width: 0;
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.sidebar h2 {
+  max-height: 32px;
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    max-height 240ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 160ms ease,
+    margin-bottom 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebar h2 {
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebar aside > div {
+  padding: var(--space-3) 0;
+}
+
+.sidebar section + section {
+  transition:
+    margin-top 240ms cubic-bezier(0.2, 0, 0, 1),
+    padding-top 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebar section + section {
+  position: relative;
+  margin-top: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 0;
+}
+
+/* A short centered divider, approximately the width of a navigation icon. */
+.shell[data-sidebar-collapsed='true'] .sidebar section + section::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 24px;
+  height: 1px;
+  background: var(--border-muted);
+  transform: translateX(-50%);
+  content: '';
+  pointer-events: none;
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebar section nav > div > a {
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+  gap: 0;
+  min-height: 44px;
+  margin-inline: auto;
+}
+
+.desktopHeaderActions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
 
-.workspaceName {
-  max-width: 32ch;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.mobileHeaderAction {
+  display: none;
+}
+
+@media (width <= 1100px) {
+  /* As on SiteHeader: theme and identity move into the mobile navigation. */
+  .desktopHeaderActions {
+    display: none;
+  }
+
+  .mobileHeaderAction {
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 .verificationBanner {
@@ -78,37 +236,105 @@
 
 .body {
   display: grid;
-  grid-template-columns: var(--app-navigation-width) minmax(0, 1fr);
+  grid-template-columns:
+    calc(var(--site-gutter) + var(--app-navigation-width))
+    minmax(0, 1fr);
   min-height: calc(100vh - var(--site-header-height));
+  transition: grid-template-columns 240ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .sidebar {
   position: sticky;
   top: var(--site-header-height);
+  display: grid;
+  height: calc(100dvh - var(--site-header-height));
+  padding: 0 0 0 var(--app-navigation-start-inset);
+  background: var(--surface-panel);
+  transition: padding-inline-start 240ms cubic-bezier(0.2, 0, 0, 1);
   align-self: start;
-  min-height: calc(100vh - var(--site-header-height));
-  padding: var(--space-6) var(--space-4);
-  background: var(--surface-default);
+  min-width: 0;
+  grid-template-rows: minmax(0, 1fr);
   border-right: 1px solid var(--border-muted);
 }
 
 .desktopNavigation {
   display: block;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 72px;
+}
+
+.desktopNavigation > aside {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 72px;
+}
+
+/* Scope the tighter horizontal insets to the account sidebar only.
+   Public ComponentSidebar geometry stays untouched. */
+.desktopNavigation aside > div {
+  padding-right: var(--app-navigation-end-inset);
+  transition: padding 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Let the active row interpolate with the rail instead of jumping at the
+   moment the collapsed state changes. Component catalog rows are unaffected. */
+.desktopNavigation aside section nav > div > a {
+  box-sizing: border-box;
+  width: 100%;
+  transition:
+    width 240ms cubic-bezier(0.2, 0, 0, 1),
+    color 140ms ease,
+    background 140ms ease;
+}
+
+.shell[data-sidebar-collapsed='true'] .navEntry {
+  justify-content: center;
+  gap: 0;
 }
 
 .navigationTabs {
   width: 100%;
 }
 
-.mobileNavigation,
-.mobileNavigationRow {
-  display: none;
+.sidebarResources {
+  display: grid;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  gap: var(--space-5);
+}
+
+.sidebarCaption {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sidebarResources a {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.sidebarResources a:hover {
+  color: var(--text-primary);
+}
+
+.sidebarResources a:focus-visible {
+  outline: 2px solid var(--text-brand);
+  outline-offset: 4px;
 }
 
 .content {
   width: 100%;
-  max-width: var(--site-max-width);
-  padding: var(--space-10) var(--site-gutter) var(--space-16);
+  max-width: 1200px;
+  padding: var(--space-8) var(--site-gutter) var(--space-12);
+  background: var(--surface-canvas);
 }
 
 .statusPage {
@@ -139,21 +365,21 @@
 
 .page {
   display: grid;
-  max-width: 960px;
-  gap: var(--space-12);
+  max-width: 1160px;
+  gap: var(--space-6);
 }
 
 .hero,
 .settingsHeader {
   display: grid;
   max-width: 860px;
-  gap: var(--space-4);
+  gap: var(--space-2);
 }
 
 .eyebrow,
 .sectionLabel {
   margin: 0;
-  color: var(--text-brand);
+  color: var(--text-secondary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
@@ -173,8 +399,8 @@
 .hero h1,
 .settingsHeader h1 {
   max-width: 780px;
-  font-size: clamp(36px, 5vw, 64px);
-  line-height: 1;
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1.15;
   letter-spacing: -0.045em;
 }
 
@@ -201,7 +427,7 @@
 .section,
 .settingsSection {
   display: grid;
-  padding-top: var(--space-8);
+  padding-top: var(--space-6);
   border-top: 1px solid var(--border-muted);
   gap: var(--space-6);
 }
@@ -227,6 +453,16 @@
   gap: var(--space-4);
 }
 
+.settingsContent {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.settingsContent strong {
+  font-weight: var(--font-weight-semibold);
+}
+
 .details div,
 .settingsList div {
   display: grid;
@@ -246,15 +482,202 @@
   text-transform: capitalize;
 }
 
-@media (width <= 760px) {
-  .header {
-    padding-inline: var(--space-4);
+.startPanel {
+  display: grid;
+  padding: var(--space-5);
+  background: var(--surface-default);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-lg);
+  gap: var(--space-3);
+}
+
+.startPanel h2,
+.proNote h2 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.resourceList {
+  display: grid;
+}
+
+.resourceLink {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 16px;
+  align-items: center;
+  min-height: 72px;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-muted);
+  gap: var(--space-3);
+}
+
+.resourceLink:last-child {
+  border-bottom: 0;
+}
+
+.resourceIcon {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  place-items: center;
+}
+
+.resourceArrow {
+  color: var(--text-secondary);
+  opacity: 0;
+}
+
+.resourceLink:hover .resourceArrow,
+.resourceLink:focus-visible .resourceArrow {
+  opacity: 1;
+}
+
+.resourceLink:hover {
+  color: var(--text-brand);
+}
+
+.resourceLink:focus-visible,
+.sidebarResources a:focus-visible {
+  outline: 2px solid var(--text-brand);
+  outline-offset: 3px;
+}
+
+.proNote {
+  display: grid;
+  padding: var(--space-2) var(--space-5);
+  gap: var(--space-2);
+}
+
+.proNote h2 {
+  font-size: var(--font-size-lg);
+}
+
+.proNote p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body,
+  .sidebar,
+  .sidebarToggleRow,
+  .sidebar h2,
+  .sidebar section + section,
+  .desktopNavigation aside > div,
+  .navLabel,
+  .toggleLabel,
+  .navTrailing,
+  .desktopNavigation aside section nav > div > a {
+    transition: none;
+  }
+}
+
+@media (width <= 1100px) {
+  /* The same ComponentNavigationShell mobile overlay and sidebar styles are
+     used in AppShell. Only account-specific actions are styled here. */
+  .body,
+  .shell[data-sidebar-collapsed='true'] .body {
+    display: block;
   }
 
-  .workspaceName {
+  .sidebar {
     display: none;
   }
 
+  .drawerNavigation {
+    display: block;
+    min-width: 0;
+  }
+
+  .mobileAccountFooter {
+    position: relative;
+    flex: none;
+    min-width: 0;
+    padding-block: calc(var(--space-2) + 1px)
+      max(var(--space-2), env(safe-area-inset-bottom));
+    background: var(--surface-panel);
+  }
+
+  /* End the Account separator at the same 26px leading baseline as
+     the menu icons; do not run it against the edge of the drawer. */
+  .mobileAccountFooter::before {
+    position: absolute;
+    top: 0;
+    right: var(--space-4);
+    left: calc(var(--space-4) + 10px);
+    height: 1px;
+    background: var(--border-muted);
+    content: '';
+    pointer-events: none;
+  }
+
+  .mobileDrawerAccount {
+    display: block;
+  }
+
+  .mobileAccountLinks {
+    padding-inline: var(--space-4);
+  }
+
+  .mobileAccountHeading {
+    margin: 0 0 var(--space-2);
+    padding-inline-start: 10px;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .mobileAccountLink,
+  .mobileSignOut {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    gap: var(--space-3);
+    cursor: pointer;
+  }
+
+  .mobileAccountLink:hover,
+  .mobileSignOut:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--text-brand) 5%, transparent);
+  }
+
+  .mobileAccountLink:focus-visible,
+  .mobileSignOut:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  .mobileAccountLink svg,
+  .mobileSignOut svg {
+    flex-shrink: 0;
+  }
+
+  .content {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (width <= 760px) {
   .verificationBanner {
     grid-template-columns: auto minmax(0, 1fr);
     padding-inline: var(--space-4);
@@ -265,36 +688,17 @@
     justify-self: start;
   }
 
-  .body {
-    display: block;
-  }
-
-  .sidebar {
-    display: none;
-  }
-
-  .mobileNavigationRow {
-    display: block;
-    padding: var(--space-4);
-    background: var(--surface-default);
-    border-bottom: 1px solid var(--border-muted);
-  }
-
-  .mobileNavigationRow .mobileNavigation {
-    display: block;
-  }
-
   .content {
     padding: var(--space-8) var(--space-4) var(--space-12);
   }
 
   .page {
-    gap: var(--space-10);
+    gap: var(--space-8);
   }
 
   .hero h1,
   .settingsHeader h1 {
-    font-size: clamp(34px, 11vw, 48px);
+    font-size: clamp(28px, 7vw, 34px);
   }
 
   .lead {

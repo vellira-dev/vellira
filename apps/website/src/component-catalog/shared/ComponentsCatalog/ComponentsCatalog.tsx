@@ -9,6 +9,7 @@ import { Button, Input } from '@vellira-ui/react';
 import { Container } from '@/components/layout/Container';
 
 import { componentGroups } from '../../registry/componentGroups';
+import { useComponentNavigation } from '../ComponentNavigationProvider';
 
 import { ComponentCatalogPreview } from './ComponentCatalogPreview';
 import { Search, Grid, Monitor, Smartphone } from '@vellira-ui/icons';
@@ -18,6 +19,7 @@ import styles from './ComponentsCatalog.module.css';
 type PlatformFilter = 'all' | 'react' | 'react-native';
 
 export function ComponentsCatalog() {
+  const { workspaceContextRequested } = useComponentNavigation();
   const searchId = useId();
   const [query, setQuery] = useState('');
   const [platform, setPlatform] = useState<PlatformFilter>('all');
@@ -79,7 +81,7 @@ export function ComponentsCatalog() {
   return (
     <section className={styles.root}>
       <Container size='wide'>
-        <div className={styles.toolbar}>
+        <div className={styles.toolbar} data-component-catalog-toolbar>
           <div className={styles.toolbarInner}>
             <div className={styles.search}>
               <label htmlFor={searchId} className={styles.searchLabel}>
@@ -161,7 +163,7 @@ export function ComponentsCatalog() {
                   {group.components.map((component) => (
                     <Link
                       key={component.slug}
-                      href={`/components/${component.slug}`}
+                      href={`/components/${component.slug}${workspaceContextRequested ? '?from=app' : ''}`}
                       className={styles.card}
                     >
                       <div className={styles.cardHeader}>

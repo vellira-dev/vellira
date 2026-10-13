@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -36,6 +37,7 @@ beforeEach(() => {
   meCalls = 0;
   resendStatus = 200;
   refreshStatus = 200;
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
   fetchMock = vi.fn<typeof fetch>(async (input) => {
     const path = new URL(String(input)).pathname;
     if (path === '/v1/me') {
@@ -92,6 +94,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -107,9 +110,17 @@ it('refreshes canonical verification after another tab verifies, without optimis
   expect(screen.getByText('Product access')).toBeInTheDocument();
   verified = true; // A separate browser has committed verification server-side.
   fireEvent.click(resend);
+  await screen.findByText(
+    'If verification is still needed, check your inbox for a new verification email.'
+  );
+  expect(meCalls).toBe(1); // Resend acceptance is not verification authority.
+  await act(async () => {
+    fireEvent.focus(window);
+  });
   await waitFor(() => expect(meCalls).toBe(2));
-  await screen.findByText('Product access');
-  expect(screen.queryByText('Email not verified')).toBeNull();
+  await waitFor(() =>
+    expect(screen.queryByText('Email not verified')).toBeNull()
+  );
   expect(
     fetchMock.mock.calls.filter(([url]) =>
       String(url).endsWith('/resend/current')
@@ -129,7 +140,7 @@ it('keeps an unverified account usable and describes accepted resend without cla
   await screen.findByText(
     'If verification is still needed, check your inbox for a new verification email.'
   );
-  expect(meCalls).toBe(2);
+  expect(meCalls).toBe(1); // A successful resend does not refresh /v1/me.
   expect(screen.getByText('Email not verified')).toBeInTheDocument();
   expect(screen.queryByText('Verification email sent.')).toBeNull();
 });
@@ -155,21 +166,40 @@ it.each([429, 503])(
   }
 );
 
-it('preserves canonical retry recovery when the post-resend account refresh is unavailable', async () => {
+it('preserves access after a transient focus recheck failure and reconciles on a later focus', async () => {
   refreshStatus = 503;
   render(
     <AppShell>
       <p>Product access</p>
     </AppShell>
   );
-  fireEvent.click(
-    await screen.findByRole('button', { name: 'Resend verification email' })
-  );
-  await screen.findByRole('button', { name: 'Try again' });
+  await screen.findByRole('button', { name: 'Resend verification email' });
+  await act(async () => {
+    fireEvent.focus(window);
+  });
+  expect(meCalls).toBe(2);
+  expect(screen.getByText('Email not verified')).toBeInTheDocument();
+  expect(screen.getByText('Product access')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
   expect(router.replace).not.toHaveBeenCalled();
+
   refreshStatus = 200;
   verified = true;
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
-  await screen.findByText('Product access');
-  expect(screen.queryByText('Email not verified')).toBeNull();
+  await act(async () => {
+    fireEvent.focus(window);
+  });
+  expect(meCalls).toBe(3);
+  await waitFor(() =>
+    expect(screen.queryByText('Email not verified')).toBeNull()
+  );
+  expect(
+    fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith('/v1/workspaces')
+    )
+  ).toHaveLength(1);
+  expect(
+    fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith('/resend/current')
+    )
+  ).toHaveLength(0);
 });

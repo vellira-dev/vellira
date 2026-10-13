@@ -1,3 +1,5 @@
+'use client';
+
 import { Container } from '@/components/layout/Container';
 
 import styles from './ComponentsPageHero.module.css';

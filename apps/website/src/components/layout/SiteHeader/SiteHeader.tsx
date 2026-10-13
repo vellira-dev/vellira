@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState, useEffect, type CSSProperties } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -11,7 +10,9 @@ import type { SiteHeaderProps } from './types';
 import { Button, Tabs } from '@vellira-ui/react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { HeaderSearch } from './HeaderSearch';
-import { Close, Menu } from '@vellira-ui/icons';
+import { Close } from '@vellira-ui/icons';
+import { HeaderChrome } from '@/components/layout/HeaderChrome/HeaderChrome';
+import { HeaderMenuButton } from '@/components/layout/HeaderChrome/HeaderMenuButton';
 
 import styles from './SiteHeader.module.css';
 
@@ -121,10 +122,25 @@ export function SiteHeader({
       }
     };
 
+    const handleResize = () => {
+      if (window.innerWidth <= 1280) return;
+      // CSS can hide the drawer and move focus to <body> before this event.
+      // Always park focus on a visible header action when an open menu
+      // becomes unavailable at its responsive breakpoint.
+      const brand = document.querySelector<HTMLAnchorElement>(
+        'header a[aria-label="Vellira home"]'
+      );
+      brand?.focus();
+      setResolvedMobileMenuOpen(false);
+    };
+
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    handleResize();
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
     };
   }, [resolvedMobileMenuOpen, setResolvedMobileMenuOpen]);
 
@@ -181,280 +197,259 @@ export function SiteHeader({
   const hasMobileNavigation = variant === 'marketing' || variant === 'portal';
 
   return (
-    <header
-      className={[styles.header, navigationOpen ? styles.navigationOpen : null]
-        .filter(Boolean)
-        .join(' ')}
+    <HeaderChrome
+      brandHref='/'
+      headerClassName={navigationOpen ? styles.navigationOpen : undefined}
     >
-      <div className={styles.container}>
-        <Link href='/' prefetch className={styles.brand}>
-          <Image
-            src='/brand/logos/logo-gradient.svg'
-            alt='Vellira'
-            width={100}
-            height={32}
-            preload
-            fetchPriority='high'
+      <div className={styles.headerSearch}>
+        <HeaderSearch />
+      </div>
+
+      {variant === 'marketing' && (
+        <div className={styles.mobileMenuTrigger}>
+          <HeaderMenuButton
+            open={resolvedMobileMenuOpen}
+            controls='mobile-site-navigation'
+            openLabel='Open navigation'
+            closeLabel='Close navigation'
+            onToggle={() => setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)}
           />
-        </Link>
+        </div>
+      )}
 
-        <div className={styles.headerRight}>
-          <div className={styles.headerSearch}>
-            <HeaderSearch />
-          </div>
+      {/* Between the marketing (1280px) and Components (1100px) breakpoints,
+          portal pages still need a visible route into site navigation. */}
+      {variant === 'portal' && (
+        <div className={styles.portalTabletMenuTrigger}>
+          <HeaderMenuButton
+            open={resolvedMobileMenuOpen}
+            controls='mobile-site-navigation'
+            openLabel='Open navigation'
+            closeLabel='Close navigation'
+            onToggle={() => setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)}
+          />
+        </div>
+      )}
 
-          {variant === 'marketing' && (
-            <Button
-              type='button'
-              size='sm'
-              appearance='ghost'
-              shape='square'
-              iconOnly
-              className={styles.mobileMenuTrigger}
-              aria-label={
-                resolvedMobileMenuOpen ? 'Close navigation' : 'Open navigation'
-              }
-              aria-expanded={resolvedMobileMenuOpen}
-              aria-controls='mobile-site-navigation'
-              iconStart={resolvedMobileMenuOpen ? <Close /> : <Menu />}
-              onClick={() => setResolvedMobileMenuOpen(!resolvedMobileMenuOpen)}
-            />
-          )}
-
-          <nav className={styles.navigation} aria-label='Primary navigation'>
-            <Tabs
-              mode='navigation'
-              value={navigationValue}
-              onValueChange={setActiveHref}
-              variant='line'
-              size='sm'
-              className={styles.navigationTabs}
-            >
-              <Tabs.List className={styles.navigationList}>
-                {marketingNavigation.map((item) => (
-                  <Tabs.Trigger key={item.label} value={item.href} asChild>
-                    <Link
-                      href={item.href}
-                      prefetch={item.type === 'page'}
-                      className={styles.navigationLink}
-                      onClick={(event) => {
-                        if (item.type !== 'section' || pathname !== '/') {
-                          return;
-                        }
-
-                        event.preventDefault();
-                        setActiveHref(item.href);
-                        scrollToAnchor(item.hash);
-                      }}
-                    >
-                      <span>{item.label}</span>
-
-                      {'badge' in item && (
-                        <span className={styles.navigationBadge}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </Tabs.Trigger>
-                ))}
-
-                <Tabs.Indicator />
-              </Tabs.List>
-            </Tabs>
-          </nav>
-
-          <div className={styles.actions}>
-            <div className={styles.themeAction}>
-              <ThemeSwitcher />
-            </div>
-          </div>
-
-          <div className={styles.externalActions}>
-            {externalNavigation.map((link) => (
-              <Button
-                key={link.label}
-                asChild
-                size='sm'
-                appearance='ghost'
-                shape='square'
-                iconOnly
-                className={styles.externalAction}
-                style={
-                  {
-                    '--icon-size': '24px',
-                  } as CSSProperties
-                }
-                iconStart={
-                  <span
-                    className={styles.actionIcon}
-                    style={
-                      {
-                        '--action-icon': `url(${link.icon})`,
-                        '--action-icon-size': `${link.iconSize}px`,
-                      } as CSSProperties
+      <nav className={styles.navigation} aria-label='Primary navigation'>
+        <Tabs
+          mode='navigation'
+          value={navigationValue}
+          onValueChange={setActiveHref}
+          variant='line'
+          size='sm'
+          className={styles.navigationTabs}
+        >
+          <Tabs.List className={styles.navigationList}>
+            {marketingNavigation.map((item) => (
+              <Tabs.Trigger key={item.label} value={item.href} asChild>
+                <Link
+                  href={item.href}
+                  prefetch={item.type === 'page'}
+                  className={styles.navigationLink}
+                  onClick={(event) => {
+                    if (item.type !== 'section' || pathname !== '/') {
+                      return;
                     }
-                    aria-hidden='true'
-                  />
-                }
-              >
-                <a
-                  href={link.href}
-                  target='_blank'
-                  rel='noreferrer noopener'
-                  aria-label={link.label}
-                  title={link.label}
-                />
-              </Button>
-            ))}
-          </div>
 
-          {hasMobileNavigation && (
-            <div
-              className={[
-                styles.mobileNavigationLayer,
-                resolvedMobileMenuOpen
-                  ? styles.mobileNavigationLayerOpen
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              inert={!resolvedMobileMenuOpen}
-            >
-              <Button
-                appearance='bare'
-                type='button'
-                className={styles.mobileNavigationBackdrop}
-                aria-label='Close navigation'
-                onClick={() => setResolvedMobileMenuOpen(false)}
-              />
-
-              <div
-                id='mobile-site-navigation'
-                className={styles.mobileNavigation}
-              >
-                <nav
-                  className={styles.mobileNavigationLinks}
-                  aria-label='Mobile navigation'
+                    event.preventDefault();
+                    setActiveHref(item.href);
+                    scrollToAnchor(item.hash);
+                  }}
                 >
-                  {marketingNavigation.map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      prefetch={item.type === 'section' ? false : undefined}
-                      className={styles.mobileNavigationLink}
-                      onClick={(event) => {
-                        setResolvedMobileMenuOpen(false);
+                  <span>{item.label}</span>
 
-                        if (item.type !== 'section' || pathname !== '/') {
-                          return;
-                        }
+                  {'badge' in item && (
+                    <span className={styles.navigationBadge}>{item.badge}</span>
+                  )}
+                </Link>
+              </Tabs.Trigger>
+            ))}
 
-                        event.preventDefault();
-                        setActiveHref(item.href);
-                        scrollToAnchor(item.hash);
-                      }}
-                    >
-                      <span>{item.label}</span>
+            <Tabs.Indicator />
+          </Tabs.List>
+        </Tabs>
+      </nav>
 
-                      {'badge' in item && item.badge && (
-                        <span className={styles.navigationBadge}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
-                </nav>
-
-                <div className={styles.mobileNavigationActions}>
-                  <Button
-                    asChild
-                    size='sm'
-                    className={styles.mobileNavigationCta}
-                  >
-                    <a
-                      href='https://docs.vellira.dev/start/getting-started'
-                      onClick={() => setResolvedMobileMenuOpen(false)}
-                    >
-                      Get started
-                    </a>
-                  </Button>
-                </div>
-
-                <div className={styles.mobileNavigationFooter}>
-                  <ThemeSwitcher />
-
-                  <div className={styles.mobileExternalLinks}>
-                    {externalNavigation.map((link) => (
-                      <Button
-                        key={link.label}
-                        asChild
-                        size='sm'
-                        appearance='ghost'
-                        shape='square'
-                        iconOnly
-                        style={
-                          {
-                            '--icon-size': '22px',
-                          } as CSSProperties
-                        }
-                        iconStart={
-                          <span
-                            className={styles.actionIcon}
-                            style={
-                              {
-                                '--action-icon': `url(${link.icon})`,
-                                '--action-icon-size': `${link.iconSize}px`,
-                              } as CSSProperties
-                            }
-                            aria-hidden='true'
-                          />
-                        }
-                      >
-                        <a
-                          href={link.href}
-                          target='_blank'
-                          rel='noreferrer noopener'
-                          aria-label={link.label}
-                          title={link.label}
-                        />
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {mobileAction && !resolvedMobileMenuOpen && (
-            <div className={styles.mobileAction}>{mobileAction}</div>
-          )}
-
-          {resolvedMobileMenuOpen && variant !== 'marketing' && (
-            <Button
-              type='button'
-              size='sm'
-              appearance='ghost'
-              shape='square'
-              iconOnly
-              className={styles.mobileGlobalClose}
-              aria-label='Close navigation'
-              aria-expanded='true'
-              aria-controls='mobile-site-navigation'
-              onClick={() => setResolvedMobileMenuOpen(false)}
-              iconStart={<Close />}
-            />
-          )}
-
-          <div className={styles.authActions}>
-            <Button asChild size='sm' className={styles.ctaButton}>
-              <a href='https://docs.vellira.dev/start/getting-started'>
-                Get started
-              </a>
-            </Button>
-          </div>
+      <div className={styles.actions}>
+        <div className={styles.themeAction}>
+          <ThemeSwitcher />
         </div>
       </div>
-    </header>
+
+      <div className={styles.externalActions}>
+        {externalNavigation.map((link) => (
+          <Button
+            key={link.label}
+            asChild
+            size='sm'
+            appearance='ghost'
+            shape='square'
+            iconOnly
+            className={styles.externalAction}
+            style={
+              {
+                '--icon-size': '24px',
+              } as CSSProperties
+            }
+            iconStart={
+              <span
+                className={styles.actionIcon}
+                style={
+                  {
+                    '--action-icon': `url(${link.icon})`,
+                    '--action-icon-size': `${link.iconSize}px`,
+                  } as CSSProperties
+                }
+                aria-hidden='true'
+              />
+            }
+          >
+            <a
+              href={link.href}
+              target='_blank'
+              rel='noreferrer noopener'
+              aria-label={link.label}
+              title={link.label}
+            />
+          </Button>
+        ))}
+      </div>
+
+      {hasMobileNavigation && (
+        <div
+          className={[
+            styles.mobileNavigationLayer,
+            resolvedMobileMenuOpen ? styles.mobileNavigationLayerOpen : null,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          inert={!resolvedMobileMenuOpen}
+        >
+          <Button
+            appearance='bare'
+            type='button'
+            className={styles.mobileNavigationBackdrop}
+            aria-label='Dismiss navigation'
+            onClick={() => setResolvedMobileMenuOpen(false)}
+          />
+
+          <div id='mobile-site-navigation' className={styles.mobileNavigation}>
+            <nav
+              className={styles.mobileNavigationLinks}
+              aria-label='Mobile navigation'
+            >
+              {marketingNavigation.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  prefetch={item.type === 'section' ? false : undefined}
+                  className={styles.mobileNavigationLink}
+                  onClick={(event) => {
+                    setResolvedMobileMenuOpen(false);
+
+                    if (item.type !== 'section' || pathname !== '/') {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    setActiveHref(item.href);
+                    scrollToAnchor(item.hash);
+                  }}
+                >
+                  <span>{item.label}</span>
+
+                  {'badge' in item && item.badge && (
+                    <span className={styles.navigationBadge}>{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </nav>
+
+            <div className={styles.mobileNavigationActions}>
+              <Button asChild size='sm' className={styles.mobileNavigationCta}>
+                <a
+                  href='https://docs.vellira.dev/start/getting-started'
+                  onClick={() => setResolvedMobileMenuOpen(false)}
+                >
+                  Get started
+                </a>
+              </Button>
+            </div>
+
+            <div className={styles.mobileNavigationFooter}>
+              <ThemeSwitcher />
+
+              <div className={styles.mobileExternalLinks}>
+                {externalNavigation.map((link) => (
+                  <Button
+                    key={link.label}
+                    asChild
+                    size='sm'
+                    appearance='ghost'
+                    shape='square'
+                    iconOnly
+                    style={
+                      {
+                        '--icon-size': '22px',
+                      } as CSSProperties
+                    }
+                    iconStart={
+                      <span
+                        className={styles.actionIcon}
+                        style={
+                          {
+                            '--action-icon': `url(${link.icon})`,
+                            '--action-icon-size': `${link.iconSize}px`,
+                          } as CSSProperties
+                        }
+                        aria-hidden='true'
+                      />
+                    }
+                  >
+                    <a
+                      href={link.href}
+                      target='_blank'
+                      rel='noreferrer noopener'
+                      aria-label={link.label}
+                      title={link.label}
+                    />
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mobileAction && !resolvedMobileMenuOpen && (
+        <div className={styles.mobileAction}>{mobileAction}</div>
+      )}
+
+      {resolvedMobileMenuOpen && variant !== 'marketing' && (
+        <Button
+          type='button'
+          size='sm'
+          appearance='ghost'
+          shape='square'
+          iconOnly
+          className={styles.mobileGlobalClose}
+          aria-label='Close navigation'
+          aria-expanded='true'
+          aria-controls='mobile-site-navigation'
+          onClick={() => setResolvedMobileMenuOpen(false)}
+          iconStart={<Close />}
+        />
+      )}
+
+      <div className={styles.authActions}>
+        <Button asChild size='sm' className={styles.ctaButton}>
+          <a href='https://docs.vellira.dev/start/getting-started'>
+            Get started
+          </a>
+        </Button>
+      </div>
+    </HeaderChrome>
   );
 }
 

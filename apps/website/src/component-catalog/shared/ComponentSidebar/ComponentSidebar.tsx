@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 
 import {
@@ -7,6 +9,7 @@ import {
 } from '@/components/navigation/Sidebar';
 
 import { componentGroups } from '../../registry/componentGroups';
+import { useComponentNavigation } from '../ComponentNavigationProvider';
 
 interface ComponentSidebarProps {
   activeSlug?: string;
@@ -17,6 +20,8 @@ export function ComponentSidebar({
   activeSlug,
   onNavigate,
 }: ComponentSidebarProps) {
+  const { workspaceContextRequested } = useComponentNavigation();
+
   return (
     <Sidebar ariaLabel='Component navigation'>
       {componentGroups.map((group) => (
@@ -27,7 +32,7 @@ export function ComponentSidebar({
               active={component.slug === activeSlug}
             >
               <Link
-                href={`/components/${component.slug}`}
+                href={`/components/${component.slug}${workspaceContextRequested ? '?from=app' : ''}`}
                 prefetch={false}
                 aria-current={
                   component.slug === activeSlug ? 'page' : undefined

@@ -5,11 +5,29 @@
 
 .toolbar {
   position: sticky;
+  /* Marketing scrolls in the document beneath the SiteHeader. The authenticated
+     catalog scrolls in ComponentExplorer.mainColumn, beneath an external header:
+     its sticky top must therefore be zero relative to that scroll container. */
   top: var(--site-header-height);
   z-index: calc(var(--z-index-dropdown) - 2);
   margin-bottom: 44px;
   background: color-mix(in srgb, var(--surface-canvas) 88%, transparent);
   backdrop-filter: blur(16px);
+}
+
+/* ComponentExplorer owns an independent desktop scroll container, so
+   index mode pins the catalog toolbar to that container at 0px. No extra
+   CSS variables or alternative header geometry are needed. */
+[data-component-explorer] .toolbar {
+  top: 0;
+  background: var(--surface-canvas);
+}
+
+@media (width <= 1100px) {
+  /* Below the explorer breakpoint, the document scrolls under SiteHeader. */
+  [data-component-explorer] .toolbar {
+    top: var(--site-header-height);
+  }
 }
 
 .toolbarInner {

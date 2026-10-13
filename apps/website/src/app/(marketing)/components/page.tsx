@@ -3,6 +3,7 @@ import { SiteFooter } from '@/components/layout/SiteFooter';
 
 import {
   COMPONENTS_INDEX_META_DESCRIPTION,
+  ComponentsIndexExperience,
   ComponentsCatalog,
   ComponentsPageHero,
 } from '@/component-catalog';
@@ -22,10 +23,9 @@ export const metadata: Metadata = {
 
 export default function ComponentsPage() {
   return (
-    <>
+    <ComponentsIndexExperience footer={<SiteFooter startSurface='canvas' />}>
       <ComponentsPageHero />
       <ComponentsCatalog />
-      <SiteFooter startSurface='canvas' />
-    </>
+    </ComponentsIndexExperience>
   );
 }

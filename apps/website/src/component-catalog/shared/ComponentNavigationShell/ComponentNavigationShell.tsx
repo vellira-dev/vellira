@@ -1,8 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+
+import { HeaderBrand } from '@/components/layout/HeaderChrome/HeaderChrome';
+import { trapNavigationTab } from '@/components/navigation/trapNavigationTab';
 
 import { ComponentSidebar } from '../ComponentSidebar';
 import { useComponentNavigation } from '../ComponentNavigationProvider';
@@ -22,36 +24,80 @@ export function ComponentNavigationShell({
   mobileOnly = false,
   desktopOnly = false,
 }: ComponentNavigationShellProps) {
-  const { open, closeNavigation, switchToMainNavigation } =
+  const { open, closeNavigation, switchToMainNavigation, fromWorkspace } =
     useComponentNavigation();
+  const surfaceRef = useRef<HTMLDivElement>(null);
+
+  const closeAndRestoreFocus = useCallback(() => {
+    closeNavigation();
+    const trigger = document.querySelector<HTMLButtonElement>(
+      '[aria-controls="component-navigation"]'
+    );
+    trigger?.focus();
+  }, [closeNavigation]);
 
   useEffect(() => {
-    if (desktopOnly || !open) {
-      return;
-    }
+    if (desktopOnly || !open) return;
+
+    // Workspace -> Components replaces the focused workspace link. Give the
+    // next drawer an explicit focus target rather than falling back to <body>.
+    const primaryAction = surfaceRef.current?.querySelector<HTMLElement>(
+      'button[class*="mainNavigationButton"]'
+    );
+    primaryAction?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        closeNavigation();
+        event.preventDefault();
+        closeAndRestoreFocus();
+        return;
       }
+      trapNavigationTab(event, surfaceRef.current);
+    };
+
+    const handleResize = () => {
+      if (window.innerWidth <= 1100) return;
+      // CSS can hide the drawer and move focus to <body> before this event.
+      // Always park focus on a visible header action when an open menu
+      // becomes unavailable at its responsive breakpoint.
+      const brand = document.querySelector<HTMLAnchorElement>(
+        'header a[aria-label="Vellira home"]'
+      );
+      brand?.focus();
+      closeNavigation();
     };
 
     const previousOverflow = document.body.style.overflow;
-
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    handleResize();
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
     };
-  }, [closeNavigation, desktopOnly, open]);
+  }, [closeAndRestoreFocus, desktopOnly, open]);
 
   return (
     <>
       {!mobileOnly && (
         <div className={styles.desktop}>
-          <ComponentSidebar activeSlug={activeSlug} />
+          {fromWorkspace && (
+            <nav
+              className={styles.workspaceReturn}
+              aria-label='Workspace navigation'
+            >
+              <Link href='/app' className={styles.workspaceReturnLink}>
+                <ArrowLeft size={16} aria-hidden='true' />
+                <span>Back to workspace</span>
+              </Link>
+            </nav>
+          )}
+          <div className={styles.desktopList}>
+            <ComponentSidebar activeSlug={activeSlug} />
+          </div>
         </div>
       )}
 
@@ -62,21 +108,15 @@ export function ComponentNavigationShell({
             type='button'
             className={styles.backdrop}
             aria-label='Close component navigation'
-            onClick={closeNavigation}
+            onClick={closeAndRestoreFocus}
           />
 
-          <div className={styles.mobileSurface}>
+          <div ref={surfaceRef} className={styles.mobileSurface}>
             <div className={styles.mobileHeader}>
-              <Link href='/' className={styles.mobileBrand}>
-                <Image
-                  src='/brand/logos/logo-gradient.svg'
-                  alt='Vellira'
-                  width={100}
-                  height={32}
-                  preload
-                  fetchPriority='high'
-                />
-              </Link>
+              <HeaderBrand
+                href={fromWorkspace ? '/app' : '/'}
+                className={styles.mobileBrand}
+              />
             </div>
 
             <aside
@@ -85,19 +125,34 @@ export function ComponentNavigationShell({
               aria-label='Component navigation'
             >
               <div className={styles.mainNavigation}>
-                <Button
-                  appearance='bare'
-                  type='button'
-                  className={styles.mainNavigationButton}
-                  onClick={switchToMainNavigation}
-                >
-                  <ArrowLeft size={16} aria-hidden='true' />
-                  <span>Main navigation</span>
-                </Button>
+                {fromWorkspace ? (
+                  <Button
+                    appearance='bare'
+                    type='button'
+                    className={styles.mainNavigationButton}
+                    onClick={switchToMainNavigation}
+                  >
+                    <ArrowLeft size={16} aria-hidden='true' />
+                    <span>Back to workspace</span>
+                  </Button>
+                ) : (
+                  <Button
+                    appearance='bare'
+                    type='button'
+                    className={styles.mainNavigationButton}
+                    onClick={switchToMainNavigation}
+                  >
+                    <ArrowLeft size={16} aria-hidden='true' />
+                    <span>Main navigation</span>
+                  </Button>
+                )}
               </div>
 
               <div className={styles.mobilePanelContent}>
-                <ComponentSidebar activeSlug={activeSlug} />
+                <ComponentSidebar
+                  activeSlug={activeSlug}
+                  onNavigate={closeNavigation}
+                />
               </div>
             </aside>
           </div>

@@ -1,16 +1,19 @@
 .container {
+  /* Same 16px outer sidebar inset as the authenticated workspace. */
+  --components-sidebar-gutter: var(--space-4);
+
   width: 100%;
   max-width: none;
-  padding-left: var(--site-gutter);
+  padding-left: var(--components-sidebar-gutter);
   padding-right: 0;
   background: var(--surface-default);
   background: linear-gradient(
     to right,
     var(--surface-panel) 0,
     var(--surface-panel)
-      calc(var(--site-gutter) + var(--explorer-sidebar-width)),
+      calc(var(--components-sidebar-gutter) + var(--explorer-sidebar-width)),
     var(--surface-default)
-      calc(var(--site-gutter) + var(--explorer-sidebar-width)),
+      calc(var(--components-sidebar-gutter) + var(--explorer-sidebar-width)),
     var(--surface-default) 100%
   );
 }
@@ -64,7 +67,15 @@
   margin-inline: auto;
 }
 
+.content.indexContent {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
 @media (width <= 1100px) {
+  /* Below the explorer breakpoint the document, not mainColumn, scrolls. */
   .container {
     width: 100%;
     max-width: none;
