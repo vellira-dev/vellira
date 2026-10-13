@@ -29,15 +29,18 @@ export function parseDocsSitemap(
     'Documentation sitemap must be a valid sitemap urlset'
   );
 
-  const entries = [...xml.matchAll(/<url\s*>/g)];
-  const locations = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)];
+  const entries = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)];
+  const openingTags = [...xml.matchAll(/<url>/g)];
   requireCondition(
-    entries.length > 0 && locations.length === entries.length,
-    'Documentation sitemap must have exactly one loc per url'
+    entries.length > 0 && entries.length === openingTags.length,
+    'Documentation sitemap has malformed url entries'
   );
 
   const urls = new Set();
-  for (const [, encoded] of locations) {
+  for (const [, body] of entries) {
+    const locations = [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)];
+    requireCondition(locations.length === 1, 'Documentation sitemap must have exactly one loc per url');
+    const encoded = locations[0][1];
     const raw = encoded.replaceAll('&amp;', '&');
     let parsed;
     try {
@@ -133,7 +136,7 @@ export async function inspectBuiltDocsDiscovery({
       'Missing or conflicting canonical in documentation HTML: ' + url
     );
   }
-  return { urls, urlCount: urls.length, redirectSources };
+  return { urls, urlCount: urls.length, redirectSources, sitemap };
 }
 
 async function fetchPublicText(path, { origin, fetchImpl }) {
@@ -165,6 +168,10 @@ export async function inspectLiveDocsDiscovery(expected, {
   requireCondition(
     missing.length === 0 && extra.length === 0,
     `Published documentation sitemap differs from build (missing: ${missing.slice(0, 5).join(', ') || 'none'}; extra: ${extra.slice(0, 5).join(', ') || 'none'})`
+  );
+  requireCondition(
+    xml === expected.sitemap,
+    'Published documentation sitemap contents differ from build'
   );
   return { urlCount: urls.length };
 }
