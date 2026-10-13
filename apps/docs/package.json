@@ -13,7 +13,7 @@
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "pnpm run sync:brand",
-    "build": "vitepress build src",
+    "build": "vitepress build src && node ../../scripts/seo/docs-sitemap-smoke.mjs --artifact",
     "prepreview": "pnpm run sync:brand",
     "preview": "vitepress preview src"
   },
