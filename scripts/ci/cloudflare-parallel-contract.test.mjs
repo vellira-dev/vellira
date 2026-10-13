@@ -73,12 +73,12 @@ test('full-path public browser suites overlap without dropping affected-path cov
     'blog-discovery-website-smoke.mjs',
     'newsletter-website-smoke.mjs',
   ]) {
-    assert.match(full, new RegExp(suite.replaceAll('.', '\\\\.')));
+    assert.match(full, new RegExp(suite.replaceAll('.', '\\.')));
   }
-  assert.match(full, /wait "\\$showcase_pid" \\|\\| showcase_status=\\$\\?/);
-  assert.match(full, /wait "\\$blog_pid" \\|\\| blog_status=\\$\\?/);
-  assert.match(full, /showcase_status != 0 \\|\\| blog_status != 0/);
-  assert.match(full, /trap 'kill "\\$server_pid"/);
+  assert.match(full, /wait "\$showcase_pid" \|\| showcase_status=\$\?/);
+  assert.match(full, /wait "\$blog_pid" \|\| blog_status=\$\?/);
+  assert.match(full, /showcase_status != 0 \|\| blog_status != 0/);
+  assert.match(full, /trap 'kill "\$server_pid"/);
 
   const affectedShowcase = ci.slice(showcaseStart, blogStart);
   assert.match(affectedShowcase, /execution_path == 'affected'/);

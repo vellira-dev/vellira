@@ -655,7 +655,7 @@ jobs:
 
           ready=false
           for attempt in $(seq 1 30); do
-            if curl --fail --silent --max-time 5 http://127.0.0.1:3101/ > /dev/null \\
+            if curl --fail --silent --max-time 5 http://127.0.0.1:3101/ > /dev/null \
               && curl --fail --silent --max-time 5 http://127.0.0.1:3101/blog > /dev/null; then
               ready=true
               break
@@ -668,21 +668,21 @@ jobs:
           fi
 
           (
-            WEBSITE_URL=http://127.0.0.1:3101 \\
-              pnpm --filter @vellira-ui/react-storybook exec node \\
+            WEBSITE_URL=http://127.0.0.1:3101 \
+              pnpm --filter @vellira-ui/react-storybook exec node \
               scripts/code-showcase-website-smoke.mjs
-            WEBSITE_URL=http://127.0.0.1:3101 \\
-              pnpm --filter @vellira-ui/react-storybook exec node \\
+            WEBSITE_URL=http://127.0.0.1:3101 \
+              pnpm --filter @vellira-ui/react-storybook exec node \
               scripts/vellira-ui-usage-website-smoke.mjs
           ) > /tmp/vellira-code-showcase-browser.log 2>&1 &
           showcase_pid=$!
 
           (
-            WEBSITE_URL=http://127.0.0.1:3101 \\
-              pnpm --filter @vellira-ui/react-storybook exec node \\
+            WEBSITE_URL=http://127.0.0.1:3101 \
+              pnpm --filter @vellira-ui/react-storybook exec node \
               scripts/blog-discovery-website-smoke.mjs
-            WEBSITE_URL=http://127.0.0.1:3101 \\
-              pnpm --filter @vellira-ui/react-storybook exec node \\
+            WEBSITE_URL=http://127.0.0.1:3101 \
+              pnpm --filter @vellira-ui/react-storybook exec node \
               scripts/newsletter-website-smoke.mjs
           ) > /tmp/vellira-blog-browser.log 2>&1 &
           blog_pid=$!
