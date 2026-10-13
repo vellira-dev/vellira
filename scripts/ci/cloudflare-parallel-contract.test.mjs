@@ -89,3 +89,34 @@ test('full-path public browser suites overlap without dropping affected-path cov
   assert.match(affectedBlog, /newsletter-website-smoke.mjs/);
   assert.match(ci.slice(accountStart), /name: Core account browser acceptance/);
 });
+
+test('staging allows the full browser soak and chunk smoke to finish before bounded timeout', async () => {
+  const staging = await fs.readFile(
+    '.github/workflows/deploy-website-cloudflare-staging.yml',
+    'utf8'
+  );
+  const deploy = staging.slice(staging.indexOf('\n  deploy:\n'));
+  assert.ok(deploy.startsWith('\n  deploy:\n'), 'Staging deploy job missing');
+  assert.match(deploy, /timeout-minutes: 40/);
+  assert.match(deploy, /group: deploy-worker-vellira-website-staging/);
+  assert.match(deploy, /cancel-in-progress: false/);
+
+  const requiredSteps = [
+    'Deploy website staging to Cloudflare Workers',
+    'Smoke test deployed routes',
+    'Verify component explorer browser geometry',
+    'Smoke test navigation and actor metrics',
+    'Soak test client navigation static assets',
+    'Smoke test static chunk integrity',
+    'Record staging evidence',
+    'Publish production promotion evidence',
+  ];
+  let previousPosition = -1;
+  for (const name of requiredSteps) {
+    const position = deploy.indexOf('      - name: ' + name);
+    assert.ok(position > previousPosition, name + ' must remain in staging gate order');
+    previousPosition = position;
+  }
+  assert.match(deploy, /if: success\(\)/);
+  assert.match(deploy, /if-no-files-found: error/);
+});
