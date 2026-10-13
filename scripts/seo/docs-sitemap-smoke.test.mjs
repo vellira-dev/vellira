@@ -78,7 +78,11 @@ test('rejects foreign, noncanonical, duplicate and legacy sitemap entries', () =
     );
   }
   assert.throws(() => parseDocsSitemap(xml(['/react/checkbox', '/react/checkbox'])), /Duplicate sitemap URL/);
-  assert.throws(() => parseDocsSitemap(xml(['/'] ), { requiredRoutes: ['/react/'] }), /Missing required/);
+  assert.throws(() => parseDocsSitemap(xml(['/']), { requiredRoutes: ['/react/'] }), /Missing required/);
+  assert.throws(
+    () => parseDocsSitemap('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://docs.vellira.dev/</loc><loc>https://docs.vellira.dev/react/</loc></url><url></url></urlset>'),
+    /exactly one loc per url/
+  );
   assert.throws(() => parseDocsSitemap('<html>not a sitemap</html>'), /urlset/);
 });
 
@@ -112,6 +116,12 @@ test('live proof compares the actual published sitemap and robots with the built
       fetchImpl: mockFetch({ sitemap: xml(routes.slice(0, -1)) }),
     }),
     /sitemap differs from build/
+  );
+  await assert.rejects(
+    inspectLiveDocsDiscovery(expected, {
+      fetchImpl: mockFetch({ sitemap: xml().replace('</loc>', '</loc><lastmod>2026-10-13</lastmod>') }),
+    }),
+    /sitemap contents differ from build/
   );
   await assert.rejects(
     inspectLiveDocsDiscovery(expected, {
