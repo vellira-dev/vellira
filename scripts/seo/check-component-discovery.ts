@@ -81,9 +81,7 @@ for (const componentName of directories) {
 
 for (const componentName of legacy) {
   if (!directories.includes(componentName)) {
-    findings.push(
-      componentName + ': stale #1136 legacy discovery exemption'
-    );
+    findings.push(componentName + ': stale #1136 legacy discovery exemption');
   }
 }
 
