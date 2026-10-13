@@ -526,7 +526,7 @@ export const componentPages = {
           id: 'password',
           title: 'Password reveal',
           description:
-            'Use type=\'password\' with revealPassword for a reveal action.',
+            'Enable revealPassword only on password-type inputs.',
         },
       ],
       platformNotes: {
