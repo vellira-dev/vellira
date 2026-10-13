@@ -203,3 +203,21 @@ test('public sitemap keeps meaningful modification timestamps, not build-time da
   assert.match(blogSeo, /latestArticle\.updatedAt \?\? latestArticle\.publishedAt/);
   assert.match(blogSeo, /article\.updatedAt \?\? article\.publishedAt/);
 });
+
+
+test('React Checkbox select-all docs include controlled children and a live example link', async () => {
+  const content = await read('apps/docs/src/react/checkbox.md');
+
+  assert.match(content, /Select All with an Indeterminate React Checkbox/);
+  assert.match(content, /import \{ Checkbox \} from '@vellira-ui\/react'/);
+  assert.match(content, /const \[selectedIds, setSelectedIds\] = useState/);
+  assert.match(content, /indeterminate=\{someSelected && !allSelected\}/);
+  assert.match(content, /onCheckedChange=\{toggleAll\}/);
+  assert.match(content, /PROJECTS\.map\(\(project\) => \(/);
+  assert.match(content, /checked=\{selectedIds\.includes\(project\.id\)\}/);
+  assert.match(content, /onCheckedChange=\{\(checked\) => toggleOne\(project\.id, checked\)\}/);
+  assert.match(content, /<fieldset>/);
+  assert.match(content, /<legend>Projects<\/legend>/);
+  assert.match(content, /https:\/\/vellira\.dev\/components\/checkbox/);
+  assert.match(content, /\[React Native Checkbox\]\(\/react-native\/checkbox\)/);
+});
