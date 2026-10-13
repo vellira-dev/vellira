@@ -46,8 +46,12 @@ describe('Component Discovery Content V1 coverage', () => {
     const issues = check({ status: 'complete' });
     expect(issues).toContain('discovery.summary must be non-empty');
     expect(issues).toContain('discovery.description must be non-empty');
-    expect(issues).toContain('discovery.whenToUse must contain useful guidance');
-    expect(issues).toContain('discovery.patterns must contain a developer pattern');
+    expect(issues).toContain(
+      'discovery.whenToUse must contain useful guidance'
+    );
+    expect(issues).toContain(
+      'discovery.patterns must contain a developer pattern'
+    );
   });
 
   it('rejects basic-only and unresolved complete content', () => {
@@ -62,9 +66,9 @@ describe('Component Discovery Content V1 coverage', () => {
       ],
       missingEvidence: ['No supported task intent.'],
     });
-    const patternError = 'complete discovery needs a non-basic developer pattern';
+    const nonBasic = 'complete discovery needs a non-basic developer pattern';
     const evidenceError = 'complete discovery cannot have unresolved evidence';
-    expect(issues).toContain(patternError);
+    expect(issues).toContain(nonBasic);
     expect(issues).toContain(evidenceError);
   });
 
@@ -88,7 +92,9 @@ describe('Component Discovery Content V1 coverage', () => {
       ...complete,
       platformNotes: { react: ['Web semantics.'] },
     });
-    expect(issues).toContain('missing discovery platform notes for react-native');
+    expect(issues).toContain(
+      'missing discovery platform notes for react-native'
+    );
   });
 
   it('blocks Stable graduation with unresolved intent', () => {
@@ -100,9 +106,13 @@ describe('Component Discovery Content V1 coverage', () => {
     };
     expect(check(unresolved, false)).toEqual([]);
     const blocked = check(unresolved, true);
-    expect(blocked).toContain('Stable component requires complete discovery content');
+    expect(blocked).toContain(
+      'Stable component requires complete discovery content'
+    );
     const noEvidence = check({ ...unresolved, missingEvidence: [] }, false);
-    expect(noEvidence).toContain('incomplete discovery must explain missing evidence');
+    expect(noEvidence).toContain(
+      'incomplete discovery must explain missing evidence'
+    );
   });
 
   it('records bounded legacy exemptions', () => {
