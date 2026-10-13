@@ -38,6 +38,7 @@ export function createToolingTasks({
     'scripts/ci/security-patched-dependencies.test.mjs',
     'scripts/seo/external-audit-regressions.test.mjs',
     'scripts/seo/docs-redirect-smoke.test.mjs',
+    'scripts/seo/docs-sitemap-smoke.test.mjs',
     'scripts/ci/chromatic-impact.test.mjs',
   ].map((file) => ({
     name: file,
