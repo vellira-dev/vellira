@@ -767,13 +767,13 @@ jobs:
             pnpm --dir apps/website exec next dev -p 3111 > /tmp/vellira-account-preview.log 2>&1 &
           server_pid=$!
           wait_for_website 3111 /app /tmp/vellira-account-preview.log
-          if ! WEBSITE_URL=http://127.0.0.1:3111 \
+          if ! WEBSITE_URL=http://localhost:3111 \
             pnpm --dir apps/website exec node scripts/account-mobile-navigation.mjs; then
             echo "::error::Development account browser smoke failed."
             tail -n 120 /tmp/vellira-account-preview.log >&2
             exit 1
           fi
-          if ! WEBSITE_URL=http://127.0.0.1:3111 \
+          if ! WEBSITE_URL=http://localhost:3111 \
             pnpm --dir apps/website exec node scripts/account-components-navigation.mjs; then
             echo "::error::Development components browser smoke failed."
             tail -n 120 /tmp/vellira-account-preview.log >&2
