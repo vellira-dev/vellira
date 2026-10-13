@@ -7,11 +7,14 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
+
+type WorkspaceSessionStatus = 'loading' | 'ready' | 'unauthenticated' | 'error';
 
 type ComponentNavigationContextValue = {
   open: boolean;
@@ -19,7 +22,8 @@ type ComponentNavigationContextValue = {
   // Navigation context only, never identity or entitlement authority.
   fromWorkspace: boolean;
   workspaceContextRequested: boolean;
-  setWorkspaceSessionReady: (ready: boolean) => void;
+  workspaceSessionStatus: WorkspaceSessionStatus;
+  setWorkspaceSessionStatus: (status: WorkspaceSessionStatus) => void;
 
   openNavigation: () => void;
   closeNavigation: () => void;
@@ -49,7 +53,9 @@ function WorkspaceContextUrlObserver({
   const searchParams = useSearchParams();
   const requested = searchParams?.get('from') === 'app';
 
-  useEffect(() => {
+  // Reconcile the visual route context before the next browser paint.
+  // The canonical session, never the URL, still grants workspace controls.
+  useLayoutEffect(() => {
     onChange(requested);
   }, [onChange, requested]);
 
@@ -66,9 +72,11 @@ export function ComponentNavigationProvider({
   const [mainOpen, setMainOpen] = useState(false);
   const [workspaceContextRequested, setWorkspaceContextRequested] =
     useState(false);
-  const [workspaceSessionReady, setWorkspaceSessionReady] = useState(false);
+  const [workspaceSessionStatus, setWorkspaceSessionStatus] =
+    useState<WorkspaceSessionStatus>('loading');
   // Query parameters request a layout; only the canonical session can grant it.
-  const fromWorkspace = workspaceContextRequested && workspaceSessionReady;
+  const fromWorkspace =
+    workspaceContextRequested && workspaceSessionStatus === 'ready';
 
   // Query-only navigation and browser history must invalidate layout context
   // just like a pathname change. This is never an authentication decision.
@@ -84,7 +92,8 @@ export function ComponentNavigationProvider({
       setOpen(false);
       setMainOpen(false);
     }
-    if (!requested) setWorkspaceSessionReady(false);
+    // Never inherit the previous URL context's authorization.
+    setWorkspaceSessionStatus('loading');
   }, []);
 
   useEffect(() => {
@@ -136,7 +145,8 @@ export function ComponentNavigationProvider({
       mainOpen,
       fromWorkspace,
       workspaceContextRequested,
-      setWorkspaceSessionReady,
+      workspaceSessionStatus,
+      setWorkspaceSessionStatus,
 
       openNavigation,
       closeNavigation,
@@ -154,6 +164,7 @@ export function ComponentNavigationProvider({
       mainOpen,
       fromWorkspace,
       workspaceContextRequested,
+      workspaceSessionStatus,
       open,
       openMainNavigation,
       openNavigation,

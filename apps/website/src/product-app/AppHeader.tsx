@@ -27,9 +27,12 @@ export function AppHeader({
   const [signingOut, setSigningOut] = useState(false);
 
   return (
-    <HeaderChrome brandHref='/app' dataProductAppHeader>
+    <HeaderChrome brandHref='/app' dataProductAppHeader={status === 'ready'}>
       <div className={styles.desktopHeaderActions}>
         <ThemeSwitcher />
+        {status === 'loading' && (
+          <span className={styles.pendingHeaderAccount} aria-hidden='true' />
+        )}
         {status === 'ready' && (
           <Dropdown color='neutral' placement='bottom-end'>
             <Dropdown.Trigger asChild>

@@ -17,9 +17,15 @@ export function ComponentsIndexExperience({
   children,
   footer,
 }: ComponentsIndexExperienceProps) {
-  const { fromWorkspace } = useComponentNavigation();
+  const { fromWorkspace, workspaceContextRequested, workspaceSessionStatus } =
+    useComponentNavigation();
 
-  if (!fromWorkspace) {
+  // Hold the final explorer geometry during the session check. The sidebar
+  // lists public components only; Back to workspace is authorized separately.
+  const pendingWorkspace =
+    workspaceContextRequested && workspaceSessionStatus === 'loading';
+
+  if (!fromWorkspace && !pendingWorkspace) {
     return (
       <>
         {children}

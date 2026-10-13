@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { AppHeader } from '@/product-app/AppHeader';
@@ -18,19 +18,22 @@ function WorkspaceComponentsHeader() {
     mainOpen,
     setMainNavigationOpen,
     openNavigation,
-    setWorkspaceSessionReady,
+    setWorkspaceSessionStatus,
   } = useComponentNavigation();
 
-  useEffect(() => {
-    setWorkspaceSessionReady(status === 'ready');
-    return () => setWorkspaceSessionReady(false);
-  }, [status, setWorkspaceSessionReady]);
+  // Update catalog geometry together with the canonical session's header.
+  useLayoutEffect(() => {
+    setWorkspaceSessionStatus(status);
+    return () => setWorkspaceSessionStatus('loading');
+  }, [status, setWorkspaceSessionStatus]);
   const closeWorkspaceNavigation = useCallback(
     () => setMainNavigationOpen(false),
     [setMainNavigationOpen]
   );
 
-  if (status !== 'ready') {
+  // Do not flash the public navigation while verifying a workspace visit.
+  // A definitive denial or error still returns to the ordinary public site.
+  if (status === 'unauthenticated' || status === 'error') {
     return (
       <SiteHeader
         variant='portal'
@@ -44,11 +47,13 @@ function WorkspaceComponentsHeader() {
   return (
     <>
       <AppHeader mobileAction={<ComponentNavigationTrigger />} />
-      <AppWorkspaceMobileMenu
-        open={mainOpen}
-        onClose={closeWorkspaceNavigation}
-        onComponentsSwitch={openNavigation}
-      />
+      {status === 'ready' && (
+        <AppWorkspaceMobileMenu
+          open={mainOpen}
+          onClose={closeWorkspaceNavigation}
+          onComponentsSwitch={openNavigation}
+        />
+      )}
     </>
   );
 }

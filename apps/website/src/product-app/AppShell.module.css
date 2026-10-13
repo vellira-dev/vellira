@@ -181,6 +181,13 @@
   gap: var(--space-3);
 }
 
+/* Hold the avatar footprint while /v1/me verifies the catalog visit. */
+.pendingHeaderAccount {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+
 .mobileHeaderAction {
   display: none;
 }
