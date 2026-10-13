@@ -58,9 +58,10 @@ export function ComponentNavigationShell({
     const handleResize = () => {
       if (window.innerWidth <= 1100) return;
       if (surfaceRef.current?.contains(document.activeElement)) {
-        document.querySelector<HTMLAnchorElement>(
+        const brand = document.querySelector<HTMLAnchorElement>(
           'header a[aria-label="Vellira home"]'
-        )?.focus();
+        );
+        brand?.focus();
       }
       closeNavigation();
     };

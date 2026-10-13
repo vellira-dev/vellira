@@ -45,6 +45,12 @@ function activeHref(pathname: string) {
   return null;
 }
 
+function componentCurrentLocation(pathname: string) {
+  if (pathname === '/components') return 'page' as const;
+  if (pathname.startsWith('/components/')) return 'location' as const;
+  return undefined;
+}
+
 /** A disabled Tooltip.Trigger would disable its asChild Link.
  * Expanded navigation must render a plain accessible link; only the collapsed
  * icon rail needs the tooltip.
@@ -122,13 +128,7 @@ function AppNavigation({
                   }
                 }}
                 aria-label={collapsed ? 'Components' : undefined}
-                aria-current={
-                  value === '/components'
-                    ? pathname === '/components'
-                      ? 'page'
-                      : 'location'
-                    : undefined
-                }
+                aria-current={componentCurrentLocation(pathname)}
               >
                 <span className={styles.navEntry}>
                   <Platforms size={18} aria-hidden='true' />
@@ -212,9 +212,10 @@ export function AppWorkspaceMobileMenu({
     const handleResize = () => {
       if (window.innerWidth <= 1100) return;
       if (panelRef.current?.contains(document.activeElement)) {
-        document.querySelector<HTMLAnchorElement>(
+        const brand = document.querySelector<HTMLAnchorElement>(
           'header a[aria-label="Vellira home"]'
-        )?.focus();
+        );
+        brand?.focus();
       }
       onClose();
     };
