@@ -192,10 +192,28 @@ try {
 
 const mobile = await openPage({ width: 390, height: 844 });
 try {
+  // DOMContentLoaded makes the server-rendered trigger visible before
+  // the Next.js client navigation bundle is hydrated. A premature click is
+  // otherwise silently lost, falsely failing the staging deployment gate.
+  await mobile.waitForLoadState('networkidle', { timeout: 20_000 });
+
   const trigger = mobile.getByRole('button', {
     name: 'Open component navigation',
   });
+  assert.equal(
+    await trigger.getAttribute('aria-expanded'),
+    'false',
+    'Public Components navigation must initially be closed'
+  );
   await trigger.click();
+  await mobile.waitForFunction(
+    () =>
+      document
+        .querySelector('[aria-controls="component-navigation"]')
+        ?.getAttribute('aria-expanded') === 'true',
+    null,
+    { timeout: 10_000 }
+  );
   const navigation = mobile.locator('#component-navigation');
   await navigation.waitFor({ state: 'visible' });
   await mobile
