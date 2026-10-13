@@ -54,3 +54,39 @@ test('CI performance inventory measures both Cloudflare worker lanes and the sta
   assert.ok(jobs.has('Cloudflare multi-deployment browser migration'));
   assert.ok(jobs.has('Cloudflare cache and multi-deployment browser contracts'));
 });
+
+
+test('full-path public browser suites overlap without dropping affected-path coverage', () => {
+  const ci = jobBlock('ci');
+  const parallelStart = ci.indexOf('- name: Parallel public website browser regressions');
+  const showcaseStart = ci.indexOf('- name: CodeShowcase browser regression');
+  const blogStart = ci.indexOf('- name: Blog discovery browser regression');
+  const accountStart = ci.indexOf('- name: Core account browser acceptance');
+  assert.ok(parallelStart > 0 && showcaseStart > parallelStart);
+  assert.ok(blogStart > showcaseStart && accountStart > blogStart);
+
+  const full = ci.slice(parallelStart, showcaseStart);
+  assert.match(full, /execution_path != 'affected'/);
+  for (const suite of [
+    'code-showcase-website-smoke.mjs',
+    'vellira-ui-usage-website-smoke.mjs',
+    'blog-discovery-website-smoke.mjs',
+    'newsletter-website-smoke.mjs',
+  ]) {
+    assert.match(full, new RegExp(suite.replaceAll('.', '\\\\.')));
+  }
+  assert.match(full, /wait "\\$showcase_pid" \\|\\| showcase_status=\\$\\?/);
+  assert.match(full, /wait "\\$blog_pid" \\|\\| blog_status=\\$\\?/);
+  assert.match(full, /showcase_status != 0 \\|\\| blog_status != 0/);
+  assert.match(full, /trap 'kill "\\$server_pid"/);
+
+  const affectedShowcase = ci.slice(showcaseStart, blogStart);
+  assert.match(affectedShowcase, /execution_path == 'affected'/);
+  assert.match(affectedShowcase, /code-showcase-website-smoke.mjs/);
+  assert.match(affectedShowcase, /vellira-ui-usage-website-smoke.mjs/);
+  const affectedBlog = ci.slice(blogStart, accountStart);
+  assert.match(affectedBlog, /execution_path == 'affected'/);
+  assert.match(affectedBlog, /blog-discovery-website-smoke.mjs/);
+  assert.match(affectedBlog, /newsletter-website-smoke.mjs/);
+  assert.match(ci.slice(accountStart), /name: Core account browser acceptance/);
+});
