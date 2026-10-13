@@ -106,9 +106,7 @@ export function getDiscoveryContentFindings(params: {
 
   for (const platform of platforms) {
     if (!hasUsableStrings(discovery.platformNotes?.[platform])) {
-      findings.push(
-        'discovery.platformNotes.' + platform + ' must describe the platform boundary'
-      );
+      findings.push('missing discovery platform notes for ' + platform);
     }
   }
 
