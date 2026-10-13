@@ -12,6 +12,7 @@ on:
       - 'turbo.json'
       - '.github/workflows/deploy-docs-worker.yml'
       - 'scripts/seo/docs-redirect-smoke.mjs'
+      - 'scripts/seo/docs-sitemap-smoke.mjs'
   workflow_dispatch:
 
 permissions:
@@ -60,6 +61,9 @@ jobs:
           grep -Fx '/getting-started /start/getting-started 301' "$DOCS_DIST_DIR/_redirects"
           grep -Fx '/getting-started/ /start/getting-started 301' "$DOCS_DIST_DIR/_redirects"
 
+      - name: Verify built sitemap, robots, and docs canonicals
+        run: node scripts/seo/docs-sitemap-smoke.mjs --artifact
+
       - name: Deploy docs to Cloudflare Workers
         run: >
           pnpm exec wrangler deploy
@@ -72,4 +76,7 @@ jobs:
 
       - name: Verify published documentation redirects on the canonical domain
         run: node scripts/seo/docs-redirect-smoke.mjs
+
+      - name: Verify published sitemap matches the deployed docs build
+        run: node scripts/seo/docs-sitemap-smoke.mjs --live
 
