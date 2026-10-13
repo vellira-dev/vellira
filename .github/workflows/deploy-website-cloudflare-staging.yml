@@ -136,7 +136,10 @@ jobs:
     needs: [classify, migration]
     if: needs.classify.outputs.release_sync != 'true' && needs.migration.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # End-to-end staging verification includes a 15-round route soak and
+    # a full static chunk integrity smoke after deployment. The former 25m
+    # cap cancelled otherwise GREEN staging runs before promotion evidence.
+    timeout-minutes: 40
     concurrency:
       group: deploy-worker-vellira-website-staging
       cancel-in-progress: false
