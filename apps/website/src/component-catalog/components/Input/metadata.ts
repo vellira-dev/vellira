@@ -41,8 +41,7 @@ export default defineComponentPageMetadata({
       {
         id: 'password',
         title: 'Password reveal',
-        description:
-          'Enable revealPassword only on password-type inputs.',
+        description: 'Enable revealPassword only on password-type inputs.',
       },
     ],
     platformNotes: {
