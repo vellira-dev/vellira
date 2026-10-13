@@ -423,6 +423,56 @@ export const componentPages = {
   },
   button: {
     name: 'Button',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Button for explicit actions such as saving, submitting a form, or opening a menu.',
+      description:
+        'Accessible React and React Native actions with Vellira Button: appearances, semantic colors, sizes, loading states, icons, links, and composition.',
+      whenToUse: [
+        'Choose Button for an action; use a semantic link for navigation.',
+        'Use appearance and color to communicate action hierarchy and intent.',
+        'For asynchronous actions, use loading and loadingText to signal progress.',
+        'Give icon-only controls accessible names; the icon itself is not a label.',
+      ],
+      patterns: [
+        {
+          id: 'async-action',
+          title: 'Save or submit',
+          description:
+            'Use loading and loadingText while an action is pending.',
+        },
+        {
+          id: 'action-hierarchy',
+          title: 'Primary and secondary actions',
+          description:
+            'Pair solid primary actions with quieter outline or ghost actions.',
+        },
+        {
+          id: 'icon-only',
+          title: 'Accessible icon-only buttons',
+          description:
+            'Keep a concise accessible label when visible text is absent.',
+        },
+        {
+          id: 'navigation',
+          title: 'Link-like buttons',
+          description:
+            'On React, use href or asChild to preserve link semantics.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Button supports onClick for actions and href or asChild for link semantics.',
+          'For an icon-only web action, use aria-label or aria-labelledby.',
+        ],
+        'react-native': [
+          'React Native Button handles native actions through onPress, not DOM onClick.',
+          'Use accessibilityLabel for icon-only native actions; web ARIA rules do not transfer.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: ButtonDemo,
       'react-native': NativeButtonDemo,
@@ -435,6 +485,62 @@ export const componentPages = {
   },
   input: {
     name: 'Input',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Input for short free-form text in forms and search, with explicit labels and validation feedback.',
+      description:
+        'Accessible React and React Native text inputs with labels, controlled values, validation feedback, clearable search, and password reveal.',
+      whenToUse: [
+        'Use Input for short text such as email, search terms, and account names.',
+        'Use Select or RadioGroup for fixed choices; use Textarea for longer messages.',
+        'Choose value with onValueChange for controlled fields or defaultValue for initial state.',
+        'Provide visible labels and actionable error text instead of placeholder-only instructions.',
+      ],
+      patterns: [
+        {
+          id: 'controlled',
+          title: 'Controlled values',
+          description:
+            'Use value and onValueChange when application state owns the text.',
+        },
+        {
+          id: 'uncontrolled',
+          title: 'Default values',
+          description:
+            'Use defaultValue when the component can manage its initial text.',
+        },
+        {
+          id: 'validation',
+          title: 'Field validation',
+          description:
+            'Use error, invalid, and FormField for accessible field feedback.',
+        },
+        {
+          id: 'clear-search',
+          title: 'Clearable search',
+          description:
+            'Use clearable and onClear to reset a controlled search field.',
+        },
+        {
+          id: 'password',
+          title: 'Password reveal',
+          description:
+            'Use type=\'password\' with revealPassword for a reveal action.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Input supports browser input types, onValueChange, and form label associations.',
+          'When the app owns a clearable value, reset its state in onClear.',
+        ],
+        'react-native': [
+          'React Native Input uses native text controls and keyboard behavior.',
+          'Choose keyboardType and returnKeyType for the expected native text input.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: InputDemo,
       'react-native': NativeInputDemo,
