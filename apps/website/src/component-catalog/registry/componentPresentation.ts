@@ -20,7 +20,7 @@ export const componentCatalogPresentation = [
     slug: 'input',
     name: 'Input',
     description:
-      'Flexible text input with adornments, validation states, and form integration.',
+      'Accessible React and React Native text inputs with labels, controlled values, validation feedback, clearable search, and password reveal.',
     category: 'forms',
     order: 10,
     docs: {
