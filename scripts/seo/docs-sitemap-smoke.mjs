@@ -3,7 +3,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const DOCS_ORIGIN = 'https://docs.vellira.dev';
-export const DOCS_DIST = 'apps/docs/src/.vitepress/dist';
+const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+export const DOCS_DIST = join(REPO_ROOT, 'apps/docs/src/.vitepress/dist');
 const REQUIRED_ROUTES = [
   '/',
   '/react/',
@@ -98,7 +99,7 @@ export async function inspectBuiltDocsDiscovery({
   readFileImpl = readFile,
   origin = DOCS_ORIGIN,
   requiredRoutes = REQUIRED_ROUTES,
-  redirectFile = 'apps/docs/src/public/_redirects',
+  redirectFile = join(REPO_ROOT, 'apps/docs/src/public/_redirects'),
 } = {}) {
   const [sitemap, robots, redirects] = await Promise.all([
     readFileImpl(join(distDir, 'sitemap.xml'), 'utf8'),
