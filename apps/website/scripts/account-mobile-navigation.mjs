@@ -56,7 +56,17 @@ try {
   for (const width of [1100, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
     await page.goto(new URL('/app', baseUrl).toString());
-    await page.getByText('Local UI preview', { exact: false }).waitFor();
+    try {
+      await page.getByText('Local UI preview', { exact: false }).waitFor({
+        timeout: 45_000,
+      });
+    } catch (cause) {
+      const body = await page.locator('body').innerText().catch(() => '');
+      throw new Error(
+        `Development preview was not available at ${page.url()}: ${body.slice(0, 900)}`,
+        { cause }
+      );
+    }
 
     const header = page.locator('[data-product-app-header]');
     const appChrome = await headerGeometry(header);

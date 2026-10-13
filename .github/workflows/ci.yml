@@ -763,14 +763,22 @@ jobs:
           server_pid=""
 
           # The fixture is development-only and never creates a real session.
-          NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW=1 \
+          NODE_ENV=development NEXT_PUBLIC_VELLIRA_LOCAL_PREVIEW=1 \
             pnpm --dir apps/website exec next dev -p 3111 > /tmp/vellira-account-preview.log 2>&1 &
           server_pid=$!
           wait_for_website 3111 /app /tmp/vellira-account-preview.log
-          WEBSITE_URL=http://127.0.0.1:3111 \
-            pnpm --dir apps/website exec node scripts/account-mobile-navigation.mjs
-          WEBSITE_URL=http://127.0.0.1:3111 \
-            pnpm --dir apps/website exec node scripts/account-components-navigation.mjs
+          if ! WEBSITE_URL=http://127.0.0.1:3111 \
+            pnpm --dir apps/website exec node scripts/account-mobile-navigation.mjs; then
+            echo "::error::Development account browser smoke failed."
+            tail -n 120 /tmp/vellira-account-preview.log >&2
+            exit 1
+          fi
+          if ! WEBSITE_URL=http://127.0.0.1:3111 \
+            pnpm --dir apps/website exec node scripts/account-components-navigation.mjs; then
+            echo "::error::Development components browser smoke failed."
+            tail -n 120 /tmp/vellira-account-preview.log >&2
+            exit 1
+          fi
 
       - name: Smoke packages
         if: ${{ needs.impact.outputs.execution_path != 'affected' && needs.impact.outputs.shape != 'docs-only' }}
