@@ -37,24 +37,21 @@ function check(
 }
 
 describe('Component Discovery Content V1 coverage', () => {
-  it('accepts a complete, platform-scoped contract', () => {
+  it('accepts a complete platform-scoped contract', () => {
     expect(check(complete)).toEqual([]);
   });
 
-  it('rejects a missing or status-only discovery object', () => {
+  it('requires adopted discovery metadata', () => {
     expect(check(undefined)).toContain('discovery metadata is required');
-    expect(check({ status: 'complete' })).toEqual(
-      expect.arrayContaining([
-        'discovery.summary must be non-empty',
-        'discovery.description must be non-empty',
-        'discovery.whenToUse must contain useful guidance',
-        'discovery.patterns must contain a developer pattern',
-      ])
-    );
+    const issues = check({ status: 'complete' });
+    expect(issues).toContain('discovery.summary must be non-empty');
+    expect(issues).toContain('discovery.description must be non-empty');
+    expect(issues).toContain('discovery.whenToUse must contain useful guidance');
+    expect(issues).toContain('discovery.patterns must contain a developer pattern');
   });
 
-  it('does not mark basic-only usage or unresolved evidence complete', () => {
-    const result = check({
+  it('rejects basic-only and unresolved complete content', () => {
+    const issues = check({
       ...complete,
       patterns: [
         {
@@ -65,68 +62,55 @@ describe('Component Discovery Content V1 coverage', () => {
       ],
       missingEvidence: ['No supported task intent.'],
     });
-
-    expect(result).toContain(
-      'complete discovery needs a non-basic developer pattern'
-    );
-    expect(result).toContain(
-      'complete discovery cannot have unresolved evidence'
-    );
+    const patternError = 'complete discovery needs a non-basic developer pattern';
+    const evidenceError = 'complete discovery cannot have unresolved evidence';
+    expect(issues).toContain(patternError);
+    expect(issues).toContain(evidenceError);
   });
 
-  it('rejects empty and duplicate developer patterns', () => {
-    expect(
-      check({
-        ...complete,
-        patterns: [complete.patterns?.[0] ?? {}, complete.patterns?.[0] ?? {}],
-      })
-    ).toContain('duplicate discovery pattern id: controlled');
-    expect(
-      check({
-        ...complete,
-        patterns: [{ id: 'controlled', title: '  ', description: '' }],
-      })
-    ).toContain('discovery.patterns[0] is incomplete');
+  it('rejects duplicate and empty patterns', () => {
+    const pattern = {
+      id: 'controlled',
+      title: 'Controlled state',
+      description: 'App state owns the value.',
+    };
+    const duplicates = check({ ...complete, patterns: [pattern, pattern] });
+    const invalid = check({
+      ...complete,
+      patterns: [{ id: 'controlled', title: ' ', description: '' }],
+    });
+    expect(duplicates).toContain('duplicate discovery pattern id: controlled');
+    expect(invalid).toContain('discovery.patterns[0] is incomplete');
   });
 
-  it('requires explicit platform boundary notes', () => {
-    expect(
-      check({ ...complete, platformNotes: { react: ['Web semantics.'] } })
-    ).toContain(
-      'missing discovery platform notes for react-native'
-    );
+  it('requires per-platform guidance', () => {
+    const issues = check({
+      ...complete,
+      platformNotes: { react: ['Web semantics.'] },
+    });
+    expect(issues).toContain('missing discovery platform notes for react-native');
   });
 
-  it('blocks Stable graduation with unresolved author intent', () => {
+  it('blocks Stable graduation with unresolved intent', () => {
     const unresolved: DiscoveryContentCandidate = {
       ...complete,
       status: 'needs-authored-intent',
-      patterns: [
-        {
-          id: 'basic',
-          title: 'Basic',
-          description: 'Basic usage.',
-        },
-      ],
-      missingEvidence: ['Missing verified developer task intent.'],
+      patterns: [{ id: 'basic', title: 'Basic', description: 'Basic usage.' }],
+      missingEvidence: ['Missing verified developer intent.'],
     };
-
     expect(check(unresolved, false)).toEqual([]);
-    expect(check(unresolved, true)).toContain(
-      'Stable component requires complete discovery content'
-    );
-    expect(check({ ...unresolved, missingEvidence: [] }, false)).toContain(
-      'incomplete discovery must explain missing evidence'
-    );
+    const blocked = check(unresolved, true);
+    expect(blocked).toContain('Stable component requires complete discovery content');
+    const noEvidence = check({ ...unresolved, missingEvidence: [] }, false);
+    expect(noEvidence).toContain('incomplete discovery must explain missing evidence');
   });
 
-  it('keeps legacy exemptions explicit, bounded and unique', () => {
-    expect(new Set(LEGACY_DISCOVERY_COMPONENTS).size).toBe(
-      LEGACY_DISCOVERY_COMPONENTS.length
-    );
-    expect(LEGACY_DISCOVERY_COMPONENTS).not.toContain('Button');
-    expect(LEGACY_DISCOVERY_COMPONENTS).not.toContain('Checkbox');
-    expect(LEGACY_DISCOVERY_COMPONENTS).not.toContain('Input');
-    expect(LEGACY_DISCOVERY_COMPONENTS).not.toContain('Textarea');
+  it('records bounded legacy exemptions', () => {
+    const names = LEGACY_DISCOVERY_COMPONENTS;
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).not.toContain('Button');
+    expect(names).not.toContain('Checkbox');
+    expect(names).not.toContain('Input');
+    expect(names).not.toContain('Textarea');
   });
 });
