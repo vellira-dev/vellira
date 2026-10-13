@@ -37,7 +37,12 @@ import styles from './AppShell.module.css';
 import componentDrawerStyles from '@/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.module.css';
 
 function activeHref(pathname: string) {
-  return pathname.startsWith('/app/settings') ? '/app/settings' : '/app';
+  if (pathname === '/app') return '/app';
+  if (pathname.startsWith('/app/settings')) return '/app/settings';
+  if (pathname === '/components' || pathname.startsWith('/components/')) {
+    return '/components';
+  }
+  return null;
 }
 
 /** A disabled Tooltip.Trigger would disable its asChild Link.
@@ -104,7 +109,7 @@ function AppNavigation({
               </Link>
             </CollapsedNavTooltip>
           </SidebarItem>
-          <SidebarItem>
+          <SidebarItem active={value === '/components'}>
             <CollapsedNavTooltip collapsed={collapsed} label='Components'>
               <Link
                 href='/components?from=app'
@@ -117,6 +122,13 @@ function AppNavigation({
                   }
                 }}
                 aria-label={collapsed ? 'Components' : undefined}
+                aria-current={
+                  value === '/components'
+                    ? pathname === '/components'
+                      ? 'page'
+                      : 'location'
+                    : undefined
+                }
               >
                 <span className={styles.navEntry}>
                   <Platforms size={18} aria-hidden='true' />
@@ -198,10 +210,17 @@ export function AppWorkspaceMobileMenu({
     };
 
     const handleResize = () => {
-      if (window.innerWidth > 1100) onClose();
+      if (window.innerWidth <= 1100) return;
+      if (panelRef.current?.contains(document.activeElement)) {
+        document.querySelector<HTMLAnchorElement>(
+          'header a[aria-label="Vellira home"]'
+        )?.focus();
+      }
+      onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleResize);
+    handleResize();
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);

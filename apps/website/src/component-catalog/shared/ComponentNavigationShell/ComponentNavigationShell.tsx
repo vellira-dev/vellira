@@ -55,13 +55,26 @@ export function ComponentNavigationShell({
       trapNavigationTab(event, surfaceRef.current);
     };
 
+    const handleResize = () => {
+      if (window.innerWidth <= 1100) return;
+      if (surfaceRef.current?.contains(document.activeElement)) {
+        document.querySelector<HTMLAnchorElement>(
+          'header a[aria-label="Vellira home"]'
+        )?.focus();
+      }
+      closeNavigation();
+    };
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    handleResize();
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
     };
   }, [closeAndRestoreFocus, desktopOnly, open]);
 

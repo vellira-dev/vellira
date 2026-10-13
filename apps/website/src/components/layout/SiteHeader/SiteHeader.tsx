@@ -122,10 +122,24 @@ export function SiteHeader({
       }
     };
 
+    const handleResize = () => {
+      if (window.innerWidth <= 1280) return;
+      const menu = document.getElementById('mobile-site-navigation');
+      if (menu?.contains(document.activeElement)) {
+        document.querySelector<HTMLAnchorElement>(
+          'header a[aria-label="Vellira home"]'
+        )?.focus();
+      }
+      setResolvedMobileMenuOpen(false);
+    };
+
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    handleResize();
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
     };
   }, [resolvedMobileMenuOpen, setResolvedMobileMenuOpen]);
 

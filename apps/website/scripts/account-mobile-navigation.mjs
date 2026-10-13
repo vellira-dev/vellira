@@ -159,6 +159,22 @@ try {
       (node) => node.classList[0]
     );
 
+    if (width === 1100) {
+      await page.setViewportSize({ width: 1200, height: 850 });
+      await drawer.waitFor({ state: 'hidden' });
+      await page.waitForFunction(() => document.body.style.overflow === '');
+      assert.equal(
+        await page.locator('main').evaluate(
+          (node) => Boolean(node.closest('[inert]'))
+        ),
+        false,
+        'Workspace resize must restore page interactivity'
+      );
+      await page.setViewportSize({ width, height: 850 });
+      await open.click();
+      await drawer.waitFor();
+    }
+
     await page.keyboard.press('Escape');
     await drawer.waitFor({ state: 'hidden' });
     assert.equal(
@@ -226,6 +242,32 @@ try {
       true,
       'Catalog content must be inert while the Components drawer is open'
     );
+    if (width === 1100) {
+      await page.setViewportSize({ width: 1200, height: 850 });
+      await componentsDrawer.waitFor({ state: 'hidden' });
+      await page.waitForFunction(() => {
+        const content = document.querySelector(
+          '[data-components-content-boundary]'
+        );
+        return content?.inert === false && document.body.style.overflow === '';
+      });
+      assert.equal(
+        await page.locator('[data-components-content-boundary]')
+          .evaluate((element) => element.inert),
+        false,
+        'Resizing above 1100px must unlock the desktop catalog'
+      );
+      assert.equal(
+        await page.locator('[data-product-app-header]')
+          .getByRole('link', { name: 'Vellira home' })
+          .evaluate((element) => document.activeElement === element),
+        true,
+        'Focus must move to the visible header after drawer resize'
+      );
+      await page.setViewportSize({ width, height: 850 });
+      await componentTrigger.click();
+      await componentsDrawer.waitFor();
+    }
     assert.equal(
       await page.evaluate(() => {
         const background = document.querySelector(
@@ -339,7 +381,21 @@ try {
       0,
       'Component drawer must close when the main workspace menu opens'
     );
-    await workspaceMenu.getByRole('link', { name: 'Overview' }).waitFor();
+    const workspaceOverview = workspaceMenu.getByRole('link', {
+      name: 'Overview',
+    });
+    await workspaceOverview.waitFor();
+    assert.equal(
+      await workspaceOverview.getAttribute('aria-current'),
+      null,
+      'Overview must not be current on Components routes'
+    );
+    assert.equal(
+      await workspaceMenu.getByRole('link', { name: 'Components' })
+        .getAttribute('aria-current'),
+      'location',
+      'Components is the active workspace section on a detail route'
+    );
     await workspaceMenu.getByRole('link', { name: 'Account settings' }).waitFor();
 
     // Switching into Components from the workspace menu must return to the
@@ -471,6 +527,17 @@ try {
 
     await siteMenu.click();
     await siteHeader.getByRole('button', { name: 'Close navigation' }).waitFor();
+    if (width === 1280) {
+      await page.setViewportSize({ width: 1440, height: 850 });
+      await page.waitForFunction(() => {
+        const trigger = document.querySelector(
+          '[aria-controls="mobile-site-navigation"]'
+        );
+        return trigger?.getAttribute('aria-expanded') === 'false';
+      });
+      await page.setViewportSize({ width, height: 850 });
+      await siteMenu.click();
+    }
     await siteHeader.getByRole('button', { name: 'Close navigation' }).first().click();
     await siteMenu.waitFor();
   }
@@ -525,6 +592,26 @@ try {
       `Portal tablet Menu must be right-aligned at ${width}px`
     );
     await publicMenu.click();
+    if (width === 1280) {
+      assert.equal(
+        await page.locator('[data-components-content-boundary]')
+          .evaluate((element) => element.inert),
+        true,
+        'The portal catalog must be inert behind the open site menu'
+      );
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.waitForFunction(() =>
+        document.querySelector('[data-components-content-boundary]')?.inert === false
+      );
+      assert.equal(
+        await page.locator('a[href="/components/button"]').first()
+          .isVisible(),
+        true,
+        'The desktop catalog must remain visible after closing the hidden menu'
+      );
+      await page.setViewportSize({ width, height: 900 });
+      await publicMenu.click();
+    }
     const blog = portalHeader.getByRole('link', { name: 'Blog' });
     await blog.waitFor();
     await blog.click();
