@@ -473,6 +473,11 @@ try {
   const publicTrigger = page.getByRole('button', {
     name: 'Open component navigation',
   });
+  assert.equal(
+    await publicTrigger.getAttribute('aria-expanded'),
+    'false',
+    'Public component menu must start closed before the first interaction'
+  );
   await publicTrigger.click();
   await page.waitForFunction(() => {
     const trigger = document.querySelector(
