@@ -1,6 +1,62 @@
 import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Input for short free-form text in forms and search, with explicit labels and validation feedback.',
+    description:
+      'Accessible React and React Native text inputs with labels, controlled values, validation feedback, clearable search, and password reveal.',
+    whenToUse: [
+      'Use Input for short text such as email, search terms, and account names.',
+      'Use Select or RadioGroup for fixed choices; use Textarea for longer messages.',
+      'Choose value with onValueChange for controlled fields or defaultValue for initial state.',
+      'Provide visible labels and actionable error text instead of placeholder-only instructions.',
+    ],
+    patterns: [
+      {
+        id: 'controlled',
+        title: 'Controlled values',
+        description:
+          'Use value and onValueChange when application state owns the text.',
+      },
+      {
+        id: 'uncontrolled',
+        title: 'Default values',
+        description:
+          'Use defaultValue when the component can manage its initial text.',
+      },
+      {
+        id: 'validation',
+        title: 'Field validation',
+        description:
+          'Use error, invalid, and FormField for accessible field feedback.',
+      },
+      {
+        id: 'clear-search',
+        title: 'Clearable search',
+        description:
+          'Use clearable and onClear to reset a controlled search field.',
+      },
+      {
+        id: 'password',
+        title: 'Password reveal',
+        description: 'Enable revealPassword only on password-type inputs.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'React Input supports browser input types, onValueChange, and form label associations.',
+        'When the app owns a clearable value, reset its state in onClear.',
+      ],
+      'react-native': [
+        'React Native Input uses native text controls and keyboard behavior.',
+        'Choose keyboardType and returnKeyType for the expected native text input.',
+      ],
+    },
+    missingEvidence: [],
+  },
+
   demo: {
     label: 'Email',
     description: 'Used for account notifications.',
