@@ -78,10 +78,7 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(
       check({
         ...complete,
-        patterns: [
-          complete.patterns?.[0] ?? {},
-          complete.patterns?.[0] ?? {},
-        ],
+        patterns: [complete.patterns?.[0] ?? {}, complete.patterns?.[0] ?? {}],
       })
     ).toContain('duplicate discovery pattern id: controlled');
     expect(
@@ -96,11 +93,11 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(
       check({ ...complete, platformNotes: { react: ['Web semantics.'] } })
     ).toContain(
-      'discovery.platformNotes.react-native must describe the platform boundary'
+      'missing discovery platform notes for react-native'
     );
   });
 
-  it('allows unresolved experimental intent, but blocks Stable graduation', () => {
+  it('blocks Stable graduation with unresolved author intent', () => {
     const unresolved: DiscoveryContentCandidate = {
       ...complete,
       status: 'needs-authored-intent',
@@ -118,9 +115,9 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(check(unresolved, true)).toContain(
       'Stable component requires complete discovery content'
     );
-    expect(
-      check({ ...unresolved, missingEvidence: [] }, false)
-    ).toContain('incomplete discovery must explain missing evidence');
+    expect(check({ ...unresolved, missingEvidence: [] }, false)).toContain(
+      'incomplete discovery must explain missing evidence'
+    );
   });
 
   it('keeps legacy exemptions explicit, bounded and unique', () => {
