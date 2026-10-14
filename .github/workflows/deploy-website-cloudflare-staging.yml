@@ -279,8 +279,8 @@ jobs:
           }
 
           check_route '/' 'Vellira'
-          check_route '/components/switch' 'Vellira Switch for React and React Native'
-          check_route '/blog' 'Practical engineering notes on design systems'
+          check_route '/components/switch' 'data-component-explorer-main' '>Switch</h1>'
+          check_route '/blog' '<h1>Blog</h1>' 'aria-label="Published articles"'
           check_route '/blog/two-runtimes' \
             'One Design System, Two Runtimes' \
             'data-language="ts"'

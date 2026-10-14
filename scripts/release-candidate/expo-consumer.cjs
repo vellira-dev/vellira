@@ -86,15 +86,15 @@ function createFixture(candidate) {
   );
 
   const dependencies = {
-    '@expo/metro-runtime': exactVersion(
-      playgroundPackage.dependencies?.['@expo/metro-runtime'],
-      '@expo/metro-runtime'
-    ),
+    // Pin the exact compatible SDK 57 patch pair for the clean consumer.
+    // The playground's ~57.0.16 range accepts later patches, but stripping
+    // the range with exactVersion would incorrectly lock this proof to .16.
+    '@expo/metro-runtime': '57.0.17',
     '@react-native-picker/picker': exactVersion(
       playgroundPackage.dependencies?.['@react-native-picker/picker'],
       '@react-native-picker/picker'
     ),
-    expo: '57.0.28',
+    expo: '57.0.29',
     react: '19.2.3',
     'react-native': exactVersion(
       playgroundPackage.dependencies?.['react-native'],

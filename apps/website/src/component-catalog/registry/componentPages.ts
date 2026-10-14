@@ -348,6 +348,56 @@ export const componentPages = {
   },
   'radio-group': {
     name: 'RadioGroup',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use RadioGroup for a labelled, mutually exclusive set of options.',
+      description:
+        'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
+      whenToUse: [
+        'Use RadioGroup when a person chooses exactly one item from a related set.',
+        'Give each RadioGroup.Item a unique value and label the group.',
+        'Use value and onValueChange for controlled selection or defaultValue for initial selection.',
+        'Use required and error for group validation; use Checkbox for independent choices.',
+      ],
+      patterns: [
+        {
+          id: 'controlled',
+          title: 'Controlled choice',
+          description:
+            'Use value and onValueChange to manage the selected option externally.',
+        },
+        {
+          id: 'default',
+          title: 'Default selection',
+          description:
+            'Use defaultValue to initialize selection while the group manages later updates.',
+        },
+        {
+          id: 'layout',
+          title: 'Orientation',
+          description:
+            'Prefer vertical options; use horizontal layout when space and labels permit.',
+        },
+        {
+          id: 'validation',
+          title: 'Required group',
+          description:
+            'Display a meaningful error and propagate disabled and invalid state to child radios.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React renders role=radiogroup with ARIA label, description, required and invalid semantics, and named native radio inputs.',
+          'React group navigation handles keyboard behavior and orientation controls layout.',
+        ],
+        'react-native': [
+          'React Native composes FormField with accessibilityRole=radiogroup and hints for required or invalid state.',
+          'Child Pressable radios expose checked/disabled accessibilityState; orientation changes their layout.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: RadioGroupDemo,
       'react-native': NativeRadioGroupDemo,
@@ -422,6 +472,50 @@ export const componentPages = {
   },
   popover: {
     name: 'Popover',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Popover for contextual content anchored near a control, including interactive details.',
+      description:
+        'React and React Native Popover with compound trigger, positioned content, optional title, description, arrow, anchor and explicit close action.',
+      whenToUse: [
+        'Use Popover for contextual details or small interactions that need more than a Tooltip.',
+        'Compose Trigger and Content, adding Title, Description, Arrow or Close where useful.',
+        'Provide an explicit close control when interactive content requires it.',
+        'Use Modal for a focused task that should take precedence over the surrounding page.',
+      ],
+      patterns: [
+        {
+          id: 'compound',
+          title: 'Contextual panel',
+          description:
+            'Compose Popover.Trigger with Popover.Content and descriptive text.',
+        },
+        {
+          id: 'placement',
+          title: 'Anchor and placement',
+          description:
+            'Use side, align and sideOffset to position content; Anchor can provide a separate reference element.',
+        },
+        {
+          id: 'dismissal',
+          title: 'Explicit dismissal',
+          description:
+            'Add Popover.Close for interactive or multistep content and handle open state if needed.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Popover supports nonmodal or modal behavior, portal positioning and collision avoidance, with focus and dismissal behavior tied to its trigger.',
+          'Use the title and description for understandable content; ensure keyboard users can dismiss or leave the popover.',
+        ],
+        'react-native': [
+          'React Native Popover exposes trigger, content, arrow, title, description, anchor and close slots with placement guidance.',
+          'Native focus and dismissal differ from web behavior; preserve accessible naming and a clear close action for task content.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: PopoverDemo,
       'react-native': NativePopoverDemo,
@@ -434,6 +528,58 @@ export const componentPages = {
   },
   modal: {
     name: 'Modal',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Modal for a focused confirmation, short form or decision that interrupts the current task.',
+      description:
+        'React and React Native Modal for focused dialogs, confirmations and forms with compound structure, controlled state, accessible dismissal and focus restoration.',
+      whenToUse: [
+        'Use Modal for a focused decision or short form that takes priority over the current page.',
+        'Prefer Popover for contextual details that should not interrupt the surrounding task.',
+        'Use a clear Title, Description, Body and action Footer; provide a safe close path for confirmation flows.',
+        'Disable outside dismissal when a critical decision requires an explicit response.',
+      ],
+      patterns: [
+        {
+          id: 'compound-dialog',
+          title: 'Compound dialog anatomy',
+          description:
+            'Compose Modal.Trigger, Overlay, Content, Header, Title, Description, Body, Footer and Close as appropriate.',
+        },
+        {
+          id: 'controlled-dialog',
+          title: 'Controlled or initial open state',
+          description:
+            'Use open and onOpenChange for application-owned visibility, or defaultOpen for initially open state.',
+        },
+        {
+          id: 'dismissal',
+          title: 'Safe dismissal',
+          description:
+            'Set closeOnOutsidePress to false when required, and keep an explicit cancel or close action available.',
+        },
+        {
+          id: 'critical-confirmation',
+          title: 'Critical confirmation',
+          description:
+            'Use explicit irreversible-action text and distinct safe and destructive actions; web alertdialog semantics require a description.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Modal supports focus trapping, initial and final focus, focus restoration, scroll prevention and configurable Escape or outside-press dismissal.',
+          'Web content supports dialog or alertdialog ARIA roles; supply Modal.Title or an accessible content label and add Modal.Description for alertdialog.',
+          'React Modal supports a Portal, animation variants and long scrollable content without requiring a new route.',
+        ],
+        'react-native': [
+          'React Native Modal uses an overlay stack with animation and focus-restoration support; provide a clear trigger, title, meaningful actions and close path.',
+          'Native dismissal is configurable for outside presses; closeOnEscape exists for API parity but browser-only focus-trap and alertdialog props are not native API guarantees.',
+          'Check reading order, overlay dismissal and VoiceOver or TalkBack announcements on real devices for consequential flows.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: ModalDemo,
       'react-native': NativeModalDemo,
@@ -446,6 +592,50 @@ export const componentPages = {
   },
   tooltip: {
     name: 'Tooltip',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Tooltip for brief, supplemental context associated with an interactive trigger.',
+      description:
+        'React and React Native Tooltip with compound Trigger and Content, positioning, optional arrow, disabled state, and platform-specific interaction.',
+      whenToUse: [
+        'Use Tooltip for short, nonessential explanations of a control.',
+        'Never rely on tooltip content as the sole source of instructions or critical feedback.',
+        'Use Tooltip.Trigger and Tooltip.Content together, keeping content concise.',
+        'Choose Popover for interactive or longer content instead of a tooltip.',
+      ],
+      patterns: [
+        {
+          id: 'compound-tooltip',
+          title: 'Trigger and content',
+          description:
+            'Compose a Tooltip.Trigger with associated Tooltip.Content for a small contextual message.',
+        },
+        {
+          id: 'placement',
+          title: 'Placement and arrow',
+          description:
+            'Select a placement and optional withArrow presentation that does not obscure the triggering control.',
+        },
+        {
+          id: 'disabled',
+          title: 'Conditional help',
+          description:
+            'Use disabled to suppress a tooltip when contextual help is not appropriate.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'Web Tooltip can use a composed asChild trigger and hover/focus interactions; controlled open state and delay behavior depend on the React API.',
+          'Provide supplementary information accessible without requiring pointer-only interaction.',
+        ],
+        'react-native': [
+          'React Native Tooltip supports touch-oriented trigger interaction and does not require web hover semantics.',
+          'Keep essential text outside Tooltip, with placement and dismissal appropriate to native accessibility and input.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: TooltipDemo,
       'react-native': NativeTooltipDemo,
@@ -458,6 +648,50 @@ export const componentPages = {
   },
   tabs: {
     name: 'Tabs',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Tabs to switch between related content panels without navigating away.',
+      description:
+        'React and React Native Tabs with compound triggers and panels, controlled or default selection, layout variants, disabled state, and platform-specific accessibility.',
+      whenToUse: [
+        'Use tabs to organize related panels within the same context.',
+        'Give every Tabs.Trigger a matching Tabs.Content value.',
+        'Use value and onValueChange when selection is application-controlled; use defaultValue for initial selection.',
+        'Prefer navigation links when each destination is a separate page.',
+      ],
+      patterns: [
+        {
+          id: 'compound-panels',
+          title: 'Triggers and panels',
+          description:
+            'Compose Tabs.List, Tabs.Trigger, Tabs.Indicator and matching Tabs.Content elements.',
+        },
+        {
+          id: 'controlled-selection',
+          title: 'Controlled selection',
+          description:
+            'Manage the selected value with value and onValueChange.',
+        },
+        {
+          id: 'panel-mounting',
+          title: 'Panel mounting',
+          description:
+            'Use keepMounted and lazyMount to manage inactive panel rendering when appropriate.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React tabs implement keyboard navigation with orientation, automatic or manual activation, direction and optional looping.',
+          'React uses stable relationships between tab triggers and panels; disabled tabs are excluded from selection navigation.',
+        ],
+        'react-native': [
+          'React Native tabs use Pressable-based trigger interaction and accessibility selection state; do not assume web-specific keyboard activationMode.',
+          'React Native supports orientation and measures trigger layout for the indicator, while matching trigger and panel values remains required.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: TabsDemo,
       'react-native': NativeTabsDemo,
@@ -470,6 +704,56 @@ export const componentPages = {
   },
   dropdown: {
     name: 'Dropdown',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Dropdown for a compact menu of related actions or optional selections.',
+      description:
+        'React and React Native Dropdown menus with compound triggers and content, grouped actions, optional search, loading and disabled states, and platform-specific selection patterns.',
+      whenToUse: [
+        'Use Dropdown to reveal a compact set of actions from a clearly named trigger.',
+        'Use Dropdown.Item for actions; organize longer menus with Group, Label, and Separator.',
+        'Use searchable menus only when filtering improves finding items.',
+        'Prefer Select for a primary form value and Popover for richer interactive content.',
+      ],
+      patterns: [
+        {
+          id: 'actions',
+          title: 'Action menu',
+          description:
+            'Compose Dropdown.Trigger, Content and Item; provide clear action labels.',
+        },
+        {
+          id: 'grouping',
+          title: 'Grouped actions',
+          description:
+            'Use Group, Label and Separator to distinguish related actions.',
+        },
+        {
+          id: 'search',
+          title: 'Search and loading',
+          description:
+            'Use searchable or loading states when filtering or asynchronous data needs them.',
+        },
+        {
+          id: 'selection',
+          title: 'Selection semantics',
+          description:
+            'Use web CheckboxItem, RadioGroup and RadioItem for selection; these are not advertised as React Native equivalents.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'Web Dropdown supports arrow-key navigation, Escape dismissal and focus return; optional nested submenus and checkbox/radio items are web-only patterns.',
+          'Web positioning can use a portal and collision avoidance; modal and loop settings affect menu interaction.',
+        ],
+        'react-native': [
+          'React Native Dropdown supports responsive popover, modal or sheet presentation and uses Pressable-based item interaction with accessible labels.',
+          'Native examples use distinct item values; do not assume web-only nested submenu or checkbox/radio item slots are available.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: DropdownDemo,
       'react-native': NativeDropdownDemo,
@@ -482,6 +766,57 @@ export const componentPages = {
   },
   select: {
     name: 'Select',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Select when a form or setting needs one or several saved values from a compact option list.',
+      description:
+        'React and React Native Select for single or multiple form values, searchable grouped options, validation, clearable state and platform-specific presentation.',
+      whenToUse: [
+        'Use Select for persisted form or preference values rather than commands; use Dropdown for contextual actions.',
+        'Prefer RadioGroup for short sets of visible alternatives that benefit from side-by-side comparison.',
+        'Choose single or multiple selection, stable item values, and an accessible label.',
+        'Use search for long option sets and pair invalid state with actionable error feedback.',
+      ],
+      patterns: [
+        {
+          id: 'controlled-selection',
+          title: 'Controlled and initial values',
+          description:
+            'Use value and onValueChange for external state, or defaultValue to initialize single or multiple selection.',
+        },
+        {
+          id: 'multi-select',
+          title: 'Multiple choices and limits',
+          description:
+            'Use multiple, maxSelected and closeOnSelect to govern multiple selection and option limits.',
+        },
+        {
+          id: 'search-and-groups',
+          title: 'Searchable grouped options',
+          description:
+            'Compose Select.Item, Group, Label, Search, Separator, Empty and Loading for structured option lists.',
+        },
+        {
+          id: 'validation',
+          title: 'Validated form field',
+          description:
+            'Use label, description, required, disabled, invalid and error to describe and validate the selected value.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Select composes with FormField and supports named form values, keyboard navigation, typeahead, searchable options and accessible trigger relationships.',
+          'Web Select supports compound Trigger/Content composition, controlled open state, portal placement and rich option content.',
+        ],
+        'react-native': [
+          'React Native Select uses FormField context and supports auto, sheet, modal or popover option presentation; it does not rely on web keyboard interaction.',
+          'Native Select supports accessible trigger labels, search, single or multiple values, option grouping and FlatList-based virtualized lists for large collections.',
+          'Verify announcement of expanded or selected state, validation errors and overlay dismissal with VoiceOver and TalkBack.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: SelectDemo,
       'react-native': NativeSelectDemo,
@@ -494,6 +829,50 @@ export const componentPages = {
   },
   radio: {
     name: 'Radio',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Radio for one choice; use RadioGroup for mutually exclusive choices.',
+      description:
+        'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
+      whenToUse: [
+        'Use RadioGroup for a related set of mutually exclusive options.',
+        'Use standalone Radio only when an application owns its selection behavior.',
+        'Choose Checkbox for independent selections.',
+        'Provide a visible label or an accessible name and explain errors.',
+      ],
+      patterns: [
+        {
+          id: 'group-item',
+          title: 'Group selection',
+          description:
+            'A Radio inside RadioGroup receives selected value and shared properties from group context.',
+        },
+        {
+          id: 'standalone',
+          title: 'Standalone state',
+          description:
+            'Outside a group, checked and onCheckedChange control state; defaultChecked initializes local selection.',
+        },
+        {
+          id: 'feedback',
+          title: 'Validation feedback',
+          description:
+            'Use error for option-specific validation and RadioGroup error for group-wide failures.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React renders a native input type=radio with label, description, aria-invalid and native required/disabled states.',
+          'Inside RadioGroup, checked derives from group value; standalone checked and defaultChecked do not own group selection.',
+        ],
+        'react-native': [
+          'React Native uses Pressable with accessibilityRole=radio and checked/disabled accessibilityState; string labels provide default accessibility names.',
+          'Description, required state, and error can contribute to the accessibility hint; the group owns selected value when present.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: RadioDemo,
       'react-native': NativeRadioDemo,

@@ -46,7 +46,7 @@ export const componentCatalogPresentation = [
     slug: 'radio',
     name: 'Radio',
     description:
-      'Accessible single-choice selection control with labels, descriptions, and validation states.',
+      'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
     category: 'forms',
     order: 30,
     docs: {
@@ -59,7 +59,7 @@ export const componentCatalogPresentation = [
     slug: 'radio-group',
     name: 'Radio Group',
     description:
-      'Single-choice selection with keyboard navigation and shared group state.',
+      'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
     category: 'forms',
     order: 40,
     docs: {
@@ -72,7 +72,7 @@ export const componentCatalogPresentation = [
     slug: 'select',
     name: 'Select',
     description:
-      'Accessible React and React Native selection with Vellira Select: single and multiple values, search, groups, rich items, and virtualization.',
+      'React and React Native Select for single or multiple form values, searchable grouped options, validation, clearable state and platform-specific presentation.',
     category: 'forms',
     order: 50,
     docs: {
@@ -99,7 +99,7 @@ export const componentCatalogPresentation = [
     slug: 'tabs',
     name: 'Tabs',
     description:
-      'Keyboard-accessible tab navigation with controlled activation and indicators.',
+      'React and React Native Tabs with compound triggers and panels, controlled or default selection, layout variants, disabled state, and platform-specific accessibility.',
     category: 'navigation',
     order: 10,
     docs: {
@@ -113,7 +113,7 @@ export const componentCatalogPresentation = [
     slug: 'dropdown',
     name: 'Dropdown',
     description:
-      'Composable action menus with nested content, selection states, and rich items.',
+      'React and React Native Dropdown menus with compound triggers and content, grouped actions, optional search, loading and disabled states, and platform-specific selection patterns.',
     category: 'overlays',
     order: 10,
     docs: {
@@ -126,7 +126,7 @@ export const componentCatalogPresentation = [
     slug: 'modal',
     name: 'Modal',
     description:
-      'Accessible modal dialogs with focus management, dismissal, and compound structure.',
+      'React and React Native Modal for focused dialogs, confirmations and forms with compound structure, controlled state, accessible dismissal and focus restoration.',
     category: 'overlays',
     order: 20,
     docs: {
@@ -139,7 +139,7 @@ export const componentCatalogPresentation = [
     slug: 'popover',
     name: 'Popover',
     description:
-      'Floating contextual content with collision handling and flexible positioning.',
+      'React and React Native Popover with compound trigger, positioned content, optional title, description, arrow, anchor and explicit close action.',
     category: 'overlays',
     order: 30,
     docs: {
@@ -152,7 +152,7 @@ export const componentCatalogPresentation = [
     slug: 'tooltip',
     name: 'Tooltip',
     description:
-      'Accessible Tooltip for React and React Native with managed delay, positioning, controlled state, compound triggers, and platform-appropriate dismissal behavior.',
+      'React and React Native Tooltip with compound Trigger and Content, positioning, optional arrow, disabled state, and platform-specific interaction.',
     category: 'overlays',
     order: 40,
     docs: {

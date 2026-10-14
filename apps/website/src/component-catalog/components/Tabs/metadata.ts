@@ -6,6 +6,49 @@ const nativeThemeImport =
   `import { useTheme } from '@vellira-ui/react-native';` as const;
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Tabs to switch between related content panels without navigating away.',
+    description:
+      'React and React Native Tabs with compound triggers and panels, controlled or default selection, layout variants, disabled state, and platform-specific accessibility.',
+    whenToUse: [
+      'Use tabs to organize related panels within the same context.',
+      'Give every Tabs.Trigger a matching Tabs.Content value.',
+      'Use value and onValueChange when selection is application-controlled; use defaultValue for initial selection.',
+      'Prefer navigation links when each destination is a separate page.',
+    ],
+    patterns: [
+      {
+        id: 'compound-panels',
+        title: 'Triggers and panels',
+        description:
+          'Compose Tabs.List, Tabs.Trigger, Tabs.Indicator and matching Tabs.Content elements.',
+      },
+      {
+        id: 'controlled-selection',
+        title: 'Controlled selection',
+        description: 'Manage the selected value with value and onValueChange.',
+      },
+      {
+        id: 'panel-mounting',
+        title: 'Panel mounting',
+        description:
+          'Use keepMounted and lazyMount to manage inactive panel rendering when appropriate.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'React tabs implement keyboard navigation with orientation, automatic or manual activation, direction and optional looping.',
+        'React uses stable relationships between tab triggers and panels; disabled tabs are excluded from selection navigation.',
+      ],
+      'react-native': [
+        'React Native tabs use Pressable-based trigger interaction and accessibility selection state; do not assume web-specific keyboard activationMode.',
+        'React Native supports orientation and measures trigger layout for the indicator, while matching trigger and panel values remains required.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<Tabs.List>
   <Tabs.Trigger value='account'>Account</Tabs.Trigger>

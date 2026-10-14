@@ -99,7 +99,57 @@ try {
   }
   assert.equal(await email.inputValue(), 'alex@example.com');
   assert.equal(await email.getAttribute('readonly'), '', 'Email remains read-only');
+  assert.equal(await email.getAttribute('id'), 'account-primary-email');
+  assert.equal(
+    await page.getByRole('textbox', { name: 'Email address', exact: true }).count(),
+    1,
+    'Email verification status must not pollute the input accessible name'
+  );
 
+  const emailLabel = panel.locator('label[for="account-primary-email"]');
+  const labelVerification = emailLabel.locator('[role="status"]').filter({ hasText: /^Verified$/ });
+  await labelVerification.waitFor();
+  assert.equal(
+    await labelVerification.count(),
+    1,
+    'Verified must appear alongside Email address, inside its field label'
+  );
+  assert.equal(await labelVerification.locator('svg').count(), 1);
+  const pillAppearance = await labelVerification.evaluate((element) => ({
+    background: getComputedStyle(element).backgroundColor,
+    border: getComputedStyle(element).borderTopWidth,
+    radius: getComputedStyle(element).borderTopLeftRadius,
+  }));
+  assert.equal(pillAppearance.background, appearance.background,
+    'Verified and Active should use the same filled success surface');
+  assert.equal(pillAppearance.border, '0px', 'Email Verified pill must have no border');
+  assert.notEqual(pillAppearance.radius, '0px', 'Email Verified must be an oval badge');
+
+  const labelGeometry = await emailLabel.evaluate((element) => {
+    const text = element.querySelector('#account-primary-email-label-text');
+    const pill = element.querySelector('[role="status"]');
+    if (!text || !pill) throw new Error('Email label and status are incomplete');
+    const textBox = text.getBoundingClientRect();
+    const pillBox = pill.getBoundingClientRect();
+    return {
+      horizontalGap: pillBox.left - textBox.right,
+      centersDelta: Math.abs(
+        pillBox.top + pillBox.height / 2 - textBox.top - textBox.height / 2
+      ),
+    };
+  });
+  assert.ok(labelGeometry.horizontalGap >= 0 && labelGeometry.horizontalGap <= 24,
+    'Verified must sit beside Email address, not at the opposite side of the form');
+  assert.ok(labelGeometry.centersDelta <= 3, 'Email label and badge must be vertically centered');
+
+  const updateEmail = panel.getByRole('button', { name: 'Update email', exact: true });
+  assert.equal(await updateEmail.count(), 1);
+  assert.equal(await updateEmail.isDisabled(), true,
+    'Email change cannot be activated before backend step-up and verification exist');
+  assert.ok(
+    (await page.locator('#account-email-change-help').textContent()).includes('not available in preview'),
+    'Disabled email-change action must have an explicit explanation'
+  );
   const blockSpacing = await panel.evaluate((root) => {
     const personal = root.querySelector('[data-account-block="personal"]');
     const preferences = root.querySelector('[data-account-block="preferences"]');
@@ -170,6 +220,17 @@ try {
   for (const width of [768, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
     await page.getByRole('heading', { name: 'Ada', exact: true }).waitFor();
+    const updateActionRect = await updateEmail.boundingBox();
+    const emailInputRect = await email.boundingBox();
+    if (!updateActionRect || !emailInputRect) throw new Error('Missing email action geometry');
+    assert.ok(
+      updateActionRect.x >= 0 && updateActionRect.x + updateActionRect.width <= width + 1,
+      'Update email action must stay within the mobile viewport'
+    );
+    if (width <= 390) {
+      assert.ok(updateActionRect.y >= emailInputRect.y + emailInputRect.height,
+        'On narrow screens Update email should sit below the address field');
+    }
     const tabRect = await tabList.boundingBox();
     const cardRect = await header.boundingBox();
     if (!tabRect || !cardRect) throw new Error('Missing mobile tab/card geometry');
