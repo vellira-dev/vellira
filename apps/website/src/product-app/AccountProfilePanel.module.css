@@ -2,7 +2,7 @@
   display: grid;
   min-width: 0;
   gap: var(--space-6);
-  padding-top: var(--space-6);
+  padding-top: 0;
   padding-bottom: var(--space-6);
 }
 
@@ -30,10 +30,11 @@
   height: 72px;
   flex: 0 0 72px;
   place-items: center;
-  border: 0;
+  border: 1px solid
+    color-mix(in srgb, var(--text-brand) 25%, var(--border-muted));
   border-radius: var(--radius-full);
-  background: var(--surface-subtle);
-  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-brand) 13%, var(--surface-elevated));
+  color: var(--text-brand);
   font-size: 20px;
   font-weight: var(--font-weight-semibold);
 }
@@ -289,7 +290,8 @@
 
 @media (width <= 650px) {
   .root {
-    padding-block: var(--space-5);
+    padding-top: 0;
+    padding-bottom: var(--space-5);
     gap: var(--space-5);
   }
 
