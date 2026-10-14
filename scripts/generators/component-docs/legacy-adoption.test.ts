@@ -22,10 +22,21 @@ describe('read-only component docs adoption audit', () => {
     [
       'managed',
       [
+        '---',
+        'title: "Managed Component"',
+        'description: "Generated documentation."',
+        '---',
+        '',
         generatedComponentDocsHeader,
+        '',
+        '# FixtureSwitch',
+        '',
+        '## Import',
+        '',
         authoredRegionStartMarker,
         'Keep this content.',
         authoredRegionEndMarker,
+        '',
       ].join('\n'),
     ],
     [
@@ -52,6 +63,108 @@ describe('read-only component docs adoption audit', () => {
       }
     }
   );
+
+  it('rejects header and authored markers inside a handwritten fenced example', () => {
+    for (const fence of ['~~~', String.fromCharCode(96).repeat(3)]) {
+      const content = [
+        '---',
+        'title: "Handwritten documentation"',
+        'description: "Existing editorial examples."',
+        '---',
+        '',
+        '# FixtureSwitch',
+        '',
+        'This introduction must not be replaced.',
+        '',
+        fence + 'markdown',
+        generatedComponentDocsHeader,
+        authoredRegionStartMarker,
+        'Only an example, not the author region.',
+        authoredRegionEndMarker,
+        fence,
+        '',
+        'Preserve this conclusion too.',
+        '',
+      ].join('\n');
+      const result = inspectComponentDocAuthority({
+        content,
+        filePath: 'react/fixture-switch.md',
+      });
+
+      expect(result.state).toBe('untrusted-markers');
+      expect(result.errors.join(' ')).toContain(
+        'generated docs ownership header must be unique'
+      );
+      expect(result.bytes).toBe(Buffer.byteLength(content, 'utf8'));
+    }
+  });
+
+  it('rejects authored markers inside a fenced example after a real header', () => {
+    const content = [
+      '---',
+      'title: "FixtureSwitch"',
+      'description: "Illustrated usage."',
+      '---',
+      '',
+      generatedComponentDocsHeader,
+      '',
+      '# FixtureSwitch',
+      '',
+      '## Import',
+      '',
+      '~~~md',
+      authoredRegionStartMarker,
+      'These are only quoted markers.',
+      authoredRegionEndMarker,
+      '~~~',
+      '',
+    ].join('\n');
+    const result = inspectComponentDocAuthority({
+      content,
+      filePath: 'react/fixture-switch.md',
+    });
+
+    expect(result.state).toBe('untrusted-markers');
+    expect(result.errors.join(' ')).toContain('outside code fences');
+  });
+
+  it('rejects a second generated header or author text after the end marker', () => {
+    const managed = [
+      '---',
+      'title: "FixtureSwitch"',
+      'description: "Generated docs."',
+      '---',
+      '',
+      generatedComponentDocsHeader,
+      '',
+      '# FixtureSwitch',
+      '',
+      '## Import',
+      '',
+      authoredRegionStartMarker,
+      'Preserve this section.',
+      authoredRegionEndMarker,
+      '',
+    ].join('\n');
+    const appended = managed + '\nA manually added paragraph.\n';
+    const duplicated = managed.replace(
+      '# FixtureSwitch',
+      '# FixtureSwitch\n' + generatedComponentDocsHeader
+    );
+
+    expect(
+      inspectComponentDocAuthority({
+        content: appended,
+        filePath: 'react/fixture-switch.md',
+      }).errors.join(' ')
+    ).toContain('end marker must terminate the document');
+    expect(
+      inspectComponentDocAuthority({
+        content: duplicated,
+        filePath: 'react/fixture-switch.md',
+      }).errors.join(' ')
+    ).toContain('ownership header must be unique');
+  });
 
   it('reports canonical component and platform inventory read-only', () => {
     const root = fs.mkdtempSync(
