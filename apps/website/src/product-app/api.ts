@@ -156,6 +156,36 @@ export type AccountProfile = {
 
 export type AccountProfileChanges = Omit<AccountProfile, 'revision'>;
 
+export type CurrentAccountEmail = {
+  address: string;
+  verified: boolean;
+};
+
+function readCurrentAccountEmail(payload: unknown): CurrentAccountEmail {
+  if (!payload || typeof payload !== 'object' || !('email' in payload)) {
+    throw new Error('Invalid current email response');
+  }
+  const value = payload.email;
+  if (!value || typeof value !== 'object' ||
+      !('address' in value) || typeof value.address !== 'string' ||
+      value.address.length === 0 ||
+      !('verified' in value) || typeof value.verified !== 'boolean') {
+    throw new Error('Invalid current email response');
+  }
+  return { address: value.address, verified: value.verified };
+}
+
+// Authentication is the only authority for this read-only sign-in address.
+// Never derive it from browser memory, login inputs, or the editable profile.
+export async function getCurrentAccountEmail(
+  signal?: AbortSignal
+): Promise<CurrentAccountEmail> {
+  return readCurrentAccountEmail(
+    await apiRequest<unknown>('/v1/auth/email/current', { signal })
+  );
+}
+
+
 function readAccountProfile(payload: unknown): AccountProfile {
   if (!payload || typeof payload !== 'object' || !('profile' in payload)) {
     throw new Error('Invalid account profile response');
