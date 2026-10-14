@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { checkboxDocs } from '../../../apps/docs/src/component-docs/Checkbox.docs';
 
@@ -96,6 +96,7 @@ function fixture() {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -256,6 +257,163 @@ describe('Checkbox legacy docs adoption pilot', () => {
     expect(fs.readFileSync(test.files[0].target, 'utf8')).toBe(
       test.files[0].original
     );
+  });
+
+
+  it.each(['react', 'react-native'] as const)(
+    'rejects unexpected YAML frontmatter on %s without modifying either page',
+    async (platform) => {
+      const test = fixture();
+      const extra = test.files.find((file) => file.platform === platform);
+      if (!extra) throw new Error('Missing frontmatter fixture');
+      const unexpected = extra.original.replace(
+        '\n---\n\n# Checkbox',
+        '\nsidebar: hidden\n---\n\n# Checkbox'
+      );
+      expect(unexpected).not.toBe(extra.original);
+      fs.writeFileSync(extra.target, unexpected);
+
+      await expect(
+        adoptLegacyComponentDocs({
+          root,
+          docsRoot: test.docsRoot,
+          componentName: 'Checkbox',
+        })
+      ).rejects.toThrow('unsupported YAML frontmatter');
+
+      const after = new Map(
+        test.files.map((file) => [file.platform, fs.readFileSync(file.target, 'utf8')])
+      );
+      expect(after.get(platform)).toBe(unexpected);
+      for (const file of test.files) {
+        if (file.platform !== platform) {
+          expect(after.get(file.platform)).toBe(file.original);
+        }
+      }
+    }
+  );
+
+  it('rejects a concurrent source change during staging before writing either page', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const native = test.files.find((file) => file.platform === 'react-native');
+    const react = test.files.find((file) => file.platform === 'react');
+    if (!native || !react) throw new Error('Missing platform fixture');
+
+    const writeFile = fs.writeFileSync;
+    let injected = false;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
+      Reflect.apply(writeFile, fs, args);
+      const file = args[0];
+      if (
+        !injected &&
+        typeof file === 'string' &&
+        file.includes('vellira-docs-adoption-') &&
+        file.endsWith(path.join('react-native', 'checkbox.md'))
+      ) {
+        injected = true;
+        fs.appendFileSync(native.target, '\nExternal native editor change.\n');
+      }
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('source changed since SHA-256 validation');
+    expect(injected).toBe(true);
+    expect(fs.readFileSync(react.target, 'utf8')).toBe(react.original);
+    expect(fs.readFileSync(native.target, 'utf8')).toBe(
+      native.original + '\nExternal native editor change.\n'
+    );
+  });
+
+  it('rechecks each platform and rolls back only the already-written page', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const react = test.files.find((file) => file.platform === 'react');
+    const native = test.files.find((file) => file.platform === 'react-native');
+    if (!react || !native) throw new Error('Missing platform fixture');
+
+    const writeFile = fs.writeFileSync;
+    let injected = false;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
+      Reflect.apply(writeFile, fs, args);
+      if (!injected && args[0] === react.target) {
+        injected = true;
+        fs.appendFileSync(native.target, '\nNative editor changed during commit.\n');
+      }
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('source changed since SHA-256 validation');
+    expect(injected).toBe(true);
+    expect(fs.readFileSync(react.target, 'utf8')).toBe(react.original);
+    expect(fs.readFileSync(native.target, 'utf8')).toBe(
+      native.original + '\nNative editor changed during commit.\n'
+    );
+  });
+
+  it('refuses to roll back a generated file modified by another editor', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const react = test.files.find((file) => file.platform === 'react');
+    const native = test.files.find((file) => file.platform === 'react-native');
+    if (!react || !native) throw new Error('Missing platform fixture');
+
+    const writeFile = fs.writeFileSync;
+    let injected = false;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
+      Reflect.apply(writeFile, fs, args);
+      if (!injected && args[0] === native.target) {
+        injected = true;
+        fs.appendFileSync(react.target, '\nExternal edit after React migration.\n');
+      }
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('cannot safely roll back documents edited after this migration');
+    expect(injected).toBe(true);
+    expect(fs.readFileSync(react.target, 'utf8')).toContain(
+      'External edit after React migration.'
+    );
+    expect(fs.readFileSync(native.target, 'utf8')).toBe(native.original);
   });
 
   it('keeps published Checkbox headings unique across both platforms', () => {
