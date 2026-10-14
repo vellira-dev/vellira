@@ -43,11 +43,17 @@ jobs:
             scripts/component-production/specs/Avatar.planning.json \
             scripts/component-program/avatar-contract.test.ts --check
           git diff --check
+          git diff --binary -- \
+            docs/architecture/avatar-source-contract-v2.md \
+            scripts/component-production/specs/Avatar.planning.json \
+            scripts/component-program/avatar-contract.test.ts \
+            > avatar-v2-formatted.patch
       - name: Upload formatted files for reviewed changes only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: avatar-v2-canonical-formatted-${{ github.run_id }}
           path: |
+            avatar-v2-formatted.patch
             docs/architecture/avatar-source-contract-v2.md
             scripts/component-production/specs/Avatar.planning.json
             scripts/component-program/avatar-contract.test.ts
