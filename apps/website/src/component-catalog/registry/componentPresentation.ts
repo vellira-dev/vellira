@@ -85,7 +85,7 @@ export const componentCatalogPresentation = [
     slug: 'form-field',
     name: 'Form Field',
     description:
-      'Composable labels, descriptions, controls, and validation messages for forms.',
+      'Composable React and React Native FormField with Label, Description, Control and Message slots, field state, accessible feedback, and layout options.',
     category: 'forms',
     order: 60,
     docs: {
