@@ -130,6 +130,9 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('Checkbox');
     expect(names).not.toContain('Input');
     expect(names).not.toContain('Textarea');
+    expect(names).not.toContain('Accordion');
+    expect(names).not.toContain('Switch');
+    expect(names).not.toContain('FormField');
   });
 });
 
@@ -310,7 +313,7 @@ describe('Discovery source authority and inventory', () => {
 
   it('does not exempt a legacy component with missing canonical authority', () => {
     const legacy = auditComponentDiscoverySources({
-      componentName: 'Accordion',
+      componentName: 'Dropdown',
       canonicalSource: undefined,
       pageSource: 'export default defineComponentPageMetadata({});',
     });

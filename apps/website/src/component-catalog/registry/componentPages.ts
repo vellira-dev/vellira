@@ -224,6 +224,56 @@ export const componentPages = {
   },
   accordion: {
     name: 'Accordion',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Accordion for in-place progressive disclosure in settings, FAQs, and detail screens.',
+      description:
+        'Accessible compound Accordion for React and React Native with single or multiple expansion, controlled and default values, collapsible behavior, disabled items, and platform-specific trigger semantics.',
+      whenToUse: [
+        'Reveal secondary details without leaving the current page or screen.',
+        'Use single mode for one open item or multiple mode to compare sections.',
+        'Use collapsible when the currently open single item may close.',
+        'Choose Tabs instead for peer views that replace content rather than reveal it.',
+      ],
+      patterns: [
+        {
+          id: 'single-expansion',
+          title: 'One section at a time',
+          description:
+            'Use single mode and defaultValue for a focused disclosure with a default open item.',
+        },
+        {
+          id: 'multiple-expansion',
+          title: 'Compare open sections',
+          description:
+            'Use multiple mode for settings or details that users need visible together.',
+        },
+        {
+          id: 'controlled-state',
+          title: 'Controlled expansion',
+          description:
+            'Use value with onValueChange when application state owns which items are expanded.',
+        },
+        {
+          id: 'collapsible-single',
+          title: 'Dismiss the open section',
+          description:
+            'Enable collapsible on a single accordion when every section may be closed.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'Accordion.Trigger uses a native button with aria-expanded and aria-controls; Tab, Enter, and Space follow browser button semantics.',
+          'Force-mount Accordion.Content only when persistent web panel state is required.',
+        ],
+        'react-native': [
+          'Accordion.Trigger exposes native button semantics and expanded state through accessibility props, not DOM aria-controls.',
+          'Wrap textual Accordion.Content children in React Native Text and verify assistive announcements on target devices.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: AccordionDemo,
       'react-native': NativeAccordionDemo,
@@ -236,6 +286,56 @@ export const componentPages = {
   },
   switch: {
     name: 'Switch',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Switch for immediate on/off settings such as notifications, synchronization, and saved preferences.',
+      description:
+        'Accessible React and React Native Switch for immediate boolean settings with controlled or default checked state, disabled, required, and invalid semantics.',
+      whenToUse: [
+        'Choose Switch for an on/off setting that takes effect immediately.',
+        'Choose Checkbox instead for independent selections or acceptance fields in a form.',
+        'Use checked with onCheckedChange when application state owns the preference; use defaultChecked for its initial local state.',
+        'Provide a meaningful accessible name describing the setting being changed.',
+      ],
+      patterns: [
+        {
+          id: 'controlled-setting',
+          title: 'Controlled preference',
+          description:
+            'Use checked and onCheckedChange when application state drives the on/off preference.',
+        },
+        {
+          id: 'uncontrolled-setting',
+          title: 'Initially enabled',
+          description:
+            'Use defaultChecked to initialize an on/off setting that Switch manages after mounting.',
+        },
+        {
+          id: 'disabled-setting',
+          title: 'Unavailable setting',
+          description:
+            'Use disabled when a setting cannot currently be changed, while keeping its label visible.',
+        },
+        {
+          id: 'required-and-invalid',
+          title: 'State and validation cues',
+          description:
+            'Use required and invalid to communicate state; implement any form submission or recovery separately.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React renders a button with role=switch and aria-checked; required and invalid map to aria-required and aria-invalid.',
+          'Disabled is the native button disabled attribute. Switch does not submit a native form value by itself.',
+        ],
+        'react-native': [
+          'React Native uses Pressable with accessibilityRole=switch and checked/disabled in accessibilityState.',
+          'Required and invalid are conveyed through accessibilityHint rather than browser ARIA attributes; verify announcements on real devices.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: SwitchDemo,
       'react-native': NativeSwitchDemo,
@@ -260,6 +360,56 @@ export const componentPages = {
   },
   'form-field': {
     name: 'FormField',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use FormField to compose a custom control with a label, helper text, validation, and consistent field layout.',
+      description:
+        'Composable React and React Native FormField with Label, Description, Control and Message slots, field state, accessible feedback, and layout options.',
+      whenToUse: [
+        'Wrap a custom field when its label, description, control, and validation feedback should share one layout.',
+        'Prefer the existing Input shorthand when it already renders all necessary field chrome.',
+        'Use compound slots when label, description, control, and supporting message need explicit composition.',
+        'Show an error when the user must recover from invalid input; reserve messages for other status or guidance.',
+      ],
+      patterns: [
+        {
+          id: 'compound-field',
+          title: 'Compound field anatomy',
+          description:
+            'Compose FormField.Label, Description, Control, and Message to structure a custom input.',
+        },
+        {
+          id: 'error-feedback',
+          title: 'Validation and recovery',
+          description:
+            'Provide error or invalid state to surface validation feedback; error takes precedence over status message.',
+        },
+        {
+          id: 'status-message',
+          title: 'Status and success text',
+          description:
+            'Use message, messageTone, and messageLive for non-error supporting feedback.',
+        },
+        {
+          id: 'field-state',
+          title: 'Field state for compatible controls',
+          description:
+            'Use required, disabled, invalid, and size with compatible child controls consuming FormField context.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React FormField renders a semantic label with generated IDs and by default binds required, disabled, and ARIA relationships to a compatible direct child; bindControl can opt out.',
+          'React error feedback uses role=alert; messageLive=polite enables an ARIA live region for non-error status.',
+        ],
+        'react-native': [
+          'React Native FormField renders View/Text layout and provides field context; custom controls remain responsible for their own accessibility label, role, and disabled interaction.',
+          'Native error and polite status feedback use accessibilityLiveRegion=polite; compatible Vellira controls may inherit state and size from context.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: FormFieldDemo,
       'react-native': NativeFormFieldDemo,
