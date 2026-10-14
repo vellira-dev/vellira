@@ -207,7 +207,7 @@ export function SettingsGeneral({
           <Tabs.Indicator />
         </Tabs.List>
 
-        <Tabs.Content value='account'>
+        <Tabs.Content value='account' className={styles.accountTabPanel}>
           <AccountProfilePanel onDirtyChange={handleAccountDirty} />
         </Tabs.Content>
         <Tabs.Content value='security'>
