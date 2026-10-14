@@ -129,8 +129,24 @@ try {
     1,
     'Verified indicator should sit beside the email, with its check icon'
   );
-  assert.equal(await page.getByRole('button', { name: 'Save changes' }).isDisabled(), true);
+  assert.equal(await page.locator('[data-profile-save-bar]').count(), 0, 'Clean profile must not show the sticky bar');
   assert.equal(profileReads, 1, 'profile GET must be read-only and load exactly once');
+
+  // Discard returns to the last server-confirmed values without a PATCH.
+  await fullName.fill('Temporary change');
+  const dirtyBar = page.locator('[data-profile-save-bar]');
+  await dirtyBar.waitFor();
+  assert.equal(await dirtyBar.getByRole('button', { name: 'Discard' }).isEnabled(), true);
+  const barPosition = await dirtyBar.evaluate((element) => ({
+    position: window.getComputedStyle(element).position,
+    bottom: window.getComputedStyle(element).bottom,
+  }));
+  assert.equal(barPosition.position, 'sticky', 'The action bar must stay attached to the viewport');
+  assert.notEqual(barPosition.bottom, 'auto', 'Sticky action bar needs a bottom offset');
+  await dirtyBar.getByRole('button', { name: 'Discard' }).click();
+  assert.equal(await fullName.inputValue(), '');
+  assert.equal(await dirtyBar.count(), 0, 'Discard must hide the action bar');
+  assert.equal(profileWrites, 0, 'Discard must not mutate the backend');
 
   await fullName.fill('Ada Lovelace');
   await displayName.fill('Ada');
@@ -140,7 +156,7 @@ try {
   assert.equal(profileWrites, 1);
   assert.equal(profile.revision, 2);
   assert.equal(profile.fullName, 'Ada Lovelace');
-  assert.equal(await page.getByRole('button', { name: 'Save changes' }).isDisabled(), true);
+  assert.equal(await page.locator('[data-profile-save-bar]').count(), 0, 'Successful save must hide the bar');
 
   // Unsaved edits must be kept on a conflict and never overwritten optimistically.
   await displayName.fill('Unsaved edit');
@@ -149,9 +165,10 @@ try {
   await page.getByText('This profile was changed elsewhere.', { exact: false }).waitFor();
   assert.equal(await displayName.inputValue(), 'Unsaved edit');
   assert.equal(profile.displayName, 'Ada', 'conflict must not mutate canonical server data');
-  await page.getByRole('button', { name: 'Discard edits and reload' }).click();
+  await page.getByRole('button', { name: 'Discard', exact: true }).click();
   await displayName.waitFor();
   assert.equal(await displayName.inputValue(), 'Ada');
+  assert.equal(await page.locator('[data-profile-save-bar]').count(), 0, 'Conflict discard must hide the bar');
 
   // Email read failures must not hide or reset the editable profile.
   emailUnavailable = true;
@@ -188,14 +205,21 @@ try {
   await page.getByRole('button', { name: 'Try again' }).click();
   await page.getByRole('textbox', { name: 'Full name' }).waitFor();
 
+  await fullName.fill('Pending mobile edit');
   for (const width of [768, 390, 320]) {
     await page.setViewportSize({ width, height: 820 });
+    await dirtyBar.waitFor();
+    const mobileBar = await dirtyBar.boundingBox();
+    if (!mobileBar) throw new Error('Dirty action bar is not visible on viewport ' + width);
+    assert.ok(mobileBar.x >= 0 && mobileBar.x + mobileBar.width <= width + 1, 'Sticky bar must fit viewport ' + width);
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
       false,
       'Account profile must fit viewport ' + width
     );
   }
+  await dirtyBar.getByRole('button', { name: 'Discard' }).click();
+  assert.equal(await dirtyBar.count(), 0, 'Mobile discard hides the bar');
   assert.equal(unexpectedMutations, 0);
   assert.ok(profileReads >= 3, 'retry must issue a new GET');
   console.log('OK Account Profile: canonical email, no duplicate details, GET/PATCH, CSRF, conflict, independent retries and mobile geometry');
