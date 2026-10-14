@@ -447,6 +447,48 @@ describe('component production contract regression matrix', () => {
     );
   });
 
+  it('rejects incomplete Discovery from the targeted generator check', () => {
+    const root = tempRoot();
+    const result = plan(root);
+    fs.mkdirSync(path.dirname(result.metadataFile), { recursive: true });
+    fs.writeFileSync(
+      result.metadataFile,
+      [
+        'export const contractProbeMetadata = defineComponentMetadata({',
+        "  name: 'ContractProbe',",
+        "  status: 'stable',",
+        "  platforms: ['react', 'react-native'],",
+        '});',
+      ].join('\n')
+    );
+    const pageMetadataFile = path.join(
+      root,
+      'apps/website/src/component-catalog/components/ContractProbe/metadata.ts'
+    );
+    fs.mkdirSync(path.dirname(pageMetadataFile), { recursive: true });
+    fs.writeFileSync(
+      pageMetadataFile,
+      "export default defineComponentPageMetadata({ discovery: { status: 'complete' } });"
+    );
+    vi.mocked(spawnSync).mockReturnValue({
+      status: 0,
+      signal: null,
+      output: [],
+      pid: 1,
+      stdout: JSON.stringify({
+        schemaVersion: '2',
+        componentName: 'ContractProbe',
+        status: 'up-to-date',
+        staleFiles: [],
+      }),
+      stderr: '',
+    } as unknown as ReturnType<typeof spawnSync>);
+
+    expect(() => checkComponentWebsiteContract(result)).toThrow(
+      'discovery.summary must be non-empty'
+    );
+  });
+
   it('maps website JSON stale evidence back to repository artifacts', () => {
     const root = '/repo';
     const result = plan(root);

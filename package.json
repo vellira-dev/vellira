@@ -31,7 +31,7 @@
     "blog:check": "tsx scripts/blog/check.ts",
     "ci": "pnpm ci:quality && pnpm ci:build && pnpm docs:build && pnpm ci:typecheck && pnpm ci:test && pnpm ci:smoke",
     "validate": "pnpm ci:quality && pnpm ci:build && pnpm docs:build && pnpm ci:typecheck && pnpm test && pnpm test:coverage && pnpm docker:e2e && pnpm ci:smoke",
-    "ci:quality": "pnpm check:next-rsc-patch && pnpm format:check && pnpm lint && pnpm check:source-hygiene && pnpm check:vellira-ui-usage && pnpm check:tokens-semantic:strict && pnpm check:ts-project-coverage && pnpm check:package-boundaries && pnpm check:playwright-version && pnpm component-pages:check && pnpm component-pages:audit && pnpm check:component --all && pnpm check:component-lifecycle && pnpm check:seo-meta-descriptions && pnpm blog:check",
+    "ci:quality": "pnpm check:next-rsc-patch && pnpm format:check && pnpm lint && pnpm check:source-hygiene && pnpm check:vellira-ui-usage && pnpm check:tokens-semantic:strict && pnpm check:ts-project-coverage && pnpm check:package-boundaries && pnpm check:playwright-version && pnpm component-pages:check && pnpm component-pages:audit && pnpm check:component-discovery && pnpm check:component --all && pnpm check:component-lifecycle && pnpm check:seo-meta-descriptions && pnpm blog:check",
     "check:next-rsc-patch": "node apps/website/scripts/next-rsc-patch-check.mjs",
     "test:cloudflare-cache": "node --test apps/website/scripts/cloudflare-local-tooling.test.mjs apps/website/scripts/cloudflare-route-cache.test.mjs apps/website/scripts/cloudflare-build-identity.test.mjs apps/website/scripts/cloudflare-cache-contract.test.mjs apps/website/scripts/cloudflare-cutover-contract.test.mjs apps/website/scripts/cloudflare-legacy-adoption.test.mjs",
     "test:cloudflare-migration": "node apps/website/scripts/cloudflare-migration-browser.mjs && node --test apps/react-storybook/scripts/cloudflare-browser-json.test.mjs",
@@ -118,7 +118,8 @@
     "component-production:validate:json": "node --import tsx scripts/component-production/validate-cli.ts",
     "component-token-reservation:json": "node --import tsx scripts/component-token-reservation/cli.ts",
     "check:component-quality:contract": "node --import tsx scripts/checks/component-quality/completion-contract-cli.ts",
-    "check:seo-meta-descriptions": "vitest run --config vitest.tooling.config.ts scripts/seo/meta-description-quality.test.ts",
+    "check:component-discovery": "node --import tsx scripts/seo/check-component-discovery.ts",
+    "check:seo-meta-descriptions": "vitest run --config vitest.tooling.config.ts scripts/seo/meta-description-quality.test.ts scripts/seo/component-discovery-contract.test.ts",
     "release-candidate:pack": "node scripts/release-candidate/cli.cjs",
     "test:product-app": "vitest run --config vitest.tooling.config.ts scripts/website/product-app*.test.*"
   },
