@@ -356,8 +356,9 @@ export function AccountProfilePanel({
             className={styles.editForm}
             onSubmit={(event) => void save(event)}
           >
-            <div className={styles.sectionHeading}>
-              <h3>Personal information</h3>
+            <div className={styles.profileBlock}>
+              <div className={styles.sectionHeading}>
+                <h3>Personal information</h3>
               <p>Manage the information shown on your Vellira account.</p>
             </div>
             <div className={styles.fieldsGrid}>
@@ -401,9 +402,11 @@ export function AccountProfilePanel({
                   : 'Your sign-in email is managed by authentication. Read-only display will be connected separately.'}
               </p>
             </div>
+            </div>
 
-            <div className={styles.sectionHeading}>
-              <h3>Preferences</h3>
+            <div className={styles.profileBlock}>
+              <div className={styles.sectionHeading}>
+                <h3>Preferences</h3>
               <p>
                 These preferences are stored in your account, not only on this
                 device.
@@ -457,6 +460,7 @@ export function AccountProfilePanel({
               Language and time zone are saved as account preferences. Some
               parts of Vellira may still appear in English.
             </p>
+            </div>
 
             {profile.saveState === 'conflict' && (
               <div className={styles.feedback} role='alert'>
