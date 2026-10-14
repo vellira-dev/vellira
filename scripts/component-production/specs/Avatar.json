@@ -90,6 +90,16 @@
         "id": "size-variants",
         "platforms": ["react", "react-native"],
         "bindings": {}
+      },
+      {
+        "id": "media-presentation",
+        "platforms": ["react", "react-native"],
+        "bindings": {},
+        "parameters": {
+          "default-size": "md",
+          "image-fit": "cover",
+          "fallback-overflow": "truncate"
+        }
       }
     ]
   }
