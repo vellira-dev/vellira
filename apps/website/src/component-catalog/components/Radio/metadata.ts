@@ -3,8 +3,10 @@ import { defineComponentPageMetadata } from '../../metadata';
 export default defineComponentPageMetadata({
   discovery: {
     status: 'complete',
-    summary: 'Use Radio for one choice; use RadioGroup for mutually exclusive choices.',
-    description: 'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
+    summary:
+      'Use Radio for one choice; use RadioGroup for mutually exclusive choices.',
+    description:
+      'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
     whenToUse: [
       'Use RadioGroup for a related set of mutually exclusive options.',
       'Use standalone Radio only when an application owns its selection behavior.',
@@ -12,9 +14,24 @@ export default defineComponentPageMetadata({
       'Provide a visible label or an accessible name and explain errors.',
     ],
     patterns: [
-      { id: 'group-item', title: 'Group selection', description: 'A Radio inside RadioGroup receives selected value and shared properties from group context.' },
-      { id: 'standalone', title: 'Standalone state', description: 'Outside a group, checked and onCheckedChange control state; defaultChecked initializes local selection.' },
-      { id: 'feedback', title: 'Validation feedback', description: 'Use error for option-specific validation and RadioGroup error for group-wide failures.' },
+      {
+        id: 'group-item',
+        title: 'Group selection',
+        description:
+          'A Radio inside RadioGroup receives selected value and shared properties from group context.',
+      },
+      {
+        id: 'standalone',
+        title: 'Standalone state',
+        description:
+          'Outside a group, checked and onCheckedChange control state; defaultChecked initializes local selection.',
+      },
+      {
+        id: 'feedback',
+        title: 'Validation feedback',
+        description:
+          'Use error for option-specific validation and RadioGroup error for group-wide failures.',
+      },
     ],
     platformNotes: {
       react: [
