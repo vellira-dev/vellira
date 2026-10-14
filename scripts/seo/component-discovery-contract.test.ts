@@ -1,4 +1,13 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
+
+import {
+  auditComponentDiscoveryCatalog,
+  auditComponentDiscoverySources,
+} from './component-discovery-audit';
 
 import {
   getDiscoveryContentFindings,
@@ -122,5 +131,130 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('Checkbox');
     expect(names).not.toContain('Input');
     expect(names).not.toContain('Textarea');
+  });
+});
+
+
+const canonicalSource = [
+  "export const probeMetadata = defineComponentMetadata({",
+  "  name: 'Probe',",
+  "  status: 'stable',",
+  "  platforms: ['react', 'react-native'],",
+  '});',
+].join('\n');
+
+const validPageSource = [
+  'export default defineComponentPageMetadata({',
+  '  discovery: {',
+  "    status: 'complete',",
+  "    summary: 'Choose Probe for explicit selection.',",
+  "    description: 'Probe is a controlled form selection.',",
+  "    whenToUse: ['Use for independently selected choices.'],",
+  '    patterns: [',
+  "      { id: 'controlled', title: 'Controlled', description: 'Application owns the selection.' },",
+  '    ],',
+  '    platformNotes: {',
+  "      react: ['Use browser accessibility semantics.'],",
+  "      'react-native': ['Use native accessibility semantics.'],",
+  '    },',
+  '    missingEvidence: [],',
+  '  },',
+  '});',
+].join('\n');
+
+describe('Discovery source authority and inventory', () => {
+  it('accepts supported static canonical and page contracts', () => {
+    expect(
+      auditComponentDiscoverySources({
+        componentName: 'Probe',
+        canonicalSource,
+        pageSource: validPageSource,
+      }).findings
+    ).toEqual([]);
+  });
+
+  it('rejects incomplete adopted metadata in the source-level gate', () => {
+    const pageSource = [
+      'export default defineComponentPageMetadata({',
+      "  discovery: { status: 'complete' },",
+      '});',
+    ].join('\n');
+    expect(
+      auditComponentDiscoverySources({
+        componentName: 'Probe',
+        canonicalSource,
+        pageSource,
+      }).findings
+    ).toContain('discovery.summary must be non-empty');
+  });
+
+  it('fails closed when canonical evidence is absent or unparseable', () => {
+    const missing = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource: undefined,
+      pageSource: validPageSource,
+    });
+    expect(missing.findings).toContain('canonical metadata file is missing');
+
+    const invalid = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource: canonicalSource.replace(
+        "['react', 'react-native']",
+        'getPlatforms()'
+      ),
+      pageSource: validPageSource,
+    });
+    expect(invalid.findings).toContain(
+      'canonical platforms are missing or invalid'
+    );
+
+    const unknownStatus = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource: canonicalSource.replace("'stable'", 'getStatus()'),
+      pageSource: validPageSource,
+    });
+    expect(unknownStatus.findings).toContain(
+      'canonical lifecycle status is missing or invalid'
+    );
+  });
+
+  it('does not exempt a legacy component with missing canonical authority', () => {
+    const legacy = auditComponentDiscoverySources({
+      componentName: 'Accordion',
+      canonicalSource: undefined,
+      pageSource: 'export default defineComponentPageMetadata({});',
+    });
+    expect(legacy.exempt).toBe(true);
+    expect(legacy.findings).toContain('canonical metadata file is missing');
+  });
+
+  it('counts component directories even without website metadata.ts', () => {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'vellira-discovery-catalog-')
+    );
+    try {
+      const componentRoot = path.join(
+        root,
+        'apps/website/src/component-catalog/components/Probe'
+      );
+      const canonicalRoot = path.join(
+        root,
+        'packages/metadata/src/components'
+      );
+      fs.mkdirSync(componentRoot, { recursive: true });
+      fs.mkdirSync(canonicalRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(canonicalRoot, 'Probe.metadata.ts'),
+        canonicalSource
+      );
+
+      const result = auditComponentDiscoveryCatalog(root);
+      expect(result.checked).toBe(1);
+      expect(result.findings).toContain(
+        'Probe: website component metadata file is missing'
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
