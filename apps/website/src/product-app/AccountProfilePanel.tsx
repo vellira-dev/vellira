@@ -362,6 +362,21 @@ export function AccountProfilePanel({
     setAttempt((old) => old + 1);
   };
 
+  // Discard never calls a mutation endpoint. After a CAS conflict, the
+  // original version is stale, so it must be refreshed before editing again.
+  const discard = () => {
+    if (!profile || saving || savingRef.current) return;
+    if (profile.saveState === 'conflict') {
+      reload();
+      return;
+    }
+    setStored((old) =>
+      old.kind === 'ready' && old.userId === userId && old.attempt === attempt
+        ? { ...old, draft: profileFields(old.original), saveState: 'idle' }
+        : old
+    );
+  };
+
   const preferredName =
     profile?.draft.displayName || profile?.draft.fullName || '';
   const avatarInitials = initials(preferredName);
@@ -381,7 +396,7 @@ export function AccountProfilePanel({
       aria-labelledby='account-state'
       data-profile-settings
     >
-      <header className={styles.identityRow}>
+      <header className={[styles.identityRow, styles.accountCard].join(' ')}>
         <div className={styles.avatar} aria-hidden='true'>
           {avatarInitials || <User size={28} />}
         </div>
@@ -430,7 +445,8 @@ export function AccountProfilePanel({
             className={styles.editForm}
             onSubmit={(event) => void save(event)}
           >
-            <div className={styles.profileBlock} data-account-block='personal'>
+            <div className={[styles.profileBlock, styles.accountCard].join(' ')}
+              data-account-block='personal'>
               <div className={styles.sectionHeading}>
                 <h3>Personal information</h3>
                 <p>Manage the information shown on your Vellira account.</p>
@@ -519,7 +535,7 @@ export function AccountProfilePanel({
             </div>
 
             <div
-              className={styles.profileBlock}
+              className={[styles.profileBlock, styles.accountCard].join(' ')}
               data-account-block='preferences'
             >
               <div className={styles.sectionHeading}>
@@ -579,60 +595,72 @@ export function AccountProfilePanel({
               </p>
             </div>
 
-            {profile.saveState === 'conflict' && (
-              <div className={styles.feedback} role='alert'>
-                This profile was changed elsewhere. Your edits are still here.
-                To load the latest version, discard your unsaved changes and
-                reload.
-                <Button
-                  appearance='outline'
-                  color='neutral'
-                  size='sm'
-                  type='button'
-                  onClick={reload}
-                >
-                  Discard edits and reload
-                </Button>
+            <div className={styles.saveFeedback}>
+              {profile.saveState === 'conflict' && (
+                <div className={styles.feedback} role='alert'>
+                  This profile was changed elsewhere. Your edits are still here.
+                  Use Discard to load the latest version before editing again.
+                </div>
+              )}
+              {profile.saveState === 'error' && (
+                <p role='alert' className={styles.errorText}>
+                  We could not save your profile. Your edits were kept. Try again.
+                </p>
+              )}
+              {profile.saveState === 'saved' && (
+                <p role='status' className={styles.successText}>
+                  Changes saved.
+                </p>
+              )}
+              {profile.saveState === 'preview-saved' && (
+                <p role='status' className={styles.successText}>
+                  Preview saved on this page only. No changes were sent to
+                  Vellira.
+                </p>
+              )}
+              {localAccountPreview && (
+                <p className={styles.mutedNote}>
+                  Local design preview — edit freely. Nothing is sent to your
+                  account.
+                </p>
+              )}
+            </div>
+
+            {dirty && (
+              <div
+                className={styles.stickyActions}
+                data-profile-save-bar
+                role='region'
+                aria-label='Unsaved profile changes'
+              >
+                <span className={styles.unsavedText} role='status'>
+                  Unsaved changes
+                </span>
+                <div className={styles.actionButtons}>
+                  <Button
+                    type='button'
+                    appearance='outline'
+                    color='neutral'
+                    size='md'
+                    disabled={saving}
+                    onClick={discard}
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    type='submit'
+                    appearance='solid'
+                    color='primary'
+                    size='md'
+                    loading={saving}
+                    loadingText='Saving…'
+                    disabled={!maySave}
+                  >
+                    Save changes
+                  </Button>
+                </div>
               </div>
             )}
-            {profile.saveState === 'error' && (
-              <p role='alert' className={styles.errorText}>
-                We could not save your profile. Your edits were kept. Try again.
-              </p>
-            )}
-            {profile.saveState === 'saved' && (
-              <p role='status' className={styles.successText}>
-                Changes saved.
-              </p>
-            )}
-            {profile.saveState === 'preview-saved' && (
-              <p role='status' className={styles.successText}>
-                Preview saved on this page only. No changes were sent to
-                Vellira.
-              </p>
-            )}
-            {localAccountPreview && (
-              <p className={styles.mutedNote}>
-                Local design preview — edit freely. Nothing is sent to your
-                account.
-              </p>
-            )}
-            <div className={styles.formActions}>
-              {dirty && !saving && (
-                <span className={styles.unsavedText}>Unsaved changes</span>
-              )}
-              <Button
-                type='submit'
-                appearance='solid'
-                color='primary'
-                size='md'
-                loading={saving}
-                loadingText='Saving…'
-                disabled={!maySave}
-              >
-                Save changes
-              </Button>
-            </div>
           </form>
         </>
       )}
