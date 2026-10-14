@@ -115,6 +115,21 @@ try {
     return field?.value === 'owner@example.test';
   });
   assert.equal(await email.getAttribute('readonly'), '');
+  assert.equal(
+    await page.getByRole('textbox', { name: 'Email address', exact: true }).count(),
+    1,
+    'The field must keep its exact accessible label, without badge text'
+  );
+  const badgeInLabel = page.locator('label[for="account-primary-email"]').getByRole('status', { name: 'Verified' });
+  assert.equal(await badgeInLabel.count(), 1, 'Verified must be colocated with the label');
+  assert.equal(await badgeInLabel.locator('svg').count(), 1, 'Verified retains the Check icon');
+  const emailUpdate = page.getByRole('button', { name: 'Update email', exact: true });
+  assert.equal(await emailUpdate.isDisabled(), true, 'Unsafe email mutation cannot be exposed yet');
+  assert.equal(
+    await emailUpdate.getAttribute('aria-describedby'),
+    'account-email-change-help',
+    'Unavailable email changes must have readable guidance'
+  );
   assert.equal(emailReads, 1, 'current sign-in email must load from auth exactly once');
   assert.equal(
     await page.getByRole('heading', { name: 'Account details' }).count(),
@@ -234,6 +249,7 @@ try {
   }
   await dirtyBar.getByRole('button', { name: 'Discard' }).click();
   assert.equal(await dirtyBar.count(), 0, 'Mobile discard hides the bar');
+  assert.equal(await emailUpdate.isDisabled(), true, 'Status changes may not enable an unsafe email edit');
   assert.equal(unexpectedMutations, 0);
   assert.ok(profileReads >= 3, 'retry must issue a new GET');
   console.log('OK Account Profile: canonical email, no duplicate details, GET/PATCH, CSRF, conflict, independent retries and mobile geometry');
