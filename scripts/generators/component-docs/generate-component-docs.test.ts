@@ -22,6 +22,8 @@ import {
   authoredRegionStartMarker,
 } from './authored-region';
 import { generateComponentDocs } from './generate-component-docs';
+import { inspectComponentDocAuthority } from './legacy-adoption';
+import { generatedComponentDocsHeader } from './render';
 
 const tempRoots: string[] = [];
 
@@ -807,6 +809,7 @@ describe('generateComponentDocs', () => {
     });
     const staleContent = [
       '# Stale',
+      generatedComponentDocsHeader,
       authoredRegionStartMarker,
       'Keep this content.',
       authoredRegionEndMarker,
@@ -864,6 +867,118 @@ describe('generateComponentDocs', () => {
     expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toContain(
       'Keep this hand-authored note.'
     );
+  });
+
+  it('refuses destructive --force on existing unmarked legacy content', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+    const original = [
+      '---',
+      'title: Original React Switch guide',
+      '---',
+      '',
+      '# FixtureSwitch',
+      '',
+      'Important authored examples and platform guidance.',
+      '',
+    ].join('\n');
+    fs.mkdirSync(path.dirname(fixture.reactDoc), { recursive: true });
+    fs.writeFileSync(fixture.reactDoc, original);
+
+    await expect(
+      generateComponentDocs({
+        root: fixture.root,
+        docsRoot: fixture.docsRoot,
+        force: true,
+        metadata: [fixture.metadata],
+        contracts: [fixture.contract],
+      })
+    ).rejects.toThrow('Refusing destructive overwrite even with --force');
+
+    expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toBe(original);
+  });
+
+  it('preflights both platforms before touching any document', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react', 'react-native'],
+    });
+    await generateComponentDocs({
+      root: fixture.root,
+      docsRoot: fixture.docsRoot,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+
+    const staleReact = fs
+      .readFileSync(fixture.reactDoc, 'utf8')
+      .replace('## Import', '## Old Import');
+    const nativeLegacy = '# Native content\n\nPreserve this native example.\n';
+    fs.writeFileSync(fixture.reactDoc, staleReact);
+    fs.writeFileSync(fixture.nativeDoc, nativeLegacy);
+
+    await expect(
+      generateComponentDocs({
+        root: fixture.root,
+        docsRoot: fixture.docsRoot,
+        force: true,
+        metadata: [fixture.metadata],
+        contracts: [fixture.contract],
+      })
+    ).rejects.toThrow('Refusing destructive overwrite even with --force');
+
+    expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toBe(staleReact);
+    expect(fs.readFileSync(fixture.nativeDoc, 'utf8')).toBe(nativeLegacy);
+  });
+
+  it('refuses marker-only documents without generated ownership evidence', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+    const original = [
+      '# Legacy page',
+      authoredRegionStartMarker,
+      'Guidance preserved inside the markers.',
+      authoredRegionEndMarker,
+      '',
+    ].join('\n');
+    fs.mkdirSync(path.dirname(fixture.reactDoc), { recursive: true });
+    fs.writeFileSync(fixture.reactDoc, original);
+
+    await expect(
+      generateComponentDocs({
+        root: fixture.root,
+        docsRoot: fixture.docsRoot,
+        force: true,
+        metadata: [fixture.metadata],
+        contracts: [fixture.contract],
+      })
+    ).rejects.toThrow('no generated docs ownership header');
+
+    expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toBe(original);
+  });
+
+  it('provides deterministic read-only legacy source evidence', () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+    const original = '# FixtureSwitch\n\nA hand-authored example.\n';
+    fs.mkdirSync(path.dirname(fixture.reactDoc), { recursive: true });
+    fs.writeFileSync(fixture.reactDoc, original);
+
+    const audit = inspectComponentDocAuthority({
+      content: fs.readFileSync(fixture.reactDoc, 'utf8'),
+      filePath: fixture.reactDoc,
+    });
+
+    expect(audit.state).toBe('legacy');
+    expect(audit.sourceSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(audit.bytes).toBe(Buffer.byteLength(original, 'utf8'));
+    expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toBe(original);
   });
 
   it('fails safely when authored-region markers are malformed', async () => {
