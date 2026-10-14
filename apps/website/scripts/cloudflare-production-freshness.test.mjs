@@ -571,3 +571,25 @@ test('production workflow uses shared freshness instead of raw SHA equality', as
     /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/
   );
 });
+
+test('superseded candidate carries exact revision and changed-path evidence', async () => {
+  const changedPath = 'apps/website/src/app/page.tsx';
+  const mock = githubFetch({ comparison: compare([changedPath]) });
+  await assert.rejects(
+    assertFreshProductionCandidate({
+      configPath: '/repo/apps/website/wrangler.production.jsonc',
+      candidateSource: 'staging',
+      candidateSha: A,
+      repository: 'vellira-dev/vellira',
+      githubToken: 'test-token',
+      fetchImpl: mock.fetchImpl,
+    }),
+    (error) => {
+      assert.equal(error.name, 'ProductionCandidateSupersededError');
+      assert.equal(error.candidateSha, A);
+      assert.equal(error.mainSha, B);
+      assert.deepEqual(error.relevantPaths, [changedPath]);
+      return true;
+    }
+  );
+});
