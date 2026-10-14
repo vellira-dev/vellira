@@ -472,6 +472,50 @@ export const componentPages = {
   },
   popover: {
     name: 'Popover',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Popover for contextual content anchored near a control, including interactive details.',
+      description:
+        'React and React Native Popover with compound trigger, positioned content, optional title, description, arrow, anchor and explicit close action.',
+      whenToUse: [
+        'Use Popover for contextual details or small interactions that need more than a Tooltip.',
+        'Compose Trigger and Content, adding Title, Description, Arrow or Close where useful.',
+        'Provide an explicit close control when interactive content requires it.',
+        'Use Modal for a focused task that should take precedence over the surrounding page.',
+      ],
+      patterns: [
+        {
+          id: 'compound',
+          title: 'Contextual panel',
+          description:
+            'Compose Popover.Trigger with Popover.Content and descriptive text.',
+        },
+        {
+          id: 'placement',
+          title: 'Anchor and placement',
+          description:
+            'Use side, align and sideOffset to position content; Anchor can provide a separate reference element.',
+        },
+        {
+          id: 'dismissal',
+          title: 'Explicit dismissal',
+          description:
+            'Add Popover.Close for interactive or multistep content and handle open state if needed.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Popover supports nonmodal or modal behavior, portal positioning and collision avoidance, with focus and dismissal behavior tied to its trigger.',
+          'Use the title and description for understandable content; ensure keyboard users can dismiss or leave the popover.',
+        ],
+        'react-native': [
+          'React Native Popover exposes trigger, content, arrow, title, description, anchor and close slots with placement guidance.',
+          'Native focus and dismissal differ from web behavior; preserve accessible naming and a clear close action for task content.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: PopoverDemo,
       'react-native': NativePopoverDemo,
@@ -608,6 +652,56 @@ export const componentPages = {
   },
   dropdown: {
     name: 'Dropdown',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Dropdown for a compact menu of related actions or optional selections.',
+      description:
+        'React and React Native Dropdown menus with compound triggers and content, grouped actions, optional search, loading and disabled states, and platform-specific selection patterns.',
+      whenToUse: [
+        'Use Dropdown to reveal a compact set of actions from a clearly named trigger.',
+        'Use Dropdown.Item for actions; organize longer menus with Group, Label, and Separator.',
+        'Use searchable menus only when filtering improves finding items.',
+        'Prefer Select for a primary form value and Popover for richer interactive content.',
+      ],
+      patterns: [
+        {
+          id: 'actions',
+          title: 'Action menu',
+          description:
+            'Compose Dropdown.Trigger, Content and Item; provide clear action labels.',
+        },
+        {
+          id: 'grouping',
+          title: 'Grouped actions',
+          description:
+            'Use Group, Label and Separator to distinguish related actions.',
+        },
+        {
+          id: 'search',
+          title: 'Search and loading',
+          description:
+            'Use searchable or loading states when filtering or asynchronous data needs them.',
+        },
+        {
+          id: 'selection',
+          title: 'Selection semantics',
+          description:
+            'Use web CheckboxItem, RadioGroup and RadioItem for selection; these are not advertised as React Native equivalents.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'Web Dropdown supports arrow-key navigation, Escape dismissal and focus return; optional nested submenus and checkbox/radio items are web-only patterns.',
+          'Web positioning can use a portal and collision avoidance; modal and loop settings affect menu interaction.',
+        ],
+        'react-native': [
+          'React Native Dropdown supports responsive popover, modal or sheet presentation and uses Pressable-based item interaction with accessible labels.',
+          'Native examples use distinct item values; do not assume web-only nested submenu or checkbox/radio item slots are available.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: DropdownDemo,
       'react-native': NativeDropdownDemo,

@@ -137,6 +137,8 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('RadioGroup');
     expect(names).not.toContain('Tabs');
     expect(names).not.toContain('Tooltip');
+    expect(names).not.toContain('Dropdown');
+    expect(names).not.toContain('Popover');
   });
 });
 
@@ -315,14 +317,24 @@ describe('Discovery source authority and inventory', () => {
     );
   });
 
-  it('does not exempt a legacy component with missing canonical authority', () => {
-    const legacy = auditComponentDiscoverySources({
-      componentName: 'Dropdown',
-      canonicalSource: undefined,
-      pageSource: 'export default defineComponentPageMetadata({});',
-    });
-    expect(legacy.exempt).toBe(true);
-    expect(legacy.findings).toContain('canonical metadata file is missing');
+  it('reports missing canonical authority for migrated and legacy components', () => {
+    const cases = [
+      { componentName: 'Dropdown', exempt: false },
+      ...LEGACY_DISCOVERY_COMPONENTS.map((componentName) => ({
+        componentName,
+        exempt: true,
+      })),
+    ];
+
+    for (const { componentName, exempt } of cases) {
+      const result = auditComponentDiscoverySources({
+        componentName,
+        canonicalSource: undefined,
+        pageSource: 'export default defineComponentPageMetadata({});',
+      });
+      expect(result.exempt).toBe(exempt);
+      expect(result.findings).toContain('canonical metadata file is missing');
+    }
   });
 
   it('counts component directories even without website metadata.ts', () => {

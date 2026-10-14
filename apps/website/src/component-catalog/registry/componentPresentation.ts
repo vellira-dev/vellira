@@ -113,7 +113,7 @@ export const componentCatalogPresentation = [
     slug: 'dropdown',
     name: 'Dropdown',
     description:
-      'Composable action menus with nested content, selection states, and rich items.',
+      'React and React Native Dropdown menus with compound triggers and content, grouped actions, optional search, loading and disabled states, and platform-specific selection patterns.',
     category: 'overlays',
     order: 10,
     docs: {
@@ -139,7 +139,7 @@ export const componentCatalogPresentation = [
     slug: 'popover',
     name: 'Popover',
     description:
-      'Floating contextual content with collision handling and flexible positioning.',
+      'React and React Native Popover with compound trigger, positioned content, optional title, description, arrow, anchor and explicit close action.',
     category: 'overlays',
     order: 30,
     docs: {

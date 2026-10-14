@@ -11,6 +11,56 @@ const nativeTriggerImports = [
 ] as const;
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Dropdown for a compact menu of related actions or optional selections.',
+    description:
+      'React and React Native Dropdown menus with compound triggers and content, grouped actions, optional search, loading and disabled states, and platform-specific selection patterns.',
+    whenToUse: [
+      'Use Dropdown to reveal a compact set of actions from a clearly named trigger.',
+      'Use Dropdown.Item for actions; organize longer menus with Group, Label, and Separator.',
+      'Use searchable menus only when filtering improves finding items.',
+      'Prefer Select for a primary form value and Popover for richer interactive content.',
+    ],
+    patterns: [
+      {
+        id: 'actions',
+        title: 'Action menu',
+        description:
+          'Compose Dropdown.Trigger, Content and Item; provide clear action labels.',
+      },
+      {
+        id: 'grouping',
+        title: 'Grouped actions',
+        description:
+          'Use Group, Label and Separator to distinguish related actions.',
+      },
+      {
+        id: 'search',
+        title: 'Search and loading',
+        description:
+          'Use searchable or loading states when filtering or asynchronous data needs them.',
+      },
+      {
+        id: 'selection',
+        title: 'Selection semantics',
+        description:
+          'Use web CheckboxItem, RadioGroup and RadioItem for selection; these are not advertised as React Native equivalents.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'Web Dropdown supports arrow-key navigation, Escape dismissal and focus return; optional nested submenus and checkbox/radio items are web-only patterns.',
+        'Web positioning can use a portal and collision avoidance; modal and loop settings affect menu interaction.',
+      ],
+      'react-native': [
+        'React Native Dropdown supports responsive popover, modal or sheet presentation and uses Pressable-based item interaction with accessible labels.',
+        'Native examples use distinct item values; do not assume web-only nested submenu or checkbox/radio item slots are available.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<Dropdown.Trigger asChild>
   <ReactButton appearance='outline' color='neutral' iconEnd={<ChevronDown />}>Actions</ReactButton>
