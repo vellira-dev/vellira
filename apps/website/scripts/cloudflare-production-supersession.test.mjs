@@ -140,7 +140,12 @@ test('workflow gates postflight, IndexNow, and bridge on verified deployment', a
 
   // The notifier does not mistake a green no-op for verified new content.
   assert.ok(notifier.includes('if matched is None:'));
-  assert.ok(notifier.includes('A superseded/no-op run must not produce'));
+  assert.ok(notifier.includes('Active Worker build belongs to another run'));
+  assert.equal(
+    notifier.split('      - name: Dispatch immutable deployment reference').length - 1,
+    1,
+    'Notifier must have exactly one immutable dispatch step'
+  );
   assert.ok(notifier.includes('raise SystemExit(0)'));
   const runtimeGuard = notifier.indexOf("if ! grep -Eq '^candidate-sha=");
   const authorizeDispatch = notifier.indexOf("echo 'eligible=true'");
