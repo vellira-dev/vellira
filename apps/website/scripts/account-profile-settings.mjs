@@ -120,7 +120,7 @@ try {
     1,
     'The field must keep its exact accessible label, without badge text'
   );
-  const badgeInLabel = page.locator('label[for="account-primary-email"]').getByRole('status', { name: 'Verified' });
+  const badgeInLabel = page.locator('label[for="account-primary-email"] [role="status"]').filter({ hasText: /^Verified$/ });
   assert.equal(await badgeInLabel.count(), 1, 'Verified must be colocated with the label');
   assert.equal(await badgeInLabel.locator('svg').count(), 1, 'Verified retains the Check icon');
   const emailUpdate = page.getByRole('button', { name: 'Update email', exact: true });
