@@ -41,6 +41,22 @@ try {
   );
   assert.notEqual(appearance.radius, '0px', 'Active must be a pill');
 
+  const cards = panel.locator(':scope > header, [data-account-block="personal"], [data-account-block="preferences"]');
+  assert.equal(await cards.count(), 3, 'Account should have three distinct surfaces');
+  for (const card of await cards.all()) {
+    const style = await card.evaluate((el) => ({
+      background: getComputedStyle(el).backgroundColor,
+      borderWidth: getComputedStyle(el).borderTopWidth,
+      radius: getComputedStyle(el).borderTopLeftRadius,
+    }));
+    assert.ok(style.background !== 'transparent' && style.background !== 'rgba(0, 0, 0, 0)',
+      'Each account card must have its own solid theme-aware surface');
+    assert.equal(style.borderWidth, '1px', 'Each account card needs a subtle boundary');
+    assert.notEqual(style.radius, '0px', 'Cards must have rounded corners');
+  }
+  assert.equal(await panel.locator('[data-profile-save-bar]').count(), 0,
+    'Clean preview must not show any floating Save controls');
+
   const fullName = page.getByRole('textbox', { name: 'Full name' });
   const displayName = page.getByRole('textbox', { name: 'Display name' });
   const email = page.getByRole('textbox', { name: 'Email address' });
@@ -95,8 +111,17 @@ try {
   ));
   assert.ok(sizes.every((height) => height <= 56), 'Form controls must be compact, got ' + sizes.join(', '));
 
+  await fullName.fill('Discard this preview edit');
+  const floatingBar = panel.locator('[data-profile-save-bar]');
+  await floatingBar.waitFor();
+  assert.equal(await floatingBar.getByRole('button', { name: 'Discard' }).isEnabled(), true);
+  await floatingBar.getByRole('button', { name: 'Discard' }).click();
+  assert.equal(await fullName.inputValue(), 'Alex Morgan', 'Preview discard restores local last-save state');
+  assert.equal(await floatingBar.count(), 0, 'Discard removes the floating action bar');
+
   await fullName.fill('Ada Lovelace');
   await displayName.fill('Ada');
+  await floatingBar.waitFor();
   await page.getByText('Unsaved changes', { exact: true }).waitFor();
   const save = page.getByRole('button', { name: 'Save changes' });
   assert.equal(await save.isEnabled(), true, 'Local preview should allow saving to a local draft');
@@ -104,7 +129,7 @@ try {
   // Local-only save is explicitly labelled. It is not a simulated server success.
   await save.click();
   await page.getByText('Preview saved on this page only.', { exact: false }).waitFor();
-  assert.equal(await save.isDisabled(), true);
+  assert.equal(await floatingBar.count(), 0, 'Local preview save hides the dirty action bar');
 
   await language.click();
   await page.getByRole('option', { name: 'Français' }).click();
@@ -122,6 +147,10 @@ try {
       });
       assert.ok(gap >= 28, 'Mobile account sections require generous spacing');
     }
+    assert.equal(await floatingBar.isVisible(), true, 'Floating actions must show for dirty state');
+    const bar = await floatingBar.boundingBox();
+    if (!bar) throw new Error('No floating bar on viewport ' + width);
+    assert.ok(bar.x >= 0 && bar.x + bar.width <= width + 1, 'Save/Discard bar must fit viewport ' + width);
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
       false,
@@ -129,6 +158,8 @@ try {
     );
   }
 
+  await floatingBar.getByRole('button', { name: 'Discard' }).click();
+  assert.equal(await floatingBar.count(), 0, 'Mobile Discard returns to a clean form');
   assert.deepEqual(backendRequests, [], 'Local Account preview may not access the real backend');
   console.log('OK compact Account UI: Active pill/check, editable preview, local save, and mobile geometry');
 } finally {
