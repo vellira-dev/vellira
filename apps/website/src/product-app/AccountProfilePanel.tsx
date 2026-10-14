@@ -405,7 +405,7 @@ export function AccountProfilePanel({
             className={styles.editForm}
             onSubmit={(event) => void save(event)}
           >
-            <div className={styles.profileBlock}>
+            <div className={styles.profileBlock} data-account-block='personal'>
               <div className={styles.sectionHeading}>
                 <h3>Personal information</h3>
               <p>Manage the information shown on your Vellira account.</p>
@@ -471,7 +471,7 @@ export function AccountProfilePanel({
             </div>
             </div>
 
-            <div className={styles.profileBlock}>
+            <div className={styles.profileBlock} data-account-block='preferences'>
               <div className={styles.sectionHeading}>
                 <h3>Preferences</h3>
               <p>
@@ -587,7 +587,7 @@ export function AccountProfilePanel({
         </>
       )}
 
-      <div className={styles.accountDetails}>
+      <div className={styles.accountDetails} data-account-block='details'>
         <div className={styles.sectionHeading}>
           <h3>Account details</h3>
           <p>
