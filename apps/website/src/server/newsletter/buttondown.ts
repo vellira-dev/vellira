@@ -1,5 +1,6 @@
 const BUTTONDOWN_SUBSCRIBERS_URL = 'https://api.buttondown.com/v1/subscribers';
 const BUTTONDOWN_TIMEOUT_MS = 8_000;
+export const PRO_INTEREST_TAG = 'vellira-pro-launch-interest';
 
 export type NewsletterSubscribeResult =
   | { ok: true }
@@ -7,6 +8,7 @@ export type NewsletterSubscribeResult =
       ok: false;
       code:
         | 'invalid_email'
+        | 'consent_required'
         | 'already_subscribed'
         | 'rate_limited'
         | 'temporarily_unavailable';
@@ -21,11 +23,13 @@ export type ButtondownSubscribeOptions = {
   apiKey: string | undefined;
   email: string;
   ipAddress: string | null;
+  purpose?: 'pro_launch';
   fetcher?: typeof fetch;
 };
 
 const newsletterErrors = {
   invalid_email: 'Enter a valid email address.',
+  consent_required: 'Please confirm that you want Pro updates.',
   already_subscribed:
     'This email is already subscribed or awaiting confirmation.',
   rate_limited: 'Please wait a few minutes and try again.',
@@ -58,7 +62,7 @@ async function readProviderErrorCode(
 async function mapProviderResponse(
   response: Response
 ): Promise<NewsletterSubscribeResult> {
-  if (response.status === 201) return { ok: true };
+  if (response.status === 200 || response.status === 201) return { ok: true };
 
   if (response.status === 422) return error('invalid_email');
   if (response.status === 429) return error('rate_limited');
@@ -80,22 +84,35 @@ export async function subscribeWithButtondown({
   apiKey,
   email,
   ipAddress,
+  purpose,
   fetcher = fetch,
 }: ButtondownSubscribeOptions): Promise<NewsletterSubscribeResult> {
   if (!apiKey) return error('temporarily_unavailable');
 
-  const body: { email_address: string; ip_address?: string } = {
-    email_address: email,
-  };
+  const body: {
+    email_address: string;
+    ip_address?: string;
+    tags?: string[];
+    type?: 'unactivated';
+  } = { email_address: email };
   if (ipAddress) body.ip_address = ipAddress;
+
+  const headers: Record<string, string> = {
+    Authorization: `Token ${apiKey}`,
+    'Content-Type': 'application/json',
+  };
+  if (purpose === 'pro_launch') {
+    // Keep Pro intent distinct from general newsletter signups, and require
+    // confirmation even when an address had previously unsubscribed.
+    body.tags = [PRO_INTEREST_TAG];
+    body.type = 'unactivated';
+    headers['X-Buttondown-Collision-Behavior'] = 'add';
+  }
 
   try {
     const response = await fetcher(BUTTONDOWN_SUBSCRIBERS_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
       cache: 'no-store',
       signal: AbortSignal.timeout(BUTTONDOWN_TIMEOUT_MS),
