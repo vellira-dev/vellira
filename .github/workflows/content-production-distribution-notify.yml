@@ -136,6 +136,54 @@ jobs:
               output.write(f'build-id={build_id}\n')
           PY
 
+          # Python exits 0 for a valid but non-matching active build. That is
+          # a confirmed no-op, not approval to dispatch. Require the exact
+          # source-run-bound candidate receipt before allowing handoff.
+          if ! grep -Eq '^candidate-sha=[0-9a-f]{40}
+          echo 'Verified live deployment identity; no publication authorization was granted.'
+
+      - name: Create short-lived repository-scoped private dispatch token
+        id: dispatch-token
+        if: steps.source.outputs.eligible == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.VELLIRA_CONTENT_BRIDGE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.VELLIRA_CONTENT_BRIDGE_APP_PRIVATE_KEY }}
+          owner: vellira-dev
+          repositories: vellira-internal
+          permission-contents: write
+
+      - name: Dispatch immutable deployment reference (not external publishing)
+        if: steps.source.outputs.eligible == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+          CANDIDATE_SHA: ${{ steps.source.outputs.candidate-sha }}
+          BUILD_ID: ${{ steps.source.outputs.build-id }}
+          PRODUCTION_RUN_ID: ${{ github.event.workflow_run.id }}
+          PRODUCTION_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          expected_build_id="$CANDIDATE_SHA-$PRODUCTION_RUN_ID-$PRODUCTION_RUN_ATTEMPT"
+          test "$expected_build_id" = "$BUILD_ID"
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            'repos/vellira-dev/vellira-internal/dispatches' \
+            -f event_type='vellira-canonical-production-verified-v1' \
+            -F 'client_payload[schemaVersion]=1' \
+            -F "client_payload[runId]=$PRODUCTION_RUN_ID" \
+            -F "client_payload[runAttempt]=$PRODUCTION_RUN_ATTEMPT" \
+            -f "client_payload[candidateSha]=$CANDIDATE_SHA" \
+            -f "client_payload[buildId]=$BUILD_ID"
+
+          printf 'Handoff submitted for verified production run %s attempt %s.\n' \
+            "$PRODUCTION_RUN_ID" "$PRODUCTION_RUN_ATTEMPT" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Private consumer independently validates source run, deploy job and live build.'
+          echo 'This workflow cannot approve channel content or call any external publisher.'
+ "$GITHUB_OUTPUT"; then
+            echo '::notice::No matching active production build; skipping dispatch.'
+            exit 0
+          fi
           echo 'eligible=true' >> "$GITHUB_OUTPUT"
           echo 'Verified live deployment identity; no publication authorization was granted.'
 
