@@ -194,7 +194,10 @@ export function AccountProfilePanel({
         kind: 'ready',
         userId,
         revision: emailRevision,
-        email: { address: 'alex@example.com', verified: verifiedFromMe === true },
+        email: {
+          address: 'alex@example.com',
+          verified: verifiedFromMe === true,
+        },
       });
       return;
     }
@@ -492,7 +495,9 @@ export function AccountProfilePanel({
                     : 'Your sign-in address is read-only. Changing it requires a separate verification flow.'}
                 </p>
                 {emailVerified === false && me && (
-                  <EmailVerificationResend className={styles.resendVerification} />
+                  <EmailVerificationResend
+                    className={styles.resendVerification}
+                  />
                 )}
                 {visibleEmail.kind === 'error' && !localAccountPreview && (
                   <div className={styles.emailRetry} role='status'>
@@ -631,7 +636,6 @@ export function AccountProfilePanel({
           </form>
         </>
       )}
-
     </section>
   );
 }
