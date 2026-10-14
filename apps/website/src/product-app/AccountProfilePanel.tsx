@@ -445,8 +445,10 @@ export function AccountProfilePanel({
             className={styles.editForm}
             onSubmit={(event) => void save(event)}
           >
-            <div className={[styles.profileBlock, styles.accountCard].join(' ')}
-              data-account-block='personal'>
+            <div
+              className={[styles.profileBlock, styles.accountCard].join(' ')}
+              data-account-block='personal'
+            >
               <div className={styles.sectionHeading}>
                 <h3>Personal information</h3>
                 <p>Manage the information shown on your Vellira account.</p>
@@ -604,7 +606,8 @@ export function AccountProfilePanel({
               )}
               {profile.saveState === 'error' && (
                 <p role='alert' className={styles.errorText}>
-                  We could not save your profile. Your edits were kept. Try again.
+                  We could not save your profile. Your edits were kept. Try
+                  again.
                 </p>
               )}
               {profile.saveState === 'saved' && (
