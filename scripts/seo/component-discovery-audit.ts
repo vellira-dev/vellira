@@ -220,7 +220,9 @@ export function auditComponentDiscoverySources(params: {
   }
 
   if (adopted && isLegacy) {
-    findings.push('discovery was adopted; remove its temporary #1136 exemption');
+    findings.push(
+      'discovery was adopted; remove its temporary #1136 exemption'
+    );
   }
 
   // Never downgrade validation when canonical lifecycle/platform evidence

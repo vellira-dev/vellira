@@ -134,7 +134,7 @@ describe('Component Discovery Content V1 coverage', () => {
 });
 
 const canonicalSource = [
-  "export const probeMetadata = defineComponentMetadata({",
+  'export const probeMetadata = defineComponentMetadata({',
   "  name: 'Probe',",
   "  status: 'stable',",
   "  platforms: ['react', 'react-native'],",
