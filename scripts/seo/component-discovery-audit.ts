@@ -61,7 +61,46 @@ function stringArray(expression: ts.Expression | undefined) {
     : undefined;
 }
 
-function metadataObject(source: string, functionName: string) {
+type MetadataAuthority = {
+  metadata?: ts.ObjectLiteralExpression;
+  findings: string[];
+};
+
+function staticObjectFindings(
+  object: ts.ObjectLiteralExpression,
+  field: string
+): string[] {
+  const findings: string[] = [];
+  const keys = new Set<string>();
+
+  for (const member of object.properties) {
+    if (ts.isSpreadAssignment(member)) {
+      findings.push(field + ' contains unprovable spread');
+      continue;
+    }
+    if (!ts.isPropertyAssignment(member)) {
+      findings.push(field + ' contains unprovable property');
+      continue;
+    }
+    const name = propertyName(member.name);
+    if (!name) {
+      findings.push(field + ' contains unprovable property name');
+      continue;
+    }
+    if (keys.has(name)) {
+      findings.push(field + ' has duplicate property: ' + name);
+    }
+    keys.add(name);
+  }
+
+  return findings;
+}
+
+function metadataObject(
+  source: string,
+  functionName: 'defineComponentMetadata' | 'defineComponentPageMetadata',
+  expectedName?: string
+): MetadataAuthority {
   const file = ts.createSourceFile(
     'component-metadata.ts',
     source,
@@ -69,25 +108,101 @@ function metadataObject(source: string, functionName: string) {
     true,
     ts.ScriptKind.TS
   );
-  let result: ts.ObjectLiteralExpression | undefined;
-
-  function visit(node: ts.Node) {
-    if (result) return;
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === functionName &&
-      node.arguments.length === 1 &&
-      ts.isObjectLiteralExpression(node.arguments[0])
-    ) {
-      result = node.arguments[0];
-      return;
-    }
-    ts.forEachChild(node, visit);
+  const findings: string[] = [];
+  if (file.parseDiagnostics.length > 0) {
+    findings.push('metadata source contains syntax errors');
   }
 
-  visit(file);
-  return result;
+  const exportedCalls = file.statements.flatMap((statement) => {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !statement.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
+      )
+    ) {
+      return [];
+    }
+
+    return [...statement.declarationList.declarations].filter((declaration) => {
+      const expression = declaration.initializer;
+      return (
+        expression !== undefined &&
+        ts.isCallExpression(expression) &&
+        ts.isIdentifier(expression.expression) &&
+        expression.expression.text === functionName
+      );
+    });
+  });
+  const defaultExports = file.statements.filter(ts.isExportAssignment);
+
+  let expression: ts.Expression | undefined;
+  if (functionName === 'defineComponentPageMetadata') {
+    if (
+      defaultExports.length !== 1 ||
+      defaultExports[0].isExportEquals ||
+      exportedCalls.length > 0
+    ) {
+      findings.push('website metadata needs one default-exported authority');
+    } else {
+      expression = defaultExports[0].expression;
+    }
+  } else if (
+    exportedCalls.length !== 1 ||
+    !ts.isIdentifier(exportedCalls[0].name) ||
+    exportedCalls[0].name.text !== expectedName ||
+    defaultExports.length > 0
+  ) {
+    findings.push('canonical metadata needs one named-exported authority');
+  } else {
+    expression = exportedCalls[0].initializer;
+  }
+
+  if (file.statements.some(ts.isExportDeclaration)) {
+    findings.push('metadata export aliases are unsupported');
+  }
+  if (
+    !expression ||
+    !ts.isCallExpression(expression) ||
+    !ts.isIdentifier(expression.expression) ||
+    expression.expression.text !== functionName ||
+    expression.arguments.length !== 1 ||
+    !ts.isObjectLiteralExpression(expression.arguments[0])
+  ) {
+    findings.push('exported metadata must use a static definition call');
+    return { findings };
+  }
+
+  const metadata = expression.arguments[0];
+  findings.push(...staticObjectFindings(metadata, 'metadata'));
+
+  if (functionName === 'defineComponentPageMetadata') {
+    const discovery = objectLiteral(property(metadata, 'discovery'));
+    if (discovery) {
+      findings.push(...staticObjectFindings(discovery, 'discovery'));
+
+      const notes = objectLiteral(property(discovery, 'platformNotes'));
+      if (notes) {
+        findings.push(...staticObjectFindings(notes, 'discovery.platformNotes'));
+      }
+
+      const patterns = property(discovery, 'patterns');
+      if (patterns && ts.isArrayLiteralExpression(patterns)) {
+        for (const [index, pattern] of patterns.elements.entries()) {
+          const item = objectLiteral(pattern);
+          if (item) {
+            findings.push(
+              ...staticObjectFindings(
+                item,
+                'discovery.patterns[' + index + ']'
+              )
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return { metadata, findings };
 }
 
 function canonicalEvidence(
@@ -108,13 +223,17 @@ function canonicalEvidence(
     };
   }
 
-  const metadata = metadataObject(source, 'defineComponentMetadata');
+  const exportName =
+    componentName[0].toLowerCase() + componentName.slice(1) + 'Metadata';
+  const authority = metadataObject(
+    source,
+    'defineComponentMetadata',
+    exportName
+  );
+  findings.push(...authority.findings);
+  const metadata = authority.metadata;
   if (!metadata) {
-    return {
-      stable: false,
-      platforms: [],
-      findings: ['canonical metadata is not a supported static declaration'],
-    };
+    return { stable: false, platforms: [], findings };
   }
 
   if (stringLiteral(property(metadata, 'name')) !== componentName) {
@@ -198,9 +317,13 @@ export function auditComponentDiscoverySources(params: {
     return { findings, adopted: false, exempt: false };
   }
 
-  const metadata = metadataObject(pageSource, 'defineComponentPageMetadata');
+  const authority = metadataObject(
+    pageSource,
+    'defineComponentPageMetadata'
+  );
+  findings.push(...authority.findings);
+  const metadata = authority.metadata;
   if (!metadata) {
-    findings.push('website component metadata is not a static declaration');
     return { findings, adopted: false, exempt: false };
   }
 

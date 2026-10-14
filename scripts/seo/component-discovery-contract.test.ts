@@ -171,6 +171,101 @@ describe('Discovery source authority and inventory', () => {
     ).toEqual([]);
   });
 
+  it('checks the effective default export, not an unused valid decoy', () => {
+    const pageSource =
+      validPageSource.replace(
+        'export default defineComponentPageMetadata({',
+        'const decoy = defineComponentPageMetadata({'
+      ) +
+      "\nexport default defineComponentPageMetadata({ discovery: { status: 'complete' } });";
+    const result = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource,
+      pageSource,
+    });
+
+    expect(result.findings).toContain('discovery.summary must be non-empty');
+  });
+
+  it('checks the canonical named export instead of an unused decoy', () => {
+    const fakeSource =
+      canonicalSource.replace(
+        'export const probeMetadata',
+        'const decoyMetadata'
+      ) +
+      '\nexport const probeMetadata = defineComponentMetadata({' +
+      " name: 'Probe', status: getStatus(), platforms: ['react'] });";
+    const result = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource: fakeSource,
+      pageSource: validPageSource,
+    });
+
+    expect(result.findings).toContain(
+      'canonical lifecycle status is missing or invalid'
+    );
+  });
+
+  it('rejects ambiguous exported metadata authorities', () => {
+    const pageSource =
+      validPageSource +
+      '\nexport const extra = defineComponentPageMetadata({});';
+    const result = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource,
+      pageSource,
+    });
+
+    expect(result.findings).toContain(
+      'website metadata needs one default-exported authority'
+    );
+  });
+
+  it('rejects spreads that can override proven Discovery fields', () => {
+    const sources = [
+      validPageSource.replace(
+        '\n});',
+        '\n  ...overrideMetadata,\n});'
+      ),
+      validPageSource.replace(
+        '    missingEvidence: [],',
+        '    missingEvidence: [],\n    ...overrideDiscovery,'
+      ),
+      validPageSource.replace(
+        "      react: ['Use browser accessibility semantics.'],",
+        "      react: ['Use browser accessibility semantics.'],\n      ...overrideNotes,"
+      ),
+    ];
+    for (const pageSource of sources) {
+      const result = auditComponentDiscoverySources({
+        componentName: 'Probe',
+        canonicalSource,
+        pageSource,
+      });
+      expect(
+        result.findings.some((finding) =>
+          finding.includes('contains unprovable spread')
+        )
+      ).toBe(true);
+    }
+  });
+
+  it('rejects overwritten or computed Discovery properties', () => {
+    const pageSource = validPageSource.replace(
+      '    missingEvidence: [],',
+      "    missingEvidence: [],\n    ['status']: 'needs-authored-intent',"
+    );
+    const result = auditComponentDiscoverySources({
+      componentName: 'Probe',
+      canonicalSource,
+      pageSource,
+    });
+
+    expect(result.findings).toContain(
+      'discovery contains unprovable property name'
+    );
+  });
+
   it('rejects incomplete adopted metadata in the source-level gate', () => {
     const pageSource = [
       'export default defineComponentPageMetadata({',
