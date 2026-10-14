@@ -13,6 +13,7 @@ const context = await browser.newContext();
 let verified = false;
 let meReads = 0;
 let workspaceReads = 0;
+let emailReads = 0;
 let mutations = 0;
 
 await context.route('**/v1/**', async (route) => {
@@ -50,6 +51,17 @@ await context.route('**/v1/**', async (route) => {
     });
     return;
   }
+  if (path === '/v1/auth/email/current') {
+    emailReads += 1;
+    // Deliberately stale projection: /v1/me is freshly authoritative
+    // after verification in another tab and must not remain 'Not verified'.
+    await route.fulfill({
+      status: 200,
+      headers,
+      body: JSON.stringify({ email: { address: 'user@example.test', verified: false } }),
+    });
+    return;
+  }
   if (path === '/v1/workspaces') {
     workspaceReads += 1;
     await route.fulfill({
@@ -77,6 +89,11 @@ try {
   await page.goto(new URL('/app/settings', baseUrl).toString());
   await page.getByText('Not verified', { exact: true }).waitFor();
   await page.getByText('Email not verified', { exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole('heading', { name: 'Account details' }).count(),
+    0,
+    'Verification must appear beside the read-only email without a duplicate details block'
+  );
   const previousMeReads = meReads;
   const previousWorkspaceReads = workspaceReads;
 
@@ -89,6 +106,12 @@ try {
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
 
   await page.getByText('Verified', { exact: true }).waitFor();
+  assert.equal(
+    await page.getByText('Not verified', { exact: true }).count(),
+    0,
+    'Fresh /v1/me verification must override a stale email projection'
+  );
+  assert.ok(emailReads >= 1, 'The read-only email projection must be fetched');
   assert.equal(
     await page.getByText('Email not verified', { exact: true }).count(),
     0,
