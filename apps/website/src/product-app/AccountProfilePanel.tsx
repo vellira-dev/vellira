@@ -118,6 +118,7 @@ export function AccountProfilePanel({
 }) {
   const { me, status } = useAppSession();
   const userId = me?.id ?? '';
+  const verifiedFromMe = me?.emailVerified;
   const deviceTimeZone = useSyncExternalStore(
     subscribeToDeviceTimeZone,
     readDeviceTimeZone,
@@ -193,7 +194,7 @@ export function AccountProfilePanel({
         kind: 'ready',
         userId,
         revision: emailRevision,
-        email: { address: 'alex@example.com', verified: me?.emailVerified === true },
+        email: { address: 'alex@example.com', verified: verifiedFromMe === true },
       });
       return;
     }
@@ -217,7 +218,7 @@ export function AccountProfilePanel({
       });
 
     return () => abort.abort();
-  }, [status, userId, emailRevision, me?.emailVerified]);
+  }, [status, userId, emailRevision, verifiedFromMe]);
 
   // A change of authenticated principal must never paint the previous user's
   // cached profile even for one frame. Do not reset it via a passive effect.
@@ -240,10 +241,11 @@ export function AccountProfilePanel({
   // Both sources are canonical auth reads. A /v1/me refresh after verifying
   // email in another tab must immediately clear the unverified state even if
   // this separately loaded email response predates verification.
-  const emailVerified = me
-    ? me.emailVerified ||
-      (visibleEmail.kind === 'ready' && visibleEmail.email.verified)
-    : undefined;
+  const emailVerified =
+    verifiedFromMe === undefined
+      ? undefined
+      : verifiedFromMe ||
+        (visibleEmail.kind === 'ready' && visibleEmail.email.verified);
 
   const profile = visible.kind === 'ready' ? visible : null;
   const dirty =
