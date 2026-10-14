@@ -131,6 +131,8 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('Input');
     expect(names).not.toContain('Textarea');
     expect(names).not.toContain('Accordion');
+    expect(names).not.toContain('Switch');
+    expect(names).not.toContain('FormField');
   });
 });
 
