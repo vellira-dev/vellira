@@ -193,7 +193,7 @@ export function AccountProfilePanel({
         kind: 'ready',
         userId,
         revision: emailRevision,
-        email: { address: 'alex@example.com', verified: true },
+        email: { address: 'alex@example.com', verified: me?.emailVerified === true },
       });
       return;
     }
@@ -217,7 +217,7 @@ export function AccountProfilePanel({
       });
 
     return () => abort.abort();
-  }, [status, userId, emailRevision]);
+  }, [status, userId, emailRevision, me?.emailVerified]);
 
   // A change of authenticated principal must never paint the previous user's
   // cached profile even for one frame. Do not reset it via a passive effect.
@@ -236,6 +236,14 @@ export function AccountProfilePanel({
     currentEmail.revision === emailRevision
       ? currentEmail
       : { kind: 'loading', userId, revision: emailRevision };
+
+  // Both sources are canonical auth reads. A /v1/me refresh after verifying
+  // email in another tab must immediately clear the unverified state even if
+  // this separately loaded email response predates verification.
+  const emailVerified = me
+    ? me.emailVerified ||
+      (visibleEmail.kind === 'ready' && visibleEmail.email.verified)
+    : undefined;
 
   const profile = visible.kind === 'ready' ? visible : null;
   const dirty =
@@ -461,16 +469,29 @@ export function AccountProfilePanel({
                     size='md'
                     wrapperClassName={styles.emailInput}
                   />
-                  {visibleEmail.kind === 'ready' &&
-                    visibleEmail.email.verified && (
-                      <Success size={19} aria-label='Email verified' />
-                    )}
+                  {emailVerified !== undefined && (
+                    <span
+                      className={
+                        emailVerified ? styles.verified : styles.unverified
+                      }
+                    >
+                      {emailVerified ? (
+                        <Success size={19} aria-hidden='true' />
+                      ) : (
+                        <Error size={19} aria-hidden='true' />
+                      )}
+                      <span>{emailVerified ? 'Verified' : 'Not verified'}</span>
+                    </span>
+                  )}
                 </div>
                 <p className={styles.emailHelp}>
                   {localAccountPreview
                     ? 'Example address for design review only — not your actual email.'
                     : 'Your sign-in address is read-only. Changing it requires a separate verification flow.'}
                 </p>
+                {emailVerified === false && me && (
+                  <EmailVerificationResend className={styles.resendVerification} />
+                )}
                 {visibleEmail.kind === 'error' && !localAccountPreview && (
                   <div className={styles.emailRetry} role='status'>
                     <span>Could not load your sign-in email.</span>
@@ -609,49 +630,6 @@ export function AccountProfilePanel({
         </>
       )}
 
-      <div className={styles.accountDetails} data-account-block='details'>
-        <div className={styles.sectionHeading}>
-          <h3>Account details</h3>
-          <p>
-            Authentication details are managed separately from your public
-            profile.
-          </p>
-        </div>
-        <dl className={styles.detailsList}>
-          <div className={styles.detailRow}>
-            <dt>Account status</dt>
-            <dd>{me?.status ?? 'Unavailable'}</dd>
-          </div>
-          <div className={styles.detailRow}>
-            <dt>Email verification</dt>
-            <dd className={styles.verification}>
-              {me ? (
-                <>
-                  <span
-                    className={
-                      me.emailVerified ? styles.verified : styles.unverified
-                    }
-                  >
-                    {me.emailVerified ? (
-                      <Success size={18} aria-hidden='true' />
-                    ) : (
-                      <Error size={18} aria-hidden='true' />
-                    )}
-                    {me.emailVerified ? 'Verified' : 'Not verified'}
-                  </span>
-                  {!me.emailVerified && <EmailVerificationResend />}
-                </>
-              ) : (
-                'Unavailable'
-              )}
-            </dd>
-          </div>
-          <div className={styles.detailRow}>
-            <dt>Time zone (device)</dt>
-            <dd>{deviceTimeZone ?? 'Detecting…'}</dd>
-          </div>
-        </dl>
-      </div>
     </section>
   );
 }
