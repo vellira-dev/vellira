@@ -77,28 +77,75 @@ test('API errors and unverified comparisons still fail closed', async () => {
   });
 });
 
-test('workflow gates activation and IndexNow on successful deployment', async () => {
-  const source = await readFile(
-    path.resolve(import.meta.dirname, '../../../.github/workflows/deploy-website-cloudflare-production.yml'),
+test('workflow gates postflight, IndexNow, and bridge on verified deployment', async () => {
+  const workflow = await readFile(
+    path.resolve(
+      import.meta.dirname,
+      '../../../.github/workflows/deploy-website-cloudflare-production.yml'
+    ),
     'utf8'
   );
-  assert.match(source, /id: preflight/);
-  assert.match(source, /id: prepublish/);
-  assert.match(source, /steps\.prepublish\.outputs\.superseded != 'true'/);
-  assert.match(source, /deployed: .*worker-deploy\.outputs\.superseded == 'false'/);
-  assert.match(source, /needs\.deploy\.outputs\.deployed == 'true'/);
-  assert.match(source, /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/);
+  const notifier = await readFile(
+    path.resolve(
+      import.meta.dirname,
+      '../../../.github/workflows/content-production-distribution-notify.yml'
+    ),
+    'utf8'
+  );
+  assert.match(workflow, /id: preflight/);
+  assert.match(workflow, /id: prepublish/);
+  assert.ok(workflow.includes("steps.prepublish.outputs.superseded != 'true'"));
+  assert.ok(
+    workflow.includes(
+      "steps.worker-deploy.outcome == 'success' && steps.worker-deploy.outputs.deployed == 'true' && steps.worker-deploy.outputs.status == 'deployed'"
+    )
+  );
+  assert.ok(workflow.includes("needs.deploy.outputs.deployed == 'true'"));
+  assert.ok(
+    workflow.includes(
+      'cloudflare-production-freshness.mjs apps/website/wrangler.production.jsonc'
+    )
+  );
+
+  // A missing worker-deploy output must not allow any post-deploy verification.
+  const postflightNames = [
+    'Audit assets after OpenNext deploy cache population',
+    'Smoke test production routes',
+    'Smoke test production auth provider discovery',
+    'Verify deployed identities, freshness and immutable bytes',
+    'Test browser forensic diagnostics',
+    'Verify production component explorer browser geometry',
+    'Smoke test production navigation and actor metrics',
+    'Soak test production client navigation static assets',
+    'Smoke test production static chunk integrity',
+  ];
+  const steps = workflow.split('      - name: ');
+  for (const name of postflightNames) {
+    const block = steps.find((step) => step.startsWith(name + '\n'));
+    assert.ok(block, 'Missing production postflight step: ' + name);
+    assert.ok(
+      block.includes("steps.worker-deploy.outputs.deployed == 'true'"),
+      'Postflight must require positive deployment receipt: ' + name
+    );
+  }
+
+  // The notifier does not mistake a green no-op for verified new content.
+  assert.ok(notifier.includes('if matched is None:'));
+  assert.ok(notifier.includes('A superseded/no-op run must not produce'));
+  assert.ok(notifier.includes('raise SystemExit(0)'));
+  assert.ok(notifier.includes("echo 'eligible=false' >>"));
+  assert.ok(notifier.includes("if: steps.source.outputs.eligible == 'true'"));
 });
 
-
-test('terminal supersession remains a no-op, never a verified deployment', async () => {
-  const workflow = await readFile(path.resolve(import.meta.dirname, '../../../.github/workflows/deploy-website-cloudflare-production.yml'), 'utf8');
-  const deploy = await readFile(path.resolve(import.meta.dirname, './cloudflare-deploy.mjs'), 'utf8');
-  assert.match(workflow, /worker-deploy\\.outputs\\.superseded == 'false'/);
-  assert.match(workflow, /steps\\.worker-deploy\\.outputs\\.superseded != 'true'/);
-  assert.match(workflow, /needs\\.deploy\\.outputs\\.deployed == 'true'/);
-  assert.match(deploy, /error instanceof ProductionCandidateSupersededError/);
-  assert.match(deploy, /CANDIDATE_SOURCE !== 'staging'/);
-  assert.match(deploy, /superseded=true/);
-  assert.match(deploy, /No Cloudflare Worker activation occurred/);
+test('terminal supersession uses phase-specific fail-closed orchestration', async () => {
+  const deploy = await readFile(
+    path.resolve(import.meta.dirname, './cloudflare-deploy.mjs'),
+    'utf8'
+  );
+  assert.ok(deploy.includes('executeGuardedDeployment({'));
+  assert.ok(deploy.includes('checkBeforeArchive:'));
+  assert.ok(deploy.includes('checkBeforeActivation:'));
+  assert.ok(deploy.includes("outcome.status === 'superseded'"));
+  assert.ok(deploy.includes('recordDeploymentOutcome({'));
+  assert.ok(deploy.includes("'.open-next/vellira-build.json'"));
 });
