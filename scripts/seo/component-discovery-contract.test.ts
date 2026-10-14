@@ -135,6 +135,8 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('FormField');
     expect(names).not.toContain('Radio');
     expect(names).not.toContain('RadioGroup');
+    expect(names).not.toContain('Tabs');
+    expect(names).not.toContain('Tooltip');
   });
 });
 
