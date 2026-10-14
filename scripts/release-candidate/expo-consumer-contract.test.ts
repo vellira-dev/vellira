@@ -64,6 +64,17 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).toContain('noWorkspaceResolution: true');
   });
 
+  it('pins a compatible SDK 57 Expo/Metro pair for clean installs', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/expo-consumer.cjs',
+      'utf8'
+    );
+
+    expect(script).toContain("expo: '57.0.29'");
+    expect(script).toContain("'@expo/metro-runtime': '57.0.17'");
+    expect(script).toContain("expoBin, 'install', '--check'");
+  });
+
   it('builds real iOS and Android development bundles through Expo Metro', () => {
     const script = readFileSync(
       'scripts/release-candidate/expo-consumer.cjs',
