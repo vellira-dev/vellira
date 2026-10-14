@@ -29,6 +29,16 @@ try {
     1,
     'Unverified should have the canonical circle-cross status icon'
   );
+  assert.equal(
+    await page.locator('label[for="account-primary-email"]').getByRole('status', { name: 'Not verified' }).count(),
+    1,
+    'The unverified status pill must be colocated with Email address'
+  );
+  assert.equal(
+    await page.getByRole('button', { name: 'Update email', exact: true }).isDisabled(),
+    true,
+    'Unverified account cannot bypass secure email change with a live action'
+  );
 
   const actions = page.getByRole('button', { name: 'Resend verification email' });
   assert.equal(
