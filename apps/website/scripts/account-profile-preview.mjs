@@ -55,14 +55,16 @@ try {
   const blockSpacing = await panel.evaluate((root) => {
     const personal = root.querySelector('[data-account-block="personal"]');
     const preferences = root.querySelector('[data-account-block="preferences"]');
-    const details = root.querySelector('[data-account-block="details"]');
-    const form = root.querySelector('form');
-    if (!personal || !preferences || !details || !form) {
+    const hero = root.querySelector(':scope > header');
+    if (!personal || !preferences || !hero) {
       throw new Error('Account profile sections are missing');
+    }
+    if (root.querySelector('[data-account-block="details"]')) {
+      throw new Error('Duplicate Account details must not be rendered');
     }
     return {
       betweenSections: preferences.getBoundingClientRect().top - personal.getBoundingClientRect().bottom,
-      beforeDetails: details.getBoundingClientRect().top - form.getBoundingClientRect().bottom,
+      belowHero: personal.getBoundingClientRect().top - hero.getBoundingClientRect().bottom,
     };
   });
   assert.ok(
@@ -70,8 +72,21 @@ try {
     'Desktop Personal information → Preferences needs spacious separation'
   );
   assert.ok(
-    blockSpacing.beforeDetails >= 36,
-    'Desktop form → Account details needs spacious separation'
+    blockSpacing.belowHero >= 36,
+    'Desktop profile header → Personal information needs spacious separation'
+  );
+  assert.equal(
+    await page.getByRole('heading', { name: 'Account details' }).count(),
+    0,
+    'Do not duplicate status and email in a redundant Account details block'
+  );
+  const verification = page.getByText('Verified', { exact: true });
+  await verification.waitFor();
+  assert.equal(await verification.count(), 1, 'Email verification status must appear only once');
+  assert.equal(
+    await verification.locator('..').locator('svg').count(),
+    1,
+    'Verification status must include the canonical icon near the email'
   );
   assert.equal(await fullName.inputValue(), 'Alex Morgan');
   assert.equal(await displayName.inputValue(), 'Alex');
