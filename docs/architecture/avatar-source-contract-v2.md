@@ -79,15 +79,21 @@ rasterization-noise tolerance; it cannot mask a broken-image indicator.
 
 ## Backward compatibility and authority boundaries
 
-The reusable module is **opt-in**: old Program decisions without
-`media-presentation` can still be parsed/compiled (modulo the globally
-versioned grammar identity), but they do not gain fictitious approved default
-size, fit or overflow choices. Strengthened `image-fallback` proof statements
-change the grammar/Program fingerprint for existing media compositions; this
-is **new authority** and must be independently attested. **Do not revise or
-reuse** the historical private #870 fingerprint/certificate or old public
-#1467/#1523. Update the new source review only against the final
-code-and-tests HEAD of public #1656.
+The reusable module is **opt-in**: decisions without
+`media-presentation` continue compiling against the exact historical
+`componentGrammarV1` registry, retaining their full Program serialization
+and fingerprints (including the pinned pre-extension media baseline).
+The compiler selects the distinct `componentGrammarV2` registry only when
+`media-presentation` is explicitly present in the reviewed Program decisions.
+An arbitrary component name, file path or human planning text cannot select V2.
+The stronger media proof subjects and required size/fit/overflow parameters
+are scoped to this successor; a missing or invalid decision fails closed.
+
+This V2 grammar and its Avatar-specific decisions yield **new** Program and
+grammar fingerprints; both must receive independent source review.
+**Do not revise or reuse** the historical private #870 fingerprint/certificate
+or old public #1467/#1523. Update the new source review only against
+the final code-and-tests HEAD of public #1656.
 
 This change does not create an implementation, editable candidate snapshot,
 approval DTO, paid production dispatch, credential access, candidate repair or
