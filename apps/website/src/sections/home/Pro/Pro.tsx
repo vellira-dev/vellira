@@ -308,12 +308,14 @@ export function Pro() {
                   what your team needs.
                 </p>
               </motion.div>
-              <motion.div
-                className={styles.interestWrap}
-                variants={shouldReduceMotion ? undefined : itemVariants}
-              >
-                <ProInterestSignup />
-              </motion.div>
+              {process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1' && (
+                <motion.div
+                  className={styles.interestWrap}
+                  variants={shouldReduceMotion ? undefined : itemVariants}
+                >
+                  <ProInterestSignup />
+                </motion.div>
+              )
             </motion.article>
           </div>
 
