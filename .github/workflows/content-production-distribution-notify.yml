@@ -118,9 +118,19 @@ jobs:
               build_id,
           )
           if matched is None:
-              raise SystemExit(
-                  'Active production build does not correspond to the verified run and attempt.'
-              )
+              # A successful superseded job never activated its Worker. A valid
+              # active build belonging to another run is a benign no-op, not a
+              # publication or a reason to dispatch to the private receiver.
+              if re.fullmatch(r'[0-9a-f]{40}-[1-9][0-9]*-[1-9][0-9]*', build_id) is None:
+                  raise SystemExit('Active production build identity is malformed.')
+              with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as summary:
+                  summary.write(
+                      '### Content bridge: no deployment for source run\\n\\n'
+                      'The verified production job did not own the active Worker build. '
+                      'A superseded/no-op run must not produce a Content Distribution dispatch.\\n'
+                  )
+              print('::notice::No dispatch: the exact source run did not activate the live Worker.')
+              raise SystemExit(0)
           with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
               output.write(f'candidate-sha={matched.group(1)}\n')
               output.write(f'build-id={build_id}\n')
