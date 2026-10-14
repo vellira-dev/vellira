@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  assessProductionAdmissionEligibility,
   planCurrentProductionAdmission,
   promotionCandidateSha,
 } from './cloudflare-production-admission.mjs';
@@ -206,4 +207,54 @@ test('invalid identities fail closed', () => {
       runs: [],
     })
   );
+});
+
+test('expected superseded admission is ineligible without throwing', async () => {
+  const state = await assessProductionAdmissionEligibility({
+    candidateSha: A,
+    mainSha: B,
+    repository: 'vellira-dev/vellira',
+    githubToken: 'test-token',
+    assess: async () => {
+      const { ProductionCandidateSupersededError } = await import(
+        './cloudflare-production-freshness.mjs'
+      );
+      throw new ProductionCandidateSupersededError('stale candidate', {
+        candidateSha: A,
+        mainSha: B,
+        relevantPaths: ['apps/website/app/page.tsx'],
+      });
+    },
+  });
+  assert.equal(state.deploymentEquivalent, false);
+  assert.equal(state.superseded, true);
+  assert.deepEqual(state.relevantPaths, ['apps/website/app/page.tsx']);
+  const plan = planCurrentProductionAdmission({
+    currentMainSha: B,
+    currentRunId: 1,
+    runs: [run({ id: 1, candidateSha: A, runNumber: 10 })],
+    currentCandidateEligible: state.deploymentEquivalent,
+  });
+  assert.equal(plan.admitCurrent, false);
+  assert.equal(plan.reason, 'stale_candidate');
+});
+
+test('untrusted admission and GitHub API errors remain fatal', async () => {
+  for (const reason of [
+    'GitHub API not reachable',
+    'GitHub compare ambiguous',
+  ]) {
+    await assert.rejects(
+      assessProductionAdmissionEligibility({
+        candidateSha: A,
+        mainSha: B,
+        repository: 'vellira-dev/vellira',
+        githubToken: 'test-token',
+        assess: async () => {
+          throw new Error(reason);
+        },
+      }),
+      new RegExp(reason)
+    );
+  }
 });
