@@ -29,7 +29,8 @@ type ReadyProfile = {
   attempt: number;
   original: AccountProfile;
   draft: AccountProfileChanges;
-  saveState: 'idle' | 'saving' | 'saved' | 'preview-saved' | 'conflict' | 'error';
+  saveState:
+    'idle' | 'saving' | 'saved' | 'preview-saved' | 'conflict' | 'error';
 };
 type ProfileState =
   { kind: 'loading' | 'error'; userId: string; attempt: number } | ReadyProfile;
@@ -186,11 +187,7 @@ export function AccountProfilePanel({
     : undefined;
   const saving = profile?.saveState === 'saving';
   const maySave =
-    !!profile &&
-    dirty &&
-    !fullNameError &&
-    !displayNameError &&
-    !saving;
+    !!profile && dirty && !fullNameError && !displayNameError && !saving;
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -319,7 +316,9 @@ export function AccountProfilePanel({
             {preferredName || 'Your account'}
           </h2>
           <p className={styles.subtitle}>
-            {preferredName ? 'Personal account' : 'Manage your personal Vellira profile.'}
+            {preferredName
+              ? 'Personal account'
+              : 'Manage your personal Vellira profile.'}
           </p>
         </div>
         {me?.status === 'active' && (
@@ -455,7 +454,8 @@ export function AccountProfilePanel({
               </div>
             </div>
             <p className={styles.preferencesHelp}>
-              Language and time zone are saved as account preferences. Some parts of Vellira may still appear in English.
+              Language and time zone are saved as account preferences. Some
+              parts of Vellira may still appear in English.
             </p>
 
             {profile.saveState === 'conflict' && (
@@ -486,12 +486,14 @@ export function AccountProfilePanel({
             )}
             {profile.saveState === 'preview-saved' && (
               <p role='status' className={styles.successText}>
-                Preview saved on this page only. No changes were sent to Vellira.
+                Preview saved on this page only. No changes were sent to
+                Vellira.
               </p>
             )}
             {localAccountPreview && (
               <p className={styles.mutedNote}>
-                Local design preview — edit freely. Nothing is sent to your account.
+                Local design preview — edit freely. Nothing is sent to your
+                account.
               </p>
             )}
             <div className={styles.formActions}>
