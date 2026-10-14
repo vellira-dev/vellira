@@ -51,7 +51,7 @@ function fixture() {
           '## Accessibility',
           '',
           'Use descriptive labels and preserve mixed state announcements.',
-        ].join('\\n')
+        ].join('\n')
       : [
           'React Native Checkbox represents an independent boolean selection.',
           '',
@@ -72,7 +72,7 @@ function fixture() {
           '## Accessibility',
           '',
           'Use accessibilityRole and an accessible label.',
-        ].join('\\n');
+        ].join('\n');
     const original = [
       '---',
       'title: ' + contract.title,
@@ -83,7 +83,7 @@ function fixture() {
       '',
       body,
       '',
-    ].join('\\n');
+    ].join('\n');
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, original);
     return { platform, target, original };
