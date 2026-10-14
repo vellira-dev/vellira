@@ -12,6 +12,7 @@ import {
 } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
+import { ProInterestSignup } from './ProInterestSignup';
 import styles from './Pro.module.css';
 
 const freeFeatures = [
@@ -306,6 +307,12 @@ export function Pro() {
                   Pro is being shaped in public. Follow the roadmap and share
                   what your team needs.
                 </p>
+              </motion.div>
+              <motion.div
+                className={styles.interestWrap}
+                variants={shouldReduceMotion ? undefined : itemVariants}
+              >
+                <ProInterestSignup />
               </motion.div>
             </motion.article>
           </div>
