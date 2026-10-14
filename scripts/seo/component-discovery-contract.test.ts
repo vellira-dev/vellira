@@ -223,10 +223,7 @@ describe('Discovery source authority and inventory', () => {
 
   it('rejects spreads that can override proven Discovery fields', () => {
     const sources = [
-      validPageSource.replace(
-        '\n});',
-        '\n  ...overrideMetadata,\n});'
-      ),
+      validPageSource.replace('\n});', '\n  ...overrideMetadata,\n});'),
       validPageSource.replace(
         '    missingEvidence: [],',
         '    missingEvidence: [],\n    ...overrideDiscovery,'

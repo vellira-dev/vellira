@@ -182,7 +182,9 @@ function metadataObject(
 
       const notes = objectLiteral(property(discovery, 'platformNotes'));
       if (notes) {
-        findings.push(...staticObjectFindings(notes, 'discovery.platformNotes'));
+        findings.push(
+          ...staticObjectFindings(notes, 'discovery.platformNotes')
+        );
       }
 
       const patterns = property(discovery, 'patterns');
@@ -191,10 +193,7 @@ function metadataObject(
           const item = objectLiteral(pattern);
           if (item) {
             findings.push(
-              ...staticObjectFindings(
-                item,
-                'discovery.patterns[' + index + ']'
-              )
+              ...staticObjectFindings(item, 'discovery.patterns[' + index + ']')
             );
           }
         }
@@ -317,10 +316,7 @@ export function auditComponentDiscoverySources(params: {
     return { findings, adopted: false, exempt: false };
   }
 
-  const authority = metadataObject(
-    pageSource,
-    'defineComponentPageMetadata'
-  );
+  const authority = metadataObject(pageSource, 'defineComponentPageMetadata');
   findings.push(...authority.findings);
   const metadata = authority.metadata;
   if (!metadata) {
