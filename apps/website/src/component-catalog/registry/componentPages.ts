@@ -528,6 +528,58 @@ export const componentPages = {
   },
   modal: {
     name: 'Modal',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Modal for a focused confirmation, short form or decision that interrupts the current task.',
+      description:
+        'React and React Native Modal for focused dialogs, confirmations and forms with compound structure, controlled state, accessible dismissal and focus restoration.',
+      whenToUse: [
+        'Use Modal for a focused decision or short form that takes priority over the current page.',
+        'Prefer Popover for contextual details that should not interrupt the surrounding task.',
+        'Use a clear Title, Description, Body and action Footer; provide a safe close path for confirmation flows.',
+        'Disable outside dismissal when a critical decision requires an explicit response.',
+      ],
+      patterns: [
+        {
+          id: 'compound-dialog',
+          title: 'Compound dialog anatomy',
+          description:
+            'Compose Modal.Trigger, Overlay, Content, Header, Title, Description, Body, Footer and Close as appropriate.',
+        },
+        {
+          id: 'controlled-dialog',
+          title: 'Controlled or initial open state',
+          description:
+            'Use open and onOpenChange for application-owned visibility, or defaultOpen for initially open state.',
+        },
+        {
+          id: 'dismissal',
+          title: 'Safe dismissal',
+          description:
+            'Set closeOnOutsidePress to false when required, and keep an explicit cancel or close action available.',
+        },
+        {
+          id: 'critical-confirmation',
+          title: 'Critical confirmation',
+          description:
+            'Use explicit irreversible-action text and distinct safe and destructive actions; web alertdialog semantics require a description.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Modal supports focus trapping, initial and final focus, focus restoration, scroll prevention and configurable Escape or outside-press dismissal.',
+          'Web content supports dialog or alertdialog ARIA roles; supply Modal.Title or an accessible content label and add Modal.Description for alertdialog.',
+          'React Modal supports a Portal, animation variants and long scrollable content without requiring a new route.',
+        ],
+        'react-native': [
+          'React Native Modal uses an overlay stack with animation and focus-restoration support; provide a clear trigger, title, meaningful actions and close path.',
+          'Native dismissal is configurable for outside presses; closeOnEscape exists for API parity but browser-only focus-trap and alertdialog props are not native API guarantees.',
+          'Check reading order, overlay dismissal and VoiceOver or TalkBack announcements on real devices for consequential flows.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: ModalDemo,
       'react-native': NativeModalDemo,
@@ -714,6 +766,57 @@ export const componentPages = {
   },
   select: {
     name: 'Select',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Select when a form or setting needs one or several saved values from a compact option list.',
+      description:
+        'React and React Native Select for single or multiple form values, searchable grouped options, validation, clearable state and platform-specific presentation.',
+      whenToUse: [
+        'Use Select for persisted form or preference values rather than commands; use Dropdown for contextual actions.',
+        'Prefer RadioGroup for short sets of visible alternatives that benefit from side-by-side comparison.',
+        'Choose single or multiple selection, stable item values, and an accessible label.',
+        'Use search for long option sets and pair invalid state with actionable error feedback.',
+      ],
+      patterns: [
+        {
+          id: 'controlled-selection',
+          title: 'Controlled and initial values',
+          description:
+            'Use value and onValueChange for external state, or defaultValue to initialize single or multiple selection.',
+        },
+        {
+          id: 'multi-select',
+          title: 'Multiple choices and limits',
+          description:
+            'Use multiple, maxSelected and closeOnSelect to govern multiple selection and option limits.',
+        },
+        {
+          id: 'search-and-groups',
+          title: 'Searchable grouped options',
+          description:
+            'Compose Select.Item, Group, Label, Search, Separator, Empty and Loading for structured option lists.',
+        },
+        {
+          id: 'validation',
+          title: 'Validated form field',
+          description:
+            'Use label, description, required, disabled, invalid and error to describe and validate the selected value.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React Select composes with FormField and supports named form values, keyboard navigation, typeahead, searchable options and accessible trigger relationships.',
+          'Web Select supports compound Trigger/Content composition, controlled open state, portal placement and rich option content.',
+        ],
+        'react-native': [
+          'React Native Select uses FormField context and supports auto, sheet, modal or popover option presentation; it does not rely on web keyboard interaction.',
+          'Native Select supports accessible trigger labels, search, single or multiple values, option grouping and FlatList-based virtualized lists for large collections.',
+          'Verify announcement of expanded or selected state, validation errors and overlay dismissal with VoiceOver and TalkBack.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: SelectDemo,
       'react-native': NativeSelectDemo,
