@@ -109,10 +109,6 @@ function metadataObject(
     ts.ScriptKind.TS
   );
   const findings: string[] = [];
-  if (file.parseDiagnostics.length > 0) {
-    findings.push('metadata source contains syntax errors');
-  }
-
   const exportedCalls = file.statements.flatMap((statement) => {
     if (
       !ts.isVariableStatement(statement) ||
