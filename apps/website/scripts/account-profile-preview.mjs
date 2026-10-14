@@ -52,6 +52,27 @@ try {
   assert.equal(await email.inputValue(), 'alex@example.com');
   assert.equal(await email.getAttribute('readonly'), '', 'Email remains read-only');
 
+  const blockSpacing = await panel.evaluate((root) => {
+    const personal = root.querySelector('[data-account-block="personal"]');
+    const preferences = root.querySelector('[data-account-block="preferences"]');
+    const details = root.querySelector('[data-account-block="details"]');
+    const form = root.querySelector('form');
+    if (!personal || !preferences || !details || !form) {
+      throw new Error('Account profile sections are missing');
+    }
+    return {
+      betweenSections: preferences.getBoundingClientRect().top - personal.getBoundingClientRect().bottom,
+      beforeDetails: details.getBoundingClientRect().top - form.getBoundingClientRect().bottom,
+    };
+  });
+  assert.ok(
+    blockSpacing.betweenSections >= 36,
+    'Desktop Personal information → Preferences needs spacious separation'
+  );
+  assert.ok(
+    blockSpacing.beforeDetails >= 36,
+    'Desktop form → Account details needs spacious separation'
+  );
   assert.equal(await fullName.inputValue(), 'Alex Morgan');
   assert.equal(await displayName.inputValue(), 'Alex');
   const sizes = await Promise.all([fullName, displayName, language, timeZone].map(async (locator) =>
@@ -77,6 +98,15 @@ try {
   for (const width of [768, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
     await page.getByRole('heading', { name: 'Ada', exact: true }).waitFor();
+    if (width === 390) {
+      const gap = await panel.evaluate((root) => {
+        const personal = root.querySelector('[data-account-block="personal"]');
+        const preferences = root.querySelector('[data-account-block="preferences"]');
+        if (!personal || !preferences) throw new Error('Missing account section');
+        return preferences.getBoundingClientRect().top - personal.getBoundingClientRect().bottom;
+      });
+      assert.ok(gap >= 28, 'Mobile account sections require generous spacing');
+    }
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
       false,
