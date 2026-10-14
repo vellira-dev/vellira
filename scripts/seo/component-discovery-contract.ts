@@ -5,10 +5,7 @@
  * component-name inference rule. Remove each name as it adopts the contract.
  * Newly generated components are intentionally NOT exempt.
  */
-export const LEGACY_DISCOVERY_COMPONENTS = [
-  'Modal',
-  'Select',
-] as const;
+export const LEGACY_DISCOVERY_COMPONENTS = ['Modal', 'Select'] as const;
 
 export type DiscoveryPlatform = 'react' | 'react-native';
 
