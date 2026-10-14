@@ -175,11 +175,7 @@ export const componentPages = {
         'Prefer the canonical state and validation API instead of rebuilding form-control behavior in application code.',
       ],
       patterns: [
-        {
-          id: 'basic',
-          title: 'Basic',
-          description: 'Basic component usage.',
-        },
+        { id: 'basic', title: 'Basic', description: 'Basic component usage.' },
         {
           id: 'controlled',
           title: 'Controlled',
@@ -617,11 +613,7 @@ export const componentPages = {
         'Use Checkbox for form-like independent selections; use Switch for persistent settings that apply immediately.',
       ],
       patterns: [
-        {
-          id: 'basic',
-          title: 'Basic',
-          description: 'Basic component usage.',
-        },
+        { id: 'basic', title: 'Basic', description: 'Basic component usage.' },
         {
           id: 'controlled',
           title: 'Controlled',
