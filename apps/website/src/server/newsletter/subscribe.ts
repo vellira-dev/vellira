@@ -157,9 +157,10 @@ export function createNewsletterSubscribeHandler(
     if (!isSameOriginRequest(request) || !hasJsonContentType(request))
       return invalidEmailResponse();
     const body = await readJsonBody(request);
-    const email = normalizeEmail(body?.email);
+    if (!body) return invalidEmailResponse();
+    const email = normalizeEmail(body.email);
     if (!email) return invalidEmailResponse();
-    if (body?.purpose !== undefined && body.purpose !== 'pro_launch')
+    if (body.purpose !== undefined && body.purpose !== 'pro_launch')
       return invalidEmailResponse();
     if (body.purpose === 'pro_launch' && body.consent !== true)
       return consentRequiredResponse();
