@@ -355,7 +355,8 @@ export const componentPages = {
     name: 'RadioGroup',
     discovery: {
       status: 'complete',
-      summary: 'Use RadioGroup for a labelled, mutually exclusive set of options.',
+      summary:
+        'Use RadioGroup for a labelled, mutually exclusive set of options.',
       description:
         'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
       whenToUse: [
