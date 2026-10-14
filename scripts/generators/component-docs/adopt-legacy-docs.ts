@@ -433,7 +433,8 @@ export async function adoptLegacyComponentDocs({
             fs.readFileSync(rollbackPath, 'utf8') !== target.source
           ) {
             throw new Error(
-              target.file + ': staged candidate or original recovery copy failed byte verification.'
+              target.file +
+                ': staged candidate or original recovery copy failed byte verification.'
             );
           }
           prepared.push({ target, candidatePath, rollbackPath, generated });

@@ -505,8 +505,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
     verifyRetainedBackup({
       targetFile: react.target,
       original: react.original,
-      expectedSha256: preview.entries.find((entry) => entry.platform === 'react')!
-        .originalSha256,
+      expectedSha256: preview.entries.find(
+        (entry) => entry.platform === 'react'
+      )!.originalSha256,
       error: failure!.message,
     });
     expect(recoveryBackups(native.target)).toEqual([]);
@@ -760,8 +761,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
     verifyRetainedBackup({
       targetFile: react.target,
       original: react.original,
-      expectedSha256: preview.entries.find((entry) => entry.platform === 'react')!
-        .originalSha256,
+      expectedSha256: preview.entries.find(
+        (entry) => entry.platform === 'react'
+      )!.originalSha256,
       error: failure!.message,
     });
     expect(recoveryBackups(native.target)).toEqual([]);
@@ -804,7 +806,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
           preview.entries.map((entry) => [entry.platform, entry.originalSha256])
         ),
       })
-    ).rejects.toThrow('staged candidate or original recovery copy failed byte verification');
+    ).rejects.toThrow(
+      'staged candidate or original recovery copy failed byte verification'
+    );
 
     expect(corrupted).toBe(true);
     for (const file of test.files) {
