@@ -144,7 +144,7 @@ Use `labelPosition` when the product layout requires the label before or after t
 
 `style` applies to the clickable Pressable row.
 
-## Accessibility
+## Additional Accessibility Details
 
 - Prefer a visible `label`.
 - When no label is rendered, provide `accessibilityLabel`.
@@ -152,7 +152,7 @@ Use `labelPosition` when the product layout requires the label before or after t
 - The icon-only touch target remains at least 44px square.
 - Confirm mixed-state announcements with VoiceOver and TalkBack.
 
-## See Also
+## Further Reading
 
 - [RadioGroup](/react-native/radio-group)
 - [FormField](/react-native/form-field)
