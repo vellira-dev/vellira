@@ -493,7 +493,6 @@ export const componentGrammarV1: readonly GrammarModuleV1[] = [
   }),
 ];
 
-
 /**
  * Opt-in successor media grammar. The V1 registry bytes remain immutable for
  * existing decisions and historical Program fingerprints. New policies select
