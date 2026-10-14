@@ -29,8 +29,7 @@ jobs:
       - name: Prove isolated dry-run and no-write tests
         run: |
           pnpm exec vitest run --config vitest.tooling.config.ts scripts/generators/component-docs/adopt-legacy-docs.test.ts
-          pnpm build
-          pnpm typecheck:tooling
+          # The exact-head PR CI runs the full build and TypeScript validation.
       - name: Preview and pin original SHA-256 receipts
         run: |
           pnpm component-docs:adopt Checkbox --dry-run --json
