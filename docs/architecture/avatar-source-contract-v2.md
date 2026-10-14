@@ -16,14 +16,14 @@ A new opt-in, reusable `media-presentation` module requires all three
 decisions below; omission causes `semantic-decision-required`, and an unknown
 value is invalid composition. No component-name heuristic can silently choose them.
 
-| Decision | Avatar value | Canonical owner |
-| --- | --- | --- |
-| Default size | `md` | Explicit `media-presentation.default-size` |
-| Image fit | `cover` (center crop, no distortion) | `media-presentation.image-fit` |
-| Fallback overflow | `truncate` (single-line, centered, ellipsis) | `media-presentation.fallback-overflow` |
-| Sizes | `sm=24`, `md=32`, `lg=40` | Human Avatar planning evidence + existing canonical tokens |
-| Shape | Round, clipped contents | Human Avatar planning evidence and token/visual review |
-| Risk | `medium` | Human Avatar planning evidence |
+| Decision          | Avatar value                                 | Canonical owner                                            |
+| ----------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| Default size      | `md`                                         | Explicit `media-presentation.default-size`                 |
+| Image fit         | `cover` (center crop, no distortion)         | `media-presentation.image-fit`                             |
+| Fallback overflow | `truncate` (single-line, centered, ellipsis) | `media-presentation.fallback-overflow`                     |
+| Sizes             | `sm=24`, `md=32`, `lg=40`                    | Human Avatar planning evidence + existing canonical tokens |
+| Shape             | Round, clipped contents                      | Human Avatar planning evidence and token/visual review     |
+| Risk              | `medium`                                     | Human Avatar planning evidence                             |
 
 Public API stays intentionally minimal: required `name: string` is the
 accessible root image name, required `fallback: string` is rendered exactly as
@@ -49,7 +49,7 @@ string remains an empty string, with the root still named by `name`.
    The image itself is decorative (Web empty `alt` and hidden from AT;
    React Native child `accessible=false`), and fallback text must not create
    a duplicate announcement at any lifecycle stage. This does not mean
-   fallback *pixels* should be absent.
+   fallback _pixels_ should be absent.
 4. **Geometry and text:** the round, clipped outer bounds follow canonical
    tokens at each size. The fallback remains one line, centered, and does not
    paint beyond those bounds. When longer than available space, ellipsis
@@ -63,14 +63,14 @@ string remains an empty string, with the root still named by `name`.
 This matrix describes **future checks**, not tests already passed by changing
 the source contract:
 
-| Evidence | Required cases | Gate |
-| --- | --- | --- |
-| Web real browser pixels | `sm/md/lg`, light/dark/high contrast, no source/pending/real 404/loaded, stable rendering | Candidate-independent Chromium proof; browser icon occlusion must be detected |
-| Request races | pending A to B, failed A after B loads, loaded A after B fails, source removal | Mutations must demonstrate stale-event rejection |
-| Web accessibility | named root, empty image alt, hidden fallback for AT, single announcement at every state | DOM checks and actual AT/screen reader review |
-| React Native behavior | URI and bundled assets, pending/error/success, source-switch, size and truncation | Unit tests **plus actual device/OS, AT and visual evidence** |
-| Tokens and packaging | three sizes; round clipping; themes; API/public exports; docs/catalog/Usage | Canonical quality/typecheck/generator and token-preservation gates |
-| Provenance | exact new base, explicit changed-path allowlist, independent candidate fingerprint, fresh certification and new Draft | Private Factory authority / human review |
+| Evidence                | Required cases                                                                                                        | Gate                                                                          |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Web real browser pixels | `sm/md/lg`, light/dark/high contrast, no source/pending/real 404/loaded, stable rendering                             | Candidate-independent Chromium proof; browser icon occlusion must be detected |
+| Request races           | pending A to B, failed A after B loads, loaded A after B fails, source removal                                        | Mutations must demonstrate stale-event rejection                              |
+| Web accessibility       | named root, empty image alt, hidden fallback for AT, single announcement at every state                               | DOM checks and actual AT/screen reader review                                 |
+| React Native behavior   | URI and bundled assets, pending/error/success, source-switch, size and truncation                                     | Unit tests **plus actual device/OS, AT and visual evidence**                  |
+| Tokens and packaging    | three sizes; round clipping; themes; API/public exports; docs/catalog/Usage                                           | Canonical quality/typecheck/generator and token-preservation gates            |
+| Provenance              | exact new base, explicit changed-path allowlist, independent candidate fingerprint, fresh certification and new Draft | Private Factory authority / human review                                      |
 
 All proof must reject a deliberately known-bad overlay and an invalid or missing
 presentation decision, rather than merely testing DOM text presence. Tests for
