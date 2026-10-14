@@ -8,7 +8,7 @@ import {
   type FormEvent,
 } from 'react';
 
-import { Error, Success, User } from '@vellira-ui/icons';
+import { Check, Error, Success, User } from '@vellira-ui/icons';
 import { Button, Input, Select } from '@vellira-ui/react';
 
 import {
@@ -29,16 +29,16 @@ type ReadyProfile = {
   attempt: number;
   original: AccountProfile;
   draft: AccountProfileChanges;
-  saveState: 'idle' | 'saving' | 'saved' | 'conflict' | 'error';
+  saveState: 'idle' | 'saving' | 'saved' | 'preview-saved' | 'conflict' | 'error';
 };
 type ProfileState =
   { kind: 'loading' | 'error'; userId: string; attempt: number } | ReadyProfile;
 
 const previewProfile: AccountProfile = {
-  fullName: '',
-  displayName: '',
+  fullName: 'Alex Morgan',
+  displayName: 'Alex',
   locale: 'en',
-  timeZone: 'UTC',
+  timeZone: 'Europe/Paris',
   revision: 1,
 };
 
@@ -190,8 +190,7 @@ export function AccountProfilePanel({
     dirty &&
     !fullNameError &&
     !displayNameError &&
-    !saving &&
-    !localAccountPreview;
+    !saving;
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -229,6 +228,26 @@ export function AccountProfilePanel({
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!profile || !maySave || savingRef.current) return;
+
+    // The explicit development fixture is editable for UX review, but never
+    // authenticates or mutates a Vellira account. No API call is made here.
+    if (localAccountPreview) {
+      const updated: AccountProfile = {
+        ...profile.draft,
+        revision: profile.original.revision + 1,
+      };
+      setStored((old) =>
+        old.kind === 'ready' && old.userId === userId && old.attempt === attempt
+          ? {
+              ...old,
+              original: updated,
+              draft: profileFields(updated),
+              saveState: 'preview-saved',
+            }
+          : old
+      );
+      return;
+    }
 
     savingRef.current = true;
     const snapshot = { ...profile.draft, revision: profile.original.revision };
@@ -297,14 +316,17 @@ export function AccountProfilePanel({
         </div>
         <div className={styles.identityCopy}>
           <h2 id='account-state' className={styles.title}>
-            Your account
+            {preferredName || 'Your account'}
           </h2>
           <p className={styles.subtitle}>
-            {preferredName || 'Manage your personal Vellira profile.'}
+            {preferredName ? 'Personal account' : 'Manage your personal Vellira profile.'}
           </p>
         </div>
         {me?.status === 'active' && (
-          <span className={styles.activePill}>Active</span>
+          <span className={styles.activePill}>
+            <Check size={14} aria-hidden='true' />
+            Active
+          </span>
         )}
       </header>
 
@@ -342,24 +364,43 @@ export function AccountProfilePanel({
             <div className={styles.fieldsGrid}>
               <Input
                 label='Full name'
-                description='Optional. Up to 120 characters.'
                 value={profile.draft.fullName}
                 onValueChange={(value) => change('fullName', value)}
                 autoComplete='name'
                 error={fullNameError}
-                disabled={saving || localAccountPreview}
-                size='lg'
+                disabled={saving}
+                size='md'
               />
               <Input
                 label='Display name'
-                description='Optional name shown in the product.'
                 value={profile.draft.displayName}
                 onValueChange={(value) => change('displayName', value)}
                 autoComplete='nickname'
                 error={displayNameError}
-                disabled={saving || localAccountPreview}
-                size='lg'
+                disabled={saving}
+                size='md'
               />
+            </div>
+            <div className={styles.emailField}>
+              <div className={styles.emailWithStatus}>
+                <Input
+                  label='Email address'
+                  type='email'
+                  value={localAccountPreview ? 'alex@example.com' : ''}
+                  placeholder='Not available in this version'
+                  readOnly
+                  size='md'
+                  wrapperClassName={styles.emailInput}
+                />
+                {me?.emailVerified && (
+                  <Success size={19} aria-label='Email verified' />
+                )}
+              </div>
+              <p className={styles.emailHelp}>
+                {localAccountPreview
+                  ? 'Example address for design review only — not your actual email.'
+                  : 'Your sign-in email is managed by authentication. Read-only display will be connected separately.'}
+              </p>
             </div>
 
             <div className={styles.sectionHeading}>
@@ -372,13 +413,12 @@ export function AccountProfilePanel({
             <div className={styles.fieldsGrid}>
               <Select
                 label='Language'
-                description='Your preference. Some areas may still appear in English.'
                 value={profile.draft.locale}
                 onValueChange={(value) => {
                   if (value) change('locale', value);
                 }}
-                disabled={saving || localAccountPreview}
-                size='lg'
+                disabled={saving}
+                size='md'
               >
                 <Select.Item value='en'>English</Select.Item>
                 <Select.Item value='fr'>Français</Select.Item>
@@ -386,13 +426,12 @@ export function AccountProfilePanel({
               <div className={styles.timeZoneControl}>
                 <Select
                   label='Time zone'
-                  description='Times and schedules can use this preference.'
                   value={profile.draft.timeZone}
                   onValueChange={(value) => {
                     if (value) change('timeZone', value);
                   }}
-                  disabled={saving || localAccountPreview}
-                  size='lg'
+                  disabled={saving}
+                  size='md'
                 >
                   {zones.map((value) => (
                     <Select.Item key={value} value={value}>
@@ -407,7 +446,7 @@ export function AccountProfilePanel({
                       appearance='link'
                       color='neutral'
                       type='button'
-                      disabled={saving || localAccountPreview}
+                      disabled={saving}
                       onClick={() => change('timeZone', deviceTimeZone)}
                     >
                       Use device time zone ({deviceTimeZone})
@@ -415,6 +454,9 @@ export function AccountProfilePanel({
                   )}
               </div>
             </div>
+            <p className={styles.preferencesHelp}>
+              Language and time zone are saved as account preferences. Some parts of Vellira may still appear in English.
+            </p>
 
             {profile.saveState === 'conflict' && (
               <div className={styles.feedback} role='alert'>
@@ -442,20 +484,25 @@ export function AccountProfilePanel({
                 Changes saved.
               </p>
             )}
+            {profile.saveState === 'preview-saved' && (
+              <p role='status' className={styles.successText}>
+                Preview saved on this page only. No changes were sent to Vellira.
+              </p>
+            )}
             {localAccountPreview && (
               <p className={styles.mutedNote}>
-                Local design preview: profile saving is disabled.
+                Local design preview — edit freely. Nothing is sent to your account.
               </p>
             )}
             <div className={styles.formActions}>
-              {dirty && !saving && !localAccountPreview && (
+              {dirty && !saving && (
                 <span className={styles.unsavedText}>Unsaved changes</span>
               )}
               <Button
                 type='submit'
                 appearance='solid'
                 color='primary'
-                size='lg'
+                size='md'
                 loading={saving}
                 loadingText='Saving…'
                 disabled={!maySave}
