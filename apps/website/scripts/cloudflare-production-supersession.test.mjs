@@ -101,11 +101,8 @@ test('workflow gates postflight, IndexNow, and bridge on verified deployment', a
     )
   );
   assert.ok(workflow.includes("needs.deploy.outputs.deployed == 'true'"));
-  assert.ok(
-    workflow.includes(
-      'cloudflare-production-freshness.mjs apps/website/wrangler.production.jsonc'
-    )
-  );
+  assert.ok(workflow.includes('id: premutation'));
+  assert.ok(workflow.includes('node apps/website/scripts/cloudflare-production-supersession.mjs'));
 
   // A missing worker-deploy output must not allow any post-deploy verification.
   const postflightNames = [
@@ -120,6 +117,17 @@ test('workflow gates postflight, IndexNow, and bridge on verified deployment', a
     'Smoke test production static chunk integrity',
   ];
   const steps = workflow.split('      - name: ');
+  for (const name of [
+    'Record production promotion provenance',
+    'Deploy production website to Cloudflare Workers',
+  ]) {
+    const block = steps.find((step) => step.startsWith(name + '\n'));
+    assert.ok(block, 'Missing gated mutation: ' + name);
+    assert.ok(
+      block.includes("steps.premutation.outputs.superseded != 'true'"),
+      'Late stale mutation gate must deny: ' + name
+    );
+  }
   for (const name of postflightNames) {
     const block = steps.find((step) => step.startsWith(name + '\n'));
     assert.ok(block, 'Missing production postflight step: ' + name);
