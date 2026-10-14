@@ -132,6 +132,20 @@ try {
   assert.equal(await page.locator('[data-profile-save-bar]').count(), 0, 'Clean profile must not show the sticky bar');
   assert.equal(profileReads, 1, 'profile GET must be read-only and load exactly once');
 
+  // The backend requires a full name for first write, even if only a
+  // preference was edited. Prevent a doomed PATCH rather than showing 400.
+  const language = page.getByRole('combobox', { name: 'Language' });
+  await language.click();
+  await page.getByRole('option', { name: 'Français' }).click();
+  await page.getByText('Enter your full name before saving changes.', { exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole('button', { name: 'Save changes' }).isDisabled(),
+    true,
+    'A first-write without required full name must not reach the API'
+  );
+  await page.getByRole('button', { name: 'Discard', exact: true }).click();
+  assert.equal(profileWrites, 0);
+
   // Discard returns to the last server-confirmed values without a PATCH.
   await fullName.fill('Temporary change');
   const dirtyBar = page.locator('[data-profile-save-bar]');
