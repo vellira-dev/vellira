@@ -1351,7 +1351,7 @@ export { switchDocs };
           force: false,
         },
       })
-    ).rejects.toThrow('Use --force for initial adoption');
+    ).rejects.toThrow('Refusing destructive overwrite');
 
     expect(readFile(unownedDocsFile)).toBe(unownedContent);
   });
