@@ -8,7 +8,7 @@ import {
   type FormEvent,
 } from 'react';
 
-import { Check, Error, Success, User } from '@vellira-ui/icons';
+import { Check, Error, User } from '@vellira-ui/icons';
 import { Button, FormField, Input, Select } from '@vellira-ui/react';
 
 import {
