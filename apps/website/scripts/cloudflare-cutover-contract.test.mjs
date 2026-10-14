@@ -203,10 +203,7 @@ test('production, staging, and legacy smoke use structural route identities', as
     'adopt-website-cloudflare-legacy.yml',
   ];
 
-  const expectedSwitch = [
-    'data-component-explorer-main',
-    '>Switch</h1>',
-  ];
+  const expectedSwitch = ['data-component-explorer-main', '>Switch</h1>'];
   const expectedBlog = ['<h1>Blog</h1>', 'aria-label="Published articles"'];
   const switchCopyEdited =
     '<div data-component-explorer-main><h1 class="title">Switch</h1>' +
@@ -232,13 +229,21 @@ test('production, staging, and legacy smoke use structural route identities', as
     assert.ok(blogLine, `Missing blog index smoke in ${workflow}`);
 
     for (const marker of expectedSwitch) {
-      assert.ok(switchLine.includes(`'${marker}'`), `Missing ${marker} in ${workflow}`);
+      assert.ok(
+        switchLine.includes(`'${marker}'`),
+        `Missing ${marker} in ${workflow}`
+      );
     }
     for (const marker of expectedBlog) {
-      assert.ok(blogLine.includes(`'${marker}'`), `Missing ${marker} in ${workflow}`);
+      assert.ok(
+        blogLine.includes(`'${marker}'`),
+        `Missing ${marker} in ${workflow}`
+      );
     }
 
-    assert.ok(expectedSwitch.every((marker) => switchCopyEdited.includes(marker)));
+    assert.ok(
+      expectedSwitch.every((marker) => switchCopyEdited.includes(marker))
+    );
     assert.ok(expectedBlog.every((marker) => blogCopyEdited.includes(marker)));
     assert.ok(
       !expectedSwitch.every((marker) => wrongComponent.includes(marker)),
@@ -270,7 +275,11 @@ test('production, staging, and legacy smoke use structural route identities', as
     'utf8'
   );
   assert.match(explorer, /data-component-explorer-main/);
-  assert.ok(componentHeader.includes('<h1 className={styles.title}>{component.name}</h1>'));
+  assert.ok(
+    componentHeader.includes(
+      '<h1 className={styles.title}>{component.name}</h1>'
+    )
+  );
   assert.match(blogIndex, /<h1>Blog<\/h1>/);
   assert.match(blogIndex, /aria-label='Published articles'/);
 });
