@@ -1,6 +1,34 @@
 import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary: 'Use RadioGroup for a labelled, mutually exclusive set of options.',
+    description: 'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
+    whenToUse: [
+      'Use RadioGroup when a person chooses exactly one item from a related set.',
+      'Give each RadioGroup.Item a unique value and label the group.',
+      'Use value and onValueChange for controlled selection or defaultValue for initial selection.',
+      'Use required and error for group validation; use Checkbox for independent choices.',
+    ],
+    patterns: [
+      { id: 'controlled', title: 'Controlled choice', description: 'Use value and onValueChange to manage the selected option externally.' },
+      { id: 'default', title: 'Default selection', description: 'Use defaultValue to initialize selection while the group manages later updates.' },
+      { id: 'layout', title: 'Orientation', description: 'Prefer vertical options; use horizontal layout when space and labels permit.' },
+      { id: 'validation', title: 'Required group', description: 'Display a meaningful error and propagate disabled and invalid state to child radios.' },
+    ],
+    platformNotes: {
+      react: [
+        'React renders role=radiogroup with ARIA label, description, required and invalid semantics, and named native radio inputs.',
+        'React group navigation handles keyboard behavior and orientation controls layout.',
+      ],
+      'react-native': [
+        'React Native composes FormField with accessibilityRole=radiogroup and hints for required or invalid state.',
+        'Child Pressable radios expose checked/disabled accessibilityState; orientation changes their layout.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<RadioGroup.Item value='fr' label='France' />
 <RadioGroup.Item value='es' label='Spain' />
