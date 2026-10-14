@@ -315,7 +315,7 @@ export function Pro() {
                 >
                   <ProInterestSignup />
                 </motion.div>
-              )
+              )}
             </motion.article>
           </div>
 
