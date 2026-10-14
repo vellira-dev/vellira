@@ -161,13 +161,22 @@ function readAccountProfile(payload: unknown): AccountProfile {
     throw new Error('Invalid account profile response');
   }
   const value = payload.profile;
-  if (!value || typeof value !== 'object' ||
-    !('fullName' in value) || typeof value.fullName !== 'string' ||
-    !('displayName' in value) || typeof value.displayName !== 'string' ||
-    !('locale' in value) || (value.locale !== 'en' && value.locale !== 'fr') ||
-    !('timeZone' in value) || typeof value.timeZone !== 'string' ||
-    !('revision' in value) || typeof value.revision !== 'number' ||
-    !Number.isSafeInteger(value.revision) || value.revision < 1) {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('fullName' in value) ||
+    typeof value.fullName !== 'string' ||
+    !('displayName' in value) ||
+    typeof value.displayName !== 'string' ||
+    !('locale' in value) ||
+    (value.locale !== 'en' && value.locale !== 'fr') ||
+    !('timeZone' in value) ||
+    typeof value.timeZone !== 'string' ||
+    !('revision' in value) ||
+    typeof value.revision !== 'number' ||
+    !Number.isSafeInteger(value.revision) ||
+    value.revision < 1
+  ) {
     throw new Error('Invalid account profile response');
   }
   return {
@@ -181,22 +190,28 @@ function readAccountProfile(payload: unknown): AccountProfile {
 
 // Profile is independent of auth identity, workspace and subscriptions.
 // Reads are strictly read-only; no lazy bootstrap or optimistic local authority.
-export async function getAccountProfile(signal?: AbortSignal): Promise<AccountProfile> {
-  return readAccountProfile(await apiRequest<unknown>('/v1/profile', { signal }));
+export async function getAccountProfile(
+  signal?: AbortSignal
+): Promise<AccountProfile> {
+  return readAccountProfile(
+    await apiRequest<unknown>('/v1/profile', { signal })
+  );
 }
 
 export async function saveAccountProfile(
   profile: AccountProfile
 ): Promise<AccountProfile> {
   const csrfToken = await getCsrfToken();
-  return readAccountProfile(await apiRequest<unknown>('/v1/profile', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': csrfToken,
-    },
-    body: JSON.stringify(profile),
-  }));
+  return readAccountProfile(
+    await apiRequest<unknown>('/v1/profile', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify(profile),
+    })
+  );
 }
 
 export type WorkspaceSubscription = {

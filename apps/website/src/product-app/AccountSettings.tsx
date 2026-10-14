@@ -4,12 +4,7 @@ import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import {
-  Contrast,
-  Moon,
-  Sun,
-  System,
-} from '@vellira-ui/icons';
+import { Contrast, Moon, Sun, System } from '@vellira-ui/icons';
 import { Button, Radio, RadioGroup, Tabs } from '@vellira-ui/react';
 
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
@@ -153,7 +148,10 @@ export function SettingsGeneral({
 }) {
   const router = useRouter();
   const [accountDirty, setAccountDirty] = useState(false);
-  const handleAccountDirty = useCallback((dirty: boolean) => setAccountDirty(dirty), []);
+  const handleAccountDirty = useCallback(
+    (dirty: boolean) => setAccountDirty(dirty),
+    []
+  );
   const { workspace } = useAppSession();
   const isOwner = workspace?.membership.role === 'owner';
   const billingDenied = section === 'billing' && !isOwner;
@@ -181,8 +179,14 @@ export function SettingsGeneral({
           if (!isSettingsSection(next) || (next === 'billing' && !isOwner)) {
             return;
           }
-          if (activeSection === 'account' && next !== 'account' && accountDirty &&
-            !window.confirm('Discard unsaved profile changes and leave Account?')) {
+          if (
+            activeSection === 'account' &&
+            next !== 'account' &&
+            accountDirty &&
+            !window.confirm(
+              'Discard unsaved profile changes and leave Account?'
+            )
+          ) {
             return;
           }
           router.push(

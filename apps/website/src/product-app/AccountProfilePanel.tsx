@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+} from 'react';
 
 import { Error, Success, User } from '@vellira-ui/icons';
 import { Button, Input, Select } from '@vellira-ui/react';
@@ -26,8 +32,7 @@ type ReadyProfile = {
   saveState: 'idle' | 'saving' | 'saved' | 'conflict' | 'error';
 };
 type ProfileState =
-  | { kind: 'loading' | 'error'; userId: string; attempt: number }
-  | ReadyProfile;
+  { kind: 'loading' | 'error'; userId: string; attempt: number } | ReadyProfile;
 
 const previewProfile: AccountProfile = {
   fullName: '',
@@ -79,15 +84,19 @@ function equalFields(a: AccountProfileChanges, b: AccountProfileChanges) {
 
 function validateName(value: string, limit: number) {
   if (value !== value.trim()) return 'Remove leading or trailing whitespace.';
-  if (/[\p{Cc}\p{Cf}\p{Cs}]/u.test(value)) return 'Remove unsupported control characters.';
-  if (Array.from(value).length > limit) return 'Use ' + limit + ' characters or fewer.';
+  if (/[\p{Cc}\p{Cf}\p{Cs}]/u.test(value))
+    return 'Remove unsupported control characters.';
+  if (Array.from(value).length > limit)
+    return 'Use ' + limit + ' characters or fewer.';
   return undefined;
 }
 
 function initials(value: string) {
   const tokens = value.trim().split(/\s+/u).filter(Boolean);
   if (tokens.length === 0) return '';
-  return (tokens[0][0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : '')).toLocaleUpperCase();
+  return (
+    tokens[0][0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : '')
+  ).toLocaleUpperCase();
 }
 
 export function AccountProfilePanel({
@@ -159,18 +168,30 @@ export function AccountProfilePanel({
   // A change of authenticated principal must never paint the previous user's
   // cached profile even for one frame. Do not reset it via a passive effect.
   const visible: ProfileState =
-    status === 'ready' && !!userId &&
-    stored.userId === userId && stored.attempt === attempt
+    status === 'ready' &&
+    !!userId &&
+    stored.userId === userId &&
+    stored.attempt === attempt
       ? stored
       : { kind: 'loading', userId, attempt };
 
   const profile = visible.kind === 'ready' ? visible : null;
-  const dirty = !!profile && !equalFields(profile.draft, profileFields(profile.original));
-  const fullNameError = profile ? validateName(profile.draft.fullName, 120) : undefined;
-  const displayNameError = profile ? validateName(profile.draft.displayName, 60) : undefined;
+  const dirty =
+    !!profile && !equalFields(profile.draft, profileFields(profile.original));
+  const fullNameError = profile
+    ? validateName(profile.draft.fullName, 120)
+    : undefined;
+  const displayNameError = profile
+    ? validateName(profile.draft.displayName, 60)
+    : undefined;
   const saving = profile?.saveState === 'saving';
-  const maySave = !!profile && dirty && !fullNameError && !displayNameError &&
-    !saving && !localAccountPreview;
+  const maySave =
+    !!profile &&
+    dirty &&
+    !fullNameError &&
+    !displayNameError &&
+    !saving &&
+    !localAccountPreview;
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -189,8 +210,13 @@ export function AccountProfilePanel({
 
   const change = (key: keyof AccountProfileChanges, value: string) => {
     setStored((old) => {
-      if (old.kind !== 'ready' || old.userId !== userId ||
-          old.attempt !== attempt || old.saveState === 'saving') return old;
+      if (
+        old.kind !== 'ready' ||
+        old.userId !== userId ||
+        old.attempt !== attempt ||
+        old.saveState === 'saving'
+      )
+        return old;
       if (key === 'locale' && value !== 'en' && value !== 'fr') return old;
       return {
         ...old,
@@ -206,25 +232,36 @@ export function AccountProfilePanel({
 
     savingRef.current = true;
     const snapshot = { ...profile.draft, revision: profile.original.revision };
-    setStored((old) => old.kind === 'ready' && old.userId === userId &&
-      old.attempt === attempt ? { ...old, saveState: 'saving' } : old);
+    setStored((old) =>
+      old.kind === 'ready' && old.userId === userId && old.attempt === attempt
+        ? { ...old, saveState: 'saving' }
+        : old
+    );
 
     try {
       const updated = await saveAccountProfile(snapshot);
       if (!mountedRef.current) return;
-      setStored((old) => old.kind === 'ready' && old.userId === userId &&
-        old.attempt === attempt ? {
-          ...old,
-          original: updated,
-          draft: profileFields(updated),
-          saveState: 'saved',
-        } : old);
+      setStored((old) =>
+        old.kind === 'ready' && old.userId === userId && old.attempt === attempt
+          ? {
+              ...old,
+              original: updated,
+              draft: profileFields(updated),
+              saveState: 'saved',
+            }
+          : old
+      );
     } catch (cause) {
       if (!mountedRef.current) return;
-      const conflicted = cause instanceof VelliraApiError &&
-        cause.status === 409 && cause.code === 'profile_conflict';
-      setStored((old) => old.kind === 'ready' && old.userId === userId &&
-        old.attempt === attempt ? { ...old, saveState: conflicted ? 'conflict' : 'error' } : old);
+      const conflicted =
+        cause instanceof VelliraApiError &&
+        cause.status === 409 &&
+        cause.code === 'profile_conflict';
+      setStored((old) =>
+        old.kind === 'ready' && old.userId === userId && old.attempt === attempt
+          ? { ...old, saveState: conflicted ? 'conflict' : 'error' }
+          : old
+      );
     } finally {
       savingRef.current = false;
     }
@@ -235,24 +272,33 @@ export function AccountProfilePanel({
     setAttempt((old) => old + 1);
   };
 
-  const preferredName = profile?.draft.displayName || profile?.draft.fullName || '';
+  const preferredName =
+    profile?.draft.displayName || profile?.draft.fullName || '';
   const avatarInitials = initials(preferredName);
   const zoneOptions = [...timeZones];
   const currentZone = profile?.draft.timeZone;
   const extraZones = [currentZone, deviceTimeZone].filter(
-    (value): value is string => !!value && value !== 'Unavailable' &&
+    (value): value is string =>
+      !!value &&
+      value !== 'Unavailable' &&
       !timeZones.some((known) => known === value)
   );
   const zones = [...zoneOptions, ...new Set(extraZones)];
 
   return (
-    <section className={styles.root} aria-labelledby='account-state' data-profile-settings>
+    <section
+      className={styles.root}
+      aria-labelledby='account-state'
+      data-profile-settings
+    >
       <header className={styles.identityRow}>
         <div className={styles.avatar} aria-hidden='true'>
           {avatarInitials || <User size={28} />}
         </div>
         <div className={styles.identityCopy}>
-          <h2 id='account-state' className={styles.title}>Your account</h2>
+          <h2 id='account-state' className={styles.title}>
+            Your account
+          </h2>
           <p className={styles.subtitle}>
             {preferredName || 'Manage your personal Vellira profile.'}
           </p>
@@ -263,12 +309,21 @@ export function AccountProfilePanel({
       </header>
 
       {visible.kind === 'loading' && (
-        <p role='status' className={styles.loadingState}>Loading your profile…</p>
+        <p role='status' className={styles.loadingState}>
+          Loading your profile…
+        </p>
       )}
       {visible.kind === 'error' && (
         <div className={styles.errorBlock}>
-          <p role='alert'>Your profile is temporarily unavailable. No changes were made.</p>
-          <Button appearance='outline' color='neutral' type='button' onClick={reload}>
+          <p role='alert'>
+            Your profile is temporarily unavailable. No changes were made.
+          </p>
+          <Button
+            appearance='outline'
+            color='neutral'
+            type='button'
+            onClick={reload}
+          >
             Try again
           </Button>
         </div>
@@ -276,7 +331,10 @@ export function AccountProfilePanel({
 
       {profile && (
         <>
-          <form className={styles.editForm} onSubmit={(event) => void save(event)}>
+          <form
+            className={styles.editForm}
+            onSubmit={(event) => void save(event)}
+          >
             <div className={styles.sectionHeading}>
               <h3>Personal information</h3>
               <p>Manage the information shown on your Vellira account.</p>
@@ -306,7 +364,10 @@ export function AccountProfilePanel({
 
             <div className={styles.sectionHeading}>
               <h3>Preferences</h3>
-              <p>These preferences are stored in your account, not only on this device.</p>
+              <p>
+                These preferences are stored in your account, not only on this
+                device.
+              </p>
             </div>
             <div className={styles.fieldsGrid}>
               <Select
@@ -333,24 +394,40 @@ export function AccountProfilePanel({
                   disabled={saving || localAccountPreview}
                   size='lg'
                 >
-                  {zones.map((value) => <Select.Item key={value} value={value}>{value}</Select.Item>)}
+                  {zones.map((value) => (
+                    <Select.Item key={value} value={value}>
+                      {value}
+                    </Select.Item>
+                  ))}
                 </Select>
-                {deviceTimeZone && deviceTimeZone !== 'Unavailable' &&
+                {deviceTimeZone &&
+                  deviceTimeZone !== 'Unavailable' &&
                   deviceTimeZone !== profile.draft.timeZone && (
-                  <Button appearance='link' color='neutral' type='button'
-                    disabled={saving || localAccountPreview}
-                    onClick={() => change('timeZone', deviceTimeZone)}>
-                    Use device time zone ({deviceTimeZone})
-                  </Button>
-                )}
+                    <Button
+                      appearance='link'
+                      color='neutral'
+                      type='button'
+                      disabled={saving || localAccountPreview}
+                      onClick={() => change('timeZone', deviceTimeZone)}
+                    >
+                      Use device time zone ({deviceTimeZone})
+                    </Button>
+                  )}
               </div>
             </div>
 
             {profile.saveState === 'conflict' && (
               <div className={styles.feedback} role='alert'>
-                This profile was changed elsewhere. Your edits are still here. To load the latest
-                version, discard your unsaved changes and reload.
-                <Button appearance='outline' color='neutral' size='sm' type='button' onClick={reload}>
+                This profile was changed elsewhere. Your edits are still here.
+                To load the latest version, discard your unsaved changes and
+                reload.
+                <Button
+                  appearance='outline'
+                  color='neutral'
+                  size='sm'
+                  type='button'
+                  onClick={reload}
+                >
                   Discard edits and reload
                 </Button>
               </div>
@@ -361,17 +438,28 @@ export function AccountProfilePanel({
               </p>
             )}
             {profile.saveState === 'saved' && (
-              <p role='status' className={styles.successText}>Changes saved.</p>
+              <p role='status' className={styles.successText}>
+                Changes saved.
+              </p>
             )}
             {localAccountPreview && (
-              <p className={styles.mutedNote}>Local design preview: profile saving is disabled.</p>
+              <p className={styles.mutedNote}>
+                Local design preview: profile saving is disabled.
+              </p>
             )}
             <div className={styles.formActions}>
               {dirty && !saving && !localAccountPreview && (
                 <span className={styles.unsavedText}>Unsaved changes</span>
               )}
-              <Button type='submit' appearance='solid' color='primary' size='lg'
-                loading={saving} loadingText='Saving…' disabled={!maySave}>
+              <Button
+                type='submit'
+                appearance='solid'
+                color='primary'
+                size='lg'
+                loading={saving}
+                loadingText='Saving…'
+                disabled={!maySave}
+              >
                 Save changes
               </Button>
             </div>
@@ -382,7 +470,10 @@ export function AccountProfilePanel({
       <div className={styles.accountDetails}>
         <div className={styles.sectionHeading}>
           <h3>Account details</h3>
-          <p>Authentication details are managed separately from your public profile.</p>
+          <p>
+            Authentication details are managed separately from your public
+            profile.
+          </p>
         </div>
         <dl className={styles.detailsList}>
           <div className={styles.detailRow}>
@@ -394,14 +485,23 @@ export function AccountProfilePanel({
             <dd className={styles.verification}>
               {me ? (
                 <>
-                  <span className={me.emailVerified ? styles.verified : styles.unverified}>
-                    {me.emailVerified ? <Success size={18} aria-hidden='true' /> :
-                      <Error size={18} aria-hidden='true' />}
+                  <span
+                    className={
+                      me.emailVerified ? styles.verified : styles.unverified
+                    }
+                  >
+                    {me.emailVerified ? (
+                      <Success size={18} aria-hidden='true' />
+                    ) : (
+                      <Error size={18} aria-hidden='true' />
+                    )}
                     {me.emailVerified ? 'Verified' : 'Not verified'}
                   </span>
                   {!me.emailVerified && <EmailVerificationResend />}
                 </>
-              ) : 'Unavailable'}
+              ) : (
+                'Unavailable'
+              )}
             </dd>
           </div>
           <div className={styles.detailRow}>
@@ -411,7 +511,8 @@ export function AccountProfilePanel({
           <div className={styles.detailRow}>
             <dt>Sign-in email</dt>
             <dd className={styles.secondaryDetail}>
-              Email address is managed by Vellira authentication; profile data does not expose it.
+              Email address is managed by Vellira authentication; profile data
+              does not expose it.
             </dd>
           </div>
         </dl>
