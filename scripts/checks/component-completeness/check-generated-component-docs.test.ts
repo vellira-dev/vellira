@@ -99,7 +99,13 @@ describe('generated component docs completeness', () => {
       contracts: [fixture.contract],
     });
 
-    fs.appendFileSync(fixture.reactDoc, '\nStale local edit.\n');
+    const original = fs.readFileSync(fixture.reactDoc, 'utf8');
+    const stale = original.replace(
+      'FixtureSwitch react summary.',
+      'Stale generated summary.'
+    );
+    expect(stale).not.toBe(original);
+    fs.writeFileSync(fixture.reactDoc, stale);
     const before = fs.readFileSync(fixture.reactDoc, 'utf8');
 
     const result = await checkGeneratedComponentDocsCompleteness({
@@ -112,6 +118,39 @@ describe('generated component docs completeness', () => {
     expect(details(result)).toEqual(
       expect.arrayContaining([
         'stale generated page apps/docs/src/react/fixture-switch.md. Run pnpm component-docs:generate.',
+      ])
+    );
+    expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toBe(before);
+  });
+
+  it('blocks authored text outside the managed region without rewriting it', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+
+    await generateComponentDocs({
+      root: fixture.root,
+      docsRoot: fixture.docsRoot,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+
+    fs.appendFileSync(fixture.reactDoc, '\nImportant manual guidance.\n');
+    const before = fs.readFileSync(fixture.reactDoc, 'utf8');
+
+    const result = await checkGeneratedComponentDocsCompleteness({
+      root: fixture.root,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+
+    expect(result.ready).toBe(false);
+    expect(details(result)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          'authored region end marker must terminate the document'
+        ),
       ])
     );
     expect(fs.readFileSync(fixture.reactDoc, 'utf8')).toBe(before);

@@ -14,6 +14,56 @@ const nativeTextStyle = `style={{
 
 export default defineComponentPageMetadata({
   profile: 'compound',
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Accordion for in-place progressive disclosure in settings, FAQs, and detail screens.',
+    description:
+      'Accessible compound Accordion for React and React Native with single or multiple expansion, controlled and default values, collapsible behavior, disabled items, and platform-specific trigger semantics.',
+    whenToUse: [
+      'Reveal secondary details without leaving the current page or screen.',
+      'Use single mode for one open item or multiple mode to compare sections.',
+      'Use collapsible when the currently open single item may close.',
+      'Choose Tabs instead for peer views that replace content rather than reveal it.',
+    ],
+    patterns: [
+      {
+        id: 'single-expansion',
+        title: 'One section at a time',
+        description:
+          'Use single mode and defaultValue for a focused disclosure with a default open item.',
+      },
+      {
+        id: 'multiple-expansion',
+        title: 'Compare open sections',
+        description:
+          'Use multiple mode for settings or details that users need visible together.',
+      },
+      {
+        id: 'controlled-state',
+        title: 'Controlled expansion',
+        description:
+          'Use value with onValueChange when application state owns which items are expanded.',
+      },
+      {
+        id: 'collapsible-single',
+        title: 'Dismiss the open section',
+        description:
+          'Enable collapsible on a single accordion when every section may be closed.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'Accordion.Trigger uses a native button with aria-expanded and aria-controls; Tab, Enter, and Space follow browser button semantics.',
+        'Force-mount Accordion.Content only when persistent web panel state is required.',
+      ],
+      'react-native': [
+        'Accordion.Trigger exposes native button semantics and expanded state through accessibility props, not DOM aria-controls.',
+        'Wrap textual Accordion.Content children in React Native Text and verify assistive announcements on target devices.',
+      ],
+    },
+    missingEvidence: [],
+  },
   demo: {
     label: 'Account settings',
     description: 'Expand a section to reveal its settings.',
