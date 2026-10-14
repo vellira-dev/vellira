@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -93,6 +94,38 @@ function fixture() {
     return { platform, target, original };
   });
   return { docsRoot, files };
+}
+
+function recoveryBackups(targetFile: string) {
+  return fs
+    .readdirSync(path.dirname(targetFile), { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() && entry.name.startsWith('.vellira-docs-commit-')
+    )
+    .map((entry) =>
+      path.join(path.dirname(targetFile), entry.name, 'original.md')
+    );
+}
+
+function verifyRetainedBackup(params: {
+  targetFile: string;
+  original: string;
+  expectedSha256: string;
+  error: string;
+}) {
+  const backups = recoveryBackups(params.targetFile);
+  expect(backups).toHaveLength(1);
+  const recoveryPath = backups[0];
+  expect(fs.readFileSync(recoveryPath, 'utf8')).toBe(params.original);
+  expect(
+    createHash('sha256')
+      .update(fs.readFileSync(recoveryPath, 'utf8'), 'utf8')
+      .digest('hex')
+  ).toBe(params.expectedSha256);
+  expect(params.error).toContain(params.targetFile);
+  expect(params.error).toContain(recoveryPath);
+  expect(params.error).toContain(params.expectedSha256);
 }
 
 afterEach(() => {
@@ -447,8 +480,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
       }
     });
 
-    await expect(
-      adoptLegacyComponentDocs({
+    let failure: Error | undefined;
+    try {
+      await adoptLegacyComponentDocs({
         root,
         docsRoot: test.docsRoot,
         componentName: 'Checkbox',
@@ -456,8 +490,11 @@ describe('Checkbox legacy docs adoption pilot', () => {
         expectedOriginalSha256: Object.fromEntries(
           preview.entries.map((entry) => [entry.platform, entry.originalSha256])
         ),
-      })
-    ).rejects.toThrow(
+      });
+    } catch (error) {
+      failure = error as Error;
+    }
+    expect(failure?.message).toContain(
       'cannot safely roll back documents edited after this migration'
     );
     expect(injected).toBe(true);
@@ -465,6 +502,14 @@ describe('Checkbox legacy docs adoption pilot', () => {
       'External edit after React migration.'
     );
     expect(fs.readFileSync(native.target, 'utf8')).toBe(native.original);
+    verifyRetainedBackup({
+      targetFile: react.target,
+      original: react.original,
+      expectedSha256: preview.entries.find((entry) => entry.platform === 'react')!
+        .originalSha256,
+      error: failure!.message,
+    });
+    expect(recoveryBackups(native.target)).toEqual([]);
   });
 
   it('keeps both source files intact on a partial sibling-temp write failure', async () => {
@@ -686,8 +731,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
       Reflect.apply(originalRename, fs, args);
     });
 
-    await expect(
-      adoptLegacyComponentDocs({
+    let failure: Error | undefined;
+    try {
+      await adoptLegacyComponentDocs({
         root,
         docsRoot: test.docsRoot,
         componentName: 'Checkbox',
@@ -695,8 +741,11 @@ describe('Checkbox legacy docs adoption pilot', () => {
         expectedOriginalSha256: Object.fromEntries(
           preview.entries.map((entry) => [entry.platform, entry.originalSha256])
         ),
-      })
-    ).rejects.toThrow(
+      });
+    } catch (error) {
+      failure = error as Error;
+    }
+    expect(failure?.message).toContain(
       'cannot safely roll back documents edited after this migration'
     );
 
@@ -708,6 +757,60 @@ describe('Checkbox legacy docs adoption pilot', () => {
     );
     expect(preservedGenerated).toContain('## API');
     expect(fs.readFileSync(native.target, 'utf8')).toBe(native.original);
+    verifyRetainedBackup({
+      targetFile: react.target,
+      original: react.original,
+      expectedSha256: preview.entries.find((entry) => entry.platform === 'react')!
+        .originalSha256,
+      error: failure!.message,
+    });
+    expect(recoveryBackups(native.target)).toEqual([]);
+  });
+
+  it('rejects a silently corrupted staged backup before either replacement', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const originalWrite = fs.writeFileSync;
+    let corrupted = false;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
+      const destination = String(args[0]);
+      if (
+        !corrupted &&
+        destination.includes('.vellira-docs-commit-') &&
+        destination.endsWith('original.md')
+      ) {
+        corrupted = true;
+        Reflect.apply(originalWrite, fs, [
+          args[0],
+          'INCORRECT ORIGINAL BACKUP',
+          args[2],
+        ]);
+        return;
+      }
+      Reflect.apply(originalWrite, fs, args);
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('staged candidate or original recovery copy failed byte verification');
+
+    expect(corrupted).toBe(true);
+    for (const file of test.files) {
+      expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
+      expect(recoveryBackups(file.target)).toEqual([]);
+    }
   });
 
   it('keeps published Checkbox headings unique across both platforms', () => {
