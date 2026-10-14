@@ -239,7 +239,7 @@ jobs:
         needs.admission.outputs.admitted == 'true'))
     runs-on: ubuntu-latest
     outputs:
-      deployed: ${{ steps.worker-deploy.outcome == 'success' }}
+      deployed: ${{ steps.worker-deploy.outcome == 'success' && steps.worker-deploy.outputs.deployed == 'true' && steps.worker-deploy.outputs.status == 'deployed' }}
     concurrency:
       group: deploy-worker-vellira-website
       cancel-in-progress: false
@@ -361,6 +361,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Verify immutable production candidate before mutation
+        id: premutation
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
         shell: bash
         run: |
@@ -368,13 +369,17 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$CANDIDATE_SHA"
           test "$VELLIRA_BUILD_ID" = "$CANDIDATE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          node apps/website/scripts/cloudflare-production-freshness.mjs apps/website/wrangler.production.jsonc
-          echo "Production mutation remains pinned to deployment-equivalent candidate $CANDIDATE_SHA"
+          node apps/website/scripts/cloudflare-production-supersession.mjs
+          if grep -Fxq 'superseded=true' "$GITHUB_OUTPUT"; then
+            echo "::notice::Production mutation skipped for superseded candidate $CANDIDATE_SHA"
+          else
+            echo "Production mutation remains pinned to deployment-equivalent candidate $CANDIDATE_SHA"
+          fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Record production promotion provenance
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.premutation.outputs.superseded != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -405,7 +410,7 @@ jobs:
           NODE
 
       - name: Deploy production website to Cloudflare Workers
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.premutation.outputs.superseded != 'true'
         id: worker-deploy
         shell: bash
         run: |
@@ -418,13 +423,13 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Audit assets after OpenNext deploy cache population
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: >-
           node apps/website/scripts/cloudflare-build-runtime-audit.mjs
           apps/website apps/website/.open-next/asset-audit-after-deploy.json
 
       - name: Smoke test production routes
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -482,7 +487,7 @@ jobs:
           check_route '/robots.txt' 'User-Agent: *'
 
       - name: Smoke test production auth provider discovery
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-auth-provider-smoke.mjs
@@ -491,13 +496,13 @@ jobs:
           AUTH_API_URL: https://api.vellira.dev
 
       - name: Verify deployed identities, freshness and immutable bytes
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
 
       - name: Test browser forensic diagnostics
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
           scripts/cloudflare-browser-diagnostics.test.mjs
@@ -505,13 +510,13 @@ jobs:
           scripts/cloudflare-client-navigation-recovery.test.mjs
 
       - name: Verify production component explorer browser geometry
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: pnpm --filter @vellira-ui/website run test:component-explorer-geometry
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production navigation and actor metrics
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-website-smoke.mjs
@@ -520,7 +525,7 @@ jobs:
           BLOG_METRICS_PUBLICATION_MODE: strict
 
       - name: Soak test production client navigation static assets
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-navigation-soak.mjs
@@ -528,7 +533,7 @@ jobs:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
 
       - name: Smoke test production static chunk integrity
-        if: ${{ steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && success() && steps.worker-deploy.outcome == 'success' }}
+        if: ${{ steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true' && success() && steps.worker-deploy.outcome == 'success' }}
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node
           scripts/cloudflare-static-chunk-smoke.mjs
