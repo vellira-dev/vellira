@@ -30,7 +30,7 @@ try {
     'Unverified should have the canonical circle-cross status icon'
   );
   assert.equal(
-    await page.locator('label[for="account-primary-email"]').getByRole('status', { name: 'Not verified' }).count(),
+    await page.locator('label[for="account-primary-email"] [role="status"]').filter({ hasText: /^Not verified$/ }).count(),
     1,
     'The unverified status pill must be colocated with Email address'
   );
