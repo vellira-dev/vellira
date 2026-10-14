@@ -484,7 +484,11 @@ describe('Checkbox legacy docs adoption pilot', () => {
         destination.endsWith('generated.md')
       ) {
         injected = true;
-        Reflect.apply(originalWrite, fs, [args[0], 'PARTIAL WRITTEN BY DISK', args[2]]);
+        Reflect.apply(originalWrite, fs, [
+          args[0],
+          'PARTIAL WRITTEN BY DISK',
+          args[2],
+        ]);
         throw new Error('Simulated ENOSPC during staged write');
       }
       Reflect.apply(originalWrite, fs, args);
@@ -506,9 +510,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
     for (const file of test.files) {
       expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
       expect(
-        fs.readdirSync(path.dirname(file.target)).filter((name) =>
-          name.startsWith('.vellira-docs-commit-')
-        )
+        fs
+          .readdirSync(path.dirname(file.target))
+          .filter((name) => name.startsWith('.vellira-docs-commit-'))
       ).toEqual([]);
     }
   });
@@ -520,7 +524,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
       docsRoot: test.docsRoot,
       componentName: 'Checkbox',
     });
-    const native = test.files.find((entry) => entry.platform === 'react-native');
+    const native = test.files.find(
+      (entry) => entry.platform === 'react-native'
+    );
     if (!native) throw new Error('Expected React Native fixture');
 
     const originalRename = fs.renameSync;
@@ -553,9 +559,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
     for (const file of test.files) {
       expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
       expect(
-        fs.readdirSync(path.dirname(file.target)).filter((name) =>
-          name.startsWith('.vellira-docs-commit-')
-        )
+        fs
+          .readdirSync(path.dirname(file.target))
+          .filter((name) => name.startsWith('.vellira-docs-commit-'))
       ).toEqual([]);
     }
   });
@@ -585,9 +591,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
     for (const file of test.files) {
       expect(fs.statSync(file.target).mode & 0o777).toBe(0o640);
       expect(
-        fs.readdirSync(path.dirname(file.target)).filter((name) =>
-          name.startsWith('.vellira-docs-commit-')
-        )
+        fs
+          .readdirSync(path.dirname(file.target))
+          .filter((name) => name.startsWith('.vellira-docs-commit-'))
       ).toEqual([]);
     }
   });
@@ -600,7 +606,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
       componentName: 'Checkbox',
     });
     const react = test.files.find((entry) => entry.platform === 'react');
-    const native = test.files.find((entry) => entry.platform === 'react-native');
+    const native = test.files.find(
+      (entry) => entry.platform === 'react-native'
+    );
     if (!react || !native) throw new Error('Missing platform fixture');
 
     const originalRename = fs.renameSync;
@@ -608,11 +616,19 @@ describe('Checkbox legacy docs adoption pilot', () => {
     let failedRollback = false;
     vi.spyOn(fs, 'renameSync').mockImplementation((...args) => {
       const source = path.basename(String(args[0]));
-      if (!failedNative && source === 'generated.md' && args[1] === native.target) {
+      if (
+        !failedNative &&
+        source === 'generated.md' &&
+        args[1] === native.target
+      ) {
         failedNative = true;
         throw new Error('Simulated native rename EIO');
       }
-      if (!failedRollback && source === 'original.md' && args[1] === react.target) {
+      if (
+        !failedRollback &&
+        source === 'original.md' &&
+        args[1] === react.target
+      ) {
         failedRollback = true;
         throw new Error('Simulated rollback rename EIO');
       }
@@ -629,7 +645,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
           preview.entries.map((entry) => [entry.platform, entry.originalSha256])
         ),
       })
-    ).rejects.toThrow('cannot safely roll back documents edited after this migration');
+    ).rejects.toThrow(
+      'cannot safely roll back documents edited after this migration'
+    );
 
     expect(failedNative).toBe(true);
     expect(failedRollback).toBe(true);
