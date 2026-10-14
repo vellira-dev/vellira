@@ -133,6 +133,8 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('Accordion');
     expect(names).not.toContain('Switch');
     expect(names).not.toContain('FormField');
+    expect(names).not.toContain('Radio');
+    expect(names).not.toContain('RadioGroup');
   });
 });
 
