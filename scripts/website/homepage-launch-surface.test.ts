@@ -10,6 +10,9 @@ const finalCtaSource = read(
   'apps/website/src/sections/home/FinalCta/FinalCta.tsx'
 );
 const proSource = read('apps/website/src/sections/home/Pro/Pro.tsx');
+const proInterestSource = read(
+  'apps/website/src/sections/home/Pro/ProInterestSignup.tsx'
+);
 const quickStartSource = read(
   'apps/website/src/sections/home/QuickStart/QuickStart.tsx'
 );
@@ -36,6 +39,18 @@ describe('homepage launch positioning and navigation', () => {
     expect(heroSource).toContain('Keep it consistent.');
     expect(heroSource).toContain('public quality checks');
     expect(heroSource).toContain('teams and AI create more UI.');
+  });
+
+  it('exposes only voluntary, unpriced Pro interest without enabling checkout', () => {
+    expect(proSource).toContain('<ProInterestSignup />');
+    expect(proSource).toContain('Coming soon');
+    expect(proInterestSource).toContain("purpose: 'pro_launch'");
+    expect(proInterestSource).toContain('consent: true');
+    expect(proInterestSource).toContain("href='/privacy'");
+    expect(proInterestSource).toContain('No pre-order or payment.');
+    expect(proInterestSource).not.toContain('checkout');
+    expect(proInterestSource).not.toContain('localStorage');
+    expect(proInterestSource).not.toContain('sessionStorage');
   });
 
   it('keeps launch CTAs on the canonical Getting Started route', () => {
