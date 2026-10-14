@@ -107,7 +107,7 @@ try {
   );
 
   const emailLabel = panel.locator('label[for="account-primary-email"]');
-  const labelVerification = emailLabel.getByRole('status', { name: 'Verified' });
+  const labelVerification = emailLabel.locator('[role="status"]').filter({ hasText: /^Verified$/ });
   await labelVerification.waitFor();
   assert.equal(
     await labelVerification.count(),
