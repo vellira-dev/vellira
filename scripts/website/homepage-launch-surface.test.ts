@@ -43,6 +43,7 @@ describe('homepage launch positioning and navigation', () => {
 
   it('exposes only voluntary, unpriced Pro interest without enabling checkout', () => {
     expect(proSource).toContain('<ProInterestSignup />');
+    expect(proSource).toContain("NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1'");
     expect(proSource).toContain('Coming soon');
     expect(proInterestSource).toContain("purpose: 'pro_launch'");
     expect(proInterestSource).toContain('consent: true');
