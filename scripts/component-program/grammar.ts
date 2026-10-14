@@ -386,7 +386,7 @@ export const componentGrammarV1: readonly GrammarModuleV1[] = [
       proof(
         'approved-appearance',
         'The chosen default size, image fit and fallback overflow are explicit reviewed decisions shared across platforms; absence of a decision is a compilation blocker.',
-        'visual-token'
+        'tokens-theming'
       ),
       proof(
         'size-and-overflow',
