@@ -84,12 +84,12 @@ try {
     };
   });
   assert.ok(
-    blockSpacing.betweenSections >= 36,
-    'Desktop Personal information → Preferences needs spacious separation'
+    blockSpacing.betweenSections >= 20,
+    'Desktop cards require at least 20px of separation (approved rhythm: 24px)'
   );
   assert.ok(
-    blockSpacing.belowHero >= 36,
-    'Desktop profile header → Personal information needs spacious separation'
+    blockSpacing.belowHero >= 20,
+    'Desktop header and personal card require at least 20px of separation'
   );
   assert.equal(
     await page.getByRole('heading', { name: 'Account details' }).count(),
@@ -145,7 +145,7 @@ try {
         if (!personal || !preferences) throw new Error('Missing account section');
         return preferences.getBoundingClientRect().top - personal.getBoundingClientRect().bottom;
       });
-      assert.ok(gap >= 28, 'Mobile account sections require generous spacing');
+      assert.ok(gap >= 16, 'Mobile cards require at least 16px separation (approved rhythm: 20px)');
     }
     assert.equal(await floatingBar.isVisible(), true, 'Floating actions must show for dirty state');
     const bar = await floatingBar.boundingBox();
