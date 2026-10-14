@@ -295,6 +295,39 @@ describe('Checkbox legacy docs adoption pilot', () => {
     }
   );
 
+  it.each([
+    ['duplicate title', '\ntitle: Forged duplicate'],
+    ['editorial frontmatter comment', '\n# Keep this editorial note'],
+    ['nested redirect metadata', '\nredirects:\n  - /old-checkbox'],
+  ] as const)(
+    'rejects %s rather than discarding YAML on adoption',
+    async (_reason, additionalYaml) => {
+      const test = fixture();
+      const react = test.files.find((file) => file.platform === 'react');
+      if (!react) throw new Error('Missing React source fixture');
+      const changed = react.original.replace(
+        '\n---\n\n# Checkbox',
+        additionalYaml + '\n---\n\n# Checkbox'
+      );
+      expect(changed).not.toBe(react.original);
+      fs.writeFileSync(react.target, changed);
+
+      await expect(
+        adoptLegacyComponentDocs({
+          root,
+          docsRoot: test.docsRoot,
+          componentName: 'Checkbox',
+        })
+      ).rejects.toThrow('unsupported YAML frontmatter');
+
+      for (const file of test.files) {
+        expect(fs.readFileSync(file.target, 'utf8')).toBe(
+          file.platform === 'react' ? changed : file.original
+        );
+      }
+    }
+  );
+
   it('rejects a concurrent source change during staging before writing either page', async () => {
     const test = fixture();
     const preview = await adoptLegacyComponentDocs({
