@@ -361,6 +361,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Verify immutable production candidate before mutation
+        id: premutation
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
         shell: bash
         run: |
@@ -368,13 +369,17 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$CANDIDATE_SHA"
           test "$VELLIRA_BUILD_ID" = "$CANDIDATE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          node apps/website/scripts/cloudflare-production-freshness.mjs apps/website/wrangler.production.jsonc
-          echo "Production mutation remains pinned to deployment-equivalent candidate $CANDIDATE_SHA"
+          node apps/website/scripts/cloudflare-production-supersession.mjs
+          if grep -Fxq 'superseded=true' "$GITHUB_OUTPUT"; then
+            echo "::notice::Production mutation skipped for superseded candidate $CANDIDATE_SHA"
+          else
+            echo "Production mutation remains pinned to deployment-equivalent candidate $CANDIDATE_SHA"
+          fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Record production promotion provenance
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.premutation.outputs.superseded != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -405,7 +410,7 @@ jobs:
           NODE
 
       - name: Deploy production website to Cloudflare Workers
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.premutation.outputs.superseded != 'true'
         id: worker-deploy
         shell: bash
         run: |
