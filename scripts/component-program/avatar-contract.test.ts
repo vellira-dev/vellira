@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { compileProductionProgram } from './cli';
+import { programDigest } from './compile';
 import { mediaProgram, mediaSpec } from './fixtures/programs';
 import type { ComponentProgramDecisionsV1 } from '../../packages/metadata/src/componentProgram';
 
@@ -94,6 +95,25 @@ describe('versioned generic image presentation and Avatar source contract', () =
     );
     expect(visual?.statement).toContain('browser broken-image indicator');
     expect(visual?.statement).toContain('no-source');
+  });
+
+  it('preserves the recorded historical V1 media serialization when no successor module is selected', () => {
+    const baseline = JSON.parse(
+      fs.readFileSync(
+        'scripts/component-program/fixtures/flat-callback-baseline.json',
+        'utf8'
+      )
+    ).media as { fingerprint: string; serialization: string };
+    const legacy = compileProductionProgram(mediaSpec());
+    const successor = compileProductionProgram(genericMediaSource());
+    expect(legacy.disposition).toBe('compiled');
+    expect(legacy.fingerprint).toBe(baseline.fingerprint);
+    expect(programDigest('baseline', legacy)).toBe(baseline.serialization);
+    expect(successor.disposition).toBe('compiled');
+    expect(successor.fingerprint).not.toBe(legacy.fingerprint);
+    expect(successor.program?.grammarFingerprint).not.toBe(
+      legacy.program?.grammarFingerprint
+    );
   });
 
   it('reuses presentation semantics for a different named component, without assuming Avatar identity', () => {
