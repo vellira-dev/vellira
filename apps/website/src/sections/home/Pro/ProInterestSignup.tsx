@@ -98,7 +98,7 @@ export function ProInterestSignup() {
       </p>
       {confirmationRequested ? (
         <p className={styles.interestSuccess} role='status'>
-          Check your inbox to confirm your subscription.
+          Thanks for your interest. If a confirmation email arrives, follow its link to finish signing up.
         </p>
       ) : (
         <form noValidate aria-busy={isSubmitting} onSubmit={onSubmit}>
