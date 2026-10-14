@@ -323,6 +323,11 @@ export const componentGrammarV1: readonly GrammarModuleV1[] = [
         'lifecycle',
         'Source changes reset image lifecycle; stale load/error events cannot replace the current source.'
       ),
+      proof(
+        'stale-request-proof',
+        'Independently prove overlapping image requests and source removal: late success or error from an obsolete request cannot alter the current image or fallback.',
+        'tests'
+      ),
     ],
   }),
   module('image-fallback', ['fallback'], {
@@ -332,7 +337,22 @@ export const componentGrammarV1: readonly GrammarModuleV1[] = [
     obligations: [
       proof(
         'fallback',
-        'Loading and failed source states select the approved deterministic fallback.'
+        'Absent, pending and failed image sources select the same deterministic fallback; only a successful current image request replaces it.'
+      ),
+      proof(
+        'unobscured',
+        'Independently compare stable rendered no-source, pending and confirmed failed states: fallback pixels remain unobscured by a pending image, browser broken-image indicator or native image placeholder.',
+        'tests'
+      ),
+      proof(
+        'loaded-replacement',
+        'A successfully loaded current image is visible and replaces the fallback completely; the pending image loader still receives its load/error events.',
+        'tests'
+      ),
+      proof(
+        'accessible-fallback',
+        'When the root has an accessible image name, the nested source image and fallback must not cause duplicate announcements across source, loading, failure and successful load.',
+        'accessibility'
       ),
     ],
   }),
@@ -346,6 +366,31 @@ export const componentGrammarV1: readonly GrammarModuleV1[] = [
       proof(
         'size-proof',
         'Every approved size resolves to deterministic geometry on each platform.',
+        'tests'
+      ),
+    ],
+  }),
+  // Opt-in only: requires explicit product decisions, never implicit Avatar defaults.
+  module('media-presentation', [], {
+    requires: ['image-source', 'image-fallback', 'size-variants'],
+    parameters: [
+      { id: 'default-size', kind: 'choice', choices: ['sm', 'md', 'lg'] },
+      { id: 'image-fit', kind: 'choice', choices: ['cover', 'contain'] },
+      {
+        id: 'fallback-overflow',
+        kind: 'choice',
+        choices: ['truncate', 'clip'],
+      },
+    ],
+    obligations: [
+      proof(
+        'approved-appearance',
+        'The chosen default size, image fit and fallback overflow are explicit reviewed decisions shared across platforms; absence of a decision is a compilation blocker.',
+        'visual-token'
+      ),
+      proof(
+        'size-and-overflow',
+        'At every approved token-owned size, images respect the selected fit and fallback stays centered in one line with the selected overflow policy without escaping its visible bounds.',
         'tests'
       ),
     ],
