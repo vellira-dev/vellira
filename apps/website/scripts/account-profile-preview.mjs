@@ -41,6 +41,38 @@ try {
   );
   assert.notEqual(appearance.radius, '0px', 'Active must be a pill');
 
+  // Tabs.List already reserves 24px below the tabs. The Account view must
+  // not add Tabs.Content padding AND root padding again.
+  const tabList = page.getByRole('tablist', { name: 'Account settings sections' });
+  const avatar = panel.locator(':scope > header > div:first-child');
+  const header = panel.locator(':scope > header');
+  const layout = await panel.evaluate((root) => {
+    const tabs = document.querySelector('[role="tablist"][aria-label="Account settings sections"]');
+    const card = root.querySelector(':scope > header');
+    const circle = card?.firstElementChild;
+    if (!tabs || !card || !circle) throw new Error('Missing account tabs, card or avatar');
+    const circleStyle = getComputedStyle(circle);
+    return {
+      tabGap: card.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom,
+      circleBorder: circleStyle.borderTopWidth,
+      circleBg: circleStyle.backgroundColor,
+      circleSize: circle.getBoundingClientRect().width,
+      cardBg: getComputedStyle(card).backgroundColor,
+      circleRadius: circleStyle.borderTopLeftRadius,
+    };
+  });
+  assert.ok(
+    layout.tabGap >= 16 && layout.tabGap <= 32,
+    'Tabs → first card gap must be approximately 24px, got ' + layout.tabGap
+  );
+  assert.equal(layout.circleBorder, '1px', 'Avatar circle needs a visible outline');
+  assert.notEqual(layout.circleBg, layout.cardBg, 'Avatar must stand out from the card surface');
+  assert.notEqual(layout.circleRadius, '0px', 'Avatar must remain round');
+  assert.ok(layout.circleSize >= 56, 'Avatar should remain a visible, comfortably sized circle');
+  await tabList.waitFor();
+  await avatar.waitFor();
+  await header.waitFor();
+
   const cards = panel.locator(':scope > header, [data-account-block="personal"], [data-account-block="preferences"]');
   assert.equal(await cards.count(), 3, 'Account should have three distinct surfaces');
   for (const card of await cards.all()) {
@@ -138,6 +170,14 @@ try {
   for (const width of [768, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
     await page.getByRole('heading', { name: 'Ada', exact: true }).waitFor();
+    const tabRect = await tabList.boundingBox();
+    const cardRect = await header.boundingBox();
+    if (!tabRect || !cardRect) throw new Error('Missing mobile tab/card geometry');
+    const mobileGap = cardRect.y - tabRect.y - tabRect.height;
+    assert.ok(
+      mobileGap >= 16 && mobileGap <= 32,
+      'Mobile tabs to profile card gap must be compact, got ' + mobileGap
+    );
     if (width === 390) {
       const gap = await panel.evaluate((root) => {
         const personal = root.querySelector('[data-account-block="personal"]');
