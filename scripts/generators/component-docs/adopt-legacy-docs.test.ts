@@ -267,7 +267,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
         'checkbox.md'
       );
       const page = fs.readFileSync(filePath, 'utf8');
-      const headings = page.split(/\r?\n/).filter((line) => line.startsWith('## '));
+      const headings = page
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('## '));
 
       expect(new Set(headings).size).toBe(headings.length);
       expect(headings).toContain('## When To Use');
@@ -276,13 +278,17 @@ describe('Checkbox legacy docs adoption pilot', () => {
 
       const region = readAuthoredRegion({ content: page, filePath });
       expect(region.valid).toBe(true);
-      if (!region.valid) throw new Error('Expected a valid published authored region');
+      if (!region.valid) {
+        throw new Error('Expected a valid published authored region');
+      }
       expect(region.content).toContain('## Additional Accessibility Details');
       expect(region.content).toContain('## Further Reading');
       if (platform === 'react') {
         expect(region.content).toContain('## Practical Usage Guidance');
         expect(region.content).toContain('export function ProjectSelection()');
-        expect(region.content).toContain('Real Example: Notification Preferences');
+        expect(region.content).toContain(
+          'Real Example: Notification Preferences'
+        );
       } else {
         expect(region.content).toContain('## Controlled And Uncontrolled');
         expect(region.content).toContain('## Indeterminate State');
