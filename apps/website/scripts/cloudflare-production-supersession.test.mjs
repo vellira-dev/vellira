@@ -141,6 +141,10 @@ test('workflow gates postflight, IndexNow, and bridge on verified deployment', a
   assert.ok(notifier.includes('if matched is None:'));
   assert.ok(notifier.includes('A superseded/no-op run must not produce'));
   assert.ok(notifier.includes('raise SystemExit(0)'));
+  const runtimeGuard = notifier.indexOf("if ! grep -Eq '^candidate-sha=");
+  const authorizeDispatch = notifier.indexOf("echo 'eligible=true'");
+  assert.ok(runtimeGuard > 0);
+  assert.ok(authorizeDispatch > runtimeGuard);
   assert.ok(notifier.includes("echo 'eligible=false' >>"));
   assert.ok(notifier.includes("if: steps.source.outputs.eligible == 'true'"));
 });
