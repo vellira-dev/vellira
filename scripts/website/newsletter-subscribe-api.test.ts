@@ -98,6 +98,32 @@ describe('newsletter subscribe API', () => {
     });
   });
 
+  it('keeps Pro collection disabled until the separate provider rollout is approved', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = handler({ subscribe, proInterestEnabled: false });
+    const result = await route(request(JSON.stringify({
+      email: 'person@example.com',
+      purpose: 'pro_launch',
+      consent: true,
+    })));
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(subscribe).not.toHaveBeenCalled();
+
+    const normal = await route(request(JSON.stringify({
+      email: 'person@example.com',
+    })));
+    expect(normal.status).toBe(201);
+    expect(subscribe).toHaveBeenCalledExactlyOnceWith({
+      apiKey: 'test-buttondown-key',
+      email: 'person@example.com',
+      ipAddress: null,
+    });
+  });
+
   it('requires a genuine Pro opt-in before tagging an email address', async () => {
     const subscribe = vi.fn(async () => ({ ok: true }) as const);
     const route = handler({ subscribe, proInterestEnabled: true });
