@@ -146,6 +146,59 @@ export function listWorkspaces() {
   return apiRequest<WorkspacesResponse>('/v1/workspaces');
 }
 
+export type AccountProfile = {
+  fullName: string;
+  displayName: string;
+  locale: 'en' | 'fr';
+  timeZone: string;
+  revision: number;
+};
+
+export type AccountProfileChanges = Omit<AccountProfile, 'revision'>;
+
+function readAccountProfile(payload: unknown): AccountProfile {
+  if (!payload || typeof payload !== 'object' || !('profile' in payload)) {
+    throw new Error('Invalid account profile response');
+  }
+  const value = payload.profile;
+  if (!value || typeof value !== 'object' ||
+    !('fullName' in value) || typeof value.fullName !== 'string' ||
+    !('displayName' in value) || typeof value.displayName !== 'string' ||
+    !('locale' in value) || (value.locale !== 'en' && value.locale !== 'fr') ||
+    !('timeZone' in value) || typeof value.timeZone !== 'string' ||
+    !('revision' in value) || !Number.isSafeInteger(value.revision) ||
+    (value.revision as number) < 1) {
+    throw new Error('Invalid account profile response');
+  }
+  return {
+    fullName: value.fullName,
+    displayName: value.displayName,
+    locale: value.locale,
+    timeZone: value.timeZone,
+    revision: value.revision as number,
+  };
+}
+
+// Profile is independent of auth identity, workspace and subscriptions.
+// Reads are strictly read-only; no lazy bootstrap or optimistic local authority.
+export async function getAccountProfile(signal?: AbortSignal): Promise<AccountProfile> {
+  return readAccountProfile(await apiRequest<unknown>('/v1/profile', { signal }));
+}
+
+export async function saveAccountProfile(
+  profile: AccountProfile
+): Promise<AccountProfile> {
+  const csrfToken = await getCsrfToken();
+  return readAccountProfile(await apiRequest<unknown>('/v1/profile', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(profile),
+  }));
+}
+
 export type WorkspaceSubscription = {
   productKey: string;
   planKey: string;
