@@ -1,6 +1,50 @@
 import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Popover for contextual content anchored near a control, including interactive details.',
+    description:
+      'React and React Native Popover with compound trigger, positioned content, optional title, description, arrow, anchor and explicit close action.',
+    whenToUse: [
+      'Use Popover for contextual details or small interactions that need more than a Tooltip.',
+      'Compose Trigger and Content, adding Title, Description, Arrow or Close where useful.',
+      'Provide an explicit close control when interactive content requires it.',
+      'Use Modal for a focused task that should take precedence over the surrounding page.',
+    ],
+    patterns: [
+      {
+        id: 'compound',
+        title: 'Contextual panel',
+        description:
+          'Compose Popover.Trigger with Popover.Content and descriptive text.',
+      },
+      {
+        id: 'placement',
+        title: 'Anchor and placement',
+        description:
+          'Use side, align and sideOffset to position content; Anchor can provide a separate reference element.',
+      },
+      {
+        id: 'dismissal',
+        title: 'Explicit dismissal',
+        description:
+          'Add Popover.Close for interactive or multistep content and handle open state if needed.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'React Popover supports nonmodal or modal behavior, portal positioning and collision avoidance, with focus and dismissal behavior tied to its trigger.',
+        'Use the title and description for understandable content; ensure keyboard users can dismiss or leave the popover.',
+      ],
+      'react-native': [
+        'React Native Popover exposes trigger, content, arrow, title, description, anchor and close slots with placement guidance.',
+        'Native focus and dismissal differ from web behavior; preserve accessible naming and a clear close action for task content.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<Popover.Trigger asChild>
   <ReactButton>Open popover</ReactButton>
