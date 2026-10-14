@@ -85,7 +85,7 @@ test('workflow gates activation and IndexNow on successful deployment', async ()
   assert.match(source, /id: preflight/);
   assert.match(source, /id: prepublish/);
   assert.match(source, /steps\.prepublish\.outputs\.superseded != 'true'/);
-  assert.match(source, /deployed: \$\{\{ steps\.worker-deploy\.outcome == 'success' \}\}/);
+  assert.match(source, /deployed: .*worker-deploy\.outputs\.superseded == 'false'/);
   assert.match(source, /needs\.deploy\.outputs\.deployed == 'true'/);
   assert.match(source, /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/);
 });
