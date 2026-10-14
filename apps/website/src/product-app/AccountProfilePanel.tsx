@@ -94,7 +94,10 @@ function equalFields(a: AccountProfileChanges, b: AccountProfileChanges) {
   );
 }
 
-function validateName(value: string, limit: number) {
+function validateName(value: string, limit: number, required = false) {
+  if (required && value.trim() === '') {
+    return 'Enter your full name before saving changes.';
+  }
   if (value !== value.trim()) return 'Remove leading or trailing whitespace.';
   if (/[\p{Cc}\p{Cf}\p{Cs}]/u.test(value))
     return 'Remove unsupported control characters.';
@@ -253,8 +256,8 @@ export function AccountProfilePanel({
   const profile = visible.kind === 'ready' ? visible : null;
   const dirty =
     !!profile && !equalFields(profile.draft, profileFields(profile.original));
-  const fullNameError = profile
-    ? validateName(profile.draft.fullName, 120)
+  const fullNameError = profile && dirty
+    ? validateName(profile.draft.fullName, 120, true)
     : undefined;
   const displayNameError = profile
     ? validateName(profile.draft.displayName, 60)
@@ -456,6 +459,7 @@ export function AccountProfilePanel({
               <div className={styles.fieldsGrid}>
                 <Input
                   label='Full name'
+                  required
                   value={profile.draft.fullName}
                   onValueChange={(value) => change('fullName', value)}
                   autoComplete='name'
