@@ -68,6 +68,22 @@ function readLegacyBody(params: {
   }
 
   const frontmatter = match[1].split(/\r?\n/);
+  // The renderer owns exactly these two keys. Reject any other YAML rather
+  // than silently dropping authored routes, redirects or sidebar metadata.
+  const keys = frontmatter.map(
+    (line) => /^([A-Za-z][A-Za-z0-9_-]*):\s+\S/.exec(line)?.[1]
+  );
+  if (
+    keys.length !== 2 ||
+    new Set(keys).size !== 2 ||
+    !keys.includes('title') ||
+    !keys.includes('description')
+  ) {
+    throw new Error(
+      file +
+        ': unsupported YAML frontmatter; only title and description are preserved by legacy docs adoption.'
+    );
+  }
   const titleLine = frontmatter.find((line) => line.startsWith('title: '));
   const descriptionLine = frontmatter.find((line) =>
     line.startsWith('description: ')
@@ -349,12 +365,42 @@ export async function adoptLegacyComponentDocs({
     }
 
     if (write) {
+      // Recheck both files after asynchronous staging and before ANY write.
+      // A digest pinned at the beginning of the run is not sufficient when
+      // another editor can modify the maintained docs while we generate.
+      const assertCurrentSource = (entry: (typeof originals)[number]) => {
+        let current: string;
+        try {
+          current = fs.readFileSync(entry.file, 'utf8');
+        } catch {
+          throw new Error(
+            entry.file +
+              ': source changed since SHA-256 validation; refusing to overwrite a missing or unreadable document.'
+          );
+        }
+        if (sha256(current) !== entry.originalSha256 || current !== entry.source) {
+          throw new Error(
+            entry.file +
+              ': source changed since SHA-256 validation; refusing to overwrite concurrent editorial changes.'
+          );
+        }
+      };
+      for (const entry of originals) {
+        assertCurrentSource(entry);
+      }
+
+      // Track only files this invocation actually wrote. During rollback,
+      // never replace a different revision that another actor wrote later.
+      const written = new Map<string, string>();
       try {
         for (const stage of stages) {
-          fs.writeFileSync(
-            stage.file.replace(stagingRoot, docsRoot),
-            fs.readFileSync(stage.file)
-          );
+          const target = originals.find(
+            (entry) => entry.platform === stage.platform
+          )!;
+          assertCurrentSource(target);
+          const generated = fs.readFileSync(stage.file, 'utf8');
+          fs.writeFileSync(target.file, generated);
+          written.set(target.file, generated);
         }
         const check = await generateComponentDocs({
           root,
@@ -370,8 +416,29 @@ export async function adoptLegacyComponentDocs({
           );
         }
       } catch (error) {
+        const conflicts: string[] = [];
         for (const entry of originals) {
-          fs.writeFileSync(entry.file, entry.source);
+          const ours = written.get(entry.file);
+          if (ours === undefined) continue;
+          try {
+            const current = fs.readFileSync(entry.file, 'utf8');
+            if (current !== ours) {
+              conflicts.push(entry.file);
+              continue;
+            }
+            fs.writeFileSync(entry.file, entry.source);
+          } catch {
+            conflicts.push(entry.file);
+          }
+        }
+        if (conflicts.length > 0) {
+          throw new Error(
+            componentName +
+              ': cannot safely roll back documents edited after this migration wrote them: ' +
+              conflicts.join(', ') +
+              '; original failure: ' +
+              String(error)
+          );
         }
         throw error;
       }
