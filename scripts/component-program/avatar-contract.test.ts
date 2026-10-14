@@ -12,12 +12,20 @@ const avatarSource = JSON.parse(
   fs.readFileSync('scripts/component-production/specs/Avatar.json', 'utf8')
 ) as Source;
 const avatarPlanning = JSON.parse(
-  fs.readFileSync('scripts/component-production/specs/Avatar.planning.json', 'utf8')
+  fs.readFileSync(
+    'scripts/component-production/specs/Avatar.planning.json',
+    'utf8'
+  )
 ) as {
   evidenceId: string;
   risk: string;
   supportedCapabilities: string[];
-  apiMembers: { name: string; type: string; required: boolean; scope: string }[];
+  apiMembers: {
+    name: string;
+    type: string;
+    required: boolean;
+    scope: string;
+  }[];
   obligations: {
     id: string;
     kind: string;
@@ -91,33 +99,68 @@ describe('versioned generic image presentation and Avatar source contract', () =
   it('reuses presentation semantics for a different named component, without assuming Avatar identity', () => {
     const result = compileProductionProgram(genericMediaSource());
     expect(result.disposition).toBe('compiled');
-    expect(result.program?.decisions.modules.some(
-      (item) => item.id === 'media-presentation'
-    )).toBe(true);
+    expect(
+      result.program?.decisions.modules.some(
+        (item) => item.id === 'media-presentation'
+      )
+    ).toBe(true);
     expect(compileProductionProgram(mediaSpec()).disposition).toBe('compiled');
   });
 
   it.each([
-    ['default size', { 'default-size': 'xl', 'image-fit': 'cover', 'fallback-overflow': 'truncate' }],
-    ['image fit', { 'default-size': 'md', 'image-fit': 'stretch', 'fallback-overflow': 'truncate' }],
-    ['fallback overflow', { 'default-size': 'md', 'image-fit': 'cover', 'fallback-overflow': 'wrap' }],
-    ['missing default', { 'image-fit': 'cover', 'fallback-overflow': 'truncate' }],
+    [
+      'default size',
+      {
+        'default-size': 'xl',
+        'image-fit': 'cover',
+        'fallback-overflow': 'truncate',
+      },
+    ],
+    [
+      'image fit',
+      {
+        'default-size': 'md',
+        'image-fit': 'stretch',
+        'fallback-overflow': 'truncate',
+      },
+    ],
+    [
+      'fallback overflow',
+      {
+        'default-size': 'md',
+        'image-fit': 'cover',
+        'fallback-overflow': 'wrap',
+      },
+    ],
+    [
+      'missing default',
+      { 'image-fit': 'cover', 'fallback-overflow': 'truncate' },
+    ],
     ['missing fit', { 'default-size': 'md', 'fallback-overflow': 'truncate' }],
     ['missing overflow', { 'default-size': 'md', 'image-fit': 'cover' }],
-    ['unknown policy', { 'default-size': 'md', 'image-fit': 'cover', 'fallback-overflow': 'truncate', 'invented': 'yes' }],
-  ])('refuses unsafe or guessed media-presentation decision: %s', (_, parameters) => {
-    const source = genericMediaSource();
-    const decisions = source.componentProgram!;
-    source.componentProgram = {
-      ...decisions,
-      modules: decisions.modules.map((item) =>
-        item.id === 'media-presentation'
-          ? { ...item, parameters }
-          : item
-      ),
-    } as ComponentProgramDecisionsV1;
-    expect(compileProductionProgram(source).disposition).not.toBe('compiled');
-  });
+    [
+      'unknown policy',
+      {
+        'default-size': 'md',
+        'image-fit': 'cover',
+        'fallback-overflow': 'truncate',
+        invented: 'yes',
+      },
+    ],
+  ])(
+    'refuses unsafe or guessed media-presentation decision: %s',
+    (_, parameters) => {
+      const source = genericMediaSource();
+      const decisions = source.componentProgram!;
+      source.componentProgram = {
+        ...decisions,
+        modules: decisions.modules.map((item) =>
+          item.id === 'media-presentation' ? { ...item, parameters } : item
+        ),
+      } as ComponentProgramDecisionsV1;
+      expect(compileProductionProgram(source).disposition).not.toBe('compiled');
+    }
+  );
 
   it('rejects media presentation if fallback or size ownership is missing', () => {
     for (const removed of ['image-fallback', 'size-variants', 'image-source']) {
@@ -129,7 +172,9 @@ describe('versioned generic image presentation and Avatar source contract', () =
       };
       const result = compileProductionProgram(source);
       expect(result.disposition).not.toBe('compiled');
-      expect(result.findings.some((item) => item.reason.includes('requires'))).toBe(true);
+      expect(
+        result.findings.some((item) => item.reason.includes('Requires'))
+      ).toBe(true);
     }
   });
 
@@ -146,7 +191,13 @@ describe('versioned generic image presentation and Avatar source contract', () =
         ...decisions,
         modules: decisions.modules.map((item) =>
           item.id === 'media-presentation'
-            ? { ...item, parameters: { ...mediaPresentation.parameters, [key]: replacement } }
+            ? {
+                ...item,
+                parameters: {
+                  ...mediaPresentation.parameters,
+                  [key]: replacement,
+                },
+              }
             : item
         ),
       };
@@ -160,14 +211,25 @@ describe('versioned generic image presentation and Avatar source contract', () =
     expect(avatarPlanning.evidenceId).toBe('avatar-api-program-v2');
     expect(avatarPlanning.risk).toBe('medium');
     expect(avatarPlanning.supportedCapabilities).toEqual(
-      expect.arrayContaining(['image-source', 'fallback', 'accessible-name', 'size-variants'])
+      expect.arrayContaining([
+        'image-source',
+        'fallback',
+        'accessible-name',
+        'size-variants',
+      ])
     );
     expect(avatarPlanning.apiMembers.map((member) => member.name)).toEqual([
-      'name', 'fallback', 'size', 'source', 'source',
+      'name',
+      'fallback',
+      'size',
+      'source',
+      'source',
     ]);
-    expect(avatarPlanning.apiMembers.filter((member) => member.name === 'source').map(
-      (member) => [member.scope, member.type]
-    )).toEqual([
+    expect(
+      avatarPlanning.apiMembers
+        .filter((member) => member.name === 'source')
+        .map((member) => [member.scope, member.type])
+    ).toEqual([
       ['react', 'string'],
       ['react-native', 'string | number'],
     ]);
@@ -189,14 +251,16 @@ describe('versioned generic image presentation and Avatar source contract', () =
     expect(obligations.get('avatar-fallback-overflow')?.consequence).toContain(
       'ellipsis'
     );
-    expect(obligations.get('avatar-accessibility-identity')?.consequence).toContain(
-      'empty alt'
-    );
-    expect(obligations.get('avatar-independent-release-proof')?.consequence).toContain(
-      'Native requires device/OS'
-    );
+    expect(
+      obligations.get('avatar-accessibility-identity')?.consequence
+    ).toContain('empty alt');
+    expect(
+      obligations.get('avatar-independent-release-proof')?.consequence
+    ).toContain('Native requires device/OS');
     for (const obligation of obligations.values()) {
-      expect(avatarPlanning.supportedCapabilities).toContain(obligation.capability);
+      expect(avatarPlanning.supportedCapabilities).toContain(
+        obligation.capability
+      );
       expect(obligation.consequence.length).toBeGreaterThan(40);
       expect(obligation.platformScope.length).toBeGreaterThan(0);
     }
