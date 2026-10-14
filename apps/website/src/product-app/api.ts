@@ -166,8 +166,8 @@ function readAccountProfile(payload: unknown): AccountProfile {
     !('displayName' in value) || typeof value.displayName !== 'string' ||
     !('locale' in value) || (value.locale !== 'en' && value.locale !== 'fr') ||
     !('timeZone' in value) || typeof value.timeZone !== 'string' ||
-    !('revision' in value) || !Number.isSafeInteger(value.revision) ||
-    (value.revision as number) < 1) {
+    !('revision' in value) || typeof value.revision !== 'number' ||
+    !Number.isSafeInteger(value.revision) || value.revision < 1) {
     throw new Error('Invalid account profile response');
   }
   return {
@@ -175,7 +175,7 @@ function readAccountProfile(payload: unknown): AccountProfile {
     displayName: value.displayName,
     locale: value.locale,
     timeZone: value.timeZone,
-    revision: value.revision as number,
+    revision: value.revision,
   };
 }
 
