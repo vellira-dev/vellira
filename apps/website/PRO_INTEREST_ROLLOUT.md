@@ -22,6 +22,9 @@ Before enabling for staging or production:
    and `X-Buttondown-Collision-Behavior: add` request, especially for **new,
    existing, previously unsubscribed and suppressed** subscriber states.
    Confirmation must not be silently bypassed or existing consent overridden.
+   Test specifically that tagging an already-confirmed `regular` subscriber
+   does not downgrade their existing newsletter status to `unactivated`; if
+   that transition occurs, leave the flag OFF until the adapter is revised.
    If the provider changes semantics, keep the flag OFF and fix the adapter
    before accepting a real Pro-interest address.
 3. Confirm the intended newsletter audiences and **tag-based segmentation** in
