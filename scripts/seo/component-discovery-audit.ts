@@ -164,8 +164,7 @@ function discoveryContent(object: ts.ObjectLiteralExpression) {
 
   return {
     status: stringLiteral(property(object, 'status')) as
-      | DiscoveryContentCandidate['status']
-      | undefined,
+      DiscoveryContentCandidate['status'] | undefined,
     summary: stringLiteral(property(object, 'summary')),
     description: stringLiteral(property(object, 'description')),
     whenToUse: stringArray(property(object, 'whenToUse')),
@@ -315,9 +314,7 @@ export function auditComponentDiscoveryCatalog(root = process.cwd()) {
 
   for (const componentName of LEGACY_DISCOVERY_COMPONENTS) {
     if (!directories.includes(componentName)) {
-      findings.push(
-        componentName + ': stale #1136 legacy discovery exemption'
-      );
+      findings.push(componentName + ': stale #1136 legacy discovery exemption');
     }
   }
 
