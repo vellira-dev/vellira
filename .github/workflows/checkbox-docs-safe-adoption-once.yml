@@ -34,8 +34,9 @@ jobs:
       - name: Preview and pin original SHA-256 receipts
         run: |
           pnpm component-docs:adopt Checkbox --dry-run --json
-          echo "REACT_SHA=$(sha256sum apps/docs/src/react/checkbox.md | cut -d ' ' -f1)" >> "$GITHUB_ENV"
-          echo "NATIVE_SHA=$(sha256sum apps/docs/src/react-native/checkbox.md | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+          printf '%s  %s\n' '5b59993e51e73624b93ab8c130e478b70d3e991e18cc44707afa6a60742fb05c' apps/docs/src/react/checkbox.md 'cb0d21d2360695a6f5cd3691c85885d3733fd6a269d1060ac59fd61e7a8694d8' apps/docs/src/react-native/checkbox.md | sha256sum --check
+          echo "REACT_SHA=5b59993e51e73624b93ab8c130e478b70d3e991e18cc44707afa6a60742fb05c" >> "$GITHUB_ENV"
+          echo "NATIVE_SHA=cb0d21d2360695a6f5cd3691c85885d3733fd6a269d1060ac59fd61e7a8694d8" >> "$GITHUB_ENV"
       - name: Adopt both platforms and confirm deterministic rerun
         run: |
           pnpm component-docs:adopt Checkbox --write --json "--expected-react-sha256=$REACT_SHA" "--expected-react-native-sha256=$NATIVE_SHA"
