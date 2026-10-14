@@ -46,7 +46,7 @@ export const componentCatalogPresentation = [
     slug: 'radio',
     name: 'Radio',
     description:
-      'Accessible single-choice selection control with labels, descriptions, and validation states.',
+      'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
     category: 'forms',
     order: 30,
     docs: {
@@ -59,7 +59,7 @@ export const componentCatalogPresentation = [
     slug: 'radio-group',
     name: 'Radio Group',
     description:
-      'Single-choice selection with keyboard navigation and shared group state.',
+      'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
     category: 'forms',
     order: 40,
     docs: {
