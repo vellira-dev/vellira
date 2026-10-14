@@ -32,6 +32,50 @@ const nativeTriggerChildren = `<Tooltip.Trigger
 <Tooltip.Content withArrow>Helpful contextual label.</Tooltip.Content>`;
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Tooltip for brief, supplemental context associated with an interactive trigger.',
+    description:
+      'React and React Native Tooltip with compound Trigger and Content, positioning, optional arrow, disabled state, and platform-specific interaction.',
+    whenToUse: [
+      'Use Tooltip for short, nonessential explanations of a control.',
+      'Never rely on tooltip content as the sole source of instructions or critical feedback.',
+      'Use Tooltip.Trigger and Tooltip.Content together, keeping content concise.',
+      'Choose Popover for interactive or longer content instead of a tooltip.',
+    ],
+    patterns: [
+      {
+        id: 'compound-tooltip',
+        title: 'Trigger and content',
+        description:
+          'Compose a Tooltip.Trigger with associated Tooltip.Content for a small contextual message.',
+      },
+      {
+        id: 'placement',
+        title: 'Placement and arrow',
+        description:
+          'Select a placement and optional withArrow presentation that does not obscure the triggering control.',
+      },
+      {
+        id: 'disabled',
+        title: 'Conditional help',
+        description:
+          'Use disabled to suppress a tooltip when contextual help is not appropriate.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'Web Tooltip can use a composed asChild trigger and hover/focus interactions; controlled open state and delay behavior depend on the React API.',
+        'Provide supplementary information accessible without requiring pointer-only interaction.',
+      ],
+      'react-native': [
+        'React Native Tooltip supports touch-oriented trigger interaction and does not require web hover semantics.',
+        'Keep essential text outside Tooltip, with placement and dismissal appropriate to native accessibility and input.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<Tooltip.Trigger asChild>
   <ReactButton>Hover for details</ReactButton>
