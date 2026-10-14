@@ -1,0 +1,84 @@
+# One-shot, branch-scoped formatting; deletes itself in the resulting commit.
+name: One-shot Pro Interest Prettier
+
+on:
+  push:
+    branches:
+      - feat/pro-interest-optin-20261014
+    paths:
+      - .github/workflows/pro-interest-format-once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pro-interest-format-once
+  cancel-in-progress: false
+
+jobs:
+  format:
+    if: github.ref == 'refs/heads/feat/pro-interest-optin-20261014'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/pro-interest-optin-20261014
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+
+      - name: Install dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Format only reviewed changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write \
+            'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' \
+            'apps/website/src/app/sitemap.ts' \
+            'apps/website/src/blog/ui/BlogNewsletterSignup.tsx' \
+            'apps/website/src/sections/home/Pro/Pro.module.css' \
+            'apps/website/src/sections/home/Pro/Pro.tsx' \
+            'apps/website/src/sections/home/Pro/ProInterestSignup.tsx' \
+            'apps/website/src/server/newsletter/buttondown.ts' \
+            'apps/website/src/server/newsletter/subscribe.ts' \
+            'scripts/website/homepage-launch-surface.test.ts' \
+            'scripts/website/newsletter-subscribe-api.test.ts' \
+            'scripts/website/privacy-page.test.ts' \
+            'apps/website/PRO_INTEREST_ROLLOUT.md'
+
+      - name: Commit exact formatting and self-remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/pro-interest-format-once.yml
+          git add -- \
+            'apps/website/src/app/(marketing)/(site)/privacy/page.tsx' \
+            'apps/website/src/app/sitemap.ts' \
+            'apps/website/src/blog/ui/BlogNewsletterSignup.tsx' \
+            'apps/website/src/sections/home/Pro/Pro.module.css' \
+            'apps/website/src/sections/home/Pro/Pro.tsx' \
+            'apps/website/src/sections/home/Pro/ProInterestSignup.tsx' \
+            'apps/website/src/server/newsletter/buttondown.ts' \
+            'apps/website/src/server/newsletter/subscribe.ts' \
+            'scripts/website/homepage-launch-surface.test.ts' \
+            'scripts/website/newsletter-subscribe-api.test.ts' \
+            'scripts/website/privacy-page.test.ts' \
+            'apps/website/PRO_INTEREST_ROLLOUT.md'
+          git add -u -- .github/workflows/pro-interest-format-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --cached --quiet; then
+            git commit -m "style(pro): format opt-in implementation"
+            git push origin HEAD:refs/heads/feat/pro-interest-optin-20261014
+          fi
