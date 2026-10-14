@@ -6,9 +6,7 @@
  * Newly generated components are intentionally NOT exempt.
  */
 export const LEGACY_DISCOVERY_COMPONENTS = [
-  'Dropdown',
   'Modal',
-  'Popover',
   'Select',
 ] as const;
 
