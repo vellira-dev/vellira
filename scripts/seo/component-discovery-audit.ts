@@ -122,7 +122,10 @@ function canonicalEvidence(
   }
 
   const status = stringLiteral(property(metadata, 'status'));
-  if (!status || !['experimental', 'beta', 'stable', 'deprecated'].includes(status)) {
+  if (
+    !status ||
+    !['experimental', 'beta', 'stable', 'deprecated'].includes(status)
+  ) {
     findings.push('canonical lifecycle status is missing or invalid');
   }
 
@@ -138,14 +141,10 @@ function canonicalEvidence(
     findings.push('canonical platforms are missing or invalid');
   }
 
-  return {
-    stable: status === 'stable',
-    platforms:
-      findings.length === 0
-        ? (platformValues as DiscoveryPlatform[])
-        : [],
-    findings,
-  };
+  const platforms =
+    findings.length === 0 ? (platformValues as DiscoveryPlatform[]) : [];
+
+  return { stable: status === 'stable', platforms, findings };
 }
 
 function discoveryContent(object: ts.ObjectLiteralExpression) {
@@ -174,9 +173,7 @@ function discoveryContent(object: ts.ObjectLiteralExpression) {
     platformNotes: platformNotes
       ? {
           react: stringArray(property(platformNotes, 'react')),
-          'react-native': stringArray(
-            property(platformNotes, 'react-native')
-          ),
+          'react-native': stringArray(property(platformNotes, 'react-native')),
         }
       : undefined,
     missingEvidence: stringArray(property(object, 'missingEvidence')),
@@ -202,10 +199,7 @@ export function auditComponentDiscoverySources(params: {
     return { findings, adopted: false, exempt: false };
   }
 
-  const metadata = metadataObject(
-    pageSource,
-    'defineComponentPageMetadata'
-  );
+  const metadata = metadataObject(pageSource, 'defineComponentPageMetadata');
   if (!metadata) {
     findings.push('website component metadata is not a static declaration');
     return { findings, adopted: false, exempt: false };
@@ -226,9 +220,7 @@ export function auditComponentDiscoverySources(params: {
   }
 
   if (adopted && isLegacy) {
-    findings.push(
-      'discovery was adopted; remove its temporary #1136 exemption'
-    );
+    findings.push('discovery was adopted; remove its temporary #1136 exemption');
   }
 
   // Never downgrade validation when canonical lifecycle/platform evidence

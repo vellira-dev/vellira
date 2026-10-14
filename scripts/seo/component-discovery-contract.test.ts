@@ -8,7 +8,6 @@ import {
   auditComponentDiscoveryCatalog,
   auditComponentDiscoverySources,
 } from './component-discovery-audit';
-
 import {
   getDiscoveryContentFindings,
   LEGACY_DISCOVERY_COMPONENTS,
@@ -134,7 +133,6 @@ describe('Component Discovery Content V1 coverage', () => {
   });
 });
 
-
 const canonicalSource = [
   "export const probeMetadata = defineComponentMetadata({",
   "  name: 'Probe',",
@@ -237,10 +235,7 @@ describe('Discovery source authority and inventory', () => {
         root,
         'apps/website/src/component-catalog/components/Probe'
       );
-      const canonicalRoot = path.join(
-        root,
-        'packages/metadata/src/components'
-      );
+      const canonicalRoot = path.join(root, 'packages/metadata/src/components');
       fs.mkdirSync(componentRoot, { recursive: true });
       fs.mkdirSync(canonicalRoot, { recursive: true });
       fs.writeFileSync(

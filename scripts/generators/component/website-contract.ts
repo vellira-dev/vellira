@@ -73,13 +73,8 @@ export function getPlannedComponentWebsiteArtifacts(
 function checkDiscoveryContentContract(plan: ComponentGenerationPlan) {
   const result = auditComponentDiscoveryFile(plan.root, plan.componentName);
   if (result.findings.length > 0) {
-    throw new Error(
-      [
-        'Component Discovery Content V1 contract failed for ' +
-          plan.componentName + ':',
-        ...result.findings.map((finding) => '  - ' + finding),
-      ].join('\n')
-    );
+    const message = 'Discovery contract invalid for ' + plan.componentName;
+    throw new Error([message, ...result.findings].join('\n'));
   }
 }
 
