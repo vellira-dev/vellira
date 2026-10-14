@@ -8,8 +8,8 @@ import {
   type FormEvent,
 } from 'react';
 
-import { Check, Error, Success, User } from '@vellira-ui/icons';
-import { Button, Input, Select } from '@vellira-ui/react';
+import { Check, Error, User } from '@vellira-ui/icons';
+import { Button, FormField, Input, Select } from '@vellira-ui/react';
 
 import {
   getAccountProfile,
@@ -480,42 +480,71 @@ export function AccountProfilePanel({
               </div>
               <div className={styles.emailField}>
                 <div className={styles.emailWithStatus}>
-                  <Input
-                    label='Email address'
-                    type='email'
-                    value={
-                      visibleEmail.kind === 'ready'
-                        ? visibleEmail.email.address
-                        : ''
-                    }
-                    placeholder={
-                      visibleEmail.kind === 'loading'
-                        ? 'Loading sign-in email…'
-                        : 'Email temporarily unavailable'
-                    }
-                    readOnly
+                  <FormField
+                    id='account-primary-email'
                     size='md'
-                    wrapperClassName={styles.emailInput}
-                  />
-                  {emailVerified !== undefined && (
-                    <span
-                      className={
-                        emailVerified ? styles.verified : styles.unverified
+                    bindControl={false}
+                    className={styles.emailInput}
+                    label={
+                      <span className={styles.emailLabelContents}>
+                        <span id='account-primary-email-label-text'>
+                          Email address
+                        </span>
+                        {emailVerified !== undefined && (
+                          <span
+                            className={[
+                              styles.emailVerificationPill,
+                              emailVerified
+                                ? styles.emailVerificationVerified
+                                : styles.emailVerificationUnverified,
+                            ].join(' ')}
+                            role='status'
+                            aria-live='polite'
+                          >
+                            {emailVerified ? (
+                              <Check size={13} aria-hidden='true' />
+                            ) : (
+                              <Error size={13} aria-hidden='true' />
+                            )}
+                            {emailVerified ? 'Verified' : 'Not verified'}
+                          </span>
+                        )}
+                      </span>
+                    }
+                  >
+                    <Input
+                      aria-labelledby='account-primary-email-label-text'
+                      type='email'
+                      value={
+                        visibleEmail.kind === 'ready'
+                          ? visibleEmail.email.address
+                          : ''
                       }
-                    >
-                      {emailVerified ? (
-                        <Success size={19} aria-hidden='true' />
-                      ) : (
-                        <Error size={19} aria-hidden='true' />
-                      )}
-                      <span>{emailVerified ? 'Verified' : 'Not verified'}</span>
-                    </span>
-                  )}
+                      placeholder={
+                        visibleEmail.kind === 'loading'
+                          ? 'Loading sign-in email…'
+                          : 'Email temporarily unavailable'
+                      }
+                      readOnly
+                      size='md'
+                    />
+                  </FormField>
+                  <Button
+                    type='button'
+                    appearance='outline'
+                    color='neutral'
+                    size='md'
+                    className={styles.emailUpdateAction}
+                    disabled
+                    aria-describedby='account-email-change-help'
+                  >
+                    Update email
+                  </Button>
                 </div>
-                <p className={styles.emailHelp}>
+                <p className={styles.emailHelp} id='account-email-change-help'>
                   {localAccountPreview
-                    ? 'Example address for design review only — not your actual email.'
-                    : 'Your sign-in address is read-only. Changing it requires a separate verification flow.'}
+                    ? 'Example address for design review only — not your actual email. Email updates are not available in preview.'
+                    : 'Updating the sign-in email will be available after secure identity re-verification is enabled.'}
                 </p>
                 {emailVerified === false && me && (
                   <EmailVerificationResend
