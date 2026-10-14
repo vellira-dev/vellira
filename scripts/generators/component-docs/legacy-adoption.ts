@@ -8,7 +8,11 @@ import type { ComponentPlatform } from '@vellira-ui/metadata';
 import { componentDocsContracts } from '../../../apps/docs/src/component-docs';
 import { componentMetadata } from '../../../packages/metadata/src/components';
 
-import { readAuthoredRegion } from './authored-region';
+import {
+  authoredRegionEndMarker,
+  authoredRegionStartMarker,
+  readAuthoredRegion,
+} from './authored-region';
 import { generatedComponentDocsHeader } from './render';
 
 export type DocsAdoptionState =
@@ -20,6 +24,98 @@ export type DocsAdoptionInspection = {
   bytes?: number;
   errors: string[];
 };
+
+/**
+ * Only the renderer's top-level Markdown structure proves document ownership.
+ * Marker substrings may appear in handwritten fenced examples.
+ */
+function inspectGeneratedDocStructure(content: string): string[] {
+  const lines = content.split(/\r?\n/);
+  const errors: string[] = [];
+  const headerOccurrences = content.split(generatedComponentDocsHeader).length - 1;
+  const headerIndex = lines.indexOf(generatedComponentDocsHeader);
+  const frontmatterEnd =
+    lines[0] === '---'
+      ? lines.findIndex((line, index) => index > 0 && line === '---')
+      : -1;
+
+  if (
+    headerOccurrences !== 1 ||
+    headerIndex < 0 ||
+    frontmatterEnd < 1 ||
+    headerIndex <= frontmatterEnd ||
+    !lines.slice(frontmatterEnd + 1, headerIndex).every((line) => !line.trim())
+  ) {
+    return [
+      'generated docs ownership header must be unique and immediately follow YAML frontmatter',
+    ];
+  }
+
+  const frontmatter = lines.slice(1, frontmatterEnd);
+  if (
+    !frontmatter.some((line) => /^title\s*:/.test(line)) ||
+    !frontmatter.some((line) => /^description\s*:/.test(line))
+  ) {
+    errors.push('generated docs frontmatter must include title and description');
+  }
+
+  const outsideFence: boolean[] = [];
+  let fence: { character: string; length: number } | undefined;
+
+  for (const line of lines) {
+    outsideFence.push(fence === undefined);
+    const match = /^ {0,3}(\x60{3,}|~{3,})(.*)$/.exec(line);
+    if (!match) {
+      continue;
+    }
+
+    const character = match[1][0];
+    if (!fence) {
+      fence = { character, length: match[1].length };
+    } else if (
+      fence.character === character &&
+      match[1].length >= fence.length &&
+      match[2].trim().length === 0
+    ) {
+      fence = undefined;
+    }
+  }
+
+  const startIndex = lines.indexOf(authoredRegionStartMarker);
+  const endIndex = lines.indexOf(authoredRegionEndMarker);
+
+  if (
+    startIndex <= headerIndex ||
+    endIndex <= startIndex ||
+    !outsideFence[startIndex] ||
+    !outsideFence[endIndex]
+  ) {
+    errors.push('authored region markers must be standalone outside code fences');
+  }
+
+  const headingIndex = lines.findIndex(
+    (line, index) =>
+      index > headerIndex && line.startsWith('# ') && outsideFence[index]
+  );
+  const importIndex = lines.findIndex(
+    (line, index) =>
+      index > headingIndex && line === '## Import' && outsideFence[index]
+  );
+
+  if (
+    headingIndex <= headerIndex ||
+    importIndex <= headingIndex ||
+    startIndex <= importIndex
+  ) {
+    errors.push('generated docs headings must precede the authored region');
+  }
+
+  if (endIndex >= 0 && lines.slice(endIndex + 1).some((line) => line.trim())) {
+    errors.push('authored region end marker must terminate the document');
+  }
+
+  return errors;
+}
 
 export function inspectComponentDocAuthority(params: {
   content: string | undefined;
@@ -66,6 +162,16 @@ export function inspectComponentDocAuthority(params: {
   }
 
   if (region.found) {
+    const structuralFindings = inspectGeneratedDocStructure(content);
+
+    if (structuralFindings.length > 0) {
+      return {
+        state: 'untrusted-markers',
+        ...evidence,
+        errors: structuralFindings.map((finding) => filePath + ': ' + finding),
+      };
+    }
+
     return { state: 'managed', ...evidence, errors: [] };
   }
 
