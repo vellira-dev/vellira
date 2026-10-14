@@ -201,7 +201,7 @@ test('production approval waits outside the serialized deploy mutex', () => {
     /node apps\/website\/scripts\/cloudflare-deploy\.mjs wrangler\.production\.jsonc/
   );
   assert.ok(
-    deploy.lastIndexOf('cloudflare-production-freshness.mjs') <
+    deploy.lastIndexOf('cloudflare-production-supersession.mjs') <
       deploy.lastIndexOf('cloudflare-deploy.mjs wrangler.production.jsonc')
   );
 });
