@@ -139,7 +139,11 @@ jobs:
           # Python exits 0 for a valid but non-matching active build. That is
           # a confirmed no-op, not approval to dispatch. Require the exact
           # source-run-bound candidate receipt before allowing handoff.
-          if ! grep -Eq '^candidate-sha=[0-9a-f]{40}
+          if ! grep -Eq '^candidate-sha=[0-9a-f]{40}$' "$GITHUB_OUTPUT"; then
+            echo '::notice::No matching active production build; skipping dispatch.'
+            exit 0
+          fi
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
           echo 'Verified live deployment identity; no publication authorization was granted.'
 
       - name: Create short-lived repository-scoped private dispatch token
