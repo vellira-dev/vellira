@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { withRemoteArchive } from './cloudflare-archive-client.mjs';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
 import { populateLocalCache } from './cloudflare-populate-local-cache.mjs';
-import { assertFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
+import { assertFreshProductionCandidate, ProductionCandidateSupersededError } from './cloudflare-production-freshness.mjs';
 import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
 import {
   archiveAssets,
@@ -35,6 +36,7 @@ function run(command, args, env = childProcessEnv) {
   assert.equal(result.status, 0, `${command} ${args.join(' ')} failed`);
 }
 
+async function deploy() {
 // Populate OpenNext's read-only route assets before auditing the final graph.
 // Activation uses Wrangler directly so no further OpenNext mutation can occur
 // after the archive/closure gate. Experimental skew mapping is intentionally absent.
@@ -97,3 +99,26 @@ await waitForRuntimeStability({
   base,
   expectedBuildId: identity.buildId,
 });
+
+}
+
+try {
+  await deploy();
+  if (process.env.GITHUB_OUTPUT) {
+    await appendFile(process.env.GITHUB_OUTPUT, 'superseded=false\n');
+  }
+} catch (error) {
+  if (!(error instanceof ProductionCandidateSupersededError) || process.env.CANDIDATE_SOURCE !== 'staging') {
+    throw error;
+  }
+  // A stale staging candidate must not activate the Worker. All other errors fail closed.
+  console.log('::notice::' + error.message);
+  if (process.env.GITHUB_OUTPUT) {
+    await appendFile(process.env.GITHUB_OUTPUT, 'superseded=true\n');
+  }
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    await appendFile(process.env.GITHUB_STEP_SUMMARY,
+      '### SUPERSEDED — production safely skipped\n\n' + error.message +
+      '\n\nNo Cloudflare Worker activation occurred. A newer staging-qualified candidate is required.\n');
+  }
+}
