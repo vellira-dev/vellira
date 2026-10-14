@@ -6,7 +6,6 @@
  * Newly generated components are intentionally NOT exempt.
  */
 export const LEGACY_DISCOVERY_COMPONENTS = [
-  'Accordion',
   'Dropdown',
   'FormField',
   'Modal',
