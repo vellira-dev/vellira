@@ -157,6 +157,16 @@
   color: var(--status-success-fg);
 }
 
+.emailRetry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--status-error-fg);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
 .emailHelp,
 .preferencesHelp {
   margin: 0;
