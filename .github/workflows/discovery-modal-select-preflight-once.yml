@@ -1,0 +1,47 @@
+name: One-shot Modal Select Discovery preflight
+on:
+  push:
+    branches:
+      - feat/discovery-modal-select-final-20261014
+permissions:
+  contents: write
+jobs:
+  preflight:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate, format and check all Discovery pages
+        run: |
+          pnpm create:component-page Modal --force
+          pnpm create:component-page Select --force
+          pnpm exec prettier apps/website/src/component-catalog/components/Modal/metadata.ts apps/website/src/component-catalog/components/Select/metadata.ts apps/website/src/component-catalog/registry/componentPages.ts apps/website/src/component-catalog/registry/componentPresentation.ts scripts/seo/component-discovery-contract.ts scripts/seo/component-discovery-contract.test.ts --write
+          pnpm format:check
+          pnpm component-pages:check
+          pnpm check:component-discovery
+          pnpm check:seo-meta-descriptions
+      - name: Assert bounded changes, self-remove, commit and push
+        run: |
+          rm .github/workflows/discovery-modal-select-preflight-once.yml
+          while IFS= read -r file; do
+            case "$file" in
+              apps/website/src/component-catalog/components/Modal/metadata.ts|apps/website/src/component-catalog/components/Select/metadata.ts|apps/website/src/component-catalog/registry/componentPages.ts|apps/website/src/component-catalog/registry/componentPresentation.ts|scripts/seo/component-discovery-contract.ts|scripts/seo/component-discovery-contract.test.ts|.github/workflows/discovery-modal-select-preflight-once.yml) ;;
+              *) echo "::error::Unexpected generated change: $file"; exit 1 ;;
+            esac
+          done < <(git diff --name-only)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git diff --cached --quiet || git commit -m "chore(discovery): canonical generator, formatting and gate proof"
+          git push origin HEAD:feat/discovery-modal-select-final-20261014
