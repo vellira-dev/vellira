@@ -45,11 +45,22 @@ try {
     1,
     'Verified must be paired with the canonical check-in-circle icon'
   );
-  await page.getByText('Time zone (device)', { exact: true }).waitFor();
-  const detectedTimeZone = await page.evaluate(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone
+  await page.getByRole('combobox', { name: 'Time zone' }).waitFor();
+  assert.equal(
+    await page.getByRole('heading', { name: 'Account details' }).count(),
+    0,
+    'Account details must not duplicate profile state'
   );
-  await page.getByText(detectedTimeZone, { exact: true }).waitFor();
+  assert.equal(
+    await page.getByText('Account status', { exact: true }).count(),
+    0,
+    'Account status is already shown in the green Active pill'
+  );
+  assert.equal(
+    await page.getByText('Time zone (device)', { exact: true }).count(),
+    0,
+    'Time zone is editable in Preferences, not duplicated in Account details'
+  );
 
   assert.equal(
     await page.getByRole('tablist', { name: 'Account settings sections' }).count(),

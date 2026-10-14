@@ -1,24 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useSyncExternalStore } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import {
-  Contrast,
-  Error,
-  Moon,
-  Success,
-  Sun,
-  System,
-  User,
-} from '@vellira-ui/icons';
+import { Contrast, Moon, Sun, System } from '@vellira-ui/icons';
 import { Button, Radio, RadioGroup, Tabs } from '@vellira-ui/react';
 
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 import { useAppSession } from './AppSession';
 import { BillingPanel } from './BillingSettings';
-import { EmailVerificationResend } from './EmailVerificationResend';
+import { AccountProfilePanel } from './AccountProfilePanel';
 
 import styles from './AccountSettings.module.css';
 
@@ -41,87 +33,6 @@ const themeOptions = [
   { value: 'system', label: 'System', icon: System },
   { value: 'high-contrast', label: 'High contrast', icon: Contrast },
 ] as const;
-
-function subscribeToDeviceTimeZone() {
-  // Timezone is a read-only browser fact until a profile preference API exists.
-  return () => {};
-}
-
-function readDeviceTimeZone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unavailable';
-}
-
-function readServerTimeZone(): string | null {
-  // Keep initial HTML and hydration equal; browser data is resolved afterward.
-  return null;
-}
-
-function AccountPanel() {
-  const { me } = useAppSession();
-  const deviceTimeZone = useSyncExternalStore(
-    subscribeToDeviceTimeZone,
-    readDeviceTimeZone,
-    readServerTimeZone
-  );
-
-  return (
-    <section className={styles.panelContent} aria-labelledby='account-state'>
-      <div className={styles.identityRow}>
-        <div className={styles.identityIcon} aria-hidden='true'>
-          <User size={24} />
-        </div>
-        <div>
-          <h2 id='account-state' className={styles.sectionTitle}>
-            Your account
-          </h2>
-          <p className={styles.description}>
-            Your current Vellira account information.
-          </p>
-        </div>
-      </div>
-
-      <dl className={styles.detailList}>
-        <div className={styles.detailRow}>
-          <dt>Account status</dt>
-          <dd>{me?.status ?? 'Unavailable'}</dd>
-        </div>
-        <div className={styles.detailRow}>
-          <dt>Email verification</dt>
-          <dd className={styles.emailVerificationActions}>
-            {me ? (
-              <span
-                className={[
-                  styles.verificationStatus,
-                  me.emailVerified
-                    ? styles.verificationVerified
-                    : styles.verificationUnverified,
-                ].join(' ')}
-              >
-                {me.emailVerified ? (
-                  <Success size={18} aria-hidden='true' />
-                ) : (
-                  <Error size={18} aria-hidden='true' />
-                )}
-                <span>{me.emailVerified ? 'Verified' : 'Not verified'}</span>
-              </span>
-            ) : (
-              'Unavailable'
-            )}
-            {me && !me.emailVerified && <EmailVerificationResend />}
-          </dd>
-        </div>
-        <div className={styles.detailRow}>
-          <dt>Time zone (device)</dt>
-          <dd>{deviceTimeZone ?? 'Detecting…'}</dd>
-        </div>
-      </dl>
-      <p className={styles.helper}>
-        This time zone is detected from your device, not saved to your Vellira
-        account. Workspace details are managed separately under Workspace.
-      </p>
-    </section>
-  );
-}
 
 function SecurityPanel() {
   return (
@@ -236,6 +147,11 @@ export function SettingsGeneral({
   section?: SettingsSection;
 }) {
   const router = useRouter();
+  const [accountDirty, setAccountDirty] = useState(false);
+  const handleAccountDirty = useCallback(
+    (dirty: boolean) => setAccountDirty(dirty),
+    []
+  );
   const { workspace } = useAppSession();
   const isOwner = workspace?.membership.role === 'owner';
   const billingDenied = section === 'billing' && !isOwner;
@@ -263,6 +179,16 @@ export function SettingsGeneral({
           if (!isSettingsSection(next) || (next === 'billing' && !isOwner)) {
             return;
           }
+          if (
+            activeSection === 'account' &&
+            next !== 'account' &&
+            accountDirty &&
+            !window.confirm(
+              'Discard unsaved profile changes and leave Account?'
+            )
+          ) {
+            return;
+          }
           router.push(
             next === 'billing'
               ? '/app/settings/billing'
@@ -281,8 +207,8 @@ export function SettingsGeneral({
           <Tabs.Indicator />
         </Tabs.List>
 
-        <Tabs.Content value='account'>
-          <AccountPanel />
+        <Tabs.Content value='account' className={styles.accountTabPanel}>
+          <AccountProfilePanel onDirtyChange={handleAccountDirty} />
         </Tabs.Content>
         <Tabs.Content value='security'>
           <SecurityPanel />

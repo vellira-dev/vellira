@@ -1,0 +1,373 @@
+.root {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-6);
+  padding-top: 0;
+  padding-bottom: var(--space-6);
+}
+
+/* All surfaces follow semantic theme tokens: white on light themes, the
+   corresponding elevated surface on dark and high-contrast themes. */
+.accountCard {
+  min-width: 0;
+  padding: var(--space-8);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-xl);
+}
+
+.identityRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-4);
+
+  /* Card padding, not a section divider, separates the account header. */
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  color: var(--text-brand);
+  font-size: 20px;
+  font-weight: var(--font-weight-semibold);
+  background: color-mix(
+    in srgb,
+    var(--text-brand) 13%,
+    var(--surface-elevated)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--text-brand) 25%, var(--border-muted));
+  border-radius: var(--radius-full);
+  place-items: center;
+}
+
+.identityCopy {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.activePill {
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  align-items: center;
+  padding: 6px var(--space-3);
+  color: var(--status-success-fg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+  background: var(--status-success-bg);
+  border: 0;
+  border-radius: var(--radius-full);
+  gap: var(--space-2);
+}
+
+.activePill svg {
+  flex: none;
+}
+
+.editForm {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-6);
+}
+
+.profileBlock {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-6);
+}
+
+.sectionHeading {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sectionHeading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.sectionHeading p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.fieldsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.fieldsGrid > * {
+  min-width: 0;
+}
+
+.timeZoneControl {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  justify-items: start;
+}
+
+.emailField {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.emailWithStatus {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.emailInput {
+  min-width: 0;
+}
+
+.emailWithStatus .verified,
+.emailWithStatus .unverified {
+  margin-bottom: 12px;
+  justify-self: end;
+}
+
+.resendVerification {
+  justify-self: start;
+}
+
+.emailRetry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--status-error-fg);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.emailHelp,
+.preferencesHelp {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.preferencesHelp {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+/* The action bar is part of the form, but sticks to the visible viewport
+   only while there are pending edits. It never appears in clean state. */
+.stickyActions {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.actionButtons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.actionButtons > * {
+  flex: none;
+}
+
+.saveFeedback {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
+.unsavedText,
+.mutedNote {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.mutedNote {
+  margin: 0;
+}
+
+.successText,
+.errorText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.successText {
+  color: var(--status-success-fg);
+}
+
+.errorText {
+  color: var(--status-error-fg);
+}
+
+.feedback,
+.errorBlock {
+  display: grid;
+  padding: var(--space-4);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  justify-items: start;
+  gap: var(--space-4);
+}
+
+.errorBlock p {
+  margin: 0;
+}
+
+.loadingState {
+  margin: 0;
+  min-height: 210px;
+  padding-block: var(--space-5);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.verified,
+.unverified {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.verified {
+  color: var(--status-success-fg);
+}
+
+.unverified {
+  color: var(--status-error-fg);
+}
+
+@media (width <= 650px) {
+  .root {
+    padding-top: 0;
+    padding-bottom: var(--space-5);
+    gap: var(--space-5);
+  }
+
+  .accountCard {
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+  }
+
+  .editForm {
+    gap: var(--space-5);
+  }
+
+  .profileBlock {
+    gap: var(--space-5);
+  }
+
+  .identityRow {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .avatar {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+  }
+
+  .activePill {
+    margin-left: 0;
+  }
+
+  .fieldsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .emailWithStatus {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: var(--space-2);
+  }
+
+  .emailWithStatus .verified,
+  .emailWithStatus .unverified {
+    justify-self: start;
+    margin-bottom: 0;
+  }
+
+  .stickyActions {
+    bottom: max(var(--space-3), env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .actionButtons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+    gap: var(--space-3);
+  }
+
+  .actionButtons > * {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    scroll-behavior: auto;
+  }
+}

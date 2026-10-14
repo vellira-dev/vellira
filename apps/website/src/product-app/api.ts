@@ -146,6 +146,108 @@ export function listWorkspaces() {
   return apiRequest<WorkspacesResponse>('/v1/workspaces');
 }
 
+export type AccountProfile = {
+  fullName: string;
+  displayName: string;
+  locale: 'en' | 'fr';
+  timeZone: string;
+  revision: number;
+};
+
+export type AccountProfileChanges = Omit<AccountProfile, 'revision'>;
+
+export type CurrentAccountEmail = {
+  address: string;
+  verified: boolean;
+};
+
+function readCurrentAccountEmail(payload: unknown): CurrentAccountEmail {
+  if (!payload || typeof payload !== 'object' || !('email' in payload)) {
+    throw new Error('Invalid current email response');
+  }
+  const value = payload.email;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('address' in value) ||
+    typeof value.address !== 'string' ||
+    value.address.length === 0 ||
+    !('verified' in value) ||
+    typeof value.verified !== 'boolean'
+  ) {
+    throw new Error('Invalid current email response');
+  }
+  return { address: value.address, verified: value.verified };
+}
+
+// Authentication is the only authority for this read-only sign-in address.
+// Never derive it from browser memory, login inputs, or the editable profile.
+export async function getCurrentAccountEmail(
+  signal?: AbortSignal
+): Promise<CurrentAccountEmail> {
+  return readCurrentAccountEmail(
+    await apiRequest<unknown>('/v1/auth/email/current', { signal })
+  );
+}
+
+function readAccountProfile(payload: unknown): AccountProfile {
+  if (!payload || typeof payload !== 'object' || !('profile' in payload)) {
+    throw new Error('Invalid account profile response');
+  }
+  const value = payload.profile;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('fullName' in value) ||
+    typeof value.fullName !== 'string' ||
+    !('displayName' in value) ||
+    typeof value.displayName !== 'string' ||
+    !('locale' in value) ||
+    (value.locale !== 'en' && value.locale !== 'fr') ||
+    !('timeZone' in value) ||
+    typeof value.timeZone !== 'string' ||
+    !('revision' in value) ||
+    typeof value.revision !== 'number' ||
+    !Number.isSafeInteger(value.revision) ||
+    value.revision < 1
+  ) {
+    throw new Error('Invalid account profile response');
+  }
+  return {
+    fullName: value.fullName,
+    displayName: value.displayName,
+    locale: value.locale,
+    timeZone: value.timeZone,
+    revision: value.revision,
+  };
+}
+
+// Profile is independent of auth identity, workspace and subscriptions.
+// Reads are strictly read-only; no lazy bootstrap or optimistic local authority.
+export async function getAccountProfile(
+  signal?: AbortSignal
+): Promise<AccountProfile> {
+  return readAccountProfile(
+    await apiRequest<unknown>('/v1/profile', { signal })
+  );
+}
+
+export async function saveAccountProfile(
+  profile: AccountProfile
+): Promise<AccountProfile> {
+  const csrfToken = await getCsrfToken();
+  return readAccountProfile(
+    await apiRequest<unknown>('/v1/profile', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify(profile),
+    })
+  );
+}
+
 export type WorkspaceSubscription = {
   productKey: string;
   planKey: string;
