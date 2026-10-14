@@ -71,7 +71,7 @@ settings, row selection, and mixed selection summaries.
   :height="520"
 />
 
-## When To Use
+## Practical Usage Guidance
 
 Use Checkbox when each option can be turned on or off without requiring another
 option to turn off. Use RadioGroup when exactly one option must be selected.
@@ -273,7 +273,7 @@ export function NotificationPreferences() {
 }
 ```
 
-## Accessibility
+## Additional Accessibility Details
 
 - Keep the label close to the control and make it descriptive.
 - Use `description` for durable context, not hover-only help.
@@ -282,7 +282,7 @@ export function NotificationPreferences() {
 - Do not use indeterminate as a third submitted value. It is a visual and
   accessibility state for partial selection.
 
-## See Also
+## Further Reading
 
 - [RadioGroup](/react/radio-group) for mutually exclusive choices.
 - [FormField](/react/form-field) for custom field layout.
