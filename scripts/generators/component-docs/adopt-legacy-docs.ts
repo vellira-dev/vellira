@@ -392,19 +392,53 @@ export async function adoptLegacyComponentDocs({
         assertCurrentSource(entry);
       }
 
-      // Track only files this invocation actually wrote. During rollback,
-      // never replace a different revision that another actor wrote later.
+      // Stage both revisions on the SAME filesystem as each destination.
+      // Writing a candidate (or rollback backup) must never truncate a
+      // maintained document, even if a disk or I/O error interrupts the write.
+      const tempDirectories: string[] = [];
       const written = new Map<string, string>();
+      const prepared: {
+        target: (typeof originals)[number];
+        candidatePath: string;
+        rollbackPath: string;
+        generated: string;
+      }[] = [];
       try {
         for (const stage of stages) {
           const target = originals.find(
             (entry) => entry.platform === stage.platform
           )!;
           assertCurrentSource(target);
+          const directory = fs.mkdtempSync(
+            path.join(path.dirname(target.file), '.vellira-docs-commit-')
+          );
+          tempDirectories.push(directory);
+
+          const candidatePath = path.join(directory, 'generated.md');
+          const rollbackPath = path.join(directory, 'original.md');
           const generated = fs.readFileSync(stage.file, 'utf8');
-          fs.writeFileSync(target.file, generated);
-          written.set(target.file, generated);
+          const mode = fs.statSync(target.file).mode;
+          fs.writeFileSync(candidatePath, generated, { flag: 'wx', mode });
+          fs.writeFileSync(rollbackPath, target.source, { flag: 'wx', mode });
+          fs.chmodSync(candidatePath, mode);
+          fs.chmodSync(rollbackPath, mode);
+          prepared.push({ target, candidatePath, rollbackPath, generated });
         }
+
+        // No maintained file changes until BOTH candidate and original
+        // backup files have been fully written and checked.
+        for (const entry of originals) {
+          assertCurrentSource(entry);
+        }
+        for (const item of prepared) {
+          assertCurrentSource(item.target);
+          // Atomic replacement: temporary candidate and destination share
+          // their parent filesystem. A failed partial temporary write leaves
+          // the existing Markdown untouched.
+          fs.renameSync(item.candidatePath, item.target.file);
+          written.set(item.target.file, item.generated);
+        }
+
         const check = await generateComponentDocs({
           root,
           docsRoot,
@@ -420,30 +454,36 @@ export async function adoptLegacyComponentDocs({
         }
       } catch (error) {
         const conflicts: string[] = [];
-        for (const entry of originals) {
-          const ours = written.get(entry.file);
+        for (const item of [...prepared].reverse()) {
+          const ours = written.get(item.target.file);
           if (ours === undefined) continue;
           try {
-            const current = fs.readFileSync(entry.file, 'utf8');
+            const current = fs.readFileSync(item.target.file, 'utf8');
             if (current !== ours) {
-              conflicts.push(entry.file);
+              conflicts.push(item.target.file);
               continue;
             }
-            fs.writeFileSync(entry.file, entry.source);
+            // Rollback is also atomic: backup was fully staged beside the
+            // destination before any document was replaced.
+            fs.renameSync(item.rollbackPath, item.target.file);
           } catch {
-            conflicts.push(entry.file);
+            conflicts.push(item.target.file);
           }
         }
         if (conflicts.length > 0) {
           throw new Error(
             componentName +
-              ': cannot safely roll back documents edited after this migration wrote them: ' +
+              ': cannot safely roll back documents edited after this migration wrote them or whose atomic restoration failed: ' +
               conflicts.join(', ') +
               '; original failure: ' +
               String(error)
           );
         }
         throw error;
+      } finally {
+        for (const directory of tempDirectories.reverse()) {
+          fs.rmSync(directory, { recursive: true, force: true });
+        }
       }
     } else {
       for (const entry of originals) {
