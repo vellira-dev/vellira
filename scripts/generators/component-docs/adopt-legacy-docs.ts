@@ -179,22 +179,18 @@ export async function adoptLegacyComponentDocs({
         originalSha256: entry.originalSha256,
         generatedSha256: entry.originalSha256,
         preservedAuthorSha256: sha256(
-          readAuthoredRegion({
-            content: entry.source,
-            filePath: entry.file,
-          }).valid
-            ? readAuthoredRegion({
-                content: entry.source,
-                filePath: entry.file,
-              }).content
-            : ''
+          entry.source.slice(
+            entry.source.indexOf(authoredRegionStartMarker) +
+              authoredRegionStartMarker.length,
+            entry.source.indexOf(authoredRegionEndMarker)
+          ).trim()
         ),
         preservedAuthorBytes: Buffer.byteLength(
           entry.source.slice(
             entry.source.indexOf(authoredRegionStartMarker) +
               authoredRegionStartMarker.length,
             entry.source.indexOf(authoredRegionEndMarker)
-          ),
+          ).trim(),
           'utf8'
         ),
       })),
