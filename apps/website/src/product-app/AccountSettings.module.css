@@ -29,6 +29,12 @@
   min-width: 0;
 }
 
+/* Tabs.List already provides a 24px bottom gap. Remove only the Account
+   panel's extra top padding; leave other Settings panels unchanged. */
+.tabs .accountTabPanel {
+  padding-top: 0;
+}
+
 .panelContent {
   display: grid;
   gap: var(--space-6);
