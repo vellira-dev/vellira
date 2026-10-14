@@ -28,8 +28,7 @@ export default defineComponentPageMetadata({
       {
         id: 'controlled-selection',
         title: 'Controlled selection',
-        description:
-          'Manage the selected value with value and onValueChange.',
+        description: 'Manage the selected value with value and onValueChange.',
       },
       {
         id: 'panel-mounting',
