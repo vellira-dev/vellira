@@ -6,6 +6,7 @@ import {
 } from '../../apps/website/src/server/newsletter/subscribe';
 import {
   BUTTONDOWN_SUBSCRIBERS_URL,
+  PRO_INTEREST_TAG,
   newsletterErrors,
   subscribeWithButtondown,
   type NewsletterSubscribeResult,
@@ -30,6 +31,7 @@ function handler(options?: {
     apiKey: string | undefined;
     email: string;
     ipAddress: string | null;
+    purpose?: 'pro_launch';
   }) => Promise<NewsletterSubscribeResult>;
 }) {
   return createNewsletterSubscribeHandler({
@@ -91,6 +93,50 @@ describe('newsletter subscribe API', () => {
       apiKey: 'test-buttondown-key',
       email: 'person@example.com',
       ipAddress: '203.0.113.12',
+    });
+  });
+
+  it('requires a genuine Pro opt-in before tagging an email address', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = handler({ subscribe });
+
+    for (const consent of [undefined, false, 'true', 1]) {
+      const response = await route(
+        request(JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'pro_launch',
+          ...(consent === undefined ? {} : { consent }),
+        }))
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        ok: false,
+        code: 'consent_required',
+      });
+    }
+    expect(subscribe).not.toHaveBeenCalled();
+
+    const invalidPurpose = await route(request(JSON.stringify({
+      email: 'person@example.com',
+      purpose: 'override',
+      consent: true,
+    })));
+    expect(invalidPurpose.status).toBe(400);
+    expect(subscribe).not.toHaveBeenCalled();
+
+    const confirmedRequest = await route(
+      request(JSON.stringify({
+        email: 'person@example.com',
+        purpose: 'pro_launch',
+        consent: true,
+      }))
+    );
+    expect(confirmedRequest.status).toBe(201);
+    expect(subscribe).toHaveBeenCalledExactlyOnceWith({
+      apiKey: 'test-buttondown-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      purpose: 'pro_launch',
     });
   });
 
@@ -159,6 +205,52 @@ describe('Buttondown provider boundary', () => {
     });
     expect(String(init?.body)).not.toContain('"type"');
     expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
+  });
+
+  it('keeps Pro updates distinct, requires confirmation, and never bypasses provider suppression', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(async () => new Response('{}', { status: 201 }));
+    const result = await subscribeWithButtondown({
+      apiKey: 'server-only-test-key',
+      email: 'pro@example.com',
+      ipAddress: null,
+      purpose: 'pro_launch',
+      fetcher,
+    });
+
+    expect(result).toEqual({ ok: true });
+    const init = fetcher.mock.calls[0]?.[1];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      email_address: 'pro@example.com',
+      tags: [PRO_INTEREST_TAG],
+      type: 'unactivated',
+    });
+    expect(init?.headers).toMatchObject({
+      'X-Buttondown-Collision-Behavior': 'add',
+    });
+    expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
+
+    await expect(
+      subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'existing@example.com',
+        ipAddress: null,
+        purpose: 'pro_launch',
+        fetcher: async () => new Response('{}', { status: 200 }),
+      })
+    ).resolves.toEqual({ ok: true });
+
+    await expect(
+      subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'suppressed@example.com',
+        ipAddress: null,
+        purpose: 'pro_launch',
+        fetcher: async () => new Response(
+          JSON.stringify({ code: 'subscriber_suppressed' }),
+          { status: 400 }
+        ),
+      })
+    ).resolves.toMatchObject({ ok: false, code: 'already_subscribed' });
   });
 
   it.each([
