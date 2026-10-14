@@ -517,6 +517,57 @@ describe('Checkbox legacy docs adoption pilot', () => {
     }
   });
 
+  it('never touches maintained docs when the second rollback backup is partially written', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const originalWrite = fs.writeFileSync;
+    let backupWrites = 0;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
+      const destination = String(args[0]);
+      if (
+        destination.includes('.vellira-docs-commit-') &&
+        destination.endsWith('original.md')
+      ) {
+        backupWrites += 1;
+        if (backupWrites === 2) {
+          Reflect.apply(originalWrite, fs, [
+            args[0],
+            'PARTIAL SECOND BACKUP',
+            args[2],
+          ]);
+          throw new Error('Simulated ENOSPC during second backup');
+        }
+      }
+      Reflect.apply(originalWrite, fs, args);
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('Simulated ENOSPC during second backup');
+
+    expect(backupWrites).toBe(2);
+    for (const file of test.files) {
+      expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
+      expect(
+        fs
+          .readdirSync(path.dirname(file.target))
+          .filter((name) => name.startsWith('.vellira-docs-commit-'))
+      ).toEqual([]);
+    }
+  });
+
   it('restores the first page atomically when the second replacement fails', async () => {
     const test = fixture();
     const preview = await adoptLegacyComponentDocs({
