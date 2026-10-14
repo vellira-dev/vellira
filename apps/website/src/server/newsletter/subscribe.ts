@@ -15,7 +15,11 @@ type NewsletterSubscribeDependencies = {
   getApiKey: () => Promise<string | undefined>;
   subscribe: typeof subscribeWithButtondown;
 };
-type NewsletterRequestBody = { email?: unknown };
+type NewsletterRequestBody = {
+  email?: unknown;
+  purpose?: unknown;
+  consent?: unknown;
+};
 
 function response(
   payload: NewsletterSubscribeResult,
@@ -25,6 +29,17 @@ function response(
     status,
     headers: { 'Cache-Control': 'no-store' },
   });
+}
+
+function consentRequiredResponse() {
+  return response(
+    {
+      ok: false,
+      code: 'consent_required',
+      message: newsletterErrors.consent_required,
+    },
+    400
+  );
 }
 
 function invalidEmailResponse() {
@@ -42,6 +57,7 @@ function statusForResult(result: NewsletterSubscribeResult): number {
   if (result.ok) return 201;
   switch (result.code) {
     case 'invalid_email':
+    case 'consent_required':
       return 400;
     case 'already_subscribed':
       return 409;
@@ -141,6 +157,10 @@ export function createNewsletterSubscribeHandler(
     const body = await readJsonBody(request);
     const email = normalizeEmail(body?.email);
     if (!email) return invalidEmailResponse();
+    if (body?.purpose !== undefined && body.purpose !== 'pro_launch')
+      return invalidEmailResponse();
+    if (body.purpose === 'pro_launch' && body.consent !== true)
+      return consentRequiredResponse();
     let apiKey: string | undefined;
     try {
       apiKey = await dependencies.getApiKey();
@@ -158,6 +178,7 @@ export function createNewsletterSubscribeHandler(
       apiKey,
       email,
       ipAddress: resolveSubscriberIp(request.headers),
+      ...(body.purpose === 'pro_launch' ? { purpose: 'pro_launch' as const } : {}),
     });
     return response(result, statusForResult(result));
   };
