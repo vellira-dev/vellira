@@ -102,11 +102,32 @@ async function verifyLinkStates(page, link, theme) {
       assert.notEqual(normal.normal, normal.hover, `${theme}: distinct hover color required`);
       assert.notEqual(normal.hover, normal.pressed, `${theme}: distinct pressed color required`);
       if (reducedMotion === 'reduce') await expect(link).toHaveCSS('transition-duration', '0s');
+      // A layout shift can relocate the pointer after hover() resolves.
+      // Sample :hover and its computed styles atomically, re-hovering only
+      // during this bounded Playwright poll. A real styling regression still
+      // fails because all four assertions must hold in the same DOM state.
+      await expect
+        .poll(
+          async () => {
+            await link.hover();
+            const state = await linkState(link);
+            return {
+              hovered: state.hovered,
+              color: state.color,
+              underline: state.underline,
+              thickness: state.thickness,
+            };
+          },
+          { message: `${theme}: prose link must retain accessible hover styling` }
+        )
+        .toEqual({
+          hovered: true,
+          color: normal.hover,
+          underline: 'underline',
+          thickness: '1px',
+        });
+      // Re-anchor the pointer immediately before testing the pressed state.
       await link.hover();
-      await expect.poll(async () => (await linkState(link)).hovered, { message: `${theme}: pointer must remain over the prose link` }).toBe(true);
-      await expect(link).toHaveCSS('color', normal.hover);
-      await expect(link).toHaveCSS('text-decoration-line', 'underline');
-      await expect(link).toHaveCSS('text-decoration-thickness', '1px');
       await page.mouse.down();
       try {
         await expect(link).toHaveCSS('color', normal.pressed);
