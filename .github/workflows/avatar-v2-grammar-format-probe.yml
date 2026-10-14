@@ -1,0 +1,47 @@
+name: Temporary Avatar V2 Grammar Formatter Evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/avatar-v2-grammar-format-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Compute canonical grammar formatting without source mutation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.22.2'
+      - name: Install pinned Prettier without scripts
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Produce byte-exact Prettier diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec prettier scripts/component-program/grammar.ts --write
+          pnpm exec prettier scripts/component-program/grammar.ts --check
+          git diff --binary -- scripts/component-program/grammar.ts \
+            > avatar-v2-grammar-format.patch
+          test -s avatar-v2-grammar-format.patch
+      - name: Upload formatter-only diff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: avatar-v2-grammar-format-${{ github.run_id }}
+          path: avatar-v2-grammar-format.patch
+          retention-days: 1
+          if-no-files-found: error
