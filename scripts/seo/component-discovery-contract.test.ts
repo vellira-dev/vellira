@@ -139,6 +139,9 @@ describe('Component Discovery Content V1 coverage', () => {
     expect(names).not.toContain('Tooltip');
     expect(names).not.toContain('Dropdown');
     expect(names).not.toContain('Popover');
+    expect(names).not.toContain('Modal');
+    expect(names).not.toContain('Select');
+    expect(names).toEqual([]);
   });
 });
 
@@ -318,13 +321,10 @@ describe('Discovery source authority and inventory', () => {
   });
 
   it('reports missing canonical authority for migrated and legacy components', () => {
-    const cases = [
-      { componentName: 'Dropdown', exempt: false },
-      ...LEGACY_DISCOVERY_COMPONENTS.map((componentName) => ({
-        componentName,
-        exempt: true,
-      })),
-    ];
+    const cases = ['Dropdown', 'Modal', 'Select'].map((componentName) => ({
+      componentName,
+      exempt: false,
+    }));
 
     for (const { componentName, exempt } of cases) {
       const result = auditComponentDiscoverySources({

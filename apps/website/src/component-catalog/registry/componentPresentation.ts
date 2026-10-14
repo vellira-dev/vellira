@@ -72,7 +72,7 @@ export const componentCatalogPresentation = [
     slug: 'select',
     name: 'Select',
     description:
-      'Accessible React and React Native selection with Vellira Select: single and multiple values, search, groups, rich items, and virtualization.',
+      'React and React Native Select for single or multiple form values, searchable grouped options, validation, clearable state and platform-specific presentation.',
     category: 'forms',
     order: 50,
     docs: {
@@ -126,7 +126,7 @@ export const componentCatalogPresentation = [
     slug: 'modal',
     name: 'Modal',
     description:
-      'Accessible modal dialogs with focus management, dismissal, and compound structure.',
+      'React and React Native Modal for focused dialogs, confirmations and forms with compound structure, controlled state, accessible dismissal and focus restoration.',
     category: 'overlays',
     order: 20,
     docs: {
