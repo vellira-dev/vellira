@@ -72,13 +72,9 @@
   flex: none;
 }
 
-.editForm,
-.accountDetails {
+.editForm {
   display: grid;
   min-width: 0;
-}
-
-.editForm {
   gap: 40px;
 }
 
@@ -86,12 +82,6 @@
   display: grid;
   min-width: 0;
   gap: var(--space-5);
-}
-
-.accountDetails {
-  gap: var(--space-6);
-  border-top: 1px solid var(--border-muted);
-  padding-top: 40px;
 }
 
 .sectionHeading {
@@ -152,9 +142,14 @@
   min-width: 0;
 }
 
-.emailWithStatus > svg {
-  margin-bottom: 14px;
-  color: var(--status-success-fg);
+.emailWithStatus .verified,
+.emailWithStatus .unverified {
+  margin-bottom: 12px;
+  justify-self: end;
+}
+
+.resendVerification {
+  justify-self: start;
 }
 
 .emailRetry {
@@ -239,42 +234,6 @@
   font-size: var(--font-size-sm);
 }
 
-.detailsList {
-  display: grid;
-  margin: 0;
-  border-top: 1px solid var(--border-muted);
-}
-
-.detailRow {
-  display: grid;
-  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
-  align-items: start;
-  padding-block: var(--space-4);
-  border-bottom: 1px solid var(--border-muted);
-  gap: var(--space-4);
-}
-
-.detailRow dt {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.detailRow dd {
-  min-width: 0;
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  overflow-wrap: anywhere;
-}
-
-.verification {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3) var(--space-5);
-}
-
 .verified,
 .unverified {
   display: inline-flex;
@@ -289,12 +248,6 @@
 
 .unverified {
   color: var(--status-error-fg);
-}
-
-.secondaryDetail {
-  color: var(--text-secondary) !important;
-  font-weight: var(--font-weight-regular) !important;
-  line-height: 1.6;
 }
 
 @media (width <= 650px) {
@@ -327,17 +280,20 @@
     margin-left: 0;
   }
 
-  .fieldsGrid,
-  .detailRow {
+  .fieldsGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .detailRow {
+  .emailWithStatus {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
     gap: var(--space-2);
   }
 
-  .accountDetails {
-    padding-top: var(--space-8);
+  .emailWithStatus .verified,
+  .emailWithStatus .unverified {
+    justify-self: start;
+    margin-bottom: 0;
   }
 
   .formActions {
