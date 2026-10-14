@@ -13,10 +13,12 @@ import { Button, Input, Select } from '@vellira-ui/react';
 
 import {
   getAccountProfile,
+  getCurrentAccountEmail,
   saveAccountProfile,
   VelliraApiError,
   type AccountProfile,
   type AccountProfileChanges,
+  type CurrentAccountEmail,
 } from './api';
 import { localAccountPreview, useAppSession } from './AppSession';
 import { EmailVerificationResend } from './EmailVerificationResend';
@@ -34,6 +36,10 @@ type ReadyProfile = {
 };
 type ProfileState =
   { kind: 'loading' | 'error'; userId: string; attempt: number } | ReadyProfile;
+
+type CurrentEmailState =
+  | { kind: 'loading' | 'error'; userId: string; revision: number }
+  | { kind: 'ready'; userId: string; revision: number; email: CurrentAccountEmail };
 
 const previewProfile: AccountProfile = {
   fullName: 'Alex Morgan',
@@ -113,6 +119,12 @@ export function AccountProfilePanel({
     readServerTimeZone
   );
   const [attempt, setAttempt] = useState(0);
+  const [emailRevision, setEmailRevision] = useState(0);
+  const [currentEmail, setCurrentEmail] = useState<CurrentEmailState>({
+    kind: 'loading',
+    userId: '',
+    revision: 0,
+  });
   const [stored, setStored] = useState<ProfileState>({
     kind: 'loading',
     userId: '',
@@ -166,6 +178,37 @@ export function AccountProfilePanel({
     return () => abort.abort();
   }, [userId, status, attempt]);
 
+  // The email projection is auth-owned and independently optional: an
+  // unavailable email read must not block profile editing or saving.
+  useEffect(() => {
+    if (status !== 'ready' || !userId) return;
+
+    if (localAccountPreview) {
+      setCurrentEmail({
+        kind: 'ready',
+        userId,
+        revision: emailRevision,
+        email: { address: 'alex@example.com', verified: true },
+      });
+      return;
+    }
+
+    const abort = new AbortController();
+    void getCurrentAccountEmail(abort.signal)
+      .then((email) => {
+        if (!abort.signal.aborted) {
+          setCurrentEmail({ kind: 'ready', userId, revision: emailRevision, email });
+        }
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) {
+          setCurrentEmail({ kind: 'error', userId, revision: emailRevision });
+        }
+      });
+
+    return () => abort.abort();
+  }, [status, userId, emailRevision]);
+
   // A change of authenticated principal must never paint the previous user's
   // cached profile even for one frame. Do not reset it via a passive effect.
   const visible: ProfileState =
@@ -175,6 +218,12 @@ export function AccountProfilePanel({
     stored.attempt === attempt
       ? stored
       : { kind: 'loading', userId, attempt };
+
+  const visibleEmail: CurrentEmailState =
+    status === 'ready' && !!userId &&
+    currentEmail.userId === userId && currentEmail.revision === emailRevision
+      ? currentEmail
+      : { kind: 'loading', userId, revision: emailRevision };
 
   const profile = visible.kind === 'ready' ? visible : null;
   const dirty =
@@ -386,21 +435,39 @@ export function AccountProfilePanel({
                 <Input
                   label='Email address'
                   type='email'
-                  value={localAccountPreview ? 'alex@example.com' : ''}
-                  placeholder='Not available in this version'
+                  value={visibleEmail.kind === 'ready' ? visibleEmail.email.address : ''}
+                  placeholder={
+                    visibleEmail.kind === 'loading'
+                      ? 'Loading sign-in email…'
+                      : 'Email temporarily unavailable'
+                  }
                   readOnly
                   size='md'
                   wrapperClassName={styles.emailInput}
                 />
-                {me?.emailVerified && (
+                {visibleEmail.kind === 'ready' && visibleEmail.email.verified && (
                   <Success size={19} aria-label='Email verified' />
                 )}
               </div>
               <p className={styles.emailHelp}>
                 {localAccountPreview
                   ? 'Example address for design review only — not your actual email.'
-                  : 'Your sign-in email is managed by authentication. Read-only display will be connected separately.'}
+                  : 'Your sign-in address is read-only. Changing it requires a separate verification flow.'}
               </p>
+              {visibleEmail.kind === 'error' && !localAccountPreview && (
+                <div className={styles.emailRetry} role='status'>
+                  <span>Could not load your sign-in email.</span>
+                  <Button
+                    appearance='link'
+                    color='neutral'
+                    size='sm'
+                    type='button'
+                    onClick={() => setEmailRevision((previous) => previous + 1)}
+                  >
+                    Retry email
+                  </Button>
+                </div>
+              )}
             </div>
             </div>
 
@@ -561,13 +628,7 @@ export function AccountProfilePanel({
             <dt>Time zone (device)</dt>
             <dd>{deviceTimeZone ?? 'Detecting…'}</dd>
           </div>
-          <div className={styles.detailRow}>
-            <dt>Sign-in email</dt>
-            <dd className={styles.secondaryDetail}>
-              Email address is managed by Vellira authentication; profile data
-              does not expose it.
-            </dd>
-          </div>
+
         </dl>
       </div>
     </section>
