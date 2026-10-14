@@ -27,6 +27,7 @@ function request(
 
 function handler(options?: {
   apiKey?: string | undefined;
+  proInterestEnabled?: boolean;
   subscribe?: (input: {
     apiKey: string | undefined;
     email: string;
@@ -37,6 +38,7 @@ function handler(options?: {
   return createNewsletterSubscribeHandler({
     getApiKey: async () =>
       options && 'apiKey' in options ? options.apiKey : 'test-buttondown-key',
+    proInterestEnabled: options?.proInterestEnabled ?? false,
     subscribe:
       options?.subscribe ??
       (async () => {
@@ -98,7 +100,7 @@ describe('newsletter subscribe API', () => {
 
   it('requires a genuine Pro opt-in before tagging an email address', async () => {
     const subscribe = vi.fn(async () => ({ ok: true }) as const);
-    const route = handler({ subscribe });
+    const route = handler({ subscribe, proInterestEnabled: true });
 
     for (const consent of [undefined, false, 'true', 1]) {
       const response = await route(
