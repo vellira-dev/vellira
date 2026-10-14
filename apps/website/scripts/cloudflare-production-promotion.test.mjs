@@ -189,10 +189,7 @@ test('production approval waits outside the serialized deploy mutex', () => {
   assert.match(deploy, /ref: \$\{\{ env\.CANDIDATE_SHA \}\}/);
   assert.match(deploy, /Verify exact production candidate checkout/);
   assert.match(deploy, /Verify immutable production candidate before mutation/);
-  assert.match(
-    deploy,
-    /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/
-  );
+  assert.ok(deploy.includes('cloudflare-production-supersession.mjs'));
   assert.doesNotMatch(deploy, /test "\$current_main" = "\$CANDIDATE_SHA"/);
   assert.match(deploy, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(deploy, /Deploy production website to Cloudflare Workers/);
