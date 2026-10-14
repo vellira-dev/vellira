@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -160,4 +161,44 @@ test('terminal supersession uses phase-specific fail-closed orchestration', asyn
   assert.ok(deploy.includes("outcome.status === 'superseded'"));
   assert.ok(deploy.includes('recordDeploymentOutcome({'));
   assert.ok(deploy.includes("'.open-next/vellira-build.json'"));
+});
+
+test('notifier shell and embedded Python remain syntactically executable', async () => {
+  const notifier = await readFile(
+    path.resolve(
+      import.meta.dirname,
+      '../../../.github/workflows/content-production-distribution-notify.yml'
+    ),
+    'utf8'
+  );
+  const start = notifier.indexOf(
+    '      - name: Recheck completed source run and exact successful deployment'
+  );
+  const end = notifier.indexOf(
+    '      - name: Create short-lived repository-scoped private dispatch token',
+    start
+  );
+  assert.ok(start >= 0 && end > start);
+  const step = notifier.slice(start, end);
+  const marker = '        run: |\n';
+  const beginning = step.indexOf(marker);
+  assert.ok(beginning >= 0);
+  const script = step
+    .slice(beginning + marker.length)
+    .split('\n')
+    .map((line) => (line.startsWith('          ') ? line.slice(10) : line))
+    .join('\n');
+  const shell = spawnSync('bash', ['-n'], { input: script, encoding: 'utf8' });
+  assert.equal(shell.status, 0, shell.stderr);
+
+  const pythonStart = script.indexOf("python - <<'PY'\n");
+  const pythonEnd = script.indexOf('\nPY\n', pythonStart);
+  assert.ok(pythonStart >= 0 && pythonEnd > pythonStart);
+  const python = script.slice(pythonStart + "python - <<'PY'\n".length, pythonEnd);
+  const syntax = spawnSync(
+    'python3',
+    ['-c', 'import ast, sys; ast.parse(sys.stdin.read())'],
+    { input: python, encoding: 'utf8' }
+  );
+  assert.equal(syntax.status, 0, syntax.stderr);
 });
