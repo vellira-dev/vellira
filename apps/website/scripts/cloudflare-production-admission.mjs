@@ -1,7 +1,10 @@
 import { appendFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-import { assessFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
+import {
+  assessFreshProductionCandidate,
+  ProductionCandidateSupersededError,
+} from './cloudflare-production-freshness.mjs';
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PROMOTION_TITLE_PATTERN = /^Promote staging ([0-9a-f]{40})$/;
@@ -139,6 +142,41 @@ async function writeAdmissionOutput(githubOutput, plan) {
   );
 }
 
+// Stale candidates are a normal scheduling result. Keep API failures,
+// malformed comparisons, and ambiguous freshness evidence as hard failures.
+export async function assessProductionAdmissionEligibility({
+  assess = assessFreshProductionCandidate,
+  candidateSha,
+  repository,
+  mainSha,
+  githubToken,
+}) {
+  try {
+    return await assess({
+      configPath: 'wrangler.production.jsonc',
+      candidateSource: 'staging',
+      candidateSha,
+      repository,
+      mainSha,
+      githubToken,
+    });
+  } catch (error) {
+    if (!(error instanceof ProductionCandidateSupersededError)) {
+      throw error;
+    }
+    return {
+      checked: true,
+      mode: 'staging',
+      mainSha,
+      deploymentEquivalent: false,
+      changedPaths: [],
+      relevantPaths: error.relevantPaths ?? [],
+      superseded: true,
+      reason: error.message,
+    };
+  }
+}
+
 export async function admitCurrentProductionPromotion({
   currentRunId = process.env.CURRENT_PRODUCTION_RUN_ID
     ? Number(process.env.CURRENT_PRODUCTION_RUN_ID)
@@ -176,9 +214,7 @@ export async function admitCurrentProductionPromotion({
     );
   }
 
-  const freshness = await assessFreshProductionCandidate({
-    configPath: 'wrangler.production.jsonc',
-    candidateSource: 'staging',
+  const freshness = await assessProductionAdmissionEligibility({
     candidateSha: expectedCandidateSha,
     repository,
     mainSha,
@@ -192,6 +228,18 @@ export async function admitCurrentProductionPromotion({
   });
 
   await writeAdmissionOutput(githubOutput, plan);
+  if (freshness.superseded) {
+    console.log('::notice::SUPERSEDED — ' + freshness.reason);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await appendFile(
+        process.env.GITHUB_STEP_SUMMARY,
+        '### Production: SUPERSEDED at admission\\n\\n' +
+          'Candidate: \`' + expectedCandidateSha + '\`\\n\\n' +
+          'Current main: \`' + mainSha + '\`\\n\\n' +
+          'Admission denied safely; no production approval or Worker deployment.\\n'
+      );
+    }
+  }
   console.log(
     JSON.stringify({
       currentMainSha: mainSha,
