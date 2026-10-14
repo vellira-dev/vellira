@@ -1,0 +1,47 @@
+# Temporary exact-PR canonical formatter, removed after check-in.
+name: Account Profile Dedup Formatter
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/account-profile-format-1655.yml'
+      - 'apps/website/src/product-app/AccountProfilePanel.tsx'
+
+permissions:
+  contents: write
+
+jobs:
+  canonical:
+    if: ${{ github.repository == 'vellira-dev/vellira' && github.event.pull_request.number == 1655 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/account-profile-spacious-v1-20261014' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.22.2'
+      - run: pnpm install --frozen-lockfile
+      - name: Canonical Prettier and browser lint
+        run: |
+          pnpm exec prettier --write apps/website/src/product-app/AccountProfilePanel.tsx
+          pnpm exec prettier --check apps/website/src/product-app/AccountProfilePanel.tsx
+          pnpm exec eslint apps/website/scripts/account-profile-preview.mjs apps/website/scripts/account-profile-settings.mjs apps/website/scripts/account-settings-tabs.mjs apps/website/scripts/account-verification-tab-refresh.mjs apps/website/scripts/account-email-verification-preview.mjs
+          git diff --check
+      - name: Commit only formatted code to this PR
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "vellira-dev/vellira"
+          test "${{ github.event.pull_request.number }}" = "1655"
+          test "${{ github.event.pull_request.head.ref }}" = "feat/account-profile-spacious-v1-20261014"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- apps/website/src/product-app/AccountProfilePanel.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m 'style(account): canonicalize deduplicated account editor'
+            git push origin HEAD:refs/heads/feat/account-profile-spacious-v1-20261014
+          fi
