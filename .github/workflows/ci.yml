@@ -821,6 +821,8 @@ jobs:
             pnpm --dir apps/website exec node scripts/account-catalog-session-boundary.mjs
           WEBSITE_URL=http://127.0.0.1:3110 \
             pnpm --dir apps/website exec node scripts/account-billing-session-boundary.mjs
+          WEBSITE_URL=http://127.0.0.1:3110 \
+            pnpm --dir apps/website exec node scripts/account-profile-settings.mjs
           cleanup
           server_pid=""
 
