@@ -18,6 +18,7 @@ import { componentMetadata } from '../../../packages/metadata/src/components';
 
 import { readComponentApiSections } from './api';
 import { readAuthoredRegion } from './authored-region';
+import { inspectComponentDocAuthority } from './legacy-adoption';
 import { renderComponentDocPage } from './render';
 
 export type ComponentDocsGenerationResult = {
@@ -70,6 +71,59 @@ export async function generateComponentDocs(
   const changedFiles: string[] = [];
   const checkedFiles: string[] = [];
   const errors: string[] = [];
+
+  // Check all selected platform files before writing any docs. Neither
+  // --force nor --check may silently replace unmarked editorial guidance.
+  const preflightErrors: string[] = [];
+
+  for (const selectedComponentName of selectedComponentNames) {
+    const selectedMetadata = metadataByName.get(selectedComponentName);
+
+    if (!selectedMetadata) {
+      continue;
+    }
+
+    for (const platform of supportedPlatforms) {
+      if (!selectedMetadata.platforms.includes(platform)) {
+        continue;
+      }
+
+      const relativeFilePath = path.join(
+        'apps',
+        'docs',
+        'src',
+        docsDirectoryByPlatform[platform],
+        slugifyComponentName(selectedComponentName) + '.md'
+      );
+      const filePath = path.join(
+        docsRoot,
+        docsDirectoryByPlatform[platform],
+        slugifyComponentName(selectedComponentName) + '.md'
+      );
+      const content = fs.existsSync(filePath)
+        ? fs.readFileSync(filePath, 'utf8')
+        : undefined;
+      const inspection = inspectComponentDocAuthority({
+        content,
+        filePath: relativeFilePath,
+      });
+
+      if (inspection.state === 'legacy') {
+        preflightErrors.push(
+          relativeFilePath +
+            ' is an unmarked legacy page. Refusing destructive overwrite' +
+            (force ? ' even with --force' : '') +
+            '. Use component-docs:adoption-audit and preserve existing guidance in a reviewed migration.'
+        );
+      } else {
+        preflightErrors.push(...inspection.errors);
+      }
+    }
+  }
+
+  if (preflightErrors.length > 0) {
+    throw new Error(preflightErrors.sort().join('\n'));
+  }
 
   for (const selectedComponentName of selectedComponentNames) {
     const componentMetadata = metadataByName.get(selectedComponentName);
@@ -138,13 +192,6 @@ export async function generateComponentDocs(
 
       if (authoredRegion && !authoredRegion.valid) {
         errors.push(...authoredRegion.errors);
-        continue;
-      }
-
-      if (currentContent && !authoredRegion?.found && !force) {
-        errors.push(
-          `${relativeFilePath} exists but does not contain an authored region. Use --force for initial adoption.`
-        );
         continue;
       }
 
@@ -240,7 +287,7 @@ Usage:
 
 Options:
   --check    Check generated component docs without writing files
-  --force    Allow initial adoption over existing unmarked docs pages
+  --force    Re-render managed docs only; never overwrite unmarked legacy pages
   --help     Show this help message
   -h         Alias for --help
 
