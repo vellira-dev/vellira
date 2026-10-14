@@ -12,11 +12,7 @@ import { readAuthoredRegion } from './authored-region';
 import { generatedComponentDocsHeader } from './render';
 
 export type DocsAdoptionState =
-  | 'missing'
-  | 'legacy'
-  | 'managed'
-  | 'invalid-markers'
-  | 'untrusted-markers';
+  'missing' | 'legacy' | 'managed' | 'invalid-markers' | 'untrusted-markers';
 
 export type DocsAdoptionInspection = {
   state: DocsAdoptionState;
@@ -52,7 +48,8 @@ export function inspectComponentDocAuthority(params: {
       state: 'untrusted-markers',
       ...evidence,
       errors: [
-        filePath + ' has authored markers but no generated docs ownership header.',
+        filePath +
+          ' has authored markers but no generated docs ownership header.',
       ],
     };
   }
@@ -62,7 +59,8 @@ export function inspectComponentDocAuthority(params: {
       state: 'invalid-markers',
       ...evidence,
       errors: [
-        filePath + ' has a generated docs header but no authored region markers.',
+        filePath +
+          ' has a generated docs header but no authored region markers.',
       ],
     };
   }
@@ -75,7 +73,8 @@ export function inspectComponentDocAuthority(params: {
     state: 'legacy',
     ...evidence,
     errors: [
-      filePath + ' contains legacy authored documentation without an ownership region.',
+      filePath +
+        ' contains legacy authored documentation without an ownership region.'
     ],
   };
 }

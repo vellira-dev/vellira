@@ -74,9 +74,9 @@ describe('read-only component docs adoption audit', () => {
         state: 'legacy',
         hasDocsContract: false,
       });
-      expect(
-        rows.find((row) => row.platform === 'react-native')?.state
-      ).toBe('missing');
+      expect(rows.find((row) => row.platform === 'react-native')?.state).toBe(
+        'missing'
+      );
       expect(fs.readFileSync(reactDoc, 'utf8')).toBe(original);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
