@@ -175,7 +175,12 @@ export const componentPages = {
         'Prefer the canonical state and validation API instead of rebuilding form-control behavior in application code.',
       ],
       patterns: [
-        { id: 'basic', title: 'Basic', description: 'Basic component usage.' },
+        {
+          id: 'basic',
+          title: 'Basic',
+          description:
+            'Basic component usage.',
+        },
         {
           id: 'controlled',
           title: 'Controlled',
@@ -350,8 +355,10 @@ export const componentPages = {
     name: 'RadioGroup',
     discovery: {
       status: 'complete',
-      summary: 'Use RadioGroup for a labelled, mutually exclusive set of options.',
-      description: 'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
+      summary:
+        'Use RadioGroup for a labelled, mutually exclusive set of options.',
+      description:
+        'React and React Native RadioGroup for controlled or default single selection, labelled items, horizontal or vertical layout, and group validation feedback.',
       whenToUse: [
         'Use RadioGroup when a person chooses exactly one item from a related set.',
         'Give each RadioGroup.Item a unique value and label the group.',
@@ -359,10 +366,30 @@ export const componentPages = {
         'Use required and error for group validation; use Checkbox for independent choices.',
       ],
       patterns: [
-        { id: 'controlled', title: 'Controlled choice', description: 'Use value and onValueChange to manage the selected option externally.' },
-        { id: 'default', title: 'Default selection', description: 'Use defaultValue to initialize selection while the group manages later updates.' },
-        { id: 'layout', title: 'Orientation', description: 'Prefer vertical options; use horizontal layout when space and labels permit.' },
-        { id: 'validation', title: 'Required group', description: 'Display a meaningful error and propagate disabled and invalid state to child radios.' },
+        {
+          id: 'controlled',
+          title: 'Controlled choice',
+          description:
+            'Use value and onValueChange to manage the selected option externally.',
+        },
+        {
+          id: 'default',
+          title: 'Default selection',
+          description:
+            'Use defaultValue to initialize selection while the group manages later updates.',
+        },
+        {
+          id: 'layout',
+          title: 'Orientation',
+          description:
+            'Prefer vertical options; use horizontal layout when space and labels permit.',
+        },
+        {
+          id: 'validation',
+          title: 'Required group',
+          description:
+            'Display a meaningful error and propagate disabled and invalid state to child radios.',
+        },
       ],
       platformNotes: {
         react: [
@@ -524,8 +551,10 @@ export const componentPages = {
     name: 'Radio',
     discovery: {
       status: 'complete',
-      summary: 'Use Radio for one choice; use RadioGroup for mutually exclusive choices.',
-      description: 'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
+      summary:
+        'Use Radio for one choice; use RadioGroup for mutually exclusive choices.',
+      description:
+        'React and React Native Radio for a labelled single choice, with controlled or default selection, disabled and required states, sizes, colors, and validation feedback.',
       whenToUse: [
         'Use RadioGroup for a related set of mutually exclusive options.',
         'Use standalone Radio only when an application owns its selection behavior.',
@@ -533,9 +562,24 @@ export const componentPages = {
         'Provide a visible label or an accessible name and explain errors.',
       ],
       patterns: [
-        { id: 'group-item', title: 'Group selection', description: 'A Radio inside RadioGroup receives selected value and shared properties from group context.' },
-        { id: 'standalone', title: 'Standalone state', description: 'Outside a group, checked and onCheckedChange control state; defaultChecked initializes local selection.' },
-        { id: 'feedback', title: 'Validation feedback', description: 'Use error for option-specific validation and RadioGroup error for group-wide failures.' },
+        {
+          id: 'group-item',
+          title: 'Group selection',
+          description:
+            'A Radio inside RadioGroup receives selected value and shared properties from group context.',
+        },
+        {
+          id: 'standalone',
+          title: 'Standalone state',
+          description:
+            'Outside a group, checked and onCheckedChange control state; defaultChecked initializes local selection.',
+        },
+        {
+          id: 'feedback',
+          title: 'Validation feedback',
+          description:
+            'Use error for option-specific validation and RadioGroup error for group-wide failures.',
+        },
       ],
       platformNotes: {
         react: [
@@ -574,7 +618,12 @@ export const componentPages = {
         'Use Checkbox for form-like independent selections; use Switch for persistent settings that apply immediately.',
       ],
       patterns: [
-        { id: 'basic', title: 'Basic', description: 'Basic component usage.' },
+        {
+          id: 'basic',
+          title: 'Basic',
+          description:
+            'Basic component usage.',
+        },
         {
           id: 'controlled',
           title: 'Controlled',
