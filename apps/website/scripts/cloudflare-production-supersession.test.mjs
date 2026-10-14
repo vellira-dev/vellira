@@ -89,3 +89,16 @@ test('workflow gates activation and IndexNow on successful deployment', async ()
   assert.match(source, /needs\.deploy\.outputs\.deployed == 'true'/);
   assert.match(source, /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/);
 });
+
+
+test('terminal supersession remains a no-op, never a verified deployment', async () => {
+  const workflow = await readFile(path.resolve(import.meta.dirname, '../../../.github/workflows/deploy-website-cloudflare-production.yml'), 'utf8');
+  const deploy = await readFile(path.resolve(import.meta.dirname, './cloudflare-deploy.mjs'), 'utf8');
+  assert.match(workflow, /worker-deploy\\.outputs\\.superseded == 'false'/);
+  assert.match(workflow, /steps\\.worker-deploy\\.outputs\\.superseded != 'true'/);
+  assert.match(workflow, /needs\\.deploy\\.outputs\\.deployed == 'true'/);
+  assert.match(deploy, /error instanceof ProductionCandidateSupersededError/);
+  assert.match(deploy, /CANDIDATE_SOURCE !== 'staging'/);
+  assert.match(deploy, /superseded=true/);
+  assert.match(deploy, /No Cloudflare Worker activation occurred/);
+});
