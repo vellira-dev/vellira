@@ -1,8 +1,8 @@
 .root {
   display: grid;
   min-width: 0;
-  gap: var(--space-8);
-  padding-top: var(--space-8);
+  gap: var(--space-6);
+  padding-top: var(--space-6);
 }
 
 .identityRow {
@@ -10,15 +10,17 @@
   align-items: center;
   min-width: 0;
   gap: var(--space-4);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .avatar {
   display: grid;
-  width: 64px;
-  height: 64px;
-  flex: 0 0 64px;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
   place-items: center;
-  border: 1px solid var(--border-muted);
+  border: 0;
   border-radius: var(--radius-full);
   background: var(--surface-subtle);
   color: var(--text-primary);
@@ -30,7 +32,7 @@
   display: grid;
   flex: 1;
   min-width: 0;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .title {
@@ -51,25 +53,35 @@
 }
 
 .activePill {
+  display: inline-flex;
   flex: 0 0 auto;
-  border: 1px solid var(--border-muted);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 0;
   border-radius: var(--radius-full);
-  padding: var(--space-2) var(--space-3);
+  padding: 6px var(--space-3);
+  background: var(--status-success-bg);
   color: var(--status-success-fg);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+.activePill svg {
+  flex: none;
 }
 
 .editForm,
 .accountDetails {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-5);
   min-width: 0;
 }
 
 .accountDetails {
   border-top: 1px solid var(--border-muted);
-  padding-top: var(--space-8);
+  padding-top: var(--space-6);
 }
 
 .sectionHeading {
@@ -96,7 +108,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: var(--space-6);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -112,13 +124,47 @@
   justify-items: start;
 }
 
+.emailField {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.emailWithStatus {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.emailInput {
+  min-width: 0;
+}
+
+.emailWithStatus > svg {
+  margin-bottom: 14px;
+  color: var(--status-success-fg);
+}
+
+.emailHelp,
+.preferencesHelp {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.preferencesHelp {
+  margin-top: calc(var(--space-3) * -1);
+}
+
 .formActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-4);
-  border-top: 1px solid var(--border-muted);
-  padding-top: var(--space-5);
+  padding-top: var(--space-2);
 }
 
 .unsavedText,
@@ -183,7 +229,7 @@
   display: grid;
   grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
   align-items: start;
-  padding-block: var(--space-5);
+  padding-block: var(--space-4);
   border-bottom: 1px solid var(--border-muted);
   gap: var(--space-4);
 }
