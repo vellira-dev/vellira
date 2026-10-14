@@ -116,6 +116,19 @@ try {
   });
   assert.equal(await email.getAttribute('readonly'), '');
   assert.equal(emailReads, 1, 'current sign-in email must load from auth exactly once');
+  assert.equal(
+    await page.getByRole('heading', { name: 'Account details' }).count(),
+    0,
+    'Account details duplicated status and email: remove the redundant block'
+  );
+  const verifiedLabel = page.getByText('Verified', { exact: true });
+  await verifiedLabel.waitFor();
+  assert.equal(await verifiedLabel.count(), 1, 'Verification status should occur only once');
+  assert.equal(
+    await verifiedLabel.locator('..').locator('svg').count(),
+    1,
+    'Verified indicator should sit beside the email, with its check icon'
+  );
   assert.equal(await page.getByRole('button', { name: 'Save changes' }).isDisabled(), true);
   assert.equal(profileReads, 1, 'profile GET must be read-only and load exactly once');
 
@@ -185,7 +198,7 @@ try {
   }
   assert.equal(unexpectedMutations, 0);
   assert.ok(profileReads >= 3, 'retry must issue a new GET');
-  console.log('OK Account Profile: session-owned email, GET/PATCH, CSRF, conflict, independent retries and responsive geometry');
+  console.log('OK Account Profile: canonical email, no duplicate details, GET/PATCH, CSRF, conflict, independent retries and mobile geometry');
 } finally {
   await page.close();
   await context.close();
