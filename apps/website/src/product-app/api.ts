@@ -166,10 +166,15 @@ function readCurrentAccountEmail(payload: unknown): CurrentAccountEmail {
     throw new Error('Invalid current email response');
   }
   const value = payload.email;
-  if (!value || typeof value !== 'object' ||
-      !('address' in value) || typeof value.address !== 'string' ||
-      value.address.length === 0 ||
-      !('verified' in value) || typeof value.verified !== 'boolean') {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('address' in value) ||
+    typeof value.address !== 'string' ||
+    value.address.length === 0 ||
+    !('verified' in value) ||
+    typeof value.verified !== 'boolean'
+  ) {
     throw new Error('Invalid current email response');
   }
   return { address: value.address, verified: value.verified };
@@ -184,7 +189,6 @@ export async function getCurrentAccountEmail(
     await apiRequest<unknown>('/v1/auth/email/current', { signal })
   );
 }
-
 
 function readAccountProfile(payload: unknown): AccountProfile {
   if (!payload || typeof payload !== 'object' || !('profile' in payload)) {

@@ -39,7 +39,12 @@ type ProfileState =
 
 type CurrentEmailState =
   | { kind: 'loading' | 'error'; userId: string; revision: number }
-  | { kind: 'ready'; userId: string; revision: number; email: CurrentAccountEmail };
+  | {
+      kind: 'ready';
+      userId: string;
+      revision: number;
+      email: CurrentAccountEmail;
+    };
 
 const previewProfile: AccountProfile = {
   fullName: 'Alex Morgan',
@@ -197,7 +202,12 @@ export function AccountProfilePanel({
     void getCurrentAccountEmail(abort.signal)
       .then((email) => {
         if (!abort.signal.aborted) {
-          setCurrentEmail({ kind: 'ready', userId, revision: emailRevision, email });
+          setCurrentEmail({
+            kind: 'ready',
+            userId,
+            revision: emailRevision,
+            email,
+          });
         }
       })
       .catch(() => {
@@ -220,8 +230,10 @@ export function AccountProfilePanel({
       : { kind: 'loading', userId, attempt };
 
   const visibleEmail: CurrentEmailState =
-    status === 'ready' && !!userId &&
-    currentEmail.userId === userId && currentEmail.revision === emailRevision
+    status === 'ready' &&
+    !!userId &&
+    currentEmail.userId === userId &&
+    currentEmail.revision === emailRevision
       ? currentEmail
       : { kind: 'loading', userId, revision: emailRevision };
 
@@ -408,125 +420,135 @@ export function AccountProfilePanel({
             <div className={styles.profileBlock} data-account-block='personal'>
               <div className={styles.sectionHeading}>
                 <h3>Personal information</h3>
-              <p>Manage the information shown on your Vellira account.</p>
-            </div>
-            <div className={styles.fieldsGrid}>
-              <Input
-                label='Full name'
-                value={profile.draft.fullName}
-                onValueChange={(value) => change('fullName', value)}
-                autoComplete='name'
-                error={fullNameError}
-                disabled={saving}
-                size='md'
-              />
-              <Input
-                label='Display name'
-                value={profile.draft.displayName}
-                onValueChange={(value) => change('displayName', value)}
-                autoComplete='nickname'
-                error={displayNameError}
-                disabled={saving}
-                size='md'
-              />
-            </div>
-            <div className={styles.emailField}>
-              <div className={styles.emailWithStatus}>
+                <p>Manage the information shown on your Vellira account.</p>
+              </div>
+              <div className={styles.fieldsGrid}>
                 <Input
-                  label='Email address'
-                  type='email'
-                  value={visibleEmail.kind === 'ready' ? visibleEmail.email.address : ''}
-                  placeholder={
-                    visibleEmail.kind === 'loading'
-                      ? 'Loading sign-in email…'
-                      : 'Email temporarily unavailable'
-                  }
-                  readOnly
+                  label='Full name'
+                  value={profile.draft.fullName}
+                  onValueChange={(value) => change('fullName', value)}
+                  autoComplete='name'
+                  error={fullNameError}
+                  disabled={saving}
                   size='md'
-                  wrapperClassName={styles.emailInput}
                 />
-                {visibleEmail.kind === 'ready' && visibleEmail.email.verified && (
-                  <Success size={19} aria-label='Email verified' />
+                <Input
+                  label='Display name'
+                  value={profile.draft.displayName}
+                  onValueChange={(value) => change('displayName', value)}
+                  autoComplete='nickname'
+                  error={displayNameError}
+                  disabled={saving}
+                  size='md'
+                />
+              </div>
+              <div className={styles.emailField}>
+                <div className={styles.emailWithStatus}>
+                  <Input
+                    label='Email address'
+                    type='email'
+                    value={
+                      visibleEmail.kind === 'ready'
+                        ? visibleEmail.email.address
+                        : ''
+                    }
+                    placeholder={
+                      visibleEmail.kind === 'loading'
+                        ? 'Loading sign-in email…'
+                        : 'Email temporarily unavailable'
+                    }
+                    readOnly
+                    size='md'
+                    wrapperClassName={styles.emailInput}
+                  />
+                  {visibleEmail.kind === 'ready' &&
+                    visibleEmail.email.verified && (
+                      <Success size={19} aria-label='Email verified' />
+                    )}
+                </div>
+                <p className={styles.emailHelp}>
+                  {localAccountPreview
+                    ? 'Example address for design review only — not your actual email.'
+                    : 'Your sign-in address is read-only. Changing it requires a separate verification flow.'}
+                </p>
+                {visibleEmail.kind === 'error' && !localAccountPreview && (
+                  <div className={styles.emailRetry} role='status'>
+                    <span>Could not load your sign-in email.</span>
+                    <Button
+                      appearance='link'
+                      color='neutral'
+                      size='sm'
+                      type='button'
+                      onClick={() =>
+                        setEmailRevision((previous) => previous + 1)
+                      }
+                    >
+                      Retry email
+                    </Button>
+                  </div>
                 )}
               </div>
-              <p className={styles.emailHelp}>
-                {localAccountPreview
-                  ? 'Example address for design review only — not your actual email.'
-                  : 'Your sign-in address is read-only. Changing it requires a separate verification flow.'}
-              </p>
-              {visibleEmail.kind === 'error' && !localAccountPreview && (
-                <div className={styles.emailRetry} role='status'>
-                  <span>Could not load your sign-in email.</span>
-                  <Button
-                    appearance='link'
-                    color='neutral'
-                    size='sm'
-                    type='button'
-                    onClick={() => setEmailRevision((previous) => previous + 1)}
-                  >
-                    Retry email
-                  </Button>
-                </div>
-              )}
-            </div>
             </div>
 
-            <div className={styles.profileBlock} data-account-block='preferences'>
+            <div
+              className={styles.profileBlock}
+              data-account-block='preferences'
+            >
               <div className={styles.sectionHeading}>
                 <h3>Preferences</h3>
-              <p>
-                These preferences are stored in your account, not only on this
-                device.
-              </p>
-            </div>
-            <div className={styles.fieldsGrid}>
-              <Select
-                label='Language'
-                value={profile.draft.locale}
-                onValueChange={(value) => {
-                  if (value) change('locale', value);
-                }}
-                disabled={saving}
-                size='md'
-              >
-                <Select.Item value='en'>English</Select.Item>
-                <Select.Item value='fr'>Français</Select.Item>
-              </Select>
-              <div className={styles.timeZoneControl}>
+                <p>
+                  These preferences are stored in your account, not only on this
+                  device.
+                </p>
+              </div>
+              <div className={styles.fieldsGrid}>
                 <Select
-                  label='Time zone'
-                  value={profile.draft.timeZone}
+                  label='Language'
+                  value={profile.draft.locale}
                   onValueChange={(value) => {
-                    if (value) change('timeZone', value);
+                    if (value) change('locale', value);
                   }}
                   disabled={saving}
                   size='md'
                 >
-                  {zones.map((value) => (
-                    <Select.Item key={value} value={value}>
-                      {value}
-                    </Select.Item>
-                  ))}
+                  <Select.Item value='en'>English</Select.Item>
+                  <Select.Item value='fr'>Français</Select.Item>
                 </Select>
-                {deviceTimeZone &&
-                  deviceTimeZone !== 'Unavailable' &&
-                  deviceTimeZone !== profile.draft.timeZone && (
-                    <Button
-                      appearance='link'
-                      color='neutral'
-                      type='button'
-                      disabled={saving}
-                      onClick={() => change('timeZone', deviceTimeZone)}
-                    >
-                      Use device time zone ({deviceTimeZone})
-                    </Button>
-                  )}
+                <div className={styles.timeZoneControl}>
+                  <Select
+                    label='Time zone'
+                    value={profile.draft.timeZone}
+                    onValueChange={(value) => {
+                      if (value) change('timeZone', value);
+                    }}
+                    disabled={saving}
+                    size='md'
+                  >
+                    {zones.map((value) => (
+                      <Select.Item key={value} value={value}>
+                        {value}
+                      </Select.Item>
+                    ))}
+                  </Select>
+                  {deviceTimeZone &&
+                    deviceTimeZone !== 'Unavailable' &&
+                    deviceTimeZone !== profile.draft.timeZone && (
+                      <Button
+                        appearance='link'
+                        color='neutral'
+                        type='button'
+                        disabled={saving}
+                        onClick={() => change('timeZone', deviceTimeZone)}
+                      >
+                        Use device time zone ({deviceTimeZone})
+                      </Button>
+                    )}
+                </div>
               </div>
-            </div>
-            <p className={styles.preferencesHelp}>
-              Language and time zone are saved as account preferences. Some
-              parts of Vellira may still appear in English.
-            </p>
+              <p className={styles.preferencesHelp}>
+                Language and time zone are saved as account preferences. Some
+                parts of Vellira may still appear in English.
+              </p>
             </div>
 
             {profile.saveState === 'conflict' && (
@@ -628,7 +650,6 @@ export function AccountProfilePanel({
             <dt>Time zone (device)</dt>
             <dd>{deviceTimeZone ?? 'Detecting…'}</dd>
           </div>
-
         </dl>
       </div>
     </section>
