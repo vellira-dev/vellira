@@ -6,7 +6,7 @@ import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from '@/components/legal/LegalDocument.module.css';
 
-const LAST_UPDATED = '2026-10-10';
+const LAST_UPDATED = '2026-10-14';
 
 export const metadata: Metadata = {
   title: 'Privacy',
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
               </p>
               <p className={styles.updated}>
                 Last updated:{' '}
-                <time dateTime={LAST_UPDATED}>October 10, 2026</time>
+                <time dateTime={LAST_UPDATED}>October 14, 2026</time>
               </p>
             </header>
 
@@ -158,13 +158,22 @@ export default function PrivacyPage() {
                 .
               </p>
 
-              <h3>Newsletter</h3>
+              <h3>Newsletter and optional Pro launch updates</h3>
               <p>
-                If you subscribe to Vellira engineering notes, Vellira sends the
-                email address you provide and, when available, the client IP
-                address to Buttondown from the server. Buttondown is used to
-                create and confirm the subscription, deliver newsletter emails,
-                manage unsubscribe state and support abuse prevention.
+                If you subscribe to Vellira engineering notes or request Pro
+                launch updates, Vellira sends the email address you provide and,
+                when available, the client IP address to Buttondown from the
+                server. Buttondown is used to confirm and manage subscriptions,
+                deliver emails, process unsubscribes and prevent abuse.
+              </p>
+              <p>
+                The optional Pro updates form also labels the subscription with
+                a topic tag in Buttondown so we can distinguish interest in
+                the launch from general newsletter signups. This is a request
+                for engineering notes and Pro news, not a purchase, reservation,
+                account upgrade, or consent to advertising tracking. We do not
+                use a tracking cookie or a new per-visitor identifier for this
+                form.
               </p>
               <p>
                 Newsletter signup is optional. You can unsubscribe using the
@@ -197,7 +206,7 @@ export default function PrivacyPage() {
                   email verification and password recovery;
                 </li>
                 <li>
-                  to provide the newsletter when you explicitly subscribe; and
+                  to send engineering notes and optional Pro launch updates when you explicitly subscribe; and
                 </li>
                 <li>to respond when you contact Vellira.</li>
               </ul>
