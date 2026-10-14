@@ -14,7 +14,7 @@ const page = await context.newPage();
 page.setDefaultTimeout(15_000);
 const apiRequests = [];
 page.on('request', (request) => {
-  if (/\/v1\/(me|auth\/email\/resend|auth\/csrf|workspaces)/.test(request.url())) {
+  if (/\/v1\//.test(new URL(request.url()).pathname)) {
     apiRequests.push(request.url());
   }
 });
