@@ -257,7 +257,22 @@ export async function adoptLegacyComponentDocs({
 
     const entries = [];
     for (const stage of stages) {
-      const generated = fs.readFileSync(stage.file, 'utf8');
+      // The staging file lives outside the repository. Canonicalize it using
+      // the actual published docs path, including its nearest Prettier config,
+      // before either platform can be written into the maintained source tree.
+      const actualFile = originals.find(
+        (entry) => entry.platform === stage.platform
+      )!.file;
+      const originalConfig = await prettier.resolveConfig(actualFile);
+      const generated = await prettier.format(
+        fs.readFileSync(stage.file, 'utf8'),
+        {
+          ...originalConfig,
+          parser: 'markdown',
+          filepath: actualFile,
+        }
+      );
+      fs.writeFileSync(stage.file, generated);
       const state = inspectComponentDocAuthority({
         content: generated,
         filePath: stage.file,
@@ -272,12 +287,11 @@ export async function adoptLegacyComponentDocs({
       if (!region.valid || !region.found) {
         throw new Error(stage.file + ': generated authored region is invalid.');
       }
-      const originalConfig = await prettier.resolveConfig(stage.file);
       const expectedAuthor = (
         await prettier.format(stage.body, {
           ...originalConfig,
           parser: 'markdown',
-          filepath: stage.file,
+          filepath: actualFile,
         })
       ).trim();
       const emittedAuthor = region.content.trim();
