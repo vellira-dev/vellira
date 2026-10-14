@@ -125,9 +125,9 @@ jobs:
                   raise SystemExit('Active production build identity is malformed.')
               with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as summary:
                   summary.write(
-                      '### Content bridge: no deployment for source run\\n\\n'
+                      '### Content bridge: no deployment for source run\n\n'
                       'The verified production job did not own the active Worker build. '
-                      'A superseded/no-op run must not produce a Content Distribution dispatch.\\n'
+                      'A superseded/no-op run must not produce a Content Distribution dispatch.\n'
                   )
               print('::notice::No dispatch: the exact source run did not activate the live Worker.')
               raise SystemExit(0)
