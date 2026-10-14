@@ -1,8 +1,8 @@
 .root {
   display: grid;
   min-width: 0;
-  gap: var(--space-6);
-  padding-top: var(--space-6);
+  gap: 40px;
+  padding-top: var(--space-8);
 }
 
 .identityRow {
@@ -10,7 +10,7 @@
   align-items: center;
   min-width: 0;
   gap: var(--space-4);
-  padding-bottom: var(--space-6);
+  padding-bottom: var(--space-8);
   border-bottom: 1px solid var(--border-muted);
 }
 
@@ -75,13 +75,23 @@
 .editForm,
 .accountDetails {
   display: grid;
-  gap: var(--space-5);
   min-width: 0;
 }
 
+.editForm {
+  gap: 40px;
+}
+
+.profileBlock {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-5);
+}
+
 .accountDetails {
+  gap: var(--space-6);
   border-top: 1px solid var(--border-muted);
-  padding-top: var(--space-6);
+  padding-top: 40px;
 }
 
 .sectionHeading {
@@ -156,7 +166,7 @@
 }
 
 .preferencesHelp {
-  margin-top: calc(var(--space-3) * -1);
+  margin-top: calc(var(--space-2) * -1);
 }
 
 .formActions {
@@ -280,7 +290,15 @@
 @media (width <= 650px) {
   .root {
     padding-top: var(--space-6);
-    gap: var(--space-6);
+    gap: var(--space-8);
+  }
+
+  .editForm {
+    gap: var(--space-8);
+  }
+
+  .profileBlock {
+    gap: var(--space-4);
   }
 
   .identityRow {
@@ -309,7 +327,7 @@
   }
 
   .accountDetails {
-    padding-top: var(--space-6);
+    padding-top: var(--space-8);
   }
 
   .formActions {
