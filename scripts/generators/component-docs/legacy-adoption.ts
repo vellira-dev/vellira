@@ -74,7 +74,7 @@ export function inspectComponentDocAuthority(params: {
     ...evidence,
     errors: [
       filePath +
-        ' contains legacy authored documentation without an ownership region.'
+        ' contains legacy authored documentation without an ownership region.',
     ],
   };
 }
