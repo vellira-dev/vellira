@@ -178,8 +178,7 @@ export const componentPages = {
         {
           id: 'basic',
           title: 'Basic',
-          description:
-            'Basic component usage.',
+          description: 'Basic component usage.',
         },
         {
           id: 'controlled',
@@ -621,8 +620,7 @@ export const componentPages = {
         {
           id: 'basic',
           title: 'Basic',
-          description:
-            'Basic component usage.',
+          description: 'Basic component usage.',
         },
         {
           id: 'controlled',
