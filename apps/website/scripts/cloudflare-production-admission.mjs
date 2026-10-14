@@ -233,10 +233,14 @@ export async function admitCurrentProductionPromotion({
     if (process.env.GITHUB_STEP_SUMMARY) {
       await appendFile(
         process.env.GITHUB_STEP_SUMMARY,
-        '### Production: SUPERSEDED at admission\\n\\n' +
-          'Candidate: \`' + expectedCandidateSha + '\`\\n\\n' +
-          'Current main: \`' + mainSha + '\`\\n\\n' +
-          'Admission denied safely; no production approval or Worker deployment.\\n'
+        [
+          '### Production: SUPERSEDED at admission',
+          '',
+          'Candidate SHA: ' + expectedCandidateSha,
+          'Current main SHA: ' + mainSha,
+          'Admission denied safely; no production approval or Worker deployment.',
+          '',
+        ].join("\n")
       );
     }
   }
