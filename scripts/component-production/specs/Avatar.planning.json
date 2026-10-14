@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1",
+  "evidenceId": "avatar-api-program-v1",
+  "supportedCapabilities": [
+    "accessible-name",
+    "fallback",
+    "image-source",
+    "size-variants"
+  ],
+  "platformScope": ["react", "react-native"],
+  "obligations": [],
+  "apiMembers": [
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "scope": "shared",
+      "capabilities": ["accessible-name"],
+      "owner": "root"
+    },
+    {
+      "name": "fallback",
+      "type": "string",
+      "required": true,
+      "scope": "shared",
+      "capabilities": ["fallback"],
+      "owner": "root"
+    },
+    {
+      "name": "size",
+      "type": "'sm' | 'md' | 'lg'",
+      "required": false,
+      "scope": "shared",
+      "capabilities": ["size-variants"],
+      "owner": "root"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "required": false,
+      "scope": "react",
+      "capabilities": ["image-source"],
+      "owner": "root"
+    },
+    {
+      "name": "source",
+      "type": "string | number",
+      "required": false,
+      "scope": "react-native",
+      "capabilities": ["image-source"],
+      "owner": "root"
+    }
+  ],
+  "divergenceReason": "React accepts URI strings while React Native also accepts numeric bundled or local image assets.",
+  "risk": "low"
+}
