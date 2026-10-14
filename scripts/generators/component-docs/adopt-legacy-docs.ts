@@ -519,7 +519,7 @@ export async function adoptLegacyComponentDocs({
                     ')'
                 )
                 .join('; ') +
-              '; original failure: ' +
+              '; do not retry adoption until these copies are reconciled; original failure: ' +
               String(error)
           );
         }
