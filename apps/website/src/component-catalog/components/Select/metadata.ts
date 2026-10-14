@@ -1,6 +1,57 @@
 import { defineComponentPageMetadata } from '../../metadata';
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use Select when a form or setting needs one or several saved values from a compact option list.',
+    description:
+      'React and React Native Select for single or multiple form values, searchable grouped options, validation, clearable state and platform-specific presentation.',
+    whenToUse: [
+      'Use Select for persisted form or preference values rather than commands; use Dropdown for contextual actions.',
+      'Prefer RadioGroup for short sets of visible alternatives that benefit from side-by-side comparison.',
+      'Choose single or multiple selection, stable item values, and an accessible label.',
+      'Use search for long option sets and pair invalid state with actionable error feedback.',
+    ],
+    patterns: [
+      {
+        id: 'controlled-selection',
+        title: 'Controlled and initial values',
+        description:
+          'Use value and onValueChange for external state, or defaultValue to initialize single or multiple selection.',
+      },
+      {
+        id: 'multi-select',
+        title: 'Multiple choices and limits',
+        description:
+          'Use multiple, maxSelected and closeOnSelect to govern multiple selection and option limits.',
+      },
+      {
+        id: 'search-and-groups',
+        title: 'Searchable grouped options',
+        description:
+          'Compose Select.Item, Group, Label, Search, Separator, Empty and Loading for structured option lists.',
+      },
+      {
+        id: 'validation',
+        title: 'Validated form field',
+        description:
+          'Use label, description, required, disabled, invalid and error to describe and validate the selected value.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'React Select composes with FormField and supports named form values, keyboard navigation, typeahead, searchable options and accessible trigger relationships.',
+        'Web Select supports compound Trigger/Content composition, controlled open state, portal placement and rich option content.',
+      ],
+      'react-native': [
+        'React Native Select uses FormField context and supports auto, sheet, modal or popover option presentation; it does not rely on web keyboard interaction.',
+        'Native Select supports accessible trigger labels, search, single or multiple values, option grouping and FlatList-based virtualized lists for large collections.',
+        'Verify announcement of expanded or selected state, validation errors and overlay dismissal with VoiceOver and TalkBack.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<Select.Item value='react'>React</Select.Item>
 <Select.Item value='vue'>Vue</Select.Item>
