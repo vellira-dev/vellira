@@ -384,11 +384,15 @@ describe('Checkbox legacy docs adoption pilot', () => {
     const native = test.files.find((file) => file.platform === 'react-native');
     if (!react || !native) throw new Error('Missing platform fixture');
 
-    const writeFile = fs.writeFileSync;
+    const renameFile = fs.renameSync;
     let injected = false;
-    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
-      Reflect.apply(writeFile, fs, args);
-      if (!injected && args[0] === react.target) {
+    vi.spyOn(fs, 'renameSync').mockImplementation((...args) => {
+      Reflect.apply(renameFile, fs, args);
+      if (
+        !injected &&
+        args[1] === react.target &&
+        path.basename(String(args[0])) === 'generated.md'
+      ) {
         injected = true;
         fs.appendFileSync(
           native.target,
@@ -426,11 +430,15 @@ describe('Checkbox legacy docs adoption pilot', () => {
     const native = test.files.find((file) => file.platform === 'react-native');
     if (!react || !native) throw new Error('Missing platform fixture');
 
-    const writeFile = fs.writeFileSync;
+    const renameFile = fs.renameSync;
     let injected = false;
-    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
-      Reflect.apply(writeFile, fs, args);
-      if (!injected && args[0] === native.target) {
+    vi.spyOn(fs, 'renameSync').mockImplementation((...args) => {
+      Reflect.apply(renameFile, fs, args);
+      if (
+        !injected &&
+        args[1] === native.target &&
+        path.basename(String(args[0])) === 'generated.md'
+      ) {
         injected = true;
         fs.appendFileSync(
           react.target,
@@ -456,6 +464,180 @@ describe('Checkbox legacy docs adoption pilot', () => {
     expect(fs.readFileSync(react.target, 'utf8')).toContain(
       'External edit after React migration.'
     );
+    expect(fs.readFileSync(native.target, 'utf8')).toBe(native.original);
+  });
+
+  it('keeps both source files intact on a partial sibling-temp write failure', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const originalWrite = fs.writeFileSync;
+    let injected = false;
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((...args) => {
+      const destination = String(args[0]);
+      if (
+        !injected &&
+        destination.includes('.vellira-docs-commit-') &&
+        destination.endsWith('generated.md')
+      ) {
+        injected = true;
+        Reflect.apply(originalWrite, fs, [args[0], 'PARTIAL WRITTEN BY DISK', args[2]]);
+        throw new Error('Simulated ENOSPC during staged write');
+      }
+      Reflect.apply(originalWrite, fs, args);
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('Simulated ENOSPC during staged write');
+
+    expect(injected).toBe(true);
+    for (const file of test.files) {
+      expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
+      expect(
+        fs.readdirSync(path.dirname(file.target)).filter((name) =>
+          name.startsWith('.vellira-docs-commit-')
+        )
+      ).toEqual([]);
+    }
+  });
+
+  it('restores the first page atomically when the second replacement fails', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const native = test.files.find((entry) => entry.platform === 'react-native');
+    if (!native) throw new Error('Expected React Native fixture');
+
+    const originalRename = fs.renameSync;
+    let injected = false;
+    vi.spyOn(fs, 'renameSync').mockImplementation((...args) => {
+      if (
+        !injected &&
+        args[1] === native.target &&
+        path.basename(String(args[0])) === 'generated.md'
+      ) {
+        injected = true;
+        throw new Error('Simulated EIO during second atomic rename');
+      }
+      Reflect.apply(originalRename, fs, args);
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('Simulated EIO during second atomic rename');
+
+    expect(injected).toBe(true);
+    for (const file of test.files) {
+      expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
+      expect(
+        fs.readdirSync(path.dirname(file.target)).filter((name) =>
+          name.startsWith('.vellira-docs-commit-')
+        )
+      ).toEqual([]);
+    }
+  });
+
+  it('preserves existing file mode across both atomic replacements', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    for (const file of test.files) {
+      fs.chmodSync(file.target, 0o640);
+    }
+    // The pin hashes file contents, not permissions.
+    const result = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+      write: true,
+      expectedOriginalSha256: Object.fromEntries(
+        preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+      ),
+    });
+
+    expect(result.status).toBe('adopted');
+    for (const file of test.files) {
+      expect(fs.statSync(file.target).mode & 0o777).toBe(0o640);
+      expect(
+        fs.readdirSync(path.dirname(file.target)).filter((name) =>
+          name.startsWith('.vellira-docs-commit-')
+        )
+      ).toEqual([]);
+    }
+  });
+
+  it('reports failed rollback without truncating a successfully replaced page', async () => {
+    const test = fixture();
+    const preview = await adoptLegacyComponentDocs({
+      root,
+      docsRoot: test.docsRoot,
+      componentName: 'Checkbox',
+    });
+    const react = test.files.find((entry) => entry.platform === 'react');
+    const native = test.files.find((entry) => entry.platform === 'react-native');
+    if (!react || !native) throw new Error('Missing platform fixture');
+
+    const originalRename = fs.renameSync;
+    let failedNative = false;
+    let failedRollback = false;
+    vi.spyOn(fs, 'renameSync').mockImplementation((...args) => {
+      const source = path.basename(String(args[0]));
+      if (!failedNative && source === 'generated.md' && args[1] === native.target) {
+        failedNative = true;
+        throw new Error('Simulated native rename EIO');
+      }
+      if (!failedRollback && source === 'original.md' && args[1] === react.target) {
+        failedRollback = true;
+        throw new Error('Simulated rollback rename EIO');
+      }
+      Reflect.apply(originalRename, fs, args);
+    });
+
+    await expect(
+      adoptLegacyComponentDocs({
+        root,
+        docsRoot: test.docsRoot,
+        componentName: 'Checkbox',
+        write: true,
+        expectedOriginalSha256: Object.fromEntries(
+          preview.entries.map((entry) => [entry.platform, entry.originalSha256])
+        ),
+      })
+    ).rejects.toThrow('cannot safely roll back documents edited after this migration');
+
+    expect(failedNative).toBe(true);
+    expect(failedRollback).toBe(true);
+    const preservedGenerated = fs.readFileSync(react.target, 'utf8');
+    expect(preservedGenerated).toContain(
+      '<!-- Generated by scripts/generators/component-docs/generate-component-docs.ts.'
+    );
+    expect(preservedGenerated).toContain('## API');
     expect(fs.readFileSync(native.target, 'utf8')).toBe(native.original);
   });
 
