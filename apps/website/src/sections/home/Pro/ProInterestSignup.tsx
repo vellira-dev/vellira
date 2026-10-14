@@ -98,7 +98,8 @@ export function ProInterestSignup() {
       </p>
       {confirmationRequested ? (
         <p className={styles.interestSuccess} role='status'>
-          Thanks for your interest. If a confirmation email arrives, follow its link to finish signing up.
+          Thanks for your interest. If a confirmation email arrives, follow its
+          link to finish signing up.
         </p>
       ) : (
         <form noValidate aria-busy={isSubmitting} onSubmit={onSubmit}>
