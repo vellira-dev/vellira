@@ -14,6 +14,7 @@ type CloudflareSecretBindings = { BUTTONDOWN_API_KEY?: unknown };
 type NewsletterSubscribeDependencies = {
   getApiKey: () => Promise<string | undefined>;
   subscribe: typeof subscribeWithButtondown;
+  proInterestEnabled: boolean;
 };
 type NewsletterRequestBody = {
   email?: unknown;
@@ -146,6 +147,7 @@ async function getButtondownApiKey(): Promise<string | undefined> {
 const defaultDependencies: NewsletterSubscribeDependencies = {
   getApiKey: getButtondownApiKey,
   subscribe: subscribeWithButtondown,
+  proInterestEnabled: process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1',
 };
 
 export function createNewsletterSubscribeHandler(
@@ -161,6 +163,15 @@ export function createNewsletterSubscribeHandler(
       return invalidEmailResponse();
     if (body.purpose === 'pro_launch' && body.consent !== true)
       return consentRequiredResponse();
+    if (body.purpose === 'pro_launch' && !dependencies.proInterestEnabled)
+      return response(
+        {
+          ok: false,
+          code: 'temporarily_unavailable',
+          message: newsletterErrors.temporarily_unavailable,
+        },
+        503
+      );
     let apiKey: string | undefined;
     try {
       apiKey = await dependencies.getApiKey();
