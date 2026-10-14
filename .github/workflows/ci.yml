@@ -838,6 +838,12 @@ jobs:
             exit 1
           fi
           if ! WEBSITE_URL=http://localhost:3111 \
+            pnpm --dir apps/website exec node scripts/account-profile-preview.mjs; then
+            echo "::error::Editable Account preview regression failed."
+            tail -n 120 /tmp/vellira-account-preview.log >&2
+            exit 1
+          fi
+          if ! WEBSITE_URL=http://localhost:3111 \
             pnpm --dir apps/website exec node scripts/account-components-navigation.mjs; then
             echo "::error::Development components browser smoke failed."
             tail -n 120 /tmp/vellira-account-preview.log >&2
