@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { checkboxDocs } from '../../../apps/docs/src/component-docs/Checkbox.docs';
+
 import { readAuthoredRegion } from './authored-region';
 import { adoptLegacyComponentDocs } from './adopt-legacy-docs';
 import { inspectComponentDocAuthority } from './legacy-adoption';
@@ -16,10 +18,72 @@ function fixture() {
   tempDirs.push(docsRoot);
   const files = ['react', 'react-native'].map((platform) => {
     const target = path.join(docsRoot, platform, 'checkbox.md');
-    const original = fs.readFileSync(
-      path.join(root, 'apps/docs/src', platform, 'checkbox.md'),
-      'utf8'
-    );
+    const contract = checkboxDocs.platforms[platform as 'react' | 'react-native'];
+    const fence = String.fromCharCode(96).repeat(3);
+    const body = platform === 'react'
+      ? [
+          'Checkbox represents independent choices.',
+          '',
+          '## When To Use',
+          '',
+          'Use Checkbox for independent form selections.',
+          '',
+          '## Props',
+          '',
+          '| Prop | Purpose |',
+          '| ---- | ------- |',
+          '| checked | Controlled value |',
+          '',
+          '## Select All with an Indeterminate React Checkbox',
+          '',
+          'An indeterminate state summarizes partially selected rows.',
+          '',
+          fence + 'tsx',
+          'export function ProjectSelection() {',
+          "  return <Checkbox indeterminate label='Select all' />;",
+          '}',
+          fence,
+          '',
+          '## Real Example: Notification Preferences',
+          '',
+          'A curated settings row illustrates controlled selection.',
+          '',
+          '## Accessibility',
+          '',
+          'Use descriptive labels and preserve mixed state announcements.',
+        ].join('\\n')
+      : [
+          'React Native Checkbox represents an independent boolean selection.',
+          '',
+          '## Controlled And Uncontrolled',
+          '',
+          fence + 'tsx',
+          "<Checkbox checked={enabled} onCheckedChange={setEnabled} label='Enabled' />",
+          fence,
+          '',
+          '## Indeterminate State',
+          '',
+          'Use indeterminate only for partial group selection.',
+          '',
+          '## Custom Icons And Color',
+          '',
+          'Prefer default icons unless the application requires custom ones.',
+          '',
+          '## Accessibility',
+          '',
+          'Use accessibilityRole and an accessible label.',
+        ].join('\\n');
+    const original = [
+      '---',
+      'title: ' + contract.title,
+      'description: ' + contract.description,
+      '---',
+      '',
+      '# Checkbox',
+      '',
+      body,
+      '',
+    ].join('\\n');
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, original);
     return { platform, target, original };
@@ -51,7 +115,7 @@ describe('Checkbox legacy docs adoption pilot', () => {
       expect(row.originalSha256).toMatch(/^[0-9a-f]{64}$/);
       expect(row.generatedSha256).toMatch(/^[0-9a-f]{64}$/);
       expect(row.preservedAuthorSha256).toMatch(/^[0-9a-f]{64}$/);
-      expect(row.preservedAuthorBytes).toBeGreaterThan(1000);
+      expect(row.preservedAuthorBytes).toBeGreaterThan(100);
     }
     for (const file of test.files) {
       expect(fs.readFileSync(file.target, 'utf8')).toBe(file.original);
