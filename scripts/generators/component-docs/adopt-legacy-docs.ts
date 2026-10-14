@@ -396,6 +396,9 @@ export async function adoptLegacyComponentDocs({
       // Writing a candidate (or rollback backup) must never truncate a
       // maintained document, even if a disk or I/O error interrupts the write.
       const tempDirectories: string[] = [];
+      // Any failed restoration must leave its fully staged original.md on
+      // disk for explicit recovery; never delete that directory in finally.
+      const recoveryDirectories = new Set<string>();
       const written = new Map<string, string>();
       const prepared: {
         target: (typeof originals)[number];
@@ -422,6 +425,17 @@ export async function adoptLegacyComponentDocs({
           fs.writeFileSync(rollbackPath, target.source, { flag: 'wx', mode });
           fs.chmodSync(candidatePath, mode);
           fs.chmodSync(rollbackPath, mode);
+          // A successful write call alone does not prove the recovery bytes
+          // survived intact. Refuse to replace any originals without both
+          // fully verified same-filesystem staged files.
+          if (
+            fs.readFileSync(candidatePath, 'utf8') !== generated ||
+            fs.readFileSync(rollbackPath, 'utf8') !== target.source
+          ) {
+            throw new Error(
+              target.file + ': staged candidate or original recovery copy failed byte verification.'
+            );
+          }
           prepared.push({ target, candidatePath, rollbackPath, generated });
         }
 
@@ -453,28 +467,57 @@ export async function adoptLegacyComponentDocs({
           );
         }
       } catch (error) {
-        const conflicts: string[] = [];
+        const conflicts: {
+          target: string;
+          backup: string;
+          originalSha256: string;
+        }[] = [];
         for (const item of [...prepared].reverse()) {
           const ours = written.get(item.target.file);
           if (ours === undefined) continue;
           try {
             const current = fs.readFileSync(item.target.file, 'utf8');
             if (current !== ours) {
-              conflicts.push(item.target.file);
+              // Another editor's changes are authoritative. Keep the
+              // complete original backup for a human to reconcile.
+              conflicts.push({
+                target: item.target.file,
+                backup: item.rollbackPath,
+                originalSha256: item.target.originalSha256,
+              });
+              recoveryDirectories.add(path.dirname(item.rollbackPath));
               continue;
             }
-            // Rollback is also atomic: backup was fully staged beside the
-            // destination before any document was replaced.
+            // Successful rename consumes original.md; no backup needs to be
+            // retained when the original has been restored atomically.
             fs.renameSync(item.rollbackPath, item.target.file);
           } catch {
-            conflicts.push(item.target.file);
+            // In particular, an I/O failure here must NOT cause finally to
+            // delete the only on-disk copy of the original authored guide.
+            conflicts.push({
+              target: item.target.file,
+              backup: item.rollbackPath,
+              originalSha256: item.target.originalSha256,
+            });
+            recoveryDirectories.add(path.dirname(item.rollbackPath));
           }
         }
         if (conflicts.length > 0) {
           throw new Error(
             componentName +
-              ': cannot safely roll back documents edited after this migration wrote them or whose atomic restoration failed: ' +
-              conflicts.join(', ') +
+              ': cannot safely roll back documents edited after this migration wrote them or whose atomic restoration failed. ' +
+              'Original recovery copies retained for manual restoration: ' +
+              conflicts
+                .map(
+                  (item) =>
+                    item.target +
+                    ' <= ' +
+                    item.backup +
+                    ' (expected SHA-256: ' +
+                    item.originalSha256 +
+                    ')'
+                )
+                .join('; ') +
               '; original failure: ' +
               String(error)
           );
@@ -482,7 +525,12 @@ export async function adoptLegacyComponentDocs({
         throw error;
       } finally {
         for (const directory of tempDirectories.reverse()) {
-          fs.rmSync(directory, { recursive: true, force: true });
+          // Retain the entire sibling directory if the original.md may still
+          // be needed. Only discard backups after successful recovery, or if
+          // no maintained document was ever replaced.
+          if (!recoveryDirectories.has(directory)) {
+            fs.rmSync(directory, { recursive: true, force: true });
+          }
         }
       }
     } else {
