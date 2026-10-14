@@ -32,7 +32,8 @@ export type DocsAdoptionInspection = {
 function inspectGeneratedDocStructure(content: string): string[] {
   const lines = content.split(/\r?\n/);
   const errors: string[] = [];
-  const headerOccurrences = content.split(generatedComponentDocsHeader).length - 1;
+  const headerOccurrences =
+    content.split(generatedComponentDocsHeader).length - 1;
   const headerIndex = lines.indexOf(generatedComponentDocsHeader);
   const frontmatterEnd =
     lines[0] === '---'
@@ -56,7 +57,9 @@ function inspectGeneratedDocStructure(content: string): string[] {
     !frontmatter.some((line) => /^title\s*:/.test(line)) ||
     !frontmatter.some((line) => /^description\s*:/.test(line))
   ) {
-    errors.push('generated docs frontmatter must include title and description');
+    errors.push(
+      'generated docs frontmatter must include title and description'
+    );
   }
 
   const outsideFence: boolean[] = [];
@@ -90,7 +93,9 @@ function inspectGeneratedDocStructure(content: string): string[] {
     !outsideFence[startIndex] ||
     !outsideFence[endIndex]
   ) {
-    errors.push('authored region markers must be standalone outside code fences');
+    errors.push(
+      'authored region markers must be standalone outside code fences'
+    );
   }
 
   const headingIndex = lines.findIndex(
