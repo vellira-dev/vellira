@@ -165,7 +165,7 @@ export const componentCatalogPresentation = [
     slug: 'switch',
     name: 'Switch',
     description:
-      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.',
+      'Accessible React and React Native Switch for immediate boolean settings with controlled or default checked state, disabled, required, and invalid semantics.',
     category: 'forms',
     order: 999,
     docs: {
