@@ -10,7 +10,11 @@ import prettier from 'prettier';
 import { componentDocsContracts } from '../../../apps/docs/src/component-docs';
 import { componentMetadata } from '../../../packages/metadata/src/components';
 
-import { authoredRegionEndMarker, authoredRegionStartMarker, readAuthoredRegion } from './authored-region';
+import {
+  authoredRegionEndMarker,
+  authoredRegionStartMarker,
+  readAuthoredRegion,
+} from './authored-region';
 import { generateComponentDocs } from './generate-component-docs';
 import { inspectComponentDocAuthority } from './legacy-adoption';
 import { generatedComponentDocsHeader } from './render';
@@ -51,13 +55,15 @@ function readLegacyBody(params: {
   file: string;
 }) {
   const { source, componentName, title, description, file } = params;
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n\s*# ([^\r\n]+)\r?\n([\s\S]*)$/.exec(
-    source
-  );
+  const match =
+    /^---\r?\n([\s\S]*?)\r?\n---\r?\n\s*# ([^\r\n]+)\r?\n([\s\S]*)$/.exec(
+      source
+    );
 
   if (!match || match[2] !== componentName) {
     throw new Error(
-      file + ': legacy docs need unambiguous frontmatter and the expected top-level H1.'
+      file +
+        ': legacy docs need unambiguous frontmatter and the expected top-level H1.'
     );
   }
 
@@ -71,14 +77,16 @@ function readLegacyBody(params: {
     descriptionLine?.slice(13).trim() !== description
   ) {
     throw new Error(
-      file + ': docs contract title/description must preserve the published legacy frontmatter.'
+      file +
+        ': docs contract title/description must preserve the published legacy frontmatter.'
     );
   }
 
   const body = match[3].trim();
   if (!body || !body.includes('## Accessibility')) {
     throw new Error(
-      file + ': expected authored guidance is missing; refusing to adopt an incomplete page.'
+      file +
+        ': expected authored guidance is missing; refusing to adopt an incomplete page.'
     );
   }
 
@@ -127,17 +135,22 @@ export async function adoptLegacyComponentDocs({
   write = false,
   expectedOriginalSha256,
 }: AdoptDocsOptions): Promise<DocsAdoptionProof> {
-  const metadata = componentMetadata.find((item) => item.name === componentName);
+  const metadata = componentMetadata.find(
+    (item) => item.name === componentName
+  );
   const contract = componentDocsContracts.find(
     (item) => item.component === componentName
   );
   if (!metadata || !contract) {
     throw new Error(
-      componentName + ': canonical metadata and a complete docs contract are required.'
+      componentName +
+        ': canonical metadata and a complete docs contract are required.'
     );
   }
   if (!platforms.every((platform) => metadata.platforms.includes(platform))) {
-    throw new Error(componentName + ': this pilot requires both supported platforms.');
+    throw new Error(
+      componentName + ': this pilot requires both supported platforms.'
+    );
   }
 
   const slug = componentName
@@ -145,17 +158,27 @@ export async function adoptLegacyComponentDocs({
     .toLowerCase();
   const originals = platforms.map((platform) => {
     const file = path.join(docsRoot, platform, slug + '.md');
-    const source = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined;
+    const source = fs.existsSync(file)
+      ? fs.readFileSync(file, 'utf8')
+      : undefined;
     const inspection = inspectComponentDocAuthority({
       content: source,
       filePath: path.relative(root, file),
     });
     if (!source || !['legacy', 'managed'].includes(inspection.state)) {
       throw new Error(
-        file + ': expected a real legacy or managed page; found ' + inspection.state
+        file +
+          ': expected a real legacy or managed page; found ' +
+          inspection.state
       );
     }
-    return { platform, file, source, inspection, originalSha256: sha256(source) };
+    return {
+      platform,
+      file,
+      source,
+      inspection,
+      originalSha256: sha256(source),
+    };
   });
 
   if (originals.every((entry) => entry.inspection.state === 'managed')) {
@@ -168,7 +191,9 @@ export async function adoptLegacyComponentDocs({
       contracts: [contract],
     });
     if (proof.status !== 'up-to-date') {
-      throw new Error(componentName + ': managed docs are stale, not safe to adopt again.');
+      throw new Error(
+        componentName + ': managed docs are stale, not safe to adopt again.'
+      );
     }
     return {
       component: componentName,
@@ -179,18 +204,22 @@ export async function adoptLegacyComponentDocs({
         originalSha256: entry.originalSha256,
         generatedSha256: entry.originalSha256,
         preservedAuthorSha256: sha256(
-          entry.source.slice(
-            entry.source.indexOf(authoredRegionStartMarker) +
-              authoredRegionStartMarker.length,
-            entry.source.indexOf(authoredRegionEndMarker)
-          ).trim()
+          entry.source
+            .slice(
+              entry.source.indexOf(authoredRegionStartMarker) +
+                authoredRegionStartMarker.length,
+              entry.source.indexOf(authoredRegionEndMarker)
+            )
+            .trim()
         ),
         preservedAuthorBytes: Buffer.byteLength(
-          entry.source.slice(
-            entry.source.indexOf(authoredRegionStartMarker) +
-              authoredRegionStartMarker.length,
-            entry.source.indexOf(authoredRegionEndMarker)
-          ).trim(),
+          entry.source
+            .slice(
+              entry.source.indexOf(authoredRegionStartMarker) +
+                authoredRegionStartMarker.length,
+              entry.source.indexOf(authoredRegionEndMarker)
+            )
+            .trim(),
           'utf8'
         ),
       })),
@@ -199,7 +228,8 @@ export async function adoptLegacyComponentDocs({
 
   if (originals.some((entry) => entry.inspection.state !== 'legacy')) {
     throw new Error(
-      componentName + ': mixed managed/legacy platforms must not be partially adopted.'
+      componentName +
+        ': mixed managed/legacy platforms must not be partially adopted.'
     );
   }
   if (write) {
@@ -278,7 +308,9 @@ export async function adoptLegacyComponentDocs({
         filePath: stage.file,
       });
       if (state.state !== 'managed') {
-        throw new Error(stage.file + ': generated output did not prove managed ownership.');
+        throw new Error(
+          stage.file + ': generated output did not prove managed ownership.'
+        );
       }
       const region = readAuthoredRegion({
         content: generated,
@@ -304,7 +336,10 @@ export async function adoptLegacyComponentDocs({
       entries.push({
         platform: stage.platform,
         file: path.relative(root, stage.file).startsWith('..')
-          ? path.relative(root, originals.find((x) => x.platform === stage.platform)!.file)
+          ? path.relative(
+              root,
+              originals.find((x) => x.platform === stage.platform)!.file
+            )
           : path.relative(root, stage.file),
         originalSha256: stage.originalSha256,
         generatedSha256: sha256(generated),
@@ -316,7 +351,10 @@ export async function adoptLegacyComponentDocs({
     if (write) {
       try {
         for (const stage of stages) {
-          fs.writeFileSync(stage.file.replace(stagingRoot, docsRoot), fs.readFileSync(stage.file));
+          fs.writeFileSync(
+            stage.file.replace(stagingRoot, docsRoot),
+            fs.readFileSync(stage.file)
+          );
         }
         const check = await generateComponentDocs({
           root,
@@ -327,7 +365,9 @@ export async function adoptLegacyComponentDocs({
           contracts: [contract],
         });
         if (check.status !== 'up-to-date') {
-          throw new Error(componentName + ': generated docs drift immediately after write.');
+          throw new Error(
+            componentName + ': generated docs drift immediately after write.'
+          );
         }
       } catch (error) {
         for (const entry of originals) {
@@ -338,7 +378,9 @@ export async function adoptLegacyComponentDocs({
     } else {
       for (const entry of originals) {
         if (fs.readFileSync(entry.file, 'utf8') !== entry.source) {
-          throw new Error(entry.file + ': dry-run modified the original source.');
+          throw new Error(
+            entry.file + ': dry-run modified the original source.'
+          );
         }
       }
     }
@@ -360,12 +402,17 @@ async function main() {
   const json = args.includes('--json');
   const allowed = new Set(['--write', '--json', '--dry-run']);
   const unknown = args.filter(
-    (arg) => arg.startsWith('--') &&
+    (arg) =>
+      arg.startsWith('--') &&
       !allowed.has(arg) &&
       !arg.startsWith('--expected-react-sha256=') &&
       !arg.startsWith('--expected-react-native-sha256=')
   );
-  if (!name || unknown.length > 0 || args.filter((arg) => !arg.startsWith('-')).length !== 1) {
+  if (
+    !name ||
+    unknown.length > 0 ||
+    args.filter((arg) => !arg.startsWith('-')).length !== 1
+  ) {
     throw new Error(
       'Usage: pnpm component-docs:adopt ComponentName [--dry-run|--write] [--json] ' +
         '[--expected-react-sha256=...] [--expected-react-native-sha256=...]'
@@ -388,14 +435,19 @@ async function main() {
     console.log(proof.status + ': ' + name);
     for (const entry of proof.entries) {
       console.log(
-        entry.platform + ': source ' + entry.originalSha256 +
-          ', output ' + entry.generatedSha256
+        entry.platform +
+          ': source ' +
+          entry.originalSha256 +
+          ', output ' +
+          entry.generatedSha256
       );
     }
   }
 }
 
-const invoked = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+const invoked =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (invoked) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
