@@ -496,6 +496,50 @@ export const componentPages = {
   },
   tooltip: {
     name: 'Tooltip',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Tooltip for brief, supplemental context associated with an interactive trigger.',
+      description:
+        'React and React Native Tooltip with compound Trigger and Content, positioning, optional arrow, disabled state, and platform-specific interaction.',
+      whenToUse: [
+        'Use Tooltip for short, nonessential explanations of a control.',
+        'Never rely on tooltip content as the sole source of instructions or critical feedback.',
+        'Use Tooltip.Trigger and Tooltip.Content together, keeping content concise.',
+        'Choose Popover for interactive or longer content instead of a tooltip.',
+      ],
+      patterns: [
+        {
+          id: 'compound-tooltip',
+          title: 'Trigger and content',
+          description:
+            'Compose a Tooltip.Trigger with associated Tooltip.Content for a small contextual message.',
+        },
+        {
+          id: 'placement',
+          title: 'Placement and arrow',
+          description:
+            'Select a placement and optional withArrow presentation that does not obscure the triggering control.',
+        },
+        {
+          id: 'disabled',
+          title: 'Conditional help',
+          description:
+            'Use disabled to suppress a tooltip when contextual help is not appropriate.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'Web Tooltip can use a composed asChild trigger and hover/focus interactions; controlled open state and delay behavior depend on the React API.',
+          'Provide supplementary information accessible without requiring pointer-only interaction.',
+        ],
+        'react-native': [
+          'React Native Tooltip supports touch-oriented trigger interaction and does not require web hover semantics.',
+          'Keep essential text outside Tooltip, with placement and dismissal appropriate to native accessibility and input.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: TooltipDemo,
       'react-native': NativeTooltipDemo,
@@ -508,6 +552,50 @@ export const componentPages = {
   },
   tabs: {
     name: 'Tabs',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Use Tabs to switch between related content panels without navigating away.',
+      description:
+        'React and React Native Tabs with compound triggers and panels, controlled or default selection, layout variants, disabled state, and platform-specific accessibility.',
+      whenToUse: [
+        'Use tabs to organize related panels within the same context.',
+        'Give every Tabs.Trigger a matching Tabs.Content value.',
+        'Use value and onValueChange when selection is application-controlled; use defaultValue for initial selection.',
+        'Prefer navigation links when each destination is a separate page.',
+      ],
+      patterns: [
+        {
+          id: 'compound-panels',
+          title: 'Triggers and panels',
+          description:
+            'Compose Tabs.List, Tabs.Trigger, Tabs.Indicator and matching Tabs.Content elements.',
+        },
+        {
+          id: 'controlled-selection',
+          title: 'Controlled selection',
+          description:
+            'Manage the selected value with value and onValueChange.',
+        },
+        {
+          id: 'panel-mounting',
+          title: 'Panel mounting',
+          description:
+            'Use keepMounted and lazyMount to manage inactive panel rendering when appropriate.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'React tabs implement keyboard navigation with orientation, automatic or manual activation, direction and optional looping.',
+          'React uses stable relationships between tab triggers and panels; disabled tabs are excluded from selection navigation.',
+        ],
+        'react-native': [
+          'React Native tabs use Pressable-based trigger interaction and accessibility selection state; do not assume web-specific keyboard activationMode.',
+          'React Native supports orientation and measures trigger layout for the indicator, while matching trigger and panel values remains required.',
+        ],
+      },
+      missingEvidence: [],
+    },
     demos: {
       react: TabsDemo,
       'react-native': NativeTabsDemo,
