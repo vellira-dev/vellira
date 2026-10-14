@@ -378,7 +378,10 @@ export async function adoptLegacyComponentDocs({
               ': source changed since SHA-256 validation; refusing to overwrite a missing or unreadable document.'
           );
         }
-        if (sha256(current) !== entry.originalSha256 || current !== entry.source) {
+        if (
+          sha256(current) !== entry.originalSha256 ||
+          current !== entry.source
+        ) {
           throw new Error(
             entry.file +
               ': source changed since SHA-256 validation; refusing to overwrite concurrent editorial changes.'

@@ -259,7 +259,6 @@ describe('Checkbox legacy docs adoption pilot', () => {
     );
   });
 
-
   it.each(['react', 'react-native'] as const)(
     'rejects unexpected YAML frontmatter on %s without modifying either page',
     async (platform) => {
@@ -282,7 +281,10 @@ describe('Checkbox legacy docs adoption pilot', () => {
       ).rejects.toThrow('unsupported YAML frontmatter');
 
       const after = new Map(
-        test.files.map((file) => [file.platform, fs.readFileSync(file.target, 'utf8')])
+        test.files.map((file) => [
+          file.platform,
+          fs.readFileSync(file.target, 'utf8'),
+        ])
       );
       expect(after.get(platform)).toBe(unexpected);
       for (const file of test.files) {
@@ -355,7 +357,10 @@ describe('Checkbox legacy docs adoption pilot', () => {
       Reflect.apply(writeFile, fs, args);
       if (!injected && args[0] === react.target) {
         injected = true;
-        fs.appendFileSync(native.target, '\nNative editor changed during commit.\n');
+        fs.appendFileSync(
+          native.target,
+          '\nNative editor changed during commit.\n'
+        );
       }
     });
 
@@ -394,7 +399,10 @@ describe('Checkbox legacy docs adoption pilot', () => {
       Reflect.apply(writeFile, fs, args);
       if (!injected && args[0] === native.target) {
         injected = true;
-        fs.appendFileSync(react.target, '\nExternal edit after React migration.\n');
+        fs.appendFileSync(
+          react.target,
+          '\nExternal edit after React migration.\n'
+        );
       }
     });
 
@@ -408,7 +416,9 @@ describe('Checkbox legacy docs adoption pilot', () => {
           preview.entries.map((entry) => [entry.platform, entry.originalSha256])
         ),
       })
-    ).rejects.toThrow('cannot safely roll back documents edited after this migration');
+    ).rejects.toThrow(
+      'cannot safely roll back documents edited after this migration'
+    );
     expect(injected).toBe(true);
     expect(fs.readFileSync(react.target, 'utf8')).toContain(
       'External edit after React migration.'
