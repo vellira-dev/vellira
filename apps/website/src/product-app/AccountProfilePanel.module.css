@@ -1,8 +1,19 @@
 .root {
   display: grid;
   min-width: 0;
-  gap: 40px;
-  padding-top: var(--space-8);
+  gap: var(--space-6);
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+/* All surfaces follow semantic theme tokens: white on light themes, the
+   corresponding elevated surface on dark and high-contrast themes. */
+.accountCard {
+  min-width: 0;
+  padding: var(--space-8);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-xl);
 }
 
 .identityRow {
@@ -10,8 +21,7 @@
   align-items: center;
   min-width: 0;
   gap: var(--space-4);
-  padding-bottom: var(--space-8);
-  border-bottom: 1px solid var(--border-muted);
+  /* Card padding, not a section divider, separates the account header. */
 }
 
 .avatar {
@@ -75,13 +85,13 @@
 .editForm {
   display: grid;
   min-width: 0;
-  gap: 40px;
+  gap: var(--space-6);
 }
 
 .profileBlock {
   display: grid;
   min-width: 0;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .sectionHeading {
@@ -174,12 +184,39 @@
   margin-top: calc(var(--space-2) * -1);
 }
 
-.formActions {
+/* The action bar is part of the form, but sticks to the visible viewport
+   only while there are pending edits. It never appears in clean state. */
+.stickyActions {
+  position: sticky;
+  z-index: 20;
+  bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-md);
+}
+
+.actionButtons {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-4);
-  padding-top: var(--space-2);
+  gap: var(--space-3);
+}
+
+.actionButtons > * {
+  flex: none;
+}
+
+.saveFeedback {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
 }
 
 .unsavedText,
@@ -252,16 +289,21 @@
 
 @media (width <= 650px) {
   .root {
-    padding-top: var(--space-6);
-    gap: var(--space-8);
+    padding-block: var(--space-5);
+    gap: var(--space-5);
+  }
+
+  .accountCard {
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
   }
 
   .editForm {
-    gap: var(--space-8);
+    gap: var(--space-5);
   }
 
   .profileBlock {
-    gap: var(--space-4);
+    gap: var(--space-5);
   }
 
   .identityRow {
@@ -296,13 +338,24 @@
     margin-bottom: 0;
   }
 
-  .formActions {
-    flex-wrap: wrap;
-    justify-content: stretch;
+  .stickyActions {
+    bottom: max(var(--space-3), env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
   }
 
-  .formActions button {
+  .actionButtons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     width: 100%;
+    gap: var(--space-3);
+  }
+
+  .actionButtons > * {
+    width: 100%;
+    min-width: 0;
   }
 }
 
