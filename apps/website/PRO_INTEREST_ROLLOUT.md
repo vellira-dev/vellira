@@ -25,6 +25,17 @@ Before enabling for staging or production:
    Test specifically that tagging an already-confirmed `regular` subscriber
    does not downgrade their existing newsletter status to `unactivated`; if
    that transition occurs, leave the flag OFF until the adapter is revised.
+   **More importantly, an unauthenticated request for somebody else's existing
+   confirmed address must never silently add the Pro-interest tag without
+   separate owner confirmation.** Buttondown's documented collision-add policy
+   merges tags for existing subscribers; a generic HTTP 200 or current
+   `type: unactivated` request is not proof of new topic-specific consent on
+   an already-active email. Before rollout, independently verify a safe
+   provider-owned opt-in confirmation flow for this case or implement a
+   narrowly reviewed verification route; otherwise refuse to tag existing
+   subscribers, explain that limitation, and count only proven opt-ins.
+   If this cannot be guaranteed, leave the flag OFF. Do not build a shadow
+   subscriber database or silently accept spoofed "interest" records.
    If the provider changes semantics, keep the flag OFF and fix the adapter
    before accepting a real Pro-interest address.
 3. Confirm the intended newsletter audiences and **tag-based segmentation** in
