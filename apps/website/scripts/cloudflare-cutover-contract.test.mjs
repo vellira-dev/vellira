@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import './cloudflare-archive-client.test.mjs';
@@ -192,4 +193,93 @@ test('runtime stabilization fails closed when the activation never converges', a
     }),
     /Runtime did not stabilize/
   );
+});
+
+test('production, staging, and legacy smoke use structural route identities', async () => {
+  const root = path.resolve(import.meta.dirname, '../../../');
+  const workflows = [
+    'deploy-website-cloudflare-staging.yml',
+    'deploy-website-cloudflare-production.yml',
+    'adopt-website-cloudflare-legacy.yml',
+  ];
+
+  const expectedSwitch = ['data-component-explorer-main', '>Switch</h1>'];
+  const expectedBlog = ['<h1>Blog</h1>', 'aria-label="Published articles"'];
+  const switchCopyEdited =
+    '<div data-component-explorer-main><h1 class="title">Switch</h1>' +
+    '<p>Entirely rewritten component introduction.</p></div>';
+  const wrongComponent =
+    '<div data-component-explorer-main><h1 class="title">Checkbox</h1></div>';
+  const blogCopyEdited =
+    '<main><h1>Blog</h1><p>Brand new description</p>' +
+    '<section aria-label="Published articles"></section></main>';
+
+  for (const workflow of workflows) {
+    const source = await readFile(
+      path.join(root, '.github/workflows', workflow),
+      'utf8'
+    );
+    const switchLine = source
+      .split('\n')
+      .find((line) => line.includes("check_route '/components/switch'"));
+    const blogLine = source
+      .split('\n')
+      .find((line) => line.includes("check_route '/blog' "));
+    assert.ok(switchLine, `Missing Switch smoke in ${workflow}`);
+    assert.ok(blogLine, `Missing blog index smoke in ${workflow}`);
+
+    for (const marker of expectedSwitch) {
+      assert.ok(
+        switchLine.includes(`'${marker}'`),
+        `Missing ${marker} in ${workflow}`
+      );
+    }
+    for (const marker of expectedBlog) {
+      assert.ok(
+        blogLine.includes(`'${marker}'`),
+        `Missing ${marker} in ${workflow}`
+      );
+    }
+
+    assert.ok(
+      expectedSwitch.every((marker) => switchCopyEdited.includes(marker))
+    );
+    assert.ok(expectedBlog.every((marker) => blogCopyEdited.includes(marker)));
+    assert.ok(
+      !expectedSwitch.every((marker) => wrongComponent.includes(marker)),
+      'A wrong component heading cannot pass the route identity smoke'
+    );
+    assert.doesNotMatch(switchLine, /Vellira Switch for React and React Native/);
+    assert.doesNotMatch(blogLine, /Practical engineering notes/);
+  }
+
+  const browserSmoke = await readFile(
+    path.join(root, 'apps/react-storybook/scripts/cloudflare-website-smoke.mjs'),
+    'utf8'
+  );
+  assert.match(browserSmoke, /componentHeading: true/);
+  assert.match(browserSmoke, /\[data-component-explorer-main\]/);
+  assert.match(browserSmoke, /getByRole\('heading'/);
+  assert.doesNotMatch(browserSmoke, /Vellira Switch for React and React Native/);
+
+  const explorer = await readFile(
+    path.join(root, 'apps/website/src/component-catalog/shared/ComponentExplorer/ComponentExplorer.tsx'),
+    'utf8'
+  );
+  const componentHeader = await readFile(
+    path.join(root, 'apps/website/src/component-catalog/shared/ComponentHeader/ComponentHeader.tsx'),
+    'utf8'
+  );
+  const blogIndex = await readFile(
+    path.join(root, 'apps/website/src/blog/ui/BlogIndex.tsx'),
+    'utf8'
+  );
+  assert.match(explorer, /data-component-explorer-main/);
+  assert.ok(
+    componentHeader.includes(
+      '<h1 className={styles.title}>{component.name}</h1>'
+    )
+  );
+  assert.match(blogIndex, /<h1>Blog<\/h1>/);
+  assert.match(blogIndex, /aria-label='Published articles'/);
 });
