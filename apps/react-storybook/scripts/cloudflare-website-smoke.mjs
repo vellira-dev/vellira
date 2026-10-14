@@ -766,7 +766,12 @@ async function performRecoverableClientNavigation({
   });
 }
 
-async function navigateByLink(startPath, href, expectedText) {
+async function navigateByLink(
+  startPath,
+  href,
+  expectedText,
+  { componentHeading = false } = {}
+) {
   await performRecoverableClientNavigation({
     startPath,
     href,
@@ -776,11 +781,18 @@ async function navigateByLink(startPath, href, expectedText) {
       await link.waitFor({ state: 'visible', timeout: 15_000 });
     },
     click: () => page.locator(`a[href="${href}"]`).first().click(),
-    assertReady: () =>
-      page.getByText(expectedText, { exact: false }).first().waitFor({
-        state: 'visible',
-        timeout: 15_000,
-      }),
+    assertReady: () => {
+      const target = componentHeading
+        ? page
+            .locator('[data-component-explorer-main]')
+            .getByRole('heading', {
+              level: 1,
+              name: expectedText,
+              exact: true,
+            })
+        : page.getByText(expectedText, { exact: false }).first();
+      return target.waitFor({ state: 'visible', timeout: 15_000 });
+    },
   });
   console.log(`OK client navigation ${startPath} -> ${href}`);
 }
@@ -1257,11 +1269,9 @@ try {
     'Controlled and Uncontrolled State Across React and React Native'
   );
   await navigateViaContinueReading();
-  await navigateByLink(
-    '/components',
-    '/components/switch',
-    'Vellira Switch for React and React Native'
-  );
+  await navigateByLink('/components', '/components/switch', 'Switch', {
+    componentHeading: true,
+  });
   await navigateWithinComponentSidebar();
   await navigateWithinMobileComponentSidebar();
 

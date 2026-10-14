@@ -158,10 +158,51 @@
   min-width: 0;
 }
 
-.emailWithStatus .verified,
-.emailWithStatus .unverified {
-  margin-bottom: 12px;
+.emailLabelContents {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
+.emailVerificationPill {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 3px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+  white-space: nowrap;
+  border: 0;
+  border-radius: var(--radius-full);
+  gap: var(--space-1);
+}
+
+.emailVerificationPill svg {
+  flex: none;
+}
+
+.emailVerificationVerified {
+  color: var(--status-success-fg);
+  background: var(--status-success-bg);
+}
+
+.emailVerificationUnverified {
+  color: var(--status-error-fg);
+  background: color-mix(
+    in srgb,
+    var(--status-error-fg) 12%,
+    var(--surface-elevated)
+  );
+}
+
+.emailUpdateAction {
   justify-self: end;
+  align-self: end;
+  white-space: nowrap;
 }
 
 .resendVerification {
@@ -277,22 +318,6 @@
   font-size: var(--font-size-sm);
 }
 
-.verified,
-.unverified {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
-
-.verified {
-  color: var(--status-success-fg);
-}
-
-.unverified {
-  color: var(--status-error-fg);
-}
-
 @media (width <= 650px) {
   .root {
     padding-top: 0;
@@ -339,10 +364,8 @@
     gap: var(--space-2);
   }
 
-  .emailWithStatus .verified,
-  .emailWithStatus .unverified {
+  .emailUpdateAction {
     justify-self: start;
-    margin-bottom: 0;
   }
 
   .stickyActions {

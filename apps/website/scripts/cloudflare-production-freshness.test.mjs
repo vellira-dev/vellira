@@ -499,61 +499,59 @@ test('canonical deployment matcher mirrors staging workflow path filters', async
   );
 });
 
-test('deploy script gates archive mutation and real activation with shared freshness', async () => {
+test('deployment orchestrator gates archive mutation and Worker activation with shared freshness', async () => {
   const source = await fs.readFile(
     path.resolve(import.meta.dirname, 'cloudflare-deploy.mjs'),
     'utf8'
   );
-
-  const marker = 'await assertFreshProductionCandidate(freshnessContext);';
-  const firstCheck = source.indexOf(marker);
-  const secondCheck = source.indexOf(marker, firstCheck + marker.length);
-  const thirdCheck = source.indexOf(marker, secondCheck + marker.length);
-  const archive = source.indexOf('await withRemoteArchive(');
-  const dryRun = source.indexOf("'--dry-run'");
-  const activation = source.indexOf(
-    "run('pnpm', ['exec', 'wrangler', 'deploy'",
-    dryRun
+  const orchestrator = await fs.readFile(
+    path.resolve(import.meta.dirname, 'cloudflare-deployment-outcome.mjs'),
+    'utf8'
   );
 
-  assert.ok(firstCheck >= 0);
-  assert.ok(secondCheck > firstCheck);
-  assert.equal(thirdCheck, -1);
-  assert.ok(firstCheck < archive, 'Freshness must gate remote archive mutation');
-  assert.ok(dryRun < secondCheck, 'Final freshness must run after dry-run');
-  assert.ok(
-    secondCheck < activation,
-    'Final freshness must run immediately before production activation'
+  const phases = [
+    'checkBeforeArchive:',
+    'archive: async',
+    'dryRun: ()',
+    'checkBeforeActivation:',
+    'activate: ()',
+    'stabilize: async',
+  ].map((phase) => source.indexOf(phase));
+  assert.ok(phases.every((value) => value >= 0));
+  assert.deepEqual([...phases].sort((a, b) => a - b), phases);
+  assert.equal(
+    (source.match(/assertFreshProductionCandidate\(freshnessContext\)/g) ?? []).length,
+    2,
+    'The deploy script must use the same exact freshness control twice'
   );
+  assert.match(orchestrator, /await archive\(\);/);
+  assert.match(orchestrator, /await dryRun\(\);/);
+  assert.match(orchestrator, /await activate\(\);/);
+  assert.match(orchestrator, /await stabilize\(\);/);
+  const guard = orchestrator.indexOf('const terminal = await checkFreshness(');
+  const activation = orchestrator.indexOf('await activate();');
+  assert.ok(guard >= 0 && activation > guard);
+  assert.match(orchestrator.slice(guard, activation), /if \(terminal\) return terminal;/);
 
-  const between = source.slice(secondCheck + marker.length, activation);
-  assert.doesNotMatch(
-    between,
-    /await |fetch\(|withRemoteArchive|prepareDeployment|populateCache/,
-    'No async or remote mutation may occur after final freshness check'
-  );
   assert.match(
     source,
     /const \{ GITHUB_TOKEN: githubToken, \.\.\.childProcessEnv \} = process\.env;/
   );
   assert.match(source, /githubToken,/);
-  assert.match(
-    source,
-    /function run\(command, args, env = childProcessEnv\)/
-  );
+  assert.match(source, /function run\(command, args, env = childProcessEnv\)/);
   assert.doesNotMatch(
     source,
     /\.\.\.process\.env[\s\S]{0,80}OPEN_NEXT_DEPLOY/,
-    'Deployment child processes must not inherit GITHUB_TOKEN through process.env'
+    'Deployment subprocesses must not inherit GITHUB_TOKEN'
   );
   assert.equal(
     (source.match(/\.\.\.childProcessEnv,/g) ?? []).length,
     2,
-    'Both Wrangler dry-run and real activation must use the sanitized child environment'
+    'Both Wrangler dry-run and activation use the sanitized child environment'
   );
 });
 
-test('production workflow uses shared freshness instead of raw SHA equality', async () => {
+test('production workflow uses fail-closed supersession gates rather than raw SHA equality', async () => {
   const workflow = await fs.readFile(
     path.resolve(
       import.meta.dirname,
@@ -561,13 +559,38 @@ test('production workflow uses shared freshness instead of raw SHA equality', as
     ),
     'utf8'
   );
-
-  assert.doesNotMatch(
-    workflow,
-    /test "\$current_main" = "\$CANDIDATE_SHA"/
+  assert.doesNotMatch(workflow, /test "\$current_main" = "\$CANDIDATE_SHA"/);
+  assert.ok(workflow.includes('id: preflight'));
+  assert.ok(workflow.includes('id: prepublish'));
+  assert.ok(workflow.includes('id: premutation'));
+  assert.ok(
+    workflow.includes(
+      'node apps/website/scripts/cloudflare-production-supersession.mjs'
+    )
   );
-  assert.match(
-    workflow,
-    /cloudflare-production-freshness\.mjs apps\/website\/wrangler\.production\.jsonc/
+  assert.ok(
+    workflow.includes("steps.premutation.outputs.superseded != 'true'")
+  );
+});
+
+test('superseded candidate carries exact revision and changed-path evidence', async () => {
+  const changedPath = 'apps/website/src/app/page.tsx';
+  const mock = githubFetch({ comparison: compare([changedPath]) });
+  await assert.rejects(
+    assertFreshProductionCandidate({
+      configPath: '/repo/apps/website/wrangler.production.jsonc',
+      candidateSource: 'staging',
+      candidateSha: A,
+      repository: 'vellira-dev/vellira',
+      githubToken: 'test-token',
+      fetchImpl: mock.fetchImpl,
+    }),
+    (error) => {
+      assert.equal(error.name, 'ProductionCandidateSupersededError');
+      assert.equal(error.candidateSha, A);
+      assert.equal(error.mainSha, B);
+      assert.deepEqual(error.relevantPaths, [changedPath]);
+      return true;
+    }
   );
 });
