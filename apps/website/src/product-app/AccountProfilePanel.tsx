@@ -256,9 +256,10 @@ export function AccountProfilePanel({
   const profile = visible.kind === 'ready' ? visible : null;
   const dirty =
     !!profile && !equalFields(profile.draft, profileFields(profile.original));
-  const fullNameError = profile && dirty
-    ? validateName(profile.draft.fullName, 120, true)
-    : undefined;
+  const fullNameError =
+    profile && dirty
+      ? validateName(profile.draft.fullName, 120, true)
+      : undefined;
   const displayNameError = profile
     ? validateName(profile.draft.displayName, 60)
     : undefined;
