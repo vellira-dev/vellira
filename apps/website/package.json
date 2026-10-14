@@ -25,6 +25,7 @@
     "test:account-billing-session-boundary": "node scripts/account-billing-session-boundary.mjs",
     "test:account-header-menu": "node scripts/account-header-menu.mjs",
     "test:account-settings-tabs": "node scripts/account-settings-tabs.mjs",
+    "test:account-profile-settings": "node scripts/account-profile-settings.mjs",
     "test:account-email-verification-preview": "node scripts/account-email-verification-preview.mjs",
     "test:account-verification-tab-refresh": "node scripts/account-verification-tab-refresh.mjs",
     "sync:icons": "pnpm --filter @vellira-ui/icons build"
