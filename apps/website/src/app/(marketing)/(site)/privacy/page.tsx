@@ -168,9 +168,9 @@ export default function PrivacyPage() {
               </p>
               <p>
                 The optional Pro updates form also labels the subscription with
-                a topic tag in Buttondown so we can distinguish interest in
-                the launch from general newsletter signups. This is a request
-                for engineering notes and Pro news, not a purchase, reservation,
+                a topic tag in Buttondown so we can distinguish interest in the
+                launch from general newsletter signups. This is a request for
+                engineering notes and Pro news, not a purchase, reservation,
                 account upgrade, or consent to advertising tracking. We do not
                 use a tracking cookie or a new per-visitor identifier for this
                 form.
@@ -206,7 +206,8 @@ export default function PrivacyPage() {
                   email verification and password recovery;
                 </li>
                 <li>
-                  to send engineering notes and optional Pro launch updates when you explicitly subscribe; and
+                  to send engineering notes and optional Pro launch updates when
+                  you explicitly subscribe; and
                 </li>
                 <li>to respond when you contact Vellira.</li>
               </ul>

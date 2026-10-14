@@ -9,12 +9,14 @@ import styles from './Pro.module.css';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SUBSCRIBE_ENDPOINT = '/api/newsletter/subscribe';
-const FALLBACK_ERROR = 'Signup is temporarily unavailable. Please try again later.';
+const FALLBACK_ERROR =
+  'Signup is temporarily unavailable. Please try again later.';
 
 const apiErrors = {
   invalid_email: 'Enter a valid email address.',
   consent_required: 'Please confirm that you want Pro updates.',
-  already_subscribed: 'This address is already subscribed or awaiting confirmation.',
+  already_subscribed:
+    'This address is already subscribed or awaiting confirmation.',
   rate_limited: 'Please wait a few minutes and try again.',
   temporarily_unavailable: FALLBACK_ERROR,
 } as const;

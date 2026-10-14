@@ -501,7 +501,6 @@
   }
 }
 
-
 .interestWrap {
   position: relative;
   margin-top: var(--space-8);
@@ -554,8 +553,13 @@
   margin: var(--space-3) 0;
   padding: var(--space-3);
   color: var(--color-success-600);
-  background: color-mix(in srgb, var(--color-success-500) 9%, var(--surface-default));
-  border: 1px solid color-mix(in srgb, var(--color-success-500) 25%, var(--border-muted));
+  background: color-mix(
+    in srgb,
+    var(--color-success-500) 9%,
+    var(--surface-default)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--color-success-500) 25%, var(--border-muted));
   border-radius: var(--radius-md);
 }
 

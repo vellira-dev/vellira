@@ -101,11 +101,15 @@ describe('newsletter subscribe API', () => {
   it('keeps Pro collection disabled until the separate provider rollout is approved', async () => {
     const subscribe = vi.fn(async () => ({ ok: true }) as const);
     const route = handler({ subscribe, proInterestEnabled: false });
-    const result = await route(request(JSON.stringify({
-      email: 'person@example.com',
-      purpose: 'pro_launch',
-      consent: true,
-    })));
+    const result = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'pro_launch',
+          consent: true,
+        })
+      )
+    );
     expect(result.status).toBe(503);
     expect(await result.json()).toMatchObject({
       ok: false,
@@ -113,9 +117,13 @@ describe('newsletter subscribe API', () => {
     });
     expect(subscribe).not.toHaveBeenCalled();
 
-    const normal = await route(request(JSON.stringify({
-      email: 'person@example.com',
-    })));
+    const normal = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+        })
+      )
+    );
     expect(normal.status).toBe(201);
     expect(subscribe).toHaveBeenCalledExactlyOnceWith({
       apiKey: 'test-buttondown-key',
@@ -130,11 +138,13 @@ describe('newsletter subscribe API', () => {
 
     for (const consent of [undefined, false, 'true', 1]) {
       const response = await route(
-        request(JSON.stringify({
-          email: 'person@example.com',
-          purpose: 'pro_launch',
-          ...(consent === undefined ? {} : { consent }),
-        }))
+        request(
+          JSON.stringify({
+            email: 'person@example.com',
+            purpose: 'pro_launch',
+            ...(consent === undefined ? {} : { consent }),
+          })
+        )
       );
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({
@@ -144,20 +154,26 @@ describe('newsletter subscribe API', () => {
     }
     expect(subscribe).not.toHaveBeenCalled();
 
-    const invalidPurpose = await route(request(JSON.stringify({
-      email: 'person@example.com',
-      purpose: 'override',
-      consent: true,
-    })));
+    const invalidPurpose = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'override',
+          consent: true,
+        })
+      )
+    );
     expect(invalidPurpose.status).toBe(400);
     expect(subscribe).not.toHaveBeenCalled();
 
     const confirmedRequest = await route(
-      request(JSON.stringify({
-        email: 'person@example.com',
-        purpose: 'pro_launch',
-        consent: true,
-      }))
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'pro_launch',
+          consent: true,
+        })
+      )
     );
     expect(confirmedRequest.status).toBe(201);
     expect(subscribe).toHaveBeenCalledExactlyOnceWith({
@@ -236,7 +252,9 @@ describe('Buttondown provider boundary', () => {
   });
 
   it('keeps Pro updates distinct, requires confirmation, and never bypasses provider suppression', async () => {
-    const fetcher = vi.fn<ButtondownFetcher>(async () => new Response('{}', { status: 201 }));
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
     const result = await subscribeWithButtondown({
       apiKey: 'server-only-test-key',
       email: 'pro@example.com',
@@ -273,10 +291,10 @@ describe('Buttondown provider boundary', () => {
         email: 'suppressed@example.com',
         ipAddress: null,
         purpose: 'pro_launch',
-        fetcher: async () => new Response(
-          JSON.stringify({ code: 'subscriber_suppressed' }),
-          { status: 400 }
-        ),
+        fetcher: async () =>
+          new Response(JSON.stringify({ code: 'subscriber_suppressed' }), {
+            status: 400,
+          }),
       })
     ).resolves.toMatchObject({ ok: false, code: 'already_subscribed' });
   });

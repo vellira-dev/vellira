@@ -147,7 +147,8 @@ async function getButtondownApiKey(): Promise<string | undefined> {
 const defaultDependencies: NewsletterSubscribeDependencies = {
   getApiKey: getButtondownApiKey,
   subscribe: subscribeWithButtondown,
-  proInterestEnabled: process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1',
+  proInterestEnabled:
+    process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1',
 };
 
 export function createNewsletterSubscribeHandler(
@@ -190,7 +191,9 @@ export function createNewsletterSubscribeHandler(
       apiKey,
       email,
       ipAddress: resolveSubscriberIp(request.headers),
-      ...(body.purpose === 'pro_launch' ? { purpose: 'pro_launch' as const } : {}),
+      ...(body.purpose === 'pro_launch'
+        ? { purpose: 'pro_launch' as const }
+        : {}),
     });
     return response(result, statusForResult(result));
   };
