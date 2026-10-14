@@ -108,7 +108,7 @@ export function auditLegacyComponentDocs(params: {
   const metadata = componentMetadata.filter(
     (item) => !componentName || item.name === componentName
   );
-  const contracts = new Set(
+  const contracts = new Set<string>(
     componentDocsContracts.map((contract) => contract.component)
   );
   const results: DocsAdoptionEntry[] = [];
