@@ -10,8 +10,6 @@ export const LEGACY_DISCOVERY_COMPONENTS = [
   'Modal',
   'Popover',
   'Select',
-  'Tabs',
-  'Tooltip',
 ] as const;
 
 export type DiscoveryPlatform = 'react' | 'react-native';

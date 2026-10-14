@@ -99,7 +99,7 @@ export const componentCatalogPresentation = [
     slug: 'tabs',
     name: 'Tabs',
     description:
-      'Keyboard-accessible tab navigation with controlled activation and indicators.',
+      'React and React Native Tabs with compound triggers and panels, controlled or default selection, layout variants, disabled state, and platform-specific accessibility.',
     category: 'navigation',
     order: 10,
     docs: {
@@ -152,7 +152,7 @@ export const componentCatalogPresentation = [
     slug: 'tooltip',
     name: 'Tooltip',
     description:
-      'Accessible Tooltip for React and React Native with managed delay, positioning, controlled state, compound triggers, and platform-appropriate dismissal behavior.',
+      'React and React Native Tooltip with compound Trigger and Content, positioning, optional arrow, disabled state, and platform-specific interaction.',
     category: 'overlays',
     order: 40,
     docs: {
