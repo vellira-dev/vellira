@@ -9,8 +9,6 @@ export const LEGACY_DISCOVERY_COMPONENTS = [
   'Dropdown',
   'Modal',
   'Popover',
-  'Radio',
-  'RadioGroup',
   'Select',
   'Tabs',
   'Tooltip',
