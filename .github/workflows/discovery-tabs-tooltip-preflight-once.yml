@@ -32,7 +32,7 @@ jobs:
       - name: Validate bounded scope and self-remove
         run: |
           rm .github/workflows/discovery-tabs-tooltip-preflight-once.yml
-          changed="$(git diff --name-only | grep -v -E '^(apps/website/src/component-catalog/components/(Tabs|Tooltip)/metadata.ts|apps/website/src/component-catalog/registry/(componentPages|componentPresentation).ts|scripts/seo/component-discovery-contract(\\.test)?.ts|\\.github/workflows/discovery-tabs-tooltip-preflight-once.yml)$' || true)"
+          changed="$(git diff --name-only | grep -v -E '^(apps/website/src/component-catalog/components/(Tabs|Tooltip)/metadata\.ts|apps/website/src/component-catalog/registry/(componentPages|componentPresentation)\.ts|scripts/seo/component-discovery-contract(\.test)?\.ts)$' | grep -v -F -x '.github/workflows/discovery-tabs-tooltip-preflight-once.yml' || true)"
           if [ -n "$changed" ]; then
             echo "Unexpected changed files:"
             echo "$changed"
