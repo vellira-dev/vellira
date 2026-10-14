@@ -7,13 +7,11 @@
  */
 export const LEGACY_DISCOVERY_COMPONENTS = [
   'Dropdown',
-  'FormField',
   'Modal',
   'Popover',
   'Radio',
   'RadioGroup',
   'Select',
-  'Switch',
   'Tabs',
   'Tooltip',
 ] as const;

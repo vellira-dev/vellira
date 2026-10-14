@@ -85,7 +85,7 @@ export const componentCatalogPresentation = [
     slug: 'form-field',
     name: 'Form Field',
     description:
-      'Composable labels, descriptions, controls, and validation messages for forms.',
+      'Composable React and React Native FormField with Label, Description, Control and Message slots, field state, accessible feedback, and layout options.',
     category: 'forms',
     order: 60,
     docs: {
@@ -165,7 +165,7 @@ export const componentCatalogPresentation = [
     slug: 'switch',
     name: 'Switch',
     description:
-      'Vellira Switch for React and React Native with usage examples, accessibility guidance, and API details.',
+      'Accessible React and React Native Switch for immediate boolean settings with controlled or default checked state, disabled, required, and invalid semantics.',
     category: 'forms',
     order: 999,
     docs: {

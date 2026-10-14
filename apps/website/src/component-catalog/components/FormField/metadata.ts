@@ -9,6 +9,56 @@ const nativeInputImports = [
 ] as const;
 
 export default defineComponentPageMetadata({
+  discovery: {
+    status: 'complete',
+    summary:
+      'Use FormField to compose a custom control with a label, helper text, validation, and consistent field layout.',
+    description:
+      'Composable React and React Native FormField with Label, Description, Control and Message slots, field state, accessible feedback, and layout options.',
+    whenToUse: [
+      'Wrap a custom field when its label, description, control, and validation feedback should share one layout.',
+      'Prefer the existing Input shorthand when it already renders all necessary field chrome.',
+      'Use compound slots when label, description, control, and supporting message need explicit composition.',
+      'Show an error when the user must recover from invalid input; reserve messages for other status or guidance.',
+    ],
+    patterns: [
+      {
+        id: 'compound-field',
+        title: 'Compound field anatomy',
+        description:
+          'Compose FormField.Label, Description, Control, and Message to structure a custom input.',
+      },
+      {
+        id: 'error-feedback',
+        title: 'Validation and recovery',
+        description:
+          'Provide error or invalid state to surface validation feedback; error takes precedence over status message.',
+      },
+      {
+        id: 'status-message',
+        title: 'Status and success text',
+        description:
+          'Use message, messageTone, and messageLive for non-error supporting feedback.',
+      },
+      {
+        id: 'field-state',
+        title: 'Field state for compatible controls',
+        description:
+          'Use required, disabled, invalid, and size with compatible child controls consuming FormField context.',
+      },
+    ],
+    platformNotes: {
+      react: [
+        'React FormField renders a semantic label with generated IDs and by default binds required, disabled, and ARIA relationships to a compatible direct child; bindControl can opt out.',
+        'React error feedback uses role=alert; messageLive=polite enables an ARIA live region for non-error status.',
+      ],
+      'react-native': [
+        'React Native FormField renders View/Text layout and provides field context; custom controls remain responsible for their own accessibility label, role, and disabled interaction.',
+        'Native error and polite status feedback use accessibilityLiveRegion=polite; compatible Vellira controls may inherit state and size from context.',
+      ],
+    },
+    missingEvidence: [],
+  },
   react: {
     children: `<ReactInput placeholder='name@company.com' type='email' />`,
     imports: reactInputImports,
