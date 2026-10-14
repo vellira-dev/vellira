@@ -1,0 +1,31 @@
+name: One-shot Discovery registry formatting
+on:
+  push:
+    branches:
+      - feat/discovery-radio-radio-group-main-sync-20261014
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply canonical formatting and remove temporary workflow
+        run: |
+          pnpm exec prettier apps/website/src/component-catalog/registry/componentPages.ts --write
+          rm .github/workflows/discovery-format-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/website/src/component-catalog/registry/componentPages.ts .github/workflows/discovery-format-once.yml
+          git diff --cached --quiet || git commit -m "style(discovery): apply canonical Prettier"
+          git push origin HEAD:feat/discovery-radio-radio-group-main-sync-20261014
