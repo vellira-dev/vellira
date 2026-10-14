@@ -178,7 +178,7 @@ export const componentCatalogPresentation = [
     slug: 'accordion',
     name: 'Accordion',
     description:
-      'Vellira Accordion for React and React Native with usage examples, accessibility guidance, and API details.',
+      'Accessible compound Accordion for React and React Native with single or multiple expansion, controlled and default values, collapsible behavior, disabled items, and platform-specific trigger semantics.',
     category: 'navigation',
     order: 999,
     docs: {
