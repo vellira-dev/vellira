@@ -14,6 +14,8 @@ const context = await browser.newContext();
 let profile = { fullName: '', displayName: '', locale: 'en', timeZone: 'UTC', revision: 1 };
 let profileReads = 0;
 let profileWrites = 0;
+let emailReads = 0;
+let emailUnavailable = false;
 let mockedConflict = false;
 let readUnavailable = false;
 let unexpectedMutations = 0;
@@ -53,6 +55,15 @@ await context.route('**/v1/**', async (route) => {
         membership: { role: 'owner' },
       }],
     });
+    return;
+  }
+  if (path === '/v1/auth/email/current' && method === 'GET') {
+    emailReads += 1;
+    if (emailUnavailable) {
+      await reply(503, { error: { code: 'account_email_unavailable' } });
+    } else {
+      await reply(200, { email: { address: 'owner@example.test', verified: true } });
+    }
     return;
   }
   if (path === '/v1/auth/csrf' && method === 'GET') {
@@ -98,6 +109,13 @@ try {
   const displayName = page.getByRole('textbox', { name: 'Display name' });
   await fullName.waitFor();
   assert.equal(await fullName.inputValue(), '');
+  const email = page.getByRole('textbox', { name: 'Email address' });
+  await page.waitForFunction(() => {
+    const field = document.querySelector('input[type="email"]');
+    return field?.value === 'owner@example.test';
+  });
+  assert.equal(await email.getAttribute('readonly'), '');
+  assert.equal(emailReads, 1, 'current sign-in email must load from auth exactly once');
   assert.equal(await page.getByRole('button', { name: 'Save changes' }).isDisabled(), true);
   assert.equal(profileReads, 1, 'profile GET must be read-only and load exactly once');
 
@@ -121,6 +139,19 @@ try {
   await page.getByRole('button', { name: 'Discard edits and reload' }).click();
   await displayName.waitFor();
   assert.equal(await displayName.inputValue(), 'Ada');
+
+  // Email read failures must not hide or reset the editable profile.
+  emailUnavailable = true;
+  await page.reload();
+  await page.getByText('Could not load your sign-in email.', { exact: true }).waitFor();
+  assert.equal(await fullName.inputValue(), 'Ada Lovelace');
+  emailUnavailable = false;
+  const readsBeforeRetry = profileReads;
+  await page.getByRole('button', { name: 'Retry email' }).click();
+  await page.waitForFunction(() =>
+    document.querySelector('input[type="email"]')?.value === 'owner@example.test'
+  );
+  assert.equal(profileReads, readsBeforeRetry, 'email retry must not reload profile data');
 
   // A deliberately rejected tab navigation must preserve both edits and tab.
   await fullName.fill('Uncommitted');
@@ -154,7 +185,7 @@ try {
   }
   assert.equal(unexpectedMutations, 0);
   assert.ok(profileReads >= 3, 'retry must issue a new GET');
-  console.log('OK Account Profile: GET/PATCH, CSRF, conflict, unsaved navigation, retry and responsive geometry');
+  console.log('OK Account Profile: session-owned email, GET/PATCH, CSRF, conflict, independent retries and responsive geometry');
 } finally {
   await page.close();
   await context.close();
