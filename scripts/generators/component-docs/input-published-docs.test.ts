@@ -93,6 +93,23 @@ describe('published Input docs safe legacy adoption', () => {
         expect(region.content).toContain('## Practical Usage Guidance');
       }
 
+      // The generator owns platform-specific API and accessibility facts.
+      // A React-only input type must not leak into the Native API table and
+      // native keyboard contracts must not be attributed to browser inputs.
+      const generatedAuthority = content.slice(
+        0,
+        content.indexOf('<!-- vellira-component-docs:authored:start -->')
+      );
+      if (platform === 'react') {
+        expect(generatedAuthority).toContain('HTMLInputTypeAttribute');
+        expect(generatedAuthority).toContain('aria-describedby');
+        expect(generatedAuthority).not.toContain('KeyboardTypeOptions');
+      } else {
+        expect(generatedAuthority).toContain('KeyboardTypeOptions');
+        expect(generatedAuthority).toContain('accessibilityHint');
+        expect(generatedAuthority).not.toContain('HTMLInputTypeAttribute');
+      }
+
       for (const section of originalSections) {
         expect(region.content).toContain(section);
       }
