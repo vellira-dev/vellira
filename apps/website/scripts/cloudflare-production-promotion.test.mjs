@@ -131,7 +131,7 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
   assert.match(
     candidate,
-    /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c/
+    /actions\/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333/
   );
   assert.match(
     candidate,
