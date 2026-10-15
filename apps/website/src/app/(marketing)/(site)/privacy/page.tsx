@@ -6,7 +6,7 @@ import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from '@/components/legal/LegalDocument.module.css';
 
-const LAST_UPDATED = '2026-10-14';
+const LAST_UPDATED = '2026-10-15';
 
 export const metadata: Metadata = {
   title: 'Privacy',
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
               </p>
               <p className={styles.updated}>
                 Last updated:{' '}
-                <time dateTime={LAST_UPDATED}>October 14, 2026</time>
+                <time dateTime={LAST_UPDATED}>October 15, 2026</time>
               </p>
             </header>
 
@@ -167,13 +167,16 @@ export default function PrivacyPage() {
                 deliver emails, process unsubscribes and prevent abuse.
               </p>
               <p>
-                The optional Pro updates form also labels the subscription with
-                a topic tag in Buttondown so we can distinguish interest in the
-                launch from general newsletter signups. This is a request for
-                engineering notes and Pro news, not a purchase, reservation,
-                account upgrade, or consent to advertising tracking. We do not
-                use a tracking cookie or a new per-visitor identifier for this
-                form.
+                If you request Pro updates through the optional form, Vellira
+                also sends a fixed signup attribution value (
+                <code>utm_campaign</code>:{' '}
+                <code>vellira_pro_launch_interest</code>) to Buttondown. This
+                helps distinguish newly confirmed Pro-interest signups from
+                general engineering newsletter signups. It is not a paid tag, a
+                separate email list, a purchase, an account upgrade, or consent
+                to advertising tracking. Existing subscribers are not modified
+                by this form. We do not use a tracking cookie or a new
+                per-visitor identifier for this purpose.
               </p>
               <p>
                 Newsletter signup is optional. You can unsubscribe using the
