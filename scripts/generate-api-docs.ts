@@ -1206,6 +1206,19 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
     return doc.replace(markedBlock, generatedBlock);
   }
 
+  // New Select compound API sections are generated from exported TypeScript
+  // types. Insert them adjacent to the existing SelectOption block rather
+  // than requiring hand-authored tables or silently replacing unrelated docs.
+  if (!doc.includes(item.heading) && /^### Select[A-Za-z]+Props$/.test(item.heading)) {
+    const optionEnd = '<!-- api-docgen:end ' + item.id.split('.')[0] + '.SelectOption.SelectOption -->';
+    const insertAt = doc.indexOf(optionEnd);
+    if (insertAt === -1 || doc.indexOf(optionEnd, insertAt + optionEnd.length) !== -1) {
+      throw new Error('Cannot locate unique SelectOption API anchor in ' + item.docPath);
+    }
+    const after = insertAt + optionEnd.length;
+    return doc.slice(0, after) + '\\n\\n' + item.heading + '\\n\\n' + generatedBlock + doc.slice(after);
+  }
+
   const block = findTableBlock(doc, item);
 
   if (!block) {
