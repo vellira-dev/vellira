@@ -534,6 +534,48 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### ModalTriggerProps',
+    'ModalTriggerProps',
+    'src/components/Modal/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalOverlayProps',
+    'ModalOverlayProps',
+    'src/components/Modal/Overlay/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalContentProps',
+    'ModalContentProps',
+    'src/components/Modal/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalHeaderProps',
+    'ModalHeaderProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalBodyProps',
+    'ModalBodyProps',
+    'src/components/Modal/Body/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalFooterProps',
+    'ModalFooterProps',
+    'src/components/Modal/Footer/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalCloseProps',
+    'ModalCloseProps',
+    'src/components/Modal/Close/types.ts'
+  ),
+  section(
+    'web',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -796,6 +838,60 @@ const defaultSections: ApiSection[] = [
     '### Modal Props',
     'ModalProps',
     'src/components/Modal/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalTriggerProps',
+    'ModalTriggerProps',
+    'src/components/Modal/Trigger/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalOverlayProps',
+    'ModalOverlayProps',
+    'src/components/Modal/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalContentProps',
+    'ModalContentProps',
+    'src/components/Modal/Content/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalHeaderProps',
+    'ModalHeaderProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalTitleProps',
+    'ModalTitleProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalDescriptionProps',
+    'ModalDescriptionProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalBodyProps',
+    'ModalBodyProps',
+    'src/components/Modal/Body/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalFooterProps',
+    'ModalFooterProps',
+    'src/components/Modal/Footer/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalCloseProps',
+    'ModalCloseProps',
+    'src/components/Modal/Close/types.ts'
   ),
   section(
     'native',
@@ -1297,6 +1393,12 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
+  if (
+    /^### Modal[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
@@ -1374,6 +1476,30 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       throw new Error('Missing or ambiguous Dropdown API root anchor');
     }
     const insertion = start + rootEnd.length;
+    return (
+      doc.slice(0, insertion) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(insertion)
+    );
+  }
+
+
+  // Bootstrap previously undocumented public Modal compound-part tables from
+  // real exported TypeScript contracts. Once generated markers exist the
+  // standard marker replacement path above owns subsequent regeneration.
+  if (
+    /^### Modal[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.ModalProps.ModalProps -->`;
+    const index = doc.indexOf(rootEnd);
+    if (index === -1 || doc.indexOf(rootEnd, index + rootEnd.length) !== -1) {
+      throw new Error('Missing or ambiguous Modal API root anchor');
+    }
+    const insertion = index + rootEnd.length;
     return (
       doc.slice(0, insertion) +
       '\n\n' +
