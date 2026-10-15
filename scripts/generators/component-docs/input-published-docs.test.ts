@@ -45,7 +45,7 @@ const pages = [
       '## Counter',
       '## Native Input Props',
       '## Styling',
-      'onClear={() => setQuery(\'\')}',
+      "onClear={() => setQuery('')}",
     ],
   },
 ] as const;

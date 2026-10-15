@@ -29,7 +29,8 @@ export const inputDocs = defineComponentDocs({
       seeAlso: [
         {
           component: 'FormField',
-          label: 'FormField for composed labels, descriptions, validation, and feedback.',
+          label:
+            'FormField for composed labels, descriptions, validation, and feedback.',
         },
         {
           component: 'Select',
