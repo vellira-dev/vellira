@@ -116,7 +116,7 @@ describe('published Modal documentation safe adoption', () => {
         expect(generated).toContain(`<!-- api-docgen:end ${marker} -->`);
       }
       expect(
-        [...generated.matchAll(/<!-- api-docgen:start (?:web|native)\.Modal\w+Props\./g)]
+        [...generated.matchAll(/<!-- api-docgen:start (?:web|native)\.Modal\w*Props\./g)]
       ).toHaveLength(apiNames.length);
       for (const fragment of page.authorEvidence) {
         expect(authored.content).toContain(fragment);
