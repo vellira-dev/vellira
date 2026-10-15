@@ -48,6 +48,9 @@ test('Pro interest is an explicit manual staging preview and stays OFF on all pr
   assert.match(production, /NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'/);
   assert.match(production, /pro-interest-live-smoke\.mjs/);
 
+  const websiteIgnore = await fs.readFile('apps/website/.gitignore', 'utf8');
+  assert.match(websiteIgnore, /^\.dev\.vars\*$/m);
+
   const legacyWorkflow = await fs.readFile(
     '.github/workflows/adopt-website-cloudflare-legacy.yml',
     'utf8'
