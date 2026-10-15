@@ -8,6 +8,9 @@ import { dropdownDocs } from '../../../apps/docs/src/component-docs/Dropdown.doc
 import { readAuthoredRegion } from './authored-region';
 import { inspectComponentDocAuthority } from './legacy-adoption';
 
+const sha256 = (value: string) =>
+  createHash('sha256').update(value).digest('hex');
+
 const pages = [
   {
     platform: 'react',
@@ -123,9 +126,7 @@ describe('published Dropdown docs safe adoption', () => {
           '## When To Use'
         );
       }
-      expect(
-        createHash('sha256').update(recoveredAuthor).digest('hex')
-      ).toBe(page.canonicalAuthoredSha256);
+      expect(sha256(recoveredAuthor)).toBe(page.canonicalAuthoredSha256);
 
       const headings = content
         .split(/\r?\n/)
