@@ -26,8 +26,14 @@ export const selectDocs = defineComponentDocs({
         'Verify selected option focus and scrolling when reopening long lists.',
       ],
       seeAlso: [
-        { component: 'Dropdown', label: 'Dropdown for contextual commands.' },
-        { component: 'RadioGroup', label: 'RadioGroup for visible exclusive choices.' },
+        {
+          component: 'Dropdown',
+          label: 'Dropdown for contextual commands.',
+        },
+        {
+          component: 'RadioGroup',
+          label: 'RadioGroup for visible exclusive choices.',
+        },
       ],
     },
     'react-native': {
@@ -49,8 +55,14 @@ export const selectDocs = defineComponentDocs({
         'Test sheet, modal, and popover focus with VoiceOver and TalkBack.',
       ],
       seeAlso: [
-        { component: 'RadioGroup', label: 'RadioGroup for short visible native choices.' },
-        { component: 'Dropdown', label: 'Dropdown for native contextual actions.' },
+        {
+          component: 'RadioGroup',
+          label: 'RadioGroup for short visible native choices.',
+        },
+        {
+          component: 'Dropdown',
+          label: 'Dropdown for native contextual actions.',
+        },
       ],
     },
   },
