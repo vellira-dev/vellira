@@ -40,6 +40,7 @@ env:
   NODE_VERSION: 22.22.2
   PRODUCTION_WORKER_URL: https://vellira-website.vellira.workers.dev
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+  NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'
 
 jobs:
   deploy:

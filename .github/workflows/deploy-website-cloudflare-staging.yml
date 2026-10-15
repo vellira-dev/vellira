@@ -28,6 +28,12 @@ on:
       - '.github/workflows/deploy-website-cloudflare-staging.yml'
       - '.github/workflows/deploy-website-cloudflare-production.yml'
   workflow_dispatch:
+    inputs:
+      pro_interest_preview:
+        description: 'Owner-approved staging-only Pro signup preview; unchecked for normal deploys.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -143,6 +149,10 @@ jobs:
     concurrency:
       group: deploy-worker-vellira-website-staging
       cancel-in-progress: false
+    env:
+      # Push and ordinary manual deploys remain OFF. Only a specifically
+      # approved manual run may enable the public staging Worker.
+      NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.pro_interest_preview == true && '1' || '0' }}
 
     steps:
       - name: Checkout exact main candidate
@@ -157,6 +167,14 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$CANDIDATE_SHA"
           echo "Validated exact staging candidate: $actual"
+
+      - name: Authorize staging-only Pro interest preview
+        if: github.event_name == 'workflow_dispatch' && inputs.pro_interest_preview == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED" = "1"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -287,6 +305,12 @@ jobs:
           check_route '/blog/rss.xml' '<rss version="2.0"'
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
+
+      - name: Verify staging Pro signup mode without provider writes
+        run: node apps/website/scripts/pro-interest-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+          PRO_INTEREST_EXPECTED_MODE: ${{ env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED }}
 
       - name: Inspect verified npm release and registry availability
         # Advisory for optional metadata: preserve website deployment gates.

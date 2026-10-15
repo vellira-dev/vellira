@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 import './cloudflare-production-admission.test.mjs';
+import './pro-interest-live-smoke.test.mjs';
 
 const stagingWorkflow = await fs.readFile(
   '.github/workflows/deploy-website-cloudflare-staging.yml',
@@ -22,6 +23,40 @@ function jobBlock(workflow, jobId, nextJobId) {
   assert.notEqual(end, -1, `Missing following workflow job: ${nextJobId}`);
   return workflow.slice(start, end);
 }
+
+test('Pro interest is an explicit manual staging preview and stays OFF on all production paths', async () => {
+  const header = stagingWorkflow.split('\\njobs:\\n')[0];
+  assert.match(header, /workflow_dispatch:\\n {4}inputs:\\n {6}pro_interest_preview:/);
+  assert.match(header, /default: false/);
+
+  const preview = jobBlock(stagingWorkflow, 'deploy');
+  assert.ok(
+    preview.includes(
+      "NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.pro_interest_preview == true && '1' || '0' }}"
+    )
+  );
+  assert.match(
+    preview,
+    /if: github\\.event_name == 'workflow_dispatch' && inputs\\.pro_interest_preview == true/
+  );
+  assert.match(preview, /test "\\$GITHUB_REF" = "refs\\/heads\\/main"/);
+  assert.match(preview, /pro-interest-live-smoke\\.mjs/);
+
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  assert.match(candidate, /workflow_run\\.event == 'push'/);
+  const production = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+  assert.match(production, /NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'/);
+  assert.match(production, /pro-interest-live-smoke\\.mjs/);
+
+  const legacyWorkflow = await fs.readFile(
+    '.github/workflows/adopt-website-cloudflare-legacy.yml',
+    'utf8'
+  );
+  assert.match(
+    legacyWorkflow,
+    /NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'/
+  );
+});
 
 test('static chunk smoke script remains syntactically valid', () => {
   assert.doesNotThrow(() =>
