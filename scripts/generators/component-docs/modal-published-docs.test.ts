@@ -16,7 +16,8 @@ const pages = [
     platform: 'react',
     relativePath: 'apps/docs/src/react/modal.md',
     packageName: '@vellira-ui/react',
-    canonicalAuthorSha256: '__MODAL_REACT_SHA__',
+    canonicalAuthorSha256:
+      '9010e20c96d7e50afcc0ccf4a03bf75809953bc6e465bae8e77a59f4cfb7f8ae',
     compoundParts: [
       'Trigger',
       'Overlay',
@@ -45,7 +46,8 @@ const pages = [
     platform: 'react-native',
     relativePath: 'apps/docs/src/react-native/modal.md',
     packageName: '@vellira-ui/react-native',
-    canonicalAuthorSha256: '__MODAL_NATIVE_SHA__',
+    canonicalAuthorSha256:
+      '82721dccdadb5024a8bf1ef24cd95a991bd748c15f022a638dfe113c98f13e54',
     compoundParts: [
       'Trigger',
       'Overlay',
@@ -100,24 +102,27 @@ describe('published Modal documentation safe adoption', () => {
       const contract = modalDocs.platforms[page.platform];
       expect(content).toContain(contract.title);
       expect(content).toContain(contract.description);
-      expect(content).toContain(
-        `import { Modal } from '${page.packageName}';`
-      );
+      expect(content).toContain(`import { Modal } from '${page.packageName}';`);
 
       const generated = content.slice(
         0,
         content.indexOf('<!-- vellira-component-docs:authored:start -->')
       );
       const prefix = page.platform === 'react' ? 'web' : 'native';
-      const apiNames = ['ModalProps', ...page.compoundParts.map((part) => `Modal${part}Props`)];
+      const apiNames = [
+        'ModalProps',
+        ...page.compoundParts.map((part) => `Modal${part}Props`),
+      ];
       for (const name of apiNames) {
         const marker = `${prefix}.${name}.${name}`;
         expect(generated).toContain(`<!-- api-docgen:start ${marker} -->`);
         expect(generated).toContain(`<!-- api-docgen:end ${marker} -->`);
       }
-      expect(
-        [...generated.matchAll(/<!-- api-docgen:start (?:web|native)\.Modal\w*Props\./g)]
-      ).toHaveLength(apiNames.length);
+      expect([
+        ...generated.matchAll(
+          /<!-- api-docgen:start (?:web|native)\.Modal\w*Props\./g
+        ),
+      ]).toHaveLength(apiNames.length);
       for (const fragment of page.authorEvidence) {
         expect(authored.content).toContain(fragment);
       }

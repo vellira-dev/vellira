@@ -26,8 +26,14 @@ export const modalDocs = defineComponentDocs({
         'Keep a clearly labeled close or cancel action, and do not communicate destructive consequences through color alone.',
       ],
       seeAlso: [
-        { component: 'Button', label: 'Button for safe and destructive dialog actions.' },
-        { component: 'FormField', label: 'FormField for compact forms inside dialogs.' },
+        {
+          component: 'Button',
+          label: 'Button for safe and destructive dialog actions.',
+        },
+        {
+          component: 'FormField',
+          label: 'FormField for compact forms inside dialogs.',
+        },
       ],
     },
     'react-native': {
@@ -50,7 +56,10 @@ export const modalDocs = defineComponentDocs({
       ],
       seeAlso: [
         { component: 'Button', label: 'Button for native dialog actions.' },
-        { component: 'FormField', label: 'FormField for structured native inputs.' },
+        {
+          component: 'FormField',
+          label: 'FormField for structured native inputs.',
+        },
       ],
     },
   },

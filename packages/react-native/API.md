@@ -1102,6 +1102,110 @@ import { Button, Modal, Portal } from '@vellira-ui/react-native';
 
 <!-- api-docgen:end native.ModalProps.ModalProps -->
 
+### ModalCloseProps
+
+<!-- api-docgen:start native.ModalCloseProps.ModalCloseProps -->
+
+| Prop                 | Type                                                                                                                        | Required | Description                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `asChild`            | `boolean`                                                                                                                   | No       | —                                      |
+| `children`           | `ReactElement<{ onPress?: PressableProps['onPress']; accessibilityLabel?: string; }, string \| JSXElementConstructor<any>>` | No       | Content rendered inside the component. |
+| `accessibilityLabel` | `string`                                                                                                                    | No       | Accessible label for screen readers.   |
+| `style`              | `StyleProp<ViewStyle>`                                                                                                      | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalCloseProps.ModalCloseProps -->
+
+### ModalFooterProps
+
+<!-- api-docgen:start native.ModalFooterProps.ModalFooterProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalFooterProps.ModalFooterProps -->
+
+### ModalBodyProps
+
+<!-- api-docgen:start native.ModalBodyProps.ModalBodyProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalBodyProps.ModalBodyProps -->
+
+### ModalDescriptionProps
+
+<!-- api-docgen:start native.ModalDescriptionProps.ModalDescriptionProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalDescriptionProps.ModalDescriptionProps -->
+
+### ModalTitleProps
+
+<!-- api-docgen:start native.ModalTitleProps.ModalTitleProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalTitleProps.ModalTitleProps -->
+
+### ModalHeaderProps
+
+<!-- api-docgen:start native.ModalHeaderProps.ModalHeaderProps -->
+
+| Prop        | Type                   | Required | Description                            |
+| ----------- | ---------------------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`     | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+| `textStyle` | `StyleProp<TextStyle>` | No       | Extra text style.                      |
+
+<!-- api-docgen:end native.ModalHeaderProps.ModalHeaderProps -->
+
+### ModalContentProps
+
+<!-- api-docgen:start native.ModalContentProps.ModalContentProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalContentProps.ModalContentProps -->
+
+### ModalOverlayProps
+
+<!-- api-docgen:start native.ModalOverlayProps.ModalOverlayProps -->
+
+| Prop           | Type                   | Required | Description                            |
+| -------------- | ---------------------- | -------- | -------------------------------------- |
+| `children`     | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `overlayStyle` | `StyleProp<ViewStyle>` | No       | Extra overlay style.                   |
+
+<!-- api-docgen:end native.ModalOverlayProps.ModalOverlayProps -->
+
+### ModalTriggerProps
+
+<!-- api-docgen:start native.ModalTriggerProps.ModalTriggerProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`              | No       | —                                      |
+| `disabled` | `boolean`              | No       | Disables interaction.                  |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalTriggerProps.ModalTriggerProps -->
+
 ### Modal Compound Components
 
 | Component       | Description            |

@@ -1507,7 +1507,6 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
     );
   }
 
-
   // Bootstrap previously undocumented public Modal compound-part tables from
   // real exported TypeScript contracts. Once generated markers exist the
   // standard marker replacement path above owns subsequent regeneration.
