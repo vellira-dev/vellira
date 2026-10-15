@@ -932,7 +932,7 @@ export async function generateApiDocs(
   // compound slots are explicitly grouped by platform to avoid allocating
   // a separate heavy TypeScript program for each compound source module.
   const getContextKey = (item: ApiSection) =>
-    /^(?:web|native)\\.Modal[A-Za-z]*Props\\./.test(item.id)
+    /^(?:web|native)\.Modal[A-Za-z]*Props\./.test(item.id)
       ? `modal:${item.docPath}`
       : item.sourceFile;
   const sourceFilesByContext = new Map<string, Set<string>>();
