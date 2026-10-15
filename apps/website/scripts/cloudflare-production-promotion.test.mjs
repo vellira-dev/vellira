@@ -25,8 +25,8 @@ function jobBlock(workflow, jobId, nextJobId) {
 }
 
 test('Pro interest is an explicit manual staging preview and stays OFF on all production paths', async () => {
-  const header = stagingWorkflow.split('\\njobs:\\n')[0];
-  assert.match(header, /workflow_dispatch:\\n {4}inputs:\\n {6}pro_interest_preview:/);
+  const header = stagingWorkflow.split('\njobs:\n')[0];
+  assert.match(header, /workflow_dispatch:\n {4}inputs:\n {6}pro_interest_preview:/);
   assert.match(header, /default: false/);
 
   const preview = jobBlock(stagingWorkflow, 'deploy');
@@ -37,16 +37,16 @@ test('Pro interest is an explicit manual staging preview and stays OFF on all pr
   );
   assert.match(
     preview,
-    /if: github\\.event_name == 'workflow_dispatch' && inputs\\.pro_interest_preview == true/
+    /if: github\.event_name == 'workflow_dispatch' && inputs\.pro_interest_preview == true/
   );
-  assert.match(preview, /test "\\$GITHUB_REF" = "refs\\/heads\\/main"/);
-  assert.match(preview, /pro-interest-live-smoke\\.mjs/);
+  assert.match(preview, /test "\$GITHUB_REF" = "refs\/heads\/main"/);
+  assert.match(preview, /pro-interest-live-smoke\.mjs/);
 
   const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
-  assert.match(candidate, /workflow_run\\.event == 'push'/);
+  assert.match(candidate, /workflow_run\.event == 'push'/);
   const production = jobBlock(productionWorkflow, 'deploy', 'indexnow');
   assert.match(production, /NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'/);
-  assert.match(production, /pro-interest-live-smoke\\.mjs/);
+  assert.match(production, /pro-interest-live-smoke\.mjs/);
 
   const legacyWorkflow = await fs.readFile(
     '.github/workflows/adopt-website-cloudflare-legacy.yml',
