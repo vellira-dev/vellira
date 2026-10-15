@@ -169,7 +169,7 @@ export default function PrivacyPage() {
               <p>
                 If you request Pro updates through the optional form,
                 Vellira also sends a fixed signup attribution value
-                (`utm_campaign`: `vellira_pro_launch_interest`) to Buttondown.
+                (<code>utm_campaign</code>: <code>vellira_pro_launch_interest</code>) to Buttondown.
                 This helps distinguish newly confirmed Pro-interest signups
                 from general engineering newsletter signups. It is not a paid
                 tag, a separate email list, a purchase, an account upgrade, or
