@@ -294,6 +294,90 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### SelectTriggerSlotProps',
+    'SelectTriggerSlotProps',
+    'src/components/Select/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectValueProps',
+    'SelectValueProps',
+    'src/components/Select/Value/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectIconProps',
+    'SelectIconProps',
+    'src/components/Select/Icon/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectContentSlotProps',
+    'SelectContentSlotProps',
+    'src/components/Select/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectSearchProps',
+    'SelectSearchProps',
+    'src/components/Select/Search/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectGroupProps',
+    'SelectGroupProps',
+    'src/components/Select/Group/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectLabelProps',
+    'SelectLabelProps',
+    'src/components/Select/Group/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemProps',
+    'SelectItemProps',
+    'src/components/Select/Item/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemIconProps',
+    'SelectItemIconProps',
+    'src/components/Select/ItemIcon/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemDescriptionProps',
+    'SelectItemDescriptionProps',
+    'src/components/Select/ItemDescription/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemBadgeProps',
+    'SelectItemBadgeProps',
+    'src/components/Select/ItemBadge/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectSeparatorProps',
+    'SelectSeparatorProps',
+    'src/components/Select/Group/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectEmptyProps',
+    'SelectEmptyProps',
+    'src/components/Select/Empty/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectLoadingProps',
+    'SelectLoadingProps',
+    'src/components/Select/Loading/types.ts'
+  ),
+  section(
+    'web',
     '### Dropdown Props',
     'DropdownProps',
     'src/components/Dropdown/types.ts'
@@ -429,6 +513,90 @@ const defaultSections: ApiSection[] = [
     'native',
     '### SelectOption',
     'SelectOption',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectTriggerSlotProps',
+    'SelectTriggerSlotProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectValueSlotProps',
+    'SelectValueSlotProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectIconSlotProps',
+    'SelectIconSlotProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectContentProps',
+    'SelectContentProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectSearchProps',
+    'SelectSearchProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectGroupProps',
+    'SelectGroupProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectLabelProps',
+    'SelectLabelProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemProps',
+    'SelectItemProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemIconProps',
+    'SelectItemIconProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemDescriptionProps',
+    'SelectItemDescriptionProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemBadgeProps',
+    'SelectItemBadgeProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectSeparatorProps',
+    'SelectSeparatorProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectEmptyProps',
+    'SelectEmptyProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectLoadingProps',
+    'SelectLoadingProps',
     'src/components/Select/types.ts'
   ),
   section(
@@ -1002,6 +1170,13 @@ function normalizeType(type: string) {
 
 function readExistingDescriptions(doc: string, item: ApiSection) {
   const descriptions = new Map<string, string>();
+  // New Select compound sections have no historic descriptions to preserve.
+  if (
+    !doc.includes(item.heading) &&
+    /^### Select[A-Za-z]+Props$/.test(item.heading)
+  ) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
@@ -1036,6 +1211,37 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
 
   if (markedBlock.test(doc)) {
     return doc.replace(markedBlock, generatedBlock);
+  }
+
+  // New Select compound API sections are generated from exported TypeScript
+  // types. Insert them adjacent to the existing SelectOption block rather
+  // than requiring hand-authored tables or silently replacing unrelated docs.
+  if (
+    !doc.includes(item.heading) &&
+    /^### Select[A-Za-z]+Props$/.test(item.heading)
+  ) {
+    const optionEnd =
+      '<!-- api-docgen:end ' +
+      item.id.split('.')[0] +
+      '.SelectOption.SelectOption -->';
+    const insertAt = doc.indexOf(optionEnd);
+    if (
+      insertAt === -1 ||
+      doc.indexOf(optionEnd, insertAt + optionEnd.length) !== -1
+    ) {
+      throw new Error(
+        'Cannot locate unique SelectOption API anchor in ' + item.docPath
+      );
+    }
+    const after = insertAt + optionEnd.length;
+    return (
+      doc.slice(0, after) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(after)
+    );
   }
 
   const block = findTableBlock(doc, item);
