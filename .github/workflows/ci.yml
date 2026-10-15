@@ -861,3 +861,171 @@ jobs:
       - name: Smoke affected native package
         if: ${{ needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-native') }}
         run: pnpm smoke:native
+
+  modal-docs-adoption:
+    name: Modal docs authority backfill (PR 1699 only)
+    if: ${{ github.event.pull_request.number == 1699 && github.event.pull_request.head.repo.full_name == 'vellira-dev/vellira' && github.event.pull_request.head.ref == 'feat/docs-modal-safe-adoption-20261015' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/docs-modal-safe-adoption-20261015
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - run: pnpm install --frozen-lockfile
+      - name: Bootstrap published Modal compound API from exact public TS types
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write scripts/generate-api-docs.ts apps/docs/src/component-docs/Modal.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/modal-published-docs.test.ts
+          pnpm docs:api
+          pnpm docs:api:check
+          pnpm exec prettier --check scripts/generate-api-docs.ts apps/docs/src/component-docs/Modal.docs.ts apps/docs/src/component-docs/index.ts packages/react/API.md packages/react-native/API.md
+      - name: Pin unchanged source blobs and prepare only duplicate H2 aliases
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import os
+          import subprocess
+
+          blobs = {
+              'react': 'cbed5ab1ee4b2ef7f18f6cb3ee431c6f450998f1',
+              'react-native': '3d67f65ccc422fa3fd46726c0b3545e04c783e21',
+          }
+          env = {}
+          for platform, expected_blob in blobs.items():
+              file = Path(f'apps/docs/src/{platform}/modal.md')
+              before = file.read_bytes()
+              committed = subprocess.check_output(
+                  ['git', 'show', 'HEAD:' + file.as_posix()]
+              )
+              assert before == committed, f'Concurrent edits detected: {file}'
+              assert subprocess.check_output(
+                  ['git', 'hash-object', file.as_posix()], text=True
+              ).strip() == expected_blob, f'Legacy source changed: {file}'
+              original_sha = hashlib.sha256(before).hexdigest()
+              authored = before.decode('utf-8')
+              assert authored.count('## Accessibility') == 1
+              assert authored.count('## See Also') == 1
+              if platform == 'react':
+                  assert authored.count('## When To Use') == 1
+                  authored = authored.replace(
+                      '## When To Use', '## Practical Usage Guidance', 1
+                  )
+              authored = authored.replace('## See Also', '## Further Reading', 1)
+              after = authored.encode('utf-8')
+              file.write_bytes(after)
+              env['MODAL_' + ('REACT' if platform == 'react' else 'NATIVE') + '_SHA'] = hashlib.sha256(after).hexdigest()
+              print(platform, 'source-blob', expected_blob, 'original-sha256', original_sha, 'normalized-sha256', hashlib.sha256(after).hexdigest())
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              for key, value in env.items():
+                  print(f'{key}={value}', file=output)
+          PY
+      - name: Atomically adopt both Modal guides under SHA-256 pins
+        run: |
+          set -euo pipefail
+          pnpm component-docs:adopt Modal --dry-run --json
+          pnpm component-docs:adopt Modal --write --json \
+            --expected-react-sha256="$MODAL_REACT_SHA" \
+            --expected-react-native-sha256="$MODAL_NATIVE_SHA"
+          python3 - <<'PY'
+          from pathlib import Path
+          start = '<!-- vellira-component-docs:authored:start -->'
+          end = '<!-- vellira-component-docs:authored:end -->'
+          for platform in ('react', 'react-native'):
+              file = Path(f'apps/docs/src/{platform}/modal.md')
+              text = file.read_text(encoding='utf-8')
+              assert text.count(start) == text.count(end) == 1
+              generated, remainder = text.split(start, 1)
+              author, suffix = remainder.split(end, 1)
+              assert not suffix.strip()
+              assert author.count('## Accessibility') == 1
+              author = author.replace(
+                  '## Accessibility', '## Additional Accessibility Details', 1
+              )
+              file.write_text(generated + start + author + end + suffix, encoding='utf-8')
+          PY
+          pnpm exec prettier --write apps/docs/src/react/modal.md apps/docs/src/react-native/modal.md
+      - name: Prove complete editorial preservation and pin golden fingerprints
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import fs from 'node:fs';
+          import prettier from 'prettier';
+
+          const sha256 = (text) => createHash('sha256').update(text).digest('hex');
+          const start = '<!-- vellira-component-docs:authored:start -->';
+          const end = '<!-- vellira-component-docs:authored:end -->';
+          const testPath = 'scripts/generators/component-docs/modal-published-docs.test.ts';
+          let testSource = fs.readFileSync(testPath, 'utf8');
+          for (const platform of ['react', 'react-native']) {
+            const file = 'apps/docs/src/' + platform + '/modal.md';
+            const original = execFileSync('git', ['show', 'HEAD:' + file], {
+              encoding: 'utf8',
+            });
+            const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n\s*# Modal\r?\n([\s\S]*)$/.exec(original);
+            if (!match) throw new Error('Original Modal guide missing: ' + file);
+            const config = await prettier.resolveConfig(file);
+            const expected = (await prettier.format(match[1].trim(), {
+              ...config, parser: 'markdown', filepath: file,
+            })).trim();
+            const generated = fs.readFileSync(file, 'utf8');
+            if (generated.split(start).length !== 2 || generated.split(end).length !== 2) {
+              throw new Error('Modal authored-region marker mismatch: ' + file);
+            }
+            let restored = generated.split(start)[1].split(end)[0].trim();
+            restored = restored
+              .replace('## Additional Accessibility Details', '## Accessibility')
+              .replace('## Further Reading', '## See Also');
+            if (platform === 'react') {
+              restored = restored.replace('## Practical Usage Guidance', '## When To Use');
+            }
+            if (restored !== expected) {
+              throw new Error('Lost or altered historical Modal author content: ' + file);
+            }
+            const digest = sha256(expected);
+            const placeholder = platform === 'react'
+              ? '__MODAL_REACT_SHA__' : '__MODAL_NATIVE_SHA__';
+            if (testSource.split(placeholder).length !== 2) {
+              throw new Error('Missing unique fingerprint slot: ' + placeholder);
+            }
+            testSource = testSource.replace(placeholder, digest);
+            console.log(platform, 'whole-author-canonical-SHA256', digest);
+          }
+          fs.writeFileSync(testPath, testSource);
+          NODE
+      - name: Verify generated authority, fixed hashes and repeatability
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write apps/docs/src/component-docs/Modal.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/modal-published-docs.test.ts
+          pnpm component-docs:generate --check
+          pnpm component-docs:adopt Modal --dry-run --json
+          pnpm docs:api:check
+          pnpm exec vitest run scripts/generators/component-docs/modal-published-docs.test.ts
+          pnpm exec prettier --check apps/docs/src/component-docs/Modal.docs.ts apps/docs/src/component-docs/index.ts apps/docs/src/react/modal.md apps/docs/src/react-native/modal.md scripts/generate-api-docs.ts scripts/generators/component-docs/modal-published-docs.test.ts packages/react/API.md packages/react-native/API.md
+      - name: Remove one-shot workflow and push only validated files
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          file = Path('.github/workflows/ci.yml')
+          source = file.read_text(encoding='utf-8')
+          marker = '\n  modal-docs-adoption:\n'
+          assert source.count(marker) == 1
+          file.write_text(source[:source.index(marker)].rstrip() + '\n', encoding='utf-8')
+          PY
+          git config user.name 'vellira-docs-sync[bot]'
+          git config user.email 'vellira-docs-sync[bot]@users.noreply.github.com'
+          git add -- .github/workflows/ci.yml scripts/generate-api-docs.ts apps/docs/src/component-docs/Modal.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/modal-published-docs.test.ts apps/docs/src/react/modal.md apps/docs/src/react-native/modal.md packages/react/API.md packages/react-native/API.md
+          git diff --cached --quiet || git commit -m 'docs(modal): adopt both published guides with exact authored preservation'
+          git push origin HEAD:feat/docs-modal-safe-adoption-20261015
