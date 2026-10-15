@@ -306,12 +306,6 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
-      - name: Verify staging Pro signup mode without provider writes
-        run: node apps/website/scripts/pro-interest-live-smoke.mjs
-        env:
-          WEBSITE_URL: ${{ env.STAGING_URL }}
-          PRO_INTEREST_EXPECTED_MODE: ${{ env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED }}
-
       - name: Inspect verified npm release and registry availability
         # Advisory for optional metadata: preserve website deployment gates.
         # Log safe response evidence so a GREEN browser soak cannot be
@@ -417,6 +411,12 @@ jobs:
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
+
+      - name: Verify staging Pro signup mode without provider writes
+        run: node apps/website/scripts/pro-interest-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+          PRO_INTEREST_EXPECTED_MODE: ${{ env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED }}
 
       - name: Test browser and blog metrics smoke policies
         run: >-

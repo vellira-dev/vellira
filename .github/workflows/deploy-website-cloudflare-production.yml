@@ -488,13 +488,6 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
-      - name: Verify production Pro signup remains disabled
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
-        run: node apps/website/scripts/pro-interest-live-smoke.mjs
-        env:
-          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
-          PRO_INTEREST_EXPECTED_MODE: '0'
-
       - name: Smoke test production auth provider discovery
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: >-
@@ -509,6 +502,13 @@ jobs:
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Verify production Pro signup remains disabled
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
+        run: node apps/website/scripts/pro-interest-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
+          PRO_INTEREST_EXPECTED_MODE: '0'
 
       - name: Test browser forensic diagnostics
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
