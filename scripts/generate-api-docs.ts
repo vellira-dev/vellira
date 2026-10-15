@@ -1216,7 +1216,7 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       throw new Error('Cannot locate unique SelectOption API anchor in ' + item.docPath);
     }
     const after = insertAt + optionEnd.length;
-    return doc.slice(0, after) + '\\n\\n' + item.heading + '\\n\\n' + generatedBlock + doc.slice(after);
+    return doc.slice(0, after) + '\n\n' + item.heading + '\n\n' + generatedBlock + doc.slice(after);
   }
 
   const block = findTableBlock(doc, item);
