@@ -14,8 +14,13 @@ type CloudflareSecretBindings = { BUTTONDOWN_API_KEY?: unknown };
 type NewsletterSubscribeDependencies = {
   getApiKey: () => Promise<string | undefined>;
   subscribe: typeof subscribeWithButtondown;
+  proInterestEnabled: boolean;
 };
-type NewsletterRequestBody = { email?: unknown };
+type NewsletterRequestBody = {
+  email?: unknown;
+  purpose?: unknown;
+  consent?: unknown;
+};
 
 function response(
   payload: NewsletterSubscribeResult,
@@ -25,6 +30,17 @@ function response(
     status,
     headers: { 'Cache-Control': 'no-store' },
   });
+}
+
+function consentRequiredResponse() {
+  return response(
+    {
+      ok: false,
+      code: 'consent_required',
+      message: newsletterErrors.consent_required,
+    },
+    400
+  );
 }
 
 function invalidEmailResponse() {
@@ -42,6 +58,7 @@ function statusForResult(result: NewsletterSubscribeResult): number {
   if (result.ok) return 201;
   switch (result.code) {
     case 'invalid_email':
+    case 'consent_required':
       return 400;
     case 'already_subscribed':
       return 409;
@@ -130,6 +147,8 @@ async function getButtondownApiKey(): Promise<string | undefined> {
 const defaultDependencies: NewsletterSubscribeDependencies = {
   getApiKey: getButtondownApiKey,
   subscribe: subscribeWithButtondown,
+  proInterestEnabled:
+    process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1',
 };
 
 export function createNewsletterSubscribeHandler(
@@ -139,8 +158,22 @@ export function createNewsletterSubscribeHandler(
     if (!isSameOriginRequest(request) || !hasJsonContentType(request))
       return invalidEmailResponse();
     const body = await readJsonBody(request);
-    const email = normalizeEmail(body?.email);
+    if (!body) return invalidEmailResponse();
+    const email = normalizeEmail(body.email);
     if (!email) return invalidEmailResponse();
+    if (body.purpose !== undefined && body.purpose !== 'pro_launch')
+      return invalidEmailResponse();
+    if (body.purpose === 'pro_launch' && body.consent !== true)
+      return consentRequiredResponse();
+    if (body.purpose === 'pro_launch' && !dependencies.proInterestEnabled)
+      return response(
+        {
+          ok: false,
+          code: 'temporarily_unavailable',
+          message: newsletterErrors.temporarily_unavailable,
+        },
+        503
+      );
     let apiKey: string | undefined;
     try {
       apiKey = await dependencies.getApiKey();
@@ -158,6 +191,9 @@ export function createNewsletterSubscribeHandler(
       apiKey,
       email,
       ipAddress: resolveSubscriberIp(request.headers),
+      ...(body.purpose === 'pro_launch'
+        ? { purpose: 'pro_launch' as const }
+        : {}),
     });
     return response(result, statusForResult(result));
   };
