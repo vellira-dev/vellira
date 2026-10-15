@@ -1170,6 +1170,10 @@ function normalizeType(type: string) {
 
 function readExistingDescriptions(doc: string, item: ApiSection) {
   const descriptions = new Map<string, string>();
+  // New Select compound sections have no historic descriptions to preserve.
+  if (!doc.includes(item.heading) && /^### Select[A-Za-z]+Props$/.test(item.heading)) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
