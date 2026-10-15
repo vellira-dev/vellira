@@ -1,3 +1,4 @@
+import { selectDocs } from './Select.docs';
 import { inputDocs } from './Input.docs';
 import { buttonDocs } from './Button.docs';
 import { checkboxDocs } from './Checkbox.docs';
@@ -6,6 +7,7 @@ import { accordionDocs } from './Accordion.docs';
 import { textareaDocs } from './Textarea.docs';
 
 export const componentDocsContracts = [
+  selectDocs,
   inputDocs,
   buttonDocs,
   checkboxDocs,
