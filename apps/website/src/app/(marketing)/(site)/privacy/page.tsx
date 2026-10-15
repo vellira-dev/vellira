@@ -167,15 +167,16 @@ export default function PrivacyPage() {
                 deliver emails, process unsubscribes and prevent abuse.
               </p>
               <p>
-                If you request Pro updates through the optional form,
-                Vellira also sends a fixed signup attribution value
-                (<code>utm_campaign</code>: <code>vellira_pro_launch_interest</code>) to Buttondown.
-                This helps distinguish newly confirmed Pro-interest signups
-                from general engineering newsletter signups. It is not a paid
-                tag, a separate email list, a purchase, an account upgrade, or
-                consent to advertising tracking. Existing subscribers are not
-                modified by this form. We do not use a tracking cookie or a
-                new per-visitor identifier for this purpose.
+                If you request Pro updates through the optional form, Vellira
+                also sends a fixed signup attribution value (
+                <code>utm_campaign</code>:{' '}
+                <code>vellira_pro_launch_interest</code>) to Buttondown. This
+                helps distinguish newly confirmed Pro-interest signups from
+                general engineering newsletter signups. It is not a paid tag, a
+                separate email list, a purchase, an account upgrade, or consent
+                to advertising tracking. Existing subscribers are not modified
+                by this form. We do not use a tracking cookie or a new
+                per-visitor identifier for this purpose.
               </p>
               <p>
                 Newsletter signup is optional. You can unsubscribe using the

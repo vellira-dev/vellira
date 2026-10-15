@@ -26,6 +26,7 @@ and does not change the sender or the newsletter audience.
 Buttondown's publicly documented subscriber API supports writing
 `utm_campaign` at creation and filtering the subscriber list by
 `utm_campaign` and lifecycle status:
+
 - https://docs.buttondown.com/api-subscribers-create
 - https://docs.buttondown.com/api-subscribers-list
 
@@ -71,7 +72,7 @@ require separate consent and implementation.
   aggregate referrers can indicate organic search, article and GitHub traffic.
   They are not user-level attribution or proof of conversions.
 - **Core engagement:** aggregate package download data, GitHub activity and
-  verified clean-consumer evidence are *proxies*, not proof of active users.
+  verified clean-consumer evidence are _proxies_, not proof of active users.
 - **Pro interest:** after a verified provider read-only UTM filter, count **only
   newly confirmed/active subscribers** with campaign
   `vellira_pro_launch_interest`. Pending, suppressed, removed, churned or
