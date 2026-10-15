@@ -184,6 +184,48 @@ describe('newsletter subscribe API', () => {
     });
   });
 
+  it('ignores caller-supplied UTM, tags and subscriber type in both signup paths', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = handler({ subscribe, proInterestEnabled: true });
+
+    const proResponse = await route(
+      request(
+        JSON.stringify({
+          email: 'pro@example.com',
+          purpose: 'pro_launch',
+          consent: true,
+          utm_campaign: 'attacker-controlled',
+          tags: ['unwanted'],
+          type: 'regular',
+        })
+      )
+    );
+    expect(proResponse.status).toBe(201);
+    expect(subscribe).toHaveBeenNthCalledWith(1, {
+      apiKey: 'test-buttondown-key',
+      email: 'pro@example.com',
+      ipAddress: null,
+      purpose: 'pro_launch',
+    });
+
+    const regularResponse = await route(
+      request(
+        JSON.stringify({
+          email: 'regular@example.com',
+          utm_campaign: 'attacker-controlled',
+          tags: ['unwanted'],
+          type: 'regular',
+        })
+      )
+    );
+    expect(regularResponse.status).toBe(201);
+    expect(subscribe).toHaveBeenNthCalledWith(2, {
+      apiKey: 'test-buttondown-key',
+      email: 'regular@example.com',
+      ipAddress: null,
+    });
+  });
+
   it('uses the first normalized X-Forwarded-For value only as a fallback', () => {
     expect(
       resolveSubscriberIp(
