@@ -362,7 +362,7 @@ describe('Buttondown provider boundary', () => {
             status: 400,
           }),
       })
-    ).resolves.toMatchObject({ ok: false, code: 'already_subscribed' });
+    ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
   });
 
   it.each([
@@ -371,9 +371,26 @@ describe('Buttondown provider boundary', () => {
       { code: 'email_invalid', detail: 'provider-private-detail' },
       'invalid_email',
     ],
-    [400, { code: 'subscriber_suppressed' }, 'already_subscribed'],
+    [400, { code: 'subscriber_exists' }, 'already_subscribed'],
+    [
+      400,
+      { code: 'subscriber_already_exists', metadata: { subscriber_id: 'sub_test123' } },
+      'already_subscribed',
+    ],
+    [400, { code: 'subscriber_suppressed' }, 'temporarily_unavailable'],
+    [
+      400,
+      { code: 'daily_subscriber_quota', detail: 'Use POST /v1/imports' },
+      'temporarily_unavailable',
+    ],
+    [400, { code: 'unknown_provider_error' }, 'temporarily_unavailable'],
     [409, {}, 'already_subscribed'],
-    [422, { detail: [{ msg: 'provider-private-detail' }] }, 'invalid_email'],
+    [422, { code: 'email_invalid' }, 'invalid_email'],
+    [
+      422,
+      { detail: [{ msg: 'provider-private-detail' }] },
+      'temporarily_unavailable',
+    ],
     [429, {}, 'rate_limited'],
     [401, {}, 'temporarily_unavailable'],
     [403, {}, 'temporarily_unavailable'],
@@ -397,6 +414,139 @@ describe('Buttondown provider boundary', () => {
 
       expect(result).toMatchObject({ ok: false, code });
       expect(JSON.stringify(result)).not.toContain('provider-private-detail');
+    }
+  );
+
+  it.each([
+    {
+      name: 'regular duplicate',
+      providerStatus: 400,
+      providerBody: { code: 'subscriber_exists' },
+      expectedStatus: 409,
+      expectedCode: 'already_subscribed',
+    },
+    {
+      name: 'pending duplicate with provider subscriber ID',
+      providerStatus: 400,
+      providerBody: {
+        code: 'already_exists',
+        metadata: { subscriber_id: 'sub_test123' },
+      },
+      expectedStatus: 409,
+      expectedCode: 'already_subscribed',
+    },
+    {
+      name: 'unsubscribed or suppressed address',
+      providerStatus: 400,
+      providerBody: { code: 'subscriber_suppressed' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'blocked or complained address',
+      providerStatus: 400,
+      providerBody: { code: 'subscriber_suppressed' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'daily subscriber creation quota',
+      providerStatus: 400,
+      providerBody: {
+        code: 'daily_subscriber_quota',
+        detail: 'Use POST /v1/imports for bulk subscribers',
+      },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'unknown HTTP 400',
+      providerStatus: 400,
+      providerBody: { code: 'unknown_provider_error' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'malformed collision metadata',
+      providerStatus: 400,
+      providerBody: {
+        code: 'unknown_provider_error',
+        metadata: { subscriber_id: 'invalid-id' },
+      },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'per-minute throttling',
+      providerStatus: 429,
+      providerBody: { code: 'rate_limited' },
+      expectedStatus: 429,
+      expectedCode: 'rate_limited',
+    },
+    {
+      name: 'unrecognized HTTP 422',
+      providerStatus: 422,
+      providerBody: { code: 'validation_error' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'provider email invalidation',
+      providerStatus: 422,
+      providerBody: { code: 'email_invalid' },
+      expectedStatus: 400,
+      expectedCode: 'invalid_email',
+    },
+  ])(
+    'keeps $name fail-closed through the actual Pro route and provider adapter',
+    async ({
+      providerStatus,
+      providerBody,
+      expectedStatus,
+      expectedCode,
+    }) => {
+      // The provider is intentionally mocked. No credentials, real addresses,
+      // existing subscriber mutations or quota-consuming API calls.
+      const providerFetch = vi.fn<ButtondownFetcher>(async () =>
+        Response.json(providerBody, { status: providerStatus })
+      );
+      const route = handler({
+        proInterestEnabled: true,
+        subscribe: (options) =>
+          subscribeWithButtondown({ ...options, fetcher: providerFetch }),
+      });
+
+      const result = await route(
+        request(
+          JSON.stringify({
+            email: '  EdgeCase@Example.com ',
+            purpose: 'pro_launch',
+            consent: true,
+            utm_campaign: 'attacker-supplied-campaign',
+            tags: ['attacker-supplied-tag'],
+            type: 'regular',
+          })
+        )
+      );
+
+      expect(result.status).toBe(expectedStatus);
+      expect(await result.json()).toMatchObject({
+        ok: false,
+        code: expectedCode,
+      });
+      expect(result.headers.get('cache-control')).toBe('no-store');
+      // Never auto-retry mutations after an ambiguous provider error.
+      expect(providerFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = providerFetch.mock.calls[0]!;
+      expect(url).toBe(BUTTONDOWN_SUBSCRIBERS_URL);
+      expect(init?.method).toBe('POST');
+      expect(init?.headers).not.toHaveProperty('X-Buttondown-Collision-Behavior');
+      expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
+      expect(JSON.parse(String(init?.body))).toEqual({
+        email_address: 'edgecase@example.com',
+        utm_campaign: PRO_INTEREST_UTM_CAMPAIGN,
+        type: 'unactivated',
+      });
     }
   );
 
