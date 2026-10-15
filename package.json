@@ -71,6 +71,7 @@
     "component-docs:generate": "node --import tsx scripts/generators/component-docs/generate-component-docs.ts",
     "component-docs:check": "pnpm component-docs:generate --check",
     "component-docs:adoption-audit": "node --import tsx scripts/generators/component-docs/legacy-adoption.ts",
+    "component-docs:adopt": "node --import tsx scripts/generators/component-docs/adopt-legacy-docs.ts",
     "component-pages:generate": "node --import tsx scripts/generators/component-page/generate-component-pages.ts",
     "component-page:semantic-metadata:json": "node --import tsx scripts/generators/component-page/semantic-metadata-contract.ts",
     "global-token-authority:json": "node --import tsx scripts/token-authority/global-token-authority.ts",

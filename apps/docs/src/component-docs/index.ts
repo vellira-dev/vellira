@@ -1,8 +1,10 @@
+import { checkboxDocs } from './Checkbox.docs';
 import { switchDocs } from './Switch.docs';
 import { accordionDocs } from './Accordion.docs';
 import { textareaDocs } from './Textarea.docs';
 
 export const componentDocsContracts = [
+  checkboxDocs,
   switchDocs,
   accordionDocs,
   textareaDocs,
