@@ -489,6 +489,7 @@ jobs:
           check_route '/robots.txt' 'User-Agent: *'
 
       - name: Verify production Pro signup remains disabled
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
         run: node apps/website/scripts/pro-interest-live-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
