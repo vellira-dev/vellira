@@ -926,15 +926,27 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
+  // A TypeScript Program is expensive. Building one for every part's
+  // source file retains many independent copies of the same dependency graph
+  // and scales heap use with the number of compound components. Group all
+  // source files for each published package into a single program instead.
+  const sourcesByDocPath = new Map<string, Set<string>>();
+  for (const item of sections) {
+    const sources = sourcesByDocPath.get(item.docPath) ?? new Set<string>();
+    sources.add(item.sourceFile);
+    sourcesByDocPath.set(item.docPath, sources);
+  }
   const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
 
   for (const item of sections) {
     const context =
-      contexts.get(item.sourceFile) ??
-      createApiDocsContext(rootDir, item.sourceFile);
+      contexts.get(item.docPath) ??
+      createApiDocsContext(rootDir, [
+        ...(sourcesByDocPath.get(item.docPath) ?? []),
+      ]);
 
-    contexts.set(item.sourceFile, context);
+    contexts.set(item.docPath, context);
     const docPath = path.join(rootDir, item.docPath);
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
@@ -995,10 +1007,12 @@ export async function generateApiDocs(
 
 function createApiDocsContext(
   rootDir: string,
-  sourceFile: string
+  sourceFiles: readonly string[]
 ): ApiDocsContext {
-  const sourcePath = path.join(rootDir, sourceFile);
-  const program = ts.createProgram([sourcePath], {
+  const sourcePaths = sourceFiles.map((sourceFile) =>
+    path.join(rootDir, sourceFile)
+  );
+  const program = ts.createProgram(sourcePaths, {
     baseUrl: rootDir,
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
