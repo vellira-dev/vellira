@@ -861,3 +861,154 @@ jobs:
       - name: Smoke affected native package
         if: ${{ needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-native') }}
         run: pnpm smoke:native
+
+  dropdown-docs-adoption:
+    name: Dropdown docs adoption (PR 1694 only)
+    if: ${{ github.event.pull_request.number == 1694 && github.event.pull_request.head.repo.full_name == 'vellira-dev/vellira' && github.event.pull_request.head.ref == 'feat/docs-dropdown-safe-adoption-20261015' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/docs-dropdown-safe-adoption-20261015
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - run: pnpm install --frozen-lockfile
+      - name: Independently pin both legacy guides and adjust only conflicting H2s
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import subprocess
+
+          receipts = {
+              'react': (
+                  'fc8448f6cc8fec4e617dec42952f1fb6f38920d1156e7094879c10333112ae16',
+                  '5fb02d0049e1bc546da6d9502d023ed3eb9ea627384dec907db131cf7e0f5aa9',
+              ),
+              'react-native': (
+                  '8cd479717bd966440b13dd365fdb79b485bd56cce4f7512a354ee4cccaad7f02',
+                  '59c1e6664be78fee55ce3dbc24dfb77cd4cc0ad1f321248d0157da988d99ff7e',
+              )
+          }
+          for platform, (original_sha, adjusted_sha) in receipts.items():
+              filename = Path(f'apps/docs/src/{platform}/dropdown.md')
+              original = filename.read_bytes()
+              assert original == subprocess.check_output(
+                  ['git', 'show', 'HEAD:' + filename.as_posix()]
+              ), f'Concurrent or unexpected source change: {filename}'
+              assert hashlib.sha256(original).hexdigest() == original_sha, filename
+
+              authored = original.decode('utf-8')
+              if platform == 'react':
+                  assert authored.count('## When To Use') == 1, filename
+                  authored = authored.replace(
+                      '## When To Use', '## Practical Usage Guidance', 1
+                  )
+              assert authored.count('## See Also') == 1, filename
+              authored = authored.replace('## See Also', '## Further Reading', 1)
+              assert authored.count('## Accessibility') == 1, filename
+              adjusted = authored.encode('utf-8')
+              assert hashlib.sha256(adjusted).hexdigest() == adjusted_sha, filename
+              filename.write_bytes(adjusted)
+              print(platform, 'original', original_sha, 'adjusted', adjusted_sha)
+          PY
+      - name: Two-platform atomic adoption with SHA-256 pins
+        run: |
+          set -euo pipefail
+          pnpm component-docs:adopt Dropdown --dry-run --json
+          pnpm component-docs:adopt Dropdown --write --json \
+            --expected-react-sha256=5fb02d0049e1bc546da6d9502d023ed3eb9ea627384dec907db131cf7e0f5aa9 \
+            --expected-react-native-sha256=59c1e6664be78fee55ce3dbc24dfb77cd4cc0ad1f321248d0157da988d99ff7e
+          python3 - <<'PY'
+          from pathlib import Path
+          start = '<!-- vellira-component-docs:authored:start -->'
+          end = '<!-- vellira-component-docs:authored:end -->'
+          for platform in ('react', 'react-native'):
+              filename = Path(f'apps/docs/src/{platform}/dropdown.md')
+              content = filename.read_text(encoding='utf-8')
+              assert content.count(start) == content.count(end) == 1
+              generated, tail = content.split(start, 1)
+              author, suffix = tail.split(end, 1)
+              assert not suffix.strip()
+              assert author.count('## Accessibility') == 1
+              author = author.replace(
+                  '## Accessibility', '## Additional Accessibility Details', 1
+              )
+              filename.write_text(generated + start + author + end + suffix, encoding='utf-8')
+          PY
+          pnpm exec prettier --write apps/docs/src/react/dropdown.md apps/docs/src/react-native/dropdown.md
+      - name: Prove all original author text preserved after reversible heading renames
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import fs from 'node:fs';
+          import prettier from 'prettier';
+
+          const hash = (text) => createHash('sha256').update(text).digest('hex');
+          const start = '<!-- vellira-component-docs:authored:start -->';
+          const end = '<!-- vellira-component-docs:authored:end -->';
+
+          for (const platform of ['react', 'react-native']) {
+            const file = 'apps/docs/src/' + platform + '/dropdown.md';
+            const original = execFileSync('git', ['show', 'HEAD:' + file], {
+              encoding: 'utf8',
+            });
+            const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n\s*# Dropdown\r?\n([\s\S]*)$/.exec(original);
+            if (!match) throw new Error('Original body missing: ' + file);
+            const config = await prettier.resolveConfig(file);
+            const expected = (await prettier.format(match[1].trim(), {
+              ...config,
+              parser: 'markdown',
+              filepath: file,
+            })).trim();
+            const generated = fs.readFileSync(file, 'utf8');
+            if (generated.split(start).length !== 2 || generated.split(end).length !== 2) {
+              throw new Error('Authored region marker multiplicity: ' + file);
+            }
+            let author = generated.split(start)[1].split(end)[0].trim();
+            author = author
+              .replace('## Additional Accessibility Details', '## Accessibility')
+              .replace('## Further Reading', '## See Also');
+            if (platform === 'react') {
+              author = author.replace('## Practical Usage Guidance', '## When To Use');
+            }
+            if (expected !== author) {
+              throw new Error('Authored text changed beyond approved heading aliases: ' + file);
+            }
+            console.log(platform, 'original-author-canonical', hash(expected), 'recovered', hash(author));
+          }
+          NODE
+      - name: Complete canonical generator and formatting checks
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write apps/docs/src/component-docs/Dropdown.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/dropdown-published-docs.test.ts
+          pnpm component-docs:generate --check
+          pnpm component-docs:adopt Dropdown --dry-run --json
+          pnpm exec vitest run scripts/generators/component-docs/dropdown-published-docs.test.ts
+          pnpm exec prettier --check apps/docs/src/component-docs/Dropdown.docs.ts apps/docs/src/component-docs/index.ts apps/docs/src/react/dropdown.md apps/docs/src/react-native/dropdown.md scripts/generators/component-docs/dropdown-published-docs.test.ts
+      - name: Remove temporary job and commit only reviewed docs
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          filename = Path('.github/workflows/ci.yml')
+          content = filename.read_text(encoding='utf-8')
+          marker = '\n  dropdown-docs-adoption:\n'
+          assert content.count(marker) == 1
+          filename.write_text(content[:content.index(marker)].rstrip() + '\n', encoding='utf-8')
+          PY
+          git config user.name 'vellira-docs-sync[bot]'
+          git config user.email 'vellira-docs-sync[bot]@users.noreply.github.com'
+          git add -- .github/workflows/ci.yml apps/docs/src/component-docs/Dropdown.docs.ts apps/docs/src/component-docs/index.ts apps/docs/src/react/dropdown.md apps/docs/src/react-native/dropdown.md scripts/generators/component-docs/dropdown-published-docs.test.ts
+          git diff --cached --quiet || git commit -m 'docs: safely adopt Dropdown guides on React and Native'
+          git push origin HEAD:feat/docs-dropdown-safe-adoption-20261015
