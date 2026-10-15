@@ -33,11 +33,14 @@ if (shouldBuild()) {
 }
 
 const dependencies = packPackages(packageNames, tempDir);
+// Reuse installed, lockfile-resolved React Native peers in the isolated
+// offline consumer. Without the SVG link, pnpm can resolve a newer registry
+// version that is absent from the frozen-workspace content-addressable store.
 const externalDependencies = linkWorkspaceDependencies(
   root,
   tempDir,
   'packages/react-native',
-  ['@react-native-picker/picker', 'react', 'react-native']
+  ['@react-native-picker/picker', 'react', 'react-native', 'react-native-svg']
 );
 
 writePackageJson(tempDir, {
