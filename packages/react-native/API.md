@@ -780,6 +780,88 @@ custom non-text triggers, provide `accessibilityLabel` and add
 
 <!-- api-docgen:end native.DropdownProps.DropdownProps -->
 
+### DropdownEmptyProps
+
+<!-- api-docgen:start native.DropdownEmptyProps.DropdownEmptyProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.DropdownEmptyProps.DropdownEmptyProps -->
+
+### DropdownLabelProps
+
+<!-- api-docgen:start native.DropdownLabelProps.DropdownLabelProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.DropdownLabelProps.DropdownLabelProps -->
+
+### DropdownGroupProps
+
+<!-- api-docgen:start native.DropdownGroupProps.DropdownGroupProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.DropdownGroupProps.DropdownGroupProps -->
+
+### DropdownSeparatorProps
+
+<!-- api-docgen:start native.DropdownSeparatorProps.DropdownSeparatorProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.DropdownSeparatorProps.DropdownSeparatorProps -->
+
+### DropdownItemProps
+
+<!-- api-docgen:start native.DropdownItemProps.DropdownItemProps -->
+
+| Prop            | Type                                   | Required | Description                            |
+| --------------- | -------------------------------------- | -------- | -------------------------------------- |
+| `children`      | `ReactNode`                            | Yes      | Content rendered inside the component. |
+| `asChild`       | `boolean`                              | No       | —                                      |
+| `value`         | `string`                               | No       | Controlled value.                      |
+| `icon`          | `ReactNode`                            | No       | Icon rendered inside the component.    |
+| `textWrap`      | `TextWrap`                             | No       | —                                      |
+| `onSelect`      | `(event: DropdownSelectEvent) => void` | No       | —                                      |
+| `color`         | `DropdownItemColor`                    | No       | —                                      |
+| `disabled`      | `boolean`                              | No       | Disables interaction.                  |
+| `closeOnSelect` | `boolean`                              | No       | —                                      |
+
+<!-- api-docgen:end native.DropdownItemProps.DropdownItemProps -->
+
+### DropdownContentProps
+
+<!-- api-docgen:start native.DropdownContentProps.DropdownContentProps -->
+
+| Prop           | Type                   | Required | Description                            |
+| -------------- | ---------------------- | -------- | -------------------------------------- |
+| `children`     | `ReactNode`            | No       | Content rendered inside the component. |
+| `style`        | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+| `presentation` | `DropdownPresentation` | No       | —                                      |
+| `command`      | `boolean`              | No       | —                                      |
+
+<!-- api-docgen:end native.DropdownContentProps.DropdownContentProps -->
+
+### DropdownTriggerProps
+
+<!-- api-docgen:start native.DropdownTriggerProps.DropdownTriggerProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `asChild`  | `boolean`   | No       | —                                      |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+| `disabled` | `boolean`   | No       | Disables interaction.                  |
+
+<!-- api-docgen:end native.DropdownTriggerProps.DropdownTriggerProps -->
+
 ## Tabs
 
 Compound tab navigation for native screens.

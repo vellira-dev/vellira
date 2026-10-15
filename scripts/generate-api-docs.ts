@@ -384,6 +384,78 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### DropdownTriggerProps',
+    'DropdownTriggerProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownContentProps',
+    'DropdownContentProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownItemProps',
+    'DropdownItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownCheckboxItemProps',
+    'DropdownCheckboxItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownRadioGroupProps',
+    'DropdownRadioGroupProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownRadioItemProps',
+    'DropdownRadioItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSeparatorProps',
+    'DropdownSeparatorProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSubProps',
+    'DropdownSubProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSubTriggerProps',
+    'DropdownSubTriggerProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSubContentProps',
+    'DropdownSubContentProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownGroupProps',
+    'DropdownGroupProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownLabelProps',
+    'DropdownLabelProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
     '### Tabs Props',
     'TabsProps',
     'src/components/Tabs/Root/types.ts'
@@ -603,6 +675,48 @@ const defaultSections: ApiSection[] = [
     'native',
     '### Dropdown Props',
     'DropdownProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownTriggerProps',
+    'DropdownTriggerProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownContentProps',
+    'DropdownContentProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownItemProps',
+    'DropdownItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownSeparatorProps',
+    'DropdownSeparatorProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownGroupProps',
+    'DropdownGroupProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownLabelProps',
+    'DropdownLabelProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownEmptyProps',
+    'DropdownEmptyProps',
     'src/components/Dropdown/types.ts'
   ),
   section(
@@ -1177,6 +1291,12 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
+  if (
+    /^### Dropdown[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
@@ -1241,6 +1361,26 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       '\n\n' +
       generatedBlock +
       doc.slice(after)
+    );
+  }
+
+  if (
+    /^### Dropdown[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.DropdownProps.DropdownProps -->`;
+    const start = doc.indexOf(rootEnd);
+    if (start < 0 || doc.indexOf(rootEnd, start + rootEnd.length) !== -1) {
+      throw new Error('Missing or ambiguous Dropdown API root anchor');
+    }
+    const insertion = start + rootEnd.length;
+    return (
+      doc.slice(0, insertion) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(insertion)
     );
   }
 
