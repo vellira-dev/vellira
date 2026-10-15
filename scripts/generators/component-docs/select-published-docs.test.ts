@@ -62,7 +62,9 @@ describe('Select published docs adoption', () => {
       const contract = selectDocs.platforms[page.platform];
       expect(content).toContain(contract.title);
       expect(content).toContain(contract.description);
-      expect(content).toContain(`import { Select } from '${page.packageName}';`);
+      expect(content).toContain(
+        `import { Select } from '${page.packageName}';`
+      );
       expect(content).toContain(`<!-- api-docgen:start ${page.marker} -->`);
       expect(content).toContain(`<!-- api-docgen:end ${page.marker} -->`);
 
