@@ -1,5 +1,6 @@
 import { Container } from '@/components/layout/Container';
 
+import { BlogDesignSystemLink } from './BlogDesignSystemLink';
 import { NewsletterSignupForm } from './NewsletterSignupForm';
 import styles from './BlogNewsletterSignup.module.css';
 
@@ -18,7 +19,12 @@ export function BlogNewsletterSignup() {
             </h2>
             <p className={styles.description} data-newsletter-description>
               Engineering notes on design systems, React, React Native,
-              developer tooling, accessibility, and automation.
+              developer tooling, accessibility, and automation. Interested
+              specifically in Pro?{' '}
+              <BlogDesignSystemLink href='/#pro'>
+                Get launch updates
+              </BlogDesignSystemLink>
+              .
             </p>
           </div>
 
