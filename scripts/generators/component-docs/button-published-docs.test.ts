@@ -60,8 +60,11 @@ describe('published Button docs safe adoption', () => {
 
       const authored = readAuthoredRegion({ content, filePath });
       expect(authored.valid).toBe(true);
+      if (!authored.valid) {
+        throw new Error('Invalid authored Button documentation');
+      }
       expect(authored.found).toBe(true);
-      if (!authored.valid || !authored.found) {
+      if (!authored.found) {
         throw new Error('Expected protected authored Button documentation');
       }
 
