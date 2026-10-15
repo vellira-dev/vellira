@@ -184,8 +184,9 @@ describe('read-only component docs adoption audit', () => {
       expect(rows).toHaveLength(2);
       expect(rows.find((row) => row.platform === 'react')).toMatchObject({
         component: 'Button',
+        // A registered contract does not make a handwritten page managed.
         state: 'legacy',
-        hasDocsContract: false,
+        hasDocsContract: true,
       });
       expect(rows.find((row) => row.platform === 'react-native')?.state).toBe(
         'missing'
