@@ -1,6 +1,6 @@
 const BUTTONDOWN_SUBSCRIBERS_URL = 'https://api.buttondown.com/v1/subscribers';
 const BUTTONDOWN_TIMEOUT_MS = 8_000;
-export const PRO_INTEREST_TAG = 'vellira-pro-launch-interest';
+export const PRO_INTEREST_UTM_CAMPAIGN = 'vellira_pro_launch_interest';
 
 export type NewsletterSubscribeResult =
   | { ok: true }
@@ -92,7 +92,7 @@ export async function subscribeWithButtondown({
   const body: {
     email_address: string;
     ip_address?: string;
-    tags?: string[];
+    utm_campaign?: string;
     type?: 'unactivated';
   } = { email_address: email };
   if (ipAddress) body.ip_address = ipAddress;
@@ -102,10 +102,10 @@ export async function subscribeWithButtondown({
     'Content-Type': 'application/json',
   };
   if (purpose === 'pro_launch') {
-    // Never upsert an existing subscriber's tags from a public, unauthenticated
-    // email field: Buttondown's default collision behavior rejects duplicates.
-    // New addresses must confirm their consent before becoming subscribers.
-    body.tags = [PRO_INTEREST_TAG];
+    // Attribute voluntary Pro interest without paid tags, while retaining
+    // default duplicate rejection (no unauthenticated updates to existing
+    // subscribers). New addresses must confirm via Buttondown double opt-in.
+    body.utm_campaign = PRO_INTEREST_UTM_CAMPAIGN;
     body.type = 'unactivated';
   }
 
