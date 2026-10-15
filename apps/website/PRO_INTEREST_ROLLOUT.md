@@ -40,7 +40,13 @@ failure modes. The screenshot displayed older-looking dates; do not treat its
 date column as evidence of the actual creation time. No extra paid Tags plan is
 needed for this tested flow.
 
-## Preconditions before staging or production activation
+## Production rollout gates (manual staging preview is separate)
+
+The owner-observed local UTM/double-opt-in case permits a **short, explicitly
+approved staging preview**, not unrestricted public activation. The following
+conditions remain mandatory before enabling the form on the public website.
+The staging Worker itself is publicly accessible during the controlled test.
+
 
 1. Confirm in a read-only provider/account review that the existing Buttondown
    credential is still valid and subscriber UTM fields/list filters are actually
@@ -81,6 +87,9 @@ purpose **OFF**. Checked preview runs fail unless they target `main`.
 
 Preview URL: `https://vellira-website-staging.vellira.workers.dev/#pro`.
 This is a **publicly reachable** origin, not a private testing audience.
+Keep the test brief, do not advertise the staging URL, and restore OFF as soon
+as verification is complete. All requests during the preview use the real
+Buttondown account; no extra user signup is automated by the smoke checks.
 Staging reuses the existing Cloudflare Worker secret `BUTTONDOWN_API_KEY`;
 nothing is copied into git, Actions variables, JavaScript or logs. The live
 smoke tests UI visibility and an intentionally rejected API request, with no
