@@ -62,7 +62,7 @@ async function readProviderErrorCode(
 async function mapProviderResponse(
   response: Response
 ): Promise<NewsletterSubscribeResult> {
-  if (response.status === 200 || response.status === 201) return { ok: true };
+  if (response.status === 201) return { ok: true };
 
   if (response.status === 422) return error('invalid_email');
   if (response.status === 429) return error('rate_limited');
@@ -102,11 +102,11 @@ export async function subscribeWithButtondown({
     'Content-Type': 'application/json',
   };
   if (purpose === 'pro_launch') {
-    // Keep Pro intent distinct from general newsletter signups, and require
-    // confirmation even when an address had previously unsubscribed.
+    // Never upsert an existing subscriber's tags from a public, unauthenticated
+    // email field: Buttondown's default collision behavior rejects duplicates.
+    // New addresses must confirm their consent before becoming subscribers.
     body.tags = [PRO_INTEREST_TAG];
     body.type = 'unactivated';
-    headers['X-Buttondown-Collision-Behavior'] = 'add';
   }
 
   try {
