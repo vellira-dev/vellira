@@ -138,13 +138,29 @@ describe('component completeness CLI', () => {
 
     const results = await runComponentCompletenessCli(['Button'], root);
 
-    expect(results).toHaveLength(1);
-    expect(results[0]?.componentName).toBe('Button');
+    // Button now owns both platform docs. Its code fixture is complete, but
+    // this minimal isolated root deliberately has no generated docs pages.
+    // The CLI must report that missing docs evidence as INCOMPLETE rather
+    // than silently approving an otherwise complete component.
+    expect(results.map((result) => result.componentName)).toEqual([
+      'Button',
+      'Generated Component Docs',
+    ]);
     expect(results[0]?.ready).toBe(true);
+    expect(results[1]?.ready).toBe(false);
+    expect(
+      results[1]?.checks.some(
+        (check) =>
+          !check.ok &&
+          check.details?.includes('missing generated page') &&
+          check.details.includes('Button')
+      )
+    ).toBe(true);
 
     expect(log).toHaveBeenCalledWith(expect.stringContaining('READY'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('INCOMPLETE'));
 
-    expect(process.exitCode).toBeUndefined();
+    expect(process.exitCode).toBe(1);
   });
 
   it('accepts component names case-insensitively', async () => {
