@@ -926,27 +926,34 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
-  // A TypeScript Program is expensive. Building one for every part's
-  // source file retains many independent copies of the same dependency graph
-  // and scales heap use with the number of compound components. Group all
-  // source files for each published package into a single program instead.
-  const sourcesByDocPath = new Map<string, Set<string>>();
+  // Preserve each existing public API table's standalone TypeScript
+  // checker semantics. Sharing its checker with unrelated components may
+  // change type strings and stale already published docs. Modal's new
+  // compound slots are explicitly grouped by platform to avoid allocating
+  // a separate heavy TypeScript program for each compound source module.
+  const getContextKey = (item: ApiSection) =>
+    /^(?:web|native)\\.Modal[A-Za-z]*Props\\./.test(item.id)
+      ? `modal:${item.docPath}`
+      : item.sourceFile;
+  const sourceFilesByContext = new Map<string, Set<string>>();
   for (const item of sections) {
-    const sources = sourcesByDocPath.get(item.docPath) ?? new Set<string>();
+    const contextKey = getContextKey(item);
+    const sources = sourceFilesByContext.get(contextKey) ?? new Set<string>();
     sources.add(item.sourceFile);
-    sourcesByDocPath.set(item.docPath, sources);
+    sourceFilesByContext.set(contextKey, sources);
   }
   const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
 
   for (const item of sections) {
+    const contextKey = getContextKey(item);
     const context =
-      contexts.get(item.docPath) ??
+      contexts.get(contextKey) ??
       createApiDocsContext(rootDir, [
-        ...(sourcesByDocPath.get(item.docPath) ?? []),
+        ...(sourceFilesByContext.get(contextKey) ?? []),
       ]);
 
-    contexts.set(item.docPath, context);
+    contexts.set(contextKey, context);
     const docPath = path.join(rootDir, item.docPath);
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
