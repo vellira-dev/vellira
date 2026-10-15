@@ -1,0 +1,112 @@
+name: One-shot Button legacy docs protected adoption
+on:
+  push:
+    branches:
+      - feat/docs-button-safe-adoption-20261015
+permissions:
+  contents: write
+jobs:
+  button-adoption:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact Button candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install pnpm tooling
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify original legacy receipts and adopt with both SHA pins
+        shell: bash
+        run: |
+          pnpm component-docs:adopt Button --dry-run --json > "$RUNNER_TEMP/button-preview.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          import { execFileSync } from 'node:child_process';
+          const preview = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/button-preview.json', 'utf8'));
+          if (preview.status !== 'preview' || preview.entries.length !== 2) throw new Error('Expected both Button legacy docs in preview');
+          for (const row of preview.entries) {
+            const original = execFileSync('git', ['show', 'HEAD:' + row.file]).toString('utf8');
+            const digest = crypto.createHash('sha256').update(original).digest('hex');
+            if (row.originalSha256 !== digest) throw new Error('Unreviewed source SHA for ' + row.file);
+            console.log('Original Button ' + row.platform + ': SHA-256=' + digest + ', bytes=' + Buffer.byteLength(original));
+          }
+          NODE
+          REACT_SHA="$(node -p "require(process.env.RUNNER_TEMP + '/button-preview.json').entries.find(x => x.platform === 'react').originalSha256")"
+          NATIVE_SHA="$(node -p "require(process.env.RUNNER_TEMP + '/button-preview.json').entries.find(x => x.platform === 'react-native').originalSha256")"
+          pnpm component-docs:adopt Button --write --json "--expected-react-sha256=${REACT_SHA}" "--expected-react-native-sha256=${NATIVE_SHA}" > "$RUNNER_TEMP/button-adopted.json"
+      - name: Prove authored body preserved and make only reversible H2 renames
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import prettier from 'prettier';
+          const start='<!-- vellira-component-docs:authored:start -->';
+          const end='<!-- vellira-component-docs:authored:end -->';
+          const replacement = new Map([
+            ['## When To Use', '## Practical Usage Guidance'],
+            ['## Accessibility', '## Additional Accessibility Details'],
+            ['## See Also', '## Further Reading'],
+          ]);
+          const preview = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/button-preview.json', 'utf8'));
+          const adopted = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/button-adopted.json', 'utf8'));
+          if (adopted.status !== 'adopted' || adopted.entries.length !== 2) throw new Error('Both platforms must be adopted');
+          for (const platform of ['react', 'react-native']) {
+            const row=preview.entries.find(e=>e.platform===platform);
+            const path=row.file;
+            const original=execFileSync('git',['show','HEAD:'+path]).toString('utf8');
+            const parsed=/^---\r?\n[\s\S]*?\r?\n---\r?\n\s*# Button\r?\n([\s\S]*)$/.exec(original);
+            if(!parsed) throw new Error('Original Button frontmatter or H1 changed on '+platform);
+            const config=await prettier.resolveConfig(path);
+            const expected=(await prettier.format(parsed[1].trim(),{...config,parser:'markdown',filepath:path})).trim();
+            let current=fs.readFileSync(path,'utf8');
+            const a=current.indexOf(start),b=current.indexOf(end,a);
+            if(a<0||b<a||current.indexOf(start,a+start.length)>=0)throw new Error('Invalid authored markers: '+platform);
+            const body=current.slice(a+start.length,b);
+            const initiallyPreserved=body.trim();
+            if(initiallyPreserved!==expected)throw new Error('Author body was altered during Button adoption: '+platform);
+            const modifiedBody=body.split('\n').map(s=>replacement.get(s)||s).join('\n');
+            if(modifiedBody===body)throw new Error('Expected authored heading renames on '+platform);
+            const reverse=new Map([...replacement].map(([key,value])=>[value,key]));
+            const recovered=modifiedBody.split('\n').map(s=>reverse.get(s)||s).join('\n').trim();
+            if(recovered!==expected)throw new Error('Button authored preservation receipt mismatch: '+platform);
+            current=current.slice(0,a+start.length)+modifiedBody+current.slice(b);
+            const headings=current.split('\n').filter(s=>s.startsWith('## '));
+            if(new Set(headings).size!==headings.length)throw new Error('Duplicate Button headings on '+platform);
+            fs.writeFileSync(path,current);
+            console.log('Button '+platform+' authored-preservation byte count='+Buffer.byteLength(expected,'utf8')+'; unique H2='+headings.length+'; SHA='+row.originalSha256);
+          }
+          NODE
+      - name: Verify generator idempotence and editorial regression suite
+        run: |
+          pnpm component-docs:generate Button --check
+          pnpm component-docs:adopt Button --dry-run --json
+          pnpm exec vitest run --config vitest.tooling.config.ts scripts/generators/component-docs
+          pnpm format:check
+      - name: Remove one-shot workflow and commit ONLY reviewed docs files
+        shell: bash
+        run: |
+          rm .github/workflows/button-docs-adoption-proof-once.yml
+          while IFS= read -r file; do
+            case "$file" in
+              apps/docs/src/react/button.md|apps/docs/src/react-native/button.md|.github/workflows/button-docs-adoption-proof-once.yml) ;;
+              *) echo "::error::Unexpected modification: $file"; exit 1 ;;
+            esac
+          done < <(git diff --name-only)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git diff --cached --quiet || git commit -m "docs(button): preserve React and native guides under generator ownership"
+          git push origin HEAD:feat/docs-button-safe-adoption-20261015
