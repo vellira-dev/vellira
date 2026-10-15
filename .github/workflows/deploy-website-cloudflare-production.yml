@@ -249,6 +249,8 @@ jobs:
       STAGING_RUN_ID: ${{ needs.candidate.outputs.staging_run_id }}
       STAGING_RUN_ATTEMPT: ${{ needs.candidate.outputs.staging_run_attempt }}
       VELLIRA_BUILD_ID: ${{ needs.candidate.outputs.candidate_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      # A staging preview must never enable public Pro signup.
+      NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'
 
     steps:
       - name: Checkout exact production candidate
@@ -500,6 +502,13 @@ jobs:
         run: node apps/website/scripts/cloudflare-runtime-contract.mjs
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+
+      - name: Verify production Pro signup remains disabled
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'
+        run: node apps/website/scripts/pro-interest-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_PUBLIC_URL }}
+          PRO_INTEREST_EXPECTED_MODE: '0'
 
       - name: Test browser forensic diagnostics
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.worker-deploy.outputs.deployed == 'true'

@@ -30,11 +30,22 @@ Buttondown's publicly documented subscriber API supports writing
 - https://docs.buttondown.com/api-subscribers-create
 - https://docs.buttondown.com/api-subscribers-list
 
-**This is only API-schema evidence, NOT proof of entitlement or behavior on the
-actual free Buttondown account.** Do not enable the form based on the docs or
-synthetic tests alone. Do not pay for Basic/Tags as part of this experiment.
+API documentation alone is not rollout evidence. On 2026-10-15 the owner
+completed a controlled free-plan local Pro signup using a new address:
+Buttondown sent a confirmation email, the owner clicked the confirmation link,
+and the account UI showed `Regular` with
+`utm_campaign: vellira_pro_launch_interest`. This is an owner-observed
+end-to-end case, not evidence of bulk delivery, recipient segmentation, or all
+failure modes. The screenshot displayed older-looking dates; do not treat its
+date column as evidence of the actual creation time. No extra paid Tags plan is
+needed for this tested flow.
 
-## Preconditions before staging or production activation
+## Production rollout gates (manual staging preview is separate)
+
+The owner-observed local UTM/double-opt-in case permits a **short, explicitly
+approved staging preview**, not unrestricted public activation. The following
+conditions remain mandatory before enabling the form on the public website.
+The staging Worker itself is publicly accessible during the controlled test.
 
 1. Confirm in a read-only provider/account review that the existing Buttondown
    credential is still valid and subscriber UTM fields/list filters are actually
@@ -65,6 +76,37 @@ Existing regular subscribers are intentionally **not** re-attributed as newly
 interested in Pro via this form. They can keep receiving general engineering
 newsletter updates; a future **subscriber-authenticated** preference path would
 require separate consent and implementation.
+
+## Owner-approved staging-only preview
+
+Use **Actions → Deploy Website Cloudflare Staging → Run workflow → main**.
+Check **pro_interest_preview** only for an explicitly approved test. Normal
+push-to-main builds and unchecked manual runs keep both the form and Pro API
+purpose **OFF**. Checked preview runs fail unless they target `main`.
+
+Preview URL: `https://vellira-website-staging.vellira.workers.dev/#pro`.
+This is a **publicly reachable** origin, not a private testing audience.
+Keep the test brief, do not advertise the staging URL, and restore OFF as soon
+as verification is complete. All requests during the preview use the real
+Buttondown account; no extra user signup is automated by the smoke checks.
+Staging reuses the existing Cloudflare Worker secret `BUTTONDOWN_API_KEY`;
+nothing is copied into git, Actions variables, JavaScript or logs. The live
+smoke tests UI visibility and an intentionally rejected API request, with no
+real subscriber creation or mutation in either mode. The ordinary engineering
+newsletter continues unchanged.
+
+A manually dispatched staging run is **not** eligible for normal production
+promotion: the production candidate contract requires a successful `push`
+staging run. Independently, standard production builds and the legacy one-time
+adoption path explicitly compile
+`NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED=0`. Existing production
+environment approval is still required.
+
+After inspecting the preview, run the staging workflow **again with the
+checkbox unchecked** to restore the public staging Worker to OFF. Confirm
+the form is absent and Pro API returns 503. Production remains OFF until
+separate owner approval, relevant provider edge-case checks and exact-head
+CI/staging evidence; merge is not activation authorization.
 
 ## Honest measurement without additional tracking
 
