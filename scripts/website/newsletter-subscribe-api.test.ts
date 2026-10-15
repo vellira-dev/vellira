@@ -6,7 +6,7 @@ import {
 } from '../../apps/website/src/server/newsletter/subscribe';
 import {
   BUTTONDOWN_SUBSCRIBERS_URL,
-  PRO_INTEREST_TAG,
+  PRO_INTEREST_UTM_CAMPAIGN,
   newsletterErrors,
   subscribeWithButtondown,
   type NewsletterSubscribeResult,
@@ -267,15 +267,16 @@ describe('Buttondown provider boundary', () => {
     const init = fetcher.mock.calls[0]?.[1];
     expect(JSON.parse(String(init?.body))).toEqual({
       email_address: 'pro@example.com',
-      tags: [PRO_INTEREST_TAG],
+      utm_campaign: PRO_INTEREST_UTM_CAMPAIGN,
       type: 'unactivated',
     });
     expect(init?.headers).not.toHaveProperty('X-Buttondown-Collision-Behavior');
     expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
+    expect(JSON.parse(String(init?.body))).not.toHaveProperty('tags');
 
-    // Existing subscribers must not acquire a Pro-interest tag from an
-    // unauthenticated duplicate signup. Buttondown's default policy rejects
-    // collisions instead of merging new fields into the existing subscriber.
+    // Existing subscribers must not acquire new Pro-interest attribution from
+    // an unauthenticated duplicate signup. Buttondown's default policy rejects
+    // collisions instead of updating an existing subscriber's campaign.
     await expect(
       subscribeWithButtondown({
         apiKey: 'server-only-test-key',
@@ -287,7 +288,7 @@ describe('Buttondown provider boundary', () => {
             'X-Buttondown-Collision-Behavior'
           );
           expect(JSON.parse(String(init?.body))).toMatchObject({
-            tags: [PRO_INTEREST_TAG],
+            utm_campaign: PRO_INTEREST_UTM_CAMPAIGN,
             type: 'unactivated',
           });
           return new Response(JSON.stringify({ code: 'subscriber_exists' }), {
