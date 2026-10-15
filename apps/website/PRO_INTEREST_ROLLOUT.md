@@ -47,7 +47,6 @@ approved staging preview**, not unrestricted public activation. The following
 conditions remain mandatory before enabling the form on the public website.
 The staging Worker itself is publicly accessible during the controlled test.
 
-
 1. Confirm in a read-only provider/account review that the existing Buttondown
    credential is still valid and subscriber UTM fields/list filters are actually
    usable on the present free plan. Do not share a secret or email list in a PR,

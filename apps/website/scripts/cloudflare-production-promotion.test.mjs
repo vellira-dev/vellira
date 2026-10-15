@@ -67,6 +67,11 @@ test('Pro interest is an explicit manual staging preview and stays OFF on all pr
     legacyWorkflow,
     /NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0'/
   );
+  assert.match(legacyWorkflow, /pro-interest-live-smoke\.mjs/);
+  assert.ok(
+    legacyWorkflow.indexOf('cloudflare-runtime-contract.mjs') <
+      legacyWorkflow.indexOf('pro-interest-live-smoke.mjs')
+  );
 });
 
 test('static chunk smoke script remains syntactically valid', () => {

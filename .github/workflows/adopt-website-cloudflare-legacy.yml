@@ -217,6 +217,12 @@ jobs:
         env:
           WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
 
+      - name: Verify production Pro signup remains disabled
+        run: node apps/website/scripts/pro-interest-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.PRODUCTION_WORKER_URL }}
+          PRO_INTEREST_EXPECTED_MODE: '0'
+
       - name: Test browser forensic diagnostics
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
