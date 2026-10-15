@@ -109,14 +109,24 @@ describe('published Modal documentation safe adoption', () => {
         content.indexOf('<!-- vellira-component-docs:authored:start -->')
       );
       const prefix = page.platform === 'react' ? 'web' : 'native';
+      const canonicalApi = fs.readFileSync(
+        path.join(process.cwd(), `packages/${page.platform}/API.md`),
+        'utf8'
+      );
       const apiNames = [
         'ModalProps',
         ...page.compoundParts.map((part) => `Modal${part}Props`),
       ];
       for (const name of apiNames) {
         const marker = `${prefix}.${name}.${name}`;
-        expect(generated).toContain(`<!-- api-docgen:start ${marker} -->`);
-        expect(generated).toContain(`<!-- api-docgen:end ${marker} -->`);
+        const start = `<!-- api-docgen:start ${marker} -->`;
+        const end = `<!-- api-docgen:end ${marker} -->`;
+        // Each published part must be sourced once from its exact platform's
+        // canonical API.md, with no duplicate or cross-platform authority.
+        expect(canonicalApi.split(start)).toHaveLength(2);
+        expect(canonicalApi.split(end)).toHaveLength(2);
+        expect(generated.split(start)).toHaveLength(2);
+        expect(generated.split(end)).toHaveLength(2);
       }
       expect([
         ...generated.matchAll(
