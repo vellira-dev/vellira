@@ -18,26 +18,22 @@ Before enabling for staging or production:
 1. Verify Buttondown newsletter API access and confirm **tags** are enabled in
    the actual account/plan. The official tags feature generally needs Buttondown
    Basic or higher. No fallback to an untagged Pro-interest signup is allowed.
-2. In a controlled provider test, verify the exact `tags`, `type: unactivated`
-   and `X-Buttondown-Collision-Behavior: add` request, especially for **new,
-   existing, previously unsubscribed and suppressed** subscriber states.
-   Confirmation must not be silently bypassed or existing consent overridden.
-   Test specifically that tagging an already-confirmed `regular` subscriber
-   does not downgrade their existing newsletter status to `unactivated`; if
-   that transition occurs, leave the flag OFF until the adapter is revised.
-   **More importantly, an unauthenticated request for somebody else's existing
-   confirmed address must never silently add the Pro-interest tag without
-   separate owner confirmation.** Buttondown's documented collision-add policy
-   merges tags for existing subscribers; a generic HTTP 200 or current
-   `type: unactivated` request is not proof of new topic-specific consent on
-   an already-active email. Before rollout, independently verify a safe
-   provider-owned opt-in confirmation flow for this case or implement a
-   narrowly reviewed verification route; otherwise refuse to tag existing
-   subscribers, explain that limitation, and count only proven opt-ins.
-   If this cannot be guaranteed, leave the flag OFF. Do not build a shadow
-   subscriber database or silently accept spoofed "interest" records.
-   If the provider changes semantics, keep the flag OFF and fix the adapter
-   before accepting a real Pro-interest address.
+2. In a controlled provider test, verify the exact `tags` and
+   `type: unactivated` request **without any collision-upsert header**, for
+   new, existing, unsubscribed, unactivated and suppressed addresses.
+   Buttondown's documented default behavior rejects an existing subscriber
+   rather than merging their tags; only a genuinely new, confirmation-pending
+   address may acquire the Pro-interest tag via this public endpoint.
+   Neither a malicious attempt using someone else's active email nor an
+   existing subscriber retry may add Pro interest or change their newsletter
+   status. Unknown/success-ambiguous responses must not count as consent.
+   **Existing newsletter subscribers cannot opt into the Pro tag via this
+   public form in V1.** If we later support them, use a separately reviewed,
+   subscriber-authenticated preference change (for example a verified
+   subscriber-editable tag in Buttondown Portal), not a public unauthenticated
+   PATCH/upsert. Check the actual Buttondown account settings and test every
+   state transition before enabling the form; fail closed on unexpected
+   provider behavior.
 3. Confirm the intended newsletter audiences and **tag-based segmentation** in
    Buttondown. The UI requests engineering notes **and** Pro updates; it does
    not silently opt users into an unrelated marketing list.
