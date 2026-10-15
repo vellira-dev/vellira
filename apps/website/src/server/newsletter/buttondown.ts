@@ -54,20 +54,28 @@ async function readProviderError(
 ): Promise<ButtondownProviderError> {
   try {
     const payload: unknown = await response.json();
-    if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      !Array.isArray(payload)
+    ) {
       const errorResponse = payload as ButtondownErrorResponse;
       const metadata = errorResponse.metadata;
       const subscriberId =
-        typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)
+        typeof metadata === 'object' &&
+        metadata !== null &&
+        !Array.isArray(metadata)
           ? (metadata as { subscriber_id?: unknown }).subscriber_id
           : null;
 
       return {
-        code: typeof errorResponse.code === 'string' ? errorResponse.code : null,
+        code:
+          typeof errorResponse.code === 'string' ? errorResponse.code : null,
         // Buttondown includes the existing ID on duplicate-create errors.
         // Do not use arbitrary 400s as evidence that an address is subscribed.
         existingSubscriber:
-          typeof subscriberId === 'string' && /^sub_[a-z0-9]+$/i.test(subscriberId),
+          typeof subscriberId === 'string' &&
+          /^sub_[a-z0-9]+$/i.test(subscriberId),
       };
     }
   } catch {
