@@ -502,12 +502,7 @@ describe('Buttondown provider boundary', () => {
     },
   ])(
     'keeps $name fail-closed through the actual Pro route and provider adapter',
-    async ({
-      providerStatus,
-      providerBody,
-      expectedStatus,
-      expectedCode,
-    }) => {
+    async ({ providerStatus, providerBody, expectedStatus, expectedCode }) => {
       // The provider is intentionally mocked. No credentials, real addresses,
       // existing subscriber mutations or quota-consuming API calls.
       const providerFetch = vi.fn<ButtondownFetcher>(async () =>
