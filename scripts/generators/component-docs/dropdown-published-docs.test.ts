@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -12,6 +13,8 @@ const pages = [
     platform: 'react',
     relativePath: 'apps/docs/src/react/dropdown.md',
     packageName: '@vellira-ui/react',
+    canonicalAuthoredSha256:
+      '6d7db0ebc01d8c8a61ffa6348eb6a286b0c4b5130898cefb68175a3ad175ec80',
     apiMarkers: [
       'web.DropdownProps.DropdownProps',
       'web.DropdownSubProps.DropdownSubProps',
@@ -36,6 +39,8 @@ const pages = [
     platform: 'react-native',
     relativePath: 'apps/docs/src/react-native/dropdown.md',
     packageName: '@vellira-ui/react-native',
+    canonicalAuthoredSha256:
+      '84f3828592db67983c784499bab1571c1964d9c66d6031d8339992a8cd64f788',
     apiMarkers: [
       'native.DropdownProps.DropdownProps',
       'native.DropdownContentProps.DropdownContentProps',
@@ -103,6 +108,24 @@ describe('published Dropdown docs safe adoption', () => {
       expect(author.content).not.toContain(
         '<!-- Add manually authored content for this component here. -->'
       );
+
+      // Reversing the only approved H2 aliases must reproduce the entire
+      // published, Prettier-canonical legacy author body byte-for-byte.
+      // Deliberate editorial changes require explicitly rebaselining this
+      // independently verified fingerprint in a reviewed migration.
+      let recoveredAuthor = author.content
+        .trim()
+        .replace('## Additional Accessibility Details', '## Accessibility')
+        .replace('## Further Reading', '## See Also');
+      if (page.platform === 'react') {
+        recoveredAuthor = recoveredAuthor.replace(
+          '## Practical Usage Guidance',
+          '## When To Use'
+        );
+      }
+      expect(
+        createHash('sha256').update(recoveredAuthor).digest('hex')
+      ).toBe(page.canonicalAuthoredSha256);
 
       const headings = content
         .split(/\r?\n/)
