@@ -42,10 +42,10 @@ describe('Select published docs adoption', () => {
   it.each(pages)(
     'keeps $platform Select docs managed and preserves examples',
     (page) => {
-        const content = fs.readFileSync(
-          path.join(process.cwd(), page.path),
-          'utf8'
-        );
+      const content = fs.readFileSync(
+        path.join(process.cwd(), page.path),
+        'utf8'
+      );
       const authority = inspectComponentDocAuthority({
         content,
         filePath: page.path,
@@ -66,7 +66,9 @@ describe('Select published docs adoption', () => {
       expect(content).toContain(`<!-- api-docgen:start ${page.marker} -->`);
       expect(content).toContain(`<!-- api-docgen:end ${page.marker} -->`);
 
-      const headings = content.split(/\\r?\\n/).filter((line) => line.startsWith('## '));
+      const headings = content
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('## '));
       expect(headings.length).toBe(new Set(headings).size);
       expect(headings).toContain('## When To Use');
       expect(headings).toContain('## Accessibility');
