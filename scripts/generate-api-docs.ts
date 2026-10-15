@@ -534,6 +534,48 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### ModalTriggerProps',
+    'ModalTriggerProps',
+    'src/components/Modal/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalOverlayProps',
+    'ModalOverlayProps',
+    'src/components/Modal/Overlay/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalContentProps',
+    'ModalContentProps',
+    'src/components/Modal/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalHeaderProps',
+    'ModalHeaderProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalBodyProps',
+    'ModalBodyProps',
+    'src/components/Modal/Body/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalFooterProps',
+    'ModalFooterProps',
+    'src/components/Modal/Footer/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalCloseProps',
+    'ModalCloseProps',
+    'src/components/Modal/Close/types.ts'
+  ),
+  section(
+    'web',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -799,6 +841,60 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'native',
+    '### ModalTriggerProps',
+    'ModalTriggerProps',
+    'src/components/Modal/Trigger/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalOverlayProps',
+    'ModalOverlayProps',
+    'src/components/Modal/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalContentProps',
+    'ModalContentProps',
+    'src/components/Modal/Content/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalHeaderProps',
+    'ModalHeaderProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalTitleProps',
+    'ModalTitleProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalDescriptionProps',
+    'ModalDescriptionProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalBodyProps',
+    'ModalBodyProps',
+    'src/components/Modal/Body/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalFooterProps',
+    'ModalFooterProps',
+    'src/components/Modal/Footer/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalCloseProps',
+    'ModalCloseProps',
+    'src/components/Modal/Close/types.ts'
+  ),
+  section(
+    'native',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -830,15 +926,34 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
+  // Preserve each existing public API table's standalone TypeScript
+  // checker semantics. Sharing its checker with unrelated components may
+  // change type strings and stale already published docs. Modal's new
+  // compound slots are explicitly grouped by platform to avoid allocating
+  // a separate heavy TypeScript program for each compound source module.
+  const getContextKey = (item: ApiSection) =>
+    /^(?:web|native)\.Modal[A-Za-z]*Props\./.test(item.id)
+      ? `modal:${item.docPath}`
+      : item.sourceFile;
+  const sourceFilesByContext = new Map<string, Set<string>>();
+  for (const item of sections) {
+    const contextKey = getContextKey(item);
+    const sources = sourceFilesByContext.get(contextKey) ?? new Set<string>();
+    sources.add(item.sourceFile);
+    sourceFilesByContext.set(contextKey, sources);
+  }
   const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
 
   for (const item of sections) {
+    const contextKey = getContextKey(item);
     const context =
-      contexts.get(item.sourceFile) ??
-      createApiDocsContext(rootDir, item.sourceFile);
+      contexts.get(contextKey) ??
+      createApiDocsContext(rootDir, [
+        ...(sourceFilesByContext.get(contextKey) ?? []),
+      ]);
 
-    contexts.set(item.sourceFile, context);
+    contexts.set(contextKey, context);
     const docPath = path.join(rootDir, item.docPath);
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
@@ -899,10 +1014,12 @@ export async function generateApiDocs(
 
 function createApiDocsContext(
   rootDir: string,
-  sourceFile: string
+  sourceFiles: readonly string[]
 ): ApiDocsContext {
-  const sourcePath = path.join(rootDir, sourceFile);
-  const program = ts.createProgram([sourcePath], {
+  const sourcePaths = sourceFiles.map((sourceFile) =>
+    path.join(rootDir, sourceFile)
+  );
+  const program = ts.createProgram(sourcePaths, {
     baseUrl: rootDir,
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
@@ -1297,6 +1414,12 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
+  if (
+    /^### Modal[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
@@ -1374,6 +1497,29 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       throw new Error('Missing or ambiguous Dropdown API root anchor');
     }
     const insertion = start + rootEnd.length;
+    return (
+      doc.slice(0, insertion) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(insertion)
+    );
+  }
+
+  // Bootstrap previously undocumented public Modal compound-part tables from
+  // real exported TypeScript contracts. Once generated markers exist the
+  // standard marker replacement path above owns subsequent regeneration.
+  if (
+    /^### Modal[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.ModalProps.ModalProps -->`;
+    const index = doc.indexOf(rootEnd);
+    if (index === -1 || doc.indexOf(rootEnd, index + rootEnd.length) !== -1) {
+      throw new Error('Missing or ambiguous Modal API root anchor');
+    }
+    const insertion = index + rootEnd.length;
     return (
       doc.slice(0, insertion) +
       '\n\n' +

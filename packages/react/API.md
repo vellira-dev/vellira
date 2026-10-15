@@ -1310,6 +1310,97 @@ import { Button, Modal, Portal } from '@vellira-ui/react';
 
 <!-- api-docgen:end web.ModalProps.ModalProps -->
 
+### ModalCloseProps
+
+<!-- api-docgen:start web.ModalCloseProps.ModalCloseProps -->
+
+| Prop         | Type                                                          | Required | Description                            |
+| ------------ | ------------------------------------------------------------- | -------- | -------------------------------------- |
+| `asChild`    | `boolean`                                                     | No       | —                                      |
+| `children`   | `ReactElement<unknown, string \| JSXElementConstructor<any>>` | No       | Content rendered inside the component. |
+| `aria-label` | `string`                                                      | No       | Accessible trigger label.              |
+| `className`  | `string`                                                      | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.ModalCloseProps.ModalCloseProps -->
+
+### ModalFooterProps
+
+<!-- api-docgen:start web.ModalFooterProps.ModalFooterProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | Yes      | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.ModalFooterProps.ModalFooterProps -->
+
+### ModalBodyProps
+
+<!-- api-docgen:start web.ModalBodyProps.ModalBodyProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | Yes      | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.ModalBodyProps.ModalBodyProps -->
+
+### ModalHeaderProps
+
+<!-- api-docgen:start web.ModalHeaderProps.ModalHeaderProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | Yes      | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.ModalHeaderProps.ModalHeaderProps -->
+
+### ModalContentProps
+
+<!-- api-docgen:start web.ModalContentProps.ModalContentProps -->
+
+| Prop              | Type                    | Required | Description                                                        |
+| ----------------- | ----------------------- | -------- | ------------------------------------------------------------------ |
+| `children`        | `ReactNode`             | Yes      | Content rendered inside the component.                             |
+| `size`            | `ModalContentSize`      | No       | Input size.                                                        |
+| `placement`       | `ModalContentPlacement` | No       | Preferred dropdown placement.                                      |
+| `scrollBehavior`  | `ModalScrollBehavior`   | No       | —                                                                  |
+| `animated`        | `boolean`               | No       | —                                                                  |
+| `forceMount`      | `boolean`               | No       | Keeps this content mounted regardless of the root mounting policy. |
+| `ariaLabel`       | `string`                | No       | Accessible trigger label for icon-only or custom triggers.         |
+| `ariaLabelledBy`  | `string`                | No       | —                                                                  |
+| `ariaDescribedBy` | `string`                | No       | —                                                                  |
+| `className`       | `string`                | No       | Extra CSS class for the root element.                              |
+| `style`           | `CSSProperties`         | No       | Extra root style.                                                  |
+
+<!-- api-docgen:end web.ModalContentProps.ModalContentProps -->
+
+### ModalOverlayProps
+
+<!-- api-docgen:start web.ModalOverlayProps.ModalOverlayProps -->
+
+| Prop         | Type      | Required | Description                                                        |
+| ------------ | --------- | -------- | ------------------------------------------------------------------ |
+| `animated`   | `boolean` | No       | —                                                                  |
+| `className`  | `string`  | No       | Extra CSS class for the root element.                              |
+| `forceMount` | `boolean` | No       | Keeps this content mounted regardless of the root mounting policy. |
+
+<!-- api-docgen:end web.ModalOverlayProps.ModalOverlayProps -->
+
+### ModalTriggerProps
+
+<!-- api-docgen:start web.ModalTriggerProps.ModalTriggerProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`   | `boolean`   | No       | —                                      |
+| `disabled`  | `boolean`   | No       | Disables interaction.                  |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.ModalTriggerProps.ModalTriggerProps -->
+
 ### Modal Compound Components
 
 | Component           | Description              |
