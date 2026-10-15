@@ -629,6 +629,163 @@ shows the first 10 labels and a `+N` overflow count.
 
 <!-- api-docgen:end web.SelectOption.SelectOption -->
 
+### SelectLoadingProps
+
+<!-- api-docgen:start web.SelectLoadingProps.SelectLoadingProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectLoadingProps.SelectLoadingProps -->
+
+### SelectEmptyProps
+
+<!-- api-docgen:start web.SelectEmptyProps.SelectEmptyProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectEmptyProps.SelectEmptyProps -->
+
+### SelectSeparatorProps
+
+<!-- api-docgen:start web.SelectSeparatorProps.SelectSeparatorProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `undefined` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectSeparatorProps.SelectSeparatorProps -->
+
+### SelectItemBadgeProps
+
+<!-- api-docgen:start web.SelectItemBadgeProps.SelectItemBadgeProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectItemBadgeProps.SelectItemBadgeProps -->
+
+### SelectItemDescriptionProps
+
+<!-- api-docgen:start web.SelectItemDescriptionProps.SelectItemDescriptionProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectItemDescriptionProps.SelectItemDescriptionProps -->
+
+### SelectItemIconProps
+
+<!-- api-docgen:start web.SelectItemIconProps.SelectItemIconProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectItemIconProps.SelectItemIconProps -->
+
+### SelectItemProps
+
+<!-- api-docgen:start web.SelectItemProps.SelectItemProps -->
+
+| Prop          | Type                                      | Required | Description                            |
+| ------------- | ----------------------------------------- | -------- | -------------------------------------- |
+| `value`       | `string`                                  | Yes      | Controlled value.                      |
+| `children`    | `ReactNode`                               | No       | Content rendered inside the component. |
+| `asChild`     | `boolean`                                 | No       | —                                      |
+| `label`       | `string`                                  | No       | Visible label.                         |
+| `disabled`    | `boolean`                                 | No       | Disables interaction.                  |
+| `description` | `ReactNode`                               | No       | Additional descriptive text.           |
+| `icon`        | `ReactNode`                               | No       | Icon rendered inside the component.    |
+| `badge`       | `ReactNode`                               | No       | —                                      |
+| `shortcut`    | `string`                                  | No       | —                                      |
+| `color`       | `import("@vellira-ui/types").SelectColor` | No       | —                                      |
+
+<!-- api-docgen:end web.SelectItemProps.SelectItemProps -->
+
+### SelectLabelProps
+
+<!-- api-docgen:start web.SelectLabelProps.SelectLabelProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.SelectLabelProps.SelectLabelProps -->
+
+### SelectGroupProps
+
+<!-- api-docgen:start web.SelectGroupProps.SelectGroupProps -->
+
+| Prop          | Type        | Required | Description                            |
+| ------------- | ----------- | -------- | -------------------------------------- |
+| `children`    | `ReactNode` | No       | Content rendered inside the component. |
+| `label`       | `ReactNode` | Yes      | Visible label.                         |
+| `selectable`  | `boolean`   | No       | —                                      |
+| `selectLabel` | `ReactNode` | No       | —                                      |
+
+<!-- api-docgen:end web.SelectGroupProps.SelectGroupProps -->
+
+### SelectSearchProps
+
+<!-- api-docgen:start web.SelectSearchProps.SelectSearchProps -->
+
+| Prop          | Type     | Required | Description                           |
+| ------------- | -------- | -------- | ------------------------------------- |
+| `placeholder` | `string` | No       | Placeholder text.                     |
+| `className`   | `string` | No       | Extra CSS class for the root element. |
+
+<!-- api-docgen:end web.SelectSearchProps.SelectSearchProps -->
+
+### SelectContentSlotProps
+
+<!-- api-docgen:start web.SelectContentSlotProps.SelectContentSlotProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | No       | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.SelectContentSlotProps.SelectContentSlotProps -->
+
+### SelectIconProps
+
+<!-- api-docgen:start web.SelectIconProps.SelectIconProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | No       | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.SelectIconProps.SelectIconProps -->
+
+### SelectValueProps
+
+<!-- api-docgen:start web.SelectValueProps.SelectValueProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | No       | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.SelectValueProps.SelectValueProps -->
+
+### SelectTriggerSlotProps
+
+<!-- api-docgen:start web.SelectTriggerSlotProps.SelectTriggerSlotProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | No       | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.SelectTriggerSlotProps.SelectTriggerSlotProps -->
+
 ## Dropdown
 
 Action menu component with compound trigger, content, item, group, checkbox,

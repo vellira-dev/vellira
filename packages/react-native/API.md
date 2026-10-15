@@ -549,6 +549,158 @@ only the values that still fit are added.
 
 <!-- api-docgen:end native.SelectOption.SelectOption -->
 
+### SelectLoadingProps
+
+<!-- api-docgen:start native.SelectLoadingProps.SelectLoadingProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectLoadingProps.SelectLoadingProps -->
+
+### SelectEmptyProps
+
+<!-- api-docgen:start native.SelectEmptyProps.SelectEmptyProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectEmptyProps.SelectEmptyProps -->
+
+### SelectSeparatorProps
+
+<!-- api-docgen:start native.SelectSeparatorProps.SelectSeparatorProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.SelectSeparatorProps.SelectSeparatorProps -->
+
+### SelectItemBadgeProps
+
+<!-- api-docgen:start native.SelectItemBadgeProps.SelectItemBadgeProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectItemBadgeProps.SelectItemBadgeProps -->
+
+### SelectItemDescriptionProps
+
+<!-- api-docgen:start native.SelectItemDescriptionProps.SelectItemDescriptionProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectItemDescriptionProps.SelectItemDescriptionProps -->
+
+### SelectItemIconProps
+
+<!-- api-docgen:start native.SelectItemIconProps.SelectItemIconProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectItemIconProps.SelectItemIconProps -->
+
+### SelectItemProps
+
+<!-- api-docgen:start native.SelectItemProps.SelectItemProps -->
+
+| Prop                 | Type          | Required | Description                                       |
+| -------------------- | ------------- | -------- | ------------------------------------------------- |
+| `color`              | `SelectColor` | No       | —                                                 |
+| `disabled`           | `boolean`     | No       | Disables interaction.                             |
+| `label`              | `string`      | Yes      | Visible label.                                    |
+| `description`        | `string`      | No       | Additional descriptive text.                      |
+| `value`              | `string`      | Yes      | Controlled value.                                 |
+| `asChild`            | `boolean`     | No       | —                                                 |
+| `children`           | `ReactNode`   | No       | Content rendered inside the component.            |
+| `icon`               | `ReactNode`   | No       | Icon rendered inside the component.               |
+| `badge`              | `ReactNode`   | No       | —                                                 |
+| `accessibilityLabel` | `string`      | No       | Accessible label for screen readers.              |
+| `accessibilityHint`  | `string`      | No       | Additional accessibility hint for screen readers. |
+
+<!-- api-docgen:end native.SelectItemProps.SelectItemProps -->
+
+### SelectLabelProps
+
+<!-- api-docgen:start native.SelectLabelProps.SelectLabelProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectLabelProps.SelectLabelProps -->
+
+### SelectGroupProps
+
+<!-- api-docgen:start native.SelectGroupProps.SelectGroupProps -->
+
+| Prop          | Type        | Required | Description                            |
+| ------------- | ----------- | -------- | -------------------------------------- |
+| `label`       | `string`    | No       | Visible label.                         |
+| `selectable`  | `boolean`   | No       | —                                      |
+| `selectLabel` | `string`    | No       | —                                      |
+| `children`    | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectGroupProps.SelectGroupProps -->
+
+### SelectSearchProps
+
+<!-- api-docgen:start native.SelectSearchProps.SelectSearchProps -->
+
+| Prop          | Type     | Required | Description       |
+| ------------- | -------- | -------- | ----------------- |
+| `placeholder` | `string` | No       | Placeholder text. |
+
+<!-- api-docgen:end native.SelectSearchProps.SelectSearchProps -->
+
+### SelectContentProps
+
+<!-- api-docgen:start native.SelectContentProps.SelectContentProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectContentProps.SelectContentProps -->
+
+### SelectIconSlotProps
+
+<!-- api-docgen:start native.SelectIconSlotProps.SelectIconSlotProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectIconSlotProps.SelectIconSlotProps -->
+
+### SelectValueSlotProps
+
+<!-- api-docgen:start native.SelectValueSlotProps.SelectValueSlotProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectValueSlotProps.SelectValueSlotProps -->
+
+### SelectTriggerSlotProps
+
+<!-- api-docgen:start native.SelectTriggerSlotProps.SelectTriggerSlotProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectTriggerSlotProps.SelectTriggerSlotProps -->
+
 ## Dropdown
 
 Native menu component with item, group, and separator entries.
