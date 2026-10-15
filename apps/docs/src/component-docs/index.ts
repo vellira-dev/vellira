@@ -1,3 +1,4 @@
+import { dropdownDocs } from './Dropdown.docs';
 import { tabsDocs } from './Tabs.docs';
 import { selectDocs } from './Select.docs';
 import { inputDocs } from './Input.docs';
@@ -8,6 +9,7 @@ import { accordionDocs } from './Accordion.docs';
 import { textareaDocs } from './Textarea.docs';
 
 export const componentDocsContracts = [
+  dropdownDocs,
   tabsDocs,
   selectDocs,
   inputDocs,

@@ -858,6 +858,180 @@ uncontrolled with `defaultOpen`. Prefer `Dropdown.Trigger asChild` with
 
 <!-- api-docgen:end web.DropdownProps.DropdownProps -->
 
+### DropdownLabelProps
+
+<!-- api-docgen:start web.DropdownLabelProps.DropdownLabelProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | No       | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownLabelProps.DropdownLabelProps -->
+
+### DropdownGroupProps
+
+<!-- api-docgen:start web.DropdownGroupProps.DropdownGroupProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.DropdownGroupProps.DropdownGroupProps -->
+
+### DropdownSubContentProps
+
+<!-- api-docgen:start web.DropdownSubContentProps.DropdownSubContentProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode` | No       | Content rendered inside the component. |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownSubContentProps.DropdownSubContentProps -->
+
+### DropdownSubTriggerProps
+
+<!-- api-docgen:start web.DropdownSubTriggerProps.DropdownSubTriggerProps -->
+
+| Prop            | Type                        | Required | Description                            |
+| --------------- | --------------------------- | -------- | -------------------------------------- |
+| `target`        | `HTMLAttributeAnchorTarget` | No       | —                                      |
+| `color`         | `DropdownItemColor`         | No       | —                                      |
+| `disabled`      | `boolean`                   | No       | Disables interaction.                  |
+| `closeOnSelect` | `boolean`                   | No       | —                                      |
+| `children`      | `ReactNode`                 | Yes      | Content rendered inside the component. |
+| `asChild`       | `boolean`                   | No       | —                                      |
+| `icon`          | `ReactNode`                 | No       | Icon rendered inside the component.    |
+| `description`   | `ReactNode`                 | No       | Additional descriptive text.           |
+| `badge`         | `ReactNode`                 | No       | —                                      |
+| `shortcut`      | `ReactNode`                 | No       | —                                      |
+| `href`          | `string`                    | No       | —                                      |
+| `rel`           | `string`                    | No       | —                                      |
+| `download`      | `string \| boolean`         | No       | —                                      |
+| `className`     | `string`                    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownSubTriggerProps.DropdownSubTriggerProps -->
+
+### DropdownSubProps
+
+<!-- api-docgen:start web.DropdownSubProps.DropdownSubProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end web.DropdownSubProps.DropdownSubProps -->
+
+### DropdownSeparatorProps
+
+<!-- api-docgen:start web.DropdownSeparatorProps.DropdownSeparatorProps -->
+
+| Prop        | Type     | Required | Description                           |
+| ----------- | -------- | -------- | ------------------------------------- |
+| `className` | `string` | No       | Extra CSS class for the root element. |
+
+<!-- api-docgen:end web.DropdownSeparatorProps.DropdownSeparatorProps -->
+
+### DropdownRadioItemProps
+
+<!-- api-docgen:start web.DropdownRadioItemProps.DropdownRadioItemProps -->
+
+| Prop            | Type        | Required | Description                            |
+| --------------- | ----------- | -------- | -------------------------------------- |
+| `disabled`      | `boolean`   | No       | Disables interaction.                  |
+| `closeOnSelect` | `boolean`   | No       | —                                      |
+| `children`      | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`       | `boolean`   | No       | —                                      |
+| `value`         | `string`    | Yes      | Controlled value.                      |
+| `icon`          | `ReactNode` | No       | Icon rendered inside the component.    |
+| `shortcut`      | `ReactNode` | No       | —                                      |
+| `className`     | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownRadioItemProps.DropdownRadioItemProps -->
+
+### DropdownRadioGroupProps
+
+<!-- api-docgen:start web.DropdownRadioGroupProps.DropdownRadioGroupProps -->
+
+| Prop            | Type                      | Required | Description                            |
+| --------------- | ------------------------- | -------- | -------------------------------------- |
+| `children`      | `ReactNode`               | No       | Content rendered inside the component. |
+| `value`         | `string`                  | No       | Controlled value.                      |
+| `defaultValue`  | `string`                  | No       | Initial uncontrolled value.            |
+| `onValueChange` | `(value: string) => void` | No       | Called when the value changes.         |
+
+<!-- api-docgen:end web.DropdownRadioGroupProps.DropdownRadioGroupProps -->
+
+### DropdownCheckboxItemProps
+
+<!-- api-docgen:start web.DropdownCheckboxItemProps.DropdownCheckboxItemProps -->
+
+| Prop              | Type                         | Required | Description                            |
+| ----------------- | ---------------------------- | -------- | -------------------------------------- |
+| `disabled`        | `boolean`                    | No       | Disables interaction.                  |
+| `closeOnSelect`   | `boolean`                    | No       | —                                      |
+| `asChild`         | `boolean`                    | No       | —                                      |
+| `checked`         | `boolean`                    | No       | —                                      |
+| `defaultChecked`  | `boolean`                    | No       | —                                      |
+| `onCheckedChange` | `(checked: boolean) => void` | No       | —                                      |
+| `icon`            | `ReactNode`                  | No       | Icon rendered inside the component.    |
+| `shortcut`        | `ReactNode`                  | No       | —                                      |
+| `children`        | `ReactNode`                  | Yes      | Content rendered inside the component. |
+| `className`       | `string`                     | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownCheckboxItemProps.DropdownCheckboxItemProps -->
+
+### DropdownItemProps
+
+<!-- api-docgen:start web.DropdownItemProps.DropdownItemProps -->
+
+| Prop            | Type                                   | Required | Description                            |
+| --------------- | -------------------------------------- | -------- | -------------------------------------- |
+| `color`         | `DropdownItemColor`                    | No       | —                                      |
+| `disabled`      | `boolean`                              | No       | Disables interaction.                  |
+| `closeOnSelect` | `boolean`                              | No       | —                                      |
+| `children`      | `ReactNode`                            | Yes      | Content rendered inside the component. |
+| `asChild`       | `boolean`                              | No       | —                                      |
+| `icon`          | `ReactNode`                            | No       | Icon rendered inside the component.    |
+| `description`   | `ReactNode`                            | No       | Additional descriptive text.           |
+| `badge`         | `ReactNode`                            | No       | —                                      |
+| `shortcut`      | `ReactNode`                            | No       | —                                      |
+| `onSelect`      | `(event: DropdownSelectEvent) => void` | No       | —                                      |
+| `href`          | `string`                               | No       | —                                      |
+| `target`        | `HTMLAttributeAnchorTarget`            | No       | —                                      |
+| `rel`           | `string`                               | No       | —                                      |
+| `download`      | `string \| boolean`                    | No       | —                                      |
+| `className`     | `string`                               | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownItemProps.DropdownItemProps -->
+
+### DropdownContentProps
+
+<!-- api-docgen:start web.DropdownContentProps.DropdownContentProps -->
+
+| Prop        | Type            | Required | Description                            |
+| ----------- | --------------- | -------- | -------------------------------------- |
+| `command`   | `boolean`       | No       | —                                      |
+| `children`  | `ReactNode`     | No       | Content rendered inside the component. |
+| `className` | `string`        | No       | Extra CSS class for the root element.  |
+| `style`     | `CSSProperties` | No       | Extra root style.                      |
+
+<!-- api-docgen:end web.DropdownContentProps.DropdownContentProps -->
+
+### DropdownTriggerProps
+
+<!-- api-docgen:start web.DropdownTriggerProps.DropdownTriggerProps -->
+
+| Prop        | Type        | Required | Description                            |
+| ----------- | ----------- | -------- | -------------------------------------- |
+| `disabled`  | `boolean`   | No       | Disables interaction.                  |
+| `children`  | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`   | `boolean`   | No       | —                                      |
+| `className` | `string`    | No       | Extra CSS class for the root element.  |
+
+<!-- api-docgen:end web.DropdownTriggerProps.DropdownTriggerProps -->
+
 ### Dropdown Parts
 
 Use `Dropdown.Item onSelect` instead of `onClick`; it covers pointer, keyboard,
