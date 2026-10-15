@@ -890,7 +890,7 @@ jobs:
               original = subprocess.check_output(['git', 'show', f'HEAD:{file}'])
               assert file.read_bytes() == original, f'Unexpected source change: {file}'
               text = original.decode('utf-8')
-              for old, new in [('## When To Use', '## Practical Usage Guidance'), ('## Accessibility', '## Additional Accessibility Details'), ('## See Also', '## Further Reading')]:
+              for old, new in [('## When To Use', '## Practical Usage Guidance'), ('## See Also', '## Further Reading')]:
                   assert text.count(old) == 1, (file, old)
                   text = text.replace(old, new, 1)
               file.write_text(text, encoding='utf-8')
@@ -902,6 +902,19 @@ jobs:
           native_sha=$(sha256sum apps/docs/src/react-native/select.md | cut -d' ' -f1)
           pnpm component-docs:adopt Select --dry-run --json
           pnpm component-docs:adopt Select --write --expected-react-sha256="$web_sha" --expected-react-native-sha256="$native_sha" --json
+          python3 - <<'PY'
+          from pathlib import Path
+          for platform in ('react', 'react-native'):
+              file = Path(f'apps/docs/src/{platform}/select.md')
+              text = file.read_text()
+              start = '<!-- vellira-component-docs:authored:start -->'
+              assert text.count(start) == 1
+              prefix, authored = text.split(start, 1)
+              assert authored.count('## Accessibility') == 1
+              authored = authored.replace('## Accessibility', '## Additional Accessibility Details', 1)
+              file.write_text(prefix + start + authored)
+          PY
+          pnpm exec prettier --write apps/docs/src/react/select.md apps/docs/src/react-native/select.md
           pnpm component-docs:adopt Select --dry-run --json
           pnpm component-docs:generate --check
       - name: Format and verify
