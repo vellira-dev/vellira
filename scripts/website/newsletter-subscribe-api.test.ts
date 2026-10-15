@@ -270,20 +270,43 @@ describe('Buttondown provider boundary', () => {
       tags: [PRO_INTEREST_TAG],
       type: 'unactivated',
     });
-    expect(init?.headers).toMatchObject({
-      'X-Buttondown-Collision-Behavior': 'add',
-    });
+    expect(init?.headers).not.toHaveProperty('X-Buttondown-Collision-Behavior');
     expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
 
+    // Existing subscribers must not acquire a Pro-interest tag from an
+    // unauthenticated duplicate signup. Buttondown's default policy rejects
+    // collisions instead of merging new fields into the existing subscriber.
     await expect(
       subscribeWithButtondown({
         apiKey: 'server-only-test-key',
         email: 'existing@example.com',
         ipAddress: null,
         purpose: 'pro_launch',
+        fetcher: async (_url, init) => {
+          expect(init?.headers).not.toHaveProperty(
+            'X-Buttondown-Collision-Behavior'
+          );
+          expect(JSON.parse(String(init?.body))).toMatchObject({
+            tags: [PRO_INTEREST_TAG],
+            type: 'unactivated',
+          });
+          return new Response(JSON.stringify({ code: 'subscriber_exists' }), {
+            status: 400,
+          });
+        },
+      })
+    ).resolves.toMatchObject({ ok: false, code: 'already_subscribed' });
+
+    // A surprising 200 does not certify either creation or topic consent.
+    await expect(
+      subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'unexpected@example.com',
+        ipAddress: null,
+        purpose: 'pro_launch',
         fetcher: async () => new Response('{}', { status: 200 }),
       })
-    ).resolves.toEqual({ ok: true });
+    ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
 
     await expect(
       subscribeWithButtondown({
