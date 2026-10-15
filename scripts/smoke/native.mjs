@@ -42,6 +42,13 @@ const externalDependencies = linkWorkspaceDependencies(
   'packages/react-native',
   ['@react-native-picker/picker', 'react', 'react-native', 'react-native-svg']
 );
+const svgDependency = linkWorkspaceDependencies(
+  root,
+  tempDir,
+  'apps/native-playground',
+  ['react-native-svg']
+);
+Object.assign(externalDependencies, svgDependency);
 
 writePackageJson(tempDir, {
   private: true,
