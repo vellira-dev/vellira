@@ -374,7 +374,10 @@ describe('Buttondown provider boundary', () => {
     [400, { code: 'subscriber_exists' }, 'already_subscribed'],
     [
       400,
-      { code: 'subscriber_already_exists', metadata: { subscriber_id: 'sub_test123' } },
+      {
+        code: 'subscriber_already_exists',
+        metadata: { subscriber_id: 'sub_test123' },
+      },
       'already_subscribed',
     ],
     [400, { code: 'subscriber_suppressed' }, 'temporarily_unavailable'],
@@ -540,7 +543,9 @@ describe('Buttondown provider boundary', () => {
       const [url, init] = providerFetch.mock.calls[0]!;
       expect(url).toBe(BUTTONDOWN_SUBSCRIBERS_URL);
       expect(init?.method).toBe('POST');
-      expect(init?.headers).not.toHaveProperty('X-Buttondown-Collision-Behavior');
+      expect(init?.headers).not.toHaveProperty(
+        'X-Buttondown-Collision-Behavior'
+      );
       expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
       expect(JSON.parse(String(init?.body))).toEqual({
         email_address: 'edgecase@example.com',
