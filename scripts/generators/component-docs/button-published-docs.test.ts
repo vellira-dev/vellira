@@ -68,9 +68,7 @@ describe('published Button docs safe adoption', () => {
       const contract = buttonDocs.platforms[platform];
       expect(content).toContain(`title: '${contract.title}'`);
       expect(content).toContain(`description: '${contract.description}'`);
-      expect(content).toContain(
-        `import { Button } from '${packageName}';`
-      );
+      expect(content).toContain(`import { Button } from '${packageName}';`);
       expect(content).toContain(`<!-- api-docgen:start ${apiMarker} -->`);
       expect(content).toContain(`<!-- api-docgen:end ${apiMarker} -->`);
 
@@ -89,9 +87,7 @@ describe('published Button docs safe adoption', () => {
         expect(authored.content).toContain(example);
       }
       // No placeholders may replace historical Button guidance.
-      expect(authored.content).not.toContain(
-        'Add editorial guidance here.'
-      );
+      expect(authored.content).not.toContain('Add editorial guidance here.');
     }
   );
 });
