@@ -1,0 +1,52 @@
+name: One-shot Button completeness admission proof
+on:
+  push:
+    branches:
+      - feat/docs-button-safe-adoption-20261015
+permissions:
+  contents: write
+jobs:
+  completeness-proof:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Canonically format changed CLI test
+        run: pnpm exec prettier scripts/checks/component-completeness/cli.test.ts --write
+      - name: Verify full Button and docs guardrail test suites
+        run: |
+          pnpm exec vitest run --config vitest.tooling.config.ts scripts/checks/component-completeness/cli.test.ts scripts/generators/component-docs
+      - name: Confirm generator freshness and formatting
+        run: |
+          pnpm component-docs:generate Button --check
+          pnpm format:check
+      - name: Remove one-shot workflow and commit only audited changes
+        shell: bash
+        run: |
+          rm .github/workflows/button-completeness-correction-once.yml
+          while IFS= read -r file; do
+            case "$file" in
+              scripts/checks/component-completeness/cli.test.ts|.github/workflows/button-completeness-correction-once.yml) ;;
+              *) echo "::error::Unexpected modified file: $file"; exit 1 ;;
+            esac
+          done < <(git diff --name-only)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git diff --cached --quiet || git commit -m "test(completeness): canonicalize Button docs requirement fixture"
+          git push origin HEAD:feat/docs-button-safe-adoption-20261015
