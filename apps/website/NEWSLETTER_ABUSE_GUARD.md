@@ -32,10 +32,9 @@ change confirmation flows, or activate the public Pro form.
 The first staging-only configuration uses two built-in Cloudflare Worker
 Rate Limiting bindings:
 
-| Scope | Staging namespace | Policy |
-| --- | --- | --- |
-| Shared newsletter route | `1712202601` | 12 attempts per 60 s |
-| Per Cloudflare IP / unknown bucket | `1712202602` | 4 attempts per 60 s |
+- Shared newsletter route: namespace `1712202601`, 12 attempts per 60 s.
+- Per Cloudflare IP / unknown bucket: namespace `1712202602`,
+  4 attempts per 60 s.
 
 The counters are **per Cloudflare location and eventually consistent**.
 Concurrent requests may temporarily exceed either limit, and the same actor
