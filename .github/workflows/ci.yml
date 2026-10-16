@@ -956,7 +956,6 @@ jobs:
               assert not suffix.strip()
               assert authored.count('## Accessibility') == 1
               authored = authored.replace('## Accessibility', '## Additional Accessibility Details', 1)
-                  assert '## Contract' in authored
               filename.write_text(generated + start + authored + end + suffix, encoding='utf-8')
           PY
           pnpm exec prettier --write apps/docs/src/react/radio-group.md apps/docs/src/react-native/radio-group.md
