@@ -11,6 +11,7 @@ import {
   Switch,
   Input,
   Modal,
+  Popover,
   Portal,
   Select,
   ThemeProvider,
@@ -34,6 +35,7 @@ The native package uses React Native `StyleSheet` styles and consumes shared des
 - Tooltip
 - Portal
 - Modal
+- Popover
 - ThemeProvider
 - useTheme
 
