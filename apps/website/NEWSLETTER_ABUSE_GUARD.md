@@ -57,8 +57,11 @@ observability and protections against distributed abuse.
 - A designated owner can separately choose `newsletter_abuse_preview=true`
   in the **Deploy Website Cloudflare Staging** workflow, on `main` only.
   Never enable `pro_interest_preview` during this abuse-guard proof. The
-  workflow temporarily sets only the staging Wrangler variable to `1` on
-  its ephemeral runner; it does not commit the change.
+  staging configuration step now **rejects both preview flags being ON**
+  before any remote deployment operation. A Pro-only preview remains
+  permitted when the guard mode is OFF. The workflow temporarily sets only
+  the staging Wrangler variable to `1` on its ephemeral runner; it does
+  not commit the change.
 - The staging smoke sends malformed addresses only, which the existing
   server rejects before provider creation. OFF expects one 400/invalid_email.
   ON sends at most 32 such calls and requires an observed 429/rate_limited,
