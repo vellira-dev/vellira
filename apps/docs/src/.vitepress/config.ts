@@ -6,6 +6,7 @@ import { defineConfig } from 'vitepress';
 import {
   componentDocsContracts,
   createGeneratedComponentDocsSidebarItems,
+  assertUniqueComponentDocsSidebarItems,
   resolveComponentDocsRoot,
 } from '../component-docs';
 import { componentMetadata } from '../../../../packages/metadata/src/components';
@@ -52,6 +53,27 @@ const reactNativeGeneratedComponentItems =
     metadata: componentMetadata,
     contracts: componentDocsContracts,
   });
+
+// The generated registry is the sole source of component links. Keep only
+// intentionally independent pages (Portal and ThemeProvider) as manual entries.
+const reactComponentSidebarItems = assertUniqueComponentDocsSidebarItems({
+  platform: 'react',
+  items: [
+    { text: 'Overview', link: '/react/' },
+    ...reactGeneratedComponentItems,
+    { text: 'Portal', link: '/react/portal' },
+    { text: 'ThemeProvider', link: '/react/theme-provider' },
+  ],
+});
+const reactNativeComponentSidebarItems = assertUniqueComponentDocsSidebarItems({
+  platform: 'react-native',
+  items: [
+    { text: 'Overview', link: '/react-native/' },
+    ...reactNativeGeneratedComponentItems,
+    { text: 'Portal', link: '/react-native/portal' },
+    { text: 'ThemeProvider', link: '/react-native/theme-provider' },
+  ],
+});
 
 export default defineConfig({
   title: 'Vellira Docs',
@@ -172,43 +194,11 @@ export default defineConfig({
       },
       {
         text: 'React',
-        items: [
-          { text: 'Overview', link: '/react/' },
-          { text: 'Button', link: '/react/button' },
-          { text: 'Input', link: '/react/input' },
-          { text: 'Checkbox', link: '/react/checkbox' },
-          ...reactGeneratedComponentItems,
-          { text: 'RadioGroup', link: '/react/radio-group' },
-          { text: 'Select', link: '/react/select' },
-          { text: 'FormField', link: '/react/form-field' },
-          { text: 'Dropdown', link: '/react/dropdown' },
-          { text: 'Tabs', link: '/react/tabs' },
-          { text: 'Popover', link: '/react/popover' },
-          { text: 'Tooltip', link: '/react/tooltip' },
-          { text: 'Modal', link: '/react/modal' },
-          { text: 'Portal', link: '/react/portal' },
-          { text: 'ThemeProvider', link: '/react/theme-provider' },
-        ],
+        items: reactComponentSidebarItems,
       },
       {
         text: 'React Native',
-        items: [
-          { text: 'Overview', link: '/react-native/' },
-          { text: 'Button', link: '/react-native/button' },
-          { text: 'Input', link: '/react-native/input' },
-          { text: 'Checkbox', link: '/react-native/checkbox' },
-          ...reactNativeGeneratedComponentItems,
-          { text: 'RadioGroup', link: '/react-native/radio-group' },
-          { text: 'Select', link: '/react-native/select' },
-          { text: 'FormField', link: '/react-native/form-field' },
-          { text: 'Dropdown', link: '/react-native/dropdown' },
-          { text: 'Tabs', link: '/react-native/tabs' },
-          { text: 'Popover', link: '/react-native/popover' },
-          { text: 'Tooltip', link: '/react-native/tooltip' },
-          { text: 'Modal', link: '/react-native/modal' },
-          { text: 'Portal', link: '/react-native/portal' },
-          { text: 'ThemeProvider', link: '/react-native/theme-provider' },
-        ],
+        items: reactNativeComponentSidebarItems,
       },
       {
         text: 'Icons',

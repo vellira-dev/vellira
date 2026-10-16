@@ -131,10 +131,6 @@ test('Search Console legacy docs URLs have unique permanent same-origin redirect
         "/project/contributing"
     ],
     [
-        "/react/radio",
-        "/react/radio-group"
-    ],
-    [
         "/components",
         "/react/"
     ],

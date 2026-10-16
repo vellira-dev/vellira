@@ -109,7 +109,7 @@ const componentLinks: Record<
       'https://github.com/vellira-dev/Vellira/tree/main/packages/react/src/primitives/Checkbox',
   },
   radio: {
-    docs: 'https://docs.vellira.dev/react/radio-group',
+    docs: 'https://docs.vellira.dev/react/radio',
     storybook:
       'https://storybook.vellira.dev/?path=/docs/primitives-radio--docs',
     source:
