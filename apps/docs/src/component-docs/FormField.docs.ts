@@ -26,9 +26,15 @@ export const formFieldDocs = defineComponentDocs({
         'Use a meaningful error announcement and keep field messages associated with their actual control.',
       ],
       seeAlso: [
-        { component: 'Input', label: 'Input for built-in text-field composition.' },
+        {
+          component: 'Input',
+          label: 'Input for built-in text-field composition.',
+        },
         { component: 'Select', label: 'Select for field choices.' },
-        { component: 'RadioGroup', label: 'RadioGroup for visible exclusive choices.' },
+        {
+          component: 'RadioGroup',
+          label: 'RadioGroup for visible exclusive choices.',
+        },
       ],
     },
     'react-native': {
@@ -52,7 +58,10 @@ export const formFieldDocs = defineComponentDocs({
       seeAlso: [
         { component: 'Input', label: 'Input for native built-in text fields.' },
         { component: 'Select', label: 'Select for compact choice fields.' },
-        { component: 'RadioGroup', label: 'RadioGroup for native exclusive choices.' },
+        {
+          component: 'RadioGroup',
+          label: 'RadioGroup for native exclusive choices.',
+        },
       ],
     },
   },

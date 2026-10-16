@@ -114,8 +114,7 @@ function readLegacyBody(params: {
     body.includes('## Custom Controls');
   if (
     !body ||
-    (!body.includes('## Accessibility') &&
-      !hasLegacyFormFieldWebA11yContract)
+    (!body.includes('## Accessibility') && !hasLegacyFormFieldWebA11yContract)
   ) {
     throw new Error(
       file +

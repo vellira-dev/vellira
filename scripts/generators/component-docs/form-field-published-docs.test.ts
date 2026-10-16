@@ -20,7 +20,7 @@ const pages = [
     sourceBlob: 'cd0de505194b68fbcbbf2234b5e97a19cc40b40c',
     packageName: '@vellira-ui/react',
     canonicalAuthorSha256:
-      '__FORMFIELD_REACT_AUTHOR_SHA256__',
+      'c4181414a6c9eb9a9aa752090d73ea04235f302320892eaf246e08192da8e075',
     authorEvidence: [
       'story="formField.complete"',
       '## Practical Usage Guidance',
@@ -45,7 +45,7 @@ const pages = [
     sourceBlob: 'ee6a4fb22d1bbffb687893351eb85032c2a16175',
     packageName: '@vellira-ui/react-native',
     canonicalAuthorSha256:
-      '__FORMFIELD_NATIVE_AUTHOR_SHA256__',
+      '73b9bdca55ea80b7181a750ebf63c30499d1b8466b10488372ad7061c82b449a',
     authorEvidence: [
       '## Basic Usage',
       '## Layout',
@@ -110,7 +110,9 @@ describe('published FormField docs safe legacy adoption', () => {
         'utf8'
       );
       const publicPropNames = [
-        ...new Set(publicIndex.match(/\bFormField(?:[A-Za-z]+)?Props\b/g) ?? []),
+        ...new Set(
+          publicIndex.match(/\bFormField(?:[A-Za-z]+)?Props\b/g) ?? []
+        ),
       ].sort();
       expect(publicPropNames).toEqual([...apiNames].sort());
       for (const name of apiNames) {
