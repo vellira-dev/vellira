@@ -19,6 +19,7 @@ import {
   FormField,
   Input,
   Modal,
+  Popover,
   RadioGroup,
   Select,
   Tabs,
@@ -41,6 +42,7 @@ import {
 - Tabs
 - Tooltip
 - Modal
+- Popover
 - ThemeProvider
 - useTheme
 
