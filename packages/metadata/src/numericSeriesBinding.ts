@@ -42,7 +42,11 @@ export function parseNumericSeriesBindingV1(
     if (!result.ok) return { ok: false, code: 'invalid-binding', path: '$' };
     return {
       ok: true,
-      value: { schemaVersion: '1', kind: 'bounded-numeric-series', data: result.data },
+      value: {
+        schemaVersion: '1',
+        kind: 'bounded-numeric-series',
+        data: result.data,
+      },
     };
   } catch {
     return { ok: false, code: 'invalid-binding', path: '$' };
