@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { snapshotNumericSeriesBindingV1 as snapshot } from './numericSeriesSnapshot';
+import {
+  snapshotNumericSeriesBindingV1 as snapshot,
+} from './numericSeriesSnapshot';
 
 const valid = () => ({
   schemaVersion: '1',
@@ -108,7 +110,7 @@ describe('immutable numeric binding snapshots', () => {
     expect(invoked).toBe(0);
   });
 
-  it('rejects sparse arrays and element accessors without invoking getters', () => {
+  it('rejects sparse arrays and accessor elements', () => {
     const sparse = valid();
     const rows: unknown[] = [];
     rows.length = 1;
