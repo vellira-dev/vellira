@@ -69,7 +69,6 @@ export function validateBoundedNumericSeries(
 ): NumericSeriesValidationResult {
   if (!record(input) || !fields(input, ['series', 'rows']))
     return invalid('invalid-dataset', '
-
   const { series, rows } = input;
   if (!Array.isArray(series) || series.length < 1 || series.length > 4)
     return invalid('invalid-series', '$.series');
@@ -121,8 +120,7 @@ export function validateBoundedNumericSeries(
     }
   }
   return { ok: true, data: input as BoundedNumericSeries };
-}
-);
+});
 
   const { series, rows } = input;
   if (!Array.isArray(series) || series.length < 1 || series.length > 4)
