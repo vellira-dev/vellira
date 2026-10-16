@@ -153,12 +153,22 @@ describe('published FormField docs safe legacy adoption', () => {
       expect(headings.length).toBe(new Set(headings).size);
 
       if (page.platform === 'react') {
+        // The legacy guide records Web ARIA wiring in its authored Contract
+        // instead of a separate Accessibility H2; preserve that contract
+        // verbatim while generator-owned guidance provides the H2.
+        expect(region.content).not.toContain('## Accessibility');
+        expect(region.content).toContain('## Contract');
+        expect(region.content).toContain('aria-labelledby');
+        expect(region.content).toContain('aria-describedby');
         expect(generated).toContain('bindControl');
-        expect(generated).not.toContain('native.FormFieldProps.FormFieldProps');
+        expect(generated).not.toContain('native.FormFieldProps.FormField');
       } else {
+        expect(region.content).toContain(
+          '## Additional Accessibility Details'
+        );
         expect(generated).toContain('controlStyle');
         expect(generated).not.toContain('bindControl');
-        expect(generated).not.toContain('web.FormFieldProps.FormFieldProps');
+        expect(generated).not.toContain('web.FormFieldProps.FormField');
       }
     }
   );
