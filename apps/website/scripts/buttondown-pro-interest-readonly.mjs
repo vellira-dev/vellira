@@ -24,7 +24,8 @@ function parseFilteredCount(payload, type) {
     !Number.isSafeInteger(payload.count) ||
     payload.count < 0 ||
     !Array.isArray(payload.results) ||
-    payload.results.length > payload.count
+    payload.results.length > payload.count ||
+    (payload.count > 0 && payload.results.length === 0)
   ) {
     throw auditError('Invalid subscriber count response');
   }
@@ -103,6 +104,14 @@ export async function auditButtondownProInterest({ apiKey, fetcher = fetch }) {
     confirmedRegular: counts.regular,
     awaitingConfirmation: counts.unactivated,
     otherStatuses: counts.all - counts.regular - counts.unactivated,
+    // An empty filtered response cannot independently prove the filter works.
+    // Nonempty first pages are checked against the campaign and selected type.
+    filterEvidence: {
+      campaign: counts.all > 0 ? 'first-page-match' : 'inconclusive-empty',
+      regular: counts.regular > 0 ? 'first-page-match' : 'inconclusive-empty',
+      unactivated:
+        counts.unactivated > 0 ? 'first-page-match' : 'inconclusive-empty',
+    },
     requests: 3,
     writes: 0,
   };
