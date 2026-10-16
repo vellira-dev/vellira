@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import path from 'node:path';
 
@@ -208,13 +209,78 @@ test('integration: a denied request is stopped before OpenNext and remains trace
   assert.equal(forwarded, 1);
 });
 
-test('bindings and rate counters are staging-only, distinct, OFF by default', () => {
+// The manual staging workflow intentionally turns its untracked runner copy
+// ON before running Cloudflare contracts. Never confuse that temporary
+// preview with the committed Wrangler config, which must always remain OFF.
+function expectedStagingGuardMode(environment) {
+  const mode = environment.NEWSLETTER_ABUSE_GUARD_PREVIEW;
+  if (mode === undefined || mode === '0') return '0';
+  assert.equal(mode, '1', 'Unexpected newsletter preview mode');
+  assert.equal(environment.GITHUB_ACTIONS, 'true');
+  assert.equal(environment.GITHUB_EVENT_NAME, 'workflow_dispatch');
+  assert.equal(environment.GITHUB_REF, 'refs/heads/main');
+  assert.equal(environment.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED, '0');
+  return '1';
+}
+
+test('staging guard contract rejects unauthorized ON preview environments', () => {
+  assert.equal(expectedStagingGuardMode({}), '0');
+  assert.equal(
+    expectedStagingGuardMode({ NEWSLETTER_ABUSE_GUARD_PREVIEW: '0' }),
+    '0'
+  );
+  const authorized = {
+    NEWSLETTER_ABUSE_GUARD_PREVIEW: '1',
+    GITHUB_ACTIONS: 'true',
+    GITHUB_EVENT_NAME: 'workflow_dispatch',
+    GITHUB_REF: 'refs/heads/main',
+    NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0',
+  };
+  assert.equal(expectedStagingGuardMode(authorized), '1');
+  for (const changed of [
+    { NEWSLETTER_ABUSE_GUARD_PREVIEW: 'invalid' },
+    { GITHUB_ACTIONS: 'false' },
+    { GITHUB_EVENT_NAME: 'push' },
+    { GITHUB_REF: 'refs/heads/feature' },
+    { NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '1' },
+  ]) {
+    assert.throws(() =>
+      expectedStagingGuardMode({ ...authorized, ...changed })
+    );
+  }
+});
+
+test('committed guard stays OFF; authorized staging overlay may be ON', () => {
   const root = path.resolve(import.meta.dirname, '..');
   const staging = readDeploymentConfig(path.join(root, 'wrangler.jsonc'));
   const production = readDeploymentConfig(
     path.join(root, 'wrangler.production.jsonc')
   );
-  assert.equal(staging.vars.NEWSLETTER_ABUSE_GUARD_ENABLED, '0');
+  const expectedMode = expectedStagingGuardMode(process.env);
+  assert.equal(staging.vars.NEWSLETTER_ABUSE_GUARD_ENABLED, expectedMode);
+
+  if (expectedMode === '1') {
+    const repoRoot = path.resolve(root, '../..');
+    // Source authority must remain OFF even when the approved workflow
+    // temporarily rewrites a working-copy config for the staging deployment.
+    assert.equal(
+      execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      }).trim(),
+      process.env.GITHUB_SHA
+    );
+    const committed = execFileSync(
+      'git',
+      ['show', 'HEAD:apps/website/wrangler.jsonc'],
+      { cwd: repoRoot, encoding: 'utf8' }
+    );
+    const matches = [
+      ...committed.matchAll(/"NEWSLETTER_ABUSE_GUARD_ENABLED"\s*:\s*"([^"]+)"/g),
+    ];
+    assert.equal(matches.length, 1, 'Expected a single committed guard setting');
+    assert.equal(matches[0][1], '0', 'Committed staging guard must remain OFF');
+  }
   assert.equal(staging.ratelimits.length, 2);
   assert.deepEqual(
     staging.ratelimits.map((x) => [x.name, x.simple.limit, x.simple.period]),
