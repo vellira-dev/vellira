@@ -180,7 +180,7 @@ References:
 
 **Security review — not yet an anti-bot proof:** the public shared newsletter
 endpoint validates JSON/content length, email format, Pro purpose/consent,
-and origin *when provided*; Buttondown itself applies firewall and rate limits.
+and origin _when provided_; Buttondown itself applies firewall and rate limits.
 The endpoint currently accepts requests with a missing Origin header and has
 no Vellira-controlled per-actor or per-resource rate limit. Scripts can call
 it directly without submitting the form; client-side consent/checkbox and

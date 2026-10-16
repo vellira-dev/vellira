@@ -129,10 +129,11 @@ describe('Pro launch-interest consent', () => {
 
   it('prevents duplicate requests and shows only safe errors', async () => {
     let resolveResponse: ((response: Response) => void) | undefined;
-    const fetcher = vi.fn<typeof fetch>(() =>
-      new Promise<Response>((resolve) => {
-        resolveResponse = resolve;
-      })
+    const fetcher = vi.fn<typeof fetch>(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve;
+        })
     );
     vi.stubGlobal('fetch', fetcher);
     render(<ProInterestSignup />);

@@ -106,9 +106,9 @@ export function ProInterestSignup() {
       </p>
       {confirmationRequested ? (
         <p className={styles.interestSuccess} role='status'>
-          Your request was received. If you receive a confirmation email,
-          follow its link to finish subscribing. No subscription is confirmed
-          just by submitting this form.
+          Your request was received. If you receive a confirmation email, follow
+          its link to finish subscribing. No subscription is confirmed just by
+          submitting this form.
         </p>
       ) : (
         <form
