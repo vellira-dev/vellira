@@ -1,3 +1,4 @@
+import { tooltipDocs } from './Tooltip.docs';
 import { popoverDocs } from './Popover.docs';
 import { modalDocs } from './Modal.docs';
 import { dropdownDocs } from './Dropdown.docs';
@@ -11,6 +12,7 @@ import { accordionDocs } from './Accordion.docs';
 import { textareaDocs } from './Textarea.docs';
 
 export const componentDocsContracts = [
+  tooltipDocs,
   popoverDocs,
   modalDocs,
   dropdownDocs,
