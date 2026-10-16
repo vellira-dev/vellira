@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, FormField, Input } from '@vellira-ui/react';
+import { Button, Checkbox, FormField, Input } from '@vellira-ui/react';
 import { useState, type FormEvent } from 'react';
 
 import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
@@ -37,7 +37,9 @@ function errorFromResponse(payload: unknown): string {
 
 export function ProInterestSignup() {
   const [email, setEmail] = useState('');
-  const [error, setError] = useState<string>();
+  const [emailError, setEmailError] = useState<string>();
+  const [consentError, setConsentError] = useState<string>();
+  const [hasConsent, setHasConsent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmationRequested, setConfirmationRequested] = useState(false);
 
@@ -47,11 +49,16 @@ export function ProInterestSignup() {
 
     const address = email.trim();
     if (!EMAIL_PATTERN.test(address) || address.length > 320) {
-      setError('Enter a valid email address.');
+      setEmailError('Enter a valid email address.');
+      return;
+    }
+    if (!hasConsent) {
+      setConsentError('Please confirm that you want Vellira email updates.');
       return;
     }
 
-    setError(undefined);
+    setEmailError(undefined);
+    setConsentError(undefined);
     setIsSubmitting(true);
 
     try {
@@ -61,7 +68,7 @@ export function ProInterestSignup() {
         body: JSON.stringify({
           email: address,
           purpose: 'pro_launch',
-          consent: true,
+          consent: hasConsent,
         }),
         cache: 'no-store',
       });
@@ -76,12 +83,13 @@ export function ProInterestSignup() {
       ) {
         setConfirmationRequested(true);
         setEmail('');
+        setHasConsent(false);
         return;
       }
 
-      setError(errorFromResponse(payload));
+      setEmailError(errorFromResponse(payload));
     } catch {
-      setError(FALLBACK_ERROR);
+      setEmailError(FALLBACK_ERROR);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,19 +101,25 @@ export function ProInterestSignup() {
         Get Pro updates
       </h4>
       <p className={styles.interestDescription}>
-        Occasional engineering notes and news about Vellira Pro, including its
-        launch. No pre-order or payment.
+        Occasional Vellira engineering notes, including Pro development and
+        launch news. One newsletter, not a reservation. No pre-order or payment.
       </p>
       {confirmationRequested ? (
         <p className={styles.interestSuccess} role='status'>
-          Thanks for your interest. If a confirmation email arrives, follow its
-          link to finish signing up.
+          Your request was received. If you receive a confirmation email,
+          follow its link to finish subscribing. No subscription is confirmed
+          just by submitting this form.
         </p>
       ) : (
-        <form noValidate aria-busy={isSubmitting} onSubmit={onSubmit}>
+        <form
+          className={styles.interestForm}
+          noValidate
+          aria-busy={isSubmitting}
+          onSubmit={onSubmit}
+        >
           <FormField
             label='Email address'
-            error={error}
+            error={emailError}
             bindControl={false}
             message=' '
           >
@@ -120,24 +134,37 @@ export function ProInterestSignup() {
                 disabled={isSubmitting}
                 onValueChange={(value) => {
                   setEmail(value);
-                  setError(undefined);
+                  setEmailError(undefined);
                 }}
               />
-              <Button
-                type='submit'
-                shape='rounded'
-                loading={isSubmitting}
-                loadingText='Subscribing'
-              >
-                Keep me posted
-              </Button>
             </div>
           </FormField>
+          <Checkbox
+            name='pro-interest-consent'
+            label='I agree to receive Vellira engineering notes, including occasional Pro launch updates, by email.'
+            checked={hasConsent}
+            onCheckedChange={(checked) => {
+              setHasConsent(checked);
+              setConsentError(undefined);
+            }}
+            required
+            disabled={isSubmitting}
+            error={consentError}
+          />
+          <Button
+            className={styles.interestSubmit}
+            type='submit'
+            shape='rounded'
+            loading={isSubmitting}
+            loadingText='Subscribing'
+          >
+            Keep me posted
+          </Button>
         </form>
       )}
       <p className={styles.interestPrivacy}>
-        By subscribing, you request Vellira engineering and Pro launch emails.
-        Confirm by email; unsubscribe anytime.{' '}
+        This is one Vellira newsletter, managed by Buttondown, not a separate
+        Pro mailing list. Confirm by email; unsubscribe anytime.{' '}
         <DesignSystemLink href='/privacy'>Privacy</DesignSystemLink>
       </p>
     </section>
