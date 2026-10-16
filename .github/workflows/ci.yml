@@ -861,3 +861,199 @@ jobs:
       - name: Smoke affected native package
         if: ${{ needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-native') }}
         run: pnpm smoke:native
+
+  popover-docs-adoption:
+    name: Popover docs authority backfill (PR 1702 only)
+    if: ${{ github.event.pull_request.number == 1702 && github.event.pull_request.head.repo.full_name == 'vellira-dev/vellira' && github.event.pull_request.head.ref == 'feat/docs-popover-safe-adoption-20261016' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/docs-popover-safe-adoption-20261016
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - run: pnpm install --frozen-lockfile
+      - name: Generate all public Popover API blocks from canonical TypeScript
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write scripts/generate-api-docs.ts apps/docs/src/component-docs/Popover.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/popover-published-docs.test.ts
+          pnpm docs:api
+          pnpm docs:api:check
+          pnpm exec prettier --check scripts/generate-api-docs.ts apps/docs/src/component-docs/Popover.docs.ts apps/docs/src/component-docs/index.ts packages/react/API.md packages/react-native/API.md
+      - name: Pin exact legacy blobs and normalize only source YAML and duplicate H2 aliases
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import os
+          import re
+          import subprocess
+
+          blobs = {
+              'react': '4139dad52a394a719cef610a8c04abd006040b21',
+              'react-native': 'fa8f0f304a51d0f48c41e5068ec95dd014258b2e',
+          }
+          native_description = (
+              'Build anchored floating surfaces with Vellira Popover using '
+              'compound components, positioning, alignment, arrows, custom anchors, '
+              'controlled state, and native accessibility.'
+          )
+          pinned = {}
+          for platform, expected_blob in blobs.items():
+              filename = Path(f'apps/docs/src/{platform}/popover.md')
+              original = filename.read_bytes()
+              assert original == subprocess.check_output(
+                  ['git', 'show', 'HEAD:' + filename.as_posix()]
+              ), f'Concurrent change to source: {filename}'
+              assert subprocess.check_output(
+                  ['git', 'hash-object', filename.as_posix()], text=True
+              ).strip() == expected_blob, f'Legacy blob changed: {filename}'
+              authored = original.decode('utf-8')
+              if platform == 'react-native':
+                  header = re.match(r'\A---\n([\s\S]*?)\n---\n', authored)
+                  assert header, 'Missing original Native YAML'
+                  assert header.group(1) == (
+                      'description: Build anchored floating surfaces with Vellira Popover using\n'
+                      '  compound components, positioning, alignment, arrows, custom anchors,\n'
+                      '  controlled state, and native accessibility.\n'
+                      'title: React Native Popover'
+                  ), 'Unexpected Native YAML fields or descriptions'
+                  authored = (
+                      '---\n'
+                      'title: React Native Popover\n'
+                      f'description: {native_description}\n'
+                      '---\n'
+                      + authored[header.end():]
+                  )
+              assert authored.count('## Accessibility') == 1, filename
+              assert authored.count('## When To Use') == 1, filename
+              assert authored.count('## See Also') == 1, filename
+              authored = authored.replace(
+                  '## When To Use', '## Practical Usage Guidance', 1
+              ).replace(
+                  '## See Also', '## Further Reading', 1
+              )
+              filename.write_text(authored, encoding='utf-8')
+              digest = hashlib.sha256(authored.encode('utf-8')).hexdigest()
+              pinned[platform] = digest
+              print(platform, 'source-blob', expected_blob,
+                    'original-sha256', hashlib.sha256(original).hexdigest(),
+                    'normalized-sha256', digest)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              print('POPOVER_REACT_SHA=' + pinned['react'], file=env)
+              print('POPOVER_NATIVE_SHA=' + pinned['react-native'], file=env)
+          PY
+      - name: Atomically adopt both Popover guides with pinned full sources
+        run: |
+          set -euo pipefail
+          pnpm component-docs:adopt Popover --dry-run --json
+          pnpm component-docs:adopt Popover --write --json \
+            --expected-react-sha256="$POPOVER_REACT_SHA" \
+            --expected-react-native-sha256="$POPOVER_NATIVE_SHA"
+          python3 - <<'PY'
+          from pathlib import Path
+          start = '<!-- vellira-component-docs:authored:start -->'
+          end = '<!-- vellira-component-docs:authored:end -->'
+          for platform in ('react', 'react-native'):
+              filename = Path(f'apps/docs/src/{platform}/popover.md')
+              text = filename.read_text(encoding='utf-8')
+              assert text.count(start) == text.count(end) == 1
+              generated, tail = text.split(start, 1)
+              authored, suffix = tail.split(end, 1)
+              assert not suffix.strip()
+              assert authored.count('## Accessibility') == 1
+              authored = authored.replace(
+                  '## Accessibility', '## Additional Accessibility Details', 1
+              )
+              filename.write_text(generated + start + authored + end + suffix,
+                                  encoding='utf-8')
+          PY
+          pnpm exec prettier --write apps/docs/src/react/popover.md apps/docs/src/react-native/popover.md
+      - name: Prove complete author-body preservation and populate permanent SHA-256
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import fs from 'node:fs';
+          import prettier from 'prettier';
+
+          const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+          const start = '<!-- vellira-component-docs:authored:start -->';
+          const end = '<!-- vellira-component-docs:authored:end -->';
+          const testPath = 'scripts/generators/component-docs/popover-published-docs.test.ts';
+          let test = fs.readFileSync(testPath, 'utf8');
+          for (const platform of ['react', 'react-native']) {
+            const filename = 'apps/docs/src/' + platform + '/popover.md';
+            const original = execFileSync('git', ['show', 'HEAD:' + filename], {
+              encoding: 'utf8',
+            });
+            // Match the original authored body independent of the original
+            // frontmatter order and Native's folded multi-line description.
+            const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n\s*# Popover\r?\n([\s\S]*)$/.exec(original);
+            if (!match) throw new Error('Original Popover author body missing: ' + filename);
+            const prettierConfig = await prettier.resolveConfig(filename);
+            const expected = (await prettier.format(match[1].trim(), {
+              ...prettierConfig, parser: 'markdown', filepath: filename,
+            })).trim();
+            const generated = fs.readFileSync(filename, 'utf8');
+            if (generated.split(start).length !== 2 || generated.split(end).length !== 2) {
+              throw new Error('Popover authored region markers invalid: ' + filename);
+            }
+            let recovered = generated.split(start)[1].split(end)[0].trim();
+            recovered = recovered
+              .replace('## Additional Accessibility Details', '## Accessibility')
+              .replace('## Practical Usage Guidance', '## When To Use')
+              .replace('## Further Reading', '## See Also');
+            if (recovered !== expected) {
+              throw new Error('Altered original Popover author text: ' + filename);
+            }
+            const digest = sha256(expected);
+            const placeholder = platform === 'react'
+              ? '__POPOVER_REACT_SHA__' : '__POPOVER_NATIVE_SHA__';
+            if (test.split(placeholder).length !== 2) {
+              throw new Error('Expected one author hash placeholder ' + placeholder);
+            }
+            test = test.replace(placeholder, digest);
+            console.log(platform, 'complete-canonical-author-sha256', digest);
+          }
+          fs.writeFileSync(testPath, test);
+          NODE
+      - name: Verify exact API, authored preservation and idempotent generation
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write scripts/generators/component-docs/popover-published-docs.test.ts apps/docs/src/component-docs/Popover.docs.ts apps/docs/src/component-docs/index.ts
+          pnpm docs:api:check
+          pnpm component-docs:generate --check
+          pnpm component-docs:adopt Popover --dry-run --json
+          pnpm exec vitest run scripts/generators/component-docs/popover-published-docs.test.ts
+          pnpm exec prettier --check scripts/generate-api-docs.ts scripts/generators/component-docs/popover-published-docs.test.ts apps/docs/src/component-docs/Popover.docs.ts apps/docs/src/component-docs/index.ts apps/docs/src/react/popover.md apps/docs/src/react-native/popover.md packages/react/API.md packages/react-native/API.md
+      - name: Remove temporary migration workflow and commit verified authority
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          filename = Path('.github/workflows/ci.yml')
+          content = filename.read_text(encoding='utf-8')
+          marker = '\n  popover-docs-adoption:\n'
+          assert content.count(marker) == 1
+          filename.write_text(content[:content.index(marker)].rstrip() + '\n',
+                              encoding='utf-8')
+          PY
+          git config user.name 'vellira-docs-sync[bot]'
+          git config user.email 'vellira-docs-sync[bot]@users.noreply.github.com'
+          git add -- .github/workflows/ci.yml scripts/generate-api-docs.ts apps/docs/src/component-docs/Popover.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/popover-published-docs.test.ts apps/docs/src/react/popover.md apps/docs/src/react-native/popover.md packages/react/API.md packages/react-native/API.md
+          git diff --cached --quiet || git commit -m 'docs(popover): adopt React and Native guides with exact author proof'
+          git push origin HEAD:feat/docs-popover-safe-adoption-20261016
