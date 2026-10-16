@@ -48,14 +48,15 @@ describe('proposed numeric series type contract', () => {
       rows: [{ x: 0, xLabel: 'First', values: { income: 0 } }],
     };
 
-    if (false) {
+    const typecheckOnly = () => {
       // @ts-expect-error Rows are read-only.
       dataset.rows.push({ x: 1, xLabel: 'Second', values: { income: 1 } });
       // @ts-expect-error A value is a number or explicit null, never a string.
       dataset.rows[0].values.income = '1';
       // @ts-expect-error Row coordinates are read-only.
       dataset.rows[0].x = 1;
-    }
+    };
+    expect(typecheckOnly).toBeTypeOf('function');
     expect(dataset.rows).toHaveLength(1);
   });
 });
