@@ -34,6 +34,11 @@ on:
         required: false
         default: false
         type: boolean
+      newsletter_abuse_preview:
+        description: 'Owner-approved staging-only newsletter burst-guard proof; no subscriber writes.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -153,6 +158,7 @@ jobs:
       # Push and ordinary manual deploys remain OFF. Only a specifically
       # approved manual run may enable the public staging Worker.
       NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.pro_interest_preview == true && '1' || '0' }}
+      NEWSLETTER_ABUSE_GUARD_PREVIEW: ${{ github.event_name == 'workflow_dispatch' && inputs.newsletter_abuse_preview == true && '1' || '0' }}
 
     steps:
       - name: Checkout exact main candidate
@@ -187,6 +193,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Configure owner-controlled staging newsletter burst guard
+        run: node apps/website/scripts/newsletter-guard-staging-mode.mjs
 
       - name: Derive protocol-defined R2 S3 secret
         shell: bash
@@ -454,6 +463,12 @@ jobs:
           scripts/cloudflare-static-chunk-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
+
+      - name: Verify staging newsletter burst guard without provider writes
+        run: node apps/website/scripts/newsletter-guard-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+          NEWSLETTER_ABUSE_GUARD_EXPECTED_MODE: ${{ env.NEWSLETTER_ABUSE_GUARD_PREVIEW }}
 
       - name: Record staging evidence
         if: success()

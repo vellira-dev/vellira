@@ -7,6 +7,21 @@
   "secrets": {
     "required": ["BUTTONDOWN_API_KEY"],
   },
+  "vars": {
+    "NEWSLETTER_ABUSE_GUARD_ENABLED": "0",
+  },
+  "ratelimits": [
+    {
+      "name": "NEWSLETTER_ROUTE_RATE_LIMIT",
+      "namespace_id": "1712202601",
+      "simple": { "limit": 12, "period": 60 },
+    },
+    {
+      "name": "NEWSLETTER_ACTOR_RATE_LIMIT",
+      "namespace_id": "1712202602",
+      "simple": { "limit": 4, "period": 60 },
+    },
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",
