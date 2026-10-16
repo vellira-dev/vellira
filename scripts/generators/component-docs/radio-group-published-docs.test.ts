@@ -130,6 +130,35 @@ describe('published RadioGroup docs safe legacy adoption', () => {
         ),
       ]).toHaveLength(apiNames.length);
 
+      // RadioGroup.Item aliases the standalone RadioProps contract. Its
+      // generated public properties must therefore match the existing
+      // canonical Radio table exactly without replacing that authority.
+      const radioMarker = `${prefix}.RadioProps.RadioProps`;
+      expect(
+        api.split(`<!-- api-docgen:start ${radioMarker} -->`)
+      ).toHaveLength(2);
+      expect(
+        api.split(`<!-- api-docgen:end ${radioMarker} -->`)
+      ).toHaveLength(2);
+      const tableProps = (name: string) => {
+        const marker = `${prefix}.${name}.${name}`;
+        const begin = api.indexOf(`<!-- api-docgen:start ${marker} -->`);
+        const end = api.indexOf(`<!-- api-docgen:end ${marker} -->`);
+        expect(begin).toBeGreaterThanOrEqual(0);
+        expect(end).toBeGreaterThan(begin);
+        return api
+          .slice(begin, end)
+          .split(/\r?\n/)
+          .flatMap((line) => {
+            const match = /^\| `([^`]+)`/.exec(line);
+            return match ? [match[1]] : [];
+          })
+          .sort();
+      };
+      expect(tableProps('RadioGroupItemProps')).toEqual(
+        tableProps('RadioProps')
+      );
+
       for (const original of page.authorEvidence) {
         expect(region.content).toContain(original);
       }
