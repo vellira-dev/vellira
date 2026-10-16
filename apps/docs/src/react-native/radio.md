@@ -50,7 +50,7 @@ API details are generated from `packages/react-native/API.md`.
 
 ## Accessibility
 
-- Radio exposes accessibilityRole='radio' and checked and disabled accessibility state.
+- Radio exposes the radio accessibility role and checked and disabled accessibility state.
 - Provide visible text or accessibilityLabel; a string label supplies the default accessible name.
 - Use descriptions and validation errors to provide relevant accessibility hints.
 - Test selected-state announcements and interactions with VoiceOver and TalkBack.

@@ -48,7 +48,7 @@ export const radioDocs = defineComponentDocs({
         'Choose Checkbox for independent choices rather than a shared exclusive selection.',
       ],
       accessibility: [
-        'Radio exposes accessibilityRole=\'radio\' and checked and disabled accessibility state.',
+        'Radio exposes the radio accessibility role and checked and disabled accessibility state.',
         'Provide visible text or accessibilityLabel; a string label supplies the default accessible name.',
         'Use descriptions and validation errors to provide relevant accessibility hints.',
         'Test selected-state announcements and interactions with VoiceOver and TalkBack.',
