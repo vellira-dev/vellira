@@ -161,11 +161,7 @@ export function snapshotNumericSeriesBindingV1(
       return id;
     });
     const rows = denseArray(rawRows, 0, 90).map((entry) => {
-      const [x, xLabel, rawValues] = ownData(entry, [
-        'x',
-        'xLabel',
-        'values',
-      ]);
+      const [x, xLabel, rawValues] = ownData(entry, ['x', 'xLabel', 'values']);
       const captured = ownData(rawValues, ids);
       const values: Record<string, unknown> = Object.create(null);
       ids.forEach((id, index) => {
