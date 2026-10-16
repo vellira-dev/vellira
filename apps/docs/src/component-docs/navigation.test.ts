@@ -37,7 +37,12 @@ describe('component docs navigation', () => {
 
       const links = items.map((item) => item.link);
       expect(new Set(links).size).toBe(links.length);
-      expect(generated.length).toBe(componentDocsContracts.length);
+      // Platform-specific contracts are valid; do not require every component
+      // to have both React and React Native pages.
+      const supportedNames = componentMetadata
+        .filter((component) => component.platforms.includes(platform))
+        .map((component) => component.name);
+      expect(generated.map((item) => item.text)).toEqual(supportedNames);
       expect(links).toContain(`/${platform}/radio-group`);
       expect(links).toContain(`/${platform}/portal`);
       expect(links).toContain(`/${platform}/theme-provider`);

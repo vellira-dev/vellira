@@ -387,6 +387,32 @@ describe('generated component docs completeness', () => {
     );
   });
 
+  it.each(['targeted', 'all'] as const)(
+    'does not skip required missing docs contracts in %s scope',
+    async (scope) => {
+      const fixture = createFixture({
+        componentName: 'FixtureSwitch',
+        platforms: ['react'],
+      });
+
+      const results = await runComponentCompletenessCheck({
+        root: fixture.root,
+        metadata: [fixture.metadata],
+        componentDocsContracts: [],
+        generatedDocsScope: scope,
+      });
+      const generated = results.find(
+        (result) => result.componentName === 'Generated Component Docs'
+      );
+
+      expect(generated).toBeDefined();
+      expect(generated?.ready).toBe(false);
+      expect(details(generated!)).toContain(
+        'FixtureSwitch: missing ComponentDocsContract for required documentation.'
+      );
+    }
+  );
+
   it('ignores unrelated unmanaged pages in targeted checks', async () => {
     const fixture = createFixture({
       componentName: 'FixtureSwitch',
