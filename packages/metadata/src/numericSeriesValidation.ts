@@ -64,9 +64,7 @@ const finite = (value: unknown, limit: number): value is number =>
  * Full Unicode case-fold parity is not yet certified; this implementation rejects
  * obvious NFC / case-insensitive label collisions without claiming that parity.
  */
-function validateDatasetShape(
-  input: unknown
-): NumericSeriesValidationResult {
+function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
   if (!record(input) || !fields(input, ['series', 'rows']))
     return invalid('invalid-dataset', '$');
   const { series, rows } = input;
