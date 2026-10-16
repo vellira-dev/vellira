@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { validateBoundedNumericSeries as validate } from './numericSeriesValidation';
 
 const dataset = () => ({
-  series: [{ id: 'revenue', label: 'Revenue' }, { id: 'costs', label: 'Costs' }],
+  series: [
+    { id: 'revenue', label: 'Revenue' },
+    { id: 'costs', label: 'Costs' },
+  ],
   rows: [
     { x: -1, xLabel: 'Before', values: { revenue: 0, costs: null } },
     { x: 2, xLabel: 'After', values: { revenue: 42, costs: -3 } },
@@ -18,7 +21,9 @@ const rejected = (value: unknown, code: string) => {
 describe('bounded numeric series runtime validation', () => {
   it('accepts finite values, explicit gaps, and empty rows', () => {
     expect(validate(dataset()).ok).toBe(true);
-    expect(validate({ series: [{ id: 'a', label: 'A' }], rows: [] }).ok).toBe(true);
+    expect(validate({ series: [{ id: 'a', label: 'A' }], rows: [] }).ok).toBe(
+      true
+    );
   });
 
   it('does not modify valid consumer labels or rows', () => {
@@ -34,17 +39,53 @@ describe('bounded numeric series runtime validation', () => {
     rejected({ ...dataset(), hidden: true }, 'invalid-dataset');
     rejected({ ...dataset(), rows: {} }, 'invalid-rows');
     rejected({ ...dataset(), series: [] }, 'invalid-series');
-    rejected({ ...dataset(), series: new Array(5).fill({ id: 'a', label: 'A' }) }, 'invalid-series');
-    rejected({ ...dataset(), rows: new Array(91).fill(dataset().rows[0]) }, 'invalid-rows');
+    rejected(
+      { ...dataset(), series: new Array(5).fill({ id: 'a', label: 'A' }) },
+      'invalid-series'
+    );
+    rejected(
+      { ...dataset(), rows: new Array(91).fill(dataset().rows[0]) },
+      'invalid-rows'
+    );
   });
 
   it('rejects duplicate and unsafe IDs and equivalent labels', () => {
-    rejected({ ...dataset(), series: [{ id: '__proto__', label: 'A' }] }, 'invalid-series-id');
-    rejected({ ...dataset(), series: [{ id: 'bad space', label: 'A' }] }, 'invalid-series-id');
-    rejected({ ...dataset(), series: [{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }] }, 'duplicate-series-id');
-    rejected({ ...dataset(), series: [{ id: 'a', label: 'Revenue' }, { id: 'b', label: 'revenue' }] }, 'duplicate-series-label');
-    rejected({ ...dataset(), series: [{ id: 'a', label: '   ' }] }, 'invalid-series-label');
-    rejected({ ...dataset(), series: [{ id: 'a', label: 'a'.repeat(121) }] }, 'invalid-series-label');
+    rejected(
+      { ...dataset(), series: [{ id: '__proto__', label: 'A' }] },
+      'invalid-series-id'
+    );
+    rejected(
+      { ...dataset(), series: [{ id: 'bad space', label: 'A' }] },
+      'invalid-series-id'
+    );
+    rejected(
+      {
+        ...dataset(),
+        series: [
+          { id: 'a', label: 'A' },
+          { id: 'a', label: 'B' },
+        ],
+      },
+      'duplicate-series-id'
+    );
+    rejected(
+      {
+        ...dataset(),
+        series: [
+          { id: 'a', label: 'Revenue' },
+          { id: 'b', label: 'revenue' },
+        ],
+      },
+      'duplicate-series-label'
+    );
+    rejected(
+      { ...dataset(), series: [{ id: 'a', label: '   ' }] },
+      'invalid-series-label'
+    );
+    rejected(
+      { ...dataset(), series: [{ id: 'a', label: 'a'.repeat(121) }] },
+      'invalid-series-label'
+    );
   });
 
   it('rejects non-finite or out-of-range and unordered x', () => {
@@ -62,17 +103,23 @@ describe('bounded numeric series runtime validation', () => {
     const badLabel = dataset();
     badLabel.rows[0].xLabel = ' \t ';
     rejected(badLabel, 'invalid-x-label');
-    const absent = dataset() as unknown as { rows: Array<{ values: Record<string, unknown> }> };
+    const absent = dataset() as unknown as {
+      rows: Array<{ values: Record<string, unknown> }>;
+    };
     delete absent.rows[0].values.costs;
     rejected(absent, 'series-key-mismatch');
-    const extra = dataset() as unknown as { rows: Array<{ values: Record<string, unknown> }> };
+    const extra = dataset() as unknown as {
+      rows: Array<{ values: Record<string, unknown> }>;
+    };
     extra.rows[0].values.extra = 7;
     rejected(extra, 'series-key-mismatch');
   });
 
   it('requires explicit null and finite, bounded numeric y observations', () => {
     for (const value of [undefined, NaN, Infinity, -Infinity, 1e12 + 1, '5']) {
-      const bad = dataset() as unknown as { rows: Array<{ values: Record<string, unknown> }> };
+      const bad = dataset() as unknown as {
+        rows: Array<{ values: Record<string, unknown> }>;
+      };
       bad.rows[0].values.costs = value;
       rejected(bad, 'invalid-y');
     }
