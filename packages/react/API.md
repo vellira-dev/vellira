@@ -471,6 +471,28 @@ import { Radio, RadioGroup } from '@vellira-ui/react';
 
 <!-- api-docgen:end web.RadioGroupProps.RadioGroupProps -->
 
+### RadioGroupItemProps
+
+<!-- api-docgen:start web.RadioGroupItemProps.RadioGroupItemProps -->
+
+| Prop               | Type                         | Required | Description                               |
+| ------------------ | ---------------------------- | -------- | ----------------------------------------- |
+| `label`            | `ReactNode`                  | No       | Visible label.                            |
+| `description`      | `ReactNode`                  | No       | Additional descriptive text.              |
+| `icon`             | `ReactNode`                  | No       | Icon rendered inside the component.       |
+| `color`            | `RadioColor`                 | No       | —                                         |
+| `wrapperClassName` | `string`                     | No       | —                                         |
+| `value`            | `string`                     | Yes      | Controlled value.                         |
+| `checked`          | `boolean`                    | No       | —                                         |
+| `defaultChecked`   | `boolean`                    | No       | —                                         |
+| `disabled`         | `boolean`                    | No       | Disables interaction.                     |
+| `required`         | `boolean`                    | No       | Marks the field as required.              |
+| `error`            | `string`                     | No       | Error message rendered for invalid state. |
+| `size`             | `RadioSize`                  | No       | Input size.                               |
+| `onCheckedChange`  | `(checked: boolean) => void` | No       | —                                         |
+
+<!-- api-docgen:end web.RadioGroupItemProps.RadioGroupItemProps -->
+
 ### Radio Props
 
 <!-- api-docgen:start web.RadioProps.RadioProps -->
