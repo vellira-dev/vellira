@@ -57,6 +57,11 @@ test('only three fixed-origin GET requests; returns aggregate counts without PII
     confirmedRegular: 2,
     awaitingConfirmation: 1,
     otherStatuses: 1,
+    filterEvidence: {
+      campaign: 'first-page-match',
+      regular: 'first-page-match',
+      unactivated: 'first-page-match',
+    },
     requests: 3,
     writes: 0,
   });
@@ -108,6 +113,10 @@ for (const scenario of [
     name: 'more rows than count',
     change: (data) => ({ ...data, count: 1 }),
   },
+  {
+    name: 'positive count with no verifiable first-page rows',
+    change: (data) => ({ ...data, results: [] }),
+  },
 ]) {
   test('fails closed for ' + scenario.name, async () => {
     const { fetcher } = mockedProvider({
@@ -130,6 +139,44 @@ for (const scenario of [
     );
   });
 }
+
+test('zero matching campaign records are counted but filter proof is explicitly inconclusive', async () => {
+  const { fetcher, calls } = mockedProvider({
+    override: () => Response.json({ count: 0, results: [] }),
+  });
+
+  const report = await auditButtondownProInterest({ apiKey: SECRET, fetcher });
+  assert.equal(report.total, 0);
+  assert.equal(report.confirmedRegular, 0);
+  assert.equal(report.awaitingConfirmation, 0);
+  assert.deepEqual(report.filterEvidence, {
+    campaign: 'inconclusive-empty',
+    regular: 'inconclusive-empty',
+    unactivated: 'inconclusive-empty',
+  });
+  assert.equal(calls.length, 3);
+});
+
+test('empty status subsets do not imply their filters are verified', async () => {
+  const { fetcher } = mockedProvider({
+    override: ({ url, data }) => {
+      const type = url.searchParams.get('type');
+      return Response.json(
+        type === 'unactivated' ? { count: 0, results: [] } : data
+      );
+    },
+  });
+
+  const report = await auditButtondownProInterest({ apiKey: SECRET, fetcher });
+  assert.equal(report.confirmedRegular, 2);
+  assert.equal(report.awaitingConfirmation, 0);
+  assert.equal(report.otherStatuses, 2);
+  assert.deepEqual(report.filterEvidence, {
+    campaign: 'first-page-match',
+    regular: 'first-page-match',
+    unactivated: 'inconclusive-empty',
+  });
+});
 
 test('rejects inconsistent cross-filter totals without emitting subscriber details', async () => {
   const { fetcher } = mockedProvider({
