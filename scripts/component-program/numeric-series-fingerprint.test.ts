@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  fingerprintNumericSeriesBindingV1 as fingerprint,
-} from './numeric-series-fingerprint';
+import * as NumericFingerprint from './numeric-series-fingerprint';
+
+const fingerprint = NumericFingerprint.fingerprintNumericSeriesBindingV1;
 
 const simple = () => ({
   schemaVersion: '1',
