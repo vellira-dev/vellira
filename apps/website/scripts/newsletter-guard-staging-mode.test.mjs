@@ -83,6 +83,48 @@ test('only explicitly owner-gated main dispatch produces staging ON config', asy
   assert.equal(config.vars.NEWSLETTER_ABUSE_GUARD_ENABLED, '0');
 });
 
+test('abuse preview rejects simultaneous Pro opt-in preview before any deployment mutation', async () => {
+  const writes = [];
+  const options = {
+    configPath: '/fixture/wrangler.jsonc',
+    loadConfig: baseConfig,
+    writeFile: async (...args) => writes.push(args),
+    githubEventName: 'workflow_dispatch',
+    githubRef: 'refs/heads/main',
+  };
+
+  await assert.rejects(
+    prepareNewsletterGuardStagingMode({
+      ...options,
+      mode: '1',
+      proInterestMode: '1',
+    }),
+    /must run separately/
+  );
+  assert.equal(writes.length, 0);
+
+  // A Pro-only preview remains allowed with the abuse guard OFF.
+  assert.equal(
+    await prepareNewsletterGuardStagingMode({
+      ...options,
+      mode: '0',
+      proInterestMode: '1',
+    }),
+    'off'
+  );
+  assert.equal(writes.length, 0);
+
+  await assert.rejects(
+    prepareNewsletterGuardStagingMode({
+      ...options,
+      mode: '1',
+      proInterestMode: 'unexpected',
+    }),
+    /Expected staging Pro interest mode/
+  );
+  assert.equal(writes.length, 0);
+});
+
 test('staging overlay rejects missing/mismatched binding configuration', () => {
   for (const config of [
     null,
