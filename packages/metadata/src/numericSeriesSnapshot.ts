@@ -1,4 +1,3 @@
-import type { BoundedNumericSeries } from './numericSeries';
 import {
   parseNumericSeriesBindingV1,
   type NumericSeriesBindingEnvelopeV1,
@@ -39,7 +38,10 @@ function ownData(
     throw new Error('Unsupported record prototype.');
   }
   const names = Reflect.ownKeys(input);
-  if (names.length !== keys.length || !keys.every((key) => names.includes(key))) {
+  if (
+    names.length !== keys.length ||
+    !keys.every((key) => names.includes(key))
+  ) {
     throw new Error('Unexpected record keys.');
   }
   return keys.map((key) => {
@@ -52,11 +54,19 @@ function ownData(
 }
 
 /** Reject sparse arrays, accessors, array subclasses and extra own keys. */
-function denseArray(input: unknown, minimum: number, maximum: number): unknown[] {
-  if (!Array.isArray(input) || Object.getPrototypeOf(input) !== Array.prototype) {
+function denseArray(
+  input: unknown,
+  minimum: number,
+  maximum: number
+): unknown[] {
+  if (
+    !Array.isArray(input) ||
+    Object.getPrototypeOf(input) !== Array.prototype
+  ) {
     throw new Error('Invalid array.');
   }
-  const length = Object.getOwnPropertyDescriptor(input, 'length')?.value as unknown;
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(input, 'length');
+  const length: unknown = lengthDescriptor?.value;
   if (
     typeof length !== 'number' ||
     !Number.isSafeInteger(length) ||
@@ -125,7 +135,8 @@ function canonicalNumericJson(value: NumericSeriesBindingEnvelopeV1): string {
 }
 
 /**
- * Isolated pre-admission snapshot; no Component Program/Factory/Chart activation.
+ * Isolated pre-admission snapshot; no Component Program, Factory or Chart
+ * activation.
  * Copies the bounded graph before validation, freezes every copy and emits
  * canonical bytes without calling any input object's JSON serializer.
  */
@@ -182,7 +193,7 @@ export function snapshotNumericSeriesBindingV1(
     const value = Object.freeze({
       schemaVersion: '1' as const,
       kind: 'bounded-numeric-series' as const,
-      data: parsed.value.data as BoundedNumericSeries,
+      data: parsed.value.data,
     });
     return { ok: true, value, canonicalJson: canonicalNumericJson(value) };
   } catch {
