@@ -179,17 +179,24 @@ test('empty status subsets do not imply their filters are verified', async () =>
 });
 
 test('rejects inconsistent cross-filter totals without emitting subscriber details', async () => {
-  const { fetcher } = mockedProvider({
-    override: () =>
+  const { fetcher, calls } = mockedProvider({
+    override: ({ data }) =>
       Response.json({
         count: 1,
-        results: [],
+        // Each individual query must pass row-level filter validation first.
+        // Only the aggregate invariant (regular + unactivated > all) is invalid.
+        results: data.results.slice(0, 1),
       }),
   });
   await assert.rejects(
     auditButtondownProInterest({ apiKey: SECRET, fetcher }),
-    /inconsistent filtered counts/
+    (error) =>
+      error.name === 'ButtondownReadOnlyAuditError' &&
+      /inconsistent filtered counts/.test(error.message) &&
+      !error.message.includes(SECRET) &&
+      !error.message.includes(PRIVATE_EMAIL)
   );
+  assert.equal(calls.length, 3);
 });
 
 for (const status of [400, 401, 403, 429, 500]) {
