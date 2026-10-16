@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
@@ -170,4 +172,33 @@ test('staging smoke fails closed for missing denial, OFF denial, wrong host or w
       /Only the canonical staging Worker|requires HTTPS/
     );
   }
+});
+
+test('staging workflow gates ON to a manual main dispatch and restores OFF by default', () => {
+  const workflow = readFileSync(
+    path.resolve(
+      import.meta.dirname,
+      '../../../.github/workflows/deploy-website-cloudflare-staging.yml'
+    ),
+    'utf8'
+  );
+  const prod = readFileSync(
+    path.resolve(
+      import.meta.dirname,
+      '../../../.github/workflows/deploy-website-cloudflare-production.yml'
+    ),
+    'utf8'
+  );
+  assert.match(workflow, /newsletter_abuse_preview:/);
+  assert.match(
+    workflow,
+    /github\.event_name == 'workflow_dispatch' && inputs\.newsletter_abuse_preview == true && '1' \|\| '0'/
+  );
+  assert.match(workflow, /Configure owner-controlled staging newsletter burst guard/);
+  assert.match(workflow, /newsletter-guard-staging-mode\.mjs/);
+  assert.match(workflow, /newsletter-guard-live-smoke\.mjs/);
+  assert.match(workflow, /NEWSLETTER_ABUSE_GUARD_EXPECTED_MODE/);
+  assert.doesNotMatch(prod, /NEWSLETTER_ABUSE_GUARD_PREVIEW/);
+  assert.doesNotMatch(prod, /NEWSLETTER_ABUSE_GUARD_ENABLED/);
+  assert.doesNotMatch(prod, /newsletter_abuse_preview/);
 });
