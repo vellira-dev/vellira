@@ -134,12 +134,10 @@ describe('published RadioGroup docs safe legacy adoption', () => {
       // generated public properties must therefore match the existing
       // canonical Radio table exactly without replacing that authority.
       const radioMarker = `${prefix}.RadioProps.RadioProps`;
-      expect(
-        api.split(`<!-- api-docgen:start ${radioMarker} -->`)
-      ).toHaveLength(2);
-      expect(
-        api.split(`<!-- api-docgen:end ${radioMarker} -->`)
-      ).toHaveLength(2);
+      const radioStart = `<!-- api-docgen:start ${radioMarker} -->`;
+      const radioEnd = `<!-- api-docgen:end ${radioMarker} -->`;
+      expect(api.split(radioStart)).toHaveLength(2);
+      expect(api.split(radioEnd)).toHaveLength(2);
       const tableProps = (name: string) => {
         const marker = `${prefix}.${name}.${name}`;
         const begin = api.indexOf(`<!-- api-docgen:start ${marker} -->`);
