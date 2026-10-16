@@ -19,6 +19,7 @@ import {
   FormField,
   Input,
   Modal,
+  Popover,
   RadioGroup,
   Select,
   Tabs,
@@ -41,6 +42,7 @@ import {
 - Tabs
 - Tooltip
 - Modal
+- Popover
 - ThemeProvider
 - useTheme
 
@@ -1418,6 +1420,116 @@ import { Button, Modal, Portal } from '@vellira-ui/react';
 ### Modal Accessibility
 
 Use `Modal.Title` for a visible title or pass `ariaLabel` to `Modal.Content`. Use `Modal.Description` when the dialog needs descriptive text, especially for `alertdialog`.
+
+## Popover
+
+Interactive floating content anchored to a trigger or custom anchor.
+
+### Popover Props
+
+<!-- api-docgen:start web.PopoverProps.PopoverProps -->
+
+| Prop               | Type                                                         | Required | Description                            |
+| ------------------ | ------------------------------------------------------------ | -------- | -------------------------------------- |
+| `children`         | `ReactNode`                                                  | Yes      | Content rendered inside the component. |
+| `portal`           | `boolean`                                                    | No       | —                                      |
+| `strategy`         | `'absolute' \| 'fixed'`                                      | No       | —                                      |
+| `open`             | `boolean`                                                    | No       | Controlled open state.                 |
+| `defaultOpen`      | `boolean`                                                    | No       | Initial uncontrolled open state.       |
+| `modal`            | `boolean`                                                    | No       | —                                      |
+| `onOpenChange`     | `(open: boolean, details: PopoverOpenChangeDetails) => void` | No       | Called when the open state changes.    |
+| `side`             | `PopoverSide`                                                | No       | —                                      |
+| `align`            | `PopoverAlign`                                               | No       | —                                      |
+| `sideOffset`       | `number`                                                     | No       | —                                      |
+| `collisionPadding` | `number`                                                     | No       | —                                      |
+| `avoidCollisions`  | `boolean`                                                    | No       | —                                      |
+
+<!-- api-docgen:end web.PopoverProps.PopoverProps -->
+
+### PopoverAnchorProps
+
+<!-- api-docgen:start web.PopoverAnchorProps.PopoverAnchorProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`   | No       | —                                      |
+
+<!-- api-docgen:end web.PopoverAnchorProps.PopoverAnchorProps -->
+
+### PopoverTriggerProps
+
+<!-- api-docgen:start web.PopoverTriggerProps.PopoverTriggerProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`   | No       | —                                      |
+
+<!-- api-docgen:end web.PopoverTriggerProps.PopoverTriggerProps -->
+
+### PopoverContentProps
+
+<!-- api-docgen:start web.PopoverContentProps.PopoverContentProps -->
+
+| Prop                   | Type                                     | Required | Description |
+| ---------------------- | ---------------------------------------- | -------- | ----------- |
+| `asChild`              | `boolean`                                | No       | —           |
+| `initialFocus`         | `RefObject<HTMLElement \| null>`         | No       | —           |
+| `returnFocus`          | `boolean`                                | No       | —           |
+| `closeOnEscape`        | `boolean`                                | No       | —           |
+| `closeOnOutsidePress`  | `boolean`                                | No       | —           |
+| `onEscapeKeyDown`      | `(event: KeyboardEvent) => void`         | No       | —           |
+| `onPointerDownOutside` | `(event: OverlayOutsideEvent) => void`   | No       | —           |
+| `onInteractOutside`    | `(event: OverlayOutsideEvent) => void`   | No       | —           |
+| `onOpenAutoFocus`      | `(event: OverlayAutoFocusEvent) => void` | No       | —           |
+| `onCloseAutoFocus`     | `(event: OverlayAutoFocusEvent) => void` | No       | —           |
+
+<!-- api-docgen:end web.PopoverContentProps.PopoverContentProps -->
+
+### PopoverArrowProps
+
+<!-- api-docgen:start web.PopoverArrowProps.PopoverArrowProps -->
+
+| Prop     | Type                | Required | Description |
+| -------- | ------------------- | -------- | ----------- |
+| `align`  | `PopoverArrowAlign` | No       | —           |
+| `offset` | `string \| number`  | No       | —           |
+
+<!-- api-docgen:end web.PopoverArrowProps.PopoverArrowProps -->
+
+### PopoverCloseProps
+
+<!-- api-docgen:start web.PopoverCloseProps.PopoverCloseProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`   | No       | —                                      |
+
+<!-- api-docgen:end web.PopoverCloseProps.PopoverCloseProps -->
+
+### PopoverTitleProps
+
+<!-- api-docgen:start web.PopoverTitleProps.PopoverTitleProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`   | No       | —                                      |
+
+<!-- api-docgen:end web.PopoverTitleProps.PopoverTitleProps -->
+
+### PopoverDescriptionProps
+
+<!-- api-docgen:start web.PopoverDescriptionProps.PopoverDescriptionProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`   | No       | —                                      |
+
+<!-- api-docgen:end web.PopoverDescriptionProps.PopoverDescriptionProps -->
 
 ## ThemeProvider
 
