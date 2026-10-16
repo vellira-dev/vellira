@@ -31,6 +31,20 @@ ownership. Malformed or ambiguous ownership always fails closed.
 The --force flag is retained for compatibility with managed documents; it is
 not an unreviewed migration escape hatch.
 
+## Repository-wide CI coverage
+
+`pnpm check:component --all` checks every canonical component whose metadata
+requires docs. Unregistered component Markdown in `apps/docs/src/react/` and
+`apps/docs/src/react-native/` is blocking, even when it has no generator marker.
+Generated pages without a contract remain blocking orphans. The only currently
+reviewed standalone-page exceptions are `index.md`, `portal.md`, and
+`theme-provider.md` on each platform. A new exception needs a deliberate,
+reviewed change to the check, not an untracked manual page.
+
+VitePress sidebars derive component links from the canonical docs registry. The
+navigation assertion rejects duplicate links before the docs build succeeds.
+Existing independent Portal and ThemeProvider pages remain untouched.
+
 ## How to migrate a legacy page
 
 1. Run the read-only audit for the component. Record original source hashes

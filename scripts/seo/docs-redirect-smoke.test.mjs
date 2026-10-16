@@ -21,6 +21,9 @@ test('parses the real legacy redirect map with no ambiguous paths', async () => 
   assert.equal(rules.get('/getting-started'), '/start/getting-started');
   assert.equal(rules.get('/components/button'), '/react/button');
   assert.equal(rules.get('/components/button/'), '/react/button');
+  // Radio now has independent canonical documentation and must not redirect.
+  assert.equal(rules.has('/react/radio'), false);
+  assert.equal(rules.has('/react/radio/'), false);
   assert.throws(
     () => parseDocsRedirects(fixture + '\n/getting-started /start/other 301'),
     /Duplicate documentation redirect/

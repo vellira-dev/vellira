@@ -20,6 +20,8 @@ const routes = [
   '/start/getting-started',
   '/react/checkbox',
   '/react/dropdown',
+  '/react/radio',
+  '/react-native/radio',
 ];
 const robots = `User-agent: *\nAllow: /\n\nSitemap: ${DOCS_ORIGIN}/sitemap.xml\n`;
 const xml = (paths = routes) =>
