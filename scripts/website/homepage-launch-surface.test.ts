@@ -51,7 +51,9 @@ describe('homepage launch positioning and navigation', () => {
     expect(proInterestSource).toContain("consent: hasConsent");
     expect(proInterestSource).toContain("checked={hasConsent}");
     expect(proInterestSource).toContain("onCheckedChange={(checked) => {");
-    expect(proInterestSource).toContain("import { Button, Checkbox, FormField, Input }");
+    expect(proInterestSource).toContain(
+      'import { Button, Checkbox, FormField, Input }'
+    );
     expect(proInterestSource).not.toContain('consent: true');
     expect(proInterestSource).toContain("href='/privacy'");
     expect(proInterestSource).toContain('No pre-order or payment.');
