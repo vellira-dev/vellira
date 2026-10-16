@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  snapshotNumericSeriesBindingV1 as snapshot,
-} from './numericSeriesSnapshot';
+import * as NumericSnapshot from './numericSeriesSnapshot';
+
+const snapshot = NumericSnapshot.snapshotNumericSeriesBindingV1;
 
 const valid = () => ({
   schemaVersion: '1',
@@ -163,10 +163,10 @@ describe('immutable numeric binding snapshots', () => {
     expect(snapshot(revoked.proxy)).toEqual(failure);
 
     const nested = valid();
-    (nested.data as { rows: unknown }).rows = new Proxy(
-      nested.data.rows,
-      { getOwnPropertyDescriptor: throwing }
-    );
+    const malformedRows = new Proxy(nested.data.rows, {
+      getOwnPropertyDescriptor: throwing,
+    });
+    (nested.data as { rows: unknown }).rows = malformedRows;
     expect(snapshot(nested)).toEqual(failure);
   });
 });
