@@ -104,6 +104,53 @@ safe controlled evidence, email templates, confirmation delivery and consent
 wording. Do not deliberately exhaust the provider quota, send bulk probes,
 attempt to subscribe someone else's address or mutate a suppressed record.
 
+## Local read-only Buttondown verification (no write API calls)
+
+Run the optional audit on a trusted local machine with your **existing** Buttondown
+`BUTTONDOWN_API_KEY` set in the process environment. Never paste the key into
+GitHub, a PR, CI variables, the conversation, or an untracked shell transcript.
+This is **not** a CI check and does not run automatically on deployment.
+
+From the repository root:
+
+```sh
+node apps/website/scripts/buttondown-pro-interest-readonly.mjs
+```
+
+When the existing untracked `apps/website/.dev.vars` holds this credential, Node
+22 also supports loading it locally without copying the key to GitHub:
+
+```sh
+node --env-file=apps/website/.dev.vars apps/website/scripts/buttondown-pro-interest-readonly.mjs
+```
+
+Both commands execute **exactly three GET requests** on the official Buttondown
+subscriber-list endpoint with fixed server-side filters:
+`utm_campaign=vellira_pro_launch_interest`, plus `type=regular` and
+`type=unactivated` respectively. They return only aggregate `count` values;
+returned email addresses and other subscriber records remain in memory and are
+never printed, exported, persisted, or logged. Unknown responses, ignored
+filters, invalid counts, network failures and 429s stop without retry.
+A positive filtered count with an empty first page also fails closed.
+Each query separately reports `first-page-match` when at least one returned
+record passes the filter check, or `inconclusive-empty` when zero matches are
+returned. Zero matches alone **cannot prove** the provider applied that filter.
+These three sequential GETs are not an atomic snapshot: a subscriber's
+confirmation transition during the audit may cause temporary differences.
+
+The outputs distinguish confirmed regular interest, unactivated/pending
+confirmation, and all other statuses. They do **not** guarantee consent or
+separate Pro email segmentation, do not establish a conversion rate, and do not
+prove rate-limit, duplicate or suppression behavior for **writes**. If the local
+key is missing or read permissions are unavailable, stop: do not generate a new
+credential, ask for one in a PR, or add production secrets to GitHub.
+
+The audit has deterministic synthetic-provider tests:
+
+```sh
+node --test apps/website/scripts/buttondown-pro-interest-readonly.test.mjs
+```
+
 ## Owner-approved staging-only preview
 
 Use **Actions → Deploy Website Cloudflare Staging → Run workflow → main**.
