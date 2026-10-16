@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { componentIntentCapabilities } from '../../packages/metadata/src/componentIntent';
-import type { ComponentIntentTargetV1 } from '../../packages/metadata/src/componentIntent';
-import { validateComponentIntentTarget } from '../../packages/metadata/src/componentIntent';
+import {
+  componentIntentCapabilities,
+  type ComponentIntentTargetV1,
+  validateComponentIntentTarget,
+} from '../../packages/metadata/src/componentIntent';
 import type { BoundedNumericSeries } from '../../packages/metadata/src/numericSeries';
 import { compileComponentProgram } from './compile';
 import { mediaProgram, mediaSpec } from './fixtures/programs';
@@ -40,7 +42,7 @@ describe('numeric data type admission boundary', () => {
     }
   );
 
-  it('does not turn proposed type-only semantics into declared Intent evidence', () => {
+  it('does not claim unadmitted Numeric Intent evidence', () => {
     const target = {
       name: 'NumericDataProbe',
       layer: 'components',
@@ -67,11 +69,14 @@ describe('numeric data type admission boundary', () => {
       rows: [{ x: 0, xLabel: '0', values: { a: null } }],
     };
     const decisions = mediaProgram();
-    const result = compileComponentProgram(componentProgramSource(mediaSpec()), {
+    const source = componentProgramSource(mediaSpec());
+    const modules = decisions.modules.map((selection, index) => {
+      if (index > 0) return selection;
+      return { ...selection, parameters: { dataset: data } };
+    });
+    const result = compileComponentProgram(source, {
       ...decisions,
-      modules: decisions.modules.map((selection, index) =>
-        index === 0 ? { ...selection, parameters: { dataset: data } } : selection
-      ),
+      modules,
     });
 
     expect(result.disposition).toBe('blocked');
