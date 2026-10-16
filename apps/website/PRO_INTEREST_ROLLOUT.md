@@ -181,19 +181,17 @@ References:
 **Security review — not yet an anti-bot proof:** the public shared newsletter
 endpoint validates JSON/content length, email format, Pro purpose/consent,
 and origin _when provided_; Buttondown itself applies firewall and rate limits.
-The endpoint currently accepts requests with a missing Origin header and has
-no Vellira-controlled per-actor or per-resource rate limit. Scripts can call
-it directly without submitting the form; client-side consent/checkbox and
-same-origin checks are not bot defenses. Buttondown's subscriber creation
-quota is shared with the existing engineering newsletter.
+The endpoint accepts requests with a missing Origin header. Client-side
+consent and same-origin checks are not bot defenses, and Buttondown's subscriber
+creation quota is shared with the existing engineering newsletter.
 
-Before activating the public Pro form, require a **separately reviewed**
-abuse-control design and staging proof that bounds unauthenticated requests
-to the shared provider endpoint. Do not weaken or unexpectedly block the
-existing engineering newsletter. Cloudflare Workers rate-limit bindings
-are per-location, eventually consistent, and cannot alone guarantee a
-global/day quota. Record the actual controls and their limitations before
-separate owner signoff. No rate-limit infrastructure is added by this PR.
+The opt-in, **staging-only** Worker burst guard is documented separately in
+[NEWSLETTER_ABUSE_GUARD.md](./NEWSLETTER_ABUSE_GUARD.md). Normal staging
+deploys keep it OFF; production has no guard bindings. Cloudflare rate limits
+are per-location and eventually consistent, so they cannot guarantee a global
+daily quota. Public Pro activation still requires an approved abuse-control
+design, global-budget decision, staging proof, production wiring, and separate
+owner signoff. Merging a guard PR is **not** permission to enable Pro.
 
 ## Owner-approved staging-only preview
 
