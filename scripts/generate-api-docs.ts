@@ -576,6 +576,54 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### Popover Props',
+    'PopoverProps',
+    'src/components/Popover/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverAnchorProps',
+    'PopoverAnchorProps',
+    'src/components/Popover/Anchor/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverTriggerProps',
+    'PopoverTriggerProps',
+    'src/components/Popover/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverContentProps',
+    'PopoverContentProps',
+    'src/components/Popover/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverArrowProps',
+    'PopoverArrowProps',
+    'src/components/Popover/Arrow/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverCloseProps',
+    'PopoverCloseProps',
+    'src/components/Popover/Close/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverTitleProps',
+    'PopoverTitleProps',
+    'src/components/Popover/Title/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverDescriptionProps',
+    'PopoverDescriptionProps',
+    'src/components/Popover/Description/types.ts'
+  ),
+  section(
+    'web',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -895,6 +943,54 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'native',
+    '### Popover Props',
+    'PopoverProps',
+    'src/components/Popover/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverAnchorProps',
+    'PopoverAnchorProps',
+    'src/components/Popover/Anchor/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverTriggerProps',
+    'PopoverTriggerProps',
+    'src/components/Popover/Trigger/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverContentProps',
+    'PopoverContentProps',
+    'src/components/Popover/Content/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverArrowProps',
+    'PopoverArrowProps',
+    'src/components/Popover/Arrow/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverCloseProps',
+    'PopoverCloseProps',
+    'src/components/Popover/Close/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverTitleProps',
+    'PopoverTitleProps',
+    'src/components/Popover/Title/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverDescriptionProps',
+    'PopoverDescriptionProps',
+    'src/components/Popover/Description/types.ts'
+  ),
+  section(
+    'native',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -926,15 +1022,17 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
-  // Preserve each existing public API table's standalone TypeScript
-  // checker semantics. Sharing its checker with unrelated components may
-  // change type strings and stale already published docs. Modal's new
-  // compound slots are explicitly grouped by platform to avoid allocating
-  // a separate heavy TypeScript program for each compound source module.
-  const getContextKey = (item: ApiSection) =>
-    /^(?:web|native)\.Modal[A-Za-z]*Props\./.test(item.id)
-      ? `modal:${item.docPath}`
+  // Preserve the original standalone checkers for unrelated components.
+  // Modal and Popover independently share one TS program per platform for
+  // their public compound sources, bounding heap use without changing type
+  // rendering for existing generated API tables.
+  const getContextKey = (item: ApiSection) => {
+    const compoundComponent =
+      /^(?:web|native)\.(Modal|Popover)[A-Za-z]*Props\./.exec(item.id)?.[1];
+    return compoundComponent
+      ? `${compoundComponent.toLowerCase()}:${item.docPath}`
       : item.sourceFile;
+  };
   const sourceFilesByContext = new Map<string, Set<string>>();
   for (const item of sections) {
     const contextKey = getContextKey(item);
@@ -1420,6 +1518,9 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
+  if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
@@ -1527,6 +1628,37 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       '\n\n' +
       generatedBlock +
       doc.slice(insertion)
+    );
+  }
+
+  // Popover has never had canonical API tables. Bootstrap every public TS
+  // block before ThemeProvider, inserting in source order and maintaining
+  // the documentation's H2 boundary. All later runs use exact markers above.
+  if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
+    const nextComponentHeading = '\n## ThemeProvider\n';
+    const before = doc.indexOf(nextComponentHeading);
+    if (
+      before < 0 ||
+      doc.indexOf(
+        nextComponentHeading,
+        before + nextComponentHeading.length
+      ) !== -1
+    ) {
+      throw new Error('Missing or ambiguous Popover API insertion anchor');
+    }
+    const isRoot = item.interfaceName === 'PopoverProps';
+    const prefix = isRoot
+      ? '\n## Popover\n\nInteractive floating content anchored to a trigger or custom anchor.\n'
+      : '';
+    return (
+      doc.slice(0, before) +
+      prefix +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      '\n' +
+      doc.slice(before)
     );
   }
 
