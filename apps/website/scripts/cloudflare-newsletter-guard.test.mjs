@@ -223,6 +223,39 @@ function expectedStagingGuardMode(environment) {
   return '1';
 }
 
+function assertStagingGuardMatchesMode(config, environment) {
+  const expectedMode = expectedStagingGuardMode(environment);
+  assert.equal(config.vars?.NEWSLETTER_ABUSE_GUARD_ENABLED, expectedMode);
+  return expectedMode;
+}
+
+test('authorized preview ON is accepted but ordinary and forged ON fail', () => {
+  const stagingOn = {
+    vars: { NEWSLETTER_ABUSE_GUARD_ENABLED: '1' },
+  };
+  const stagingOff = {
+    vars: { NEWSLETTER_ABUSE_GUARD_ENABLED: '0' },
+  };
+  const authorized = {
+    NEWSLETTER_ABUSE_GUARD_PREVIEW: '1',
+    GITHUB_ACTIONS: 'true',
+    GITHUB_EVENT_NAME: 'workflow_dispatch',
+    GITHUB_REF: 'refs/heads/main',
+    NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: '0',
+  };
+
+  assert.equal(assertStagingGuardMatchesMode(stagingOn, authorized), '1');
+  assert.equal(assertStagingGuardMatchesMode(stagingOff, {}), '0');
+  assert.throws(() => assertStagingGuardMatchesMode(stagingOn, {}));
+  assert.throws(() => assertStagingGuardMatchesMode(stagingOff, authorized));
+  assert.throws(() =>
+    assertStagingGuardMatchesMode(stagingOn, {
+      ...authorized,
+      GITHUB_EVENT_NAME: 'push',
+    })
+  );
+});
+
 test('staging guard contract rejects unauthorized ON preview environments', () => {
   assert.equal(expectedStagingGuardMode({}), '0');
   assert.equal(
@@ -256,8 +289,7 @@ test('committed guard stays OFF; authorized staging overlay may be ON', () => {
   const production = readDeploymentConfig(
     path.join(root, 'wrangler.production.jsonc')
   );
-  const expectedMode = expectedStagingGuardMode(process.env);
-  assert.equal(staging.vars.NEWSLETTER_ABUSE_GUARD_ENABLED, expectedMode);
+  const expectedMode = assertStagingGuardMatchesMode(staging, process.env);
 
   if (expectedMode === '1') {
     const repoRoot = path.resolve(root, '../..');
