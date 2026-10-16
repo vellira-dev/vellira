@@ -64,7 +64,7 @@ const finite = (value: unknown, limit: number): value is number =>
  * Full Unicode case-fold parity is not yet certified; this implementation rejects
  * obvious NFC / case-insensitive label collisions without claiming that parity.
  */
-export function validateBoundedNumericSeries(
+function validateDatasetShape(
   input: unknown
 ): NumericSeriesValidationResult {
   if (!record(input) || !fields(input, ['series', 'rows']))
@@ -120,4 +120,15 @@ export function validateBoundedNumericSeries(
     }
   }
   return { ok: true, data: input as BoundedNumericSeries };
+}
+
+/** Contain hostile JavaScript reflection traps at the public validation boundary. */
+export function validateBoundedNumericSeries(
+  input: unknown
+): NumericSeriesValidationResult {
+  try {
+    return validateDatasetShape(input);
+  } catch {
+    return invalid('invalid-dataset', '$');
+  }
 }
