@@ -527,6 +527,15 @@
   line-height: 1.55;
 }
 
+.interestForm {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.interestSubmit {
+  justify-self: start;
+}
+
 .interestControls {
   display: flex;
   align-items: stretch;
@@ -536,10 +545,6 @@
 .interestControls > :first-child {
   flex: 1;
   min-width: 0;
-}
-
-.interestControls button {
-  flex: 0 0 auto;
 }
 
 .interestPrivacy {
@@ -579,7 +584,7 @@
     flex-direction: column;
   }
 
-  .interestControls button {
+  .interestSubmit {
     width: 100%;
   }
 
