@@ -1224,6 +1224,98 @@ import { Button, Modal, Portal } from '@vellira-ui/react-native';
 
 Provide a clear title and body copy for screen reader users. The native implementation exposes modal structure and close behavior, while the consuming app remains responsible for meaningful labels and actions.
 
+## Popover
+
+Interactive floating content anchored to a trigger or custom anchor.
+
+### Popover Props
+
+<!-- api-docgen:start native.PopoverProps.PopoverProps -->
+
+| Prop                  | Type                                                         | Required | Description                            |
+| --------------------- | ------------------------------------------------------------ | -------- | -------------------------------------- |
+| `children`            | `ReactNode`                                                  | Yes      | Content rendered inside the component. |
+| `closeOnOutsidePress` | `boolean`                                                    | No       | —                                      |
+| `open`                | `boolean`                                                    | No       | Controlled open state.                 |
+| `defaultOpen`         | `boolean`                                                    | No       | Initial uncontrolled open state.       |
+| `onOpenChange`        | `(open: boolean, details: PopoverOpenChangeDetails) => void` | No       | Called when the open state changes.    |
+| `side`                | `PopoverSide`                                                | No       | —                                      |
+| `align`               | `PopoverAlign`                                               | No       | —                                      |
+| `sideOffset`          | `number`                                                     | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverProps.PopoverProps -->
+
+### PopoverAnchorProps
+
+<!-- api-docgen:start native.PopoverAnchorProps.PopoverAnchorProps -->
+
+| Prop       | Type                                                                          | Required | Description                            |
+| ---------- | ----------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children` | `ReactElement<PopoverAnchorChildProps, string \| JSXElementConstructor<any>>` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`                                                                     | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverAnchorProps.PopoverAnchorProps -->
+
+### PopoverTriggerProps
+
+<!-- api-docgen:start native.PopoverTriggerProps.PopoverTriggerProps -->
+
+| Prop       | Type                                                                           | Required | Description                            |
+| ---------- | ------------------------------------------------------------------------------ | -------- | -------------------------------------- |
+| `children` | `ReactElement<PopoverTriggerChildProps, string \| JSXElementConstructor<any>>` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`                                                                      | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverTriggerProps.PopoverTriggerProps -->
+
+### PopoverContentProps
+
+<!-- api-docgen:start native.PopoverContentProps.PopoverContentProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+
+<!-- api-docgen:end native.PopoverContentProps.PopoverContentProps -->
+
+### PopoverArrowProps
+
+<!-- api-docgen:start native.PopoverArrowProps.PopoverArrowProps -->
+
+| Prop    | Type                   | Required | Description       |
+| ------- | ---------------------- | -------- | ----------------- |
+| `style` | `StyleProp<ViewStyle>` | No       | Extra root style. |
+
+<!-- api-docgen:end native.PopoverArrowProps.PopoverArrowProps -->
+
+### PopoverCloseProps
+
+<!-- api-docgen:start native.PopoverCloseProps.PopoverCloseProps -->
+
+| Prop       | Type                                                                         | Required | Description                            |
+| ---------- | ---------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children` | `ReactElement<PopoverCloseChildProps, string \| JSXElementConstructor<any>>` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`                                                                    | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverCloseProps.PopoverCloseProps -->
+
+### PopoverTitleProps
+
+<!-- api-docgen:start native.PopoverTitleProps.PopoverTitleProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.PopoverTitleProps.PopoverTitleProps -->
+
+### PopoverDescriptionProps
+
+<!-- api-docgen:start native.PopoverDescriptionProps.PopoverDescriptionProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.PopoverDescriptionProps.PopoverDescriptionProps -->
+
 ## ThemeProvider
 
 Provides theme context for native components.

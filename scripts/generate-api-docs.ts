@@ -1518,10 +1518,7 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
-  if (
-    item.id.includes('.Popover') &&
-    !doc.includes(item.heading)
-  ) {
+  if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
     return descriptions;
   }
   const block = findTableBlock(doc, item);
@@ -1634,7 +1631,6 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
     );
   }
 
-
   // Popover has never had canonical API tables. Bootstrap every public TS
   // block before ThemeProvider, inserting in source order and maintaining
   // the documentation's H2 boundary. All later runs use exact markers above.
@@ -1643,7 +1639,10 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
     const before = doc.indexOf(nextComponentHeading);
     if (
       before < 0 ||
-      doc.indexOf(nextComponentHeading, before + nextComponentHeading.length) !== -1
+      doc.indexOf(
+        nextComponentHeading,
+        before + nextComponentHeading.length
+      ) !== -1
     ) {
       throw new Error('Missing or ambiguous Popover API insertion anchor');
     }

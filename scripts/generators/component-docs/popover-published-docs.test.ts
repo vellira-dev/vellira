@@ -27,7 +27,8 @@ const pages = [
     relativePath: 'apps/docs/src/react/popover.md',
     sourceBlob: '4139dad52a394a719cef610a8c04abd006040b21',
     packageName: '@vellira-ui/react',
-    canonicalAuthorSha256: '__POPOVER_REACT_SHA__',
+    canonicalAuthorSha256:
+      '6a7c2cb4b22133e07a4ea8bd95f6db708884aa0d9c75a9f1c073c27862ac53db',
     authorEvidence: [
       'story="popover.basic"',
       '## Practical Usage Guidance',
@@ -49,7 +50,8 @@ const pages = [
     relativePath: 'apps/docs/src/react-native/popover.md',
     sourceBlob: 'fa8f0f304a51d0f48c41e5068ec95dd014258b2e',
     packageName: '@vellira-ui/react-native',
-    canonicalAuthorSha256: '__POPOVER_NATIVE_SHA__',
+    canonicalAuthorSha256:
+      '4863c8664cf7bd430b2959f2b738007bded4803f17548b816dae02b6acaaad5d',
     authorEvidence: [
       '## Open in Storybook',
       '## Practical Usage Guidance',
@@ -108,7 +110,10 @@ describe('published Popover docs safe legacy adoption', () => {
         'utf8'
       );
       const prefix = page.platform === 'react' ? 'web' : 'native';
-      const apiNames = ['PopoverProps', ...parts.map((part) => `Popover${part}Props`)];
+      const apiNames = [
+        'PopoverProps',
+        ...parts.map((part) => `Popover${part}Props`),
+      ];
       for (const name of apiNames) {
         const marker = `${prefix}.${name}.${name}`;
         const start = `<!-- api-docgen:start ${marker} -->`;
@@ -118,9 +123,11 @@ describe('published Popover docs safe legacy adoption', () => {
         expect(generated.split(start)).toHaveLength(2);
         expect(generated.split(end)).toHaveLength(2);
       }
-      expect(
-        [...generated.matchAll(/<!-- api-docgen:start (?:web|native)\.Popover\w*Props\./g)]
-      ).toHaveLength(apiNames.length);
+      expect([
+        ...generated.matchAll(
+          /<!-- api-docgen:start (?:web|native)\.Popover\w*Props\./g
+        ),
+      ]).toHaveLength(apiNames.length);
 
       for (const original of page.authorEvidence) {
         expect(region.content).toContain(original);
@@ -129,7 +136,7 @@ describe('published Popover docs safe legacy adoption', () => {
       // The only permitted body changes are these reversible aliases for
       // generator-owned headings. Recovered text must match the entire
       // Prettier-canonical original authored body, not selected excerpts.
-      let recovered = region.content
+      const recovered = region.content
         .trim()
         .replace('## Additional Accessibility Details', '## Accessibility')
         .replace('## Practical Usage Guidance', '## When To Use')
