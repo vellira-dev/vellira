@@ -40,7 +40,7 @@ describe('newsletter status pages', () => {
       screen.getByRole('heading', { name: 'Check your inbox' })
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/We sent you a confirmation email/)
+      screen.getByText(/If you receive a confirmation email/)
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Back to Vellira' })
