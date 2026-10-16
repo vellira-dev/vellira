@@ -112,7 +112,10 @@ for (const scenario of [
   test('fails closed for ' + scenario.name, async () => {
     const { fetcher } = mockedProvider({
       override: ({ url, data }) => {
-        if (scenario.onlyType && url.searchParams.get('type') !== scenario.onlyType) {
+        if (
+          scenario.onlyType &&
+          url.searchParams.get('type') !== scenario.onlyType
+        ) {
           return Response.json(data);
         }
         return Response.json(scenario.change(data));
@@ -130,10 +133,10 @@ for (const scenario of [
 
 test('rejects inconsistent cross-filter totals without emitting subscriber details', async () => {
   const { fetcher } = mockedProvider({
-    override: ({ url, data }) =>
+    override: () =>
       Response.json({
-        ...data,
-        count: url.searchParams.has('type') ? 1 : 1,
+        count: 1,
+        results: [],
       }),
   });
   await assert.rejects(
