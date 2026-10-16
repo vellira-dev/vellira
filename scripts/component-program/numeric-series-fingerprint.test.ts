@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { fingerprintNumericSeriesBindingV1 as fingerprint } from './numeric-series-fingerprint';
+import {
+  fingerprintNumericSeriesBindingV1 as fingerprint,
+} from './numeric-series-fingerprint';
 
 const simple = () => ({
   schemaVersion: '1',
@@ -87,7 +89,7 @@ describe('numeric series canonical fingerprint (pre-admission)', () => {
     expect(result.value.data.series[0].label).toBe('A');
   });
 
-  it('refuses unexpected fields, avoiding arbitrary object fingerprinting', () => {
+  it('refuses arbitrary object fingerprinting', () => {
     const object = { ...simple(), arbitrary: { executable: true } };
     expect(fingerprint(object)).toEqual({
       ok: false,
