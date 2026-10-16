@@ -49,9 +49,18 @@ export async function checkGeneratedComponentDocsCompleteness(params: {
   const checks: ComponentCheckResult[] = [];
 
   checks.push(...checkExpectedDocs({ root, metadata, contracts }));
+  checks.push(...checkCanonicalDocsContractCoverage({ metadata, contracts }));
   checks.push(...checkStorybookReferences({ root, metadata, contracts }));
   checks.push(
     ...(await checkGeneratedDocsFreshness({ root, metadata, contracts }))
+  );
+  checks.push(
+    ...checkUnregisteredComponentDocsPages({
+      root,
+      metadata,
+      contracts,
+      orphanComponentNames,
+    })
   );
   checks.push(
     ...checkOrphanedGeneratedDocs({
@@ -69,6 +78,92 @@ export async function checkGeneratedComponentDocsCompleteness(params: {
     ready: orderedChecks.every((check) => check.ok),
     checks: orderedChecks,
   };
+}
+
+// VitePress overviews are not component pages. Portal and ThemeProvider are
+// intentional independent pages, not components in the canonical metadata
+// registry. All other component pages must be covered by docs contracts.
+const standaloneDocsPageNames = new Set([
+  'index.md',
+  'portal.md',
+  'theme-provider.md',
+]);
+
+function checkCanonicalDocsContractCoverage(params: {
+  metadata: readonly ComponentMetadata[];
+  contracts: readonly ComponentDocsContract[];
+}): ComponentCheckResult[] {
+  const contracts = new Set(params.contracts.map((item) => item.component));
+
+  return params.metadata
+    .filter((item) => item.requirements.docs && !contracts.has(item.name))
+    .map((item) => ({
+      name: 'component-docs' as const,
+      ok: false,
+      details: `${item.name}: missing ComponentDocsContract for required documentation.`,
+    }));
+}
+
+function checkUnregisteredComponentDocsPages(params: {
+  root: string;
+  metadata: readonly ComponentMetadata[];
+  contracts: readonly ComponentDocsContract[];
+  orphanComponentNames?: readonly string[];
+}): ComponentCheckResult[] {
+  const { root, metadata, contracts, orphanComponentNames } = params;
+  const expectedPaths = new Set<string>();
+  const targetedSlugs = orphanComponentNames
+    ? new Set(orphanComponentNames.map(slugifyComponentName))
+    : undefined;
+  const checks: ComponentCheckResult[] = [];
+
+  for (const contract of contracts) {
+    const component = metadata.find((item) => item.name === contract.component);
+    if (!component) continue;
+
+    for (const platform of component.platforms) {
+      expectedPaths.add(
+        expectedGeneratedDocPath({
+          root,
+          componentName: component.name,
+          platform,
+        }).absolutePath
+      );
+    }
+  }
+
+  for (const platform of supportedPlatforms) {
+    const docsDir = path.join(root, 'apps', 'docs', 'src', platform);
+    if (!fs.existsSync(docsDir)) continue;
+
+    for (const fileName of fs.readdirSync(docsDir).sort(compareCodeUnit)) {
+      if (!fileName.endsWith('.md') || standaloneDocsPageNames.has(fileName)) {
+        continue;
+      }
+
+      const absolutePath = path.join(docsDir, fileName);
+      if (!fs.statSync(absolutePath).isFile() || expectedPaths.has(absolutePath)) {
+        continue;
+      }
+
+      // Generated orphans have their own more specific failing check.
+      if (fs.readFileSync(absolutePath, 'utf8').includes(generatedComponentDocsHeader)) {
+        continue;
+      }
+
+      const slug = fileName.slice(0, -'.md'.length);
+      if (targetedSlugs && !targetedSlugs.has(slug)) continue;
+
+      checks.push({
+        name: 'component-docs',
+        platform,
+        ok: false,
+        details: `${path.relative(root, absolutePath)}: unmanaged component docs page. Register a ComponentDocsContract and generate it, or add an explicitly reviewed standalone-page exception.`,
+      });
+    }
+  }
+
+  return checks;
 }
 
 function checkExpectedDocs(params: {

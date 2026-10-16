@@ -24,6 +24,36 @@ export function resolveComponentDocsRoot(configModuleUrl: string) {
   return path.resolve(path.dirname(fileURLToPath(configModuleUrl)), '..');
 }
 
+/**
+ * Fail closed if a manual sidebar entry shadows a generated component page.
+ * The same invariant applies during the real VitePress build and unit tests.
+ */
+export function assertUniqueComponentDocsSidebarItems(params: {
+  platform: ComponentPlatform;
+  items: readonly ComponentDocsSidebarItem[];
+}): ComponentDocsSidebarItem[] {
+  const { platform, items } = params;
+  const links = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const item of items) {
+    if (links.has(item.link)) {
+      duplicates.add(item.link);
+    }
+    links.add(item.link);
+  }
+
+  if (duplicates.size > 0) {
+    throw new Error(
+      `Duplicate ${platform} component docs navigation links: ${[...duplicates]
+        .sort(compareCodeUnit)
+        .join(', ')}.`
+    );
+  }
+
+  return [...items];
+}
+
 // Generated component-doc navigation follows the canonical metadata array order.
 // That keeps React and React Native sidebars stable without introducing a second
 // generated-doc component registry.

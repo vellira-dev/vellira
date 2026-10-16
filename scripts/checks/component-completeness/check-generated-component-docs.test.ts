@@ -299,7 +299,7 @@ describe('generated component docs completeness', () => {
     );
   });
 
-  it('does not treat unrelated hand-authored docs pages as orphans', async () => {
+  it('blocks unregistered hand-authored component docs without rewriting', async () => {
     const fixture = createFixture({
       componentName: 'FixtureSwitch',
       platforms: ['react'],
@@ -312,8 +312,39 @@ describe('generated component docs completeness', () => {
       contracts: [fixture.contract],
     });
 
-    const authoredPage = path.join(fixture.docsRoot, 'react', 'authored.md');
-    fs.writeFileSync(authoredPage, '# Authored\n');
+    const authoredPage = path.join(fixture.docsRoot, 'react', 'unregistered.md');
+    const original = '# Independent manual page\\n';
+    fs.writeFileSync(authoredPage, original);
+
+    const result = await checkGeneratedComponentDocsCompleteness({
+      root: fixture.root,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+
+    expect(result.ready).toBe(false);
+    expect(details(result)).toContain(
+      'apps/docs/src/react/unregistered.md: unmanaged component docs page. Register a ComponentDocsContract and generate it, or add an explicitly reviewed standalone-page exception.'
+    );
+    expect(fs.readFileSync(authoredPage, 'utf8')).toBe(original);
+  });
+
+  it('allows only the reviewed standalone VitePress pages', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+
+    await generateComponentDocs({
+      root: fixture.root,
+      docsRoot: fixture.docsRoot,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+
+    for (const name of ['index.md', 'portal.md', 'theme-provider.md']) {
+      fs.writeFileSync(path.join(fixture.docsRoot, 'react', name), '# Manual\\n');
+    }
 
     const result = await checkGeneratedComponentDocsCompleteness({
       root: fixture.root,
@@ -322,6 +353,58 @@ describe('generated component docs completeness', () => {
     });
 
     expect(result.ready).toBe(true);
+  });
+
+  it('fails required canonical docs metadata without a docs contract', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+
+    await generateComponentDocs({
+      root: fixture.root,
+      docsRoot: fixture.docsRoot,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+
+    const result = await checkGeneratedComponentDocsCompleteness({
+      root: fixture.root,
+      metadata: [fixture.metadata, createMetadata('FixtureRadio', ['react'])],
+      contracts: [fixture.contract],
+    });
+
+    expect(result.ready).toBe(false);
+    expect(details(result)).toContain(
+      'FixtureRadio: missing ComponentDocsContract for required documentation.'
+    );
+  });
+
+  it('ignores unrelated unmanaged pages in targeted checks', async () => {
+    const fixture = createFixture({
+      componentName: 'FixtureSwitch',
+      platforms: ['react'],
+    });
+
+    await generateComponentDocs({
+      root: fixture.root,
+      docsRoot: fixture.docsRoot,
+      metadata: [fixture.metadata],
+      contracts: [fixture.contract],
+    });
+    fs.writeFileSync(
+      path.join(fixture.docsRoot, 'react', 'unrelated.md'),
+      '# Manual\\n'
+    );
+
+    const results = await runComponentCompletenessCheck({
+      root: fixture.root,
+      metadata: [fixture.metadata],
+      componentDocsContracts: [fixture.contract],
+      generatedDocsScope: 'targeted',
+    });
+
+    expect(results.at(-1)?.ready).toBe(true);
   });
 
   it('returns generated docs failures from the local completeness path', async () => {
