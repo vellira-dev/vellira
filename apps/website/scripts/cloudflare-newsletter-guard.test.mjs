@@ -122,7 +122,7 @@ test('canonicalized IPv6 uses a stable actor key', async () => {
   ]);
 });
 
-test('route-wide denial is safe HTTP 429 and never consults actor budget', async () => {
+test('route-wide denial is safe HTTP 429 after one actor check', async () => {
   const route = limiter({ success: false });
   const actor = limiter();
   const result = await maybeLimitNewsletterSubscribe(post(), enabled(route, actor));
@@ -134,7 +134,7 @@ test('route-wide denial is safe HTTP 429 and never consults actor budget', async
     code: 'rate_limited',
     message: 'Please wait a few minutes and try again.',
   });
-  assert.equal(actor.calls.length, 0);
+  assert.equal(actor.calls.length, 1);
 });
 
 test('actor denial is safe HTTP 429 independent of Pro signup purpose', async () => {
@@ -143,7 +143,7 @@ test('actor denial is safe HTTP 429 independent of Pro signup purpose', async ()
   const result = await maybeLimitNewsletterSubscribe(post(), enabled(route, actor));
   assert.equal(result.status, 429);
   assert.equal(actor.calls.length, 1);
-  assert.equal(route.calls.length, 1);
+  assert.equal(route.calls.length, 0);
   assert.equal((await result.json()).code, 'rate_limited');
 });
 
