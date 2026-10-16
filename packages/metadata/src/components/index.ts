@@ -1,4 +1,5 @@
 import { accordionMetadata } from './Accordion.metadata';
+import { avatarMetadata } from './Avatar.metadata';
 import { buttonMetadata } from './Button.metadata';
 import { checkboxMetadata } from './Checkbox.metadata';
 import { dropdownMetadata } from './Dropdown.metadata';
@@ -16,6 +17,7 @@ import { tooltipMetadata } from './Tooltip.metadata';
 
 export {
   accordionMetadata,
+  avatarMetadata,
   buttonMetadata,
   checkboxMetadata,
   dropdownMetadata,
@@ -48,4 +50,5 @@ export const componentMetadata = [
   switchMetadata,
   accordionMetadata,
   textareaMetadata,
+  avatarMetadata,
 ] as const;
