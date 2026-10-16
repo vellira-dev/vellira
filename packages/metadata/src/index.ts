@@ -8,6 +8,7 @@ export * from './expansionCatalog';
 export * from './expansionReport';
 export * from './numericSeries';
 export * from './numericSeriesBinding';
+export * from './numericSeriesSnapshot';
 export * from './numericSeriesValidation';
 export * from './quality';
 export * from './stability';
