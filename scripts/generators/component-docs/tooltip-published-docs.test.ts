@@ -162,11 +162,11 @@ describe('published Tooltip docs safe legacy adoption', () => {
 
       if (page.platform === 'react') {
         expect(generated).toContain('skipDelay');
-        expect(generated).not.toContain('native.TooltipProps.TooltipProps');
+        expect(generated).not.toContain('native.TooltipProps.Tooltip');
       } else {
         expect(generated).toContain('closeOnOutsidePress');
         expect(generated).not.toContain('skipDelay');
-        expect(generated).not.toContain('web.TooltipProps.TooltipProps');
+        expect(generated).not.toContain('web.TooltipProps.Tooltip');
       }
     }
   );
