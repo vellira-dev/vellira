@@ -141,7 +141,12 @@ export function ProInterestSignup() {
           </FormField>
           <Checkbox
             name='pro-interest-consent'
-            label='I agree to receive Vellira engineering notes, including occasional Pro launch updates, by email.'
+            label={
+              <>
+                I agree to receive Vellira engineering notes, including
+                occasional Pro launch updates, by email.
+              </>
+            }
             checked={hasConsent}
             onCheckedChange={(checked) => {
               setHasConsent(checked);
