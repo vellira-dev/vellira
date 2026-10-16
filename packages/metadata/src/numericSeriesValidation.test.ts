@@ -126,6 +126,56 @@ describe('bounded numeric series runtime validation', () => {
     }
   });
 
+  it('returns a stable failure for throwing and revoked proxy traps', () => {
+    const throwing = () => {
+      throw new Error('untrusted proxy trap');
+    };
+    const malformedRoot = new Proxy({}, { getPrototypeOf: throwing });
+    expect(validate(malformedRoot)).toEqual({
+      ok: false,
+      code: 'invalid-dataset',
+      path: '
+    let called = false;
+    const values = Object.defineProperty({ costs: null }, 'revenue', {
+      enumerable: true,
+      get() {
+        called = true;
+        return 4;
+      },
+    });
+    const bad = dataset();
+    (bad.rows[0] as { values: unknown }).values = values;
+    rejected(bad, 'series-key-mismatch');
+    expect(called).toBe(false);
+    const inherited = Object.create({ revenue: 0, costs: null });
+    (bad.rows[0] as { values: unknown }).values = inherited;
+    rejected(bad, 'invalid-values');
+  });
+});
+,
+    });
+
+    const malformedFields = new Proxy({}, { ownKeys: throwing });
+    rejected(malformedFields, 'invalid-dataset');
+
+    const malformedDescriptor = new Proxy(
+      { series: [], rows: [] },
+      { getOwnPropertyDescriptor: throwing }
+    );
+    rejected(malformedDescriptor, 'invalid-dataset');
+
+    const datasetWithBadSeries = dataset();
+    (datasetWithBadSeries.series as unknown[])[0] = new Proxy(
+      {},
+      { getPrototypeOf: throwing }
+    );
+    rejected(datasetWithBadSeries, 'invalid-dataset');
+
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    rejected(revoked.proxy, 'invalid-dataset');
+  });
+
   it('rejects arrays, accessors and inherited data instead of evaluating them', () => {
     let called = false;
     const values = Object.defineProperty({ costs: null }, 'revenue', {
