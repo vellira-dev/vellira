@@ -299,7 +299,7 @@ describe('generated component docs completeness', () => {
     );
   });
 
-  it('blocks unregistered hand-authored component docs without rewriting', async () => {
+  it('rejects unregistered manual pages without rewriting', async () => {
     const fixture = createFixture({
       componentName: 'FixtureSwitch',
       platforms: ['react'],
@@ -312,8 +312,12 @@ describe('generated component docs completeness', () => {
       contracts: [fixture.contract],
     });
 
-    const authoredPage = path.join(fixture.docsRoot, 'react', 'unregistered.md');
-    const original = '# Independent manual page\\n';
+    const authoredPage = path.join(
+      fixture.docsRoot,
+      'react',
+      'unregistered.md'
+    );
+    const original = '# Independent manual page\n';
     fs.writeFileSync(authoredPage, original);
 
     const result = await checkGeneratedComponentDocsCompleteness({
@@ -343,7 +347,10 @@ describe('generated component docs completeness', () => {
     });
 
     for (const name of ['index.md', 'portal.md', 'theme-provider.md']) {
-      fs.writeFileSync(path.join(fixture.docsRoot, 'react', name), '# Manual\\n');
+      fs.writeFileSync(
+        path.join(fixture.docsRoot, 'react', name),
+        '# Manual\n'
+      );
     }
 
     const result = await checkGeneratedComponentDocsCompleteness({
@@ -355,7 +362,7 @@ describe('generated component docs completeness', () => {
     expect(result.ready).toBe(true);
   });
 
-  it('fails required canonical docs metadata without a docs contract', async () => {
+  it('rejects required metadata with no docs contract', async () => {
     const fixture = createFixture({
       componentName: 'FixtureSwitch',
       platforms: ['react'],
@@ -394,7 +401,7 @@ describe('generated component docs completeness', () => {
     });
     fs.writeFileSync(
       path.join(fixture.docsRoot, 'react', 'unrelated.md'),
-      '# Manual\\n'
+      '# Manual\n'
     );
 
     const results = await runComponentCompletenessCheck({

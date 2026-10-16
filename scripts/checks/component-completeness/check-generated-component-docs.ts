@@ -142,12 +142,16 @@ function checkUnregisteredComponentDocsPages(params: {
       }
 
       const absolutePath = path.join(docsDir, fileName);
-      if (!fs.statSync(absolutePath).isFile() || expectedPaths.has(absolutePath)) {
+      if (
+        !fs.statSync(absolutePath).isFile() ||
+        expectedPaths.has(absolutePath)
+      ) {
         continue;
       }
 
       // Generated orphans have their own more specific failing check.
-      if (fs.readFileSync(absolutePath, 'utf8').includes(generatedComponentDocsHeader)) {
+      const content = fs.readFileSync(absolutePath, 'utf8');
+      if (content.includes(generatedComponentDocsHeader)) {
         continue;
       }
 

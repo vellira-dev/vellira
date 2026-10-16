@@ -10,7 +10,10 @@ import {
   createGeneratedComponentDocsSidebarItems,
 } from './navigation';
 
-const docsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const docsRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..'
+);
 
 describe('component docs navigation', () => {
   it.each(['react', 'react-native'] as const)(
