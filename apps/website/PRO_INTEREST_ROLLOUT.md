@@ -131,6 +131,12 @@ subscriber-list endpoint with fixed server-side filters:
 returned email addresses and other subscriber records remain in memory and are
 never printed, exported, persisted, or logged. Unknown responses, ignored
 filters, invalid counts, network failures and 429s stop without retry.
+A positive filtered count with an empty first page also fails closed.
+Each query separately reports `first-page-match` when at least one returned
+record passes the filter check, or `inconclusive-empty` when zero matches are
+returned. Zero matches alone **cannot prove** the provider applied that filter.
+These three sequential GETs are not an atomic snapshot: a subscriber's
+confirmation transition during the audit may cause temporary differences.
 
 The outputs distinguish confirmed regular interest, unactivated/pending
 confirmation, and all other statuses. They do **not** guarantee consent or
