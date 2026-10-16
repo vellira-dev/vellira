@@ -134,25 +134,7 @@ describe('bounded numeric series runtime validation', () => {
     expect(validate(malformedRoot)).toEqual({
       ok: false,
       code: 'invalid-dataset',
-      path: '
-    let called = false;
-    const values = Object.defineProperty({ costs: null }, 'revenue', {
-      enumerable: true,
-      get() {
-        called = true;
-        return 4;
-      },
-    });
-    const bad = dataset();
-    (bad.rows[0] as { values: unknown }).values = values;
-    rejected(bad, 'series-key-mismatch');
-    expect(called).toBe(false);
-    const inherited = Object.create({ revenue: 0, costs: null });
-    (bad.rows[0] as { values: unknown }).values = inherited;
-    rejected(bad, 'invalid-values');
-  });
-});
-,
+      path: '$',
     });
 
     const malformedFields = new Proxy({}, { ownKeys: throwing });
