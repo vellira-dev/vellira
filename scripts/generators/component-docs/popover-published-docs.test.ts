@@ -114,6 +114,14 @@ describe('published Popover docs safe legacy adoption', () => {
         'PopoverProps',
         ...parts.map((part) => `Popover${part}Props`),
       ];
+      const publicIndex = fs.readFileSync(
+        path.join(process.cwd(), `packages/${page.platform}/src/index.ts`),
+        'utf8'
+      );
+      const publicPropNames = [
+        ...new Set(publicIndex.match(/\\bPopover(?:[A-Za-z]+)?Props\\b/g) ?? []),
+      ].sort();
+      expect(publicPropNames).toEqual([...apiNames].sort());
       for (const name of apiNames) {
         const marker = `${prefix}.${name}.${name}`;
         const start = `<!-- api-docgen:start ${marker} -->`;
