@@ -300,6 +300,12 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### RadioGroupItemProps',
+    'RadioGroupItemProps',
+    'src/components/RadioGroup/Item/types.ts'
+  ),
+  section(
+    'web',
     '### Radio Props',
     'RadioProps',
     'src/primitives/Radio/types.ts'
@@ -706,6 +712,12 @@ const defaultSections: ApiSection[] = [
     '### RadioGroup Props',
     'RadioGroupProps',
     'src/components/RadioGroup/types.ts'
+  ),
+  section(
+    'native',
+    '### RadioGroupItemProps',
+    'RadioGroupItemProps',
+    'src/components/RadioGroup/Item/types.ts'
   ),
   section(
     'native',
@@ -1574,6 +1586,9 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
+  if (item.heading === '### RadioGroupItemProps' && !doc.includes(item.heading)) {
+    return descriptions;
+  }
   if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
     return descriptions;
   }
@@ -1747,6 +1762,33 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       generatedBlock +
       '\n' +
       doc.slice(insertAt)
+    );
+  }
+
+  // RadioGroup.Item is a public compound part whose props alias RadioProps.
+  // Populate its own marker before the existing standalone Radio table;
+  // both continue to be independently regenerated from their public sources.
+  if (item.heading === '### RadioGroupItemProps' && !doc.includes(item.heading)) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.RadioGroupProps.RadioGroupProps -->`;
+    const following = '\n### Radio Props\n';
+    const rootAt = doc.indexOf(rootEnd);
+    const next = doc.indexOf(following);
+    if (
+      rootAt < 0 ||
+      doc.indexOf(rootEnd, rootAt + rootEnd.length) !== -1 ||
+      next < rootAt + rootEnd.length ||
+      doc.indexOf(following, next + following.length) !== -1
+    ) {
+      throw new Error('Missing or ambiguous RadioGroup.Item API authority');
+    }
+    return (
+      doc.slice(0, next) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      '\n' +
+      doc.slice(next)
     );
   }
 
