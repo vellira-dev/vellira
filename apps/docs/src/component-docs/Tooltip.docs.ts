@@ -26,9 +26,18 @@ export const tooltipDocs = defineComponentDocs({
         'Preserve dismissal and screen-reader behavior, and use persistent helper text for required content.',
       ],
       seeAlso: [
-        { component: 'Button', label: 'Button for accessible icon-only triggers.' },
-        { component: 'FormField', label: 'FormField for persistent form guidance.' },
-        { component: 'Popover', label: 'Popover for interactive contextual content.' },
+        {
+          component: 'Button',
+          label: 'Button for accessible icon-only triggers.',
+        },
+        {
+          component: 'FormField',
+          label: 'FormField for persistent form guidance.',
+        },
+        {
+          component: 'Popover',
+          label: 'Popover for interactive contextual content.',
+        },
       ],
     },
     'react-native': {
@@ -51,8 +60,14 @@ export const tooltipDocs = defineComponentDocs({
       ],
       seeAlso: [
         { component: 'Button', label: 'Button for native trigger controls.' },
-        { component: 'FormField', label: 'FormField for required helper messages.' },
-        { component: 'Popover', label: 'Popover for interactive native contextual content.' },
+        {
+          component: 'FormField',
+          label: 'FormField for required helper messages.',
+        },
+        {
+          component: 'Popover',
+          label: 'Popover for interactive native contextual content.',
+        },
       ],
     },
   },

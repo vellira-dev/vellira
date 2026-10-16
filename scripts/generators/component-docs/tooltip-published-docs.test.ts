@@ -20,7 +20,7 @@ const pages = [
     sourceBlob: '13343e878a0460a1cc39ce8bb830499d2a36bfa2',
     packageName: '@vellira-ui/react',
     canonicalAuthorSha256:
-      '__TOOLTIP_REACT_AUTHOR_SHA256__',
+      '9336bda5867ced8955f745cc876b5c2d0a97de03ad1ffe44c7dfc81e2358294f',
     authorEvidence: [
       'story="tooltip.triggers"',
       '## Practical Usage Guidance',
@@ -43,7 +43,7 @@ const pages = [
     sourceBlob: '8ae424d6631bbbb01f39d7785b6c24b4c3d94a97',
     packageName: '@vellira-ui/react-native',
     canonicalAuthorSha256:
-      '__TOOLTIP_NATIVE_AUTHOR_SHA256__',
+      '3b8e21b1d7c287d2c5257b221202926904a10719059e865f1acd8f7388bc11cf',
     authorEvidence: [
       '## Basic Usage',
       '## Controlled State',
@@ -112,9 +112,7 @@ describe('published Tooltip docs safe legacy adoption', () => {
       const publicPropNames = [
         ...new Set(publicIndex.match(/\bTooltip(?:[A-Za-z]+)?Props\b/g) ?? []),
       ].sort();
-      expect(publicPropNames).toEqual(
-        [...apiNames, 'TooltipRootProps'].sort()
-      );
+      expect(publicPropNames).toEqual([...apiNames, 'TooltipRootProps'].sort());
       const typeSource = fs.readFileSync(
         path.join(
           process.cwd(),
@@ -122,7 +120,9 @@ describe('published Tooltip docs safe legacy adoption', () => {
         ),
         'utf8'
       );
-      expect(typeSource).toContain('export type TooltipProps = TooltipRootProps;');
+      expect(typeSource).toContain(
+        'export type TooltipProps = TooltipRootProps;'
+      );
       for (const name of apiNames) {
         const marker = `${prefix}.${name}.${name === 'TooltipProps' ? 'Tooltip' : name}`;
         const start = `<!-- api-docgen:start ${marker} -->`;
