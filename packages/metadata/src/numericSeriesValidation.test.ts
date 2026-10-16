@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { validateBoundedNumericSeries as validate } from './numericSeriesValidation';
 
 const dataset = () => ({
