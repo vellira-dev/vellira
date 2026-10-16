@@ -93,11 +93,13 @@ export async function maybeLimitNewsletterSubscribe(request, env) {
   if (mode == null || mode === '0') return null;
   if (mode !== '1') return unavailable();
 
-  // The route key is shared for ordinary newsletter and Pro signup. Callers
-  // cannot reset either budget by altering purpose or email parameters.
-  const route = await check(env.NEWSLETTER_ROUTE_RATE_LIMIT, ROUTE_KEY);
-  if (route === 'limited') return limited();
-  if (route !== 'allowed') return unavailable();
+  // Both limits must exist. Apply the actor limit first so one abusive IP
+  // cannot consume the entire shared route budget after its own denial.
+  if (
+    typeof env.NEWSLETTER_ROUTE_RATE_LIMIT?.limit !== 'function' ||
+    typeof env.NEWSLETTER_ACTOR_RATE_LIMIT?.limit !== 'function'
+  )
+    return unavailable();
 
   const actor = trustedClientAddress(request.headers) ?? 'unknown';
   const local = await check(
@@ -106,5 +108,11 @@ export async function maybeLimitNewsletterSubscribe(request, env) {
   );
   if (local === 'limited') return limited();
   if (local !== 'allowed') return unavailable();
+
+  // The route key is shared for ordinary newsletter and Pro signup. Callers
+  // cannot reset either budget by altering purpose or email parameters.
+  const route = await check(env.NEWSLETTER_ROUTE_RATE_LIMIT, ROUTE_KEY);
+  if (route === 'limited') return limited();
+  if (route !== 'allowed') return unavailable();
   return null;
 }
