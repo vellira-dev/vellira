@@ -17,6 +17,12 @@ export type NewsletterSubscribeResult =
 
 type ButtondownErrorResponse = {
   code?: unknown;
+  metadata?: unknown;
+};
+
+type ButtondownProviderError = {
+  code: string | null;
+  existingSubscriber: boolean;
 };
 
 export type ButtondownSubscribeOptions = {
@@ -43,20 +49,40 @@ function error(
   return { ok: false, code, message: newsletterErrors[code] };
 }
 
-async function readProviderErrorCode(
+async function readProviderError(
   response: Response
-): Promise<string | null> {
+): Promise<ButtondownProviderError> {
   try {
     const payload: unknown = await response.json();
-    if (typeof payload === 'object' && payload !== null) {
-      const code = (payload as ButtondownErrorResponse).code;
-      if (typeof code === 'string') return code;
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      !Array.isArray(payload)
+    ) {
+      const errorResponse = payload as ButtondownErrorResponse;
+      const metadata = errorResponse.metadata;
+      const subscriberId =
+        typeof metadata === 'object' &&
+        metadata !== null &&
+        !Array.isArray(metadata)
+          ? (metadata as { subscriber_id?: unknown }).subscriber_id
+          : null;
+
+      return {
+        code:
+          typeof errorResponse.code === 'string' ? errorResponse.code : null,
+        // Buttondown includes the existing ID on duplicate-create errors.
+        // Do not use arbitrary 400s as evidence that an address is subscribed.
+        existingSubscriber:
+          typeof subscriberId === 'string' &&
+          /^sub_[a-z0-9]+$/i.test(subscriberId),
+      };
     }
   } catch {
     // Provider error payloads are intentionally never exposed to callers.
   }
 
-  return null;
+  return { code: null, existingSubscriber: false };
 }
 
 async function mapProviderResponse(
@@ -64,17 +90,32 @@ async function mapProviderResponse(
 ): Promise<NewsletterSubscribeResult> {
   if (response.status === 201) return { ok: true };
 
-  if (response.status === 422) return error('invalid_email');
+  if (response.status === 422) {
+    const providerError = await readProviderError(response);
+    return providerError.code === 'email_invalid'
+      ? error('invalid_email')
+      : error('temporarily_unavailable');
+  }
   if (response.status === 429) return error('rate_limited');
   if (response.status === 401 || response.status === 403)
     return error('temporarily_unavailable');
   if (response.status === 409) return error('already_subscribed');
 
   if (response.status === 400) {
-    const providerCode = await readProviderErrorCode(response);
-    return providerCode === 'email_invalid'
-      ? error('invalid_email')
-      : error('already_subscribed');
+    const providerError = await readProviderError(response);
+    if (providerError.code === 'email_invalid') return error('invalid_email');
+    if (providerError.code === 'subscriber_suppressed')
+      return error('temporarily_unavailable');
+    if (
+      providerError.code === 'subscriber_exists' ||
+      providerError.existingSubscriber
+    )
+      return error('already_subscribed');
+
+    // Buttondown also uses HTTP 400 for the daily subscriber-creation limit.
+    // Unknown validation, quota and firewall errors must not be presented as
+    // proof that the submitted email is already subscribed.
+    return error('temporarily_unavailable');
   }
 
   return error('temporarily_unavailable');

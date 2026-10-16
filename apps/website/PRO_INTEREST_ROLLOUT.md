@@ -77,6 +77,33 @@ interested in Pro via this form. They can keep receiving general engineering
 newsletter updates; a future **subscriber-authenticated** preference path would
 require separate consent and implementation.
 
+## Provider failure-mode proof (no subscriber writes)
+
+The website provider adapter has deterministic, **mocked** contract coverage for
+the Pro route and the regular newsletter path:
+
+- Existing and pending duplicate addresses cannot be overwritten or
+  re-attributed: no `X-Buttondown-Collision-Behavior`, `PATCH`, retry or
+  bypass-firewall operation is sent.
+- Suppressed, unsubscribed, blocked and complained cases are represented by
+  Buttondown's documented `subscriber_suppressed` response. Public callers
+  receive a generic unavailable result, not a claim that the address is active.
+- Unknown `400` failures, including the documented daily subscriber-creation
+  quota, fail closed as temporarily unavailable. `429` is rate-limited;
+  unrelated `422` validation failures are not misreported as invalid emails.
+- New Pro signup requests retain server-owned `utm_campaign`, require
+  `type: unactivated` and never accept caller-provided tags or subscriber type.
+  Tests use synthetic addresses and mock responses; no Buttondown credential is
+  used and no provider quota is consumed.
+
+**Mocks are not live-provider proof.** The owner-observed single fresh-email
+confirmation case above is the only completed live write/confirmation exercise.
+Before production, separately verify the free-plan read-only filtered subscriber
+count, suppression/duplicate behavior through provider-owned documentation or
+safe controlled evidence, email templates, confirmation delivery and consent
+wording. Do not deliberately exhaust the provider quota, send bulk probes,
+attempt to subscribe someone else's address or mutate a suppressed record.
+
 ## Owner-approved staging-only preview
 
 Use **Actions → Deploy Website Cloudflare Staging → Run workflow → main**.
