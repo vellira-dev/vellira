@@ -1,6 +1,6 @@
 import {
-  parseNumericSeriesBindingV1,
   type NumericSeriesBindingEnvelopeV1,
+  parseNumericSeriesBindingV1,
 } from './numericSeriesBinding';
 
 export type NumericSeriesImmutableSnapshotV1 = Readonly<{
