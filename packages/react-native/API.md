@@ -395,6 +395,31 @@ import { Radio, RadioGroup } from '@vellira-ui/react-native';
 
 <!-- api-docgen:end native.RadioGroupProps.RadioGroupProps -->
 
+### RadioGroupItemProps
+
+<!-- api-docgen:start native.RadioGroupItemProps.RadioGroupItemProps -->
+
+| Prop               | Type                         | Required | Description                               |
+| ------------------ | ---------------------------- | -------- | ----------------------------------------- |
+| `label`            | `ReactNode`                  | No       | Visible label.                            |
+| `description`      | `ReactNode`                  | No       | Additional descriptive text.              |
+| `icon`             | `ReactNode`                  | No       | Icon rendered inside the component.       |
+| `color`            | `RadioColor`                 | No       | —                                         |
+| `error`            | `string`                     | No       | Error message rendered for invalid state. |
+| `containerStyle`   | `StyleProp<ViewStyle>`       | No       | —                                         |
+| `labelStyle`       | `StyleProp<TextStyle>`       | No       | Extra label text style.                   |
+| `descriptionStyle` | `StyleProp<TextStyle>`       | No       | —                                         |
+| `errorStyle`       | `StyleProp<TextStyle>`       | No       | —                                         |
+| `value`            | `string`                     | Yes      | Controlled value.                         |
+| `checked`          | `boolean`                    | No       | —                                         |
+| `defaultChecked`   | `boolean`                    | No       | —                                         |
+| `disabled`         | `boolean`                    | No       | Disables interaction.                     |
+| `required`         | `boolean`                    | No       | Marks the field as required.              |
+| `size`             | `RadioSize`                  | No       | Input size.                               |
+| `onCheckedChange`  | `(checked: boolean) => void` | No       | —                                         |
+
+<!-- api-docgen:end native.RadioGroupItemProps.RadioGroupItemProps -->
+
 ### Radio Props
 
 <!-- api-docgen:start native.RadioProps.RadioProps -->
