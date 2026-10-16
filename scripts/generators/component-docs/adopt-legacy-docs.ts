@@ -99,7 +99,23 @@ function readLegacyBody(params: {
   }
 
   const body = match[3].trim();
-  if (!body || !body.includes('## Accessibility')) {
+  // The original published Web FormField guide already documents explicit
+  // aria labeling and description relationships in its Contract section,
+  // but predates the dedicated "Accessibility" H2. Accept only that exact
+  // platform/component and equivalent authored guidance; the generated
+  // contract supplies the new Accessibility section. All other legacy docs
+  // still require their original authored Accessibility section.
+  const hasLegacyFormFieldWebA11yContract =
+    componentName === 'FormField' &&
+    file.replaceAll('\\', '/').endsWith('/react/form-field.md') &&
+    body.includes('## Contract') &&
+    body.includes('aria-labelledby') &&
+    body.includes('aria-describedby') &&
+    body.includes('## Custom Controls');
+  if (
+    !body ||
+    (!body.includes('## Accessibility') && !hasLegacyFormFieldWebA11yContract)
+  ) {
     throw new Error(
       file +
         ': expected authored guidance is missing; refusing to adopt an incomplete page.'
