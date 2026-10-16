@@ -211,17 +211,6 @@ export async function generateComponentDocs(
         })
       );
 
-      // TEMPORARY read-only diagnostic: remove after canonical Radio output is committed.
-      if (
-        check &&
-        selectedComponentName === 'Radio' &&
-        currentContent !== expectedContent
-      ) {
-        console.error(
-          `RADIO_EXPECTED_${platform}_START\\n${expectedContent}RADIO_EXPECTED_${platform}_END`
-        );
-      }
-
       checkedFiles.push(path.relative(root, filePath));
 
       if (currentContent === expectedContent) {

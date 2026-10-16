@@ -59,7 +59,5 @@ API details are generated from `packages/react/API.md`.
 - [FormField](/react/form-field) - FormField for field descriptions and errors.
 
 <!-- vellira-component-docs:authored:start -->
-
 <!-- Add manually authored content for this component here. -->
-
 <!-- vellira-component-docs:authored:end -->

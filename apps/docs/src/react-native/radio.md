@@ -62,7 +62,5 @@ API details are generated from `packages/react-native/API.md`.
 - [FormField](/react-native/form-field) - FormField for field validation and guidance.
 
 <!-- vellira-component-docs:authored:start -->
-
 <!-- Add manually authored content for this component here. -->
-
 <!-- vellira-component-docs:authored:end -->
