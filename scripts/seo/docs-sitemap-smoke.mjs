@@ -12,6 +12,8 @@ const REQUIRED_ROUTES = [
   '/start/getting-started',
   '/react/checkbox',
   '/react/dropdown',
+  '/react/radio',
+  '/react-native/radio',
 ];
 
 function requireCondition(condition, message) {
