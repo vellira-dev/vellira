@@ -42,6 +42,7 @@ export function validateStagingGuardConfig(config) {
  */
 export async function prepareNewsletterGuardStagingMode({
   mode,
+  proInterestMode = '0',
   githubEventName,
   githubRef,
   configPath = TARGET,
@@ -49,6 +50,18 @@ export async function prepareNewsletterGuardStagingMode({
   writeFile = fs.writeFile,
 }) {
   assert.ok(mode === '0' || mode === '1', 'Expected staging guard mode 0 or 1');
+  assert.ok(
+    proInterestMode === '0' || proInterestMode === '1',
+    'Expected staging Pro interest mode 0 or 1'
+  );
+  // Staging is publicly reachable. Never combine a provider-write-free abuse
+  // proof with a live Pro opt-in preview in the same deployment.
+  if (mode === '1')
+    assert.equal(
+      proInterestMode,
+      '0',
+      'Newsletter abuse and Pro signup previews must run separately'
+    );
   const config = loadConfig(configPath);
   validateStagingGuardConfig(config);
   if (mode === '0') return 'off';
@@ -66,6 +79,7 @@ export async function prepareNewsletterGuardStagingMode({
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const result = await prepareNewsletterGuardStagingMode({
     mode: process.env.NEWSLETTER_ABUSE_GUARD_PREVIEW,
+    proInterestMode: process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED,
     githubEventName: process.env.GITHUB_EVENT_NAME,
     githubRef: process.env.GITHUB_REF,
   });
