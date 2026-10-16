@@ -7,6 +7,7 @@ export * from './expansion';
 export * from './expansionCatalog';
 export * from './expansionReport';
 export * from './numericSeries';
+export * from './numericSeriesValidation';
 export * from './quality';
 export * from './stability';
 export * from './tokenLifecycle';
