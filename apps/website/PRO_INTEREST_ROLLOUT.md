@@ -151,6 +151,50 @@ The audit has deterministic synthetic-provider tests:
 node --test apps/website/scripts/buttondown-pro-interest-readonly.test.mjs
 ```
 
+## Pro email consent, confirmation copy, and abuse review
+
+Vellira presents an **unchecked, required Vellira Checkbox** before the Pro
+form's submit button. The user must positively agree to receive the single
+Vellira engineering newsletter, including occasional Pro launch updates.
+The form does not send `purpose: pro_launch` or `consent: true` until the
+checkbox is checked; the Worker independently rejects missing/false consent.
+Emails remain pending Buttondown double opt-in (`type: unactivated`) until the
+mailbox owner confirms. A 201 response is only request acceptance, not
+evidence of email delivery or active subscription. The form and shared
+newsletter success page use **conditional** confirmation copy; duplicates
+must not falsely promise a new confirmation email.
+
+Buttondown's **default** confirmation email is provider-owned and was observed
+by the owner in the prior one-address test. Before public activation, verify
+its visible newsletter identity, sender, explanation of the opt-in, working
+confirmation link and an invitation to ignore unsolicited requests.
+Review `Settings > Subscribing > Confirmation` in the Buttondown account if
+that panel is available on the current plan. Buttondown documents **custom**
+confirmation email templates as a Standard-plan feature; do not purchase
+an upgrade or change provider settings to satisfy this Vellira PR.
+References:
+
+- https://docs.buttondown.com/double-opt-in
+- https://docs.buttondown.com/transactional-emails-confirmation
+- https://www.cnil.fr/fr/la-prospection-commerciale-par-courrier-electronique-sms-mms-et-automate-dappel
+
+**Security review — not yet an anti-bot proof:** the public shared newsletter
+endpoint validates JSON/content length, email format, Pro purpose/consent,
+and origin _when provided_; Buttondown itself applies firewall and rate limits.
+The endpoint currently accepts requests with a missing Origin header and has
+no Vellira-controlled per-actor or per-resource rate limit. Scripts can call
+it directly without submitting the form; client-side consent/checkbox and
+same-origin checks are not bot defenses. Buttondown's subscriber creation
+quota is shared with the existing engineering newsletter.
+
+Before activating the public Pro form, require a **separately reviewed**
+abuse-control design and staging proof that bounds unauthenticated requests
+to the shared provider endpoint. Do not weaken or unexpectedly block the
+existing engineering newsletter. Cloudflare Workers rate-limit bindings
+are per-location, eventually consistent, and cannot alone guarantee a
+global/day quota. Record the actual controls and their limitations before
+separate owner signoff. No rate-limit infrastructure is added by this PR.
+
 ## Owner-approved staging-only preview
 
 Use **Actions → Deploy Website Cloudflare Staging → Run workflow → main**.
