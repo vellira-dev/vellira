@@ -68,60 +68,7 @@ export function validateBoundedNumericSeries(
   input: unknown
 ): NumericSeriesValidationResult {
   if (!record(input) || !fields(input, ['series', 'rows']))
-    return invalid('invalid-dataset', '
-  const { series, rows } = input;
-  if (!Array.isArray(series) || series.length < 1 || series.length > 4)
-    return invalid('invalid-series', '$.series');
-  if (!Array.isArray(rows) || rows.length > 90)
-    return invalid('invalid-rows', '$.rows');
-
-  const ids = new Set<string>();
-  const labels = new Set<string>();
-  for (let i = 0; i < series.length; i++) {
-    const item: unknown = series[i];
-    const path = `$.series[${i}]`;
-    if (!record(item) || !fields(item, ['id', 'label']))
-      return invalid('invalid-series', path);
-    const { id, label: seriesLabel } = item;
-    if (
-      typeof id !== 'string' ||
-      !/^[A-Za-z0-9_-]{1,64}$/.test(id) ||
-      ['__proto__', 'prototype', 'constructor'].includes(id)
-    )
-      return invalid('invalid-series-id', `${path}.id`);
-    if (ids.has(id)) return invalid('duplicate-series-id', `${path}.id`);
-    ids.add(id);
-    if (!label(seriesLabel))
-      return invalid('invalid-series-label', `${path}.label`);
-    const normalized = seriesLabel.normalize('NFC').toLowerCase();
-    if (labels.has(normalized))
-      return invalid('duplicate-series-label', `${path}.label`);
-    labels.add(normalized);
-  }
-
-  let previousX = -Infinity;
-  for (let i = 0; i < rows.length; i++) {
-    const item: unknown = rows[i];
-    const path = `$.rows[${i}]`;
-    if (!record(item) || !fields(item, ['x', 'xLabel', 'values']))
-      return invalid('invalid-row', path);
-    const { x, xLabel, values } = item;
-    if (!finite(x, 1e9)) return invalid('invalid-x', `${path}.x`);
-    if (x <= previousX) return invalid('non-increasing-x', `${path}.x`);
-    previousX = x;
-    if (!label(xLabel)) return invalid('invalid-x-label', `${path}.xLabel`);
-    if (!record(values)) return invalid('invalid-values', `${path}.values`);
-    if (!fields(values, Array.from(ids)))
-      return invalid('series-key-mismatch', `${path}.values`);
-    for (const id of ids) {
-      const value = values[id];
-      if (value !== null && !finite(value, 1e12))
-        return invalid('invalid-y', `${path}.values.${id}`);
-    }
-  }
-  return { ok: true, data: input as BoundedNumericSeries };
-});
-
+    return invalid('invalid-dataset', '$');
   const { series, rows } = input;
   if (!Array.isArray(series) || series.length < 1 || series.length > 4)
     return invalid('invalid-series', '$.series');
