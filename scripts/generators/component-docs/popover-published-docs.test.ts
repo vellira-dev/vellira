@@ -119,7 +119,7 @@ describe('published Popover docs safe legacy adoption', () => {
         'utf8'
       );
       const publicPropNames = [
-        ...new Set(publicIndex.match(/\\bPopover(?:[A-Za-z]+)?Props\\b/g) ?? []),
+        ...new Set(publicIndex.match(/\bPopover(?:[A-Za-z]+)?Props\b/g) ?? []),
       ].sort();
       expect(publicPropNames).toEqual([...apiNames].sort());
       for (const name of apiNames) {
