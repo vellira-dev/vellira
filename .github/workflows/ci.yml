@@ -861,3 +861,189 @@ jobs:
       - name: Smoke affected native package
         if: ${{ needs.impact.outputs.execution_path == 'affected' && contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/react-native') }}
         run: pnpm smoke:native
+
+  tooltip-docs-adoption:
+    name: Tooltip two-platform safe docs adoption (PR 1707 only)
+    if: ${{ github.event.pull_request.number == 1707 && github.event.pull_request.head.repo.full_name == 'vellira-dev/vellira' && github.event.pull_request.head.ref == 'feat/docs-tooltip-safe-adoption-20261016' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/docs-tooltip-safe-adoption-20261016
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - run: pnpm install --frozen-lockfile
+      - name: Validate existing Tooltip canonical API and scoped contract
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write apps/docs/src/component-docs/Tooltip.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/tooltip-published-docs.test.ts
+          pnpm docs:api:check
+          python3 - <<'PY'
+          from pathlib import Path
+          for platform, prefix in [('react', 'web'), ('react-native', 'native')]:
+              api = Path(f'packages/{platform}/API.md').read_text(encoding='utf-8')
+              names = (
+                  f'{prefix}.TooltipProps.Tooltip',
+                  f'{prefix}.TooltipTriggerProps.TooltipTriggerProps',
+                  f'{prefix}.TooltipContentProps.TooltipContentProps',
+              )
+              for name in names:
+                  assert api.count(f'<!-- api-docgen:start {name} -->') == 1, name
+                  assert api.count(f'<!-- api-docgen:end {name} -->') == 1, name
+              index = Path(f'packages/{platform}/src/index.ts').read_text(encoding='utf-8')
+              for name in ('TooltipProps', 'TooltipRootProps', 'TooltipTriggerProps', 'TooltipContentProps'):
+                  assert name in index, (platform, name)
+              root_alias = Path(f'packages/{platform}/src/components/Tooltip/types.ts').read_text(encoding='utf-8')
+              assert 'export type TooltipProps = TooltipRootProps;' in root_alias
+          PY
+      - name: Check immutable original sources and approve only H2 aliases
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import os
+          import subprocess
+
+          original_blobs = {
+              'react': '13343e878a0460a1cc39ce8bb830499d2a36bfa2',
+              'react-native': '8ae424d6631bbbb01f39d7785b6c24b4c3d94a97',
+          }
+          environment = {}
+          for platform, blob in original_blobs.items():
+              filename = Path(f'apps/docs/src/{platform}/tooltip.md')
+              source = filename.read_bytes()
+              assert source == subprocess.check_output(
+                  ['git', 'show', 'HEAD:' + filename.as_posix()]
+              ), f'Concurrent source changes: {filename}'
+              assert subprocess.check_output(
+                  ['git', 'hash-object', filename.as_posix()], text=True
+              ).strip() == blob, f'Unexpected Tooltip legacy source blob: {filename}'
+              content = source.decode('utf-8')
+              assert content.count('## Accessibility') == 1
+              assert content.count('## See Also') == 1
+              if platform == 'react':
+                  assert content.count('## When To Use') == 1
+                  content = content.replace(
+                      '## When To Use', '## Practical Usage Guidance', 1
+                  )
+              content = content.replace('## See Also', '## Further Reading', 1)
+              filename.write_text(content, encoding='utf-8')
+              digest = hashlib.sha256(content.encode('utf-8')).hexdigest()
+              environment['TOOLTIP_' + ('REACT' if platform == 'react' else 'NATIVE') + '_SHA'] = digest
+              print(platform, 'source-Git-blob', blob,
+                    'original-file-sha256', hashlib.sha256(source).hexdigest(),
+                    'pre-adoption-sha256', digest)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              for key, value in environment.items():
+                  print(key + '=' + value, file=output)
+          PY
+      - name: Adopt both published Tooltip guides with pinned source digests
+        run: |
+          set -euo pipefail
+          pnpm component-docs:adopt Tooltip --dry-run --json
+          pnpm component-docs:adopt Tooltip --write --json \
+            --expected-react-sha256="$TOOLTIP_REACT_SHA" \
+            --expected-react-native-sha256="$TOOLTIP_NATIVE_SHA"
+          python3 - <<'PY'
+          from pathlib import Path
+          start = '<!-- vellira-component-docs:authored:start -->'
+          end = '<!-- vellira-component-docs:authored:end -->'
+          for platform in ('react', 'react-native'):
+              filename = Path(f'apps/docs/src/{platform}/tooltip.md')
+              current = filename.read_text(encoding='utf-8')
+              assert current.count(start) == current.count(end) == 1
+              generated, remainder = current.split(start, 1)
+              author, suffix = remainder.split(end, 1)
+              assert not suffix.strip()
+              assert author.count('## Accessibility') == 1
+              author = author.replace(
+                  '## Accessibility', '## Additional Accessibility Details', 1
+              )
+              filename.write_text(generated + start + author + end + suffix,
+                                  encoding='utf-8')
+          PY
+          pnpm exec prettier --write apps/docs/src/react/tooltip.md apps/docs/src/react-native/tooltip.md
+      - name: Independently prove complete original authorship and pin hashes
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import fs from 'node:fs';
+          import prettier from 'prettier';
+
+          const sha = (value) => createHash('sha256').update(value).digest('hex');
+          const start = '<!-- vellira-component-docs:authored:start -->';
+          const end = '<!-- vellira-component-docs:authored:end -->';
+          const testFile = 'scripts/generators/component-docs/tooltip-published-docs.test.ts';
+          let test = fs.readFileSync(testFile, 'utf8');
+
+          for (const platform of ['react', 'react-native']) {
+            const file = 'apps/docs/src/' + platform + '/tooltip.md';
+            const original = execFileSync('git', ['show', 'HEAD:' + file], {
+              encoding: 'utf8',
+            });
+            const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n\s*# Tooltip\r?\n([\s\S]*)$/.exec(original);
+            if (!match) throw new Error('Original Tooltip author body missing: ' + file);
+            const config = await prettier.resolveConfig(file);
+            const expected = (await prettier.format(match[1].trim(), {
+              ...config, parser: 'markdown', filepath: file,
+            })).trim();
+
+            const rendered = fs.readFileSync(file, 'utf8');
+            if (rendered.split(start).length !== 2 || rendered.split(end).length !== 2) {
+              throw new Error('Tooltip authored markers invalid: ' + file);
+            }
+            let recovered = rendered.split(start)[1].split(end)[0].trim();
+            recovered = recovered
+              .replace('## Additional Accessibility Details', '## Accessibility')
+              .replace('## Practical Usage Guidance', '## When To Use')
+              .replace('## Further Reading', '## See Also');
+            if (recovered !== expected) {
+              throw new Error('Tooltip author content altered: ' + file);
+            }
+            const digest = sha(expected);
+            const placeholder = platform === 'react'
+              ? '__TOOLTIP_REACT_AUTHOR_SHA256__'
+              : '__TOOLTIP_NATIVE_AUTHOR_SHA256__';
+            if (test.split(placeholder).length !== 2) {
+              throw new Error('Missing unique Tooltip author fingerprint: ' + placeholder);
+            }
+            test = test.replace(placeholder, digest);
+            console.log(platform, 'canonical-entire-authored-body-sha256', digest);
+          }
+          fs.writeFileSync(testFile, test);
+          NODE
+      - name: Verify exact managed API, history, and generator no-op
+        run: |
+          set -euo pipefail
+          pnpm exec prettier --write scripts/generators/component-docs/tooltip-published-docs.test.ts apps/docs/src/component-docs/Tooltip.docs.ts apps/docs/src/component-docs/index.ts
+          pnpm docs:api:check
+          pnpm component-docs:generate --check
+          pnpm component-docs:adopt Tooltip --dry-run --json
+          pnpm exec vitest run scripts/generators/component-docs/tooltip-published-docs.test.ts
+          pnpm exec prettier --check apps/docs/src/component-docs/Tooltip.docs.ts apps/docs/src/component-docs/index.ts apps/docs/src/react/tooltip.md apps/docs/src/react-native/tooltip.md scripts/generators/component-docs/tooltip-published-docs.test.ts
+      - name: Remove one-off job and publish only verified docs changes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          file = Path('.github/workflows/ci.yml')
+          text = file.read_text(encoding='utf-8')
+          marker = '\n  tooltip-docs-adoption:\n'
+          assert text.count(marker) == 1
+          file.write_text(text[:text.index(marker)].rstrip() + '\n', encoding='utf-8')
+          PY
+          git config user.name 'vellira-docs-sync[bot]'
+          git config user.email 'vellira-docs-sync[bot]@users.noreply.github.com'
+          git add -- .github/workflows/ci.yml apps/docs/src/component-docs/Tooltip.docs.ts apps/docs/src/component-docs/index.ts scripts/generators/component-docs/tooltip-published-docs.test.ts apps/docs/src/react/tooltip.md apps/docs/src/react-native/tooltip.md
+          git diff --cached --quiet || git commit -m 'docs(tooltip): safely adopt both guides with exact author preservation'
+          git push origin HEAD:feat/docs-tooltip-safe-adoption-20261016
