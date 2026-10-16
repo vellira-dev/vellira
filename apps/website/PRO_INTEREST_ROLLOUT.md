@@ -107,27 +107,27 @@ attempt to subscribe someone else's address or mutate a suppressed record.
 ## Local read-only Buttondown verification (no write API calls)
 
 Run the optional audit on a trusted local machine with your **existing** Buttondown
-\`BUTTONDOWN_API_KEY\` set in the process environment. Never paste the key into
+`BUTTONDOWN_API_KEY` set in the process environment. Never paste the key into
 GitHub, a PR, CI variables, the conversation, or an untracked shell transcript.
 This is **not** a CI check and does not run automatically on deployment.
 
 From the repository root:
 
-\`\`\`sh
+```sh
 node apps/website/scripts/buttondown-pro-interest-readonly.mjs
-\`\`\`
+```
 
-When the existing untracked \`apps/website/.dev.vars\` holds this credential, Node
+When the existing untracked `apps/website/.dev.vars` holds this credential, Node
 22 also supports loading it locally without copying the key to GitHub:
 
-\`\`\`sh
+```sh
 node --env-file=apps/website/.dev.vars apps/website/scripts/buttondown-pro-interest-readonly.mjs
-\`\`\`
+```
 
 Both commands execute **exactly three GET requests** on the official Buttondown
 subscriber-list endpoint with fixed server-side filters:
-\`utm_campaign=vellira_pro_launch_interest\`, plus \`type=regular\` and
-\`type=unactivated\` respectively. They return only aggregate \`count\` values;
+`utm_campaign=vellira_pro_launch_interest`, plus `type=regular` and
+`type=unactivated` respectively. They return only aggregate `count` values;
 returned email addresses and other subscriber records remain in memory and are
 never printed, exported, persisted, or logged. Unknown responses, ignored
 filters, invalid counts, network failures and 429s stop without retry.
@@ -141,9 +141,9 @@ credential, ask for one in a PR, or add production secrets to GitHub.
 
 The audit has deterministic synthetic-provider tests:
 
-\`\`\`sh
+```sh
 node --test apps/website/scripts/buttondown-pro-interest-readonly.test.mjs
-\`\`\`
+```
 
 ## Owner-approved staging-only preview
 
