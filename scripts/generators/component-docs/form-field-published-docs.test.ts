@@ -163,9 +163,7 @@ describe('published FormField docs safe legacy adoption', () => {
         expect(generated).toContain('bindControl');
         expect(generated).not.toContain('native.FormFieldProps.FormField');
       } else {
-        expect(region.content).toContain(
-          '## Additional Accessibility Details'
-        );
+        expect(region.content).toContain('## Additional Accessibility Details');
         expect(generated).toContain('controlStyle');
         expect(generated).not.toContain('bindControl');
         expect(generated).not.toContain('web.FormFieldProps.FormField');
