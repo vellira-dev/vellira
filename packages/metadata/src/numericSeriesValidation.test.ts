@@ -129,7 +129,10 @@ describe('bounded numeric series runtime validation', () => {
     let called = false;
     const values = Object.defineProperty({ costs: null }, 'revenue', {
       enumerable: true,
-      get() { called = true; return 4; },
+      get() {
+        called = true;
+        return 4;
+      },
     });
     const bad = dataset();
     (bad.rows[0] as { values: unknown }).values = values;
