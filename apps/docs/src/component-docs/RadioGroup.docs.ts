@@ -26,9 +26,18 @@ export const radioGroupDocs = defineComponentDocs({
         'Associate group validation errors, required/disabled state, and selected state with their controls.',
       ],
       seeAlso: [
-        { component: 'Select', label: 'Select for compact or longer choice lists.' },
-        { component: 'Checkbox', label: 'Checkbox for independent boolean choices.' },
-        { component: 'FormField', label: 'FormField for custom field composition.' },
+        {
+          component: 'Select',
+          label: 'Select for compact or longer choice lists.',
+        },
+        {
+          component: 'Checkbox',
+          label: 'Checkbox for independent boolean choices.',
+        },
+        {
+          component: 'FormField',
+          label: 'FormField for custom field composition.',
+        },
       ],
     },
     'react-native': {
@@ -51,8 +60,14 @@ export const radioGroupDocs = defineComponentDocs({
       ],
       seeAlso: [
         { component: 'Select', label: 'Select for compact or long lists.' },
-        { component: 'Checkbox', label: 'Checkbox for independent native choices.' },
-        { component: 'FormField', label: 'FormField for custom field layouts.' },
+        {
+          component: 'Checkbox',
+          label: 'Checkbox for independent native choices.',
+        },
+        {
+          component: 'FormField',
+          label: 'FormField for custom field layouts.',
+        },
       ],
     },
   },

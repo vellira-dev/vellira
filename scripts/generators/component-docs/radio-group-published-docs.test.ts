@@ -20,7 +20,7 @@ const pages = [
     sourceBlob: '6926d44594be6711c436b402c7da125e9ed8f0ec',
     packageName: '@vellira-ui/react',
     canonicalAuthorSha256:
-      '__RADIOGROUP_REACT_SHA256__',
+      'fbc13d226a198c952355164c81dfb211450e9cca190f3137d7cd9faf5046ce22',
     authorEvidence: [
       'story="radioGroup.states"',
       '## Practical Usage Guidance',
@@ -43,7 +43,7 @@ const pages = [
     sourceBlob: 'd97920db7b6589ea8bc185f1e45e59cede1a87bd',
     packageName: '@vellira-ui/react-native',
     canonicalAuthorSha256:
-      '__RADIOGROUP_NATIVE_SHA256__',
+      'be25f08d0403fcc2fc9e2cb79b17b72fd774039489f33812142cfac3b75267c0',
     authorEvidence: [
       '## Basic Usage',
       '## Controlled Usage',
@@ -173,7 +173,9 @@ describe('published RadioGroup docs safe legacy adoption', () => {
       expect(compoundSource).toContain('Item: RadioGroupItem');
       if (page.platform === 'react') {
         expect(generated).toContain('wrapperClassName');
-        expect(generated).not.toContain('native.RadioGroupProps.RadioGroupProps');
+        expect(generated).not.toContain(
+          'native.RadioGroupProps.RadioGroupProps'
+        );
       } else {
         expect(generated).toContain('containerStyle');
         expect(generated).not.toContain('web.RadioGroupProps.RadioGroupProps');

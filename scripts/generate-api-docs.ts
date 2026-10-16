@@ -1586,7 +1586,10 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
-  if (item.heading === '### RadioGroupItemProps' && !doc.includes(item.heading)) {
+  if (
+    item.heading === '### RadioGroupItemProps' &&
+    !doc.includes(item.heading)
+  ) {
     return descriptions;
   }
   if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
@@ -1768,7 +1771,10 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
   // RadioGroup.Item is a public compound part whose props alias RadioProps.
   // Populate its own marker before the existing standalone Radio table;
   // both continue to be independently regenerated from their public sources.
-  if (item.heading === '### RadioGroupItemProps' && !doc.includes(item.heading)) {
+  if (
+    item.heading === '### RadioGroupItemProps' &&
+    !doc.includes(item.heading)
+  ) {
     const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.RadioGroupProps.RadioGroupProps -->`;
     const following = '\n### Radio Props\n';
     const rootAt = doc.indexOf(rootEnd);
