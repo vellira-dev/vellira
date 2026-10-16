@@ -1,3 +1,4 @@
+import { radioDocs } from './Radio.docs';
 import { radioGroupDocs } from './RadioGroup.docs';
 import { formFieldDocs } from './FormField.docs';
 import { tooltipDocs } from './Tooltip.docs';
@@ -14,6 +15,7 @@ import { accordionDocs } from './Accordion.docs';
 import { textareaDocs } from './Textarea.docs';
 
 export const componentDocsContracts = [
+  radioDocs,
   radioGroupDocs,
   formFieldDocs,
   tooltipDocs,
