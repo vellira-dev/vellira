@@ -1,3 +1,4 @@
+/* global URL, Response */
 // An opt-in, Cloudflare-native burst guard for the shared newsletter endpoint.
 // Deployment modes are configured by trusted Wrangler bindings, not callers.
 export const NEWSLETTER_SUBSCRIBE_PATH = '/api/newsletter/subscribe';
