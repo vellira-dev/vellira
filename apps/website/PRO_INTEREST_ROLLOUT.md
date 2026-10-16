@@ -173,6 +173,7 @@ that panel is available on the current plan. Buttondown documents **custom**
 confirmation email templates as a Standard-plan feature; do not purchase
 an upgrade or change provider settings to satisfy this Vellira PR.
 References:
+
 - https://docs.buttondown.com/double-opt-in
 - https://docs.buttondown.com/transactional-emails-confirmation
 - https://www.cnil.fr/fr/la-prospection-commerciale-par-courrier-electronique-sms-mms-et-automate-dappel
@@ -193,6 +194,7 @@ existing engineering newsletter. Cloudflare Workers rate-limit bindings
 are per-location, eventually consistent, and cannot alone guarantee a
 global/day quota. Record the actual controls and their limitations before
 separate owner signoff. No rate-limit infrastructure is added by this PR.
+
 ## Owner-approved staging-only preview
 
 Use **Actions → Deploy Website Cloudflare Staging → Run workflow → main**.
