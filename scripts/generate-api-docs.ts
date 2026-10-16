@@ -270,6 +270,30 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### FormFieldLabelProps',
+    'FormFieldLabelProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
+    '### FormFieldDescriptionProps',
+    'FormFieldDescriptionProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
+    '### FormFieldControlProps',
+    'FormFieldControlProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
+    '### FormFieldMessageProps',
+    'FormFieldMessageProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
     '### RadioGroup Props',
     'RadioGroupProps',
     'src/components/RadioGroup/types.ts'
@@ -651,6 +675,30 @@ const defaultSections: ApiSection[] = [
     'native',
     '## FormField',
     'FormFieldProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldLabelProps',
+    'FormFieldLabelProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldDescriptionProps',
+    'FormFieldDescriptionProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldControlProps',
+    'FormFieldControlProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldMessageProps',
+    'FormFieldMessageProps',
     'src/patterns/FormField/types.ts'
   ),
   section(
@@ -1518,6 +1566,14 @@ function readExistingDescriptions(doc: string, item: ApiSection) {
   ) {
     return descriptions;
   }
+  if (
+    /^### FormField(?:Label|Description|Control|Message)Props$/.test(
+      item.heading
+    ) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
   if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
     return descriptions;
   }
@@ -1659,6 +1715,38 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
       generatedBlock +
       '\n' +
       doc.slice(before)
+    );
+  }
+
+  // Introduce already-public FormField slots alongside the root API while
+  // leaving the existing published documentation outside FormField intact.
+  // Subsequent runs use the exact generated markers above.
+  if (
+    /^### FormField(?:Label|Description|Control|Message)Props$/.test(
+      item.heading
+    ) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.FormFieldProps.FormField -->`;
+    const following = '\n## RadioGroup\n';
+    const rootAt = doc.indexOf(rootEnd);
+    const insertAt = doc.indexOf(following);
+    if (
+      rootAt < 0 ||
+      doc.indexOf(rootEnd, rootAt + rootEnd.length) !== -1 ||
+      insertAt < rootAt + rootEnd.length ||
+      doc.indexOf(following, insertAt + following.length) !== -1
+    ) {
+      throw new Error('Missing or ambiguous FormField API insertion anchor');
+    }
+    return (
+      doc.slice(0, insertAt) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      '\n' +
+      doc.slice(insertAt)
     );
   }
 
