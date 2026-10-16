@@ -1,6 +1,7 @@
 export * from './component';
 export * from './componentIntent';
 export * from './componentProgram';
+export * from './numericSeries';
 export * from './components';
 export * from './defineComponentMetadata';
 export * from './expansion';
