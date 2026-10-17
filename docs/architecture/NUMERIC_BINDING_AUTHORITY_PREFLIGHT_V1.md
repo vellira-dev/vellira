@@ -22,7 +22,7 @@ Unknown/throwing JavaScript objects are not assumed to be safe: reflection error
 
 - No changes to `componentProgramSource`, `ComponentProgramDecisionsV1`, `parseComponentProgramDecisions`, grammar registry or private Factory.
 - No arbitrary JSON parameter, `numeric-data-geometry` module, rendering API, React Native authority, generated code, or chart library.
-- A Web component with existing, non-numeric grammar can be used only as an **identity fixture** for this preflight. It is *not* evidence that numeric semantic obligations have been reviewed, accepted or satisfied.
+- A Web component with existing, non-numeric grammar can be used only as an **identity fixture** for this preflight. It is _not_ evidence that numeric semantic obligations have been reviewed, accepted or satisfied.
 - No release, billing, provider/model request, certification or proof of user consent.
 
 ## Next admission gate
