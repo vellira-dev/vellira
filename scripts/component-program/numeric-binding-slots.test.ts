@@ -4,9 +4,7 @@ import { parseComponentProductionInput } from '../component-production/contracts
 import { compileComponentProgram } from './compile';
 import { mediaProgram, mediaSpec } from './fixtures/programs';
 import { prepareNumericBindingAuthorityV1 } from './numeric-binding-authority';
-import {
-  parseComponentProgramNumericBindingSlotsV1,
-} from './numeric-binding-slots';
+import { parseComponentProgramNumericBindingSlotsV1 } from './numeric-binding-slots';
 import { fingerprintNumericSeriesBindingV1 } from './numeric-series-fingerprint';
 import { parseComponentProgramDecisions } from './parse';
 import { componentProgramSource } from './source';
@@ -54,7 +52,10 @@ describe('finite numeric binding slot reference contract', () => {
     expectInvalid({ ...proposal(), data: { series: [], rows: [] } });
     expectInvalid({ ...proposal(), baseProgramFingerprint: 'unverified' });
     expectInvalid({ ...proposal(), schemaVersion: '2' });
-    expectInvalid({ ...proposal(), slots: [{ ...proposal().slots[0], data: {} }] });
+    expectInvalid({
+      ...proposal(),
+      slots: [{ ...proposal().slots[0], data: {} }],
+    });
     expectInvalid({
       ...proposal(),
       slots: [
