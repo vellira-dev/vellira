@@ -20,11 +20,11 @@ The parser rejects duplicate slot IDs, duplicate authority fingerprint reference
 
 `baseProgramFingerprint` must refer to the previously **compiled numeric-free Component Program**. It is deliberately not a fingerprint of the proposed slot-bearing decisions: the authority receipt from #1727 already binds to that numeric-free program. Hashing a new slot-bearing program into the receipt would create a circular identity dependency.
 
-Parsing establishes only the **shape** of this reference. It does not prove that the fingerprint belongs to a trusted issuer or equals a particular source revision. A future governed resolver must independently verify the pinned base program, issuing authority, signed/reviewed provenance and all corresponding dataset receipt identities before admitting a semantic capability.
+The slot parser establishes only the **shape** of these references. During compilation, V1 independently recompiles the numeric-free decisions against the same derived source and registry to confirm that `baseProgramFingerprint` exactly matches the real compiled baseline. It does not prove that the receipt belongs to a trusted issuer or that the source revision is authentic. A future governed resolver must independently verify issuing authority, signed/reviewed provenance and all corresponding dataset receipt identities before admitting a semantic capability.
 
 ## Critical compiler barrier
 
-`parseComponentProgramDecisions` accepts and validates the optional slot proposal. **Any nonempty slot proposal causes `compileComponentProgram` to return `missing-grammar-capability` and `program: null` / `fingerprint: null`.** It cannot be silently dropped or compiled as an ordinary legacy program.
+`parseComponentProgramDecisions` accepts and validates the optional slot proposal. **A well-formed proposal with a matching base program causes `compileComponentProgram` to return `missing-grammar-capability` and `program: null` / `fingerprint: null`. A stale or non-compiling baseline returns `blocked`.** It cannot be silently dropped or compiled as an ordinary legacy program.
 
 Decisions without `numericBindingSlots` use exactly the existing parser, scalar parameter validation, grammar, fingerprints and compilation behavior. Existing unsupported `bounded-numeric-series` and `numeric-data-geometry` modules remain blocked. The production parser may retain the review-only proposal but no production consumer is authorized to treat it as a compiled numeric contract.
 
