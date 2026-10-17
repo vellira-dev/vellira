@@ -9,6 +9,8 @@ import {
   type ComponentStateChangeV1,
 } from '../../packages/metadata/src/componentProgram';
 
+import { parseComponentProgramNumericBindingSlotsV1 } from './numeric-binding-slots';
+
 export function record(
   value: unknown,
   keys: readonly string[],
@@ -122,11 +124,19 @@ export function parseComponentProgramDecisions(
     throw new Error('Component Program input exceeds 64 KiB.');
   const input = record(
     value,
-    ['schemaVersion', 'anatomy', 'states', 'transitions', 'modules'],
-    'Component Program'
+    [
+      'schemaVersion',
+      'anatomy',
+      'states',
+      'transitions',
+      'modules',
+      'numericBindingSlots',
+    ],
+    'Component Program',
+    ['numericBindingSlots']
   );
   enumeration(input.schemaVersion, ['1']);
-  return {
+  const decisions: ComponentProgramDecisionsV1 = {
     schemaVersion: '1',
     anatomy: list(input.anatomy, 64).map((value) => {
       const item = record(value, ['id', 'role', 'parent'], 'anatomy');
@@ -213,5 +223,26 @@ export function parseComponentProgramDecisions(
           : {}),
       };
     }),
+    ...(Object.hasOwn(input, 'numericBindingSlots')
+      ? {
+          numericBindingSlots: parseComponentProgramNumericBindingSlotsV1(
+            input.numericBindingSlots
+          ),
+        }
+      : {}),
   };
+  if (decisions.numericBindingSlots) {
+    const roots = decisions.anatomy.filter(
+      (item) => item.parent === null && item.role === 'root'
+    );
+    if (
+      roots.length !== 1 ||
+      decisions.numericBindingSlots.slots.some(
+        (slot) => slot.ownerRootId !== roots[0]?.id
+      )
+    ) {
+      throw new Error('Numeric slot root differs from the program root.');
+    }
+  }
+  return decisions;
 }

@@ -330,6 +330,31 @@ export function compileComponentProgram(
     const grammar = new Map(registry.map((item) => [item.id, item]));
     const source = normalizedSource(sourceInput);
     const parsed = parseComponentProgramDecisions(decisionsInput);
+    if (parsed.numericBindingSlots) {
+      const { numericBindingSlots, ...baselineDecisions } = parsed;
+      const baseline = compileComponentProgram(
+        sourceInput,
+        baselineDecisions,
+        registry
+      );
+      if (
+        baseline.disposition !== 'compiled' ||
+        baseline.fingerprint !== numericBindingSlots.baseProgramFingerprint
+      ) {
+        finding(
+          'invalid-composition',
+          'numeric-binding-slots',
+          'The numeric-free Component Program fingerprint does not match.'
+        );
+        return blocked();
+      }
+      finding(
+        'missing-grammar-capability',
+        'bounded-numeric-series',
+        'Numeric Binding Slots V1 are review-only until numeric grammar admission.'
+      );
+      return blocked();
+    }
     const decisions: ComponentProgramDecisionsV1 = {
       ...parsed,
       anatomy: sorted(parsed.anatomy),
