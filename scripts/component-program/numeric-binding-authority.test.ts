@@ -113,9 +113,7 @@ describe('numeric binding authority preflight', () => {
     expect(result.receipt.authorityFingerprint).toBe(original);
     expect(result.snapshot.data.rows[1].values.revenue).toBe(42);
     expect(result.snapshot.data.series[0].label).toBe('Revenue');
-    expect(
-      prepareNumericBindingAuthorityV1(spec, request)
-    ).toMatchObject({
+    expect(prepareNumericBindingAuthorityV1(spec, request)).toMatchObject({
       ok: false,
       code: 'binding-fingerprint-mismatch',
     });
@@ -150,10 +148,7 @@ describe('numeric binding authority preflight', () => {
   it('never grants React Native or unregistered numeric grammar authority', () => {
     const { spec, request } = prepared();
     expect(
-      prepareNumericBindingAuthorityV1(
-        { ...spec, platform: 'both' },
-        request
-      )
+      prepareNumericBindingAuthorityV1({ ...spec, platform: 'both' }, request)
     ).toMatchObject({ ok: false, code: 'unsupported-platform' });
 
     const numericSpec = {
@@ -188,9 +183,9 @@ describe('numeric binding authority preflight', () => {
         ),
       },
     };
-    expect(
-      prepareNumericBindingAuthorityV1(badProgram, request)
-    ).toMatchObject({ ok: false, code: 'invalid-production-spec' });
+    expect(prepareNumericBindingAuthorityV1(badProgram, request)).toMatchObject(
+      { ok: false, code: 'invalid-production-spec' }
+    );
 
     const extra = dataset() as unknown as Record<string, unknown>;
     extra.extra = true;
@@ -213,23 +208,25 @@ describe('numeric binding authority preflight', () => {
         return dataset();
       },
     });
-    expect(
-      prepareNumericBindingAuthorityV1(spec, accessor)
-    ).toMatchObject({ ok: false, code: 'invalid-request' });
+    expect(prepareNumericBindingAuthorityV1(spec, accessor)).toMatchObject({
+      ok: false,
+      code: 'invalid-request',
+    });
     expect(called).toBe(false);
 
     const revoked = Proxy.revocable({}, {});
     revoked.revoke();
-    expect(
-      prepareNumericBindingAuthorityV1(spec, revoked.proxy)
-    ).toMatchObject({ ok: false, code: 'invalid-request' });
+    expect(prepareNumericBindingAuthorityV1(spec, revoked.proxy)).toMatchObject(
+      { ok: false, code: 'invalid-request' }
+    );
   });
 
   it('rejects absent or invalid production authority', () => {
     const { spec, request } = prepared();
-    expect(
-      prepareNumericBindingAuthorityV1(null, request)
-    ).toMatchObject({ ok: false, code: 'invalid-production-spec' });
+    expect(prepareNumericBindingAuthorityV1(null, request)).toMatchObject({
+      ok: false,
+      code: 'invalid-production-spec',
+    });
     expect(
       prepareNumericBindingAuthorityV1(
         { ...spec, componentProgram: undefined },
