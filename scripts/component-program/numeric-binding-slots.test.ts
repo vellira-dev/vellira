@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { parseComponentProductionInput } from '../component-production/contracts';
 import { compileComponentProgram } from './compile';
 import { mediaProgram, mediaSpec } from './fixtures/programs';
+import { prepareNumericBindingAuthorityV1 } from './numeric-binding-authority';
 import {
   parseComponentProgramNumericBindingSlotsV1,
 } from './numeric-binding-slots';
+import { fingerprintNumericSeriesBindingV1 } from './numeric-series-fingerprint';
 import { parseComponentProgramDecisions } from './parse';
 import { componentProgramSource } from './source';
 
@@ -207,6 +210,86 @@ describe('finite numeric binding slot reference contract', () => {
     expect(compileComponentProgram(source, baselineDecisions)).toEqual(
       baseline
     );
+  });
+
+  it('accepts prior Web authority receipt references without admitting grammar', () => {
+    const baselineProgram = mediaProgram();
+    const spec = {
+      ...mediaSpec(),
+      platform: 'web' as const,
+      componentProgram: {
+        ...baselineProgram,
+        modules: baselineProgram.modules.map((module) => ({
+          ...module,
+          platforms: ['react'] as const,
+        })),
+        transitions: baselineProgram.transitions.map((transition) => ({
+          ...transition,
+          platforms: ['react'] as const,
+        })),
+      },
+    };
+    const parsed = parseComponentProductionInput(spec);
+    const baseline = compileComponentProgram(
+      componentProgramSource(parsed),
+      parsed.componentProgram
+    );
+    expect(baseline.disposition).toBe('compiled');
+    if (!baseline.fingerprint) throw new Error('Missing Web program.');
+
+    const binding = {
+      schemaVersion: '1' as const,
+      kind: 'bounded-numeric-series' as const,
+      data: {
+        series: [{ id: 'revenue', label: 'Revenue' }],
+        rows: [{ x: 0, xLabel: 'Start', values: { revenue: null } }],
+      },
+    };
+    const hashed = fingerprintNumericSeriesBindingV1(binding);
+    expect(hashed.ok).toBe(true);
+    if (!hashed.ok) return;
+
+    const authority = prepareNumericBindingAuthorityV1(spec, {
+      schemaVersion: '1',
+      ownerName: 'PortraitProbe',
+      bindingId: 'revenue',
+      expectedProgramFingerprint: baseline.fingerprint,
+      expectedBindingFingerprint: hashed.fingerprint,
+      binding,
+    });
+    expect(authority.ok).toBe(true);
+    if (!authority.ok) return;
+
+    const numericBindingSlots = {
+      schemaVersion: '1',
+      baseProgramFingerprint: baseline.fingerprint,
+      slots: [
+        {
+          id: 'revenue',
+          kind: 'bounded-numeric-series',
+          platform: 'react',
+          ownerRootId: authority.receipt.ownerRootId,
+          bindingFingerprint: authority.receipt.bindingFingerprint,
+          authorityFingerprint: authority.receipt.authorityFingerprint,
+        },
+      ],
+    };
+    const withSlots = parseComponentProductionInput({
+      ...spec,
+      componentProgram: {
+        ...spec.componentProgram,
+        numericBindingSlots,
+      },
+    });
+    expect(withSlots.componentProgram?.numericBindingSlots).toEqual(
+      numericBindingSlots
+    );
+    expect(
+      compileComponentProgram(
+        componentProgramSource(withSlots),
+        withSlots.componentProgram
+      ).disposition
+    ).toBe('missing-grammar-capability');
   });
 
   it('checks root ownership and preserves scalar parameter restrictions', () => {
