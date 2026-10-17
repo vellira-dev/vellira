@@ -1,0 +1,17 @@
+name: Numeric Authority Prettier Diagnostic
+on:
+  push:
+    branches:
+      - feat/numeric-binding-authority-preflight-v1
+permissions:
+  contents: read
+jobs:
+  prettier-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Show exact prettier changes
+        run: |
+          npx --yes prettier@3.9.8 --write docs/architecture/NUMERIC_BINDING_AUTHORITY_PREFLIGHT_V1.md scripts/component-program/numeric-binding-authority.test.ts
+          git diff -- docs/architecture/NUMERIC_BINDING_AUTHORITY_PREFLIGHT_V1.md scripts/component-program/numeric-binding-authority.test.ts
