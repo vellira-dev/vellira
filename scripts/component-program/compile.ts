@@ -330,6 +330,14 @@ export function compileComponentProgram(
     const grammar = new Map(registry.map((item) => [item.id, item]));
     const source = normalizedSource(sourceInput);
     const parsed = parseComponentProgramDecisions(decisionsInput);
+    if (parsed.numericBindingSlots) {
+      finding(
+        'missing-grammar-capability',
+        'bounded-numeric-series',
+        'Numeric Binding Slots V1 are review-only until numeric grammar admission.'
+      );
+      return blocked();
+    }
     const decisions: ComponentProgramDecisionsV1 = {
       ...parsed,
       anatomy: sorted(parsed.anatomy),
