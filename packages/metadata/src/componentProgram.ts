@@ -118,6 +118,21 @@ export interface ComponentStateChangeV1 {
   };
 }
 
+/** Finite review-only references, never inline datasets or module parameters. */
+export interface ComponentProgramNumericBindingSlotsV1 {
+  schemaVersion: '1';
+  /** Fingerprint of the unchanged compiled program without this proposal. */
+  baseProgramFingerprint: string;
+  slots: readonly Readonly<{
+    id: string;
+    kind: 'bounded-numeric-series';
+    platform: 'react';
+    ownerRootId: string;
+    bindingFingerprint: string;
+    authorityFingerprint: string;
+  }>[];
+}
+
 export interface ComponentProgramDecisionsV1 {
   schemaVersion: '1';
   anatomy: readonly {
@@ -145,6 +160,8 @@ export interface ComponentProgramDecisionsV1 {
     /** Only keys and scalar types declared by the selected public module. */
     parameters?: Readonly<Record<string, string | number>>;
   }[];
+  /** Review-only numeric slots. A nonempty proposal cannot compile in V1. */
+  numericBindingSlots?: ComponentProgramNumericBindingSlotsV1;
 }
 
 /** Derived from existing metadata/intent/spec, never separately authored. */
