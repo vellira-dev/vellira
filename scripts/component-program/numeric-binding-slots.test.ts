@@ -189,6 +189,21 @@ describe('finite numeric binding slot reference contract', () => {
         subject: 'bounded-numeric-series',
       })
     );
+    const mismatched = compileComponentProgram(source, {
+      ...baselineDecisions,
+      numericBindingSlots: proposal(),
+    });
+    expect(mismatched).toMatchObject({
+      disposition: 'blocked',
+      program: null,
+      fingerprint: null,
+    });
+    expect(mismatched.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'invalid-composition',
+        subject: 'numeric-binding-slots',
+      })
+    );
     expect(compileComponentProgram(source, baselineDecisions)).toEqual(
       baseline
     );
