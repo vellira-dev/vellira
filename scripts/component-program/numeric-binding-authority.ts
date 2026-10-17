@@ -55,7 +55,9 @@ type AuthorityFailureCode = Extract<
   { ok: false }
 >['code'];
 
-const rejected = (code: AuthorityFailureCode): NumericBindingAuthorityResultV1 => ({
+const rejected = (
+  code: AuthorityFailureCode
+): NumericBindingAuthorityResultV1 => ({
   ok: false,
   code,
   path: '$',
@@ -80,7 +82,10 @@ function requestFields(input: unknown): Record<string, unknown> {
     'binding',
   ];
   const own = Reflect.ownKeys(input);
-  if (own.length !== fields.length || !fields.every((key) => own.includes(key))) {
+  if (
+    own.length !== fields.length ||
+    !fields.every((key) => own.includes(key))
+  ) {
     throw new Error('Invalid authority request fields.');
   }
   const result: Record<string, unknown> = Object.create(null);
@@ -102,26 +107,27 @@ export function prepareNumericBindingAuthorityV1(
   productionInput: unknown,
   requestInput: unknown
 ): NumericBindingAuthorityResultV1 {
-  let request: Record<string, unknown>;
+  let request: NumericBindingAuthorityRequestV1;
   try {
-    request = requestFields(requestInput);
+    const raw = requestFields(requestInput);
     if (
-      request.schemaVersion !== '1' ||
-      typeof request.ownerName !== 'string' ||
-      !/^[A-Za-z][A-Za-z0-9._-]{0,95}$/.test(request.ownerName) ||
-      typeof request.bindingId !== 'string' ||
-      !/^[a-z][a-z0-9-]{0,63}$/.test(request.bindingId) ||
-      typeof request.expectedProgramFingerprint !== 'string' ||
+      raw.schemaVersion !== '1' ||
+      typeof raw.ownerName !== 'string' ||
+      !/^[A-Za-z][A-Za-z0-9._-]{0,95}$/.test(raw.ownerName) ||
+      typeof raw.bindingId !== 'string' ||
+      !/^[a-z][a-z0-9-]{0,63}$/.test(raw.bindingId) ||
+      typeof raw.expectedProgramFingerprint !== 'string' ||
       !/^component-program-v1:[a-f0-9]{64}$/.test(
-        request.expectedProgramFingerprint
+        raw.expectedProgramFingerprint
       ) ||
-      typeof request.expectedBindingFingerprint !== 'string' ||
+      typeof raw.expectedBindingFingerprint !== 'string' ||
       !/^numeric-series-binding-v1:sha256:[a-f0-9]{64}$/.test(
-        request.expectedBindingFingerprint
+        raw.expectedBindingFingerprint
       )
     ) {
       return rejected('invalid-request');
     }
+    request = raw as unknown as NumericBindingAuthorityRequestV1;
   } catch {
     return rejected('invalid-request');
   }
@@ -137,7 +143,10 @@ export function prepareNumericBindingAuthorityV1(
     // The source is derived from validated production input, not caller-authored
     // as a second mutable authority.
     const source = componentProgramSource(production);
-    const compiled = compileComponentProgram(source, production.componentProgram);
+    const compiled = compileComponentProgram(
+      source,
+      production.componentProgram
+    );
     if (
       compiled.disposition !== 'compiled' ||
       !compiled.program ||
