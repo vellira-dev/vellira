@@ -40,8 +40,10 @@ function finiteSlots(value: unknown): unknown[] {
   ) {
     throw new Error('Invalid slot array.');
   }
-  const length: unknown = Object.getOwnPropertyDescriptor(value, 'length')
-    ?.value;
+  const length: unknown = Object.getOwnPropertyDescriptor(
+    value,
+    'length'
+  )?.value;
   if (
     typeof length !== 'number' ||
     !Number.isSafeInteger(length) ||
