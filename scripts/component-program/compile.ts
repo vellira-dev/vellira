@@ -331,6 +331,23 @@ export function compileComponentProgram(
     const source = normalizedSource(sourceInput);
     const parsed = parseComponentProgramDecisions(decisionsInput);
     if (parsed.numericBindingSlots) {
+      const { numericBindingSlots, ...baselineDecisions } = parsed;
+      const baseline = compileComponentProgram(
+        sourceInput,
+        baselineDecisions,
+        registry
+      );
+      if (
+        baseline.disposition !== 'compiled' ||
+        baseline.fingerprint !== numericBindingSlots.baseProgramFingerprint
+      ) {
+        finding(
+          'invalid-composition',
+          'numeric-binding-slots',
+          'The numeric-free Component Program fingerprint does not match.'
+        );
+        return blocked();
+      }
       finding(
         'missing-grammar-capability',
         'bounded-numeric-series',
