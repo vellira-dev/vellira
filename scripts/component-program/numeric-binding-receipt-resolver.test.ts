@@ -129,9 +129,9 @@ describe('review-only numeric binding receipt resolver', () => {
     expect(Object.isFrozen(result.resolved[0])).toBe(true);
     expect(Object.isFrozen(result.resolved[0].receipt)).toBe(true);
     expect(Object.isFrozen(result.resolved[0].snapshot.data.rows)).toBe(true);
-    expect(Object.isFrozen(result.resolved[0].snapshot.data.rows[0].values)).toBe(
-      true
-    );
+    expect(
+      Object.isFrozen(result.resolved[0].snapshot.data.rows[0].values)
+    ).toBe(true);
   });
 
   it('detaches both receipts and data from changes after resolution', () => {
@@ -149,9 +149,9 @@ describe('review-only numeric binding receipt resolver', () => {
     );
     expect(result.resolved[0].canonicalJson).toBe(originalJson);
     expect(result.resolved[0].snapshot.data.rows[0].values.value).toBe(10);
-    expect(
-      resolveNumericBindingReceiptsV1(production, evidence).ok
-    ).toBe(false);
+    expect(resolveNumericBindingReceiptsV1(production, evidence).ok).toBe(
+      false
+    );
   });
 
   it('rejects stale baselines, swapped ownership and changed source tokens', () => {
@@ -172,9 +172,9 @@ describe('review-only numeric binding receipt resolver', () => {
     });
 
     const wrongOwner = { ...production, componentName: 'AnotherProbe' };
-    expect(
-      resolveNumericBindingReceiptsV1(wrongOwner, evidence)
-    ).toMatchObject({ ok: false, code: 'receipt-mismatch' });
+    expect(resolveNumericBindingReceiptsV1(wrongOwner, evidence)).toMatchObject(
+      { ok: false, code: 'receipt-mismatch' }
+    );
 
     const modifiedSource = {
       ...production,
@@ -216,9 +216,10 @@ describe('review-only numeric binding receipt resolver', () => {
             : entry.receipt,
       })),
     };
-    expect(
-      resolveNumericBindingReceiptsV1(production, forged)
-    ).toMatchObject({ ok: false, code: 'receipt-mismatch' });
+    expect(resolveNumericBindingReceiptsV1(production, forged)).toMatchObject({
+      ok: false,
+      code: 'receipt-mismatch',
+    });
 
     const forgedSlot = {
       ...production,
@@ -239,9 +240,10 @@ describe('review-only numeric binding receipt resolver', () => {
         },
       },
     };
-    expect(
-      resolveNumericBindingReceiptsV1(forgedSlot, forged)
-    ).toMatchObject({ ok: false, code: 'receipt-mismatch' });
+    expect(resolveNumericBindingReceiptsV1(forgedSlot, forged)).toMatchObject({
+      ok: false,
+      code: 'receipt-mismatch',
+    });
 
     const swapped = {
       ...evidence,
@@ -250,9 +252,10 @@ describe('review-only numeric binding receipt resolver', () => {
         { ...evidence.entries[1], receipt: evidence.entries[0].receipt },
       ],
     };
-    expect(
-      resolveNumericBindingReceiptsV1(production, swapped)
-    ).toMatchObject({ ok: false, code: 'receipt-mismatch' });
+    expect(resolveNumericBindingReceiptsV1(production, swapped)).toMatchObject({
+      ok: false,
+      code: 'receipt-mismatch',
+    });
   });
 
   it('requires exactly one evidence entry per finite slot', () => {
@@ -302,9 +305,7 @@ describe('review-only numeric binding receipt resolver', () => {
     expect(
       resolveNumericBindingReceiptsV1(production, {
         ...evidence,
-        entries: [
-          { ...evidence.entries[0], arbitrary: { executable: true } },
-        ],
+        entries: [{ ...evidence.entries[0], arbitrary: { executable: true } }],
       })
     ).toMatchObject({ ok: false, code: 'invalid-evidence' });
   });
@@ -320,9 +321,10 @@ describe('review-only numeric binding receipt resolver', () => {
         return evidence.entries;
       },
     });
-    expect(
-      resolveNumericBindingReceiptsV1(production, hostile)
-    ).toMatchObject({ ok: false, code: 'invalid-evidence' });
+    expect(resolveNumericBindingReceiptsV1(production, hostile)).toMatchObject({
+      ok: false,
+      code: 'invalid-evidence',
+    });
     expect(called).toBe(0);
 
     const serializer = fixture();
