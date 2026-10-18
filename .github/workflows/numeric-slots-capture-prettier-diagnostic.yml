@@ -1,0 +1,17 @@
+name: Numeric Capture Formatter Diagnostic
+on:
+  push:
+    branches:
+      - feat/numeric-binding-slots-contract-v1
+permissions:
+  contents: read
+jobs:
+  formatter-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Show required formatting
+        run: |
+          npx --yes prettier@3.9.8 --write scripts/component-program/capture-input.ts
+          git diff -- scripts/component-program/capture-input.ts
