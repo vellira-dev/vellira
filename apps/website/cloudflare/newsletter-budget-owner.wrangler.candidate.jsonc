@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "vellira-newsletter-budget-owner",
+  "main": "./newsletter-budget-owner-worker.mjs",
+  "compatibility_date": "2026-09-06",
+  "workers_dev": false,
+  "exports": {
+    "NewsletterRollingBudgetCoordinator": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  }
+}
