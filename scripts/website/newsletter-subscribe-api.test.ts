@@ -622,7 +622,7 @@ describe('dormant global budget provider admission seam', () => {
       async () => {
         throw new Error('private coordinator failure');
       },
-      async () => 'unexpected' as const,
+      async () => 'unexpected' as 'admitted',
     ]) {
       const fetcher = vi.fn<ButtondownFetcher>(async () =>
         new Response('{}', { status: 201 })
