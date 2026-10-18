@@ -321,10 +321,12 @@ describe('review-only numeric binding receipt resolver', () => {
         },
       ],
     };
-    expect(resolveNumericBindingReceiptsV1(production, expanded)).toMatchObject({
-      ok: false,
-      code: 'invalid-binding',
-    });
+    expect(resolveNumericBindingReceiptsV1(production, expanded)).toMatchObject(
+      {
+        ok: false,
+        code: 'invalid-binding',
+      }
+    );
   });
 
   it('never executes root/nested toJSON or accessor values', () => {
