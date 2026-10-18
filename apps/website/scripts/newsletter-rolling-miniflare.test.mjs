@@ -141,16 +141,27 @@ test('persisted null fails closed without resetting the budget', async (t) => {
   }
 });
 
-test('candidate remains absent from deployed Workers and Wrangler targets', async () => {
+test('rolling candidate remains detached from deployed website Workers', () => {
   const root = path.resolve(import.meta.dirname, '..');
   for (const name of [
     'cloudflare-worker.mjs',
-    'cloudflare/newsletter-budget-owner-worker.mjs',
     'wrangler.jsonc',
     'wrangler.production.jsonc',
   ]) {
     const source = readFileSync(path.join(root, name), 'utf8');
     assert.doesNotMatch(source, /NewsletterRollingBudgetCoordinator/);
     assert.doesNotMatch(source, /newsletter-rolling-budget-coordinator/);
+    assert.doesNotMatch(source, /vellira-newsletter-budget-owner/);
   }
+
+  // The *undeployed* dedicated owner may export this candidate class.
+  // It is not an activation path for either canonical website Worker.
+  const owner = readFileSync(
+    path.join(root, 'cloudflare/newsletter-budget-owner-worker.mjs'),
+    'utf8'
+  );
+  assert.match(
+    owner,
+    /export \{ NewsletterRollingBudgetCoordinator \} from '\.\/newsletter-rolling-budget-coordinator\.mjs'/
+  );
 });

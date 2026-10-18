@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import worker, {
-  NewsletterBudgetCoordinator,
+  NewsletterRollingBudgetCoordinator,
 } from '../cloudflare/newsletter-budget-owner-worker.mjs';
 
 test('unbound global budget owner has no public routes', async () => {
@@ -14,6 +14,6 @@ test('unbound global budget owner has no public routes', async () => {
   assert.equal(await response.text(), '');
 });
 
-test('owner exports the existing tested coordinator class', () => {
-  assert.equal(typeof NewsletterBudgetCoordinator, 'function');
+test('owner exports the tested rolling-window coordinator class', () => {
+  assert.equal(typeof NewsletterRollingBudgetCoordinator, 'function');
 });
