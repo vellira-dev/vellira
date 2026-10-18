@@ -20,7 +20,8 @@ export default function App() {
   const [preview, setPreview] = useState<Profile | null>(null);
 
   const emailValid = emailPattern.test(profile.email.trim());
-  const emailError = attempted && !emailValid ? 'Enter a valid email address.' : undefined;
+  const emailError =
+    attempted && !emailValid ? 'Enter a valid email address.' : undefined;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,7 +34,11 @@ export default function App() {
       <h1>One form, two runtimes</h1>
       <p>React example with Vellira. Nothing is sent to a server.</p>
 
-      <form noValidate onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
+      <form
+        noValidate
+        onSubmit={handleSubmit}
+        style={{ display: 'grid', gap: 20 }}
+      >
         <Input
           label='Email'
           type='email'
@@ -60,7 +65,11 @@ export default function App() {
       </form>
 
       {preview && (
-        <section role='status' aria-label='Local form preview' style={{ marginTop: 24 }}>
+        <section
+          role='status'
+          aria-label='Local form preview'
+          style={{ marginTop: 24 }}
+        >
           <h2>Local preview</h2>
           <pre>{JSON.stringify(preview, null, 2)}</pre>
         </section>
