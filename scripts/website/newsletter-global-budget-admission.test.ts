@@ -58,9 +58,7 @@ describe('dormant global newsletter budget binding adapter', () => {
         NEWSLETTER_GLOBAL_BUDGET: binding,
       });
       expect(await admit?.()).toBe(expected);
-      expect(binding.idFromName).toHaveBeenCalledWith(
-        'one-buttondown-account'
-      );
+      expect(binding.idFromName).toHaveBeenCalledWith('one-buttondown-account');
       expect(binding.fetch).toHaveBeenCalledTimes(1);
       const request = binding.fetch.mock.calls[0]?.[0];
       expect(request?.method).toBe('POST');
