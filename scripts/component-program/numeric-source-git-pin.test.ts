@@ -197,6 +197,36 @@ describe('non-authorizing numeric source Git pin preflight', () => {
     expect(result.ownerApproved).toBe(false);
   });
 
+  it('rejects a valid component spec pinned under a different component filename', () => {
+    const { root, pin, sourceBytes, evidence } = sourceFixture();
+    const wrongPath = 'scripts/component-production/specs/OtherProbe.json';
+    const revision = commit(root, wrongPath, sourceBytes);
+
+    // Both paths contain byte-identical, tracked Git blobs at this HEAD.
+    expect(git(root, 'rev-parse', 'HEAD:' + wrongPath)).toBe(
+      git(root, 'rev-parse', 'HEAD:' + pin.sourcePath)
+    );
+    expect(
+      prepareNumericSourceGitPinV1(
+        root,
+        { ...pin, revision, sourcePath: wrongPath },
+        evidence
+      )
+    ).toMatchObject({ ok: false, code: 'invalid-source' });
+
+    // The correct canonical path with the same commit/evidence must still pass.
+    const accepted = prepareNumericSourceGitPinV1(
+      root,
+      { ...pin, revision },
+      evidence
+    );
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.sourcePath).toBe(pin.sourcePath);
+    expect(accepted.ownerApproved).toBe(false);
+    expect(accepted.grammarAdmitted).toBe(false);
+  });
+
   it('rejects mismatched HEAD, stale pin, and missing Git history', () => {
     const { root, pin, evidence } = sourceFixture();
     expect(
