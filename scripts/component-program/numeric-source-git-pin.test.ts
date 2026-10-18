@@ -200,10 +200,14 @@ describe('non-authorizing numeric source Git pin preflight', () => {
   it('rejects mismatched HEAD, stale pin, and missing Git history', () => {
     const { root, pin, evidence } = sourceFixture();
     expect(
-      prepareNumericSourceGitPinV1(root, {
-        ...pin,
-        revision: 'f'.repeat(40),
-      }, evidence)
+      prepareNumericSourceGitPinV1(
+        root,
+        {
+          ...pin,
+          revision: 'f'.repeat(40),
+        },
+        evidence
+      )
     ).toMatchObject({ ok: false, code: 'revision-mismatch' });
 
     const next = 'scripts/component-production/specs/NextProbe.json';
@@ -217,10 +221,14 @@ describe('non-authorizing numeric source Git pin preflight', () => {
   it('rejects unknown repository, unpinned location and paths escaping specs', () => {
     const { root, pin, evidence } = sourceFixture();
     expect(
-      prepareNumericSourceGitPinV1(root, {
-        ...pin,
-        repository: 'other/project',
-      }, evidence)
+      prepareNumericSourceGitPinV1(
+        root,
+        {
+          ...pin,
+          repository: 'other/project',
+        },
+        evidence
+      )
     ).toMatchObject({ ok: false, code: 'invalid-pin' });
     for (const sourcePath of [
       '../config.json',
@@ -244,9 +252,9 @@ describe('non-authorizing numeric source Git pin preflight', () => {
       ok: false,
       code: 'repository-mismatch',
     });
-    expect(
-      prepareNumericSourceGitPinV1(tmpdir(), pin, evidence)
-    ).toMatchObject({ ok: false, code: 'checkout-unavailable' });
+    expect(prepareNumericSourceGitPinV1(tmpdir(), pin, evidence)).toMatchObject(
+      { ok: false, code: 'checkout-unavailable' }
+    );
   });
 
   it('rejects absent sources and git symlinks instead of reading through them', () => {
@@ -254,7 +262,10 @@ describe('non-authorizing numeric source Git pin preflight', () => {
     expect(
       prepareNumericSourceGitPinV1(
         root,
-        { ...pin, sourcePath: 'scripts/component-production/specs/Missing.json' },
+        {
+          ...pin,
+          sourcePath: 'scripts/component-production/specs/Missing.json',
+        },
         evidence
       )
     ).toMatchObject({ ok: false, code: 'source-not-tracked' });
@@ -296,9 +307,10 @@ describe('non-authorizing numeric source Git pin preflight', () => {
         },
       })),
     };
-    expect(
-      prepareNumericSourceGitPinV1(root, pin, tampered)
-    ).toMatchObject({ ok: false, code: 'receipt-resolution-failed' });
+    expect(prepareNumericSourceGitPinV1(root, pin, tampered)).toMatchObject({
+      ok: false,
+      code: 'receipt-resolution-failed',
+    });
 
     const counterfeit = {
       ...evidence,
@@ -311,9 +323,10 @@ describe('non-authorizing numeric source Git pin preflight', () => {
         },
       })),
     };
-    expect(
-      prepareNumericSourceGitPinV1(root, pin, counterfeit)
-    ).toMatchObject({ ok: false, code: 'receipt-resolution-failed' });
+    expect(prepareNumericSourceGitPinV1(root, pin, counterfeit)).toMatchObject({
+      ok: false,
+      code: 'receipt-resolution-failed',
+    });
   });
 
   it('contains accessor/Proxy traps without executing attacker-supplied getters', () => {
@@ -326,9 +339,9 @@ describe('non-authorizing numeric source Git pin preflight', () => {
         return pin.revision;
       },
     });
-    expect(
-      prepareNumericSourceGitPinV1(root, hostile, evidence)
-    ).toMatchObject({ ok: false, code: 'invalid-pin' });
+    expect(prepareNumericSourceGitPinV1(root, hostile, evidence)).toMatchObject(
+      { ok: false, code: 'invalid-pin' }
+    );
     expect(called).toBe(false);
 
     const revoked = Proxy.revocable({}, {});
