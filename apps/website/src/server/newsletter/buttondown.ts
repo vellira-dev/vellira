@@ -31,6 +31,8 @@ export type ButtondownSubscribeOptions = {
   ipAddress: string | null;
   purpose?: 'pro_launch';
   fetcher?: typeof fetch;
+  // Injection seam for a future shared, durable budget. Not wired at runtime.
+  admit?: () => Promise<'admitted' | 'exhausted' | 'unavailable'>;
 };
 
 const newsletterErrors = {
@@ -127,6 +129,7 @@ export async function subscribeWithButtondown({
   ipAddress,
   purpose,
   fetcher = fetch,
+  admit,
 }: ButtondownSubscribeOptions): Promise<NewsletterSubscribeResult> {
   if (!apiKey) return error('temporarily_unavailable');
 
@@ -148,6 +151,19 @@ export async function subscribeWithButtondown({
     // subscribers). New addresses must confirm via Buttondown double opt-in.
     body.utm_campaign = PRO_INTEREST_UTM_CAMPAIGN;
     body.type = 'unactivated';
+  }
+
+  // Admission, when explicitly injected, applies equally to both purposes.
+  // Never contact the provider after denial, an invalid result or a failure.
+  if (admit) {
+    let decision: 'admitted' | 'exhausted' | 'unavailable';
+    try {
+      decision = await admit();
+    } catch {
+      return error('temporarily_unavailable');
+    }
+    if (decision === 'exhausted') return error('rate_limited');
+    if (decision !== 'admitted') return error('temporarily_unavailable');
   }
 
   try {
