@@ -50,9 +50,7 @@ describe('finite numeric binding slot reference contract', () => {
 
   it('accepts exact null-prototype records emitted by detached capture', () => {
     const original = proposal();
-    const slots = [
-      Object.assign(Object.create(null), original.slots[0]),
-    ];
+    const slots = [Object.assign(Object.create(null), original.slots[0])];
     const captured = Object.assign(Object.create(null), {
       schemaVersion: original.schemaVersion,
       baseProgramFingerprint: original.baseProgramFingerprint,
