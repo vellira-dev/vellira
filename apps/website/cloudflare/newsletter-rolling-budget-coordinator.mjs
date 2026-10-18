@@ -1,4 +1,5 @@
 import { admitRollingNewsletterAttempt } from './newsletter-rolling-window-model.mjs';
+import { rollingBudgetResponse } from './newsletter-rolling-response.mjs';
 
 // Candidate only: not exported by the deployed website or budget owner Worker.
 // One transaction persists attempts and lastSeen even on quota exhaustion.
@@ -17,7 +18,7 @@ export class NewsletterRollingBudgetCoordinator {
     }
     const capacity = Number(this.env.NEWSLETTER_GLOBAL_BUDGET_CAPACITY);
     if (!Number.isSafeInteger(capacity) || capacity < 1) {
-      return this.reply('unavailable', 503);
+      return rollingBudgetResponse('unavailable');
     }
     try {
       const now = Date.now();
@@ -30,18 +31,10 @@ export class NewsletterRollingBudgetCoordinator {
         }
         return result.outcome;
       });
-      if (outcome === 'admitted') return this.reply('admitted', 200);
-      if (outcome === 'exhausted') return this.reply('rate_limited', 429);
-      return this.reply('unavailable', 503);
+      return rollingBudgetResponse(outcome);
     } catch {
-      return this.reply('unavailable', 503);
+      return rollingBudgetResponse('unavailable');
     }
   }
 
-  reply(code, status) {
-    return globalThis.Response.json(
-      { ok: status === 200, code },
-      { status, headers: { 'Cache-Control': 'no-store' } }
-    );
-  }
 }
