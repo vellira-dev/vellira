@@ -1,0 +1,33 @@
+name: Dashboard Numeric Source Preparation (Non-Authorizing)
+
+on:
+  push:
+    branches:
+      - feat/dashboard-numeric-source-review-v1
+    paths:
+      - .github/workflows/dashboard-numeric-source-preparation.yml
+      - scripts/component-production/prepare-dashboard-numeric-source.ts
+
+permissions:
+  contents: read
+
+jobs:
+  generate-review-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout exact proposed public source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.22.2'
+      - name: Install frozen dependencies without scripts
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Prepare only synthetic source and receipts
+        run: node --import tsx scripts/component-production/prepare-dashboard-numeric-source.ts
