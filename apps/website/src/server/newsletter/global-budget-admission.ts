@@ -1,6 +1,9 @@
 // Dormant adapter for the already-tested provider admission seam.
 // This module is intentionally not imported by the deployed newsletter handler.
-export type NewsletterAdmissionDecision = 'admitted' | 'exhausted' | 'unavailable';
+export type NewsletterAdmissionDecision =
+  | 'admitted'
+  | 'exhausted'
+  | 'unavailable';
 
 type BudgetStub = {
   fetch: (request: Request) => Promise<Response>;
