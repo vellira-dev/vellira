@@ -21,10 +21,15 @@ export class NewsletterRollingBudgetCoordinator {
       return rollingBudgetResponse('unavailable');
     }
     try {
-      const now = Date.now();
       const outcome = await this.ctx.storage.transaction(async (txn) => {
         const persisted = await txn.get('rolling-v1');
-        const state = persisted ?? { attempts: [], lastSeen: 0 };
+        // Only a missing key may initialize an empty budget. Persisted null
+        // (or any invalid value) is corruption and must fail closed.
+        const state =
+          persisted === undefined ? { attempts: [], lastSeen: 0 } : persisted;
+        // Sample the clock after obtaining the serialized persisted state.
+        // This avoids a queued request carrying an outdated pre-transaction time.
+        const now = Date.now();
         const result = admitRollingNewsletterAttempt(state, capacity, now);
         if (result.outcome !== 'unavailable') {
           await txn.put('rolling-v1', result.next);
