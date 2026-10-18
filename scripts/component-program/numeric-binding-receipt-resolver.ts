@@ -123,7 +123,6 @@ export function resolveNumericBindingReceiptsV1(
     return rejected('program-not-blocked');
   }
 
-  let evidence: Record<string, unknown>;
   let entries: Record<string, unknown>[];
   try {
     const detached = captureComponentProgramInput(evidenceInput);
@@ -138,7 +137,6 @@ export function resolveNumericBindingReceiptsV1(
     ) {
       return rejected('invalid-evidence');
     }
-    evidence = detached;
     entries = detached.entries.map((entry) => {
       if (
         !exactFields(entry, ['slotId', 'receipt', 'binding']) ||
