@@ -1,10 +1,11 @@
 # Try Vellira: the same form state on React and React Native
 
-A small, **local-only** email/preferences form for developers evaluating Vellira.
+A small, **local-only** email/preferences form for developers evaluating
+Vellira.
 It uses public components in both renderers: `Input`, `Checkbox`, and `Button`.
 
-The two examples intentionally share the *product state shape* and controlled value
-callbacks, not the rendering implementation:
+The two examples intentionally share the *product state shape* and controlled
+value callbacks, not the rendering implementation:
 
 | Concern | Web | React Native |
 | --- | --- | --- |
@@ -13,7 +14,8 @@ callbacks, not the rendering implementation:
 | Submission | `<form onSubmit>` and `type='submit'` | `Button onPress` |
 | Labels, feedback | Browser semantics | Native accessibility primitives |
 
-The examples **do not send data**, call a backend, or subscribe anyone to a mailing list.
+The examples **do not send data**, call a backend, or subscribe anyone to a
+mailing list.
 A valid submission displays a preview of the form data on screen.
 
 ## Run the React example
@@ -51,8 +53,9 @@ npm install @vellira-ui/react-native
 npx expo start
 ```
 
-Use an Expo SDK **57 / React Native 0.86+** app for current Vellira Native renderer
-compatibility. Follow Expo's on-screen instructions to open an emulator or device.
+Use an Expo SDK **57 / React Native 0.86+** app for current Vellira Native
+renderer compatibility. Follow Expo's on-screen instructions to open an
+emulator or device.
 The first native launch may require platform setup.
 
 ## What to evaluate
