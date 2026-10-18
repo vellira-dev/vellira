@@ -589,7 +589,6 @@ describe('Buttondown provider boundary', () => {
   });
 });
 
-
 describe('dormant global budget provider admission seam', () => {
   it.each(['exhausted', 'unavailable'] as const)(
     'blocks a %s decision before Buttondown for either purpose',
@@ -609,7 +608,8 @@ describe('dormant global budget provider admission seam', () => {
         });
         expect(result).toMatchObject({
           ok: false,
-          code: decision === 'exhausted' ? 'rate_limited' : 'temporarily_unavailable',
+          code:
+            decision === 'exhausted' ? 'rate_limited' : 'temporarily_unavailable',
         });
         expect(admit).toHaveBeenCalledTimes(1);
         expect(fetcher).not.toHaveBeenCalled();
@@ -619,8 +619,10 @@ describe('dormant global budget provider admission seam', () => {
 
   it('fails closed for thrown and malformed admission outcomes', async () => {
     for (const admit of [
-      async () => { throw new Error('private coordinator failure'); },
-      async () => 'unexpected' as 'admitted',
+      async () => {
+        throw new Error('private coordinator failure');
+      },
+      async () => 'unexpected' as const,
     ]) {
       const fetcher = vi.fn<ButtondownFetcher>(async () =>
         new Response('{}', { status: 201 })
@@ -632,9 +634,14 @@ describe('dormant global budget provider admission seam', () => {
         fetcher,
         admit,
       });
-      expect(result).toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+      expect(result).toMatchObject({
+        ok: false,
+        code: 'temporarily_unavailable',
+      });
       expect(fetcher).not.toHaveBeenCalled();
-      expect(JSON.stringify(result)).not.toContain('private coordinator failure');
+      expect(JSON.stringify(result)).not.toContain(
+        'private coordinator failure'
+      );
     }
   });
 
@@ -655,7 +662,10 @@ describe('dormant global budget provider admission seam', () => {
       fetcher,
       admit,
     });
-    expect(result).toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
     expect(events).toEqual(['admit', 'provider']);
     expect(admit).toHaveBeenCalledTimes(1);
     expect(fetcher).toHaveBeenCalledTimes(1);
@@ -673,7 +683,10 @@ describe('dormant global budget provider admission seam', () => {
       admit,
       fetcher,
     });
-    expect(result).toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
     expect(admit).not.toHaveBeenCalled();
     expect(fetcher).not.toHaveBeenCalled();
   });
