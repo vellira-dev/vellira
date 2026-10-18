@@ -11,12 +11,13 @@ const slotKeys = [
 
 /** Capture only exact own enumerable data fields; never evaluate getters. */
 function exactRecord(value: unknown, keys: readonly string[]): unknown[] {
-  if (
-    value === null ||
-    typeof value !== 'object' ||
-    Array.isArray(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  ) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid record.');
+  }
+  // The detached Component Program capture intentionally uses null prototypes.
+  // Accept both inert plain-record shapes; preserve exact descriptor checks.
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
     throw new Error('Invalid record.');
   }
   const own = Reflect.ownKeys(value);
