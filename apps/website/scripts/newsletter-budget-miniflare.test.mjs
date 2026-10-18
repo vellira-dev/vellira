@@ -28,8 +28,8 @@ function createMiniflare(persistPath, capacity = '7') {
             },
             TEST_NEWSLETTER_BUDGET: {
               type: 'durable-object',
-              className: 'NewsletterBudgetCoordinator',
-              scriptName: 'newsletter-budget-local-test',
+              worker: 'newsletter-budget-local-test',
+              exportName: 'NewsletterBudgetCoordinator',
             },
           },
           exports: {
