@@ -382,19 +382,15 @@ describe('finite numeric binding slot reference contract', () => {
       },
     };
     let invoked = 0;
-    const sourceWithGetter = Object.defineProperty(
-      { ...source },
-      'platforms',
-      {
-        enumerable: true,
-        configurable: true,
-        get() {
-          invoked += 1;
-          delete decisions.numericBindingSlots;
-          return source.platforms;
-        },
-      }
-    );
+    const sourceWithGetter = Object.defineProperty({ ...source }, 'platforms', {
+      enumerable: true,
+      configurable: true,
+      get() {
+        invoked += 1;
+        delete decisions.numericBindingSlots;
+        return source.platforms;
+      },
+    });
     const result = compileComponentProgram(sourceWithGetter, decisions);
     expect(invoked).toBeGreaterThan(0);
     expect(Object.hasOwn(decisions, 'numericBindingSlots')).toBe(false);
