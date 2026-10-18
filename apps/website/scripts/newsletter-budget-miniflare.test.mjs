@@ -16,18 +16,29 @@ function createMiniflare(persistPath, capacity = '7') {
     resourcePersistencePath: persistPath,
     workers: [
       {
-        name: 'newsletter-budget-local-test',
         config: {
           type: 'worker',
           name: 'newsletter-budget-local-test',
           compatibilityDate: '2026-09-06',
+          entrypoint: entry,
+          env: {
+            NEWSLETTER_GLOBAL_BUDGET_CAPACITY: {
+              type: 'text',
+              value: capacity,
+            },
+            TEST_NEWSLETTER_BUDGET: {
+              type: 'durable-object',
+              className: 'NewsletterBudgetCoordinator',
+              scriptName: 'newsletter-budget-local-test',
+            },
+          },
+          exports: {
+            NewsletterBudgetCoordinator: {
+              type: 'durable-object',
+              storage: 'sqlite',
+            },
+          },
         },
-        modules: true,
-        scriptPath: entry,
-        durableObjects: {
-          TEST_NEWSLETTER_BUDGET: 'NewsletterBudgetCoordinator',
-        },
-        bindings: { NEWSLETTER_GLOBAL_BUDGET_CAPACITY: capacity },
       },
     ],
   });
