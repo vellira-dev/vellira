@@ -588,3 +588,103 @@ describe('Buttondown provider boundary', () => {
     ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
   });
 });
+
+describe('dormant global budget provider admission seam', () => {
+  it('denies exhausted budget without a provider call', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    for (const purpose of [undefined, 'pro_launch'] as const) {
+      const result = await subscribeWithButtondown({
+        apiKey: 'test-key',
+        email: 'person@example.com',
+        ipAddress: null,
+        purpose,
+        admit: async () => 'exhausted',
+        fetcher,
+      });
+      expect(result).toMatchObject({ ok: false, code: 'rate_limited' });
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for unavailable and invalid coordinator results', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const admit = vi.fn(async () => 'unavailable' as const);
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit,
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unexpected coordinator decision without provider writes', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => 'invalid' as 'admitted',
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects a thrown coordinator error without provider writes or leaking details', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => {
+        throw new Error('private coordinator failure');
+      },
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(JSON.stringify(result)).not.toContain('private coordinator failure');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('admits before calling the provider exactly once', async () => {
+    const calls: string[] = [];
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => {
+        calls.push('admit');
+        return 'admitted';
+      },
+      fetcher: async () => {
+        calls.push('provider');
+        throw new Error('network failure');
+      },
+    });
+    expect(calls).toEqual(['admit', 'provider']);
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+  });
+});
