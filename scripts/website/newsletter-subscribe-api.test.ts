@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createNewsletterBudgetAdmission } from '../../apps/website/src/server/newsletter/global-budget-admission';
+
 import {
   createNewsletterSubscribeHandler,
   resolveSubscriberIp,
@@ -686,5 +688,70 @@ describe('dormant global budget provider admission seam', () => {
       ok: false,
       code: 'temporarily_unavailable',
     });
+  });
+});
+
+describe('newsletter handler global budget integration', () => {
+  const makeRequest = () =>
+    request(JSON.stringify({ email: 'person@example.com' }));
+
+  it('preserves ordinary newsletter behavior with missing/OFF binding', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const getAdmission = vi.fn(async () =>
+      createNewsletterBudgetAdmission({
+        NEWSLETTER_GLOBAL_BUDGET_ENABLED: '0',
+      })
+    );
+    const route = createNewsletterSubscribeHandler({
+      getApiKey: async () => 'test-key',
+      getAdmission,
+      subscribe: (input) =>
+        subscribeWithButtondown({ ...input, fetcher }),
+      proInterestEnabled: false,
+    });
+    expect((await route(makeRequest())).status).toBe(201);
+    expect(getAdmission).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks shared provider calls when enabled binding is missing', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const route = createNewsletterSubscribeHandler({
+      getApiKey: async () => 'test-key',
+      getAdmission: async () =>
+        createNewsletterBudgetAdmission({
+          NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
+        }),
+      subscribe: (input) =>
+        subscribeWithButtondown({ ...input, fetcher }),
+      proInterestEnabled: false,
+    });
+    const result = await route(makeRequest());
+    expect(result.status).toBe(503);
+    expect(result.headers.get('cache-control')).toBe('no-store');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when acquiring admission throws', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = createNewsletterSubscribeHandler({
+      getApiKey: async () => 'test-key',
+      getAdmission: async () => {
+        throw new Error('private coordinator failure');
+      },
+      subscribe,
+      proInterestEnabled: false,
+    });
+    const result = await route(makeRequest());
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(subscribe).not.toHaveBeenCalled();
   });
 });
