@@ -293,6 +293,81 @@ describe('finite numeric binding slot reference contract', () => {
     ).toBe('missing-grammar-capability');
   });
 
+  it('does not execute a root numericBindingSlots getter that deletes itself', () => {
+    const source = componentProgramSource(mediaSpec());
+    const decisions: Record<string, unknown> = { ...mediaProgram() };
+    let invoked = 0;
+    Object.defineProperty(decisions, 'numericBindingSlots', {
+      enumerable: true,
+      configurable: true,
+      get() {
+        invoked += 1;
+        delete decisions.numericBindingSlots;
+        return proposal();
+      },
+    });
+
+    const result = compileComponentProgram(source, decisions);
+    expect(result.disposition).toBe('blocked');
+    expect(result.program).toBeNull();
+    expect(result.fingerprint).toBeNull();
+    expect(invoked).toBe(0);
+    expect(Object.hasOwn(decisions, 'numericBindingSlots')).toBe(true);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({ code: 'invalid-composition' })
+    );
+  });
+
+  it('does not execute root toJSON that deletes proposed numeric slots', () => {
+    const source = componentProgramSource(mediaSpec());
+    const decisions: Record<string, unknown> = {
+      ...mediaProgram(),
+      numericBindingSlots: proposal(),
+    };
+    let invoked = 0;
+    Object.defineProperty(decisions, 'toJSON', {
+      configurable: true,
+      value() {
+        invoked += 1;
+        delete decisions.numericBindingSlots;
+        return mediaProgram();
+      },
+    });
+
+    const result = compileComponentProgram(source, decisions);
+    expect(result.disposition).toBe('blocked');
+    expect(result.program).toBeNull();
+    expect(result.fingerprint).toBeNull();
+    expect(invoked).toBe(0);
+    expect(Object.hasOwn(decisions, 'numericBindingSlots')).toBe(true);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({ code: 'invalid-composition' })
+    );
+  });
+
+  it('rejects nested getters before sizing without changing legacy fingerprints', () => {
+    const source = componentProgramSource(mediaSpec());
+    const baseline = compileComponentProgram(source, mediaProgram());
+    expect(baseline.disposition).toBe('compiled');
+
+    const decisions = mediaProgram();
+    let invoked = 0;
+    Object.defineProperty(decisions.modules[0], 'parameters', {
+      enumerable: true,
+      configurable: true,
+      get() {
+        invoked += 1;
+        return { dataset: proposal() };
+      },
+    });
+    const result = compileComponentProgram(source, decisions);
+    expect(result.disposition).toBe('blocked');
+    expect(result.program).toBeNull();
+    expect(result.fingerprint).toBeNull();
+    expect(invoked).toBe(0);
+    expect(compileComponentProgram(source, mediaProgram())).toEqual(baseline);
+  });
+
   it('checks root ownership and preserves scalar parameter restrictions', () => {
     const source = componentProgramSource(mediaSpec());
     const baseline = mediaProgram();
