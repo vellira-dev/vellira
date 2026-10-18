@@ -111,10 +111,7 @@ export function resolveNumericBindingReceiptsV1(
   if (numericBindingSlots.baseProgramFingerprint !== baseline.fingerprint) {
     return rejected('base-program-fingerprint-mismatch');
   }
-  const denied = compileComponentProgram(
-    source,
-    production.componentProgram
-  );
+  const denied = compileComponentProgram(source, production.componentProgram);
   if (
     denied.disposition !== 'missing-grammar-capability' ||
     denied.program !== null ||
