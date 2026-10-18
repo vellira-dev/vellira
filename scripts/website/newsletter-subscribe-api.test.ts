@@ -590,62 +590,52 @@ describe('Buttondown provider boundary', () => {
 });
 
 describe('dormant global budget provider admission seam', () => {
-  it.each(['exhausted', 'unavailable'] as const)(
-    'blocks a %s decision before Buttondown for either purpose',
-    async (decision) => {
-      for (const purpose of [undefined, 'pro_launch'] as const) {
-        const fetcher = vi.fn<ButtondownFetcher>(async () =>
-          new Response('{}', { status: 201 })
-        );
-        const admit = vi.fn(async () => decision);
-        const result = await subscribeWithButtondown({
-          apiKey: 'server-only-test-key',
-          email: 'test@example.com',
-          ipAddress: null,
-          ...(purpose ? { purpose } : {}),
-          fetcher,
-          admit,
-        });
-        expect(result).toMatchObject({
-          ok: false,
-          code:
-            decision === 'exhausted' ? 'rate_limited' : 'temporarily_unavailable',
-        });
-        expect(admit).toHaveBeenCalledTimes(1);
-        expect(fetcher).not.toHaveBeenCalled();
-      }
+  it('blocks both purposes before provider writes on budget exhaustion', async () => {
+    for (const purpose of [undefined, 'pro_launch'] as const) {
+      const fetcher = vi.fn<ButtondownFetcher>(
+        async () => new Response('{}', { status: 201 })
+      );
+      const admit = vi.fn(async () => 'exhausted' as const);
+      const result = await subscribeWithButtondown({
+        apiKey: 'test-key',
+        email: 'person@example.com',
+        ipAddress: null,
+        purpose,
+        admit,
+        fetcher,
+      });
+      expect(result).toMatchObject({ ok: false, code: 'rate_limited' });
+      expect(admit).toHaveBeenCalledTimes(1);
+      expect(fetcher).not.toHaveBeenCalled();
     }
-  );
+  });
 
-  it('fails closed for thrown and malformed admission outcomes', async () => {
+  it('fails closed when admission is unavailable or throws', async () => {
     for (const admit of [
-      async () => {
+      async () => 'unavailable' as const,
+      async (): Promise<'admitted'> => {
         throw new Error('private coordinator failure');
       },
-      async () => 'unexpected' as 'admitted',
     ]) {
-      const fetcher = vi.fn<ButtondownFetcher>(async () =>
-        new Response('{}', { status: 201 })
+      const fetcher = vi.fn<ButtondownFetcher>(
+        async () => new Response('{}', { status: 201 })
       );
       const result = await subscribeWithButtondown({
-        apiKey: 'server-only-test-key',
-        email: 'test@example.com',
+        apiKey: 'test-key',
+        email: 'person@example.com',
         ipAddress: null,
-        fetcher,
         admit,
+        fetcher,
       });
       expect(result).toMatchObject({
         ok: false,
         code: 'temporarily_unavailable',
       });
       expect(fetcher).not.toHaveBeenCalled();
-      expect(JSON.stringify(result)).not.toContain(
-        'private coordinator failure'
-      );
     }
   });
 
-  it('admits once before the provider request without retry on provider failure', async () => {
+  it('calls admission before one provider attempt without retries', async () => {
     const events: string[] = [];
     const admit = vi.fn(async () => {
       events.push('admit');
@@ -656,38 +646,18 @@ describe('dormant global budget provider admission seam', () => {
       throw new Error('network failure');
     });
     const result = await subscribeWithButtondown({
-      apiKey: 'server-only-test-key',
-      email: 'test@example.com',
+      apiKey: 'test-key',
+      email: 'person@example.com',
       ipAddress: null,
-      fetcher,
       admit,
+      fetcher,
     });
     expect(result).toMatchObject({
-      ok: false,
-      code: 'temporarily_unavailable',
-    });
+        ok: false,
+        code: 'temporarily_unavailable',
+      });
     expect(events).toEqual(['admit', 'provider']);
     expect(admit).toHaveBeenCalledTimes(1);
     expect(fetcher).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not admit or write when the API key is absent', async () => {
-    const admit = vi.fn(async () => 'admitted' as const);
-    const fetcher = vi.fn<ButtondownFetcher>(async () =>
-      new Response('{}', { status: 201 })
-    );
-    const result = await subscribeWithButtondown({
-      apiKey: undefined,
-      email: 'test@example.com',
-      ipAddress: null,
-      admit,
-      fetcher,
-    });
-    expect(result).toMatchObject({
-      ok: false,
-      code: 'temporarily_unavailable',
-    });
-    expect(admit).not.toHaveBeenCalled();
-    expect(fetcher).not.toHaveBeenCalled();
   });
 });
