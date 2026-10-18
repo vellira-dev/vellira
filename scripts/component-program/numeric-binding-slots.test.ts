@@ -48,6 +48,22 @@ describe('finite numeric binding slot reference contract', () => {
     expect(Reflect.set(parsed.slots[0], 'id', 'other')).toBe(false);
   });
 
+  it('accepts exact null-prototype records emitted by detached capture', () => {
+    const original = proposal();
+    const slots = [
+      Object.assign(Object.create(null), original.slots[0]),
+    ];
+    const captured = Object.assign(Object.create(null), {
+      schemaVersion: original.schemaVersion,
+      baseProgramFingerprint: original.baseProgramFingerprint,
+      slots,
+    });
+    const parsed = parse(captured);
+    expect(parsed).toEqual(original);
+    expect(Object.isFrozen(parsed)).toBe(true);
+    expect(Object.isFrozen(parsed.slots[0])).toBe(true);
+  });
+
   it('rejects foreign fields, dataset objects and wrong fingerprint kinds', () => {
     expectInvalid({ ...proposal(), data: { series: [], rows: [] } });
     expectInvalid({ ...proposal(), baseProgramFingerprint: 'unverified' });
