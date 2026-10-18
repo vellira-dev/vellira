@@ -53,10 +53,7 @@ export type NumericSourceGitPinResultV1 =
       path: '$';
     }>;
 
-type FailureCode = Extract<
-  NumericSourceGitPinResultV1,
-  { ok: false }
->['code'];
+type FailureCode = Extract<NumericSourceGitPinResultV1, { ok: false }>['code'];
 
 const rejected = (code: FailureCode): NumericSourceGitPinResultV1 =>
   Object.freeze({ ok: false, code, path: '$' });
@@ -70,8 +67,8 @@ function sourcePin(input: unknown): NumericSourceGitPinV1 | null {
       typeof value !== 'object' ||
       Array.isArray(value) ||
       Reflect.ownKeys(value).length !== 4 ||
-      !['schemaVersion', 'repository', 'revision', 'sourcePath'].every(
-        (key) => Object.hasOwn(value, key)
+      !['schemaVersion', 'repository', 'revision', 'sourcePath'].every((key) =>
+        Object.hasOwn(value, key)
       )
     ) {
       return null;
@@ -140,7 +137,9 @@ export function prepareNumericSourceGitPinV1(
       return rejected('checkout-unavailable');
     }
     root = realpathSync(checkoutRoot);
-    if (realpathSync(utf8(git(root, ['rev-parse', '--show-toplevel']))) !== root) {
+    if (
+      realpathSync(utf8(git(root, ['rev-parse', '--show-toplevel']))) !== root
+    ) {
       return rejected('checkout-unavailable');
     }
   } catch {
@@ -198,10 +197,7 @@ export function prepareNumericSourceGitPinV1(
   } catch {
     return rejected('invalid-source');
   }
-  const resolution = resolveNumericBindingReceiptsV1(
-    production,
-    evidenceInput
-  );
+  const resolution = resolveNumericBindingReceiptsV1(production, evidenceInput);
   if (!resolution.ok) return rejected('receipt-resolution-failed');
 
   // Protect against branch/ref changes during inspection. Object reads above
