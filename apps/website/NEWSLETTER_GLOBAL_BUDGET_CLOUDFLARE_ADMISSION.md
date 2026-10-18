@@ -1,90 +1,56 @@
 # Newsletter global budget — Cloudflare deployment admission
 
-Status: **design and admission gate only**. Parent issues: #1728 and #1712.
-No Cloudflare Durable Object namespace, production binding, or provider quota enforcement is activated by this document.
+Status: **design only**. Tracking: #1728 and #1712.
 
-## Current state (18 October 2026)
+No Durable Object namespace, binding, deployment, or provider quota enforcement is activated by this document.
 
-The website handler calls the optional global admission adapter before the
-Buttondown subscriber-create request. The adapter returns no callback when
-`NEWSLETTER_GLOBAL_BUDGET_ENABLED` is absent or `0`. The coordinator and
-local Miniflare persistence tests exist, but the deployed Cloudflare website
-does not export the coordinator class, and neither canonical Wrangler target
-declares a global-budget Durable Object binding.
+## Current state
 
-The coordinator currently stores one monotonically increasing `spent` value
-**without any window or reset**. It is not yet a daily quota implementation.
-Do not turn it ON merely because the current adapter fails closed on a missing
-binding: a real ON rollout requires verified quota and reset semantics.
+The newsletter handler has an optional global admission callback before the Buttondown subscriber-create request. Missing or `0` mode leaves this callback disabled.
 
-## Single authoritative namespace
+The coordinator currently stores a monotonically increasing `spent` count with no quota window or reset. It is **not a daily budget implementation**. Neither production nor staging declares a global budget Durable Object binding.
 
-For one Buttondown account, there must be exactly one authoritative namespace
-and object ID for all Vellira callers that can send subscriber-create requests.
+## One authoritative namespace
 
-- Prefer a separately owned, explicitly named budget Worker with a
-  SQLite-backed Durable Object class; staging and production website Workers
-  should bind to **that same owner** through `script_name` rather than each
-  registering an independent class. This is a proposal, not authorization to
-  deploy another Worker.
-- Inventory the actual Buttondown credential/account used by each environment,
-  other subscriber-create writers, and whether sharing is acceptable before
-  selecting that authority. Separate keys may still share an account quota.
-- The coordinator's object-name key must be stable across all callers; a
-  constant on two **distinct namespaces** does not provide a shared budget.
-- Do not declare `NewsletterBudgetCoordinator` separately in both staging
-  and production website configurations. The ownership decision needs
-  migration/rename/rollback review, cost assessment, and access controls.
-- New Durable Object namespaces require the SQLite backend. Cloudflare
-  supports declaring classes using `exports` (preferred for new projects)
-  or legacy `migrations`; do not combine those lifecycle mechanisms.
+A shared Buttondown account requires one authoritative budget namespace and object identity across every writer.
 
-## Provider proof required before runtime wiring
+- Prefer a dedicated budget Worker owning a SQLite-backed Durable Object. The staging and production websites should reference the same owner through `script_name`, subject to security review.
+- Confirm which environments and other clients share the Buttondown account. Different API keys do not necessarily imply separate account quotas.
+- Stable object names are insufficient if the callers reference separate namespaces.
+- Never create independent staging and production coordinator classes for a shared account budget.
+- Review Durable Object naming, migration, permission scope, operational cost, and rollback before deployment.
+- Use one Cloudflare-supported class lifecycle approach. Do not mix declarative exports with legacy migration configuration.
 
-Record evidence from the actual Buttondown plan/account for:
+## Provider evidence required
 
-1. Subscriber-create quota units, window and reset boundary; whether failed,
-   duplicate, or timed-out requests count. Do not assume 100/day or midnight UTC.
-2. Other writers and environment keys; reserve enough quota for existing
-   engineering newsletter delivery.
-3. The actual number and meaning of budget admissions, including unknown
-   outcomes and conservative non-refund rules.
-4. A fair strategy for distributed abuse: a single global counter protects the
-   upstream limit but malicious callers can otherwise exhaust it and starve
-   ordinary subscribers.
+Before runtime activation, verify the actual Buttondown account quota, request accounting, window and reset semantics, and any other subscriber-create writers. Do not assume a universal 100-request daily limit or a UTC reset boundary.
 
-If any fact is unknown, leave the global budget OFF.
+Conservative admission must account for ambiguous provider outcomes without refunding possibly consumed capacity. Reserve provider quota for legitimate engineering newsletter requests.
 
-## Deployment sequence — separate approvals
+A single global counter cannot prevent malicious traffic from exhausting the budget. Review Cloudflare WAF coverage, including custom domains and Workers.dev.
 
-1. Confirm Cloudflare account-side WAF and Workers.dev/custom-domain coverage,
-   traffic observability, production site deploy gates and Worker ownership.
-2. Review a **standalone** infrastructure PR for the namespace owner and any
-   SQLite class declaration. Keep site Worker config unchanged until authority
-   is established. Ensure no subscriber write can happen from the new owner.
-3. Verify actual cloud persistence/concurrency and namespace identity with
-   safe synthetic traffic, while all site admission modes remain OFF.
-4. Review separate default-OFF website binding PRs referencing that owner.
-   Fail closed on ON/missing binding; normal OFF requests must remain unchanged.
-5. Only with separate owner approval and provider quota/window validation,
-   review window/reset implementation and conduct a short staging-only ON
-   no-write test followed by mandatory OFF restoration. Production Pro and
-   global-budget mode remain OFF until a distinct rollout decision.
+If any required provider fact remains unverified, leave enforcement OFF.
 
-## Hard acceptance checks
+## Separate rollout approvals
 
-- Exact-head CI GREEN and no unreviewed secret values or provider writes.
-- A test must fail if staging and production declare distinct local DO owner
-  classes while using a shared Buttondown account.
-- Synthetic concurrent callers share the same storage identity and cannot
-  admit more than the configured maximum.
-- Missing/invalid bindings and coordinator failures deny before Buttondown.
-- The OFF path preserves the engineering newsletter and does not charge a
-  budget slot.
-- Rollback instructions cover a failed deployment *after* activation as well
-  as a successful preview; OFF restoration must be independently confirmed.
+1. Inspect actual Cloudflare account WAF controls, Worker routes, telemetry, and deployment permissions.
+2. Review a standalone namespace-owner infrastructure PR. It must not send Buttondown requests.
+3. Prove remote Cloudflare storage persistence, concurrency, and namespace identity using synthetic traffic.
+4. Review website bindings that reference the same authority and remain OFF by default.
+5. Validate the provider quota and implement the required window/reset model in a separate reviewed PR.
+6. With explicit owner approval, conduct a short staging-only ON test without provider writes and restore OFF immediately afterward.
+7. Treat production activation as a separate decision. Public Pro and global budget modes remain OFF until then.
 
-References:
+## Acceptance criteria
+
+- Exact-head CI is green and no secrets or subscriber payloads enter logs.
+- Tests reject independent namespace ownership for environments sharing the same provider account.
+- Concurrent callers cannot admit more than the configured global maximum.
+- Missing bindings and coordinator failures deny before Buttondown whenever enforcement is enabled.
+- OFF preserves ordinary newsletter behavior without spending budget.
+- Rollback instructions cover failures after deployment and require verified OFF restoration.
+
+## References
 
 - https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 - https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/
