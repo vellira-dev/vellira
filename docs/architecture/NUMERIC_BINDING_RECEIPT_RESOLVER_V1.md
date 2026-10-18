@@ -4,7 +4,7 @@
 
 ## Purpose and inputs
 
-After #1727 (Numeric Binding Authority preflight) and #1731 (Finite Numeric Binding Slots), the resolver must prove that a proposed slot does not merely contain *plausible-looking hashes*. A caller-supplied receipt is untrusted until its fields match an independently recomputed receipt for the current source, numeric-free program and immutable dataset.
+After #1727 (Numeric Binding Authority preflight) and #1731 (Finite Numeric Binding Slots), the resolver must prove that a proposed slot does not merely contain _plausible-looking hashes_. A caller-supplied receipt is untrusted until its fields match an independently recomputed receipt for the current source, numeric-free program and immutable dataset.
 
 `resolveNumericBindingReceiptsV1(productionInput: unknown, evidenceInput: unknown)` is a Node-only, pure, review-required sidecar. It accepts a canonical production spec containing `componentProgram.numericBindingSlots` and a separate exact evidence envelope:
 
