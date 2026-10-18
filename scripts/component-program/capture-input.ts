@@ -87,11 +87,7 @@ export function captureComponentProgramInput(value: unknown): unknown {
           throw new Error('Symbol Component Program field.');
         }
         const descriptor = Object.getOwnPropertyDescriptor(input, key);
-        if (
-          !descriptor ||
-          !descriptor.enumerable ||
-          !('value' in descriptor)
-        ) {
+        if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) {
           throw new Error('Hidden or accessor Component Program field.');
         }
         result[key] = copy(descriptor.value as unknown, depth + 1);
