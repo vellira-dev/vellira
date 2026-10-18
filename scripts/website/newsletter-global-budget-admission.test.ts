@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createNewsletterBudgetAdmission } from '../../apps/website/src/server/newsletter/global-budget-admission';
 
 function coordinator(status: number, code: string, cache = 'no-store') {
-  const fetch = vi.fn(async () =>
+  const fetch = vi.fn(async (_request: Request) =>
     Response.json(
       { ok: status === 200, code },
       { status, headers: { 'Cache-Control': cache } }
