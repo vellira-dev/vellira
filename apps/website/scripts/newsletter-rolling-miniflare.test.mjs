@@ -13,6 +13,7 @@ function createMiniflare(persistPath, capacity = '7') {
     'scripts/newsletter-rolling-miniflare-fixture.mjs',
     'cloudflare/newsletter-rolling-budget-coordinator.mjs',
     'cloudflare/newsletter-rolling-window-model.mjs',
+    'cloudflare/newsletter-rolling-response.mjs',
   ];
   return new Miniflare({
     resourcePersistencePath: persistPath,
