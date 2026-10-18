@@ -194,7 +194,7 @@ describe('review-only numeric binding receipt resolver', () => {
     ).toMatchObject({ ok: false, code: 'dataset-mismatch' });
 
     const malformed = fixture();
-    malformed.evidence.entries[0].binding.data.rows[0].values.value = Infinity;
+    malformed.evidence.entries[0].binding.data.rows[1].x = -1;
     expect(
       resolveNumericBindingReceiptsV1(production, malformed.evidence)
     ).toMatchObject({ ok: false, code: 'invalid-binding' });
