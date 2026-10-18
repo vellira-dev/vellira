@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1",
+  "componentName": "DashboardNumericSourceProbe",
+  "platform": "web",
+  "layer": "components",
+  "category": "data-display",
+  "profile": "base",
+  "capabilities": [],
+  "semanticCapabilities": [
+    "accessible-name"
+  ],
+  "parts": [],
+  "componentTokens": "standard",
+  "componentProgram": {
+    "schemaVersion": "1",
+    "anatomy": [
+      {
+        "id": "Root",
+        "role": "root",
+        "parent": null
+      }
+    ],
+    "states": [],
+    "transitions": [],
+    "modules": [
+      {
+        "id": "accessible-name",
+        "platforms": [
+          "react"
+        ],
+        "bindings": {}
+      }
+    ],
+    "numericBindingSlots": {
+      "schemaVersion": "1",
+      "baseProgramFingerprint": "component-program-v1:a3c8c628c6872174d8377e98c07e56e3292aee567774bac895bb23241dc97bc6",
+      "slots": [
+        {
+          "id": "sample-series",
+          "kind": "bounded-numeric-series",
+          "platform": "react",
+          "ownerRootId": "Root",
+          "bindingFingerprint": "numeric-series-binding-v1:sha256:b403d7a80a141fbbc50d6a7bf6471cde0575f0a98d41610995e59b9cce09f559",
+          "authorityFingerprint": "numeric-binding-authority-v1:sha256:c38d92cfef2d1da482f9be9a55a098ca1bb54eb7855cd1fed3fcca81a1af159e"
+        }
+      ]
+    }
+  }
+}
