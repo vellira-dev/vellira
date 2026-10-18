@@ -310,6 +310,22 @@ describe('review-only numeric binding receipt resolver', () => {
     ).toMatchObject({ ok: false, code: 'invalid-evidence' });
   });
 
+  it('requires the exact versioned numeric binding envelope after capture', () => {
+    const { production, evidence } = fixture();
+    const expanded = {
+      ...evidence,
+      entries: [
+        {
+          ...evidence.entries[0],
+          binding: { ...evidence.entries[0].binding, extra: true },
+        },
+      ],
+    };
+    expect(
+      resolveNumericBindingReceiptsV1(production, expanded)
+    ).toMatchObject({ ok: false, code: 'invalid-binding' });
+  });
+
   it('never executes root/nested toJSON or accessor values', () => {
     const { production, evidence } = fixture();
     let called = 0;
