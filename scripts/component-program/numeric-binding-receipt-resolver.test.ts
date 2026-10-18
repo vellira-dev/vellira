@@ -326,13 +326,15 @@ describe('review-only numeric binding receipt resolver', () => {
     expect(called).toBe(0);
 
     const serializer = fixture();
-    Object.defineProperty(serializer.evidence.entries[0].receipt, 'toJSON', {
+    const receipt = { ...serializer.evidence.entries[0].receipt };
+    Object.defineProperty(receipt, 'toJSON', {
       configurable: true,
       value() {
         called += 1;
         return {};
       },
     });
+    serializer.evidence.entries[0].receipt = receipt;
     expect(
       resolveNumericBindingReceiptsV1(
         serializer.production,
