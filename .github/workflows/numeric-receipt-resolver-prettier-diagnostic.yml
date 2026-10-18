@@ -1,0 +1,17 @@
+name: Numeric Receipt Resolver Prettier Diagnostic
+on:
+  push:
+    branches:
+      - feat/numeric-binding-receipt-resolver-v1
+permissions:
+  contents: read
+jobs:
+  formatter-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Show exact canonical formatting changes
+        run: |
+          npx --yes prettier@3.9.8 --write docs/architecture/NUMERIC_BINDING_RECEIPT_RESOLVER_V1.md scripts/component-program/numeric-binding-receipt-resolver.ts scripts/component-program/numeric-binding-receipt-resolver.test.ts
+          git diff -- docs/architecture/NUMERIC_BINDING_RECEIPT_RESOLVER_V1.md scripts/component-program/numeric-binding-receipt-resolver.ts scripts/component-program/numeric-binding-receipt-resolver.test.ts
