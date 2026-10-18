@@ -9,8 +9,8 @@ export class NewsletterBudgetCoordinator {
   }
 
   async fetch(request) {
-    if (request.method !== 'POST' || new URL(request.url).pathname !== '/admit') {
-      return new Response(null, { status: 404 });
+    if (request.method !== 'POST' || new globalThis.URL(request.url).pathname !== '/admit') {
+      return new globalThis.Response(null, { status: 404 });
     }
 
     const capacity = Number(this.env.NEWSLETTER_GLOBAL_BUDGET_CAPACITY);
@@ -38,7 +38,7 @@ export class NewsletterBudgetCoordinator {
   }
 
   reply(code, status) {
-    return Response.json(
+    return globalThis.Response.json(
       { ok: status === 200, code },
       { status, headers: { 'Cache-Control': 'no-store' } }
     );
