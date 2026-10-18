@@ -1,17 +1,19 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import { Miniflare } from 'miniflare';
 
-const entry = path.resolve(
-  import.meta.dirname,
-  'newsletter-budget-miniflare-fixture.mjs'
-);
-
 function createMiniflare(persistPath, capacity = '7') {
+  const scripts = path.resolve(import.meta.dirname, '..');
+  const files = [
+    ['scripts/newsletter-budget-miniflare-fixture.mjs', path.join(scripts, 'scripts/newsletter-budget-miniflare-fixture.mjs')],
+    ['cloudflare/newsletter-budget-coordinator.mjs', path.join(scripts, 'cloudflare/newsletter-budget-coordinator.mjs')],
+    ['cloudflare/newsletter-global-budget-model.mjs', path.join(scripts, 'cloudflare/newsletter-global-budget-model.mjs')],
+  ];
   return new Miniflare({
     resourcePersistencePath: persistPath,
     workers: [
@@ -20,7 +22,15 @@ function createMiniflare(persistPath, capacity = '7') {
           type: 'worker',
           name: 'newsletter-budget-local-test',
           compatibilityDate: '2026-09-06',
-          entrypoint: entry,
+          manifest: {
+            mainModule: 'scripts/newsletter-budget-miniflare-fixture.mjs',
+            modules: Object.fromEntries(
+              files.map(([name, file]) => [
+                name,
+                { type: 'esm', contents: readFileSync(file, 'utf8') },
+              ])
+            ),
+          },
           env: {
             NEWSLETTER_GLOBAL_BUDGET_CAPACITY: {
               type: 'text',
