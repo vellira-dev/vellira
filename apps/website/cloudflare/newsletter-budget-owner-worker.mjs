@@ -1,6 +1,6 @@
-// Dedicated future Durable Object owner entrypoint (not deployed or bound).
+// Dedicated candidate Durable Object owner entrypoint (not deployed or bound).
 // No public routes and no Buttondown credentials or provider requests.
-export { NewsletterBudgetCoordinator } from './newsletter-budget-coordinator.mjs';
+export { NewsletterRollingBudgetCoordinator } from './newsletter-rolling-budget-coordinator.mjs';
 
 export default {
   fetch() {
