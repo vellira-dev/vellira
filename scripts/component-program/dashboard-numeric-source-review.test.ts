@@ -9,26 +9,30 @@ import { componentProgramSource } from './source';
 
 const component = 'DashboardNumericSourceProbe';
 const sourcePath = '../component-production/specs/' + component + '.json';
-const evidencePath = '../component-production/numeric-evidence/' + component + '.json';
+const evidencePath =
+  '../component-production/numeric-evidence/' + component + '.json';
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 }
 
-describe('Dashboard numeric source — content proof only', () => {
+describe('Dashboard numeric source â content proof only', () => {
   it('recompiles the approved numeric-free baseline and denies Numeric Grammar', () => {
     const production = parseComponentProductionInput(readJson(sourcePath));
     expect(production.componentName).toBe(component);
     expect(production.platform).toBe('web');
     const proposed = production.componentProgram;
     expect(proposed?.numericBindingSlots?.slots).toHaveLength(1);
-    if (!proposed?.numericBindingSlots) throw new Error('Missing numeric slot proposal.');
+    if (!proposed?.numericBindingSlots)
+      throw new Error('Missing numeric slot proposal.');
 
     const { numericBindingSlots, ...baselineDecisions } = proposed;
     const source = componentProgramSource(production);
     const baseline = compileComponentProgram(source, baselineDecisions);
     expect(baseline.disposition).toBe('compiled');
-    expect(baseline.fingerprint).toBe(numericBindingSlots.baseProgramFingerprint);
+    expect(baseline.fingerprint).toBe(
+      numericBindingSlots.baseProgramFingerprint
+    );
 
     const attempted = compileComponentProgram(source, proposed);
     expect(attempted.disposition).toBe('missing-grammar-capability');
@@ -44,7 +48,9 @@ describe('Dashboard numeric source — content proof only', () => {
     if (!result.ok) return;
     expect(result.disposition).toBe('review-required');
     expect(result.grammarAdmitted).toBe(false);
-    expect(result.resolved.map((item) => item.slotId)).toEqual(['sample-series']);
+    expect(result.resolved.map((item) => item.slotId)).toEqual([
+      'sample-series',
+    ]);
     expect(result.resolved[0]?.receipt.grammarAdmitted).toBe(false);
     expect(result.resolved[0]?.snapshot.data.rows).toHaveLength(3);
   });
@@ -53,20 +59,28 @@ describe('Dashboard numeric source — content proof only', () => {
     const production = readJson(sourcePath);
     const evidence = readJson(evidencePath) as {
       schemaVersion: string;
-      entries: { slotId: string; receipt: Record<string, unknown>; binding: unknown }[];
+      entries: {
+        slotId: string;
+        receipt: Record<string, unknown>;
+        binding: unknown;
+      }[];
     };
     const invalid = {
       ...evidence,
-      entries: [{
-        ...evidence.entries[0],
-        receipt: {
-          ...evidence.entries[0]?.receipt,
-          authorityFingerprint: 'numeric-binding-authority-v1:sha256:' + 'f'.repeat(64),
+      entries: [
+        {
+          ...evidence.entries[0],
+          receipt: {
+            ...evidence.entries[0]?.receipt,
+            authorityFingerprint:
+              'numeric-binding-authority-v1:sha256:' + 'f'.repeat(64),
+          },
         },
-      }],
+      ],
     };
     expect(resolveNumericBindingReceiptsV1(production, invalid)).toMatchObject({
-      ok: false, code: 'receipt-mismatch',
+      ok: false,
+      code: 'receipt-mismatch',
     });
   });
 });

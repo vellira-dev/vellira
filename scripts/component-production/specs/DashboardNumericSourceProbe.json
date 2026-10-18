@@ -6,9 +6,7 @@
   "category": "data-display",
   "profile": "base",
   "capabilities": [],
-  "semanticCapabilities": [
-    "accessible-name"
-  ],
+  "semanticCapabilities": ["accessible-name"],
   "parts": [],
   "componentTokens": "standard",
   "componentProgram": {
@@ -25,9 +23,7 @@
     "modules": [
       {
         "id": "accessible-name",
-        "platforms": [
-          "react"
-        ],
+        "platforms": ["react"],
         "bindings": {}
       }
     ],
