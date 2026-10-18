@@ -9,6 +9,7 @@ import {
   type ComponentStateChangeV1,
 } from '../../packages/metadata/src/componentProgram';
 
+import { captureComponentProgramInput } from './capture-input';
 import { parseComponentProgramNumericBindingSlotsV1 } from './numeric-binding-slots';
 
 export function record(
@@ -120,10 +121,18 @@ function stateChange(value: unknown): ComponentStateChangeV1 {
 export function parseComponentProgramDecisions(
   value: unknown
 ): ComponentProgramDecisionsV1 {
-  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 65536)
+  // Capturing before any serialization prevents getters/toJSON from silently
+  // removing review-only numeric slots during the input size check.
+  const captured = captureComponentProgramInput(value);
+  const serialized = JSON.stringify(captured);
+  if (
+    typeof serialized !== 'string' ||
+    Buffer.byteLength(serialized, 'utf8') > 65536
+  ) {
     throw new Error('Component Program input exceeds 64 KiB.');
+  }
   const input = record(
-    value,
+    captured,
     [
       'schemaVersion',
       'anatomy',
