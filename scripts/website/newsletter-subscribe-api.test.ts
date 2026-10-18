@@ -707,8 +707,7 @@ describe('newsletter handler global budget integration', () => {
     const route = createNewsletterSubscribeHandler({
       getApiKey: async () => 'test-key',
       getAdmission,
-      subscribe: (input) =>
-        subscribeWithButtondown({ ...input, fetcher }),
+      subscribe: (input) => subscribeWithButtondown({ ...input, fetcher }),
       proInterestEnabled: false,
     });
     expect((await route(makeRequest())).status).toBe(201);
@@ -726,8 +725,7 @@ describe('newsletter handler global budget integration', () => {
         createNewsletterBudgetAdmission({
           NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
         }),
-      subscribe: (input) =>
-        subscribeWithButtondown({ ...input, fetcher }),
+      subscribe: (input) => subscribeWithButtondown({ ...input, fetcher }),
       proInterestEnabled: false,
     });
     const result = await route(makeRequest());
