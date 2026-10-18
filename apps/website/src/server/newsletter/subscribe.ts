@@ -1,5 +1,7 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
+import { createNewsletterBudgetAdmission } from './global-budget-admission';
+
 import {
   newsletterErrors,
   subscribeWithButtondown,
@@ -10,11 +12,17 @@ const MAX_REQUEST_BYTES = 1_024;
 const MAX_EMAIL_LENGTH = 320;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type CloudflareSecretBindings = { BUTTONDOWN_API_KEY?: unknown };
+type CloudflareSecretBindings = {
+  BUTTONDOWN_API_KEY?: unknown;
+  NEWSLETTER_GLOBAL_BUDGET_ENABLED?: unknown;
+  NEWSLETTER_GLOBAL_BUDGET?: unknown;
+};
+type Admission = () => Promise<'admitted' | 'exhausted' | 'unavailable'>;
 type NewsletterSubscribeDependencies = {
   getApiKey: () => Promise<string | undefined>;
   subscribe: typeof subscribeWithButtondown;
   proInterestEnabled: boolean;
+  getAdmission?: () => Promise<Admission | undefined>;
 };
 type NewsletterRequestBody = {
   email?: unknown;
@@ -144,7 +152,13 @@ async function getButtondownApiKey(): Promise<string | undefined> {
     : undefined;
 }
 
+async function getGlobalBudgetAdmission(): Promise<Admission | undefined> {
+  const { env } = await getCloudflareContext({ async: true });
+  return createNewsletterBudgetAdmission(env as CloudflareSecretBindings);
+}
+
 const defaultDependencies: NewsletterSubscribeDependencies = {
+  getAdmission: getGlobalBudgetAdmission,
   getApiKey: getButtondownApiKey,
   subscribe: subscribeWithButtondown,
   proInterestEnabled:
@@ -187,7 +201,23 @@ export function createNewsletterSubscribeHandler(
         503
       );
     }
+    let admit: Admission | undefined;
+    if (apiKey && dependencies.getAdmission) {
+      try {
+        admit = await dependencies.getAdmission();
+      } catch {
+        return response(
+          {
+            ok: false,
+            code: 'temporarily_unavailable',
+            message: newsletterErrors.temporarily_unavailable,
+          },
+          503
+        );
+      }
+    }
     const result = await dependencies.subscribe({
+      ...(admit ? { admit } : {}),
       apiKey,
       email,
       ipAddress: resolveSubscriberIp(request.headers),
