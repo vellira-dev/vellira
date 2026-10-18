@@ -197,6 +197,14 @@ export function prepareNumericSourceGitPinV1(
   } catch {
     return rejected('invalid-source');
   }
+  // A valid Git blob must also belong to its canonical component identity.
+  // Hash and receipt equality alone cannot prevent a cross-component path alias.
+  if (
+    pin.sourcePath !==
+    `scripts/component-production/specs/${production.componentName}.json`
+  ) {
+    return rejected('invalid-source');
+  }
   const resolution = resolveNumericBindingReceiptsV1(production, evidenceInput);
   if (!resolution.ok) return rejected('receipt-resolution-failed');
 
