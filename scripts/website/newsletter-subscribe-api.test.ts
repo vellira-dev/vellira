@@ -627,6 +627,45 @@ describe('dormant global budget provider admission seam', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it('rejects an unexpected coordinator decision without provider writes', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => 'invalid' as 'admitted',
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects a thrown coordinator error without provider writes or leaking details', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => {
+        throw new Error('private coordinator failure');
+      },
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(JSON.stringify(result)).not.toContain('private coordinator failure');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('admits before calling the provider exactly once', async () => {
     const calls: string[] = [];
     const result = await subscribeWithButtondown({
