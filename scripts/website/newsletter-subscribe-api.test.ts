@@ -588,3 +588,93 @@ describe('Buttondown provider boundary', () => {
     ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
   });
 });
+
+
+describe('dormant global budget provider admission seam', () => {
+  it.each(['exhausted', 'unavailable'] as const)(
+    'blocks a %s decision before Buttondown for either purpose',
+    async (decision) => {
+      for (const purpose of [undefined, 'pro_launch'] as const) {
+        const fetcher = vi.fn<ButtondownFetcher>(async () =>
+          new Response('{}', { status: 201 })
+        );
+        const admit = vi.fn(async () => decision);
+        const result = await subscribeWithButtondown({
+          apiKey: 'server-only-test-key',
+          email: 'test@example.com',
+          ipAddress: null,
+          ...(purpose ? { purpose } : {}),
+          fetcher,
+          admit,
+        });
+        expect(result).toMatchObject({
+          ok: false,
+          code: decision === 'exhausted' ? 'rate_limited' : 'temporarily_unavailable',
+        });
+        expect(admit).toHaveBeenCalledTimes(1);
+        expect(fetcher).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  it('fails closed for thrown and malformed admission outcomes', async () => {
+    for (const admit of [
+      async () => { throw new Error('private coordinator failure'); },
+      async () => 'unexpected' as 'admitted',
+    ]) {
+      const fetcher = vi.fn<ButtondownFetcher>(async () =>
+        new Response('{}', { status: 201 })
+      );
+      const result = await subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'test@example.com',
+        ipAddress: null,
+        fetcher,
+        admit,
+      });
+      expect(result).toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(JSON.stringify(result)).not.toContain('private coordinator failure');
+    }
+  });
+
+  it('admits once before the provider request without retry on provider failure', async () => {
+    const events: string[] = [];
+    const admit = vi.fn(async () => {
+      events.push('admit');
+      return 'admitted' as const;
+    });
+    const fetcher = vi.fn<ButtondownFetcher>(async () => {
+      events.push('provider');
+      throw new Error('network failure');
+    });
+    const result = await subscribeWithButtondown({
+      apiKey: 'server-only-test-key',
+      email: 'test@example.com',
+      ipAddress: null,
+      fetcher,
+      admit,
+    });
+    expect(result).toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+    expect(events).toEqual(['admit', 'provider']);
+    expect(admit).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not admit or write when the API key is absent', async () => {
+    const admit = vi.fn(async () => 'admitted' as const);
+    const fetcher = vi.fn<ButtondownFetcher>(async () =>
+      new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: undefined,
+      email: 'test@example.com',
+      ipAddress: null,
+      admit,
+      fetcher,
+    });
+    expect(result).toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+    expect(admit).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});
