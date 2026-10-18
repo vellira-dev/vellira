@@ -368,6 +368,41 @@ describe('finite numeric binding slot reference contract', () => {
     expect(compileComponentProgram(source, mediaProgram())).toEqual(baseline);
   });
 
+  it('captures numeric slots before source getters can delete them', () => {
+    const source = componentProgramSource(mediaSpec());
+    const baseline = compileComponentProgram(source, mediaProgram());
+    expect(baseline.disposition).toBe('compiled');
+    if (!baseline.fingerprint) throw new Error('Missing baseline identity.');
+
+    const decisions: Record<string, unknown> = {
+      ...mediaProgram(),
+      numericBindingSlots: {
+        ...proposal(),
+        baseProgramFingerprint: baseline.fingerprint,
+      },
+    };
+    let invoked = 0;
+    const sourceWithGetter = Object.defineProperty(
+      { ...source },
+      'platforms',
+      {
+        enumerable: true,
+        configurable: true,
+        get() {
+          invoked += 1;
+          delete decisions.numericBindingSlots;
+          return source.platforms;
+        },
+      }
+    );
+    const result = compileComponentProgram(sourceWithGetter, decisions);
+    expect(invoked).toBeGreaterThan(0);
+    expect(Object.hasOwn(decisions, 'numericBindingSlots')).toBe(false);
+    expect(result.disposition).toBe('missing-grammar-capability');
+    expect(result.program).toBeNull();
+    expect(result.fingerprint).toBeNull();
+  });
+
   it('checks root ownership and preserves scalar parameter restrictions', () => {
     const source = componentProgramSource(mediaSpec());
     const baseline = mediaProgram();
