@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Button, Checkbox, Input, ThemeProvider } from '@vellira-ui/react-native';
+import {
+  Button,
+  Checkbox,
+  Input,
+  ThemeProvider,
+} from '@vellira-ui/react-native';
 
 type Profile = { email: string; updates: boolean };
 
@@ -13,7 +18,8 @@ export default function App() {
   const [preview, setPreview] = useState<Profile | null>(null);
 
   const emailValid = emailPattern.test(profile.email.trim());
-  const emailError = attempted && !emailValid ? 'Enter a valid email address.' : undefined;
+  const emailError =
+    attempted && !emailValid ? 'Enter a valid email address.' : undefined;
 
   function handleSubmit() {
     setAttempted(true);
@@ -32,10 +38,15 @@ export default function App() {
         }}
       >
         <View style={{ gap: 8 }}>
-          <Text accessibilityRole='header' style={{ fontSize: 24, fontWeight: '700' }}>
+          <Text
+            accessibilityRole='header'
+            style={{ fontSize: 24, fontWeight: '700' }}
+          >
             One form, two runtimes
           </Text>
-          <Text>React Native example with Vellira. Nothing is sent to a server.</Text>
+          <Text>
+            React Native example with Vellira. Nothing is sent to a server.
+          </Text>
         </View>
         <Input
           label='Email'
@@ -63,7 +74,11 @@ export default function App() {
           Preview form data
         </Button>
         {preview && (
-          <View style={{ gap: 8 }} accessible accessibilityLabel='Local form preview'>
+          <View
+            style={{ gap: 8 }}
+            accessible
+            accessibilityLabel='Local form preview'
+          >
             <Text style={{ fontWeight: '600' }}>Local preview</Text>
             <Text accessibilityLiveRegion='polite'>
               {JSON.stringify(preview, null, 2)}
