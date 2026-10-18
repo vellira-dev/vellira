@@ -17,6 +17,21 @@ function createMiniflare(persistPath, capacity = '7') {
     workers: [
       {
         name: 'newsletter-budget-local-test',
+        config: {
+          worker: {
+            name: 'newsletter-budget-local-test',
+            main: entry,
+          },
+          vars: { NEWSLETTER_GLOBAL_BUDGET_CAPACITY: capacity },
+          durable_objects: {
+            bindings: [
+              {
+                name: 'TEST_NEWSLETTER_BUDGET',
+                class_name: 'NewsletterBudgetCoordinator',
+              },
+            ],
+          },
+        },
         modules: true,
         scriptPath: entry,
         durableObjects: {
