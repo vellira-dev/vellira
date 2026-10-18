@@ -13,11 +13,18 @@ const entry = path.resolve(
 
 function createMiniflare(persistPath, capacity = '7') {
   return new Miniflare({
-    modules: true,
-    scriptPath: entry,
-    durableObjects: { TEST_NEWSLETTER_BUDGET: 'NewsletterBudgetCoordinator' },
-    durableObjectsPersist: persistPath,
-    bindings: { NEWSLETTER_GLOBAL_BUDGET_CAPACITY: capacity },
+    resourcePersistencePath: persistPath,
+    workers: [
+      {
+        name: 'newsletter-budget-local-test',
+        modules: true,
+        scriptPath: entry,
+        durableObjects: {
+          TEST_NEWSLETTER_BUDGET: 'NewsletterBudgetCoordinator',
+        },
+        bindings: { NEWSLETTER_GLOBAL_BUDGET_CAPACITY: capacity },
+      },
+    ],
   });
 }
 
