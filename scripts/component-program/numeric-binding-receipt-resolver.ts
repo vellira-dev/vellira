@@ -173,13 +173,24 @@ export function resolveNumericBindingReceiptsV1(
   for (const slot of numericBindingSlots.slots) {
     const entry = byId.get(slot.id);
     if (!entry) return rejected('missing-receipt');
+    if (!exactFields(entry.binding, ['schemaVersion', 'kind', 'data'])) {
+      return rejected('invalid-binding');
+    }
+    // The reviewed numeric snapshot requires a plain outer envelope.
+    // Restore only its known fields from the already detached data graph;
+    // nested null-prototype records retain descriptor-only authority.
+    const binding = {
+      schemaVersion: entry.binding.schemaVersion,
+      kind: entry.binding.kind,
+      data: entry.binding.data,
+    };
     const candidate = prepareNumericBindingAuthorityV1(baseProduction, {
       schemaVersion: '1',
       ownerName: production.componentName,
       bindingId: slot.id,
       expectedProgramFingerprint: baseline.fingerprint,
       expectedBindingFingerprint: slot.bindingFingerprint,
-      binding: entry.binding,
+      binding,
     });
     if (!candidate.ok) {
       if (candidate.code === 'invalid-binding') {
