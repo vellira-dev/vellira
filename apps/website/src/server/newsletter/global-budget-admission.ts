@@ -1,9 +1,7 @@
 // Dormant adapter for the already-tested provider admission seam.
 // This module is intentionally not imported by the deployed newsletter handler.
 export type NewsletterAdmissionDecision =
-  | 'admitted'
-  | 'exhausted'
-  | 'unavailable';
+  'admitted' | 'exhausted' | 'unavailable';
 
 type BudgetStub = {
   fetch: (request: Request) => Promise<Response>;
@@ -33,8 +31,7 @@ export function createNewsletterBudgetAdmission(
   return async () => {
     try {
       const namespace = bindings.NEWSLETTER_GLOBAL_BUDGET as
-        | BudgetNamespace
-        | undefined;
+        BudgetNamespace | undefined;
       if (
         !namespace ||
         typeof namespace.idFromName !== 'function' ||
