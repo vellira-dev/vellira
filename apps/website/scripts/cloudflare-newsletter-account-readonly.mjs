@@ -61,6 +61,20 @@ function pageStatus(payload, count, page, maximum, accumulated = count) {
   return { status: page === total ? 'complete' : 'next' };
 }
 
+// List Worker Scripts and List Worker Routes are documented as unpaginated
+// result arrays. Never require result_info there: real 200 responses omit it.
+// Reject malformed items, duplicates, or unexpected *incomplete* pagination
+// metadata rather than turning unknown inventory into false negative evidence.
+function singlePageItems(payload, validItem) {
+  const items = payload.result;
+  if (!Array.isArray(items) || !items.every(validItem)) return null;
+  const ids = items.map((item) => item.id);
+  if (ids.length !== new Set(ids).size) return null;
+  if (payload.result_info !== undefined &&
+    pageStatus(payload, items.length, 1, 1).status !== 'complete') return null;
+  return items;
+}
+
 export async function auditCloudflareNewsletterAccount({
   accountId,
   apiToken,
@@ -112,17 +126,17 @@ export async function auditCloudflareNewsletterAccount({
   const workerPresence = Object.fromEntries(WORKERS.map((name) => [name, 'unverified']));
   let workerInventoryStatus = workersReply.status;
   if (workersReply.status === 'available') {
-    const workers = workersReply.payload.result;
-    if (Array.isArray(workers) && workers.every((worker) => isObject(worker) && typeof worker.id === 'string')) {
-      const page = pageStatus(workersReply.payload, workers.length, 1, 1);
-      workerInventoryStatus = page.status === 'complete' ? 'complete' : 'incomplete';
+    const workers = singlePageItems(
+      workersReply.payload,
+      (worker) => isObject(worker) &&
+        typeof worker.id === 'string' && worker.id.length > 0
+    );
+    if (workers) {
+      workerInventoryStatus = 'complete';
       for (const name of WORKERS) {
-        // A positive match is valid even on an incomplete page; absence isn't.
-        if (workers.some((worker) => worker.id === name)) {
-          workerPresence[name] = 'present';
-        } else if (workerInventoryStatus === 'complete') {
-          workerPresence[name] = 'absent';
-        }
+        workerPresence[name] = workers.some((worker) => worker.id === name)
+          ? 'present'
+          : 'absent';
       }
     } else workerInventoryStatus = 'incomplete';
   }
@@ -284,13 +298,18 @@ export async function auditCloudflareNewsletterAccount({
     const reply = await get('/zones/' + zoneId + '/workers/routes');
     if (reply.status !== 'available') zoneRoutes = { status: reply.status };
     else {
-      const items = reply.payload.result;
-      zoneRoutes = Array.isArray(items) && items.every(isObject) &&
-        pageStatus(reply.payload, items.length, 1, 1).status === 'complete'
+      const items = singlePageItems(
+        reply.payload,
+        (item) => isObject(item) &&
+          typeof item.id === 'string' && item.id.length > 0 &&
+          typeof item.pattern === 'string' && item.pattern.length > 0 &&
+          (item.script === undefined || typeof item.script === 'string')
+      );
+      zoneRoutes = items
         ? {
             status: 'observed',
             hasNewsletterWebsiteRoute: items.some((item) =>
-              item.script === 'vellira-website' && typeof item.pattern === 'string' &&
+              item.script === 'vellira-website' &&
               /vellira\.dev/.test(item.pattern)
             ),
           }
