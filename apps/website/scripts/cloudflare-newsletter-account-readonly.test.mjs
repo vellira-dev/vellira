@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import { auditCloudflareNewsletterAccount } from './cloudflare-newsletter-account-readonly.mjs';
@@ -209,4 +211,19 @@ test('unexpected provider payloads and network errors do not print sensitive err
   assert.equal(report.namespaceInventoryStatus, 'unavailable');
   assert.equal(report.sharedNamespaceIdentity, 'unverified');
   assert.equal(JSON.stringify(report).includes('private-test-token'), false);
+});
+
+test('manual account audit never runs on push or schedules and cannot deploy', () => {
+  const workflow = readFileSync(
+    path.resolve(import.meta.dirname, '../../../.github/workflows/cloudflare-newsletter-account-readonly.yml'),
+    'utf8'
+  );
+  assert.match(workflow, /^on:\n  workflow_dispatch:/m);
+  assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule|workflow_run):/m);
+  assert.match(workflow, /if: github.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /permissions:\n  contents: read/);
+  assert.match(workflow, /secrets.CLOUDFLARE_API_TOKEN/);
+  assert.match(workflow, /secrets.CLOUDFLARE_ACCOUNT_ID/);
+  assert.doesNotMatch(workflow, /wrangler|cloudflare-deploy|CLOUDFLARE_R2_SECRET_ACCESS_KEY/);
+  assert.doesNotMatch(workflow, /upload-artifact|checkout@main|pull_request_target/);
 });
