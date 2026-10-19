@@ -127,12 +127,16 @@ export async function auditButtondownApiRequests({
   let expectedCount;
   const seenIds = new Set();
   const keys = new Set();
-  const statuses = {
-    success2xx: 0, http400: 0, http429: 0, other4xx: 0,
-    server5xx: 0, other: 0,
-  };
-  const sources = { api: 0, app: 0, integrationOrClient: 0, unknown: 0 };
-  const dailyUtc = {};
+  // Maps avoid attacker-influenced dynamic object keys while accumulating
+  // metadata; only the fixed aggregates are converted to plain output.
+  const statuses = new Map([
+    ['success2xx', 0], ['http400', 0], ['http429', 0],
+    ['other4xx', 0], ['server5xx', 0], ['other', 0],
+  ]);
+  const sources = new Map([
+    ['api', 0], ['app', 0], ['integrationOrClient', 0], ['unknown', 0],
+  ]);
+  const dailyUtc = new Map();
   let withoutKeyId = 0;
   let total = 0;
   let requests = 0;
@@ -177,10 +181,12 @@ export async function auditButtondownApiRequests({
       throw auditError('API request total changed during pagination');
     }
     for (const item of result.items) {
-      statuses[statusBucket(item.status)] += 1;
-      sources[sourceBucket(item.source)] += 1;
+      const status = statusBucket(item.status);
+      const source = sourceBucket(item.source);
+      statuses.set(status, statuses.get(status) + 1);
+      sources.set(source, sources.get(source) + 1);
       const date = new Date(item.timestamp).toISOString().slice(0, 10);
-      dailyUtc[date] = (dailyUtc[date] ?? 0) + 1;
+      dailyUtc.set(date, (dailyUtc.get(date) ?? 0) + 1);
       if (item.keyId) keys.add(item.keyId);
       else withoutKeyId += 1;
     }
@@ -202,10 +208,10 @@ export async function auditButtondownApiRequests({
         reportedMatchingRequests: expectedCount,
         countedMatchingRequests: total,
         completeness: 'filtered-pages-complete',
-        byStatus: statuses,
-        bySourceCategory: sources,
+        byStatus: Object.fromEntries(statuses),
+        bySourceCategory: Object.fromEntries(sources),
         byUtcDay: Object.fromEntries(
-          Object.entries(dailyUtc).sort(([a], [b]) => a.localeCompare(b))
+          [...dailyUtc.entries()].sort(([a], [b]) => a.localeCompare(b))
         ),
         distinctApiKeyIdsObserved: keys.size,
         requestsWithoutApiKeyId: withoutKeyId,
