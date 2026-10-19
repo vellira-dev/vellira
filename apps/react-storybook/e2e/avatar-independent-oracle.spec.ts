@@ -236,8 +236,13 @@ test.describe('Avatar V2 browser oracle negative controls', () => {
 test('TEMPORARY print exact Prettier output for the oracle', async () => {
   const prettier = await import('prettier');
   const { readFileSync } = await import('node:fs');
-  const { fileURLToPath } = await import('node:url');
-  const filepath = fileURLToPath(import.meta.url);
+  const { existsSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const filename = 'avatar-independent-oracle.spec.ts';
+  const local = resolve(process.cwd(), 'e2e', filename);
+  const filepath = existsSync(local)
+    ? local
+    : resolve(process.cwd(), 'apps/react-storybook/e2e', filename);
   const original = readFileSync(filepath, 'utf8');
   const result = await prettier.format(original, { filepath });
   console.log('BEGIN_AVATAR_PRETTIER_FORMATTED_SOURCE');
