@@ -71,6 +71,55 @@ describe('createOverlayManagerStore', () => {
     expect(store.getZIndex('custom')).toBe(5000);
   });
 
+  it('places a newer dropdown above its open modal despite lower base level', () => {
+    const store = createOverlayManagerStore({ policy });
+
+    store.register({ id: 'modal', zIndexLevel: 'modal' });
+    store.register({ id: 'select', zIndexLevel: 'dropdown' });
+    store.register({ id: 'popover', zIndexLevel: 'popover' });
+
+    expect(store.getZIndex('modal')).toBe(1000);
+    expect(store.getZIndex('select')).toBe(1010);
+    expect(store.getZIndex('popover')).toBe(1020);
+    expect(store.getTopmost()?.id).toBe('popover');
+
+    store.unregister('popover');
+    store.unregister('select');
+
+    expect(store.getZIndex('modal')).toBe(1000);
+    expect(store.getZIndex('select')).toBeUndefined();
+
+    store.register({ id: 'select-again', zIndexLevel: 'dropdown' });
+    expect(store.getZIndex('select-again')).toBe(1010);
+  });
+
+  it('recalculates stacking when an earlier overlay is promoted', () => {
+    const store = createOverlayManagerStore({ policy });
+
+    store.register({ id: 'parent', zIndexLevel: 'popover' });
+    store.register({ id: 'child', zIndexLevel: 'dropdown' });
+
+    expect(store.getZIndex('child')).toBe(210);
+
+    store.update({ id: 'parent', zIndexLevel: 'modal' });
+
+    expect(store.getZIndex('parent')).toBe(1000);
+    expect(store.getZIndex('child')).toBe(1010);
+  });
+
+  it('respects explicit stacking overrides while lifting subsequent defaults', () => {
+    const store = createOverlayManagerStore({ policy });
+
+    store.register({ id: 'explicit', zIndexLevel: 'modal', zIndex: 5000 });
+    store.register({ id: 'select', zIndexLevel: 'dropdown' });
+
+    expect(store.getZIndex('explicit')).toBe(5000);
+    expect(store.getZIndex('select')).toBe(5010);
+
+    store.update({ id: 'explicit', zIndexLevel: 'modal', zIndex: 8000 });
+    expect(store.getZIndex('select')).toBe(8010);
+  });
+
   it('updates z-index metadata without changing stack order', () => {
     const store = createOverlayManagerStore({ policy });
 
