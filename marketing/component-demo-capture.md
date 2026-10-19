@@ -3,8 +3,8 @@
 Creates GIF, MP4, PNG, and SHA-256 evidence from **real React Storybook**.
 
 V1 originally proved `dropdown-keyboard`. The same reviewed pipeline now also
-supports `button-confirmation`, `modal-focus`, and `select-keyboard` using existing
-Button, Modal, and Select Storybook interactions.
+supports `button-confirmation`, `modal-focus`, `select-keyboard`, and
+`tabs-keyboard` using existing Button, Modal, Select, and Tabs Storybook interactions.
 No React Native or auto-publishing.
 
 ## Proof before merge
@@ -14,7 +14,7 @@ A dedicated PR workflow runs only when demo tooling changes.
 It checks out the exact PR HEAD with read-only repository permissions.
 
 It builds Storybook once and captures **all reviewed** Dropdown, Button, Modal,
-and Select stories in Chromium. Ordinary manual runs capture only the selected
+Select, and Tabs stories in Chromium. Ordinary manual runs capture only the selected
 scenario.
 
 No secrets, arbitrary URLs, or write permissions are supplied.
@@ -28,7 +28,7 @@ Review its uploaded GIF, MP4, PNG, and manifest before merging.
 After merge, open **Actions → Capture Component Demo → Run workflow**.
 
 Choose `main` and one of `dropdown-keyboard`, `button-confirmation`,
-`modal-focus`, or `select-keyboard`.
+`modal-focus`, `select-keyboard`, or `tabs-keyboard`.
 
 The workflow uses reviewed source and never publishes to Buffer.
 
@@ -128,8 +128,8 @@ Four reviewed phases (`ready`, `opened`, `focused`, `closed`) produce
 `modal-focus.mp4`, `modal-focus.gif`, `modal-focus.png` and their
 branded `social/modal-focus-social.*` counterparts with SHA-256 evidence.
 The focused story and real dialog geometry determine the crop. The existing
-manual workflow now offers four choices; pre-merge demo-tooling validation
-runs Dropdown, Button, Modal and Select in the same isolated proof job.
+manual workflow offers five choices; pre-merge demo-tooling validation
+runs Dropdown, Button, Modal, Select and Tabs in the same isolated proof job.
 
 ## Select keyboard choice scenario
 
@@ -144,6 +144,22 @@ The four source-verified phases are `ready`, `opened`, `highlighted`, and
 include raw `select-keyboard.{mp4,gif,png}` and
 `social/select-keyboard-social.{mp4,gif,png}` plus SHA-256 manifest.
 
-The existing path-filtered PR workflow runs all four scenarios sequentially
+The existing path-filtered PR workflow runs all five scenarios sequentially
 in one Storybook build. Manual captures still select one specific demo.
 No new agent, package, auto-merge, scheduler, or Buffer publisher is added.
+
+## Tabs controlled keyboard scenario
+
+The allowlisted `tabs-keyboard` demo reuses the canonical
+`Components/Tabs/Controlled` Storybook story. Playwright verifies Home is
+selected and its panel is visible, ArrowRight moves actual keyboard focus and
+selection to Profile and then Settings, and the Home key restores the first
+tab and its panel. It checks `aria-selected`, focused DOM element, controlled
+current-value text, and the real tabpanel content in every phase.
+
+The four frames are `ready`, `profile`, `settings`, and `restored`, with
+the poster showing Settings. A single scenario produces
+`tabs-keyboard.{mp4,gif,png}`, `social/tabs-keyboard-social.{mp4,gif,png}`
+and its commit/run-bound manifest. No app navigation or backend write occurs.
+Every demo-tooling PR validates the full five-scenario matrix in the existing
+read-only job; a manual run captures only the selected component.

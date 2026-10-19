@@ -3,6 +3,48 @@
 export const STORYBOOK_ORIGIN = 'http://127.0.0.1:6006';
 
 const DEMOS = Object.freeze({
+  'tabs-keyboard': Object.freeze({
+    storyId: 'components-tabs--controlled',
+    title: 'Vellira Tabs — keyboard navigation',
+    subtitle: 'Arrow-key activation and live panel updates',
+    viewport: Object.freeze({ width: 960, height: 540 }),
+    gifWidth: 800,
+    gifFps: 12,
+    phaseFrames: Object.freeze({
+      ready: 9,
+      profile: 17,
+      settings: 17,
+      restored: 13,
+    }),
+    socialStages: Object.freeze([
+      Object.freeze({
+        name: 'ready',
+        label: '01 / HOME',
+        key: 'ARROW RIGHT',
+        action: 'Navigate to Profile',
+      }),
+      Object.freeze({
+        name: 'profile',
+        label: '02 / PROFILE',
+        key: 'ARROW RIGHT',
+        action: 'Navigate to Settings',
+      }),
+      Object.freeze({
+        name: 'settings',
+        label: '03 / SETTINGS',
+        key: 'HOME',
+        action: 'Return to the first tab',
+      }),
+      Object.freeze({
+        name: 'restored',
+        label: '04 / HOME',
+        key: 'DONE',
+        action: 'Panel and focus restored',
+      }),
+    ]),
+    posterPhase: 'settings',
+    maxGifBytes: 8 * 1024 * 1024,
+  }),
   'select-keyboard': Object.freeze({
     storyId: 'components-select--simple-usage',
     title: 'Vellira Select — keyboard choice',

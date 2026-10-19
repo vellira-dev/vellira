@@ -9,6 +9,7 @@ import { capturePhase } from './component-demo-frames.mjs';
 import { recordButtonConfirmation } from './component-demo-button.mjs';
 import { recordModalFocus } from './component-demo-modal.mjs';
 import { recordSelectKeyboard } from './component-demo-select.mjs';
+import { recordTabsKeyboard } from './component-demo-tabs.mjs';
 import {
   encodeSocialMedia,
   getSocialCrop,
@@ -177,6 +178,7 @@ async function main() {
           'button-confirmation': recordButtonConfirmation,
           'modal-focus': recordModalFocus,
           'select-keyboard': recordSelectKeyboard,
+          'tabs-keyboard': recordTabsKeyboard,
         }[name];
         if (!recorder) throw new Error('Unreviewed component demo scenario.');
         crop = await recorder(page, demo, framesDir, png);
