@@ -33,12 +33,8 @@ function mockCloudflare({ workerNames = liveScripts, namespaces = [], withBindin
     assert.equal(options.body, undefined);
     if (deny.includes(path)) return makeResponse(null, 403);
     if (path === '/accounts/' + accountId + '/workers/scripts') {
-      return makeResponse(
-        workerNames.map((id) => ({ id })),
-        200,
-        { count: workerNames.length, page: 1, per_page: 100,
-          total_count: workerNames.length, total_pages: 1 }
-      );
+      // The documented List Worker Scripts response has no result_info.
+      return makeResponse(workerNames.map((id) => ({ id })));
     }
     if (path === '/accounts/' + accountId + '/workers/durable_objects/namespaces') {
       assert.equal(url.searchParams.get('page'), '1');
@@ -70,11 +66,12 @@ function mockCloudflare({ workerNames = liveScripts, namespaces = [], withBindin
       return makeResponse([{ id: zoneId, name: 'vellira.dev', account: { id: accountId } }]);
     }
     if (path === '/zones/' + zoneId + '/workers/routes') {
-      return makeResponse(
-        [{ pattern: 'vellira.dev/api/*', script: 'vellira-website' }],
-        200, { count: 1, page: 1, per_page: 100, total_count: 1,
-          total_pages: 1 }
-      );
+      // The documented List Worker Routes response has no result_info.
+      return makeResponse([{
+        id: '1234567890abcdef1234567890abcdef',
+        pattern: 'vellira.dev/api/*',
+        script: 'vellira-website',
+      }]);
     }
     if (path.includes('/rulesets/phases/')) {
       if (path.endsWith('/http_ratelimit/entrypoint')) {
@@ -114,6 +111,7 @@ test('Cloudflare inventory is strictly GET-only, sanitized, and does not claim W
   assert.equal(report.workerDev['vellira-website-staging'].enabled, true);
   assert.equal(report.workerDev['vellira-website-staging'].previewsEnabled, false);
   assert.equal(report.zoneStatus, 'observed');
+  assert.equal(report.zoneRoutes.status, 'observed');
   assert.equal(report.zoneRoutes.hasNewsletterWebsiteRoute, true);
   assert.equal(report.zoneWaf.http_ratelimit.enabledRules, 1);
   assert.equal(report.accountWaf.http_ratelimit.enabledRules, 1);
@@ -289,10 +287,11 @@ test('mismatched pagination totals and page numbers cannot prove an absent domai
   }
 });
 
-test('an incomplete Worker listing may prove observed presence but never absence', async () => {
+test('an unexpected partial Worker listing stays incomplete and cannot prove absence', async () => {
   const base = mockCloudflare();
   const fetcher = (url, options) => url.pathname.endsWith('/workers/scripts')
-    ? makeResponse([{ id: 'vellira-website' }])
+    ? makeResponse([{ id: 'vellira-website' }], 200,
+      { count: 1, page: 1, per_page: 1, total_count: 2, total_pages: 2 })
     : base.fetcher(url, options);
   const report = await auditCloudflareNewsletterAccount({
     accountId,
@@ -300,7 +299,7 @@ test('an incomplete Worker listing may prove observed presence but never absence
     fetcher,
   });
   assert.equal(report.workerInventoryStatus, 'incomplete');
-  assert.equal(report.workerPresence['vellira-website'], 'present');
+  assert.equal(report.workerPresence['vellira-website'], 'unverified');
   assert.equal(report.workerPresence['vellira-website-staging'], 'unverified');
   assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'unverified');
 });
@@ -389,4 +388,120 @@ test('missing preview flag is inconclusive, even with ordinary workers.dev disab
   });
   assert.deepEqual(report.workerDev['vellira-website'], { status: 'incomplete' });
   assert.deepEqual(report.domains['vellira.dev'], { status: 'incomplete' });
+});
+
+
+test('documented unpaginated Worker and zone-route lists can prove absence', async () => {
+  const baseline = mockCloudflare({ workerNames: [] });
+  const fetcher = (url, options) => url.pathname.endsWith('/workers/routes')
+    ? makeResponse([])
+    : baseline.fetcher(url, options);
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.equal(report.workerInventoryStatus, 'complete');
+  assert.equal(report.workerPresence['vellira-website'], 'absent');
+  assert.equal(report.workerPresence['vellira-website-staging'], 'absent');
+  assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'absent');
+  assert.deepEqual(report.zoneRoutes, {
+    status: 'observed', hasNewsletterWebsiteRoute: false,
+  });
+});
+
+test('unpaginated Worker scripts reject uninspectable IDs and duplicates', async () => {
+  for (const rows of [
+    [{ id: 'vellira-website' }, {}],
+    [{ id: 'vellira-website' }, { id: null }],
+    [{ id: 'vellira-website' }, { id: 'vellira-website' }],
+    [{ id: '' }],
+    [{ id: 'vellira-website' }, null],
+  ]) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.endsWith('/workers/scripts')
+      ? makeResponse(rows)
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.workerInventoryStatus, 'incomplete');
+    assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'unverified');
+    assert.equal(report.workerPresence['vellira-website'], 'unverified');
+  }
+});
+
+test('unpaginated zone routes reject malformed or duplicate entries', async () => {
+  const validId = '1234567890abcdef1234567890abcdef';
+  for (const rows of [
+    [{ id: validId, script: 'vellira-website' }],
+    [{ id: validId, pattern: null, script: 'vellira-website' }],
+    [{ id: validId, pattern: 'vellira.dev/*', script: 123 }],
+    [{ id: validId, pattern: 'vellira.dev/*' }, {
+      id: validId, pattern: 'other.example/*',
+    }],
+    [{ pattern: 'vellira.dev/*', script: 'vellira-website' }],
+    [null],
+  ]) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.endsWith('/workers/routes')
+      ? makeResponse(rows)
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.zoneRoutes.status, 'incomplete');
+    assert.equal(
+      Object.hasOwn(report.zoneRoutes, 'hasNewsletterWebsiteRoute'), false
+    );
+  }
+});
+
+test('scriptless zone routes are valid without implying a newsletter Worker route', async () => {
+  const base = mockCloudflare();
+  const fetcher = (url, options) => url.pathname.endsWith('/workers/routes')
+    ? makeResponse([{
+      id: '1234567890abcdef1234567890abcdef',
+      pattern: 'vellira.dev/*',
+    }])
+    : base.fetcher(url, options);
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.deepEqual(report.zoneRoutes, {
+    status: 'observed', hasNewsletterWebsiteRoute: false,
+  });
+});
+
+test('unexpected pagination indicating extra pages remains inconclusive for both unpaginated endpoints', async () => {
+  const base = mockCloudflare();
+  const fetcher = (url, options) => {
+    if (url.pathname.endsWith('/workers/scripts')) {
+      return makeResponse([{ id: 'vellira-website' }], 200,
+        { count: 1, page: 1, per_page: 1, total_count: 2, total_pages: 2 });
+    }
+    if (url.pathname.endsWith('/workers/routes')) {
+      return makeResponse([{
+        id: '1234567890abcdef1234567890abcdef',
+        pattern: 'vellira.dev/*',
+        script: 'vellira-website',
+      }], 200, { count: 1, page: 1, per_page: 1, total_count: 2,
+        total_pages: 2 });
+    }
+    return base.fetcher(url, options);
+  };
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.equal(report.workerInventoryStatus, 'incomplete');
+  assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'unverified');
+  assert.equal(report.zoneRoutes.status, 'incomplete');
 });
