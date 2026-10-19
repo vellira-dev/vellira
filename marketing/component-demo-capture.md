@@ -1,49 +1,53 @@
 # Verified component demo capture (V1)
 
-Capture **real interactions** from the exact source revision of Vellira's existing
-React Storybook, without a second agent or a publishing integration. V1 supports
-`dropdown-keyboard` only. It does **not** capture React Native, publish a post,
-change components, approve content, or modify Buffer.
+Creates GIF, MP4, PNG, and SHA-256 evidence from **real React Storybook**.
 
-## Pre-merge proof
+V1 permits only `dropdown-keyboard`. No React Native or auto-publishing.
 
-A separate `pull_request` trigger runs **only for changes to the capture scripts
-or capture workflow**. It checks out the exact PR HEAD, builds Storybook and
-runs the real Chromium scenario before any merge. This job is not a required CI
-lane and is not triggered for ordinary component or website pull requests. It
-uses no secrets, write permissions, or social credentials and accepts only
-same-repository PRs. Inspect its media artifact on the *final HEAD* before Ready.
+## Proof before merge
 
-## Manual GitHub Actions run
+A dedicated PR workflow runs only when demo tooling changes.
 
-After the workflow is merged, visit **Actions → Capture Component Demo → Run
-workflow**, select the **main** branch and `dropdown-keyboard` scenario. The run
-uses the dispatched immutable `main` commit in the pinned Linux Playwright image;
-it does not accept a user URL or an unreviewed arbitrary script.
+It checks out the exact PR HEAD with read-only repository permissions.
 
-On success, download the `component-demo-dropdown-keyboard-*` artifact. It contains:
+It builds Storybook and captures the real Dropdown in Chromium.
 
-- `dropdown-keyboard.mp4` — video to prefer for social platforms when supported;
-- `dropdown-keyboard.gif` — looping GIF, capped at 8 MiB;
-- `dropdown-keyboard.png` — image of the verified menu-open state;
-- `manifest.json` — source SHA, story ID, run identity and SHA-256 checksums.
+No secrets, arbitrary URLs, or write permissions are supplied.
 
-The recording is assembled from four verified, **post-load** real Storybook
-states: ready → opened → ArrowDown highlighted → Escape closed. Navigation,
-font loading and startup frames are *never* captured. FFmpeg encodes this
-post-load frame sequence, and the CLI validates resulting GIF/MP4 durations.
-The first and last frames should also be visually inspected before publishing.
+The PR check is separate from the required CI critical path.
 
-The workflow has read-only repository permissions, no social credentials, no
-commits and no Buffer scheduling. Its runtime is bounded at 18 minutes and its
-artifacts expire after seven days. It does not extend the required CI critical
-path. Verify all generated media visually, confirm public claims, and approve
-the final social copy **before** adding media to Buffer. Uploading GIF/MP4 into
-social posts is a separate human-reviewed step.
+Review its uploaded GIF, MP4, PNG, and manifest before merging.
 
-## Local reproduction (optional)
+## Manual capture
 
-Build Storybook from the intended local commit:
+After merge, open **Actions → Capture Component Demo → Run workflow**.
+
+Choose `main` and `dropdown-keyboard`.
+
+The workflow uses reviewed source and never publishes to Buffer.
+
+Its timeout is 18 minutes. Artifacts expire after seven days.
+
+The artifact contains four files:
+
+- `dropdown-keyboard.mp4`: social video.
+- `dropdown-keyboard.gif`: looping GIF, under 8 MiB.
+- `dropdown-keyboard.png`: menu-open preview.
+- `manifest.json`: source SHA, run ID, and SHA-256 checksums.
+
+The animation uses four verified Storybook states:
+
+Ready → Enter/open → ArrowDown highlight → Escape/close.
+
+Capture starts only after Storybook, fonts, and trigger are ready.
+
+Loading and navigation frames are never included.
+
+FFmpeg verifies duration. Review the first and last frames visually.
+
+## Local reproduction
+
+From the Vellira repository root:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -59,12 +63,10 @@ In another terminal, with `ffmpeg` and `ffprobe` available:
 node scripts/visual/capture-component-demo.mjs dropdown-keyboard
 ```
 
-The CLI accepts only the reviewed allowlisted scenario and local Storybook
-endpoint `127.0.0.1:6006`. It asserts the actual menu opens via Enter, responds
-to ArrowDown, closes via Escape and restores focus. It fails rather than emitting
-finished assets if these checks, clip duration, or GIF-size bounds fail.
+The CLI checks Enter, ArrowDown, Escape, and restored keyboard focus.
 
-Outputs remain in the ignored
-`apps/react-storybook/test-results/component-demo/dropdown-keyboard/`
-directory. No artifacts are committed. Extend the allowlist only with new
-reviewed real-story scenarios and matching behavioral assertions.
+The CLI rejects unknown scenarios, invalid output, and oversized GIFs.
+
+Output is ignored under `apps/react-storybook/test-results/component-demo/`.
+
+No generated media is committed. Publishing remains a separate review step.
