@@ -511,7 +511,7 @@ export function PlatformParity() {
           </div>
           <Button asChild appearance='solid' color='primary'>
             <a
-              href='https://github.com/vellira-dev/vellira/tree/main/examples/workspace-starter'
+              href='https://github.com/vellira-dev/vellira/tree/growth/react-native-form-try-it-20261018/examples/workspace-starter'
               target='_blank'
               rel='noopener noreferrer'
             >
