@@ -218,10 +218,10 @@ test('manual account audit never runs on push or schedules and cannot deploy', (
     path.resolve(import.meta.dirname, '../../../.github/workflows/cloudflare-newsletter-account-readonly.yml'),
     'utf8'
   );
-  assert.match(workflow, /^on:\n  workflow_dispatch:/m);
-  assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule|workflow_run):/m);
+  assert.match(workflow, /^on:\n[ ]{2}workflow_dispatch:/m);
+  assert.doesNotMatch(workflow, /^[ ]{2}(?:push|pull_request|schedule|workflow_run):/m);
   assert.match(workflow, /if: github.ref == 'refs\/heads\/main'/);
-  assert.match(workflow, /permissions:\n  contents: read/);
+  assert.match(workflow, /permissions:\n[ ]{2}contents: read/);
   assert.match(workflow, /secrets.CLOUDFLARE_API_TOKEN/);
   assert.match(workflow, /secrets.CLOUDFLARE_ACCOUNT_ID/);
   assert.doesNotMatch(workflow, /wrangler|cloudflare-deploy|CLOUDFLARE_R2_SECRET_ACCESS_KEY/);
