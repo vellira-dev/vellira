@@ -9,6 +9,7 @@ import type {
 } from 'react';
 
 import { RadioGroup } from '../RadioGroup';
+import { Select } from '../Select';
 
 import { Modal } from './Modal';
 
@@ -500,6 +501,76 @@ export const NestedModal: Story = {
       </ProductModal>
     </Section>
   ),
+};
+
+function NestedSelectModalDemo() {
+  const [team, setTeam] = useState('design');
+  const [status, setStatus] = useState('planned');
+
+  return (
+    <Section title='Select inside Modal'>
+      <Modal>
+        <Modal.Trigger asChild>
+          <Button>Create project</Button>
+        </Modal.Trigger>
+        <Portal>
+          <Modal.Overlay />
+          <Modal.Content>
+            <Modal.Header>
+              <div>
+                <Modal.Title>Create project</Modal.Title>
+                <Modal.Description>
+                  Choose a team and status without closing this dialog.
+                </Modal.Description>
+              </div>
+              <Modal.Close />
+            </Modal.Header>
+            <Modal.Body>
+              <div style={fieldGridStyle}>
+                <Select
+                  label='Team'
+                  value={team}
+                  onValueChange={(value) => {
+                    if (value) setTeam(value);
+                  }}
+                >
+                  <Select.Item value='design'>Design</Select.Item>
+                  <Select.Item value='platform'>Platform</Select.Item>
+                  <Select.Item value='mobile'>Mobile</Select.Item>
+                </Select>
+                <Select
+                  label='Status'
+                  value={status}
+                  onValueChange={(value) => {
+                    if (value) setStatus(value);
+                  }}
+                >
+                  <Select.Item value='planned'>Planned</Select.Item>
+                  <Select.Item value='active'>In progress</Select.Item>
+                  <Select.Item value='shipped'>Shipped</Select.Item>
+                </Select>
+                <p data-testid='selected-team'>Selected team: {team}</p>
+                <p data-testid='selected-status'>
+                  Selected status: {status}
+                </p>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Modal.Close asChild>
+                <Button appearance='outline' color='neutral'>
+                  Cancel
+                </Button>
+              </Modal.Close>
+            </Modal.Footer>
+          </Modal.Content>
+        </Portal>
+      </Modal>
+    </Section>
+  );
+}
+
+export const NestedSelect: Story = {
+  render: () => <NestedSelectModalDemo />,
 };
 
 export const AlertDialog: Story = {
