@@ -30,12 +30,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
 
     {
-      url: `${SITE_URL}/showcase`,
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    },
-
-    {
       url: `${SITE_URL}/components`,
       changeFrequency: 'weekly' as const,
       priority: 0.9,

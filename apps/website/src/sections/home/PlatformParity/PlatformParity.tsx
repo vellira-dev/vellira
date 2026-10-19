@@ -499,6 +499,26 @@ export function PlatformParity() {
             ))}
           </ul>
         </div>
+
+        <div className={styles.tryIt}>
+          <div className={styles.tryItCopy}>
+            <strong>Want to try Vellira in your own project?</strong>
+            <p>
+              Follow a small React and React Native form example. Check
+              controlled state and platform-specific interactions with the
+              published packages, then tell us where the setup gets confusing.
+            </p>
+          </div>
+          <Button asChild appearance='solid' color='primary'>
+            <a
+              href='https://github.com/vellira-dev/vellira/tree/main/examples/cross-platform-form'
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              Try Vellira locally
+            </a>
+          </Button>
+        </div>
       </div>
     </section>
   );
