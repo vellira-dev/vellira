@@ -25,6 +25,22 @@ function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+// Deployments must account for all live traffic before any binding conclusion.
+// Cloudflare declares the percentages must total 100 (allow two-decimal rounding).
+function validTrafficSplit(versions) {
+  if (!Array.isArray(versions) || versions.length < 1 || versions.length > MAX_VERSION_READS) {
+    return false;
+  }
+  if (!versions.every((v) =>
+    isObject(v) && UUID.test(v.version_id ?? '') &&
+    typeof v.percentage === 'number' && Number.isFinite(v.percentage) &&
+    v.percentage >= 0.01 && v.percentage <= 100
+  )) return false;
+  if (new Set(versions.map((v) => v.version_id)).size !== versions.length) return false;
+  const sum = versions.reduce((total, v) => total + v.percentage, 0);
+  return Number.isFinite(sum) && Math.abs(sum - 100) < 0.011;
+}
+
 function budgetBindingPresent(bindings) {
   if (Array.isArray(bindings)) {
     return bindings.some((binding) => isObject(binding) && binding.name === 'NEWSLETTER_GLOBAL_BUDGET');
@@ -65,6 +81,18 @@ function pageStatus(payload, count, page, maximum, accumulated = count) {
 // result arrays. Never require result_info there: real 200 responses omit it.
 // Reject malformed items, duplicates, or unexpected *incomplete* pagination
 // metadata rather than turning unknown inventory into false negative evidence.
+// Match the route hostname, never a suffix in another hostname or in the path.
+// Cloudflare permits optional schemes and leading host wildcards.
+function targetsVelliraZone(pattern) {
+  const host = pattern.replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+  if (host === '*') return true;
+  const hostname = host.startsWith('*.')
+    ? host.slice(2)
+    : host.startsWith('*') ? host.slice(1) : host;
+  return /^[a-z0-9-]+(?:\.[a-z0-9-]+)*$/.test(hostname) &&
+    (hostname === 'vellira.dev' || hostname.endsWith('.vellira.dev'));
+}
+
 function singlePageItems(payload, validItem) {
   const items = payload.result;
   if (!Array.isArray(items) || !items.every(validItem)) return null;
@@ -218,16 +246,11 @@ export async function auditCloudflareNewsletterAccount({
     }
     const deployments = reply.payload.result?.deployments;
     const versions = deployments?.[0]?.versions;
-    if (
-      !Array.isArray(deployments) || !Array.isArray(versions) ||
-      versions.length < 1 || versions.length > MAX_VERSION_READS ||
-      !versions.every((v) => isObject(v) && UUID.test(v.version_id ?? '') &&
-        typeof v.percentage === 'number' && v.percentage > 0)
-    ) {
+    if (!Array.isArray(deployments) || !validTrafficSplit(versions)) {
       liveBinding[name] = { status: 'incomplete' };
       continue;
     }
-    let seen = false;
+    let allHaveBinding = true;
     let complete = true;
     for (const v of versions) {
       const detail = await get(root + '/workers/scripts/' + name + '/versions/' + v.version_id);
@@ -240,10 +263,10 @@ export async function auditCloudflareNewsletterAccount({
         complete = false;
         break;
       }
-      seen ||= found;
+      allHaveBinding &&= found;
     }
     liveBinding[name] = complete
-      ? { status: 'observed', globalBudgetBindingInServingVersions: seen }
+      ? { status: 'observed', globalBudgetBindingInServingVersions: allHaveBinding }
       : { status: 'incomplete' };
   }
 
@@ -310,7 +333,7 @@ export async function auditCloudflareNewsletterAccount({
             status: 'observed',
             hasNewsletterWebsiteRoute: items.some((item) =>
               item.script === 'vellira-website' &&
-              /vellira\.dev/.test(item.pattern)
+              targetsVelliraZone(item.pattern)
             ),
           }
         : { status: 'incomplete' };
