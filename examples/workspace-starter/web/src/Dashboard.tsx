@@ -214,8 +214,12 @@ export function Dashboard({
   const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
-    const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
-    if (saved) setWorkspace(saved);
+    try {
+      const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
+      if (saved) setWorkspace(saved);
+    } catch {
+      // Private browsing may forbid even reading localStorage.
+    }
     setHydrated(true);
   }, [storageKey]);
 

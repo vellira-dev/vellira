@@ -317,7 +317,7 @@ try {
               .getByRole('button', { name: 'Overview', exact: true })
               .click();
             await expect(
-              dashboard.getByRole('heading', { name: 'Demo QA Workspace' })
+              dashboard.getByText('Demo QA Workspace', { exact: true })
             ).toBeVisible();
 
             const savedProjects = await page.evaluate(() => {
@@ -329,7 +329,7 @@ try {
             assert.equal(savedProjects, 4);
             await page.reload({ waitUntil: 'domcontentloaded' });
             await expect(
-              dashboard.getByRole('heading', { name: 'Demo QA Workspace' })
+              dashboard.getByText('Demo QA Workspace', { exact: true })
             ).toBeVisible();
             await dashboard
               .getByRole('button', { name: 'Projects', exact: true })

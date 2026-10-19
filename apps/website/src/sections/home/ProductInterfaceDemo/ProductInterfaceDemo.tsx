@@ -2,7 +2,7 @@
 
 import { Button } from '@vellira-ui/react';
 
-import { Dashboard } from '../../../../../../examples/workspace-starter/web/src/Dashboard';
+import { Dashboard } from './Dashboard';
 
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 
