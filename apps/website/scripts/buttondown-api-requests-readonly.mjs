@@ -64,7 +64,6 @@ function assertPage(payload, page, totalSoFar, start, end, seenIds) {
       timestamp: Date.parse(entry.creation_date),
       status: entry.status_code,
       source: SOURCES.has(entry.source) ? entry.source : 'unknown',
-      keyId: entry.api_key_id ?? null,
     });
   }
 
@@ -126,7 +125,6 @@ export async function auditButtondownApiRequests({
   const before = new Date(end).toISOString();
   let expectedCount;
   const seenIds = new Set();
-  const keys = new Set();
   // Maps avoid attacker-influenced dynamic object keys while accumulating
   // metadata; only the fixed aggregates are converted to plain output.
   const statuses = new Map([
@@ -137,7 +135,6 @@ export async function auditButtondownApiRequests({
     ['api', 0], ['app', 0], ['integrationOrClient', 0], ['unknown', 0],
   ]);
   const dailyUtc = new Map();
-  let withoutKeyId = 0;
   let total = 0;
   let requests = 0;
 
@@ -187,8 +184,6 @@ export async function auditButtondownApiRequests({
       sources.set(source, sources.get(source) + 1);
       const date = new Date(item.timestamp).toISOString().slice(0, 10);
       dailyUtc.set(date, (dailyUtc.get(date) ?? 0) + 1);
-      if (item.keyId) keys.add(item.keyId);
-      else withoutKeyId += 1;
     }
     total += result.items.length;
 
@@ -213,8 +208,6 @@ export async function auditButtondownApiRequests({
         byUtcDay: Object.fromEntries(
           [...dailyUtc.entries()].sort(([a], [b]) => a.localeCompare(b))
         ),
-        distinctApiKeyIdsObserved: keys.size,
-        requestsWithoutApiKeyId: withoutKeyId,
         quotaForThisAccount: 'unverified',
         resetRule: 'unverified',
         otherWriters: 'unverified',
