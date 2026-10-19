@@ -55,7 +55,7 @@ describe('nested overlays', () => {
     unmount();
   });
 
-  it('renders a portaled Select above its parent Modal when opened by the user', () => {
+  it('layers portaled Select options above an open Modal', () => {
     const onModalOpenChange = vi.fn();
     const onValueChange = vi.fn();
 
