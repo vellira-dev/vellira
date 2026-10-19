@@ -190,6 +190,7 @@ test('invalid traffic allocations never yield positive binding evidence', async 
   const badSplits = [
     [{ version_id: version, percentage: 50 }, { version_id: version, percentage: 50 }],
     [{ version_id: version, percentage: 50 }, { version_id: secondVersion, percentage: 40 }],
+    [{ version_id: version, percentage: 50 }, { version_id: secondVersion, percentage: 49.99 }],
     [{ version_id: version, percentage: 101 }],
     [{ version_id: version, percentage: 0 }, { version_id: secondVersion, percentage: 100 }],
     [{ version_id: version, percentage: -50 }, { version_id: secondVersion, percentage: 150 }],
