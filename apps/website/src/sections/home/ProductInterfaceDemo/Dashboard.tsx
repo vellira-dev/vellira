@@ -385,7 +385,8 @@ export function Dashboard({
                     }))}
                   />
                   <p className={styles.chartNote}>
-                    Live counts from the sample projects. No historical analytics.
+                    Live counts from the sample projects. No historical
+                    analytics.
                   </p>
                 </section>
                 <section className={styles.chartCard}>

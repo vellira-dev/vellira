@@ -58,8 +58,8 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('Completion Rate');
     expect(standaloneDashboard).toContain('Projects by status');
     expect(standaloneDashboard).toContain('Projects by team');
-    expect(standaloneDashboard).toContain("iconStart={<Icon");
-    expect(standaloneDashboard).toContain("iconStart={<Plus");
+    expect(standaloneDashboard).toContain('iconStart={<Icon');
+    expect(standaloneDashboard).toContain('iconStart={<Plus');
     expect(standaloneDashboard).toContain("type='search'");
     expect(standaloneDashboard).toContain("aria-label='Search projects'");
     expect(standaloneDashboard).not.toMatch(/\slabel='Search projects'/);
