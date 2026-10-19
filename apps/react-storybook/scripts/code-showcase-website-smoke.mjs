@@ -253,6 +253,85 @@ try {
             page.locator('[data-vellira-theme]').first()
           ).toHaveAttribute('data-vellira-theme', colorScheme);
 
+          // Exercise the real Core dashboard in the existing website browser
+          // session. This is not a screenshot mockup or a separate marketing
+          // route; only one desktop scenario performs the complete interaction
+          // sequence to avoid multiplying CI runtime across theme variants.
+          if (
+            reducedMotion === 'reduce' &&
+            colorScheme === 'light' &&
+            viewport.width === 1440
+          ) {
+            const demoSection = page.locator('#interface');
+            const dashboard = page.locator('#dashboard-live');
+            await dashboard.scrollIntoViewIfNeeded();
+            await expect(dashboard).toBeVisible();
+            await expect(
+              demoSection.getByRole('link', { name: 'View Source' })
+            ).toHaveAttribute(
+              'href',
+              'https://github.com/vellira-dev/vellira/blob/main/examples/workspace-starter/web/src/App.tsx'
+            );
+
+            await dashboard
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await dashboard
+              .getByRole('button', { name: 'New project' })
+              .click();
+
+            const dialog = page.getByRole('dialog', {
+              name: 'Create a project',
+            });
+            await expect(dialog).toBeVisible();
+            await dialog
+              .getByRole('textbox', { name: 'Project name' })
+              .fill('Browser smoke project');
+
+            await dialog.getByRole('combobox', { name: 'Team' }).click();
+            const mobileOption = page.getByRole('option', {
+              name: 'Mobile',
+              exact: true,
+            });
+            await expect(mobileOption).toBeVisible();
+            await mobileOption.click();
+            await expect(dialog).toBeVisible();
+
+            await dialog.getByRole('combobox', { name: 'Status' }).click();
+            await page.getByRole('option', { name: 'Shipped' }).click();
+            await dialog
+              .getByRole('button', { name: 'Create project' })
+              .click();
+            await expect(dialog).toBeHidden();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+
+            await dashboard
+              .getByRole('button', { name: 'Settings', exact: true })
+              .click();
+            await dashboard
+              .getByRole('textbox', { name: 'Workspace name' })
+              .fill('Demo QA Workspace');
+            await dashboard
+              .getByRole('button', { name: 'Overview', exact: true })
+              .click();
+            await expect(
+              dashboard.getByRole('heading', { name: 'Demo QA Workspace' })
+            ).toBeVisible();
+
+            const savedProjects = await page.evaluate(() => {
+              const state = localStorage.getItem(
+                'vellira-dashboard-live-core-v1'
+              );
+              return state ? JSON.parse(state).projects.length : null;
+            });
+            assert.equal(savedProjects, 4);
+            await page.screenshot({
+              path: `${artifactDir}/dashboard-core-live-1440.png`,
+            });
+          }
+
           // Review the new homepage narrative in each theme, viewport and
           // motion preference, using the same real browser as CodeShowcase.
           const story = page.locator('#why-vellira');
