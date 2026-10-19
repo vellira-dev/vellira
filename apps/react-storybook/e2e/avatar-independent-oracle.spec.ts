@@ -120,16 +120,13 @@ async function renderFixture(
   if (input.state !== 'absent') {
     await expect
       .poll(() =>
-        page.locator('.image').evaluate(
-          (element, loaded) => {
-            const img = element as HTMLImageElement;
-            return (
-              img.complete &&
-              (loaded ? img.naturalWidth > 0 : img.naturalWidth === 0)
-            );
-          },
-          input.state === 'loaded'
-        )
+        page.locator('.image').evaluate((element, loaded) => {
+          const img = element as HTMLImageElement;
+          return (
+            img.complete &&
+            (loaded ? img.naturalWidth > 0 : img.naturalWidth === 0)
+          );
+        }, input.state === 'loaded')
       )
       .toBe(true);
   }
@@ -230,22 +227,4 @@ test.describe('Avatar V2 browser oracle negative controls', () => {
     });
     expect(duplicate).toBe(true);
   });
-});
-
-
-test('TEMPORARY print exact Prettier output for the oracle', async () => {
-  const prettier = await import('prettier');
-  const { readFileSync } = await import('node:fs');
-  const { existsSync } = await import('node:fs');
-  const { resolve } = await import('node:path');
-  const filename = 'avatar-independent-oracle.spec.ts';
-  const local = resolve(process.cwd(), 'e2e', filename);
-  const filepath = existsSync(local)
-    ? local
-    : resolve(process.cwd(), 'apps/react-storybook/e2e', filename);
-  const original = readFileSync(filepath, 'utf8');
-  const result = await prettier.format(original, { filepath });
-  console.log('BEGIN_AVATAR_PRETTIER_FORMATTED_SOURCE');
-  console.log(result);
-  console.log('END_AVATAR_PRETTIER_FORMATTED_SOURCE');
 });
