@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(resolve(path), 'utf8');
 
 const page = read('apps/website/src/app/(marketing)/(site)/showcase/page.tsx');
+const controls = read(
+  'apps/website/src/app/(marketing)/(site)/showcase/ShowcaseControls.tsx'
+);
 const routeStyles = read(
   'apps/website/src/app/(marketing)/(site)/showcase/showcase.module.css'
 );
@@ -25,34 +28,33 @@ describe('first-developer interactive showcase', () => {
     expect(sitemap).toContain('url: `${SITE_URL}/showcase`');
   });
 
-  it('reuses actual cross-platform demo and public code UI', () => {
+  it('reuses actual platform previews and code UI', () => {
     expect(page).toContain('<PlatformParity />');
     expect(page).toContain('<CodeShowcase />');
     expect(page).toContain('<QuickStart />');
-    expect(page).toContain('<ThemeSwitcher />');
+    expect(page).toContain('<ShowcaseHeroControls />');
+    expect(page).toContain('<ShowcaseFeedbackActions />');
+    expect(controls).toContain('<ThemeSwitcher />');
     expect(page).not.toContain('<iframe');
     expect(homepage).toContain('<PlatformParity />');
     expect(homepage).toContain('<CodeShowcase />');
   });
 
-  it('provides a visible route from interaction to installation and feedback', () => {
-    expect(page).toContain("href='#platforms'");
-    expect(page).toContain("href='#code'");
-    expect(page).toContain("href='#quick-start'");
-    expect(page).toContain(
+  it('provides routes to installation and developer feedback', () => {
+    expect(controls).toContain("href='#platforms'");
+    expect(controls).toContain("href='#code'");
+    expect(controls).toContain("href='#quick-start'");
+    expect(controls).toContain(
       'github.com/vellira-dev/vellira/tree/main/examples/cross-platform-form'
     );
-    expect(page).toContain('github.com/vellira-dev/vellira/issues/new');
-    expect(page).toContain('/blog/cross-platform-form-vellira');
+    expect(controls).toContain('github.com/vellira-dev/vellira/issues/new');
+    expect(controls).toContain('/blog/cross-platform-form-vellira');
   });
 
-  it('makes limitations explicit and avoids Vite headline collisions', () => {
+  it('discloses device limitations and avoids overlapping headings', () => {
     expect(page).toContain('React Native Web');
     expect(page).toContain('not an iOS or Android device test');
-    expect(page).toContain('no account or newsletter signup required'.replace(
-      'no account',
-      'No account'
-    ));
+    expect(page).toContain('No account or newsletter signup required');
     expect(routeStyles).toContain('line-height: 1.12;');
     expect(routeStyles).toContain('overflow-wrap: break-word;');
   });

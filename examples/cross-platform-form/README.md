@@ -7,12 +7,12 @@ It uses public components in both renderers: `Input`, `Checkbox`, and `Button`.
 The two examples intentionally share the *product state shape* and controlled
 value callbacks, not the rendering implementation:
 
-| Concern | Web | React Native |
-| --- | --- | --- |
-| Email value | `onValueChange(email)` | `onValueChange(email)` |
-| Preference | `onCheckedChange(checked)` | `onCheckedChange(checked)` |
-| Submission | `<form onSubmit>` and `type='submit'` | `Button onPress` |
-| Labels, feedback | Browser semantics | Native accessibility primitives |
+| Concern          | Web                                   | React Native                    |
+| ---------------- | ------------------------------------- | ------------------------------- |
+| Email value      | `onValueChange(email)`                | `onValueChange(email)`          |
+| Preference       | `onCheckedChange(checked)`            | `onCheckedChange(checked)`      |
+| Submission       | `<form onSubmit>` and `type='submit'` | `Button onPress`                |
+| Labels, feedback | Browser semantics                     | Native accessibility primitives |
 
 The examples **do not send data**, call a backend, or subscribe anyone to a
 mailing list.

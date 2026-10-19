@@ -1,19 +1,18 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-
-import { Button } from '@vellira-ui/react';
-
 import { SiteFooter } from '@/components/layout/SiteFooter';
-import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { BackToTop } from '@/components/navigation/BackToTop';
 import { CodeShowcase } from '@/sections/home/CodeShowcase';
 import { PlatformParity } from '@/sections/home/PlatformParity';
 import { QuickStart } from '@/sections/home/QuickStart';
 
+import {
+  ShowcaseFeedbackActions,
+  ShowcaseHeroControls,
+} from './ShowcaseControls';
 import styles from './showcase.module.css';
 
 const description =
-  'Try real React and React Native Vellira components, compare synchronized state, inspect example code, and install the open-source packages.';
+  'Try Vellira React and React Native components, compare synchronized state, inspect code, and install the open-source packages.';
 
 export const metadata: Metadata = {
   title: 'Interactive React + React Native Showcase',
@@ -46,28 +45,7 @@ export default function ShowcasePage() {
               packages in your own project.
             </p>
 
-            <nav className={styles.actions} aria-label='Showcase steps'>
-              <Button asChild appearance='solid' color='primary'>
-                <Link href='#platforms'>Try live comparison</Link>
-              </Button>
-              <Button asChild appearance='outline' color='neutral'>
-                <Link href='#code'>Explore example code</Link>
-              </Button>
-              <Button asChild appearance='ghost' color='neutral'>
-                <Link href='#quick-start'>Install Vellira</Link>
-              </Button>
-            </nav>
-
-            <div className={styles.themeControl}>
-              <div>
-                <strong>Try a different theme</strong>
-                <p>
-                  The theme selector updates the Web preview and requests a
-                  matching theme for the browser-hosted Native preview.
-                </p>
-              </div>
-              <ThemeSwitcher />
-            </div>
+            <ShowcaseHeroControls />
             <p className={styles.disclaimer}>
               The embedded React Native example uses React Native Web in a
               browser. It is not an iOS or Android device test. Native
@@ -93,41 +71,22 @@ export default function ShowcasePage() {
         <CodeShowcase />
         <QuickStart />
 
-        <section className={styles.feedback} aria-labelledby='showcase-feedback'>
+        <section
+          className={styles.feedback}
+          aria-labelledby='showcase-feedback'
+        >
           <div className={styles.feedbackInner}>
             <p className={styles.eyebrow}>Try it yourself</p>
-            <h2 id='showcase-feedback'>What would stop you from using Vellira?</h2>
+            <h2 id='showcase-feedback'>
+              What would stop you from using Vellira?
+            </h2>
             <p>
               Start with the React + React Native form evaluation source.
               Try installation, keyboard and native interaction, and validation.
               We welcome concrete problems, confusing steps, and broken cases
               much more than promotional reactions.
             </p>
-            <div className={styles.feedbackActions}>
-              <Button asChild appearance='solid' color='primary'>
-                <a
-                  href='https://github.com/vellira-dev/vellira/tree/main/examples/cross-platform-form'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
-                  Open runnable example
-                </a>
-              </Button>
-              <Button asChild appearance='outline' color='neutral'>
-                <a href='/blog/cross-platform-form-vellira'>
-                  Read the form walkthrough
-                </a>
-              </Button>
-              <Button asChild appearance='ghost' color='neutral'>
-                <a
-                  href='https://github.com/vellira-dev/vellira/issues/new'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
-                  Send technical feedback
-                </a>
-              </Button>
-            </div>
+            <ShowcaseFeedbackActions />
             <p className={styles.feedbackNote}>
               Open source. No account or newsletter signup required to explore.
             </p>
