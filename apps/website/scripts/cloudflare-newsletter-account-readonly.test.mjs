@@ -97,8 +97,10 @@ test('Cloudflare inventory is strictly GET-only, sanitized, and does not claim W
   assert.equal(report.workerPresence['vellira-website'], 'present');
   assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'absent');
   assert.equal(report.namespaceInventoryStatus, 'complete');
+  assert.equal(report.namespaceInventoryDiagnostic, null);
   assert.equal(report.coordinatorClassNamespaceCount, 0);
   assert.equal(report.domainInventoryStatus, 'complete');
+  assert.equal(report.domainInventoryDiagnostic, null);
   assert.deepEqual(report.domains['vellira.dev'], {
     status: 'observed',
     enabled: true,
@@ -234,8 +236,10 @@ test('denied Cloudflare permissions stay unverified, never incorrectly absent', 
   assert.equal(report.workerInventoryStatus, 'permission_denied');
   assert.equal(report.workerPresence['vellira-website'], 'unverified');
   assert.equal(report.namespaceInventoryStatus, 'permission_denied');
+  assert.equal(report.namespaceInventoryDiagnostic, null);
   assert.equal(report.coordinatorClassNamespaceCount, null);
   assert.equal(report.domainInventoryStatus, 'permission_denied');
+  assert.equal(report.domainInventoryDiagnostic, null);
   assert.equal(report.zoneStatus, 'permission_denied');
   assert.equal(report.zoneRoutes.status, 'permission_denied');
   assert.equal(report.accountWaf.http_request_firewall_custom.status, 'permission_denied');
@@ -261,6 +265,7 @@ test('truncated namespace inventory is inconclusive, not zero', async () => {
     fetcher: fixture.fetcher,
   });
   assert.equal(report.namespaceInventoryStatus, 'incomplete');
+  assert.equal(report.namespaceInventoryDiagnostic, 'pagination_page_limit');
   assert.equal(report.coordinatorClassNamespaceCount, null);
   assert.equal(report.sharedNamespaceIdentity, 'unverified');
 });
@@ -288,6 +293,105 @@ test('unexpected provider payloads and network errors do not print sensitive err
   assert.equal(report.namespaceInventoryStatus, 'unavailable');
   assert.equal(report.sharedNamespaceIdentity, 'unverified');
   assert.equal(JSON.stringify(report).includes('private-test-token'), false);
+});
+
+test('namespace pagination omission gives a fixed diagnostic, never false zero', async () => {
+  for (const resultInfo of [undefined, { page: 1, count: 1 }]) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.includes('/durable_objects/namespaces')
+      ? makeResponse([{ id: 'private-namespace-id', class: 'OtherClass' }], 200, resultInfo)
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.namespaceInventoryStatus, 'incomplete');
+    assert.equal(report.namespaceInventoryDiagnostic, 'pagination_metadata_missing');
+    assert.equal(report.coordinatorClassNamespaceCount, null);
+    assert.equal(JSON.stringify(report).includes('private-namespace-id'), false);
+    assert.equal(report.remoteWrites, 0);
+  }
+});
+
+test('pagination inconsistency and malformed namespace records are distinguishable', async () => {
+  const cases = [
+    {
+      records: [{ id: 'private-namespace-id', class: 'OtherClass' }],
+      info: { page: 1, count: 1, total_pages: 1, total_count: 20 },
+      diagnostic: 'pagination_metadata_invalid',
+    },
+    {
+      records: [null],
+      info: { total_pages: 1 },
+      diagnostic: 'records_uninspectable',
+    },
+    {
+      records: [{ id: 'private-namespace-id', class: '' }],
+      info: { total_pages: 1 },
+      diagnostic: 'namespace_class_uninspectable',
+    },
+  ];
+  for (const scenario of cases) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.includes('/durable_objects/namespaces')
+      ? makeResponse(scenario.records, 200, scenario.info)
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.namespaceInventoryStatus, 'incomplete');
+    assert.equal(report.namespaceInventoryDiagnostic, scenario.diagnostic);
+    assert.equal(report.coordinatorClassNamespaceCount, null);
+    assert.equal(JSON.stringify(report).includes('private-namespace-id'), false);
+  }
+});
+
+test('domain pagination beyond the audited page retains positive host evidence only', async () => {
+  const base = mockCloudflare();
+  const fetcher = (url, options) => url.pathname.endsWith('/workers/domains')
+    ? makeResponse([
+      { hostname: 'vellira.dev', enabled: true, previews_enabled: false,
+        service: 'vellira-website', id: 'private-domain-id' },
+    ], 200, { total_pages: 2, page: 1, count: 1, per_page: 20, total_count: 21 })
+    : base.fetcher(url, options);
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.equal(report.domainInventoryStatus, 'incomplete');
+  assert.equal(report.domainInventoryDiagnostic, 'pagination_page_limit');
+  assert.equal(report.domains['vellira.dev'].status, 'observed');
+  assert.deepEqual(report.domains['www.vellira.dev'], { status: 'unverified' });
+  assert.equal(JSON.stringify(report).includes('private-domain-id'), false);
+});
+
+test('malformed domain page or account response prints only safe diagnostic literals', async () => {
+  const cases = [
+    { records: [null], info: { total_pages: 1 }, cause: 'records_uninspectable' },
+    {
+      records: [{ hostname: 'other.example.invalid', enabled: true }],
+      info: { total_pages: 1, page: 2 },
+      cause: 'pagination_metadata_invalid',
+    },
+  ];
+  for (const scenario of cases) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.endsWith('/workers/domains')
+      ? makeResponse(scenario.records, 200, scenario.info)
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.domainInventoryStatus, 'incomplete');
+    assert.equal(report.domainInventoryDiagnostic, scenario.cause);
+    assert.deepEqual(report.domains['www.vellira.dev'], { status: 'unverified' });
+  }
 });
 
 test('manual account audit never runs on push or schedules and cannot deploy', () => {
@@ -326,6 +430,7 @@ test('missing pagination metadata with 20 of 21 domains cannot imply a hostname 
     fetcher,
   });
   assert.equal(report.domainInventoryStatus, 'incomplete');
+  assert.equal(report.domainInventoryDiagnostic, 'pagination_metadata_missing');
   assert.deepEqual(report.domains['vellira.dev'], { status: 'unverified' });
   assert.deepEqual(report.domains['www.vellira.dev'], { status: 'unverified' });
 });
@@ -383,6 +488,7 @@ test('namespace records with no class or an empty class cannot imply zero coordi
       fetcher: fixture.fetcher,
     });
     assert.equal(report.namespaceInventoryStatus, 'incomplete');
+    assert.equal(report.namespaceInventoryDiagnostic, 'namespace_class_uninspectable');
     assert.equal(report.coordinatorClassNamespaceCount, null);
     assert.equal(JSON.stringify(report).includes('private-namespace-id'), false);
   }
