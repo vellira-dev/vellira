@@ -81,6 +81,58 @@ an owner-approved reserve. Never store tokens, complete response headers,
 subscriber emails, account IDs or provider payloads in the repository.
 Until the evidence is conclusive, leave the global mode OFF.
 
+### Local read-only usage audit (no subscription writes)
+
+The script `scripts/buttondown-api-requests-readonly.mjs` accesses only
+Buttondown's documented `GET /v1/api_requests` listing endpoint and
+requests the preceding **seven days** with server-side filters for
+`method=POST` and `path=/v1/subscribers`. This is a diagnostic for
+**API-request activity**, not an account-specific daily quota endpoint.
+
+Run it only from a trusted local checkout with your **existing** API key
+already available in the local environment:
+
+```sh
+node --env-file=apps/website/.dev.vars apps/website/scripts/buttondown-api-requests-readonly.mjs
+```
+
+Or, when `BUTTONDOWN_API_KEY` is already in the process environment:
+
+```sh
+node apps/website/scripts/buttondown-api-requests-readonly.mjs
+```
+
+The script sends only GET requests, at most five pages of 100 records each.
+It generates each fixed API URL independently rather than following
+provider-supplied pagination URLs, rejects ignored filters, missing pages,
+inconsistent totals and corrupted results, and stops with no partial report
+when the result set exceeds the bounded maximum. The API key is not logged,
+stored, transmitted to GitHub or included in its output. Raw API-request
+objects (including IPs, API-key IDs/labels and request identifiers) are held
+in memory only; output includes **aggregate status categories, source
+categories, UTC-day counts and distinct observed API-key counts**. These
+diagnostics contain no subscriber records or request payloads.
+
+A successful audit does **not** prove that Buttondown retained every
+historical request, that all subscriber creation occurs through this API,
+or that an observed API key/source corresponds to exactly one writer.
+Even **zero** matching rows is not authoritative proof of zero attempts.
+If the API does not expose request history to the existing key, do not
+grant broader permissions automatically or retry using subscriber writes.
+A failing or incomplete audit must not inform a production capacity decision.
+
+Test without network or provider credentials:
+
+```sh
+node --test apps/website/scripts/buttondown-api-requests-readonly.test.mjs
+```
+
+References:
+
+- https://docs.buttondown.com/api-api-requests-list
+- https://docs.buttondown.com/api-pagination
+- https://docs.buttondown.com/api-rate-limits
+
 ### Offline Wrangler preflight
 
 After installing the existing lockfile dependencies, run:
