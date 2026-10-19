@@ -515,7 +515,7 @@ export function PlatformParity() {
               target='_blank'
               rel='noopener noreferrer'
             >
-              Try the Workspace Starter
+              Try the Dashboard Starter
             </a>
           </Button>
         </div>
