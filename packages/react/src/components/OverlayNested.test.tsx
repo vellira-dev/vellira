@@ -92,9 +92,7 @@ describe('nested overlays', () => {
     const dropdown = listbox?.parentElement as HTMLElement | undefined;
     expect(dropdown).toBeDefined();
     expect(dropdown?.parentElement).not.toBe(dialog);
-    expect(
-      Number(dropdown?.style.zIndex)
-    ).toBeGreaterThan(
+    expect(Number(dropdown?.style.zIndex)).toBeGreaterThan(
       Number(dialog?.style.getPropertyValue('--z-index-modal')) + 1
     );
 
