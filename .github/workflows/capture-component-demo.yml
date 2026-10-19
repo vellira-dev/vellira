@@ -21,6 +21,7 @@ on:
           - button-confirmation
           - modal-focus
           - select-keyboard
+          - tabs-keyboard
 
 permissions:
   contents: read
@@ -59,7 +60,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test "$(git rev-parse HEAD)" = "$VELLIRA_DEMO_EXPECTED_SHA"
           case "$VELLIRA_DEMO_NAME" in
-            dropdown-keyboard|button-confirmation|modal-focus|select-keyboard) ;;
+            dropdown-keyboard|button-confirmation|modal-focus|select-keyboard|tabs-keyboard) ;;
             *) echo '::error::Unsupported demo.'; exit 2 ;;
           esac
 
@@ -120,7 +121,7 @@ jobs:
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             # Demo infrastructure changes must preserve all reviewed scenarios.
-            for scenario in dropdown-keyboard button-confirmation modal-focus select-keyboard; do
+            for scenario in dropdown-keyboard button-confirmation modal-focus select-keyboard tabs-keyboard; do
               node scripts/visual/capture-component-demo.mjs "$scenario"
             done
           else
