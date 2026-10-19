@@ -120,10 +120,16 @@ async function renderFixture(
   if (input.state !== 'absent') {
     await expect
       .poll(() =>
-        page.locator('.image').evaluate((element) => {
-          const img = element as HTMLImageElement;
-          return img.complete && (input.state === 'loaded' ? img.naturalWidth > 0 : img.naturalWidth === 0);
-        })
+        page.locator('.image').evaluate(
+          (element, loaded) => {
+            const img = element as HTMLImageElement;
+            return (
+              img.complete &&
+              (loaded ? img.naturalWidth > 0 : img.naturalWidth === 0)
+            );
+          },
+          input.state === 'loaded'
+        )
       )
       .toBe(true);
   }
@@ -222,6 +228,15 @@ test.describe('Avatar V2 independent browser oracle (historical negative control
       state: 'failed-hidden',
       duplicateName: true,
     });
-    await expect(page.getByRole('img', { name: 'Jordan Diaz' })).toHaveCount(2);
+    // The parent img role makes descendants presentational in some ATs,
+    // so inspect the raw duplicate accessible-name exposure as well.
+    const duplicate = await page.locator('.avatar img').evaluate((node) => {
+      const parentName = node.parentElement?.getAttribute('aria-label');
+      return (
+        node.getAttribute('alt') === parentName &&
+        node.getAttribute('aria-hidden') !== 'true'
+      );
+    });
+    expect(duplicate).toBe(true);
   });
 });
