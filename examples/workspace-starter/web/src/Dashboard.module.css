@@ -342,23 +342,38 @@
 .trendChart {
   min-height: 235px;
 }
-.trendSvg {
-  display: block;
+.trendPlot {
+  position: relative;
   width: 100%;
-  height: 204px;
-  overflow: visible;
+  aspect-ratio: 540 / 204;
+  margin-top: 8px;
+  background-image: linear-gradient(
+    to bottom,
+    transparent calc(100% - 1px),
+    var(--border-muted) calc(100% - 1px)
+  );
+  background-size: 100% 25%;
 }
-.trendLine {
-  stroke: var(--color-primary-500);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.trendSegment {
+  position: absolute;
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-primary-500);
+  transform-origin: left center;
 }
 .trendDot {
-  fill: var(--color-primary-500);
-  stroke: var(--surface-default);
-  stroke-width: 3;
+  position: absolute;
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 3px solid var(--surface-default);
+  border-radius: 50%;
+  background: var(--color-primary-500);
+  box-shadow: 0 0 0 1px var(--color-primary-500);
+  transform: translate(-50%, -50%);
 }
+
 .trendLegend {
   display: flex;
   justify-content: space-between;

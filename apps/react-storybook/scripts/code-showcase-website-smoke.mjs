@@ -336,7 +336,7 @@ try {
               .getByRole('textbox', { name: 'Workspace name' })
               .fill('Demo QA Workspace');
             await dashboard
-              .getByRole('button', { name: 'Overview', exact: true })
+              .getByRole('button', { name: 'Dashboard', exact: true })
               .click();
             await expect(
               dashboard.getByText('Demo QA Workspace', { exact: true })
@@ -360,7 +360,7 @@ try {
               dashboard.getByText('Browser smoke project')
             ).toBeVisible();
             await dashboard
-              .getByRole('button', { name: 'Overview', exact: true })
+              .getByRole('button', { name: 'Dashboard', exact: true })
               .click();
             await expect(dashboard).toBeVisible();
             await page.evaluate(() => {

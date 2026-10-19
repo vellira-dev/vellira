@@ -101,52 +101,58 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
     x: selected.length === 1 ? 270 : 28 + (index * 484) / (selected.length - 1),
     y: 176 - statusProgress[project.status] * 1.4,
   }));
-  const linePoints = dots
-    .map((point) => String(point.x) + ',' + String(point.y))
-    .join(' ');
+  const segments = dots.slice(1).map((to, index) => {
+    const from = dots[index];
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    return {
+      id: to.id,
+      left: (from.x / 540) * 100 + '%',
+      top: (from.y / 204) * 100 + '%',
+      width: (Math.hypot(dx, dy) / 540) * 100 + '%',
+      transform: 'rotate(' + ((Math.atan2(dy, dx) * 180) / Math.PI) + 'deg)',
+    };
+  });
 
   return (
     <div className={styles.trendChart}>
       {dots.length > 0 ? (
         <>
-          <svg
-            viewBox='0 0 540 204'
+          <div
+            className={styles.trendPlot}
             role='img'
-            aria-label='Project progress in list order, based on current status: planned 20 percent, in progress 65 percent and shipped 100 percent'
-            className={styles.trendSvg}
+            aria-label={
+              'Progress by sample project: ' +
+              dots.map((point) => point.name + ' ' + point.value + ' percent').join(', ')
+            }
           >
-            <title>Progress by sample project</title>
-            {[36, 78, 120, 162].map((y) => (
-              <line
-                key={y}
-                x1='20'
-                x2='520'
-                y1={y}
-                y2={y}
-                className={styles.chartGrid}
+            {segments.map((segment) => (
+              <span
+                key={segment.id}
+                className={styles.trendSegment}
+                style={{
+                  left: segment.left,
+                  top: segment.top,
+                  width: segment.width,
+                  transform: segment.transform,
+                }}
+                aria-hidden='true'
               />
             ))}
-            {dots.length > 1 && (
-              <polyline
-                points={linePoints}
-                className={styles.trendLine}
-                fill='none'
-              />
-            )}
             {dots.map((point) => (
-              <circle
+              <span
                 key={point.id}
-                cx={point.x}
-                cy={point.y}
-                r='6'
                 className={styles.trendDot}
-              >
-                <title>
-                  {point.name}: {point.value}% status progress
-                </title>
-              </circle>
+                style={{
+                  left: (point.x / 540) * 100 + '%',
+                  top: (point.y / 204) * 100 + '%',
+                }}
+                title={point.name + ': ' + point.value + '% status progress'}
+                aria-hidden='true'
+              />
             ))}
-          </svg>
+          </div>
           <div className={styles.trendLegend} aria-hidden='true'>
             {dots.map((point) => (
               <span key={point.id}>{point.name.split(' ')[0]}</span>
@@ -159,6 +165,7 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
     </div>
   );
 }
+
 
 function PipelineChart({ projects }: { projects: readonly Project[] }) {
   const counts = statuses.map((status) => ({

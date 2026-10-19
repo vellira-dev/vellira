@@ -92,6 +92,8 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('workspace.projects.length');
     expect(standaloneDashboard).toContain('completionRate');
     expect(standaloneDashboard).toContain('statusProgress');
+    expect(standaloneDashboard).not.toContain('<svg');
+    expect(siteDashboard).not.toContain('<svg');
     expect(standaloneDashboard).toContain("saved.name === 'Northstar Studio'");
   });
 });
