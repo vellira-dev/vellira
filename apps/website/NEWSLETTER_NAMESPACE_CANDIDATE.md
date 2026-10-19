@@ -232,8 +232,7 @@ Truncated API pages and unsupported response shapes remain `incomplete`.
 
 ### Read-only inventory diagnostics (Evidence V2)
 
-The real owner-run account audit on 2026-10-19 showed `namespaceInventoryStatus:
-incomplete`, `domainInventoryStatus: incomplete`, and four zone/account WAF
+The real owner-run account audit on 2026-10-19 showed `namespaceInventoryStatus: incomplete`, `domainInventoryStatus: incomplete`, and four zone/account WAF
 `permission_denied` responses. The missing budget-owner Worker and absent
 site serving-version budget bindings were separately **observed**. Do not
 mistake the job's `SUCCESS` for infrastructure readiness.
@@ -243,14 +242,15 @@ allowlisted fields: `namespaceInventoryDiagnostic` and
 `domainInventoryDiagnostic`. `null` means no extra diagnostic; it is **not**
 proof of completeness. Incomplete status can carry one of these codes:
 
-| Diagnostic | Meaning |
-| --- | --- |
-| `pagination_metadata_missing` | No provable `total_pages`; a short result is not an exhaustive listing |
-| `pagination_metadata_invalid` | Inconsistent/malformed page or count metadata |
-| `pagination_page_limit` | More pages than this bounded audit will inspect |
-| `records_uninspectable` | Unexpected list shape or invalid record |
-| `namespace_class_uninspectable` | At least one namespace has no usable class; zero cannot be inferred |
-| `response_uninspectable` | A successful HTTP response could not be safely parsed or validated |
+- `pagination_metadata_missing`: no provable `total_pages`; a short
+  response is not proof that a list is exhaustive.
+- `pagination_metadata_invalid`: page or count metadata is inconsistent.
+- `pagination_page_limit`: more pages than the bounded audit can inspect.
+- `records_uninspectable`: unexpected list shape or record type.
+- `namespace_class_uninspectable`: at least one Durable Object namespace has
+  no usable class; zero cannot be inferred.
+- `response_uninspectable`: an HTTP 200 response cannot be safely parsed
+  or validated.
 
 The diagnostic codes disclose neither page counts nor namespace/class names,
 IDs, domain inventory, provider messages, raw responses or token values.
