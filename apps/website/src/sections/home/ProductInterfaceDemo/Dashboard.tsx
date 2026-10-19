@@ -31,7 +31,6 @@ import {
   readStoredWorkspace,
   removeProject,
   toggleProject,
-  type Project,
   type ProjectStatus,
   type Team,
   type Workspace,
