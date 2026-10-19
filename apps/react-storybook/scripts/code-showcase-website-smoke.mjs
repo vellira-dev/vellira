@@ -85,8 +85,23 @@ try {
             picker.getByRole('button', { name, exact: true });
           const code = section.locator('pre code');
 
-          await picker.scrollIntoViewIfNeeded();
           await expect(picker).toBeVisible();
+          await expect
+            .poll(
+              async () => {
+                try {
+                  await picker.scrollIntoViewIfNeeded({ timeout: 2000 });
+                  return true;
+                } catch (error) {
+                  if (!String(error).includes('not attached to the DOM')) {
+                    throw error;
+                  }
+                  return false;
+                }
+              },
+              { timeout: 15000, message: 'Code picker should settle after hydration' }
+            )
+            .toBe(true);
           await ensurePickerPainted(picker);
           await expect(picker.getByRole('button')).toHaveCount(4);
           await expect(
