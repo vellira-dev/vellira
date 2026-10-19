@@ -8,7 +8,10 @@ component implementation, CI-wide job, or social publishing integration.
 
 ## Admission and ownership
 
-- Scope is **Dropdown keyboard V2 only** on React web.
+- V2 introduced the **Dropdown keyboard** demo on React web. The reviewed
+  Button confirmation extension uses the same proof/social renderer with a
+  separate allowlisted Storybook scenario; Modal/Select/Tabs are still outside
+  this version.
 - The source story is the allowlisted `components-dropdown--default`.
 - Raw proof capture remains the existing V1 path and filenames.
 - Input must be an exact Git SHA and local Storybook on `127.0.0.1:6006`.
@@ -59,7 +62,8 @@ removes the whole local output, never silently emits a partial success.
 
 ## Out of scope
 
-- React Native capture, additional components, generative media, new packages.
+- React Native capture, Modal/Select/Tabs and unreviewed components,
+  generative media, new packages.
 - Auto-merging, social scheduling, external URLs, AI writers, persistent storage.
 - Replacing actual component animation with fake motion or marketing claims.
 
@@ -68,3 +72,18 @@ removes the whole local output, never silently emits a partial success.
 Add independently verified scenarios for Button, Modal, Select and Tabs through
 new allowlist entries and targeted behavior assertions. Keep a single social
 renderer, one capture pipeline, and existing manual publication controls.
+
+## Reviewed Button extension
+
+Use `button-confirmation` to demonstrate keyboard activation of the canonical
+Vellira Button, real confirmation state, loading with `aria-busy=true` and
+disabled interaction, and automatic return to ready. The underlying maintained
+Storybook story simulates the action with a local timer; it does not delete any
+real workspace or call a backend. Real screenshot frames are captured only
+after visual and behavioral assertions pass.
+
+The social renderer receives per-demo phase captions, subtitle and poster phase,
+but keeps the same 1200 × 1200 profile and honest short crossfades. Both
+Dropdown and Button must pass exact-head pre-merge capture whenever this
+capture infrastructure changes. Manual runs stay opt-in and capture only the
+selected scenario. No changes to V1 Dropdown output contracts are permitted.

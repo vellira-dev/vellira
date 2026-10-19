@@ -28,6 +28,21 @@ test('only the reviewed Dropdown story is admitted', () => {
   assert.equal(getDemo('dropdown-keyboard').viewport.width, 960);
 });
 
+test('Button capture is an explicitly reviewed real Storybook story', () => {
+  const demo = getDemo('button-confirmation');
+  assert.equal(demo.storyId, 'primitives-button--destructive-confirmation');
+  assert.equal(
+    getStoryUrl('button-confirmation'),
+    `${STORYBOOK_ORIGIN}/iframe.html?id=primitives-button--destructive-confirmation&viewMode=story&globals=theme:light`
+  );
+  assert.deepEqual(Object.keys(demo.phaseFrames), [
+    'ready', 'confirming', 'loading', 'closed',
+  ]);
+  assert.equal(getFrameCount(demo), 56);
+  assert.equal(demo.posterPhase, 'confirming');
+  verifyDuration(56 / 12, demo);
+});
+
 test('rejects unknown demos and user-controlled URLs or paths', () => {
   for (const value of ['', '../secret', 'https://example.com', 'dropdown', 'constructor', '__proto__']) {
     assert.throws(() => getDemo(value), /Unknown component demo/);

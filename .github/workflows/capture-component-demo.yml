@@ -1,6 +1,6 @@
 name: Capture Component Demo
 
-run-name: Component demo / ${{ inputs.demo || 'dropdown-keyboard' }} / ${{ github.event.pull_request.head.sha || github.sha }}
+run-name: Component demo / ${{ github.event_name == 'pull_request' && 'regression-matrix' || inputs.demo }} / ${{ github.event.pull_request.head.sha || github.sha }}
 
 on:
   # Only demo-infrastructure PRs run the pre-merge media proof. No ordinary
@@ -18,6 +18,7 @@ on:
         required: true
         options:
           - dropdown-keyboard
+          - button-confirmation
 
 permissions:
   contents: read
@@ -56,7 +57,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test "$(git rev-parse HEAD)" = "$VELLIRA_DEMO_EXPECTED_SHA"
           case "$VELLIRA_DEMO_NAME" in
-            dropdown-keyboard) ;;
+            dropdown-keyboard|button-confirmation) ;;
             *) echo '::error::Unsupported demo.'; exit 2 ;;
           esac
 
@@ -111,18 +112,25 @@ jobs:
           echo '::error::Storybook did not become ready.'
           exit 1
 
-      - name: Capture and verify real Dropdown behavior
+      - name: Capture and verify real component behavior
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/visual/capture-component-demo.mjs "$VELLIRA_DEMO_NAME"
-          printf '### Component demo\n\nScenario: `%s`\n\nSource: `%s`\n\nResult: post-load proof media plus 1200px branded social GIF, MP4, PNG and SHA-256 manifest. Review required; not published.\n' \
-            "$VELLIRA_DEMO_NAME" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            # Demo infrastructure changes must preserve both reviewed outputs.
+            for scenario in dropdown-keyboard button-confirmation; do
+              node scripts/visual/capture-component-demo.mjs "$scenario"
+            done
+          else
+            node scripts/visual/capture-component-demo.mjs "$VELLIRA_DEMO_NAME"
+          fi
+          printf '### Component demo\n\nSelection: `%s`\n\nSource: `%s`\n\nResult: post-load proof media plus 1200px branded social GIF, MP4, PNG and SHA-256 manifest. Review required; not published.\n' \
+            "${{ github.event_name == 'pull_request' && 'both reviewed demos' || inputs.demo }}" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload review-only demo artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: component-demo-${{ env.VELLIRA_DEMO_NAME }}-${{ env.VELLIRA_DEMO_EXPECTED_SHA }}-${{ github.run_id }}
-          path: apps/react-storybook/test-results/component-demo/${{ env.VELLIRA_DEMO_NAME }}/
+          name: component-demo-${{ github.event_name == 'pull_request' && 'regression-matrix' || inputs.demo }}-${{ env.VELLIRA_DEMO_EXPECTED_SHA }}-${{ github.run_id }}
+          path: apps/react-storybook/test-results/component-demo/
           if-no-files-found: error
           retention-days: 7

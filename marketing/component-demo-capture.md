@@ -2,7 +2,9 @@
 
 Creates GIF, MP4, PNG, and SHA-256 evidence from **real React Storybook**.
 
-V1 permits only `dropdown-keyboard`. No React Native or auto-publishing.
+V1 originally proved `dropdown-keyboard`. The same reviewed pipeline now also
+supports `button-confirmation`, using an existing Button Storybook interaction.
+No React Native or auto-publishing.
 
 ## Proof before merge
 
@@ -10,7 +12,8 @@ A dedicated PR workflow runs only when demo tooling changes.
 
 It checks out the exact PR HEAD with read-only repository permissions.
 
-It builds Storybook and captures the real Dropdown in Chromium.
+It builds Storybook and captures **both reviewed** Dropdown and Button stories
+in Chromium. Ordinary manual runs capture only the selected scenario.
 
 No secrets, arbitrary URLs, or write permissions are supplied.
 
@@ -22,7 +25,7 @@ Review its uploaded GIF, MP4, PNG, and manifest before merging.
 
 After merge, open **Actions → Capture Component Demo → Run workflow**.
 
-Choose `main` and `dropdown-keyboard`.
+Choose `main` and either `dropdown-keyboard` or `button-confirmation`.
 
 The workflow uses reviewed source and never publishes to Buffer.
 
@@ -91,3 +94,21 @@ motion. The workflow remains read-only and does not publish to Buffer.
 
 Review [the V2 technical specification](./component-demo-social-v2.md) and
 inspect the downloaded frames before approving publication.
+
+## Button confirmation scenario (extension)
+
+The allowlisted `button-confirmation` scenario uses the maintained
+`Primitives/Button/DestructiveConfirmation` Storybook story. It verifies
+keyboard activation, the confirmation panel and its enabled actions,
+`aria-busy` plus disabled state while loading, and return to the enabled state.
+It performs **no actual workspace deletion**. The four evidence-backed phases
+are `ready`, `confirming`, `loading`, and `closed`.
+
+The output follows the existing contract under the selected scenario directory:
+`button-confirmation.mp4`, `.gif`, `.png`, plus
+`social/button-confirmation-social.mp4`, `.gif`, `.png` and a SHA-256 manifest.
+Both demos reuse the single square 1200 × 1200 renderer, official Vellira
+logo/fonts, read-only workflow permissions, exact-head checks and 7-day
+artifact retention. A demo-tooling PR runs both scenarios sequentially within
+**one** existing path-filtered job. No second agent, scheduled job or
+Buffer publication is introduced.
