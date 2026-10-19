@@ -10,9 +10,10 @@ component implementation, CI-wide job, or social publishing integration.
 
 - V2 introduced the **Dropdown keyboard** demo on React web. Reviewed Button
   confirmation and Modal focus/Escape scenarios now reuse the same proof/social
-  renderer and have separate allowlisted Storybook scenarios. Select/Tabs
-  remain outside this version.
-- The source story is the allowlisted `components-dropdown--default`.
+  renderer and have separate allowlisted Storybook scenarios. Reviewed Select
+  keyboard choice also reuses this renderer. Tabs remains outside scope.
+- Each scenario uses its own allowlisted, maintained Storybook story. The
+  source components remain canonical; no demo-only clones are permitted.
 - Raw proof capture remains the existing V1 path and filenames.
 - Input must be an exact Git SHA and local Storybook on `127.0.0.1:6006`.
 - The canonical Vellira wordmark and WOFF2 fonts are read from existing assets.
@@ -62,15 +63,15 @@ removes the whole local output, never silently emits a partial success.
 
 ## Out of scope
 
-- React Native capture, Select/Tabs and unreviewed components, generative
-  media, new packages.
+- React Native capture, Tabs and unreviewed components, generative media,
+  new packages.
 - Auto-merging, social scheduling, external URLs, AI writers, persistent storage.
 - Replacing actual component animation with fake motion or marketing claims.
 
 ## Follow-up after V2 acceptance
 
-Add independently verified scenarios for Select and Tabs through new
-allowlist entries and targeted behavior assertions. Keep a single social
+Add an independently verified scenario for Tabs through a new allowlist entry
+and targeted behavior assertions. Keep a single social
 renderer, one capture pipeline, and existing manual publication controls.
 
 ## Reviewed Button extension
@@ -83,9 +84,8 @@ real workspace or call a backend. Real screenshot frames are captured only
 after visual and behavioral assertions pass.
 
 The social renderer receives per-demo phase captions, subtitle and poster phase,
-but keeps the same 1200 × 1200 profile and honest short crossfades. Both
-Dropdown and Button must pass exact-head pre-merge capture whenever this
-capture infrastructure changes. Manual runs stay opt-in and capture only the
+but keeps the same 1200 × 1200 profile and honest short crossfades. All four reviewed scenarios must pass exact-head pre-merge capture whenever
+this capture infrastructure changes. Manual runs stay opt-in and capture only the
 selected scenario. No changes to V1 Dropdown output contracts are permitted.
 
 ## Reviewed Modal focus extension
@@ -97,6 +97,19 @@ focus restoration. The source component and its public API are untouched.
 
 The social renderer reuses the four existing proof-backed screenshot phases and
 square layout, with Modal-specific captions and a poster showing the open
-Dialog. A capture-tooling PR runs all three reviewed scenarios sequentially in
+Dialog. A capture-tooling PR runs all four reviewed scenarios sequentially in
 one read-only job; manual runs generate only the owner's chosen scenario.
 Artifacts require independent visual inspection before any publication.
+
+## Reviewed Select keyboard extension
+
+The `select-keyboard` scenario uses `Components/Select/SimpleUsage` without
+modifying the canonical Select. Playwright validates real keyboard opening,
+portal ownership, `aria-expanded`, `aria-activedescendant` highlighting
+Germany, actual selection through Enter, and retained trigger focus.
+
+The same square 1200 × 1200 renderer accepts Select-specific captions
+and uses its highlighted state for the poster. Proof frames remain
+independent of the social output. The existing path-filtered capture job
+runs Dropdown, Button, Modal and Select sequentially in one build.
+Manual runs remain explicit and single-scenario.

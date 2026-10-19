@@ -108,6 +108,42 @@ test('Modal social presentation has real focus and Escape labels, without fake U
   );
 });
 
+test('Select social labels describe real keyboard selection, not fabricated UI', () => {
+  const select = {
+    ...demo,
+    title: 'Vellira Select — keyboard choice',
+    subtitle: 'Keyboard navigation and verified selection',
+    phaseFrames: { ready: 9, opened: 17, highlighted: 17, selected: 13 },
+    socialStages: [
+      { name: 'ready', label: '01 / READY', key: 'ENTER', action: 'Open the choices' },
+      { name: 'opened', label: '02 / OPEN', key: 'ARROW DOWN', action: 'Navigate options' },
+      { name: 'highlighted', label: '03 / HIGHLIGHT', key: 'ENTER', action: 'Choose Germany' },
+      { name: 'selected', label: '04 / SELECTED', key: 'DONE', action: 'Germany is selected' },
+    ],
+    posterPhase: 'highlighted',
+  };
+  assert.deepEqual(getSocialStages(select).map((x) => [x.name, x.startFrame]), [
+    ['ready', 0], ['opened', 9], ['highlighted', 26], ['selected', 43],
+  ]);
+  assert.equal(getSocialXfadePlan(select).expectedDuration, 56 / 12);
+  const markup = getSocialMarkup({
+    demo: select,
+    stage: getSocialStages(select)[3],
+    crop: getSocialCrop(trigger, menu, demo.viewport),
+    imageBase64: Buffer.from('real-select-proof').toString('base64'),
+    logoBase64: Buffer.from('<svg/>').toString('base64'),
+  });
+  assert.match(markup, /Keyboard navigation and verified selection/);
+  assert.match(markup, /Germany is selected/);
+  assert.match(markup, /<div class="title">Select<\/div>/);
+  assert.match(markup, /alt="Real Storybook Select"/);
+  assert.doesNotMatch(markup, /<select\b|<option\b/);
+  assert.throws(
+    () => getSocialStages({ ...select, socialStages: select.socialStages.slice(1) }),
+    /exactly four reviewed/
+  );
+});
+
 test('social HTML has approved branding, stage text and verified image only', () => {
   const stage = getSocialStages(demo)[2];
   const markup = getSocialMarkup({
