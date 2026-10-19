@@ -215,6 +215,16 @@ The sanitized report checks:
 - Workers.dev exposure and serving-version binding names.
 - Custom domains, zone routes, and basic WAF rule counts.
 
+The serving-version budget binding is reported as present only if **every**
+traffic-serving version in a valid 100% deployment split contains
+`NEWSLETTER_GLOBAL_BUDGET`. Mixed binding states report `false`; an invalid
+or uninspectable traffic split reports `incomplete`. Binding-name presence
+never proves that global budget enforcement is active.
+
+Worker route existence checks match the Vellira zone hostname, including
+documented leading wildcards, rather than incidental text in unrelated domains
+or paths. A route-name match does not prove effective traffic or WAF coverage.
+
 No token, account ID, namespace ID, raw rule, or API body is printed.
 
 Missing permissions remain `unverified`, never interpreted as absence.
