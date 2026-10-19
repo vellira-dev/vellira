@@ -82,13 +82,32 @@ export function createOverlayManagerStore<TLevel extends string>({
     listeners.forEach((listener) => listener());
   };
 
-  const resolveZIndex = (entry: OverlayManagerStoreEntry<TLevel>) =>
-    resolveOverlayZIndex({
-      explicitZIndex: entry.zIndex,
-      level: entry.zIndexLevel,
-      order: entry.order,
-      policy,
-    });
+  const resolveZIndex = (id: string): number | undefined => {
+    let highest = Number.NEGATIVE_INFINITY;
+
+    for (const entry of snapshot.stack) {
+      const preferred = resolveOverlayZIndex({
+        explicitZIndex: entry.zIndex,
+        level: entry.zIndexLevel,
+        order: entry.order,
+        policy,
+      });
+
+      // A newer, non-explicit overlay must paint above earlier overlays even
+      // when its token level (e.g. dropdown) is lower than the parent's modal.
+      // Explicit z-index overrides remain authoritative.
+      const resolved =
+        entry.zIndex === undefined
+          ? Math.max(preferred, highest + policy.orderStep)
+          : preferred;
+
+      if (entry.id === id) return resolved;
+
+      highest = Math.max(highest, resolved);
+    }
+
+    return undefined;
+  };
 
   return {
     register(registration) {
@@ -162,9 +181,7 @@ export function createOverlayManagerStore<TLevel extends string>({
     },
 
     getZIndex(id) {
-      const entry = registry.get(id);
-
-      return entry ? resolveZIndex(entry) : undefined;
+      return resolveZIndex(id);
     },
 
     subscribe(listener) {

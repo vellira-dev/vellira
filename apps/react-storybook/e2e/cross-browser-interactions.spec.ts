@@ -236,6 +236,103 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
   });
 
+  test('nested Modal Select options are visible, clickable and dismiss independently', async ({
+    page,
+    isMobile,
+  }) => {
+    await openStory(page, 'components-modal--nested-select');
+
+    const opener = page.getByRole('button', { name: 'Create project' });
+    await opener.click();
+
+    const dialog = page.getByRole('dialog', { name: 'Create project' });
+    await expect(dialog).toBeVisible();
+
+    const team = dialog.getByRole('combobox', { name: 'Team' });
+    await expect(team).toHaveAttribute('aria-expanded', 'false');
+
+    if (isMobile) {
+      await team.tap();
+    } else {
+      await team.click();
+    }
+
+    const listbox = page.getByRole('listbox');
+    const mobile = page.getByRole('option', { name: 'Mobile', exact: true });
+
+    await expect(listbox).toBeVisible();
+    await expect(mobile).toBeVisible();
+    await expect(team).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      await listbox.evaluate((node) => node.closest('[role="dialog"]'))
+    ).toBeNull();
+
+    await expect
+      .poll(
+        () =>
+          mobile.evaluate((node) => {
+            const bounds = node.getBoundingClientRect();
+            const x = bounds.left + bounds.width / 2;
+            const y = bounds.top + bounds.height / 2;
+            const target = document.elementFromPoint(x, y);
+
+            return (
+              bounds.width > 0 &&
+              bounds.height > 0 &&
+              target !== null &&
+              (target === node || node.contains(target))
+            );
+          }),
+        { message: 'Nested Select option should win browser hit-testing' }
+      )
+      .toBe(true);
+
+    if (isMobile) {
+      await mobile.tap();
+    } else {
+      await mobile.click();
+    }
+
+    await expect(dialog.getByTestId('selected-team')).toHaveText(
+      'Selected team: mobile'
+    );
+    await expect(listbox).toBeHidden();
+    await expect(dialog).toBeVisible();
+
+    // This test switches from a pointer-selected Team option to keyboard-only
+    // Status navigation. Keep the cursor away from the next dropdown so its
+    // stationary hover does not overwrite the keyboard's active option.
+    await page.mouse.move(0, 0);
+
+    const status = dialog.getByRole('combobox', { name: 'Status' });
+    await status.focus();
+    await status.press('ArrowDown');
+    await expect(page.getByRole('listbox')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('listbox')).toBeHidden();
+    await expect(dialog).toBeVisible();
+    await expect(status).toHaveAttribute('aria-expanded', 'false');
+
+    await status.focus();
+    await status.press('ArrowDown');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await expect(status).toBeFocused();
+    await status.press('End');
+    await expect(status).toHaveAttribute('aria-activedescendant', /-option-2$/);
+    await status.press('Enter');
+
+    await expect(dialog.getByTestId('selected-status')).toHaveText(
+      'Selected status: shipped'
+    );
+    await expect(page.getByRole('listbox')).toBeHidden();
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+
   test.describe('desktop-only contracts', () => {
     test.skip(
       ({ isMobile }) => isMobile,

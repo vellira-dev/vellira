@@ -73,8 +73,17 @@ describe('nested overlays', () => {
       </Modal>
     );
 
-    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
-    expect(document.querySelector('[role="listbox"]')).not.toBeNull();
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    const listbox = document.querySelector('[role="listbox"]');
+    const dropdown = listbox?.parentElement as HTMLElement | null;
+    const modalZIndex = Number(
+      dialog?.style.getPropertyValue('--z-index-modal')
+    );
+    const selectZIndex = Number(dropdown?.style.zIndex);
+
+    expect(dialog).not.toBeNull();
+    expect(listbox).not.toBeNull();
+    expect(selectZIndex).toBeGreaterThan(modalZIndex + 1);
 
     pressDocumentKey('Escape');
 
