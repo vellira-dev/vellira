@@ -62,7 +62,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain("iconStart={<Plus");
     expect(standaloneDashboard).toContain("type='search'");
     expect(standaloneDashboard).toContain("aria-label='Search projects'");
-    expect(standaloneDashboard).not.toContain("label='Search projects'");
+    expect(standaloneDashboard).not.toMatch(/\slabel='Search projects'/);
     expect(standaloneDashboard).not.toContain('ProjectTrend');
     expect(standaloneDashboard).toContain('No historical analytics.');
 
