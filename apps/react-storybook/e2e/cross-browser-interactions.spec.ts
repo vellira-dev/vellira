@@ -313,10 +313,7 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await status.press('ArrowDown');
     await expect(page.getByRole('listbox')).toBeVisible();
     await page.keyboard.press('End');
-    await expect(status).toHaveAttribute(
-      'aria-activedescendant',
-      /-option-2$/
-    );
+    await expect(status).toHaveAttribute('aria-activedescendant', /-option-2$/);
     await page.keyboard.press('Enter');
 
     await expect(dialog.getByTestId('selected-status')).toHaveText(
