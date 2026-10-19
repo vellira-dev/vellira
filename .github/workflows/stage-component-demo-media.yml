@@ -1,0 +1,68 @@
+name: Stage Reviewed Component Demo Media (one-time)
+
+on:
+  push:
+    branches:
+      - feat/component-demo-media-hosting-20261019
+    paths:
+      - '.github/workflows/stage-component-demo-media.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: stage-component-demo-media-once
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    if: github.repository == 'vellira-dev/vellira' && github.ref == 'refs/heads/feat/component-demo-media-hosting-20261019'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact staging branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: true
+
+      - name: Download exact approved artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_identity="$(gh api repos/vellira-dev/vellira/actions/runs/39277740730 --jq '.head_sha + " " + .conclusion')"
+          test "$run_identity" = '260850f9e5f2fb51e9095b739e63952ce6a7e1cc success'
+          mkdir -p "$RUNNER_TEMP/vellira-component-proof"
+          gh run download 39277740730 \
+            --repo vellira-dev/vellira \
+            --name component-demo-regression-matrix-260850f9e5f2fb51e9095b739e63952ce6a7e1cc-39277740730 \
+            --dir "$RUNNER_TEMP/vellira-component-proof"
+
+      - name: Exercise promotion allowlist and fail-closed guards
+        run: node --test scripts/visual/stage-component-demo-media.test.mjs
+
+      - name: Validate every source byte and stage immutable public assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/visual/stage-component-demo-media.mjs \
+            "$RUNNER_TEMP/vellira-component-proof" \
+            "$GITHUB_WORKSPACE/apps/website/public/media/component-demos/v1"
+          test "$(find apps/website/public/media/component-demos/v1 -type f | wc -l)" -eq 16
+
+      - name: Persist verified assets only on this isolated feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feat/component-demo-media-hosting-20261019'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- apps/website/public/media/component-demos/v1
+          git diff --cached --check
+          git diff --cached --quiet && { echo '::error::No reviewed assets to stage'; exit 1; }
+          git commit -m 'chore(marketing): retain reviewed component demo media'
+          git push origin HEAD:"$GITHUB_REF"
+          echo 'Verified demo media committed to isolated staging branch; NO production deployment.' >> "$GITHUB_STEP_SUMMARY"
