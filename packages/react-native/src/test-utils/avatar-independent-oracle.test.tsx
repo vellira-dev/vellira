@@ -17,7 +17,12 @@ type ReviewProps = {
   size?: 'sm' | 'md' | 'lg';
 };
 
-type Mutation = 'none' | 'stale-request' | 'missing-truncation' | 'lost-error' | 'duplicate-name';
+type Mutation =
+  | 'none'
+  | 'stale-request'
+  | 'missing-truncation'
+  | 'lost-error'
+  | 'duplicate-name';
 
 function makeFixture(mutation: Mutation) {
   function ImageState({
@@ -45,9 +50,7 @@ function makeFixture(mutation: Mutation) {
         )}
         <Image
           accessible={mutation === 'duplicate-name'}
-          accessibilityLabel={
-            mutation === 'duplicate-name' ? name : undefined
-          }
+          accessibilityLabel={mutation === 'duplicate-name' ? name : undefined}
           source={source}
           onLoad={() => setLoaded(true)}
           onError={
@@ -58,12 +61,7 @@ function makeFixture(mutation: Mutation) {
     );
   }
 
-  function Fixture({
-    fallback,
-    name,
-    size = 'md',
-    source,
-  }: ReviewProps) {
+  function Fixture({ fallback, name, size = 'md', source }: ReviewProps) {
     const dimensions = { sm: 24, md: 32, lg: 40 };
     const normalizedSource =
       typeof source === 'string' ? { uri: source } : source;
@@ -137,7 +135,9 @@ function inspectCandidate(Candidate: ReturnType<typeof makeFixture>) {
     expect(fallback()?.textContent).toBe(required.fallback);
     expect(image().getAttribute('aria-hidden')).toBe('true');
     expect(
-      mounted.container.querySelectorAll('[role="img"]:not([aria-hidden="true"])')
+      mounted.container.querySelectorAll(
+        '[role="img"]:not([aria-hidden="true"])'
+      )
     ).toHaveLength(1);
 
     const a = captureNativeImageRequest(image());
@@ -172,8 +172,8 @@ function inspectCandidate(Candidate: ReturnType<typeof makeFixture>) {
   }
 }
 
-describe('Avatar V2 native request oracle calibration (test fixtures only)', () => {
-  it('accepts a fixture preserving Native request and fallback invariants', () => {
+describe('Avatar V2 native request oracle calibration', () => {
+  it('accepts the reference lifecycle', () => {
     expect(() => inspectCandidate(makeFixture('none'))).not.toThrow();
   });
 
