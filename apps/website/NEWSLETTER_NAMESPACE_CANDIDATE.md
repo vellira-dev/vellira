@@ -230,6 +230,60 @@ No token, account ID, namespace ID, raw rule, or API body is printed.
 Missing permissions remain `unverified`, never interpreted as absence.
 Truncated API pages and unsupported response shapes remain `incomplete`.
 
+### Read-only inventory diagnostics (Evidence V2)
+
+The real owner-run account audit on 2026-10-19 showed `namespaceInventoryStatus: incomplete`, `domainInventoryStatus: incomplete`, and four zone/account WAF
+`permission_denied` responses. The missing budget-owner Worker and absent
+site serving-version budget bindings were separately **observed**. Do not
+mistake the job's `SUCCESS` for infrastructure readiness.
+
+A following audit keeps the same GET calls and includes two fixed-literal,
+allowlisted fields: `namespaceInventoryDiagnostic` and
+`domainInventoryDiagnostic`. `null` means no extra diagnostic; it is **not**
+proof of completeness. Incomplete status can carry one of these codes:
+
+- `pagination_metadata_missing`: no provable `total_pages`; a short
+  response is not proof that a list is exhaustive.
+- `pagination_metadata_invalid`: page or count metadata is inconsistent.
+- `pagination_page_limit`: more pages than the bounded audit can inspect.
+- `records_uninspectable`: unexpected list shape or record type.
+- `namespace_class_uninspectable`: at least one Durable Object namespace has
+  no usable class; zero cannot be inferred.
+- `response_uninspectable`: an HTTP 200 response cannot be safely parsed
+  or validated.
+
+The diagnostic codes disclose neither page counts nor namespace/class names,
+IDs, domain inventory, provider messages, raw responses or token values.
+For HTTP 403, the existing `permission_denied` status already carries the
+diagnosis. Do **not** change the production Cloudflare token, assume WAF is
+absent, or infer a zero Durable Object coordinator count from incomplete data.
+
+### Independent account-side evidence still required
+
+In the Cloudflare dashboard, view zone `vellira.dev` security settings and
+inspect **WAF custom rules** and **rate-limiting rules**. If the account uses
+account-level rulesets, inspect those separately. Review effective scope,
+applicability and bypasses, rather than assuming that a rule count proves
+coverage. The existing CI deployment token's HTTP 403 is insufficient evidence.
+If additional API evidence is needed, use a separately approved, minimally
+scoped **read-only** authorization instead of granting WAF write or rotating
+production credentials.
+
+For both `vellira-website-staging` and `vellira-website`, open Workers &
+Pages, select the Worker and inspect its **Domains** (or Settings > Domains &
+Routes) options for `workers.dev` and **Preview URLs**. Their presence was
+observed in the first audit. Verify any Cloudflare Access restrictions
+independently; ordinary zone WAF coverage does not prove protection of
+`workers.dev` or Preview URL entry points. Do not disable routes or change
+the Wrangler configuration as part of this inspection.
+
+Record only non-sensitive attestation: review date (UTC), which route classes
+and ruleset scopes were inspected, and `observed`, `unverified` or
+`not_configured` where independently proven. Do not record rule expressions,
+raw hostnames outside fixed Vellira constants, account identifiers or secrets.
+No provider quota, shared namespace identity, global budget activation or
+public Pro eligibility is granted by this diagnostic change.
+
 The report cannot prove shared Durable Object instance identity.
 It also cannot prove effective WAF coverage for each public hostname.
 Both claims require separate account-side review before activation.
