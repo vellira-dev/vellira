@@ -11,6 +11,7 @@ import qualityGatesBeforeComponentGrowthMetadata from '../../content/blog/qualit
 import reactReactNativeTwoUiLibrariesMetadata from '../../content/blog/react-react-native-two-ui-libraries/metadata.json';
 import twoRuntimesMetadata from '../../content/blog/two-runtimes/metadata.json';
 import typescriptProjectOwnershipMetadata from '../../content/blog/typescript-project-ownership/metadata.json';
+import whenASelectRendersBehindAModalMetadata from '../../content/blog/when-a-select-renders-behind-a-modal/metadata.json';
 import whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata from '../../content/blog/when-developers-re-decide-ui-across-browser-and-native/metadata.json';
 import whenNestedModalEscapeHandlingReachesTheWrongOverlayMetadata from '../../content/blog/when-nested-modal-escape-handling-reaches-the-wrong-overlay/metadata.json';
 
@@ -71,6 +72,10 @@ const blogArticleMetadataRegistryEntries = [
     metadata: typescriptProjectOwnershipMetadata,
   },
   {
+    slug: 'when-a-select-renders-behind-a-modal',
+    metadata: whenASelectRendersBehindAModalMetadata,
+  },
+  {
     slug: 'when-developers-re-decide-ui-across-browser-and-native',
     metadata: whenDevelopersReDecideUiAcrossBrowserAndNativeMetadata,
   },
@@ -103,6 +108,8 @@ const blogArticleModuleLoaders: Readonly<Record<string, BlogMDXModuleLoader>> =
     'two-runtimes': () => import('../../content/blog/two-runtimes/article.mdx'),
     'typescript-project-ownership': () =>
       import('../../content/blog/typescript-project-ownership/article.mdx'),
+    'when-a-select-renders-behind-a-modal': () =>
+      import('../../content/blog/when-a-select-renders-behind-a-modal/article.mdx'),
     'when-developers-re-decide-ui-across-browser-and-native': () =>
       import('../../content/blog/when-developers-re-decide-ui-across-browser-and-native/article.mdx'),
     'when-nested-modal-escape-handling-reaches-the-wrong-overlay': () =>
