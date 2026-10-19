@@ -7,6 +7,11 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { capturePhase } from './component-demo-frames.mjs';
 import {
+  encodeSocialMedia,
+  getSocialCrop,
+  renderSocialStages,
+} from './component-demo-social.mjs';
+import {
   getDemo,
   getFrameCount,
   getStoryUrl,
@@ -101,6 +106,11 @@ async function recordDropdown(page, demo, framesDir, outputPng) {
   if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
     throw new Error('Dropdown did not expose expanded state.');
   }
+  const crop = getSocialCrop(
+    await trigger.boundingBox(),
+    await menu.boundingBox(),
+    demo.viewport
+  );
   next = await capturePhase(page, framesDir, next, demo.phaseFrames.opened, outputPng);
 
   await page.keyboard.press('ArrowDown');
@@ -122,6 +132,7 @@ async function recordDropdown(page, demo, framesDir, outputPng) {
   if (errors.length > 0) {
     throw new Error(`Storybook page errors: ${errors.join('; ').slice(0, 600)}`);
   }
+  return crop;
 }
 
 async function main() {
@@ -147,6 +158,8 @@ async function main() {
   try {
     const { chromium } = requireFromStorybook('@playwright/test');
     const browser = await chromium.launch({ headless: true });
+    let socialFrames;
+    let crop;
     try {
       const context = await browser.newContext({
         viewport: demo.viewport,
@@ -155,15 +168,25 @@ async function main() {
         reducedMotion: 'reduce',
       });
       try {
-        await recordDropdown(await context.newPage(), demo, framesDir, png);
+        crop = await recordDropdown(await context.newPage(), demo, framesDir, png);
       } finally {
         await context.close();
       }
+      socialFrames = await renderSocialStages({
+        browser,
+        demo,
+        sourceFramesDir: framesDir,
+        tempDir: temporaryDir,
+        outputDir,
+        crop,
+        root,
+      });
     } finally {
       await browser.close();
     }
 
     convertFrames(framesDir, mp4, gif, demo);
+    const social = encodeSocialMedia({ demo, ...socialFrames });
     const manifest = {
       schemaVersion: 1,
       demo: name,
@@ -182,9 +205,10 @@ async function main() {
         [`${name}.gif`]: fileEvidence(gif),
         [`${name}.png`]: fileEvidence(png),
       },
+      social: { schemaVersion: 1, crop, ...social },
     };
     writeFileSync(path.join(outputDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-    console.log(`Demo captured from ${demo.storyId} at ${sha}.`);
+    console.log(`Proof and branded social demo captured from ${demo.storyId} at ${sha}.`);
     console.log(`Artifacts: ${outputDir}`);
   } catch (error) {
     rmSync(outputDir, { recursive: true, force: true });

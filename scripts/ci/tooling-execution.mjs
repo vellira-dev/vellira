@@ -31,6 +31,7 @@ export function createToolingTasks({
     'scripts/ci/cloudflare-candidate-checks.test.mjs',
     'scripts/visual/canonical-fonts.test.mjs',
     'scripts/visual/component-demo-policy.test.mjs',
+    'scripts/visual/component-demo-social.test.mjs',
     'scripts/ci/workflow-noise.test.mjs',
     'scripts/ci/pr-change-intent.test.mjs',
     'scripts/smoke/utils.test.mjs',

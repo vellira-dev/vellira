@@ -70,3 +70,24 @@ The CLI rejects unknown scenarios, invalid output, and oversized GIFs.
 Output is ignored under `apps/react-storybook/test-results/component-demo/`.
 
 No generated media is committed. Publishing remains a separate review step.
+
+## Branded social output (V2)
+
+V2 adds a publication-oriented version without replacing the raw V1 proof.
+
+The same archive includes the following three files under `social/`:
+
+- `dropdown-keyboard-social.mp4`: 1200 × 1200 H.264 video.
+- `dropdown-keyboard-social.gif`: square looping animation, at most 8 MiB.
+- `dropdown-keyboard-social.png`: branded menu-open poster.
+
+The existing `manifest.json` retains raw file hashes and adds versioned
+`social` evidence, including the proof-derived crop, phase names, dimensions,
+and individual SHA-256 hashes.
+
+Social media is rendered only from real, verified Storybook screenshots. Short
+crossfades connect the four captured states; they are not fabricated component
+motion. The workflow remains read-only and does not publish to Buffer.
+
+Review [the V2 technical specification](./component-demo-social-v2.md) and
+inspect the downloaded frames before approving publication.
