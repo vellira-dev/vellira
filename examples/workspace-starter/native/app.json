@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Vellira Workspace Starter",
+    "slug": "vellira-workspace-starter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "dev.vellira.workspace.starter"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
