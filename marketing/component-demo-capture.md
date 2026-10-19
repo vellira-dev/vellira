@@ -107,8 +107,24 @@ are `ready`, `confirming`, `loading`, and `closed`.
 The output follows the existing contract under the selected scenario directory:
 `button-confirmation.mp4`, `.gif`, `.png`, plus
 `social/button-confirmation-social.mp4`, `.gif`, `.png` and a SHA-256 manifest.
-Both demos reuse the single square 1200 × 1200 renderer, official Vellira
-logo/fonts, read-only workflow permissions, exact-head checks and 7-day
-artifact retention. A demo-tooling PR runs both scenarios sequentially within
-**one** existing path-filtered job. No second agent, scheduled job or
+All reviewed scenarios reuse the single square 1200 × 1200 renderer,
+official Vellira logo/fonts, read-only workflow permissions, exact-head checks
+and 7-day artifact retention. A demo-tooling PR runs all scenarios sequentially
+within **one** existing path-filtered job. No second agent, scheduled job or
 Buffer publication is introduced.
+
+## Modal focus and Escape scenario
+
+The allowlisted `modal-focus` scenario uses the existing
+`Components/Modal/Default` Storybook story. It captures real browser behavior:
+Enter opens the dialog, focus moves inside the portal, Tab moves to Cancel,
+and Escape closes it and restores focus to the trigger. The browser also checks
+`aria-modal=true` and verifies that the dialog is rendered outside Storybook's
+root. No account settings are saved or remote services called.
+
+Four reviewed phases (`ready`, `opened`, `focused`, `closed`) produce
+`modal-focus.mp4`, `modal-focus.gif`, `modal-focus.png` and their
+branded `social/modal-focus-social.*` counterparts with SHA-256 evidence.
+The focused story and real dialog geometry determine the crop. The existing
+manual workflow now offers three choices; pre-merge demo-tooling validation
+runs Dropdown, Button and Modal in the same isolated proof job.

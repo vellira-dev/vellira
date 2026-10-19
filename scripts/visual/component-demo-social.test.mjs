@@ -72,6 +72,42 @@ test('Button stages reuse social format with verified confirmation and loading p
   }), /Unreviewed or incomplete/);
 });
 
+test('Modal social presentation has real focus and Escape labels, without fake UI', () => {
+  const modal = {
+    ...demo,
+    title: 'Vellira Modal — focus and Escape dismissal',
+    subtitle: 'Keyboard focus and Escape restoration',
+    phaseFrames: { ready: 9, opened: 17, focused: 17, closed: 13 },
+    socialStages: [
+      { name: 'ready', label: '01 / READY', key: 'ENTER', action: 'Open the dialog' },
+      { name: 'opened', label: '02 / OPEN', key: 'FOCUS', action: 'Focus starts inside' },
+      { name: 'focused', label: '03 / NAVIGATE', key: 'TAB', action: 'Move focus inside' },
+      { name: 'closed', label: '04 / RESTORE', key: 'ESC', action: 'Return focus to trigger' },
+    ],
+    posterPhase: 'opened',
+  };
+  assert.deepEqual(getSocialStages(modal).map(x => [x.name, x.startFrame]), [
+    ['ready', 0], ['opened', 9], ['focused', 26], ['closed', 43],
+  ]);
+  assert.equal(getSocialXfadePlan(modal).expectedDuration, 56 / 12);
+  const markup = getSocialMarkup({
+    demo: modal,
+    stage: getSocialStages(modal)[3],
+    crop: getSocialCrop(trigger, menu, demo.viewport),
+    imageBase64: Buffer.from('real-modal-proof').toString('base64'),
+    logoBase64: Buffer.from('<svg/>').toString('base64'),
+  });
+  assert.match(markup, /Keyboard focus and Escape restoration/);
+  assert.match(markup, /Return focus to trigger/);
+  assert.match(markup, /<div class="title">Modal<\/div>/);
+  assert.match(markup, /alt="Real Storybook Modal"/);
+  assert.doesNotMatch(markup, /<button\b|<dialog\b/);
+  assert.throws(
+    () => getSocialStages({ ...modal, socialStages: modal.socialStages.slice(1) }),
+    /exactly four reviewed/
+  );
+});
+
 test('social HTML has approved branding, stage text and verified image only', () => {
   const stage = getSocialStages(demo)[2];
   const markup = getSocialMarkup({

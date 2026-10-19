@@ -8,10 +8,10 @@ component implementation, CI-wide job, or social publishing integration.
 
 ## Admission and ownership
 
-- V2 introduced the **Dropdown keyboard** demo on React web. The reviewed
-  Button confirmation extension uses the same proof/social renderer with a
-  separate allowlisted Storybook scenario; Modal/Select/Tabs are still outside
-  this version.
+- V2 introduced the **Dropdown keyboard** demo on React web. Reviewed Button
+  confirmation and Modal focus/Escape scenarios now reuse the same proof/social
+  renderer and have separate allowlisted Storybook scenarios. Select/Tabs
+  remain outside this version.
 - The source story is the allowlisted `components-dropdown--default`.
 - Raw proof capture remains the existing V1 path and filenames.
 - Input must be an exact Git SHA and local Storybook on `127.0.0.1:6006`.
@@ -62,15 +62,15 @@ removes the whole local output, never silently emits a partial success.
 
 ## Out of scope
 
-- React Native capture, Modal/Select/Tabs and unreviewed components,
-  generative media, new packages.
+- React Native capture, Select/Tabs and unreviewed components, generative
+  media, new packages.
 - Auto-merging, social scheduling, external URLs, AI writers, persistent storage.
 - Replacing actual component animation with fake motion or marketing claims.
 
 ## Follow-up after V2 acceptance
 
-Add independently verified scenarios for Button, Modal, Select and Tabs through
-new allowlist entries and targeted behavior assertions. Keep a single social
+Add independently verified scenarios for Select and Tabs through new
+allowlist entries and targeted behavior assertions. Keep a single social
 renderer, one capture pipeline, and existing manual publication controls.
 
 ## Reviewed Button extension
@@ -87,3 +87,16 @@ but keeps the same 1200 × 1200 profile and honest short crossfades. Both
 Dropdown and Button must pass exact-head pre-merge capture whenever this
 capture infrastructure changes. Manual runs stay opt-in and capture only the
 selected scenario. No changes to V1 Dropdown output contracts are permitted.
+
+## Reviewed Modal focus extension
+
+Use `modal-focus` to demonstrate the canonical `Components/Modal/Default`
+story. The real Playwright session confirms portal ownership, dialog semantics,
+keyboard opening, initial focus, Tab navigation, Escape dismissal and final
+focus restoration. The source component and its public API are untouched.
+
+The social renderer reuses the four existing proof-backed screenshot phases and
+square layout, with Modal-specific captions and a poster showing the open
+Dialog. A capture-tooling PR runs all three reviewed scenarios sequentially in
+one read-only job; manual runs generate only the owner's chosen scenario.
+Artifacts require independent visual inspection before any publication.
