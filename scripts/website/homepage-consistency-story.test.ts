@@ -68,7 +68,7 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(code).not.toContain('Workspace Pro');
     expect(parity).toContain('Exact props and interaction details');
     expect(parity).toContain('Feature parity continues to evolve.');
-    expect(parity).toContain('Try the Workspace Starter');
+    expect(parity).toContain('Try the Dashboard Starter');
     expect(parity).toContain(
       'github.com/vellira-dev/vellira/tree/main/examples/workspace-starter'
     );
