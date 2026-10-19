@@ -22,6 +22,30 @@ function auditError(code) {
   return error;
 }
 
+// Only fixed, non-sensitive status categories can appear in diagnostics.
+// Never echo the provider response body, URL, headers, or request metadata.
+function readOnlyFailureMessage(status) {
+  switch (status) {
+    case 400:
+      return 'Buttondown read-only API HTTP 400: request or filters rejected';
+    case 401:
+      return 'Buttondown read-only API HTTP 401: authentication rejected';
+    case 403:
+      return 'Buttondown read-only API HTTP 403: access denied (check key permissions)';
+    case 404:
+      return 'Buttondown read-only API HTTP 404: endpoint unavailable';
+    case 429:
+      return 'Buttondown read-only API HTTP 429: request rate limited';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'Buttondown read-only API HTTP 5xx: provider unavailable';
+    default:
+      return 'Buttondown read-only API returned unexpected HTTP status';
+  }
+}
+
 function assertPage(payload, page, totalSoFar, start, end, seenIds) {
   if (
     !payload ||
@@ -164,7 +188,7 @@ export async function auditButtondownApiRequests({
     requests += 1;
     if (response?.status !== 200) {
       // Never expose body, response headers or URL, even when provider fails.
-      throw auditError('Buttondown read-only API returned non-200');
+      throw auditError(readOnlyFailureMessage(response?.status));
     }
     let payload;
     try {
