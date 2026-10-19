@@ -26,7 +26,7 @@ function isObject(value) {
 }
 
 // Deployments must account for all live traffic before any binding conclusion.
-// Cloudflare declares the percentages must total 100 (allow two-decimal rounding).
+// Cloudflare requires percentages to total 100; allow only floating-point noise.
 function validTrafficSplit(versions) {
   if (!Array.isArray(versions) || versions.length < 1 || versions.length > MAX_VERSION_READS) {
     return false;
@@ -38,7 +38,7 @@ function validTrafficSplit(versions) {
   )) return false;
   if (new Set(versions.map((v) => v.version_id)).size !== versions.length) return false;
   const sum = versions.reduce((total, v) => total + v.percentage, 0);
-  return Number.isFinite(sum) && Math.abs(sum - 100) < 0.011;
+  return Number.isFinite(sum) && Math.abs(sum - 100) < 1e-6;
 }
 
 function budgetBindingPresent(bindings) {
