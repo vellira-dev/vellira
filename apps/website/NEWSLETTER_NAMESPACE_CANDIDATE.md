@@ -110,7 +110,7 @@ when the result set exceeds the bounded maximum. The API key is not logged,
 stored, transmitted to GitHub or included in its output. Raw API-request
 objects (including IPs, API-key IDs/labels and request identifiers) are held
 in memory only; output includes **aggregate status categories, source
-categories, UTC-day counts and distinct observed API-key counts**. These
+categories and UTC-day counts**, never credential-diversity metrics. These
 diagnostics contain no subscriber records or request payloads.
 
 A successful audit does **not** prove that Buttondown retained every
