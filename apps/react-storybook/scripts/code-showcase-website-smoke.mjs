@@ -24,35 +24,48 @@ async function checkGeometry(control) {
 }
 
 async function ensurePickerPainted(picker) {
-  await picker.evaluate((element) =>
-    element.scrollIntoView({
-      behavior: 'instant',
-      block: 'center',
-      inline: 'center',
-    })
-  );
-  await expect(picker).toBeInViewport();
   await expect
     .poll(
       () =>
         picker.evaluate((element) => {
+          // React hydration can reposition the picker after a one-shot scroll.
+          // On every poll, scroll the current DOM node and recheck real paint.
+          element.scrollIntoView({
+            behavior: 'instant',
+            block: 'center',
+            inline: 'center',
+          });
+          const rect = element.getBoundingClientRect();
+          if (
+            rect.width <= 0 ||
+            rect.height <= 0 ||
+            rect.top < -1 ||
+            rect.left < -1 ||
+            rect.bottom > window.innerHeight + 1 ||
+            rect.right > window.innerWidth + 1
+          ) {
+            return false;
+          }
           for (let node = element; node; node = node.parentElement) {
             const style = getComputedStyle(node);
             if (
               Number(style.opacity) < 1 ||
               style.visibility !== 'visible' ||
               style.display === 'none'
-            )
+            ) {
               return false;
+            }
           }
-          const rect = element.getBoundingClientRect();
           const hit = document.elementFromPoint(
-            rect.x + rect.width / 2,
-            rect.y + rect.height / 2
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2
           );
           return hit !== null && (hit === element || element.contains(hit));
         }),
-      { message: 'Picker must be fully painted and unobscured', timeout: 15000 }
+      {
+        message: 'Picker must be in viewport, fully painted and unobscured',
+        timeout: 20000,
+      }
     )
     .toBe(true);
 }

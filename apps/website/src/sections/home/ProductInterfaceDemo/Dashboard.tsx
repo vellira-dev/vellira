@@ -111,7 +111,7 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
       left: (from.x / 540) * 100 + '%',
       top: (from.y / 204) * 100 + '%',
       width: (Math.hypot(dx, dy) / 540) * 100 + '%',
-      transform: 'rotate(' + ((Math.atan2(dy, dx) * 180) / Math.PI) + 'deg)',
+      transform: 'rotate(' + (Math.atan2(dy, dx) * 180) / Math.PI + 'deg)',
     };
   });
 
@@ -124,7 +124,9 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
             role='img'
             aria-label={
               'Progress by sample project: ' +
-              dots.map((point) => point.name + ' ' + point.value + ' percent').join(', ')
+              dots
+                .map((point) => point.name + ' ' + point.value + ' percent')
+                .join(', ')
             }
           >
             {segments.map((segment) => (
@@ -165,7 +167,6 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
     </div>
   );
 }
-
 
 function PipelineChart({ projects }: { projects: readonly Project[] }) {
   const counts = statuses.map((status) => ({
