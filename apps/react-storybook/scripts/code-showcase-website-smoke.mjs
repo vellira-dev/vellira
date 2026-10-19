@@ -86,22 +86,8 @@ try {
           const code = section.locator('pre code');
 
           await expect(picker).toBeVisible();
-          await expect
-            .poll(
-              async () => {
-                try {
-                  await picker.scrollIntoViewIfNeeded({ timeout: 2000 });
-                  return true;
-                } catch (error) {
-                  if (!String(error).includes('not attached to the DOM')) {
-                    throw error;
-                  }
-                  return false;
-                }
-              },
-              { timeout: 15000, message: 'Code picker should settle after hydration' }
-            )
-            .toBe(true);
+          // ensurePickerPainted already scrolls, checks viewport and verifies
+          // real hit-testing. Avoid a redundant actionability wait during hydration.
           await ensurePickerPainted(picker);
           await expect(picker.getByRole('button')).toHaveCount(4);
           await expect(
