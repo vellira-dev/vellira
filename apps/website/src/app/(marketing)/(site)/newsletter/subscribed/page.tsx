@@ -14,7 +14,7 @@ export default function NewsletterSubscribedPage() {
   return (
     <NewsletterStatusPage
       heading='Check your inbox'
-      body='We sent you a confirmation email. Confirm your subscription to start receiving Vellira engineering notes.'
+      body='If you receive a confirmation email, follow its link to finish subscribing to Vellira engineering notes. Existing subscribers may not receive another email.'
     />
   );
 }

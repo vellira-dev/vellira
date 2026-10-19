@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createNewsletterBudgetAdmission } from '../../apps/website/src/server/newsletter/global-budget-admission';
+
 import {
   createNewsletterSubscribeHandler,
   resolveSubscriberIp,
 } from '../../apps/website/src/server/newsletter/subscribe';
 import {
   BUTTONDOWN_SUBSCRIBERS_URL,
+  PRO_INTEREST_UTM_CAMPAIGN,
   newsletterErrors,
   subscribeWithButtondown,
   type NewsletterSubscribeResult,
@@ -26,15 +29,18 @@ function request(
 
 function handler(options?: {
   apiKey?: string | undefined;
+  proInterestEnabled?: boolean;
   subscribe?: (input: {
     apiKey: string | undefined;
     email: string;
     ipAddress: string | null;
+    purpose?: 'pro_launch';
   }) => Promise<NewsletterSubscribeResult>;
 }) {
   return createNewsletterSubscribeHandler({
     getApiKey: async () =>
       options && 'apiKey' in options ? options.apiKey : 'test-buttondown-key',
+    proInterestEnabled: options?.proInterestEnabled ?? false,
     subscribe:
       options?.subscribe ??
       (async () => {
@@ -91,6 +97,134 @@ describe('newsletter subscribe API', () => {
       apiKey: 'test-buttondown-key',
       email: 'person@example.com',
       ipAddress: '203.0.113.12',
+    });
+  });
+
+  it('keeps Pro collection disabled until the separate provider rollout is approved', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = handler({ subscribe, proInterestEnabled: false });
+    const result = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'pro_launch',
+          consent: true,
+        })
+      )
+    );
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(subscribe).not.toHaveBeenCalled();
+
+    const normal = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+        })
+      )
+    );
+    expect(normal.status).toBe(201);
+    expect(subscribe).toHaveBeenCalledExactlyOnceWith({
+      apiKey: 'test-buttondown-key',
+      email: 'person@example.com',
+      ipAddress: null,
+    });
+  });
+
+  it('requires a genuine Pro opt-in before tagging an email address', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = handler({ subscribe, proInterestEnabled: true });
+
+    for (const consent of [undefined, false, 'true', 1]) {
+      const response = await route(
+        request(
+          JSON.stringify({
+            email: 'person@example.com',
+            purpose: 'pro_launch',
+            ...(consent === undefined ? {} : { consent }),
+          })
+        )
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        ok: false,
+        code: 'consent_required',
+      });
+    }
+    expect(subscribe).not.toHaveBeenCalled();
+
+    const invalidPurpose = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'override',
+          consent: true,
+        })
+      )
+    );
+    expect(invalidPurpose.status).toBe(400);
+    expect(subscribe).not.toHaveBeenCalled();
+
+    const confirmedRequest = await route(
+      request(
+        JSON.stringify({
+          email: 'person@example.com',
+          purpose: 'pro_launch',
+          consent: true,
+        })
+      )
+    );
+    expect(confirmedRequest.status).toBe(201);
+    expect(subscribe).toHaveBeenCalledExactlyOnceWith({
+      apiKey: 'test-buttondown-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      purpose: 'pro_launch',
+    });
+  });
+
+  it('ignores caller-supplied UTM, tags and subscriber type in both signup paths', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = handler({ subscribe, proInterestEnabled: true });
+
+    const proResponse = await route(
+      request(
+        JSON.stringify({
+          email: 'pro@example.com',
+          purpose: 'pro_launch',
+          consent: true,
+          utm_campaign: 'attacker-controlled',
+          tags: ['unwanted'],
+          type: 'regular',
+        })
+      )
+    );
+    expect(proResponse.status).toBe(201);
+    expect(subscribe).toHaveBeenNthCalledWith(1, {
+      apiKey: 'test-buttondown-key',
+      email: 'pro@example.com',
+      ipAddress: null,
+      purpose: 'pro_launch',
+    });
+
+    const regularResponse = await route(
+      request(
+        JSON.stringify({
+          email: 'regular@example.com',
+          utm_campaign: 'attacker-controlled',
+          tags: ['unwanted'],
+          type: 'regular',
+        })
+      )
+    );
+    expect(regularResponse.status).toBe(201);
+    expect(subscribe).toHaveBeenNthCalledWith(2, {
+      apiKey: 'test-buttondown-key',
+      email: 'regular@example.com',
+      ipAddress: null,
     });
   });
 
@@ -161,15 +295,107 @@ describe('Buttondown provider boundary', () => {
     expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
   });
 
+  it('keeps Pro updates distinct, requires confirmation, and never bypasses provider suppression', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'server-only-test-key',
+      email: 'pro@example.com',
+      ipAddress: null,
+      purpose: 'pro_launch',
+      fetcher,
+    });
+
+    expect(result).toEqual({ ok: true });
+    const init = fetcher.mock.calls[0]?.[1];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      email_address: 'pro@example.com',
+      utm_campaign: PRO_INTEREST_UTM_CAMPAIGN,
+      type: 'unactivated',
+    });
+    expect(init?.headers).not.toHaveProperty('X-Buttondown-Collision-Behavior');
+    expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
+    expect(JSON.parse(String(init?.body))).not.toHaveProperty('tags');
+
+    // Existing subscribers must not acquire new Pro-interest attribution from
+    // an unauthenticated duplicate signup. Buttondown's default policy rejects
+    // collisions instead of updating an existing subscriber's campaign.
+    await expect(
+      subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'existing@example.com',
+        ipAddress: null,
+        purpose: 'pro_launch',
+        fetcher: async (_url, init) => {
+          expect(init?.headers).not.toHaveProperty(
+            'X-Buttondown-Collision-Behavior'
+          );
+          expect(JSON.parse(String(init?.body))).toMatchObject({
+            utm_campaign: PRO_INTEREST_UTM_CAMPAIGN,
+            type: 'unactivated',
+          });
+          return new Response(JSON.stringify({ code: 'subscriber_exists' }), {
+            status: 400,
+          });
+        },
+      })
+    ).resolves.toMatchObject({ ok: false, code: 'already_subscribed' });
+
+    // A surprising 200 does not certify either creation or topic consent.
+    await expect(
+      subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'unexpected@example.com',
+        ipAddress: null,
+        purpose: 'pro_launch',
+        fetcher: async () => new Response('{}', { status: 200 }),
+      })
+    ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+
+    await expect(
+      subscribeWithButtondown({
+        apiKey: 'server-only-test-key',
+        email: 'suppressed@example.com',
+        ipAddress: null,
+        purpose: 'pro_launch',
+        fetcher: async () =>
+          new Response(JSON.stringify({ code: 'subscriber_suppressed' }), {
+            status: 400,
+          }),
+      })
+    ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+  });
+
   it.each([
     [
       400,
       { code: 'email_invalid', detail: 'provider-private-detail' },
       'invalid_email',
     ],
-    [400, { code: 'subscriber_suppressed' }, 'already_subscribed'],
+    [400, { code: 'subscriber_exists' }, 'already_subscribed'],
+    [
+      400,
+      {
+        code: 'subscriber_already_exists',
+        metadata: { subscriber_id: 'sub_test123' },
+      },
+      'already_subscribed',
+    ],
+    [400, { code: 'subscriber_suppressed' }, 'temporarily_unavailable'],
+    [
+      400,
+      { code: 'daily_subscriber_quota', detail: 'Use POST /v1/imports' },
+      'temporarily_unavailable',
+    ],
+    [400, { code: 'unknown_provider_error' }, 'temporarily_unavailable'],
     [409, {}, 'already_subscribed'],
-    [422, { detail: [{ msg: 'provider-private-detail' }] }, 'invalid_email'],
+    [422, { code: 'email_invalid' }, 'invalid_email'],
+    [
+      422,
+      { detail: [{ msg: 'provider-private-detail' }] },
+      'temporarily_unavailable',
+    ],
     [429, {}, 'rate_limited'],
     [401, {}, 'temporarily_unavailable'],
     [403, {}, 'temporarily_unavailable'],
@@ -193,6 +419,136 @@ describe('Buttondown provider boundary', () => {
 
       expect(result).toMatchObject({ ok: false, code });
       expect(JSON.stringify(result)).not.toContain('provider-private-detail');
+    }
+  );
+
+  it.each([
+    {
+      name: 'regular duplicate',
+      providerStatus: 400,
+      providerBody: { code: 'subscriber_exists' },
+      expectedStatus: 409,
+      expectedCode: 'already_subscribed',
+    },
+    {
+      name: 'pending duplicate with provider subscriber ID',
+      providerStatus: 400,
+      providerBody: {
+        code: 'already_exists',
+        metadata: { subscriber_id: 'sub_test123' },
+      },
+      expectedStatus: 409,
+      expectedCode: 'already_subscribed',
+    },
+    {
+      name: 'unsubscribed or suppressed address',
+      providerStatus: 400,
+      providerBody: { code: 'subscriber_suppressed' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'blocked or complained address',
+      providerStatus: 400,
+      providerBody: { code: 'subscriber_suppressed' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'daily subscriber creation quota',
+      providerStatus: 400,
+      providerBody: {
+        code: 'daily_subscriber_quota',
+        detail: 'Use POST /v1/imports for bulk subscribers',
+      },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'unknown HTTP 400',
+      providerStatus: 400,
+      providerBody: { code: 'unknown_provider_error' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'malformed collision metadata',
+      providerStatus: 400,
+      providerBody: {
+        code: 'unknown_provider_error',
+        metadata: { subscriber_id: 'invalid-id' },
+      },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'per-minute throttling',
+      providerStatus: 429,
+      providerBody: { code: 'rate_limited' },
+      expectedStatus: 429,
+      expectedCode: 'rate_limited',
+    },
+    {
+      name: 'unrecognized HTTP 422',
+      providerStatus: 422,
+      providerBody: { code: 'validation_error' },
+      expectedStatus: 503,
+      expectedCode: 'temporarily_unavailable',
+    },
+    {
+      name: 'provider email invalidation',
+      providerStatus: 422,
+      providerBody: { code: 'email_invalid' },
+      expectedStatus: 400,
+      expectedCode: 'invalid_email',
+    },
+  ])(
+    'keeps $name fail-closed through the actual Pro route and provider adapter',
+    async ({ providerStatus, providerBody, expectedStatus, expectedCode }) => {
+      // The provider is intentionally mocked. No credentials, real addresses,
+      // existing subscriber mutations or quota-consuming API calls.
+      const providerFetch = vi.fn<ButtondownFetcher>(async () =>
+        Response.json(providerBody, { status: providerStatus })
+      );
+      const route = handler({
+        proInterestEnabled: true,
+        subscribe: (options) =>
+          subscribeWithButtondown({ ...options, fetcher: providerFetch }),
+      });
+
+      const result = await route(
+        request(
+          JSON.stringify({
+            email: '  EdgeCase@Example.com ',
+            purpose: 'pro_launch',
+            consent: true,
+            utm_campaign: 'attacker-supplied-campaign',
+            tags: ['attacker-supplied-tag'],
+            type: 'regular',
+          })
+        )
+      );
+
+      expect(result.status).toBe(expectedStatus);
+      expect(await result.json()).toMatchObject({
+        ok: false,
+        code: expectedCode,
+      });
+      expect(result.headers.get('cache-control')).toBe('no-store');
+      // Never auto-retry mutations after an ambiguous provider error.
+      expect(providerFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = providerFetch.mock.calls[0]!;
+      expect(url).toBe(BUTTONDOWN_SUBSCRIBERS_URL);
+      expect(init?.method).toBe('POST');
+      expect(init?.headers).not.toHaveProperty(
+        'X-Buttondown-Collision-Behavior'
+      );
+      expect(init?.headers).not.toHaveProperty('X-Buttondown-Bypass-Firewall');
+      expect(JSON.parse(String(init?.body))).toEqual({
+        email_address: 'edgecase@example.com',
+        utm_campaign: PRO_INTEREST_UTM_CAMPAIGN,
+        type: 'unactivated',
+      });
     }
   );
 
@@ -232,5 +588,168 @@ describe('Buttondown provider boundary', () => {
         },
       })
     ).resolves.toMatchObject({ ok: false, code: 'temporarily_unavailable' });
+  });
+});
+
+describe('dormant global budget provider admission seam', () => {
+  it('denies exhausted budget without a provider call', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    for (const purpose of [undefined, 'pro_launch'] as const) {
+      const result = await subscribeWithButtondown({
+        apiKey: 'test-key',
+        email: 'person@example.com',
+        ipAddress: null,
+        purpose,
+        admit: async () => 'exhausted',
+        fetcher,
+      });
+      expect(result).toMatchObject({ ok: false, code: 'rate_limited' });
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for unavailable and invalid coordinator results', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const admit = vi.fn(async () => 'unavailable' as const);
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit,
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unexpected coordinator decision without provider writes', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => 'invalid' as 'admitted',
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects a thrown coordinator error without provider writes or leaking details', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => {
+        throw new Error('private coordinator failure');
+      },
+      fetcher,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(JSON.stringify(result)).not.toContain('private coordinator failure');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('admits before calling the provider exactly once', async () => {
+    const calls: string[] = [];
+    const result = await subscribeWithButtondown({
+      apiKey: 'test-key',
+      email: 'person@example.com',
+      ipAddress: null,
+      admit: async () => {
+        calls.push('admit');
+        return 'admitted';
+      },
+      fetcher: async () => {
+        calls.push('provider');
+        throw new Error('network failure');
+      },
+    });
+    expect(calls).toEqual(['admit', 'provider']);
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+  });
+});
+
+describe('newsletter handler global budget integration', () => {
+  const makeRequest = () =>
+    request(JSON.stringify({ email: 'person@example.com' }));
+
+  it('preserves ordinary newsletter behavior with missing/OFF binding', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const getAdmission = vi.fn(async () =>
+      createNewsletterBudgetAdmission({
+        NEWSLETTER_GLOBAL_BUDGET_ENABLED: '0',
+      })
+    );
+    const route = createNewsletterSubscribeHandler({
+      getApiKey: async () => 'test-key',
+      getAdmission,
+      subscribe: (input) => subscribeWithButtondown({ ...input, fetcher }),
+      proInterestEnabled: false,
+    });
+    expect((await route(makeRequest())).status).toBe(201);
+    expect(getAdmission).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks shared provider calls when enabled binding is missing', async () => {
+    const fetcher = vi.fn<ButtondownFetcher>(
+      async () => new Response('{}', { status: 201 })
+    );
+    const route = createNewsletterSubscribeHandler({
+      getApiKey: async () => 'test-key',
+      getAdmission: async () =>
+        createNewsletterBudgetAdmission({
+          NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
+        }),
+      subscribe: (input) => subscribeWithButtondown({ ...input, fetcher }),
+      proInterestEnabled: false,
+    });
+    const result = await route(makeRequest());
+    expect(result.status).toBe(503);
+    expect(result.headers.get('cache-control')).toBe('no-store');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when acquiring admission throws', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = createNewsletterSubscribeHandler({
+      getApiKey: async () => 'test-key',
+      getAdmission: async () => {
+        throw new Error('private coordinator failure');
+      },
+      subscribe,
+      proInterestEnabled: false,
+    });
+    const result = await route(makeRequest());
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({
+      ok: false,
+      code: 'temporarily_unavailable',
+    });
+    expect(subscribe).not.toHaveBeenCalled();
   });
 });

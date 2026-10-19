@@ -327,6 +327,8 @@ export function compileComponentProgram(
     fingerprint: null,
   });
   try {
+    // Capture decisions before inspecting source/grammar; those inputs may
+    // contain reflection traps that mutate the caller-owned decision object.
     const parsed = parseComponentProgramDecisions(decisionsInput);
     // Legacy grammar and every derived Program fingerprint stay byte-identical.
     // Only an explicit reviewed module selection opts into successor proof rules.
@@ -338,6 +340,31 @@ export function compileComponentProgram(
     const order = validateComponentGrammar(activeRegistry);
     const grammar = new Map(activeRegistry.map((item) => [item.id, item]));
     const source = normalizedSource(sourceInput);
+    if (parsed.numericBindingSlots) {
+      const { numericBindingSlots, ...baselineDecisions } = parsed;
+      const baseline = compileComponentProgram(
+        sourceInput,
+        baselineDecisions,
+        activeRegistry
+      );
+      if (
+        baseline.disposition !== 'compiled' ||
+        baseline.fingerprint !== numericBindingSlots.baseProgramFingerprint
+      ) {
+        finding(
+          'invalid-composition',
+          'numeric-binding-slots',
+          'The numeric-free Component Program fingerprint does not match.'
+        );
+        return blocked();
+      }
+      finding(
+        'missing-grammar-capability',
+        'bounded-numeric-series',
+        'Numeric Binding Slots V1 are review-only until numeric grammar admission.'
+      );
+      return blocked();
+    }
     const decisions: ComponentProgramDecisionsV1 = {
       ...parsed,
       anatomy: sorted(parsed.anatomy),

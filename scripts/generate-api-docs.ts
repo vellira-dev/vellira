@@ -270,9 +270,39 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### FormFieldLabelProps',
+    'FormFieldLabelProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
+    '### FormFieldDescriptionProps',
+    'FormFieldDescriptionProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
+    '### FormFieldControlProps',
+    'FormFieldControlProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
+    '### FormFieldMessageProps',
+    'FormFieldMessageProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'web',
     '### RadioGroup Props',
     'RadioGroupProps',
     'src/components/RadioGroup/types.ts'
+  ),
+  section(
+    'web',
+    '### RadioGroupItemProps',
+    'RadioGroupItemProps',
+    'src/components/RadioGroup/Item/types.ts'
   ),
   section(
     'web',
@@ -294,8 +324,164 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### SelectTriggerSlotProps',
+    'SelectTriggerSlotProps',
+    'src/components/Select/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectValueProps',
+    'SelectValueProps',
+    'src/components/Select/Value/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectIconProps',
+    'SelectIconProps',
+    'src/components/Select/Icon/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectContentSlotProps',
+    'SelectContentSlotProps',
+    'src/components/Select/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectSearchProps',
+    'SelectSearchProps',
+    'src/components/Select/Search/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectGroupProps',
+    'SelectGroupProps',
+    'src/components/Select/Group/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectLabelProps',
+    'SelectLabelProps',
+    'src/components/Select/Group/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemProps',
+    'SelectItemProps',
+    'src/components/Select/Item/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemIconProps',
+    'SelectItemIconProps',
+    'src/components/Select/ItemIcon/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemDescriptionProps',
+    'SelectItemDescriptionProps',
+    'src/components/Select/ItemDescription/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectItemBadgeProps',
+    'SelectItemBadgeProps',
+    'src/components/Select/ItemBadge/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectSeparatorProps',
+    'SelectSeparatorProps',
+    'src/components/Select/Group/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectEmptyProps',
+    'SelectEmptyProps',
+    'src/components/Select/Empty/types.ts'
+  ),
+  section(
+    'web',
+    '### SelectLoadingProps',
+    'SelectLoadingProps',
+    'src/components/Select/Loading/types.ts'
+  ),
+  section(
+    'web',
     '### Dropdown Props',
     'DropdownProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownTriggerProps',
+    'DropdownTriggerProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownContentProps',
+    'DropdownContentProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownItemProps',
+    'DropdownItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownCheckboxItemProps',
+    'DropdownCheckboxItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownRadioGroupProps',
+    'DropdownRadioGroupProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownRadioItemProps',
+    'DropdownRadioItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSeparatorProps',
+    'DropdownSeparatorProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSubProps',
+    'DropdownSubProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSubTriggerProps',
+    'DropdownSubTriggerProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownSubContentProps',
+    'DropdownSubContentProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownGroupProps',
+    'DropdownGroupProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'web',
+    '### DropdownLabelProps',
+    'DropdownLabelProps',
     'src/components/Dropdown/types.ts'
   ),
   section(
@@ -378,6 +564,96 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'web',
+    '### ModalTriggerProps',
+    'ModalTriggerProps',
+    'src/components/Modal/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalOverlayProps',
+    'ModalOverlayProps',
+    'src/components/Modal/Overlay/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalContentProps',
+    'ModalContentProps',
+    'src/components/Modal/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalHeaderProps',
+    'ModalHeaderProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalBodyProps',
+    'ModalBodyProps',
+    'src/components/Modal/Body/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalFooterProps',
+    'ModalFooterProps',
+    'src/components/Modal/Footer/types.ts'
+  ),
+  section(
+    'web',
+    '### ModalCloseProps',
+    'ModalCloseProps',
+    'src/components/Modal/Close/types.ts'
+  ),
+  section(
+    'web',
+    '### Popover Props',
+    'PopoverProps',
+    'src/components/Popover/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverAnchorProps',
+    'PopoverAnchorProps',
+    'src/components/Popover/Anchor/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverTriggerProps',
+    'PopoverTriggerProps',
+    'src/components/Popover/Trigger/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverContentProps',
+    'PopoverContentProps',
+    'src/components/Popover/Content/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverArrowProps',
+    'PopoverArrowProps',
+    'src/components/Popover/Arrow/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverCloseProps',
+    'PopoverCloseProps',
+    'src/components/Popover/Close/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverTitleProps',
+    'PopoverTitleProps',
+    'src/components/Popover/Title/types.ts'
+  ),
+  section(
+    'web',
+    '### PopoverDescriptionProps',
+    'PopoverDescriptionProps',
+    'src/components/Popover/Description/types.ts'
+  ),
+  section(
+    'web',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -409,9 +685,39 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'native',
+    '### FormFieldLabelProps',
+    'FormFieldLabelProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldDescriptionProps',
+    'FormFieldDescriptionProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldControlProps',
+    'FormFieldControlProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
+    '### FormFieldMessageProps',
+    'FormFieldMessageProps',
+    'src/patterns/FormField/types.ts'
+  ),
+  section(
+    'native',
     '### RadioGroup Props',
     'RadioGroupProps',
     'src/components/RadioGroup/types.ts'
+  ),
+  section(
+    'native',
+    '### RadioGroupItemProps',
+    'RadioGroupItemProps',
+    'src/components/RadioGroup/Item/types.ts'
   ),
   section(
     'native',
@@ -433,8 +739,134 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'native',
+    '### SelectTriggerSlotProps',
+    'SelectTriggerSlotProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectValueSlotProps',
+    'SelectValueSlotProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectIconSlotProps',
+    'SelectIconSlotProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectContentProps',
+    'SelectContentProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectSearchProps',
+    'SelectSearchProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectGroupProps',
+    'SelectGroupProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectLabelProps',
+    'SelectLabelProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemProps',
+    'SelectItemProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemIconProps',
+    'SelectItemIconProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemDescriptionProps',
+    'SelectItemDescriptionProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectItemBadgeProps',
+    'SelectItemBadgeProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectSeparatorProps',
+    'SelectSeparatorProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectEmptyProps',
+    'SelectEmptyProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
+    '### SelectLoadingProps',
+    'SelectLoadingProps',
+    'src/components/Select/types.ts'
+  ),
+  section(
+    'native',
     '### Dropdown Props',
     'DropdownProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownTriggerProps',
+    'DropdownTriggerProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownContentProps',
+    'DropdownContentProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownItemProps',
+    'DropdownItemProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownSeparatorProps',
+    'DropdownSeparatorProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownGroupProps',
+    'DropdownGroupProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownLabelProps',
+    'DropdownLabelProps',
+    'src/components/Dropdown/types.ts'
+  ),
+  section(
+    'native',
+    '### DropdownEmptyProps',
+    'DropdownEmptyProps',
     'src/components/Dropdown/types.ts'
   ),
   section(
@@ -517,6 +949,108 @@ const defaultSections: ApiSection[] = [
   ),
   section(
     'native',
+    '### ModalTriggerProps',
+    'ModalTriggerProps',
+    'src/components/Modal/Trigger/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalOverlayProps',
+    'ModalOverlayProps',
+    'src/components/Modal/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalContentProps',
+    'ModalContentProps',
+    'src/components/Modal/Content/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalHeaderProps',
+    'ModalHeaderProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalTitleProps',
+    'ModalTitleProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalDescriptionProps',
+    'ModalDescriptionProps',
+    'src/components/Modal/Header/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalBodyProps',
+    'ModalBodyProps',
+    'src/components/Modal/Body/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalFooterProps',
+    'ModalFooterProps',
+    'src/components/Modal/Footer/types.ts'
+  ),
+  section(
+    'native',
+    '### ModalCloseProps',
+    'ModalCloseProps',
+    'src/components/Modal/Close/types.ts'
+  ),
+  section(
+    'native',
+    '### Popover Props',
+    'PopoverProps',
+    'src/components/Popover/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverAnchorProps',
+    'PopoverAnchorProps',
+    'src/components/Popover/Anchor/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverTriggerProps',
+    'PopoverTriggerProps',
+    'src/components/Popover/Trigger/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverContentProps',
+    'PopoverContentProps',
+    'src/components/Popover/Content/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverArrowProps',
+    'PopoverArrowProps',
+    'src/components/Popover/Arrow/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverCloseProps',
+    'PopoverCloseProps',
+    'src/components/Popover/Close/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverTitleProps',
+    'PopoverTitleProps',
+    'src/components/Popover/Title/types.ts'
+  ),
+  section(
+    'native',
+    '### PopoverDescriptionProps',
+    'PopoverDescriptionProps',
+    'src/components/Popover/Description/types.ts'
+  ),
+  section(
+    'native',
     '### ThemeProvider Props',
     'ThemeProviderProps',
     'src/theme/types.ts'
@@ -548,15 +1082,36 @@ export async function generateApiDocs(
     silent = false,
     sections = defaultSections,
   } = params;
+  // Preserve the original standalone checkers for unrelated components.
+  // Modal and Popover independently share one TS program per platform for
+  // their public compound sources, bounding heap use without changing type
+  // rendering for existing generated API tables.
+  const getContextKey = (item: ApiSection) => {
+    const compoundComponent =
+      /^(?:web|native)\.(Modal|Popover)[A-Za-z]*Props\./.exec(item.id)?.[1];
+    return compoundComponent
+      ? `${compoundComponent.toLowerCase()}:${item.docPath}`
+      : item.sourceFile;
+  };
+  const sourceFilesByContext = new Map<string, Set<string>>();
+  for (const item of sections) {
+    const contextKey = getContextKey(item);
+    const sources = sourceFilesByContext.get(contextKey) ?? new Set<string>();
+    sources.add(item.sourceFile);
+    sourceFilesByContext.set(contextKey, sources);
+  }
   const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
 
   for (const item of sections) {
+    const contextKey = getContextKey(item);
     const context =
-      contexts.get(item.sourceFile) ??
-      createApiDocsContext(rootDir, item.sourceFile);
+      contexts.get(contextKey) ??
+      createApiDocsContext(rootDir, [
+        ...(sourceFilesByContext.get(contextKey) ?? []),
+      ]);
 
-    contexts.set(item.sourceFile, context);
+    contexts.set(contextKey, context);
     const docPath = path.join(rootDir, item.docPath);
     const currentDoc =
       docs.get(item.docPath) ?? fs.readFileSync(docPath, 'utf8');
@@ -617,10 +1172,12 @@ export async function generateApiDocs(
 
 function createApiDocsContext(
   rootDir: string,
-  sourceFile: string
+  sourceFiles: readonly string[]
 ): ApiDocsContext {
-  const sourcePath = path.join(rootDir, sourceFile);
-  const program = ts.createProgram([sourcePath], {
+  const sourcePaths = sourceFiles.map((sourceFile) =>
+    path.join(rootDir, sourceFile)
+  );
+  const program = ts.createProgram(sourcePaths, {
     baseUrl: rootDir,
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
@@ -1002,6 +1559,42 @@ function normalizeType(type: string) {
 
 function readExistingDescriptions(doc: string, item: ApiSection) {
   const descriptions = new Map<string, string>();
+  // New Select compound sections have no historic descriptions to preserve.
+  if (
+    !doc.includes(item.heading) &&
+    /^### Select[A-Za-z]+Props$/.test(item.heading)
+  ) {
+    return descriptions;
+  }
+  if (
+    /^### Dropdown[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
+  if (
+    /^### Modal[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
+  if (
+    /^### FormField(?:Label|Description|Control|Message)Props$/.test(
+      item.heading
+    ) &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
+  if (
+    item.heading === '### RadioGroupItemProps' &&
+    !doc.includes(item.heading)
+  ) {
+    return descriptions;
+  }
+  if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
+    return descriptions;
+  }
   const block = findTableBlock(doc, item);
 
   if (!block) {
@@ -1036,6 +1629,173 @@ function replaceGeneratedTable(doc: string, item: ApiSection, table: string) {
 
   if (markedBlock.test(doc)) {
     return doc.replace(markedBlock, generatedBlock);
+  }
+
+  // New Select compound API sections are generated from exported TypeScript
+  // types. Insert them adjacent to the existing SelectOption block rather
+  // than requiring hand-authored tables or silently replacing unrelated docs.
+  if (
+    !doc.includes(item.heading) &&
+    /^### Select[A-Za-z]+Props$/.test(item.heading)
+  ) {
+    const optionEnd =
+      '<!-- api-docgen:end ' +
+      item.id.split('.')[0] +
+      '.SelectOption.SelectOption -->';
+    const insertAt = doc.indexOf(optionEnd);
+    if (
+      insertAt === -1 ||
+      doc.indexOf(optionEnd, insertAt + optionEnd.length) !== -1
+    ) {
+      throw new Error(
+        'Cannot locate unique SelectOption API anchor in ' + item.docPath
+      );
+    }
+    const after = insertAt + optionEnd.length;
+    return (
+      doc.slice(0, after) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(after)
+    );
+  }
+
+  if (
+    /^### Dropdown[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.DropdownProps.DropdownProps -->`;
+    const start = doc.indexOf(rootEnd);
+    if (start < 0 || doc.indexOf(rootEnd, start + rootEnd.length) !== -1) {
+      throw new Error('Missing or ambiguous Dropdown API root anchor');
+    }
+    const insertion = start + rootEnd.length;
+    return (
+      doc.slice(0, insertion) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(insertion)
+    );
+  }
+
+  // Bootstrap previously undocumented public Modal compound-part tables from
+  // real exported TypeScript contracts. Once generated markers exist the
+  // standard marker replacement path above owns subsequent regeneration.
+  if (
+    /^### Modal[A-Za-z]+Props$/.test(item.heading) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.ModalProps.ModalProps -->`;
+    const index = doc.indexOf(rootEnd);
+    if (index === -1 || doc.indexOf(rootEnd, index + rootEnd.length) !== -1) {
+      throw new Error('Missing or ambiguous Modal API root anchor');
+    }
+    const insertion = index + rootEnd.length;
+    return (
+      doc.slice(0, insertion) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      doc.slice(insertion)
+    );
+  }
+
+  // Popover has never had canonical API tables. Bootstrap every public TS
+  // block before ThemeProvider, inserting in source order and maintaining
+  // the documentation's H2 boundary. All later runs use exact markers above.
+  if (item.id.includes('.Popover') && !doc.includes(item.heading)) {
+    const nextComponentHeading = '\n## ThemeProvider\n';
+    const before = doc.indexOf(nextComponentHeading);
+    if (
+      before < 0 ||
+      doc.indexOf(
+        nextComponentHeading,
+        before + nextComponentHeading.length
+      ) !== -1
+    ) {
+      throw new Error('Missing or ambiguous Popover API insertion anchor');
+    }
+    const isRoot = item.interfaceName === 'PopoverProps';
+    const prefix = isRoot
+      ? '\n## Popover\n\nInteractive floating content anchored to a trigger or custom anchor.\n'
+      : '';
+    return (
+      doc.slice(0, before) +
+      prefix +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      '\n' +
+      doc.slice(before)
+    );
+  }
+
+  // Introduce already-public FormField slots alongside the root API while
+  // leaving the existing published documentation outside FormField intact.
+  // Subsequent runs use the exact generated markers above.
+  if (
+    /^### FormField(?:Label|Description|Control|Message)Props$/.test(
+      item.heading
+    ) &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.FormFieldProps.FormField -->`;
+    const following = '\n## RadioGroup\n';
+    const rootAt = doc.indexOf(rootEnd);
+    const insertAt = doc.indexOf(following);
+    if (
+      rootAt < 0 ||
+      doc.indexOf(rootEnd, rootAt + rootEnd.length) !== -1 ||
+      insertAt < rootAt + rootEnd.length ||
+      doc.indexOf(following, insertAt + following.length) !== -1
+    ) {
+      throw new Error('Missing or ambiguous FormField API insertion anchor');
+    }
+    return (
+      doc.slice(0, insertAt) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      '\n' +
+      doc.slice(insertAt)
+    );
+  }
+
+  // RadioGroup.Item is a public compound part whose props alias RadioProps.
+  // Populate its own marker before the existing standalone Radio table;
+  // both continue to be independently regenerated from their public sources.
+  if (
+    item.heading === '### RadioGroupItemProps' &&
+    !doc.includes(item.heading)
+  ) {
+    const rootEnd = `<!-- api-docgen:end ${item.id.split('.')[0]}.RadioGroupProps.RadioGroupProps -->`;
+    const following = '\n### Radio Props\n';
+    const rootAt = doc.indexOf(rootEnd);
+    const next = doc.indexOf(following);
+    if (
+      rootAt < 0 ||
+      doc.indexOf(rootEnd, rootAt + rootEnd.length) !== -1 ||
+      next < rootAt + rootEnd.length ||
+      doc.indexOf(following, next + following.length) !== -1
+    ) {
+      throw new Error('Missing or ambiguous RadioGroup.Item API authority');
+    }
+    return (
+      doc.slice(0, next) +
+      '\n\n' +
+      item.heading +
+      '\n\n' +
+      generatedBlock +
+      '\n' +
+      doc.slice(next)
+    );
   }
 
   const block = findTableBlock(doc, item);

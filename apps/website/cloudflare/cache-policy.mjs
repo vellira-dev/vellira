@@ -1,4 +1,5 @@
 /* global Response, URL, Headers, crypto, console */
+import { maybeLimitNewsletterSubscribe } from './newsletter-burst-guard.mjs';
 export const RSC_CACHE_CONTROL =
   'private, no-cache, no-store, max-age=0, must-revalidate';
 export const HTML_CACHE_CONTROL = 'no-cache, max-age=0, must-revalidate';
@@ -174,10 +175,11 @@ export function createWebsiteWorker(
             });
         }
       } else if (!response) {
-        response = applyCachePolicy(
-          request,
-          await handler.fetch(request, env, ctx)
-        );
+        // Gate the shared Buttondown-backed route before invoking OpenNext.
+        // This remains OFF in production and on routine staging deploys.
+        response =
+          (await maybeLimitNewsletterSubscribe(request, env)) ??
+          applyCachePolicy(request, await handler.fetch(request, env, ctx));
       }
       const headers = new Headers(response.headers);
       headers.set('X-Vellira-Build-Id', buildId);

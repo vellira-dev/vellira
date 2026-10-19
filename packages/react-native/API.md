@@ -11,6 +11,7 @@ import {
   Switch,
   Input,
   Modal,
+  Popover,
   Portal,
   Select,
   ThemeProvider,
@@ -34,6 +35,7 @@ The native package uses React Native `StyleSheet` styles and consumes shared des
 - Tooltip
 - Portal
 - Modal
+- Popover
 - ThemeProvider
 - useTheme
 
@@ -304,6 +306,55 @@ root exposes disabled state when `disabled` is set.
 
 <!-- api-docgen:end native.FormFieldProps.FormField -->
 
+### FormFieldLabelProps
+
+<!-- api-docgen:start native.FormFieldLabelProps.FormFieldLabelProps -->
+
+| Prop           | Type                   | Required | Description                            |
+| -------------- | ---------------------- | -------- | -------------------------------------- |
+| `children`     | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `action`       | `ReactNode`            | No       | —                                      |
+| `info`         | `ReactNode`            | No       | —                                      |
+| `optionalText` | `ReactNode`            | No       | —                                      |
+| `style`        | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.FormFieldLabelProps.FormFieldLabelProps -->
+
+### FormFieldDescriptionProps
+
+<!-- api-docgen:start native.FormFieldDescriptionProps.FormFieldDescriptionProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.FormFieldDescriptionProps.FormFieldDescriptionProps -->
+
+### FormFieldControlProps
+
+<!-- api-docgen:start native.FormFieldControlProps.FormFieldControlProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.FormFieldControlProps.FormFieldControlProps -->
+
+### FormFieldMessageProps
+
+<!-- api-docgen:start native.FormFieldMessageProps.FormFieldMessageProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `tone`     | `FormFieldMessageTone` | No       | —                                      |
+| `live`     | `FormFieldMessageLive` | No       | —                                      |
+| `style`    | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.FormFieldMessageProps.FormFieldMessageProps -->
+
 ## RadioGroup
 
 Single-selection group with controlled and uncontrolled modes.
@@ -343,6 +394,31 @@ import { Radio, RadioGroup } from '@vellira-ui/react-native';
 | `invalid`          | `boolean`                     | No       | —                                     |
 
 <!-- api-docgen:end native.RadioGroupProps.RadioGroupProps -->
+
+### RadioGroupItemProps
+
+<!-- api-docgen:start native.RadioGroupItemProps.RadioGroupItemProps -->
+
+| Prop               | Type                         | Required | Description                               |
+| ------------------ | ---------------------------- | -------- | ----------------------------------------- |
+| `label`            | `ReactNode`                  | No       | Visible label.                            |
+| `description`      | `ReactNode`                  | No       | Additional descriptive text.              |
+| `icon`             | `ReactNode`                  | No       | Icon rendered inside the component.       |
+| `color`            | `RadioColor`                 | No       | —                                         |
+| `error`            | `string`                     | No       | Error message rendered for invalid state. |
+| `containerStyle`   | `StyleProp<ViewStyle>`       | No       | —                                         |
+| `labelStyle`       | `StyleProp<TextStyle>`       | No       | Extra label text style.                   |
+| `descriptionStyle` | `StyleProp<TextStyle>`       | No       | —                                         |
+| `errorStyle`       | `StyleProp<TextStyle>`       | No       | —                                         |
+| `value`            | `string`                     | Yes      | Controlled value.                         |
+| `checked`          | `boolean`                    | No       | —                                         |
+| `defaultChecked`   | `boolean`                    | No       | —                                         |
+| `disabled`         | `boolean`                    | No       | Disables interaction.                     |
+| `required`         | `boolean`                    | No       | Marks the field as required.              |
+| `size`             | `RadioSize`                  | No       | Input size.                               |
+| `onCheckedChange`  | `(checked: boolean) => void` | No       | —                                         |
+
+<!-- api-docgen:end native.RadioGroupItemProps.RadioGroupItemProps -->
 
 ### Radio Props
 
@@ -549,6 +625,158 @@ only the values that still fit are added.
 
 <!-- api-docgen:end native.SelectOption.SelectOption -->
 
+### SelectLoadingProps
+
+<!-- api-docgen:start native.SelectLoadingProps.SelectLoadingProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectLoadingProps.SelectLoadingProps -->
+
+### SelectEmptyProps
+
+<!-- api-docgen:start native.SelectEmptyProps.SelectEmptyProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectEmptyProps.SelectEmptyProps -->
+
+### SelectSeparatorProps
+
+<!-- api-docgen:start native.SelectSeparatorProps.SelectSeparatorProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.SelectSeparatorProps.SelectSeparatorProps -->
+
+### SelectItemBadgeProps
+
+<!-- api-docgen:start native.SelectItemBadgeProps.SelectItemBadgeProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectItemBadgeProps.SelectItemBadgeProps -->
+
+### SelectItemDescriptionProps
+
+<!-- api-docgen:start native.SelectItemDescriptionProps.SelectItemDescriptionProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectItemDescriptionProps.SelectItemDescriptionProps -->
+
+### SelectItemIconProps
+
+<!-- api-docgen:start native.SelectItemIconProps.SelectItemIconProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectItemIconProps.SelectItemIconProps -->
+
+### SelectItemProps
+
+<!-- api-docgen:start native.SelectItemProps.SelectItemProps -->
+
+| Prop                 | Type          | Required | Description                                       |
+| -------------------- | ------------- | -------- | ------------------------------------------------- |
+| `color`              | `SelectColor` | No       | —                                                 |
+| `disabled`           | `boolean`     | No       | Disables interaction.                             |
+| `label`              | `string`      | Yes      | Visible label.                                    |
+| `description`        | `string`      | No       | Additional descriptive text.                      |
+| `value`              | `string`      | Yes      | Controlled value.                                 |
+| `asChild`            | `boolean`     | No       | —                                                 |
+| `children`           | `ReactNode`   | No       | Content rendered inside the component.            |
+| `icon`               | `ReactNode`   | No       | Icon rendered inside the component.               |
+| `badge`              | `ReactNode`   | No       | —                                                 |
+| `accessibilityLabel` | `string`      | No       | Accessible label for screen readers.              |
+| `accessibilityHint`  | `string`      | No       | Additional accessibility hint for screen readers. |
+
+<!-- api-docgen:end native.SelectItemProps.SelectItemProps -->
+
+### SelectLabelProps
+
+<!-- api-docgen:start native.SelectLabelProps.SelectLabelProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectLabelProps.SelectLabelProps -->
+
+### SelectGroupProps
+
+<!-- api-docgen:start native.SelectGroupProps.SelectGroupProps -->
+
+| Prop          | Type        | Required | Description                            |
+| ------------- | ----------- | -------- | -------------------------------------- |
+| `label`       | `string`    | No       | Visible label.                         |
+| `selectable`  | `boolean`   | No       | —                                      |
+| `selectLabel` | `string`    | No       | —                                      |
+| `children`    | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectGroupProps.SelectGroupProps -->
+
+### SelectSearchProps
+
+<!-- api-docgen:start native.SelectSearchProps.SelectSearchProps -->
+
+| Prop          | Type     | Required | Description       |
+| ------------- | -------- | -------- | ----------------- |
+| `placeholder` | `string` | No       | Placeholder text. |
+
+<!-- api-docgen:end native.SelectSearchProps.SelectSearchProps -->
+
+### SelectContentProps
+
+<!-- api-docgen:start native.SelectContentProps.SelectContentProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectContentProps.SelectContentProps -->
+
+### SelectIconSlotProps
+
+<!-- api-docgen:start native.SelectIconSlotProps.SelectIconSlotProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectIconSlotProps.SelectIconSlotProps -->
+
+### SelectValueSlotProps
+
+<!-- api-docgen:start native.SelectValueSlotProps.SelectValueSlotProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectValueSlotProps.SelectValueSlotProps -->
+
+### SelectTriggerSlotProps
+
+<!-- api-docgen:start native.SelectTriggerSlotProps.SelectTriggerSlotProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.SelectTriggerSlotProps.SelectTriggerSlotProps -->
+
 ## Dropdown
 
 Native menu component with item, group, and separator entries.
@@ -627,6 +855,88 @@ custom non-text triggers, provide `accessibilityLabel` and add
 | `offset`             | `number`                  | No       | —                                                                      |
 
 <!-- api-docgen:end native.DropdownProps.DropdownProps -->
+
+### DropdownEmptyProps
+
+<!-- api-docgen:start native.DropdownEmptyProps.DropdownEmptyProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.DropdownEmptyProps.DropdownEmptyProps -->
+
+### DropdownLabelProps
+
+<!-- api-docgen:start native.DropdownLabelProps.DropdownLabelProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.DropdownLabelProps.DropdownLabelProps -->
+
+### DropdownGroupProps
+
+<!-- api-docgen:start native.DropdownGroupProps.DropdownGroupProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+
+<!-- api-docgen:end native.DropdownGroupProps.DropdownGroupProps -->
+
+### DropdownSeparatorProps
+
+<!-- api-docgen:start native.DropdownSeparatorProps.DropdownSeparatorProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.DropdownSeparatorProps.DropdownSeparatorProps -->
+
+### DropdownItemProps
+
+<!-- api-docgen:start native.DropdownItemProps.DropdownItemProps -->
+
+| Prop            | Type                                   | Required | Description                            |
+| --------------- | -------------------------------------- | -------- | -------------------------------------- |
+| `children`      | `ReactNode`                            | Yes      | Content rendered inside the component. |
+| `asChild`       | `boolean`                              | No       | —                                      |
+| `value`         | `string`                               | No       | Controlled value.                      |
+| `icon`          | `ReactNode`                            | No       | Icon rendered inside the component.    |
+| `textWrap`      | `TextWrap`                             | No       | —                                      |
+| `onSelect`      | `(event: DropdownSelectEvent) => void` | No       | —                                      |
+| `color`         | `DropdownItemColor`                    | No       | —                                      |
+| `disabled`      | `boolean`                              | No       | Disables interaction.                  |
+| `closeOnSelect` | `boolean`                              | No       | —                                      |
+
+<!-- api-docgen:end native.DropdownItemProps.DropdownItemProps -->
+
+### DropdownContentProps
+
+<!-- api-docgen:start native.DropdownContentProps.DropdownContentProps -->
+
+| Prop           | Type                   | Required | Description                            |
+| -------------- | ---------------------- | -------- | -------------------------------------- |
+| `children`     | `ReactNode`            | No       | Content rendered inside the component. |
+| `style`        | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+| `presentation` | `DropdownPresentation` | No       | —                                      |
+| `command`      | `boolean`              | No       | —                                      |
+
+<!-- api-docgen:end native.DropdownContentProps.DropdownContentProps -->
+
+### DropdownTriggerProps
+
+<!-- api-docgen:start native.DropdownTriggerProps.DropdownTriggerProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `asChild`  | `boolean`   | No       | —                                      |
+| `children` | `ReactNode` | No       | Content rendered inside the component. |
+| `disabled` | `boolean`   | No       | Disables interaction.                  |
+
+<!-- api-docgen:end native.DropdownTriggerProps.DropdownTriggerProps -->
 
 ## Tabs
 
@@ -868,6 +1178,110 @@ import { Button, Modal, Portal } from '@vellira-ui/react-native';
 
 <!-- api-docgen:end native.ModalProps.ModalProps -->
 
+### ModalCloseProps
+
+<!-- api-docgen:start native.ModalCloseProps.ModalCloseProps -->
+
+| Prop                 | Type                                                                                                                        | Required | Description                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `asChild`            | `boolean`                                                                                                                   | No       | —                                      |
+| `children`           | `ReactElement<{ onPress?: PressableProps['onPress']; accessibilityLabel?: string; }, string \| JSXElementConstructor<any>>` | No       | Content rendered inside the component. |
+| `accessibilityLabel` | `string`                                                                                                                    | No       | Accessible label for screen readers.   |
+| `style`              | `StyleProp<ViewStyle>`                                                                                                      | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalCloseProps.ModalCloseProps -->
+
+### ModalFooterProps
+
+<!-- api-docgen:start native.ModalFooterProps.ModalFooterProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalFooterProps.ModalFooterProps -->
+
+### ModalBodyProps
+
+<!-- api-docgen:start native.ModalBodyProps.ModalBodyProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalBodyProps.ModalBodyProps -->
+
+### ModalDescriptionProps
+
+<!-- api-docgen:start native.ModalDescriptionProps.ModalDescriptionProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalDescriptionProps.ModalDescriptionProps -->
+
+### ModalTitleProps
+
+<!-- api-docgen:start native.ModalTitleProps.ModalTitleProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<TextStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalTitleProps.ModalTitleProps -->
+
+### ModalHeaderProps
+
+<!-- api-docgen:start native.ModalHeaderProps.ModalHeaderProps -->
+
+| Prop        | Type                   | Required | Description                            |
+| ----------- | ---------------------- | -------- | -------------------------------------- |
+| `children`  | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`     | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+| `textStyle` | `StyleProp<TextStyle>` | No       | Extra text style.                      |
+
+<!-- api-docgen:end native.ModalHeaderProps.ModalHeaderProps -->
+
+### ModalContentProps
+
+<!-- api-docgen:start native.ModalContentProps.ModalContentProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalContentProps.ModalContentProps -->
+
+### ModalOverlayProps
+
+<!-- api-docgen:start native.ModalOverlayProps.ModalOverlayProps -->
+
+| Prop           | Type                   | Required | Description                            |
+| -------------- | ---------------------- | -------- | -------------------------------------- |
+| `children`     | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `overlayStyle` | `StyleProp<ViewStyle>` | No       | Extra overlay style.                   |
+
+<!-- api-docgen:end native.ModalOverlayProps.ModalOverlayProps -->
+
+### ModalTriggerProps
+
+<!-- api-docgen:start native.ModalTriggerProps.ModalTriggerProps -->
+
+| Prop       | Type                   | Required | Description                            |
+| ---------- | ---------------------- | -------- | -------------------------------------- |
+| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`              | No       | —                                      |
+| `disabled` | `boolean`              | No       | Disables interaction.                  |
+| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+
+<!-- api-docgen:end native.ModalTriggerProps.ModalTriggerProps -->
+
 ### Modal Compound Components
 
 | Component       | Description            |
@@ -883,6 +1297,98 @@ import { Button, Modal, Portal } from '@vellira-ui/react-native';
 ### Modal Accessibility
 
 Provide a clear title and body copy for screen reader users. The native implementation exposes modal structure and close behavior, while the consuming app remains responsible for meaningful labels and actions.
+
+## Popover
+
+Interactive floating content anchored to a trigger or custom anchor.
+
+### Popover Props
+
+<!-- api-docgen:start native.PopoverProps.PopoverProps -->
+
+| Prop                  | Type                                                         | Required | Description                            |
+| --------------------- | ------------------------------------------------------------ | -------- | -------------------------------------- |
+| `children`            | `ReactNode`                                                  | Yes      | Content rendered inside the component. |
+| `closeOnOutsidePress` | `boolean`                                                    | No       | —                                      |
+| `open`                | `boolean`                                                    | No       | Controlled open state.                 |
+| `defaultOpen`         | `boolean`                                                    | No       | Initial uncontrolled open state.       |
+| `onOpenChange`        | `(open: boolean, details: PopoverOpenChangeDetails) => void` | No       | Called when the open state changes.    |
+| `side`                | `PopoverSide`                                                | No       | —                                      |
+| `align`               | `PopoverAlign`                                               | No       | —                                      |
+| `sideOffset`          | `number`                                                     | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverProps.PopoverProps -->
+
+### PopoverAnchorProps
+
+<!-- api-docgen:start native.PopoverAnchorProps.PopoverAnchorProps -->
+
+| Prop       | Type                                                                          | Required | Description                            |
+| ---------- | ----------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children` | `ReactElement<PopoverAnchorChildProps, string \| JSXElementConstructor<any>>` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`                                                                     | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverAnchorProps.PopoverAnchorProps -->
+
+### PopoverTriggerProps
+
+<!-- api-docgen:start native.PopoverTriggerProps.PopoverTriggerProps -->
+
+| Prop       | Type                                                                           | Required | Description                            |
+| ---------- | ------------------------------------------------------------------------------ | -------- | -------------------------------------- |
+| `children` | `ReactElement<PopoverTriggerChildProps, string \| JSXElementConstructor<any>>` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`                                                                      | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverTriggerProps.PopoverTriggerProps -->
+
+### PopoverContentProps
+
+<!-- api-docgen:start native.PopoverContentProps.PopoverContentProps -->
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | Yes      | Content rendered inside the component. |
+
+<!-- api-docgen:end native.PopoverContentProps.PopoverContentProps -->
+
+### PopoverArrowProps
+
+<!-- api-docgen:start native.PopoverArrowProps.PopoverArrowProps -->
+
+| Prop    | Type                   | Required | Description       |
+| ------- | ---------------------- | -------- | ----------------- |
+| `style` | `StyleProp<ViewStyle>` | No       | Extra root style. |
+
+<!-- api-docgen:end native.PopoverArrowProps.PopoverArrowProps -->
+
+### PopoverCloseProps
+
+<!-- api-docgen:start native.PopoverCloseProps.PopoverCloseProps -->
+
+| Prop       | Type                                                                         | Required | Description                            |
+| ---------- | ---------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| `children` | `ReactElement<PopoverCloseChildProps, string \| JSXElementConstructor<any>>` | Yes      | Content rendered inside the component. |
+| `asChild`  | `boolean`                                                                    | No       | —                                      |
+
+<!-- api-docgen:end native.PopoverCloseProps.PopoverCloseProps -->
+
+### PopoverTitleProps
+
+<!-- api-docgen:start native.PopoverTitleProps.PopoverTitleProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.PopoverTitleProps.PopoverTitleProps -->
+
+### PopoverDescriptionProps
+
+<!-- api-docgen:start native.PopoverDescriptionProps.PopoverDescriptionProps -->
+
+| Prop | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+
+<!-- api-docgen:end native.PopoverDescriptionProps.PopoverDescriptionProps -->
 
 ## ThemeProvider
 

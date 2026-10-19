@@ -28,6 +28,17 @@ on:
       - '.github/workflows/deploy-website-cloudflare-staging.yml'
       - '.github/workflows/deploy-website-cloudflare-production.yml'
   workflow_dispatch:
+    inputs:
+      pro_interest_preview:
+        description: 'Owner-approved staging-only Pro signup preview; unchecked for normal deploys.'
+        required: false
+        default: false
+        type: boolean
+      newsletter_abuse_preview:
+        description: 'Owner-approved staging-only newsletter burst-guard proof; no subscriber writes.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -109,7 +120,7 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -143,6 +154,11 @@ jobs:
     concurrency:
       group: deploy-worker-vellira-website-staging
       cancel-in-progress: false
+    env:
+      # Push and ordinary manual deploys remain OFF. Only a specifically
+      # approved manual run may enable the public staging Worker.
+      NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.pro_interest_preview == true && '1' || '0' }}
+      NEWSLETTER_ABUSE_GUARD_PREVIEW: ${{ github.event_name == 'workflow_dispatch' && inputs.newsletter_abuse_preview == true && '1' || '0' }}
 
     steps:
       - name: Checkout exact main candidate
@@ -158,17 +174,28 @@ jobs:
           test "$actual" = "$CANDIDATE_SHA"
           echo "Validated exact staging candidate: $actual"
 
+      - name: Authorize staging-only Pro interest preview
+        if: github.event_name == 'workflow_dispatch' && inputs.pro_interest_preview == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED" = "1"
+
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Configure owner-controlled staging newsletter burst guard
+        run: node apps/website/scripts/newsletter-guard-staging-mode.mjs
 
       - name: Derive protocol-defined R2 S3 secret
         shell: bash
@@ -394,6 +421,12 @@ jobs:
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
 
+      - name: Verify staging Pro signup mode without provider writes
+        run: node apps/website/scripts/pro-interest-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+          PRO_INTEREST_EXPECTED_MODE: ${{ env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED }}
+
       - name: Test browser and blog metrics smoke policies
         run: >-
           pnpm --filter @vellira-ui/react-storybook exec node --test
@@ -430,6 +463,12 @@ jobs:
           scripts/cloudflare-static-chunk-smoke.mjs
         env:
           WEBSITE_URL: ${{ env.STAGING_URL }}
+
+      - name: Verify staging newsletter burst guard without provider writes
+        run: node apps/website/scripts/newsletter-guard-live-smoke.mjs
+        env:
+          WEBSITE_URL: ${{ env.STAGING_URL }}
+          NEWSLETTER_ABUSE_GUARD_EXPECTED_MODE: ${{ env.NEWSLETTER_ABUSE_GUARD_PREVIEW }}
 
       - name: Record staging evidence
         if: success()

@@ -1,5 +1,7 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
+import { createNewsletterBudgetAdmission } from './global-budget-admission';
+
 import {
   newsletterErrors,
   subscribeWithButtondown,
@@ -10,12 +12,23 @@ const MAX_REQUEST_BYTES = 1_024;
 const MAX_EMAIL_LENGTH = 320;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type CloudflareSecretBindings = { BUTTONDOWN_API_KEY?: unknown };
+type CloudflareSecretBindings = {
+  BUTTONDOWN_API_KEY?: unknown;
+  NEWSLETTER_GLOBAL_BUDGET_ENABLED?: unknown;
+  NEWSLETTER_GLOBAL_BUDGET?: unknown;
+};
+type Admission = () => Promise<'admitted' | 'exhausted' | 'unavailable'>;
 type NewsletterSubscribeDependencies = {
   getApiKey: () => Promise<string | undefined>;
   subscribe: typeof subscribeWithButtondown;
+  proInterestEnabled: boolean;
+  getAdmission?: () => Promise<Admission | undefined>;
 };
-type NewsletterRequestBody = { email?: unknown };
+type NewsletterRequestBody = {
+  email?: unknown;
+  purpose?: unknown;
+  consent?: unknown;
+};
 
 function response(
   payload: NewsletterSubscribeResult,
@@ -25,6 +38,17 @@ function response(
     status,
     headers: { 'Cache-Control': 'no-store' },
   });
+}
+
+function consentRequiredResponse() {
+  return response(
+    {
+      ok: false,
+      code: 'consent_required',
+      message: newsletterErrors.consent_required,
+    },
+    400
+  );
 }
 
 function invalidEmailResponse() {
@@ -42,6 +66,7 @@ function statusForResult(result: NewsletterSubscribeResult): number {
   if (result.ok) return 201;
   switch (result.code) {
     case 'invalid_email':
+    case 'consent_required':
       return 400;
     case 'already_subscribed':
       return 409;
@@ -127,9 +152,17 @@ async function getButtondownApiKey(): Promise<string | undefined> {
     : undefined;
 }
 
+async function getGlobalBudgetAdmission(): Promise<Admission | undefined> {
+  const { env } = await getCloudflareContext({ async: true });
+  return createNewsletterBudgetAdmission(env as CloudflareSecretBindings);
+}
+
 const defaultDependencies: NewsletterSubscribeDependencies = {
+  getAdmission: getGlobalBudgetAdmission,
   getApiKey: getButtondownApiKey,
   subscribe: subscribeWithButtondown,
+  proInterestEnabled:
+    process.env.NEXT_PUBLIC_VELLIRA_PRO_INTEREST_ENABLED === '1',
 };
 
 export function createNewsletterSubscribeHandler(
@@ -139,8 +172,22 @@ export function createNewsletterSubscribeHandler(
     if (!isSameOriginRequest(request) || !hasJsonContentType(request))
       return invalidEmailResponse();
     const body = await readJsonBody(request);
-    const email = normalizeEmail(body?.email);
+    if (!body) return invalidEmailResponse();
+    const email = normalizeEmail(body.email);
     if (!email) return invalidEmailResponse();
+    if (body.purpose !== undefined && body.purpose !== 'pro_launch')
+      return invalidEmailResponse();
+    if (body.purpose === 'pro_launch' && body.consent !== true)
+      return consentRequiredResponse();
+    if (body.purpose === 'pro_launch' && !dependencies.proInterestEnabled)
+      return response(
+        {
+          ok: false,
+          code: 'temporarily_unavailable',
+          message: newsletterErrors.temporarily_unavailable,
+        },
+        503
+      );
     let apiKey: string | undefined;
     try {
       apiKey = await dependencies.getApiKey();
@@ -154,10 +201,29 @@ export function createNewsletterSubscribeHandler(
         503
       );
     }
+    let admit: Admission | undefined;
+    if (apiKey && dependencies.getAdmission) {
+      try {
+        admit = await dependencies.getAdmission();
+      } catch {
+        return response(
+          {
+            ok: false,
+            code: 'temporarily_unavailable',
+            message: newsletterErrors.temporarily_unavailable,
+          },
+          503
+        );
+      }
+    }
     const result = await dependencies.subscribe({
+      ...(admit ? { admit } : {}),
       apiKey,
       email,
       ipAddress: resolveSubscriberIp(request.headers),
+      ...(body.purpose === 'pro_launch'
+        ? { purpose: 'pro_launch' as const }
+        : {}),
     });
     return response(result, statusForResult(result));
   };

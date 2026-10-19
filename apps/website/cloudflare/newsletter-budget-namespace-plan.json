@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate-only-no-deployment",
+  "owner": {
+    "worker": "vellira-newsletter-budget-owner",
+    "config": "cloudflare/newsletter-budget-owner.wrangler.candidate.jsonc",
+    "entrypoint": "cloudflare/newsletter-budget-owner-worker.mjs",
+    "className": "NewsletterRollingBudgetCoordinator",
+    "storage": "sqlite",
+    "objectName": "one-buttondown-account"
+  },
+  "providerEvidence": {
+    "documentedDefaultSubscriberCreatePerDay": 100,
+    "actualAccountDailyQuota": "unverified",
+    "actualResetSemantics": "unverified",
+    "otherAccountWriters": "unverified",
+    "stagingAndProductionCredentialScope": "unverified",
+    "ownerApproval": "not-granted"
+  },
+  "targets": [
+    {
+      "role": "staging",
+      "websiteWorker": "vellira-website-staging",
+      "binding": {
+        "name": "NEWSLETTER_GLOBAL_BUDGET",
+        "class_name": "NewsletterRollingBudgetCoordinator",
+        "script_name": "vellira-newsletter-budget-owner"
+      },
+      "objectName": "one-buttondown-account",
+      "mode": "0"
+    },
+    {
+      "role": "production",
+      "websiteWorker": "vellira-website",
+      "binding": {
+        "name": "NEWSLETTER_GLOBAL_BUDGET",
+        "class_name": "NewsletterRollingBudgetCoordinator",
+        "script_name": "vellira-newsletter-budget-owner"
+      },
+      "objectName": "one-buttondown-account",
+      "mode": "0"
+    }
+  ]
+}

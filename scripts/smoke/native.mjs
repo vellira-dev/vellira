@@ -39,6 +39,13 @@ const externalDependencies = linkWorkspaceDependencies(
   'packages/react-native',
   ['@react-native-picker/picker', 'react', 'react-native']
 );
+const svgDependency = linkWorkspaceDependencies(
+  root,
+  tempDir,
+  'apps/native-playground',
+  ['react-native-svg']
+);
+Object.assign(externalDependencies, svgDependency);
 
 writePackageJson(tempDir, {
   private: true,
@@ -204,11 +211,24 @@ writeFileSync(
   `
 const Component = () => null;
 
+export const Circle = Component;
 export const ClipPath = Component;
 export const Defs = Component;
+export const Ellipse = Component;
 export const G = Component;
+export const Line = Component;
+export const LinearGradient = Component;
+export const Mask = Component;
 export const Path = Component;
+export const Pattern = Component;
+export const Polygon = Component;
+export const Polyline = Component;
+export const RadialGradient = Component;
 export const Rect = Component;
+export const Stop = Component;
+export const Text = Component;
+export const TSpan = Component;
+export const Use = Component;
 export default Component;
 `
 );

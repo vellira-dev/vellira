@@ -41,6 +41,14 @@ function toName(file: string): string {
 }
 
 function assertIconName(file: string, name: string): void {
+  // Authentication providers are official external artwork, not Vellira icons.
+  // Fail before generating files rather than silently publishing these names.
+  if (/^(?:Google|Apple)(?:Light|Dark|Black|White)?$/.test(name)) {
+    throw new Error(
+      `External authentication artwork "${file}" must remain in apps/website/brand/auth, outside @vellira-ui/icons.`
+    );
+  }
+
   if (/^[A-Z][A-Za-z0-9]*$/.test(name)) return;
 
   throw new Error(

@@ -40,6 +40,9 @@ describe('website privacy policy', () => {
     expect(privacyPage).toContain('Saved sign-in preference');
     expect(privacyPage).toContain('vellira-auth-login-preference');
     expect(privacyPage).toContain('Buttondown');
+    expect(privacyPage).toContain('Newsletter and optional Pro launch updates');
+    expect(privacyPage).toContain('vellira_pro_launch_interest');
+    expect(privacyPage).toContain("const LAST_UPDATED = '2026-10-15'");
     expect(privacyPage).toContain('client IP');
     expect(privacyPage).toContain('Render');
     expect(privacyPage).toContain('Vellira accounts and authentication');
@@ -63,7 +66,7 @@ describe('website privacy policy', () => {
 
   it('includes the privacy route in the public sitemap', () => {
     expect(sitemap).toContain('`${SITE_URL}/privacy`');
-    expect(sitemap).toContain("new Date('2026-10-10')");
+    expect(sitemap).toContain("new Date('2026-10-15')");
   });
 
   it('links the policy at the newsletter email collection point', () => {

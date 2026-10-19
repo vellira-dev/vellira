@@ -122,7 +122,12 @@ export async function runComponentCompletenessCheck(params: {
           metadataNames.has(contract.component)
         );
 
-  if (docsContracts.length > 0) {
+  // Do not skip the docs gate when a targeted component has no registered
+  // contract: missing required documentation must remain a blocking finding.
+  if (
+    docsContracts.length > 0 ||
+    metadata.some((component) => component.requirements.docs)
+  ) {
     results.push(
       await checkGeneratedComponentDocsCompleteness({
         root,
