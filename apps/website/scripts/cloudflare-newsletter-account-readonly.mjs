@@ -55,13 +55,18 @@ function budgetBindingPresent(bindings) {
 }
 
 function pageStatus(payload, count, page, maximum, accumulated = count) {
-  // A short first page does not prove the inventory is exhaustive: the
-  // server may apply a smaller default page size than PAGE_SIZE.
+  // Short pages cannot prove exhaustion; metadata may be absent even on 200.
+  // Diagnostic codes are fixed literals, never provider messages or data.
   const info = payload.result_info;
-  if (!isObject(info)) return { status: 'incomplete' };
+  if (info === undefined || (isObject(info) && !Object.hasOwn(info, 'total_pages'))) {
+    return { status: 'incomplete', diagnostic: 'pagination_metadata_missing' };
+  }
+  if (!isObject(info)) {
+    return { status: 'incomplete', diagnostic: 'pagination_metadata_invalid' };
+  }
   const total = info.total_pages;
   if (
-    !Number.isSafeInteger(total) || total < 1 || total > maximum ||
+    !Number.isSafeInteger(total) || total < 1 ||
     total < page || !Number.isSafeInteger(count) || count < 0 ||
     !Number.isSafeInteger(accumulated) || accumulated < count ||
     (info.page !== undefined && info.page !== page) ||
@@ -73,7 +78,10 @@ function pageStatus(payload, count, page, maximum, accumulated = count) {
       (!Number.isSafeInteger(info.total_count) ||
         info.total_count < accumulated ||
         (page === total && info.total_count !== accumulated)))
-  ) return { status: 'incomplete' };
+  ) return { status: 'incomplete', diagnostic: 'pagination_metadata_invalid' };
+  if (total > maximum) {
+    return { status: 'incomplete', diagnostic: 'pagination_page_limit' };
+  }
   return { status: page === total ? 'complete' : 'next' };
 }
 
@@ -170,6 +178,7 @@ export async function auditCloudflareNewsletterAccount({
   }
 
   let namespaceInventoryStatus = 'unverified';
+  let namespaceInventoryDiagnostic = null;
   let coordinatorNamespaces = null;
   const collected = [];
   for (let page = 1; page <= MAX_NAMESPACE_PAGES; page += 1) {
@@ -177,11 +186,13 @@ export async function auditCloudflareNewsletterAccount({
       String(page) + '&per_page=' + String(PAGE_SIZE));
     if (reply.status !== 'available') {
       namespaceInventoryStatus = reply.status;
+      namespaceInventoryDiagnostic = reply.status === 'incomplete' ? 'response_uninspectable' : null;
       break;
     }
     const items = reply.payload.result;
     if (!Array.isArray(items) || !items.every(isObject)) {
       namespaceInventoryStatus = 'incomplete';
+      namespaceInventoryDiagnostic = 'records_uninspectable';
       break;
     }
     collected.push(...items);
@@ -189,9 +200,13 @@ export async function auditCloudflareNewsletterAccount({
       reply.payload, items.length, page, MAX_NAMESPACE_PAGES, collected.length
     );
     namespaceInventoryStatus = pagination.status;
+    namespaceInventoryDiagnostic = pagination.diagnostic ?? null;
     if (pagination.status !== 'next') break;
   }
-  if (namespaceInventoryStatus === 'next') namespaceInventoryStatus = 'incomplete';
+  if (namespaceInventoryStatus === 'next') {
+    namespaceInventoryStatus = 'incomplete';
+    namespaceInventoryDiagnostic = 'pagination_page_limit';
+  }
   if (namespaceInventoryStatus === 'complete') {
     // Cloudflare marks both name and class optional. Without a usable class,
     // a namespace cannot be excluded from the candidate coordinator count.
@@ -199,6 +214,7 @@ export async function auditCloudflareNewsletterAccount({
       typeof item.class !== 'string' || !item.class.trim()
     )) {
       namespaceInventoryStatus = 'incomplete';
+      namespaceInventoryDiagnostic = 'namespace_class_uninspectable';
     } else {
       coordinatorNamespaces = collected.filter((item) =>
         item.class === COORDINATOR
@@ -272,13 +288,16 @@ export async function auditCloudflareNewsletterAccount({
 
   const domainReply = await get(root + '/workers/domains');
   let domainInventoryStatus = domainReply.status;
+  let domainInventoryDiagnostic = domainReply.status === 'incomplete' ? 'response_uninspectable' : null;
   const domains = Object.fromEntries(DOMAINS.map((host) => [host, { status: 'unverified' }]));
   if (domainReply.status === 'available') {
     const items = domainReply.payload.result;
     if (Array.isArray(items) && items.every((item) =>
       isObject(item) && typeof item.hostname === 'string' && item.hostname
     )) {
-      domainInventoryStatus = pageStatus(domainReply.payload, items.length, 1, 1).status;
+      const pagination = pageStatus(domainReply.payload, items.length, 1, 1);
+      domainInventoryStatus = pagination.status;
+      domainInventoryDiagnostic = pagination.diagnostic ?? null;
       for (const host of DOMAINS) {
         const matches = items.filter((item) => item.hostname === host);
         if (matches.length === 1 &&
@@ -297,7 +316,10 @@ export async function auditCloudflareNewsletterAccount({
           domains[host] = { status: matches.length === 0 ? 'unverified' : 'incomplete' };
         }
       }
-    } else domainInventoryStatus = 'incomplete';
+    } else {
+      domainInventoryStatus = 'incomplete';
+      domainInventoryDiagnostic = 'records_uninspectable';
+    }
   }
 
   const zonesReply = await get('/zones?name=vellira.dev&account.id=' + accountId);
@@ -369,10 +391,12 @@ export async function auditCloudflareNewsletterAccount({
     workerInventoryStatus,
     workerPresence,
     namespaceInventoryStatus,
+    namespaceInventoryDiagnostic,
     coordinatorClassNamespaceCount: coordinatorNamespaces,
     workerDev,
     liveBinding,
     domainInventoryStatus,
+    domainInventoryDiagnostic,
     domains,
     zoneStatus,
     zoneRoutes,
