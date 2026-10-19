@@ -138,7 +138,7 @@ export default function App() {
             <div className='brandMark' aria-hidden='true'>V</div>
             <div>
               <strong>Vellira</strong>
-              <span>Workspace Starter</span>
+              <span>Dashboard Starter</span>
             </div>
           </div>
           <nav className='sideNav' aria-label='Workspace navigation'>
@@ -476,7 +476,7 @@ export default function App() {
           </Tabs>
 
           <footer className='appFooter'>
-            <span>Vellira Workspace Starter · Local demo</span>
+            <span>Vellira Dashboard Starter · Local demo</span>
             <div>
               <a
                 href='https://docs.vellira.dev/react/'

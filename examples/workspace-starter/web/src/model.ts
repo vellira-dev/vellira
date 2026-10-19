@@ -17,7 +17,7 @@ export interface Workspace {
 }
 
 export const initialWorkspace: Workspace = {
-  name: 'Northstar Studio',
+  name: 'Demo Workspace',
   notifications: true,
   projects: [
     {

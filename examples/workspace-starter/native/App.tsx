@@ -30,7 +30,7 @@ type Workspace = {
 
 const storageKey = 'vellira-workspace-native-starter-v1';
 const initialWorkspace: Workspace = {
-  name: 'Northstar Studio',
+  name: 'Demo Workspace',
   notifications: true,
   projects: [
     { id: 1, name: 'Design token refresh', status: 'active', completed: false },
@@ -461,7 +461,7 @@ function WorkspaceScreen() {
 
         <View style={{ gap: 6, paddingTop: 15 }}>
           <Text style={{ color: subtleText, fontSize: 12 }}>
-            Vellira Workspace Starter · React Native
+            Vellira Dashboard Starter · React Native
           </Text>
           <Text style={{ color: subtleText, fontSize: 12 }}>
             Offline UI example. No account or backend required.

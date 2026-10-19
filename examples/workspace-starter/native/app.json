@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Vellira Workspace Starter",
-    "slug": "vellira-workspace-starter",
+    "name": "Vellira Dashboard Starter",
+    "slug": "vellira-dashboard-starter",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",

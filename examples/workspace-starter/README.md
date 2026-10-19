@@ -1,12 +1,12 @@
-# Vellira Workspace Starter
+# Vellira Dashboard Starter — Free Core Demo
 
-A **working mini-application**, not a static screenshot or an isolated Button
-demo. This sample lets independent developers explore Vellira's public UI
-components in a realistic project.
+A **working, MIT-licensed Core demonstration**, not a screenshot, paywall or
+commercial production template. React and React Native developers can run it,
+inspect the Vellira APIs, and adapt the project to their own work.
 
-The two apps use **published Vellira 2.179.1 packages**, not local workspace
-source imports. They are independently installable and work without a Vellira
-account or backend.
+Both apps pin **Vellira 2.179.1 packages**. They are independently installable
+and work without a Vellira account, backend or Pro subscription. The public
+source remains available under the repository's MIT license.
 
 ## What you can do
 
@@ -106,3 +106,20 @@ expected behavior in [GitHub Issues](https://github.com/vellira-dev/vellira/issu
 See the [React docs](https://docs.vellira.dev/react/), the
 [React Native docs](https://docs.vellira.dev/react-native/), and the
 [cross-platform form article](https://vellira.dev/blog/cross-platform-form-vellira).
+
+## Free Core versus future paid products
+
+This starter is **Core**: Vellira React/React Native controls, accessible
+interactions, semantic tokens/themes, documentation, examples, known correctness
+checks, local demonstration state, and source code remain freely usable.
+
+Future **Vellira Pro** may offer managed multi-project workflows, richer
+analysis/automation and team governance. Advanced **application kits** (such as
+production-oriented SaaS dashboards with real auth, role management, billing,
+server persistence and integrations) may be separately licensed premium
+products. None of those are included or claimed to work in this free demo.
+Commercial packaging and pricing have not been finalized.
+
+The public demo must remain useful without Pro. No paid implementation, secret,
+production customer data, proprietary template, paid-license mechanism or
+artificially disabled Core correctness checks belong in this directory.
