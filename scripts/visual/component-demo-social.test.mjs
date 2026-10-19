@@ -173,7 +173,7 @@ test('Tabs social captions express real ArrowRight and Home transitions', () => 
   assert.match(markup, /Return to the first tab/);
   assert.match(markup, /<div class="title">Tabs<\/div>/);
   assert.match(markup, /alt="Real Storybook Tabs"/);
-  assert.doesNotMatch(markup, /<button\b|<section\b|<div role="tablist"/);
+  assert.doesNotMatch(markup, /<button\b|<select\b|role="tab(?:list|panel)?"/);
   assert.throws(
     () => getSocialStages({ ...tabs, socialStages: tabs.socialStages.slice(1) }),
     /exactly four reviewed/
