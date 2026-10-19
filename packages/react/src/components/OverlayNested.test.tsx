@@ -55,6 +55,61 @@ describe('nested overlays', () => {
     unmount();
   });
 
+  it('renders a portaled Select above its parent Modal when opened by the user', () => {
+    const onModalOpenChange = vi.fn();
+    const onValueChange = vi.fn();
+
+    const { unmount } = render(
+      <Modal open onOpenChange={onModalOpenChange}>
+        <Portal>
+          <Modal.Overlay />
+          <Modal.Content ariaLabel='Create project'>
+            <Select
+              label='Status'
+              id='project-status'
+              defaultValue='planned'
+              onValueChange={onValueChange}
+            >
+              <Select.Item value='planned'>Planned</Select.Item>
+              <Select.Item value='active'>In progress</Select.Item>
+            </Select>
+          </Modal.Content>
+        </Portal>
+      </Modal>
+    );
+
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    const trigger = dialog?.querySelector<HTMLButtonElement>(
+      '[role="combobox"]'
+    );
+    expect(trigger).not.toBeNull();
+
+    act(() => {
+      trigger?.click();
+    });
+
+    const listbox = document.querySelector('[role="listbox"]');
+    const dropdown = listbox?.parentElement as HTMLElement | undefined;
+    expect(dropdown).toBeDefined();
+    expect(dropdown?.parentElement).not.toBe(dialog);
+    expect(
+      Number(dropdown?.style.zIndex)
+    ).toBeGreaterThan(
+      Number(dialog?.style.getPropertyValue('--z-index-modal')) + 1
+    );
+
+    act(() => {
+      document.getElementById('project-status-listbox-option-1')?.click();
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith('active');
+    expect(onModalOpenChange).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+
+    unmount();
+  });
+
   it('closes only a select nested in a modal on Escape', () => {
     const onModalOpenChange = vi.fn();
     const onSelectOpenChange = vi.fn();
