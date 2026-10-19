@@ -505,8 +505,8 @@ export function PlatformParity() {
             <strong>Want to try Vellira in your own project?</strong>
             <p>
               Explore a complete workspace with project management, forms,
-              themes, and platform-specific interactions. Install the
-              standalone React or React Native starter and edit the source.
+              themes, and platform-specific interactions. Install the standalone
+              React or React Native starter and edit the source.
             </p>
           </div>
           <Button asChild appearance='solid' color='primary'>

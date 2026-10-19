@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { Button, Checkbox, Dropdown, Input, Modal, Portal, Select } from '@vellira-ui/react';
+import {
+  Button,
+  Checkbox,
+  Dropdown,
+  Input,
+  Modal,
+  Portal,
+  Select,
+} from '@vellira-ui/react';
 
 import {
   addProject,
@@ -47,7 +55,9 @@ export function ProductInterfaceDemo() {
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace);
   const [hydrated, setHydrated] = useState(false);
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>(
+    'all'
+  );
   const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newTeam, setNewTeam] = useState<Team>('design');
@@ -101,9 +111,7 @@ export function ProductInterfaceDemo() {
       setNameError('Enter a project name.');
       return;
     }
-    setWorkspace((current) =>
-      addProject(current, newName, newTeam, newStatus)
-    );
+    setWorkspace((current) => addProject(current, newName, newTeam, newStatus));
     setModalOpen(false);
     setView('projects');
     setFeedback('Your project was created locally.');
@@ -131,8 +139,8 @@ export function ProductInterfaceDemo() {
           </h2>
           <p className={styles.description}>
             Try a project dashboard built with Vellira Core. Create projects,
-            explore overlays, change the theme and inspect an independent
-            React + React Native starter. No account required.
+            explore overlays, change the theme and inspect an independent React
+            + React Native starter. No account required.
           </p>
           <nav className={styles.ctas} aria-label='Try Vellira Dashboard'>
             <Button asChild appearance='solid' color='primary'>
@@ -150,7 +158,8 @@ export function ProductInterfaceDemo() {
             </Button>
           </nav>
           <p className={styles.freeStatement}>
-            Free Core demo · MIT source · Local sample data · No Pro subscription
+            Free Core demo · MIT source · Local sample data · No Pro
+            subscription
           </p>
         </header>
 
@@ -169,15 +178,15 @@ export function ProductInterfaceDemo() {
             <span className={styles.windowTitle}>
               Vellira Dashboard Starter
             </span>
-            <span className={styles.liveIndicator}>
-              Interactive Core demo
-            </span>
+            <span className={styles.liveIndicator}>Interactive Core demo</span>
           </div>
 
           <div className={styles.shell}>
             <aside className={styles.sidebar}>
               <div className={styles.brand}>
-                <span className={styles.brandMark} aria-hidden='true'>V</span>
+                <span className={styles.brandMark} aria-hidden='true'>
+                  V
+                </span>
                 <div>
                   <strong>Vellira</strong>
                   <small>Dashboard Starter</small>
@@ -215,12 +224,17 @@ export function ProductInterfaceDemo() {
               </div>
 
               {feedback && (
-                <p role='status' className={styles.notice}>{feedback}</p>
+                <p role='status' className={styles.notice}>
+                  {feedback}
+                </p>
               )}
 
               {view === 'overview' && (
                 <div className={styles.content}>
-                  <div className={styles.metrics} aria-label='Demo project metrics'>
+                  <div
+                    className={styles.metrics}
+                    aria-label='Demo project metrics'
+                  >
                     <div className={styles.metric}>
                       <small>Total projects</small>
                       <strong>{workspace.projects.length}</strong>
@@ -241,7 +255,9 @@ export function ProductInterfaceDemo() {
                     <div className={styles.panel}>
                       <div className={styles.panelTitle}>
                         <div>
-                          <span className={styles.sectionLabel}>Latest work</span>
+                          <span className={styles.sectionLabel}>
+                            Latest work
+                          </span>
                           <h4>Projects overview</h4>
                         </div>
                         <Button
@@ -254,14 +270,20 @@ export function ProductInterfaceDemo() {
                       </div>
                       {workspace.projects.slice(0, 4).map((project) => (
                         <div key={project.id} className={styles.projectRow}>
-                          <span className={styles.projectInitial} aria-hidden='true'>
+                          <span
+                            className={styles.projectInitial}
+                            aria-hidden='true'
+                          >
                             {project.name.slice(0, 1).toUpperCase()}
                           </span>
                           <div className={styles.projectInfo}>
                             <strong>{project.name}</strong>
                             <small>{project.team} team</small>
                           </div>
-                          <span className={styles.status} data-status={project.status}>
+                          <span
+                            className={styles.status}
+                            data-status={project.status}
+                          >
                             {statusLabels[project.status]}
                           </span>
                         </div>
@@ -276,9 +298,10 @@ export function ProductInterfaceDemo() {
                       <span className={styles.sectionLabel}>Get started</span>
                       <h4>Everything here uses Core.</h4>
                       <p className={styles.panelText}>
-                        These are real Vellira inputs, menus, dialogs and buttons
-                        with local state. You can inspect their implementation
-                        and use the free packages in your own application.
+                        These are real Vellira inputs, menus, dialogs and
+                        buttons with local state. You can inspect their
+                        implementation and use the free packages in your own
+                        application.
                       </p>
                       <Button
                         appearance='outline'
@@ -297,7 +320,9 @@ export function ProductInterfaceDemo() {
                   <div className={styles.panel}>
                     <div className={styles.panelTitle}>
                       <div>
-                        <span className={styles.sectionLabel}>Project manager</span>
+                        <span className={styles.sectionLabel}>
+                          Project manager
+                        </span>
                         <h4>Projects</h4>
                       </div>
                       <Button onClick={openNewProject}>Create project</Button>
@@ -330,13 +355,19 @@ export function ProductInterfaceDemo() {
                     <div className={styles.projectList}>
                       {projects.map((project) => (
                         <div key={project.id} className={styles.projectRow}>
-                          <span className={styles.projectInitial} aria-hidden='true'>
+                          <span
+                            className={styles.projectInitial}
+                            aria-hidden='true'
+                          >
                             {project.name.slice(0, 1).toUpperCase()}
                           </span>
                           <div className={styles.projectInfo}>
                             <strong>{project.name}</strong>
                             <small>{project.description}</small>
-                            <span className={styles.status} data-status={project.status}>
+                            <span
+                              className={styles.status}
+                              data-status={project.status}
+                            >
                               {statusLabels[project.status]}
                             </span>
                           </div>
@@ -458,11 +489,7 @@ export function ProductInterfaceDemo() {
 
               <footer className={styles.dashboardFooter}>
                 <span>Free Core · React · Sample projects</span>
-                <a
-                  href={sourceUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
+                <a href={sourceUrl} target='_blank' rel='noopener noreferrer'>
                   Inspect the starter source ↗
                 </a>
               </footer>
@@ -472,10 +499,10 @@ export function ProductInterfaceDemo() {
 
         <div className={styles.boundary}>
           <p>
-            <strong>Core stays free.</strong> This is a functional example
-            built with published Vellira primitives and local data.
-            Production-oriented application kits, managed team workflows,
-            and advanced AI-assisted work belong to future paid layers.
+            <strong>Core stays free.</strong> This is a functional example built
+            with published Vellira primitives and local data.
+            Production-oriented application kits, managed team workflows, and
+            advanced AI-assisted work belong to future paid layers.
           </p>
           <a href='#pro'>Explore the Pro roadmap →</a>
         </div>

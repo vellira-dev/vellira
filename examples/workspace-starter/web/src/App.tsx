@@ -135,7 +135,9 @@ export default function App() {
       <div className='application'>
         <aside className='sidebar'>
           <div className='brand'>
-            <div className='brandMark' aria-hidden='true'>V</div>
+            <div className='brandMark' aria-hidden='true'>
+              V
+            </div>
             <div>
               <strong>Vellira</strong>
               <span>Dashboard Starter</span>
@@ -273,7 +275,9 @@ export default function App() {
                         </div>
                       ))}
                       {workspace.projects.length === 0 && (
-                        <p className='empty'>Create a project to get started.</p>
+                        <p className='empty'>
+                          Create a project to get started.
+                        </p>
                       )}
                     </div>
                   </section>
@@ -308,11 +312,11 @@ export default function App() {
                     <div>
                       <span className='eyebrow'>Project manager</span>
                       <h2>Projects</h2>
-                      <p>Create, duplicate, complete, or remove project items.</p>
+                      <p>
+                        Create, duplicate, complete, or remove project items.
+                      </p>
                     </div>
-                    <Button onClick={() => setCreateOpen(true)}>
-                      Create
-                    </Button>
+                    <Button onClick={() => setCreateOpen(true)}>Create</Button>
                   </div>
 
                   <div className='filters'>
@@ -338,7 +342,9 @@ export default function App() {
                     >
                       {allStatuses.map((value) => (
                         <Select.Item key={value} value={value}>
-                          {value === 'all' ? 'All statuses' : statusLabel[value]}
+                          {value === 'all'
+                            ? 'All statuses'
+                            : statusLabel[value]}
                         </Select.Item>
                       ))}
                     </Select>
@@ -353,9 +359,7 @@ export default function App() {
                     {visibleProjects.map((project) => (
                       <article key={project.id} className='projectRow'>
                         <div className='projectCopy'>
-                          <span className='eyebrow'>
-                            Team: {project.team}
-                          </span>
+                          <span className='eyebrow'>Team: {project.team}</span>
                           <h3>{project.name}</h3>
                           <p>{project.description}</p>
                           <span
@@ -445,7 +449,11 @@ export default function App() {
                   />
                   <div className='themePicker'>
                     <span>Appearance</span>
-                    <div className='themeButtons' role='group' aria-label='Theme'>
+                    <div
+                      className='themeButtons'
+                      role='group'
+                      aria-label='Theme'
+                    >
                       {themeNames.map((option) => (
                         <Button
                           key={option}

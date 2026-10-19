@@ -292,9 +292,7 @@ function WorkspaceScreen() {
                     <Text style={{ color: mainText, fontWeight: '600' }}>
                       {project.name}
                     </Text>
-                    <Text style={{ color: subtleText }}>
-                      {project.status}
-                    </Text>
+                    <Text style={{ color: subtleText }}>{project.status}</Text>
                   </View>
                 ))}
                 {data.projects.length === 0 && (
@@ -386,9 +384,7 @@ function WorkspaceScreen() {
                 </View>
               ))}
               {visibleProjects.length === 0 && (
-                <Text style={{ color: subtleText }}>
-                  No matching projects.
-                </Text>
+                <Text style={{ color: subtleText }}>No matching projects.</Text>
               )}
             </View>
           </Tabs.Content>
@@ -420,7 +416,9 @@ function WorkspaceScreen() {
                   <Text style={{ color: mainText, fontWeight: '600' }}>
                     Appearance
                   </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  <View
+                    style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+                  >
                     {(['light', 'dark', 'highContrast'] as const).map(
                       (option) => (
                         <Button
@@ -428,9 +426,7 @@ function WorkspaceScreen() {
                           appearance={
                             themeName === option ? 'solid' : 'outline'
                           }
-                          color={
-                            themeName === option ? 'primary' : 'neutral'
-                          }
+                          color={themeName === option ? 'primary' : 'neutral'}
                           onPress={() => setTheme(option)}
                         >
                           {option === 'highContrast'

@@ -1,5 +1,10 @@
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -333,7 +338,11 @@ body {
   display: grid;
   align-content: start;
   gap: 16px;
-  background: color-mix(in srgb, var(--surface-default) 80%, var(--surface-subtle));
+  background: color-mix(
+    in srgb,
+    var(--surface-default) 80%,
+    var(--surface-subtle)
+  );
 }
 
 .insightCard p {

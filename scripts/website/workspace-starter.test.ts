@@ -13,7 +13,12 @@ import {
 
 describe('Vellira Workspace Starter state model', () => {
   it('creates nonempty projects without mutating sample data', () => {
-    const updated = addProject(initialWorkspace, '  Mobile QA  ', 'mobile', 'planned');
+    const updated = addProject(
+      initialWorkspace,
+      '  Mobile QA  ',
+      'mobile',
+      'planned'
+    );
     expect(updated.projects).toHaveLength(4);
     expect(updated.projects[0]).toMatchObject({
       id: 4,
@@ -52,11 +57,21 @@ describe('Vellira Workspace Starter state model', () => {
   });
 
   it('filters by status and text without mutating projects', () => {
-    expect(filterProjects(initialWorkspace.projects, '', 'all')).toHaveLength(3);
-    expect(filterProjects(initialWorkspace.projects, '', 'planned')).toHaveLength(1);
-    expect(filterProjects(initialWorkspace.projects, 'MOBILE', 'all')[0].id).toBe(2);
-    expect(filterProjects(initialWorkspace.projects, 'semantic', 'all')[0].id).toBe(1);
-    expect(filterProjects(initialWorkspace.projects, 'mobile', 'shipped')).toEqual([]);
+    expect(filterProjects(initialWorkspace.projects, '', 'all')).toHaveLength(
+      3
+    );
+    expect(
+      filterProjects(initialWorkspace.projects, '', 'planned')
+    ).toHaveLength(1);
+    expect(
+      filterProjects(initialWorkspace.projects, 'MOBILE', 'all')[0].id
+    ).toBe(2);
+    expect(
+      filterProjects(initialWorkspace.projects, 'semantic', 'all')[0].id
+    ).toBe(1);
+    expect(
+      filterProjects(initialWorkspace.projects, 'mobile', 'shipped')
+    ).toEqual([]);
   });
 
   it('rejects corrupt, duplicate or invalid persisted data', () => {
