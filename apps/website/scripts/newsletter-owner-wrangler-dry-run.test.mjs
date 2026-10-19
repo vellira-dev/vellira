@@ -25,9 +25,8 @@ function javascriptFiles(directory) {
 }
 
 test('pinned Wrangler compiles owner candidate without deployment or credentials', (t) => {
-  const wrangler = path.join(website, 'node_modules/.bin/wrangler');
-  assert.ok(fs.existsSync(wrangler), 'Repository-pinned Wrangler must be installed');
-
+  // The workspace installs binaries through pnpm; per-package .bin paths
+  // are not guaranteed to exist in CI's filtered install layout.
   const config = JSON.parse(fs.readFileSync(ownerConfig, 'utf8'));
   assert.equal(config.name, 'vellira-newsletter-budget-owner');
   assert.equal(config.workers_dev, false);
@@ -63,10 +62,19 @@ test('pinned Wrangler compiles owner candidate without deployment or credentials
 
   // Fixed arguments only: never use --temporary or invoke a deployment.
   // Do not inherit Cloudflare credentials, Buttondown keys or GH tokens.
-  const args = ['deploy', '--config', ownerConfig, '--dry-run', '--outdir', outdir];
+  const args = [
+    'exec',
+    'wrangler',
+    'deploy',
+    '--config',
+    ownerConfig,
+    '--dry-run',
+    '--outdir',
+    outdir,
+  ];
   assert.ok(args.includes('--dry-run'));
   assert.ok(!args.includes('--temporary'));
-  const result = spawnSync(wrangler, args, {
+  const result = spawnSync('pnpm', args, {
     cwd: website,
     encoding: 'utf8',
     timeout: 90_000,
