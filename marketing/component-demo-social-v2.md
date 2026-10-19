@@ -10,8 +10,8 @@ component implementation, CI-wide job, or social publishing integration.
 
 - V2 introduced the **Dropdown keyboard** demo on React web. Reviewed Button
   confirmation and Modal focus/Escape scenarios now reuse the same proof/social
-  renderer and have separate allowlisted Storybook scenarios. Select/Tabs
-  remain outside this version.
+  renderer and have separate allowlisted Storybook scenarios. Reviewed Select
+  keyboard choice also reuses this renderer. Tabs remains outside scope.
 - The source story is the allowlisted `components-dropdown--default`.
 - Raw proof capture remains the existing V1 path and filenames.
 - Input must be an exact Git SHA and local Storybook on `127.0.0.1:6006`.
@@ -62,15 +62,15 @@ removes the whole local output, never silently emits a partial success.
 
 ## Out of scope
 
-- React Native capture, Select/Tabs and unreviewed components, generative
-  media, new packages.
+- React Native capture, Tabs and unreviewed components, generative media,
+  new packages.
 - Auto-merging, social scheduling, external URLs, AI writers, persistent storage.
 - Replacing actual component animation with fake motion or marketing claims.
 
 ## Follow-up after V2 acceptance
 
-Add independently verified scenarios for Select and Tabs through new
-allowlist entries and targeted behavior assertions. Keep a single social
+Add an independently verified scenario for Tabs through a new allowlist entry
+and targeted behavior assertions. Keep a single social
 renderer, one capture pipeline, and existing manual publication controls.
 
 ## Reviewed Button extension
@@ -100,3 +100,16 @@ square layout, with Modal-specific captions and a poster showing the open
 Dialog. A capture-tooling PR runs all three reviewed scenarios sequentially in
 one read-only job; manual runs generate only the owner's chosen scenario.
 Artifacts require independent visual inspection before any publication.
+
+## Reviewed Select keyboard extension
+
+The `select-keyboard` scenario uses `Components/Select/SimpleUsage` without
+modifying the canonical Select. Playwright validates real keyboard opening,
+portal ownership, `aria-expanded`, `aria-activedescendant` highlighting
+Germany, actual selection through Enter, and retained trigger focus.
+
+The same square 1200 × 1200 renderer accepts Select-specific captions
+and uses its highlighted state for the poster. Proof frames remain
+independent of the social output. The existing path-filtered capture job
+runs Dropdown, Button, Modal and Select sequentially in one build.
+Manual runs remain explicit and single-scenario.

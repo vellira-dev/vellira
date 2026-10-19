@@ -3,6 +3,48 @@
 export const STORYBOOK_ORIGIN = 'http://127.0.0.1:6006';
 
 const DEMOS = Object.freeze({
+  'select-keyboard': Object.freeze({
+    storyId: 'components-select--simple-usage',
+    title: 'Vellira Select — keyboard choice',
+    subtitle: 'Keyboard navigation and verified selection',
+    viewport: Object.freeze({ width: 960, height: 540 }),
+    gifWidth: 800,
+    gifFps: 12,
+    phaseFrames: Object.freeze({
+      ready: 9,
+      opened: 17,
+      highlighted: 17,
+      selected: 13,
+    }),
+    socialStages: Object.freeze([
+      Object.freeze({
+        name: 'ready',
+        label: '01 / READY',
+        key: 'ENTER',
+        action: 'Open the choices',
+      }),
+      Object.freeze({
+        name: 'opened',
+        label: '02 / OPEN',
+        key: 'ARROW DOWN',
+        action: 'Navigate options',
+      }),
+      Object.freeze({
+        name: 'highlighted',
+        label: '03 / HIGHLIGHT',
+        key: 'ENTER',
+        action: 'Choose Germany',
+      }),
+      Object.freeze({
+        name: 'selected',
+        label: '04 / SELECTED',
+        key: 'DONE',
+        action: 'Germany is selected',
+      }),
+    ]),
+    posterPhase: 'highlighted',
+    maxGifBytes: 8 * 1024 * 1024,
+  }),
   'modal-focus': Object.freeze({
     storyId: 'components-modal--default',
     title: 'Vellira Modal — focus and Escape dismissal',
