@@ -4,7 +4,7 @@ A **working mini-application**, not a static screenshot or an isolated Button
 demo. This sample lets independent developers explore Vellira's public UI
 components in a realistic project.
 
-The two apps use **published Vellira 2.173.0 packages**, not local workspace
+The two apps use **published Vellira 2.179.1 packages**, not local workspace
 source imports. They are independently installable and work without a Vellira
 account or backend.
 
