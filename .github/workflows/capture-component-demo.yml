@@ -1,0 +1,126 @@
+name: Capture Component Demo
+
+run-name: Component demo / ${{ inputs.demo || 'dropdown-keyboard' }} / ${{ github.event.pull_request.head.sha || github.sha }}
+
+on:
+  # Only demo-infrastructure PRs run the pre-merge media proof. No ordinary
+  # component/website PR gets this expensive job or a new required CI lane.
+  pull_request:
+    paths:
+      - '.github/workflows/capture-component-demo.yml'
+      - 'scripts/visual/component-demo-*'
+      - 'scripts/visual/capture-component-demo.mjs'
+  workflow_dispatch:
+    inputs:
+      demo:
+        description: 'Repository-owned scenario; no arbitrary URLs or scripts.'
+        type: choice
+        required: true
+        options:
+          - dropdown-keyboard
+
+permissions:
+  contents: read
+
+concurrency:
+  group: component-demo-${{ github.event.pull_request.number || github.ref }}-${{ inputs.demo || 'dropdown-keyboard' }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture reviewed Storybook interactions
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+    env:
+      VELLIRA_DEMO_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VELLIRA_DEMO_NAME: ${{ inputs.demo || 'dropdown-keyboard' }}
+
+    steps:
+      - name: Checkout exact source revision without write credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify immutable source and scenario
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git rev-parse HEAD)" = "$VELLIRA_DEMO_EXPECTED_SHA"
+          case "$VELLIRA_DEMO_NAME" in
+            dropdown-keyboard) ;;
+            *) echo '::error::Unsupported demo.'; exit 2 ;;
+          esac
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js without package cache
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          package-manager-cache: false
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test demo scenario admission contracts
+        run: node --test scripts/visual/component-demo-policy.test.mjs
+
+      - name: Build Storybook dependencies from exact source revision
+        run: pnpm exec turbo run build --filter='@vellira-ui/react-storybook^...'
+
+      - name: Build Storybook from exact source revision
+        run: pnpm --dir apps/react-storybook exec storybook build
+
+      - name: Ensure local video encoder
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -hide_banner -version | head -n 1
+
+      - name: Serve exact-revision Storybook locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 6006 --bind 127.0.0.1 \
+            --directory apps/react-storybook/storybook-static \
+            > "$RUNNER_TEMP/vellira-demo-storybook.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --max-time 2 \
+                http://127.0.0.1:6006/index.json > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/vellira-demo-storybook.log"
+          echo '::error::Storybook did not become ready.'
+          exit 1
+
+      - name: Capture and verify real Dropdown behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/visual/capture-component-demo.mjs "$VELLIRA_DEMO_NAME"
+          printf '### Component demo\n\nScenario: `%s`\n\nSource: `%s`\n\nResult: post-load GIF, MP4, PNG and SHA-256 manifest for review. Not published.\n' \
+            "$VELLIRA_DEMO_NAME" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload review-only demo artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: component-demo-${{ env.VELLIRA_DEMO_NAME }}-${{ env.VELLIRA_DEMO_EXPECTED_SHA }}-${{ github.run_id }}
+          path: apps/react-storybook/test-results/component-demo/${{ env.VELLIRA_DEMO_NAME }}/
+          if-no-files-found: error
+          retention-days: 7
