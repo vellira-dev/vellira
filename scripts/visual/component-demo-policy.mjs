@@ -3,6 +3,48 @@
 export const STORYBOOK_ORIGIN = 'http://127.0.0.1:6006';
 
 const DEMOS = Object.freeze({
+  'modal-focus': Object.freeze({
+    storyId: 'components-modal--default',
+    title: 'Vellira Modal — focus and Escape dismissal',
+    subtitle: 'Keyboard focus and Escape restoration',
+    viewport: Object.freeze({ width: 960, height: 540 }),
+    gifWidth: 800,
+    gifFps: 12,
+    phaseFrames: Object.freeze({
+      ready: 9,
+      opened: 17,
+      focused: 17,
+      closed: 13,
+    }),
+    socialStages: Object.freeze([
+      Object.freeze({
+        name: 'ready',
+        label: '01 / READY',
+        key: 'ENTER',
+        action: 'Open the dialog',
+      }),
+      Object.freeze({
+        name: 'opened',
+        label: '02 / OPEN',
+        key: 'FOCUS',
+        action: 'Focus starts inside',
+      }),
+      Object.freeze({
+        name: 'focused',
+        label: '03 / NAVIGATE',
+        key: 'TAB',
+        action: 'Move focus inside',
+      }),
+      Object.freeze({
+        name: 'closed',
+        label: '04 / RESTORE',
+        key: 'ESC',
+        action: 'Return focus to trigger',
+      }),
+    ]),
+    posterPhase: 'opened',
+    maxGifBytes: 8 * 1024 * 1024,
+  }),
   'button-confirmation': Object.freeze({
     storyId: 'primitives-button--destructive-confirmation',
     title: 'Vellira Button — confirmation and loading',
