@@ -58,6 +58,36 @@ test('Modal capture admits the maintained focus-and-Escape Storybook scenario', 
   verifyDuration(56 / 12, modal);
 });
 
+test('Select choice uses the maintained SimpleUsage story and four verified phases', () => {
+  const demo = getDemo('select-keyboard');
+  assert.equal(demo.storyId, 'components-select--simple-usage');
+  assert.equal(
+    getStoryUrl('select-keyboard'),
+    STORYBOOK_ORIGIN + '/iframe.html?id=components-select--simple-usage&viewMode=story&globals=theme:light'
+  );
+  assert.equal(demo.posterPhase, 'highlighted');
+  assert.deepEqual(Object.keys(demo.phaseFrames), [
+    'ready', 'opened', 'highlighted', 'selected',
+  ]);
+  assert.equal(getFrameCount(demo), 56);
+  verifyDuration(56 / 12, demo);
+});
+
+test('Tabs capture admits real Controlled story and keyboard navigation stages', () => {
+  const tabs = getDemo('tabs-keyboard');
+  assert.equal(tabs.storyId, 'components-tabs--controlled');
+  assert.equal(
+    getStoryUrl('tabs-keyboard'),
+    STORYBOOK_ORIGIN + '/iframe.html?id=components-tabs--controlled&viewMode=story&globals=theme:light'
+  );
+  assert.equal(tabs.posterPhase, 'settings');
+  assert.deepEqual(Object.keys(tabs.phaseFrames), [
+    'ready', 'profile', 'settings', 'restored',
+  ]);
+  assert.equal(getFrameCount(tabs), 56);
+  verifyDuration(56 / 12, tabs);
+});
+
 test('rejects unknown demos and user-controlled URLs or paths', () => {
   for (const value of ['', '../secret', 'https://example.com', 'dropdown', 'constructor', '__proto__']) {
     assert.throws(() => getDemo(value), /Unknown component demo/);

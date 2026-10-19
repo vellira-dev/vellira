@@ -3,6 +3,90 @@
 export const STORYBOOK_ORIGIN = 'http://127.0.0.1:6006';
 
 const DEMOS = Object.freeze({
+  'tabs-keyboard': Object.freeze({
+    storyId: 'components-tabs--controlled',
+    title: 'Vellira Tabs — keyboard navigation',
+    subtitle: 'Arrow-key activation and live panel updates',
+    viewport: Object.freeze({ width: 960, height: 540 }),
+    gifWidth: 800,
+    gifFps: 12,
+    phaseFrames: Object.freeze({
+      ready: 9,
+      profile: 17,
+      settings: 17,
+      restored: 13,
+    }),
+    socialStages: Object.freeze([
+      Object.freeze({
+        name: 'ready',
+        label: '01 / HOME',
+        key: 'ARROW RIGHT',
+        action: 'Navigate to Profile',
+      }),
+      Object.freeze({
+        name: 'profile',
+        label: '02 / PROFILE',
+        key: 'ARROW RIGHT',
+        action: 'Navigate to Settings',
+      }),
+      Object.freeze({
+        name: 'settings',
+        label: '03 / SETTINGS',
+        key: 'HOME',
+        action: 'Return to the first tab',
+      }),
+      Object.freeze({
+        name: 'restored',
+        label: '04 / HOME',
+        key: 'DONE',
+        action: 'Panel and focus restored',
+      }),
+    ]),
+    posterPhase: 'settings',
+    maxGifBytes: 8 * 1024 * 1024,
+  }),
+  'select-keyboard': Object.freeze({
+    storyId: 'components-select--simple-usage',
+    title: 'Vellira Select — keyboard choice',
+    subtitle: 'Keyboard navigation and verified selection',
+    viewport: Object.freeze({ width: 960, height: 540 }),
+    gifWidth: 800,
+    gifFps: 12,
+    phaseFrames: Object.freeze({
+      ready: 9,
+      opened: 17,
+      highlighted: 17,
+      selected: 13,
+    }),
+    socialStages: Object.freeze([
+      Object.freeze({
+        name: 'ready',
+        label: '01 / READY',
+        key: 'ENTER',
+        action: 'Open the choices',
+      }),
+      Object.freeze({
+        name: 'opened',
+        label: '02 / OPEN',
+        key: 'ARROW DOWN',
+        action: 'Navigate options',
+      }),
+      Object.freeze({
+        name: 'highlighted',
+        label: '03 / HIGHLIGHT',
+        key: 'ENTER',
+        action: 'Choose Germany',
+      }),
+      Object.freeze({
+        name: 'selected',
+        label: '04 / SELECTED',
+        key: 'DONE',
+        action: 'Germany is selected',
+      }),
+    ]),
+    posterPhase: 'highlighted',
+    maxGifBytes: 8 * 1024 * 1024,
+  }),
   'modal-focus': Object.freeze({
     storyId: 'components-modal--default',
     title: 'Vellira Modal — focus and Escape dismissal',

@@ -64,6 +64,18 @@ export function validateDeploymentTarget(config) {
     'Unrecognized deployment target'
   );
   validateRoutes(config);
+  // Stable workers.dev origins are required by staging/prod deploy and recovery.
+  // Version/aliased Preview URLs are not an authorized public entry point.
+  assert.equal(
+    config.workers_dev,
+    true,
+    'Canonical workers.dev diagnostic origins must remain enabled'
+  );
+  assert.equal(
+    config.preview_urls,
+    false,
+    'Preview/Version URLs must be explicitly disabled on website Workers'
+  );
   const bindings = config.r2_buckets?.filter(
     (binding) => binding.binding === 'STATIC_ASSET_ARCHIVE'
   );

@@ -36,6 +36,60 @@ function sampleConfig() {
   };
 }
 
+test('canonical website targets preserve stable workers.dev but disable Preview URLs', async () => {
+  const { experimental_readRawConfig } = await import('wrangler');
+  const { readDeploymentConfig, validateDeploymentTarget } =
+    await import('./cloudflare-target-config.mjs');
+  for (const filename of configs) {
+    const file = path.join(root, filename);
+    const { rawConfig } = experimental_readRawConfig({ config: file });
+    assert.equal(rawConfig.workers_dev, true, filename);
+    assert.equal(rawConfig.preview_urls, false, filename);
+    const canonical = readDeploymentConfig(file);
+    assert.equal(canonical.workers_dev, true, filename);
+    assert.equal(canonical.preview_urls, false, filename);
+    for (const changed of [
+      { preview_urls: true },
+      { preview_urls: undefined },
+      { preview_urls: null },
+      { workers_dev: false },
+      { workers_dev: undefined },
+    ]) {
+      assert.throws(
+        () => validateDeploymentTarget({ ...canonical, ...changed }),
+        /Canonical workers.dev diagnostic origins|Preview\/Version URLs/
+      );
+    }
+  }
+});
+
+test('website deploy and recovery still use the existing unversioned worker origins', async () => {
+  const workflows = [
+    ['deploy-website-cloudflare-staging.yml', [
+      'https://vellira-website-staging.vellira.workers.dev',
+    ]],
+    ['deploy-website-cloudflare-production.yml', [
+      'https://vellira-website-staging.vellira.workers.dev',
+      'https://vellira-website.vellira.workers.dev',
+    ]],
+  ];
+  for (const [filename, expected] of workflows) {
+    const source = await fs.readFile(
+      path.join(repo, '.github/workflows', filename),
+      'utf8'
+    );
+    for (const url of expected) assert.ok(source.includes(url), filename);
+    const explicitUrls = source.match(/https:\/\/[a-z0-9-]+\.vellira\.workers\.dev/g) ?? [];
+    assert.ok(explicitUrls.length > 0, filename);
+    assert.ok(explicitUrls.every((url) => expected.includes(url)), filename);
+  }
+  const deploy = await fs.readFile(
+    path.join(root, 'scripts/cloudflare-deploy.mjs'),
+    'utf8'
+  );
+  assert.match(deploy, /\$\{config\.name\}\.vellira\.workers\.dev/);
+});
+
 test('projection: omits runtime secret requirements without altering the source', () => {
   const source = sampleConfig();
   const before = structuredClone(source);
