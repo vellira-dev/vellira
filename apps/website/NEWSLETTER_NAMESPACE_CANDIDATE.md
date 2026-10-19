@@ -197,6 +197,57 @@ does not authenticate to Cloudflare, provision namespaces, establish
 cross-Worker bindings, verify any account-scoped namespace identity, or
 authorize a real deployment.
 
+## Real Cloudflare account inventory (read-only, no deployment)
+
+The local candidate does **not** establish a deployed, shared Durable Object.
+To inspect actual Cloudflare account state without provisioning anything,
+use the separate **manual-only** GitHub Actions workflow:
+
+**Actions → Cloudflare Newsletter Account Read-Only Audit → Run workflow → main.**
+
+The job runs only for the audited `main` revision. It reuses the already
+configured Cloudflare deployment secrets solely for fixed authenticated
+`GET` calls; it does not upload a Worker, create Durable Objects, modify
+routes, change WAF rules, send requests to Buttondown, or expose account IDs,
+namespace IDs, token values, IP addresses or raw API response JSON in logs.
+No job artifact or full Cloudflare API response is uploaded.
+
+The sanitized report checks whether the expected staging/production/owner
+Worker scripts are present, whether the rolling coordinator class has a
+namespace **by its class name** (never its ID), current Workers.dev exposure,
+known custom domains/routes, and whether currently serving Worker versions
+have a `NEWSLETTER_GLOBAL_BUDGET` binding name. It also reads counts of
+rules from account- and zone-level custom firewall and rate-limit entry
+point rulesets, **not** their expressions or private rule configuration.
+
+A missing permission is reported as `permission_denied` or `unverified`,
+**never** interpreted as evidence that a Worker, namespace, binding or WAF
+rule is absent. Pagination gaps or API schema mismatches are `incomplete`.
+The results deliberately leave `sharedNamespaceIdentity`,
+`newsletterWafCoverage` and `buttondownQuota` as `unverified` even when
+component names and counts match; the account API alone does not prove
+cross-Worker Durable Object **instance** identity or effective rules for
+`workers.dev`, the custom domain and the shared newsletter endpoint.
+
+Before any future activation, separately inspect complete effective WAF
+expressions and workers.dev route coverage with an authorized operator.
+Owner approval, synthetic write-free remote namespace proof and exact
+provider quota remain separate blockers. Do not run a different deployment
+workflow or copy Cloudflare tokens into a local terminal to perform this audit.
+
+Run the no-network contract tests locally with:
+
+```sh
+node --test apps/website/scripts/cloudflare-newsletter-account-readonly.test.mjs
+```
+
+References:
+
+- https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/
+- https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
+- https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/
+- https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/subdomain/methods/get/
+- https://developers.cloudflare.com/api/resources/rulesets/subresources/phases/methods/get/
 ## Separate approval sequence
 
 1. Merge only after exact-head CI and independent review. Keep both sites OFF.
