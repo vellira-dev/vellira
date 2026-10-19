@@ -46,7 +46,7 @@ describe('live Vellira Dashboard Core showcase', () => {
 
   it('only links free source and does not advertise unbuilt paid features', () => {
     expect(website).toContain('Free Core demo');
-    expect(website).toContain('No Pro subscription');
+    expect(website).toMatch(/No Pro\s+subscription/);
     expect(website).toContain('future paid layers');
     expect(website).toContain("href='#pro'");
     expect(website).toContain('github.com/vellira-dev/vellira');
