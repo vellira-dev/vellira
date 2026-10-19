@@ -26,7 +26,7 @@ export async function recordModalFocus(page, demo, framesDir, posterPath) {
       display: flex; align-items: center; justify-content: center;
       padding: 24px !important;
     }
-    #storybook-root section { width: 430px; }
+    #storybook-root section { width: 430px; margin: 0 auto; }
   ` });
   await page.evaluate(() => document.fonts.ready);
 
