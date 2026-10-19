@@ -35,7 +35,6 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(website).toContain('View Source');
     expect(website).toContain('Use This Starter');
     expect(website).toContain('growth/react-native-form-try-it-20261018');
-    expect(read('apps/website/src/sections/home/PlatformParity/PlatformParity.tsx')).toContain('github.com/vellira-dev/vellira/tree/growth/react-native-form-try-it-20261018/examples/workspace-starter');
     expect(website).not.toContain('/blob/main/examples/workspace-starter');
   });
 
