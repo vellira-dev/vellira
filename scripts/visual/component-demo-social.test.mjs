@@ -144,6 +144,42 @@ test('Select social labels describe real keyboard selection, not fabricated UI',
   );
 });
 
+test('Tabs social captions express real ArrowRight and Home transitions', () => {
+  const tabs = {
+    ...demo,
+    title: 'Vellira Tabs — keyboard navigation',
+    subtitle: 'Arrow-key activation and live panel updates',
+    phaseFrames: { ready: 9, profile: 17, settings: 17, restored: 13 },
+    socialStages: [
+      { name: 'ready', label: '01 / HOME', key: 'ARROW RIGHT', action: 'Navigate to Profile' },
+      { name: 'profile', label: '02 / PROFILE', key: 'ARROW RIGHT', action: 'Navigate to Settings' },
+      { name: 'settings', label: '03 / SETTINGS', key: 'HOME', action: 'Return to the first tab' },
+      { name: 'restored', label: '04 / HOME', key: 'DONE', action: 'Panel and focus restored' },
+    ],
+    posterPhase: 'settings',
+  };
+  assert.deepEqual(getSocialStages(tabs).map((stage) => [stage.name, stage.startFrame]), [
+    ['ready', 0], ['profile', 9], ['settings', 26], ['restored', 43],
+  ]);
+  assert.equal(getSocialXfadePlan(tabs).expectedDuration, 56 / 12);
+  const markup = getSocialMarkup({
+    demo: tabs,
+    stage: getSocialStages(tabs)[2],
+    crop: getSocialCrop(trigger, menu, demo.viewport),
+    imageBase64: Buffer.from('verified-tabs-proof').toString('base64'),
+    logoBase64: Buffer.from('<svg/>').toString('base64'),
+  });
+  assert.match(markup, /Arrow-key activation and live panel updates/);
+  assert.match(markup, /Return to the first tab/);
+  assert.match(markup, /<div class="title">Tabs<\/div>/);
+  assert.match(markup, /alt="Real Storybook Tabs"/);
+  assert.doesNotMatch(markup, /<button\b|<section\b|<div role="tablist"/);
+  assert.throws(
+    () => getSocialStages({ ...tabs, socialStages: tabs.socialStages.slice(1) }),
+    /exactly four reviewed/
+  );
+});
+
 test('social HTML has approved branding, stage text and verified image only', () => {
   const stage = getSocialStages(demo)[2];
   const markup = getSocialMarkup({
