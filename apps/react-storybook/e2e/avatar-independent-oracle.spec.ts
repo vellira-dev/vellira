@@ -112,10 +112,7 @@ function avatarMarkup({
   ].join('');
 }
 
-async function renderFixture(
-  page: Page,
-  input: Parameters<typeof avatarMarkup>[0]
-) {
+async function renderFixture(page: Page, input: Parameters<typeof avatarMarkup>[0]) {
   await page.setContent(avatarMarkup(input));
   if (input.state !== 'absent') {
     await expect
@@ -156,12 +153,10 @@ async function inspectFallbackLayout(page: Page) {
   });
 }
 
-test.describe('Avatar V2 independent browser oracle (historical negative controls)', () => {
+test.describe('Avatar V2 browser oracle negative controls', () => {
   test.describe.configure({ retries: 0 });
 
-  test('frozen historic CSS permits a failed image to paint over fallback pixels', async ({
-    page,
-  }) => {
+  test('frozen failed image paints over fallback pixels', async ({ page }) => {
     const prefix = 'blob ' + Buffer.byteLength(historicAvatarStyles) + '\0';
     const hash = createHash('sha1')
       .update(prefix)
@@ -184,9 +179,7 @@ test.describe('Avatar V2 independent browser oracle (historical negative control
     expect(loaded.equals(baseline)).toBe(false);
   });
 
-  test('frozen historic fallback fails the single-line truncate geometry contract', async ({
-    page,
-  }) => {
+  test('historical fallback wraps instead of truncating', async ({ page }) => {
     const words = 'Jordan Alexander Diaz Smith';
     await renderFixture(page, { state: 'absent', fallback: words, size: 'sm' });
     const historic = await inspectFallbackLayout(page);
@@ -209,20 +202,12 @@ test.describe('Avatar V2 independent browser oracle (historical negative control
     });
   });
 
-  test('one accessible root is not confused with decorative versus duplicate image', async ({
-    page,
-  }) => {
+  test('named root needs decorative children', async ({ page }) => {
     await renderFixture(page, { state: 'failed-hidden' });
     await expect(page.getByRole('img', { name: 'Jordan Diaz' })).toHaveCount(1);
     await expect(page.locator('.image')).toHaveAttribute('alt', '');
-    await expect(page.locator('.image')).toHaveAttribute(
-      'aria-hidden',
-      'true'
-    );
-    await expect(page.locator('.fallback')).toHaveAttribute(
-      'aria-hidden',
-      'true'
-    );
+    await expect(page.locator('.image')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('.fallback')).toHaveAttribute('aria-hidden', 'true');
 
     await renderFixture(page, {
       state: 'failed-hidden',
