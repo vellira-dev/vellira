@@ -299,6 +299,11 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await expect(listbox).toBeHidden();
     await expect(dialog).toBeVisible();
 
+    // This test switches from a pointer-selected Team option to keyboard-only
+    // Status navigation. Keep the cursor away from the next dropdown so its
+    // stationary hover does not overwrite the keyboard's active option.
+    await page.mouse.move(0, 0);
+
     const status = dialog.getByRole('combobox', { name: 'Status' });
     await status.focus();
     await status.press('ArrowDown');
