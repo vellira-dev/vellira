@@ -75,8 +75,11 @@ jobs:
       - name: Test demo scenario admission contracts
         run: node --test scripts/visual/component-demo-policy.test.mjs
 
+      - name: Build Storybook dependencies from exact source revision
+        run: pnpm exec turbo run build --filter='@vellira-ui/react-storybook^...'
+
       - name: Build Storybook from exact source revision
-        run: pnpm --filter @vellira-ui/react-storybook build
+        run: pnpm --dir apps/react-storybook exec storybook build
 
       - name: Ensure local video encoder
         shell: bash

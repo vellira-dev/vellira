@@ -48,7 +48,8 @@ Build Storybook from the intended local commit:
 ```sh
 pnpm install --frozen-lockfile
 node --test scripts/visual/component-demo-policy.test.mjs
-pnpm --filter @vellira-ui/react-storybook build
+pnpm exec turbo run build --filter='@vellira-ui/react-storybook^...'
+pnpm --dir apps/react-storybook exec storybook build
 python3 -m http.server 6006 --bind 127.0.0.1 --directory apps/react-storybook/storybook-static
 ```
 
