@@ -231,3 +231,16 @@ test.describe('Avatar V2 browser oracle negative controls', () => {
     expect(duplicate).toBe(true);
   });
 });
+
+
+test('TEMPORARY print exact Prettier output for the oracle', async () => {
+  const prettier = await import('prettier');
+  const { readFileSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const filepath = fileURLToPath(import.meta.url);
+  const original = readFileSync(filepath, 'utf8');
+  const result = await prettier.format(original, { filepath });
+  console.log('BEGIN_AVATAR_PRETTIER_FORMATTED_SOURCE');
+  console.log(result);
+  console.log('END_AVATAR_PRETTIER_FORMATTED_SOURCE');
+});
