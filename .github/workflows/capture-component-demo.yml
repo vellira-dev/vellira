@@ -1,8 +1,15 @@
 name: Capture Component Demo
 
-run-name: Component demo / ${{ inputs.demo }} / ${{ github.sha }}
+run-name: Component demo / ${{ inputs.demo || 'dropdown-keyboard' }} / ${{ github.event.pull_request.head.sha || github.sha }}
 
 on:
+  # Only demo-infrastructure PRs run the pre-merge media proof. No ordinary
+  # component/website PR gets this expensive job or a new required CI lane.
+  pull_request:
+    paths:
+      - '.github/workflows/capture-component-demo.yml'
+      - 'scripts/visual/component-demo-*'
+      - 'scripts/visual/capture-component-demo.mjs'
   workflow_dispatch:
     inputs:
       demo:
@@ -16,27 +23,30 @@ permissions:
   contents: read
 
 concurrency:
-  group: component-demo-${{ github.ref }}-${{ inputs.demo }}
+  group: component-demo-${{ github.event.pull_request.number || github.ref }}-${{ inputs.demo || 'dropdown-keyboard' }}
   cancel-in-progress: true
 
 jobs:
   capture:
     name: Capture reviewed Storybook interactions
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       options: --ipc=host
     env:
-      VELLIRA_DEMO_EXPECTED_SHA: ${{ github.sha }}
-      VELLIRA_DEMO_NAME: ${{ inputs.demo }}
+      VELLIRA_DEMO_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VELLIRA_DEMO_NAME: ${{ inputs.demo || 'dropdown-keyboard' }}
 
     steps:
-      - name: Checkout exact main revision without write credentials
+      - name: Checkout exact source revision without write credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Verify immutable source and scenario
@@ -72,7 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! command -v ffmpeg >/dev/null 2>&1; then
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
             apt-get update -qq
             DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
           fi
@@ -101,13 +111,13 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/visual/capture-component-demo.mjs "$VELLIRA_DEMO_NAME"
-          printf '### Component demo\n\nScenario: `%s`\n\nSource: `%s`\n\nResult: generated GIF, MP4, PNG and SHA-256 manifest for human review. No publishing.\n' \
+          printf '### Component demo\n\nScenario: `%s`\n\nSource: `%s`\n\nResult: post-load GIF, MP4, PNG and SHA-256 manifest for review. Not published.\n' \
             "$VELLIRA_DEMO_NAME" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload review-only demo artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: component-demo-${{ inputs.demo }}-${{ github.sha }}-${{ github.run_id }}
-          path: apps/react-storybook/test-results/component-demo/${{ inputs.demo }}/
+          name: component-demo-${{ env.VELLIRA_DEMO_NAME }}-${{ env.VELLIRA_DEMO_EXPECTED_SHA }}-${{ github.run_id }}
+          path: apps/react-storybook/test-results/component-demo/${{ env.VELLIRA_DEMO_NAME }}/
           if-no-files-found: error
           retention-days: 7
