@@ -14,6 +14,7 @@ import styles from './SiteFooter.module.css';
 
 const productLinks = [
   { label: 'Components', href: '/components' },
+  { label: 'Showcase', href: '/showcase' },
   { label: 'Blog', href: '/blog' },
   { label: 'Platforms', href: '/#platforms' },
   { label: 'Themes', href: '/#themes' },

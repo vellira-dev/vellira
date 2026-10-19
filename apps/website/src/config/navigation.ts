@@ -1,7 +1,7 @@
 export type MarketingNavigationItem =
   | {
       label: string;
-      href: '/components' | '/blog';
+      href: '/components' | '/blog' | '/showcase';
       type: 'page';
       badge?: string;
     }
@@ -17,6 +17,11 @@ const pageNavigation: readonly MarketingNavigationItem[] = [
   {
     label: 'Components',
     href: '/components',
+    type: 'page',
+  },
+  {
+    label: 'Showcase',
+    href: '/showcase',
     type: 'page',
   },
   {
