@@ -101,7 +101,9 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
     x: selected.length === 1 ? 270 : 28 + (index * 484) / (selected.length - 1),
     y: 176 - statusProgress[project.status] * 1.4,
   }));
-  const linePoints = dots.map((point) => String(point.x) + ',' + String(point.y)).join(' ');
+  const linePoints = dots
+    .map((point) => String(point.x) + ',' + String(point.y))
+    .join(' ');
 
   return (
     <div className={styles.trendChart}>
@@ -139,7 +141,9 @@ function ProjectTrend({ projects }: { projects: readonly Project[] }) {
                 r='6'
                 className={styles.trendDot}
               >
-                <title>{point.name}: {point.value}% status progress</title>
+                <title>
+                  {point.name}: {point.value}% status progress
+                </title>
               </circle>
             ))}
           </svg>
@@ -167,7 +171,11 @@ function PipelineChart({ projects }: { projects: readonly Project[] }) {
     <div
       className={styles.pipeline}
       role='img'
-      aria-label={counts.map((item) => statusLabels[item.status] + ': ' + item.count + ' projects').join(', ')}
+      aria-label={counts
+        .map(
+          (item) => statusLabels[item.status] + ': ' + item.count + ' projects'
+        )
+        .join(', ')}
     >
       {counts.map((item) => (
         <div className={styles.pipelineColumn} key={item.status}>
@@ -226,8 +234,7 @@ export function Dashboard({
   useEffect(() => {
     if (!hydrated) return;
     try {
-      const stored =
-        variant === 'embedded' ? workspace : { workspace, theme };
+      const stored = variant === 'embedded' ? workspace : { workspace, theme };
       window.localStorage.setItem(storageKey, JSON.stringify(stored));
     } catch {
       // The demo remains usable when storage is disabled.
@@ -240,13 +247,39 @@ export function Dashboard({
   );
   const total = workspace.projects.length;
   const completed = workspace.projects.filter((item) => item.completed).length;
-  const active = workspace.projects.filter((item) => item.status === 'active').length;
+  const active = workspace.projects.filter(
+    (item) => item.status === 'active'
+  ).length;
   const completionRate = total ? Math.round((completed / total) * 100) : 0;
   const cards = [
-    { label: 'Total Projects', number: String(total), detail: 'Local projects', icon: Package, tone: 'primary' },
-    { label: 'Completed', number: String(completed), detail: 'Marked as done', icon: Check, tone: 'success' },
-    { label: 'In Progress', number: String(active), detail: 'Active projects', icon: Clock, tone: 'warning' },
-    { label: 'Completion Rate', number: String(completionRate) + '%', detail: 'Of current projects', icon: Grid, tone: 'purple' },
+    {
+      label: 'Total Projects',
+      number: String(total),
+      detail: 'Local projects',
+      icon: Package,
+      tone: 'primary',
+    },
+    {
+      label: 'Completed',
+      number: String(completed),
+      detail: 'Marked as done',
+      icon: Check,
+      tone: 'success',
+    },
+    {
+      label: 'In Progress',
+      number: String(active),
+      detail: 'Active projects',
+      icon: Clock,
+      tone: 'warning',
+    },
+    {
+      label: 'Completion Rate',
+      number: String(completionRate) + '%',
+      detail: 'Of current projects',
+      icon: Grid,
+      tone: 'purple',
+    },
   ];
 
   function openCreate() {
@@ -262,9 +295,7 @@ export function Dashboard({
       setNameError('Enter a project name.');
       return;
     }
-    setWorkspace((current) =>
-      addProject(current, newName, newTeam, newStatus)
-    );
+    setWorkspace((current) => addProject(current, newName, newTeam, newStatus));
     setModalOpen(false);
     setView('projects');
     setFeedback('Project created in this browser.');
@@ -290,7 +321,9 @@ export function Dashboard({
     >
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden='true'>V</span>
+          <span className={styles.brandMark} aria-hidden='true'>
+            V
+          </span>
           <div>
             <strong>Vellira</strong>
             <small>Dashboard Starter</small>
@@ -316,7 +349,9 @@ export function Dashboard({
           })}
         </nav>
         <div className={styles.sidebarFoot}>
-          <div className={styles.userAvatar} aria-hidden='true'>DW</div>
+          <div className={styles.userAvatar} aria-hidden='true'>
+            DW
+          </div>
           <div>
             <strong>Demo Workspace</strong>
             <small>Local-only sample account</small>
@@ -375,7 +410,10 @@ export function Dashboard({
 
           {view === 'overview' && (
             <div className={styles.overview}>
-              <section className={styles.metrics} aria-label='Live project metrics'>
+              <section
+                className={styles.metrics}
+                aria-label='Live project metrics'
+              >
                 {cards.map((card) => {
                   const Icon = card.icon;
                   return (
@@ -401,7 +439,8 @@ export function Dashboard({
                   </div>
                   <ProjectTrend projects={workspace.projects} />
                   <p className={styles.chartNote}>
-                    Each point shows the project's current status, not historical analytics.
+                    Each point shows the project's current status, not
+                    historical analytics.
                   </p>
                 </section>
                 <section className={styles.chartCard}>
@@ -434,10 +473,16 @@ export function Dashboard({
                   {workspace.projects.slice(0, 3).map((project) => (
                     <article className={styles.projectCard} key={project.id}>
                       <div className={styles.projectCardTitle}>
-                        <span className={styles.projectSymbol} aria-hidden='true'>
+                        <span
+                          className={styles.projectSymbol}
+                          aria-hidden='true'
+                        >
                           {project.name.charAt(0).toUpperCase()}
                         </span>
-                        <span className={styles.statusPill} data-status={project.status}>
+                        <span
+                          className={styles.statusPill}
+                          data-status={project.status}
+                        >
                           {statusLabels[project.status]}
                         </span>
                       </div>
@@ -445,14 +490,18 @@ export function Dashboard({
                       <p>{project.description}</p>
                       <div className={styles.projectProgress}>
                         <div
-                          style={{ width: String(statusProgress[project.status]) + '%' }}
+                          style={{
+                            width: String(statusProgress[project.status]) + '%',
+                          }}
                         />
                       </div>
                       <small>{teamLabels[project.team]} team</small>
                     </article>
                   ))}
                   {total === 0 && (
-                    <p className={styles.empty}>Create your first project to get started.</p>
+                    <p className={styles.empty}>
+                      Create your first project to get started.
+                    </p>
                   )}
                 </div>
               </section>
@@ -473,8 +522,10 @@ export function Dashboard({
                   label='Status filter'
                   value={filter}
                   onValueChange={(value) => {
-                    if (typeof value === 'string' &&
-                      (value === 'all' || isStatus(value))) {
+                    if (
+                      typeof value === 'string' &&
+                      (value === 'all' || isStatus(value))
+                    ) {
                       setFilter(value);
                     }
                   }}
@@ -495,8 +546,12 @@ export function Dashboard({
                     <div className={styles.projectDetails}>
                       <strong>{project.name}</strong>
                       <small>{project.description}</small>
-                      <span className={styles.statusPill} data-status={project.status}>
-                        {statusLabels[project.status]} · {teamLabels[project.team]}
+                      <span
+                        className={styles.statusPill}
+                        data-status={project.status}
+                      >
+                        {statusLabels[project.status]} ·{' '}
+                        {teamLabels[project.team]}
                       </span>
                     </div>
                     <div className={styles.rowActions}>
@@ -511,7 +566,9 @@ export function Dashboard({
                       />
                       <Dropdown placement='bottom-end'>
                         <Dropdown.Trigger asChild>
-                          <Button appearance='outline' color='neutral'>Actions</Button>
+                          <Button appearance='outline' color='neutral'>
+                            Actions
+                          </Button>
                         </Dropdown.Trigger>
                         <Dropdown.Content>
                           <Dropdown.Item
@@ -541,7 +598,10 @@ export function Dashboard({
                   </article>
                 ))}
                 {projects.length === 0 && (
-                  <p className={styles.empty}>No matching projects. Change the filter or create a new project.</p>
+                  <p className={styles.empty}>
+                    No matching projects. Change the filter or create a new
+                    project.
+                  </p>
                 )}
               </div>
             </section>
@@ -592,7 +652,11 @@ export function Dashboard({
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
-                <Button appearance='outline' color='neutral' onClick={resetDemo}>
+                <Button
+                  appearance='outline'
+                  color='neutral'
+                  onClick={resetDemo}
+                >
                   Restore sample data
                 </Button>
               </div>

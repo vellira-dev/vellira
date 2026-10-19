@@ -12,7 +12,9 @@ const homepage = read('apps/website/src/app/(marketing)/(site)/page.tsx');
 const model = read('examples/workspace-starter/web/src/model.ts');
 const starter = read('examples/workspace-starter/web/src/App.tsx');
 const readme = read('examples/workspace-starter/README.md');
-const standaloneDashboard = read('examples/workspace-starter/web/src/Dashboard.tsx');
+const standaloneDashboard = read(
+  'examples/workspace-starter/web/src/Dashboard.tsx'
+);
 const siteDashboard = read(
   'apps/website/src/sections/home/ProductInterfaceDemo/Dashboard.tsx'
 );

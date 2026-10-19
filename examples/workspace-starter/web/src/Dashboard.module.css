@@ -35,12 +35,17 @@
   width: 38px;
   height: 38px;
   place-items: center;
-  color: var(--action-primary-solid-text, white);
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-500),
+    var(--color-primary-600)
+  );
   border-radius: 12px;
   font-size: 20px;
   font-weight: 800;
-  box-shadow: 0 3px 12px color-mix(in srgb, var(--color-primary-500) 20%, transparent);
+  box-shadow: 0 3px 12px
+    color-mix(in srgb, var(--color-primary-500) 20%, transparent);
 }
 
 .brand strong,
@@ -81,7 +86,11 @@
 }
 .navButton[aria-current='page'] {
   border-color: color-mix(in srgb, var(--color-primary-500) 22%, transparent);
-  background: color-mix(in srgb, var(--color-primary-500) 14%, var(--surface-default));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-500) 14%,
+    var(--surface-default)
+  );
   color: var(--color-primary-500);
 }
 .navButton svg {
@@ -117,7 +126,11 @@
   place-items: center;
   border-radius: 50%;
   color: var(--color-primary-500);
-  background: color-mix(in srgb, var(--color-primary-500) 14%, var(--surface-default));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-500) 14%,
+    var(--surface-default)
+  );
   font-size: 12px;
   font-weight: 800;
 }
@@ -213,8 +226,13 @@
 .notice {
   margin: -8px 0 20px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--color-success-500) 8%, var(--surface-default));
-  border: 1px solid color-mix(in srgb, var(--color-success-500) 24%, var(--border-muted));
+  background: color-mix(
+    in srgb,
+    var(--color-success-500) 8%,
+    var(--surface-default)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--color-success-500) 24%, var(--border-muted));
   border-radius: 10px;
   font-size: 12px;
 }
@@ -376,7 +394,12 @@
   justify-content: center;
   flex: 1;
   height: 183px;
-  background: repeating-linear-gradient(to top, transparent 0 46px, var(--border-muted) 47px, transparent 48px);
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0 46px,
+    var(--border-muted) 47px,
+    transparent 48px
+  );
 }
 .pipelineBar {
   display: flex;
@@ -456,7 +479,11 @@
   width: 36px;
   height: 36px;
   place-items: center;
-  background: color-mix(in srgb, var(--color-primary-500) 12%, var(--surface-default));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-500) 12%,
+    var(--surface-default)
+  );
   color: var(--color-primary-500);
   border-radius: 10px;
   font-size: 14px;

@@ -279,7 +279,14 @@ try {
           ) {
             const demoSection = page.locator('#interface');
             const dashboard = page.locator('#dashboard-live');
-            await dashboard.scrollIntoViewIfNeeded();
+            await expect(dashboard).toBeVisible();
+            await page.evaluate(() => {
+              document.getElementById('dashboard-live')?.scrollIntoView({
+                behavior: 'instant',
+                block: 'start',
+              });
+            });
+            await expect(dashboard).toBeInViewport();
             await expect(dashboard).toBeVisible();
             await expect(
               demoSection.getByRole('link', { name: 'View Source' })
@@ -355,7 +362,14 @@ try {
             await dashboard
               .getByRole('button', { name: 'Overview', exact: true })
               .click();
-            await dashboard.scrollIntoViewIfNeeded();
+            await expect(dashboard).toBeVisible();
+            await page.evaluate(() => {
+              document.getElementById('dashboard-live')?.scrollIntoView({
+                behavior: 'instant',
+                block: 'start',
+              });
+            });
+            await expect(dashboard).toBeInViewport();
             await page.screenshot({
               path: `${artifactDir}/dashboard-core-live-1440.png`,
             });
@@ -367,7 +381,14 @@ try {
             viewport.width === 390
           ) {
             const mobileDemo = page.locator('#dashboard-live');
-            await mobileDemo.scrollIntoViewIfNeeded();
+            await expect(mobileDemo).toBeVisible();
+            await page.evaluate(() => {
+              document.getElementById('dashboard-live')?.scrollIntoView({
+                behavior: 'instant',
+                block: 'start',
+              });
+            });
+            await expect(mobileDemo).toBeInViewport();
             await expect(mobileDemo).toBeVisible();
             const rect = await mobileDemo.boundingBox();
             assert.ok(

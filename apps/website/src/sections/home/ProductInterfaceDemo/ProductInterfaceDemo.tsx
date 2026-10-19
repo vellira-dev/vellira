@@ -13,7 +13,10 @@ import styles from './ProductInterfaceDemo.module.css';
 const previewRef = 'growth/react-native-form-try-it-20261018';
 const repository = 'https://github.com/vellira-dev/vellira';
 const sourceUrl =
-  repository + '/blob/' + previewRef + '/examples/workspace-starter/web/src/Dashboard.tsx';
+  repository +
+  '/blob/' +
+  previewRef +
+  '/examples/workspace-starter/web/src/Dashboard.tsx';
 const starterUrl =
   repository + '/tree/' + previewRef + '/examples/workspace-starter';
 
@@ -71,7 +74,9 @@ export function ProductInterfaceDemo() {
               <span />
               <span />
             </div>
-            <span className={styles.windowTitle}>Vellira Dashboard Starter</span>
+            <span className={styles.windowTitle}>
+              Vellira Dashboard Starter
+            </span>
             <span className={styles.liveIndicator}>Interactive Core demo</span>
           </div>
           <Dashboard
