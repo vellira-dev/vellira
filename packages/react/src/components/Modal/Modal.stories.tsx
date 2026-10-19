@@ -550,9 +550,7 @@ function NestedSelectModalDemo() {
                   <Select.Item value='shipped'>Shipped</Select.Item>
                 </Select>
                 <p data-testid='selected-team'>Selected team: {team}</p>
-                <p data-testid='selected-status'>
-                  Selected status: {status}
-                </p>
+                <p data-testid='selected-status'>Selected status: {status}</p>
               </div>
             </Modal.Body>
             <Modal.Footer>
