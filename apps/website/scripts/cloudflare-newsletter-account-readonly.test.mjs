@@ -33,7 +33,12 @@ function mockCloudflare({ workerNames = liveScripts, namespaces = [], withBindin
     assert.equal(options.body, undefined);
     if (deny.includes(path)) return makeResponse(null, 403);
     if (path === '/accounts/' + accountId + '/workers/scripts') {
-      return makeResponse(workerNames.map((id) => ({ id })));
+      return makeResponse(
+        workerNames.map((id) => ({ id })),
+        200,
+        { count: workerNames.length, page: 1, per_page: 100,
+          total_count: workerNames.length, total_pages: 1 }
+      );
     }
     if (path === '/accounts/' + accountId + '/workers/durable_objects/namespaces') {
       assert.equal(url.searchParams.get('page'), '1');
@@ -52,9 +57,12 @@ function mockCloudflare({ workerNames = liveScripts, namespaces = [], withBindin
     }
     if (path === '/accounts/' + accountId + '/workers/domains') {
       return makeResponse([
-        { hostname: 'vellira.dev', enabled: true, service: 'vellira-website', id: 'hidden-domain-identifier' },
-        { hostname: 'www.vellira.dev', enabled: true, service: 'vellira-website', id: 'hidden-domain-identifier2' },
-      ]);
+        { hostname: 'vellira.dev', enabled: true, previews_enabled: false,
+          service: 'vellira-website', id: 'hidden-domain-identifier' },
+        { hostname: 'www.vellira.dev', enabled: true, previews_enabled: false,
+          service: 'vellira-website', id: 'hidden-domain-identifier2' },
+      ], 200, { count: 2, page: 1, per_page: 20, total_count: 2,
+        total_pages: 1 });
     }
     if (path === '/zones') {
       assert.equal(url.searchParams.get('name'), 'vellira.dev');
@@ -62,7 +70,11 @@ function mockCloudflare({ workerNames = liveScripts, namespaces = [], withBindin
       return makeResponse([{ id: zoneId, name: 'vellira.dev', account: { id: accountId } }]);
     }
     if (path === '/zones/' + zoneId + '/workers/routes') {
-      return makeResponse([{ pattern: 'vellira.dev/api/*', script: 'vellira-website' }]);
+      return makeResponse(
+        [{ pattern: 'vellira.dev/api/*', script: 'vellira-website' }],
+        200, { count: 1, page: 1, per_page: 100, total_count: 1,
+          total_pages: 1 }
+      );
     }
     if (path.includes('/rulesets/phases/')) {
       if (path.endsWith('/http_ratelimit/entrypoint')) {
@@ -92,6 +104,7 @@ test('Cloudflare inventory is strictly GET-only, sanitized, and does not claim W
   assert.deepEqual(report.domains['vellira.dev'], {
     status: 'observed',
     enabled: true,
+    previewsEnabled: false,
     expectedProductionWorker: true,
   });
   assert.deepEqual(report.liveBinding['vellira-website'], {
@@ -99,6 +112,7 @@ test('Cloudflare inventory is strictly GET-only, sanitized, and does not claim W
     globalBudgetBindingInServingVersions: false,
   });
   assert.equal(report.workerDev['vellira-website-staging'].enabled, true);
+  assert.equal(report.workerDev['vellira-website-staging'].previewsEnabled, false);
   assert.equal(report.zoneStatus, 'observed');
   assert.equal(report.zoneRoutes.hasNewsletterWebsiteRoute, true);
   assert.equal(report.zoneWaf.http_ratelimit.enabledRules, 1);
@@ -226,4 +240,153 @@ test('manual account audit never runs on push or schedules and cannot deploy', (
   assert.match(workflow, /secrets.CLOUDFLARE_ACCOUNT_ID/);
   assert.doesNotMatch(workflow, /wrangler|cloudflare-deploy|CLOUDFLARE_R2_SECRET_ACCESS_KEY/);
   assert.doesNotMatch(workflow, /upload-artifact|checkout@main|pull_request_target/);
+});
+
+
+test('missing pagination metadata with 20 of 21 domains cannot imply a hostname is absent', async () => {
+  const base = mockCloudflare();
+  const fetcher = async (url, options) => {
+    if (url.pathname.endsWith('/workers/domains')) {
+      return makeResponse(Array.from({ length: 20 }, (_, i) => ({
+        id: 'private-id-' + i,
+        hostname: 'other-' + i + '.example.invalid',
+        enabled: true,
+        previews_enabled: false,
+        service: 'other-worker',
+      })));
+    }
+    return base.fetcher(url, options);
+  };
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.equal(report.domainInventoryStatus, 'incomplete');
+  assert.deepEqual(report.domains['vellira.dev'], { status: 'unverified' });
+  assert.deepEqual(report.domains['www.vellira.dev'], { status: 'unverified' });
+});
+
+test('mismatched pagination totals and page numbers cannot prove an absent domain', async () => {
+  for (const info of [
+    { count: 20, page: 1, per_page: 20, total_count: 21, total_pages: 1 },
+    { count: 1, page: 2, per_page: 20, total_count: 1, total_pages: 1 },
+    { count: 1, page: 1, per_page: 20, total_count: 1 },
+    { count: 2, page: 1, per_page: 20, total_count: 2, total_pages: 1 },
+  ]) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.endsWith('/workers/domains')
+      ? makeResponse([{ hostname: 'other.example.invalid', enabled: true,
+        previews_enabled: false, service: 'other-worker' }], 200, info)
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.domainInventoryStatus, 'incomplete');
+    assert.deepEqual(report.domains['vellira.dev'], { status: 'unverified' });
+  }
+});
+
+test('an incomplete Worker listing may prove observed presence but never absence', async () => {
+  const base = mockCloudflare();
+  const fetcher = (url, options) => url.pathname.endsWith('/workers/scripts')
+    ? makeResponse([{ id: 'vellira-website' }])
+    : base.fetcher(url, options);
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.equal(report.workerInventoryStatus, 'incomplete');
+  assert.equal(report.workerPresence['vellira-website'], 'present');
+  assert.equal(report.workerPresence['vellira-website-staging'], 'unverified');
+  assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'unverified');
+});
+
+test('namespace records with no class or an empty class cannot imply zero coordinators', async () => {
+  for (const namespaces of [
+    [{ id: 'private-namespace-id' }],
+    [{ name: 'some-name', id: 'private-namespace-id' }],
+    [{ class: '', id: 'private-namespace-id' }],
+    [{ class: 'OtherClass' }, { id: 'private-namespace-id' }],
+  ]) {
+    const fixture = mockCloudflare({ namespaces });
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher: fixture.fetcher,
+    });
+    assert.equal(report.namespaceInventoryStatus, 'incomplete');
+    assert.equal(report.coordinatorClassNamespaceCount, null);
+    assert.equal(JSON.stringify(report).includes('private-namespace-id'), false);
+  }
+});
+
+test('only verified Cloudflare class, not an optional name, proves coordinator identity', async () => {
+  const fixture = mockCloudflare({ namespaces: [
+    { class: 'OtherClass', name: 'NewsletterRollingBudgetCoordinator' },
+  ] });
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher: fixture.fetcher,
+  });
+  assert.equal(report.namespaceInventoryStatus, 'complete');
+  assert.equal(report.coordinatorClassNamespaceCount, 0);
+});
+
+test('workers.dev preview URLs and custom-domain previews remain visible if main route is off', async () => {
+  const base = mockCloudflare();
+  const fetcher = (url, options) => {
+    if (url.pathname.endsWith('/subdomain')) {
+      return makeResponse({ enabled: false, previews_enabled: true });
+    }
+    if (url.pathname.endsWith('/workers/domains')) {
+      return makeResponse([
+        { hostname: 'vellira.dev', enabled: false, previews_enabled: true,
+          service: 'vellira-website' },
+        { hostname: 'www.vellira.dev', enabled: true, previews_enabled: false,
+          service: 'vellira-website' },
+      ], 200, { count: 2, page: 1, per_page: 20, total_count: 2,
+        total_pages: 1 });
+    }
+    return base.fetcher(url, options);
+  };
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.deepEqual(report.workerDev['vellira-website'], {
+    status: 'observed', enabled: false, previewsEnabled: true,
+  });
+  assert.deepEqual(report.domains['vellira.dev'], {
+    status: 'observed', enabled: false, previewsEnabled: true,
+    expectedProductionWorker: true,
+  });
+  assert.equal(report.newsletterWafCoverage, 'unverified');
+});
+
+test('missing preview flag is inconclusive, even with ordinary workers.dev disabled', async () => {
+  const base = mockCloudflare();
+  const fetcher = (url, options) => {
+    if (url.pathname.endsWith('/subdomain')) {
+      return makeResponse({ enabled: false });
+    }
+    if (url.pathname.endsWith('/workers/domains')) {
+      return makeResponse([{ hostname: 'vellira.dev', enabled: false,
+        service: 'vellira-website' }], 200,
+        { count: 1, page: 1, per_page: 20, total_count: 1, total_pages: 1 });
+    }
+    return base.fetcher(url, options);
+  };
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.deepEqual(report.workerDev['vellira-website'], { status: 'incomplete' });
+  assert.deepEqual(report.domains['vellira.dev'], { status: 'incomplete' });
 });
