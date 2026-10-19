@@ -38,19 +38,27 @@ function budgetBindingPresent(bindings) {
   );
 }
 
-function pageStatus(payload, count, page, maximum) {
+function pageStatus(payload, count, page, maximum, accumulated = count) {
+  // A short first page does not prove the inventory is exhaustive: the
+  // server may apply a smaller default page size than PAGE_SIZE.
   const info = payload.result_info;
-  if (info !== undefined && (!isObject(info) || (
-    info.total_pages !== undefined &&
-    (!Number.isSafeInteger(info.total_pages) || info.total_pages < page)
-  ))) return { status: 'incomplete' };
-  const total = info?.total_pages;
-  if (total !== undefined) {
-    if (total > maximum) return { status: 'incomplete' };
-    return { status: page >= total ? 'complete' : 'next' };
-  }
-  if (count < PAGE_SIZE) return { status: 'complete' };
-  return { status: 'incomplete' };
+  if (!isObject(info)) return { status: 'incomplete' };
+  const total = info.total_pages;
+  if (
+    !Number.isSafeInteger(total) || total < 1 || total > maximum ||
+    total < page || !Number.isSafeInteger(count) || count < 0 ||
+    !Number.isSafeInteger(accumulated) || accumulated < count ||
+    (info.page !== undefined && info.page !== page) ||
+    (info.count !== undefined && info.count !== count) ||
+    (info.per_page !== undefined &&
+      (!Number.isSafeInteger(info.per_page) || info.per_page < 1 ||
+        count > info.per_page)) ||
+    (info.total_count !== undefined &&
+      (!Number.isSafeInteger(info.total_count) ||
+        info.total_count < accumulated ||
+        (page === total && info.total_count !== accumulated)))
+  ) return { status: 'incomplete' };
+  return { status: page === total ? 'complete' : 'next' };
 }
 
 export async function auditCloudflareNewsletterAccount({
@@ -108,9 +116,12 @@ export async function auditCloudflareNewsletterAccount({
     if (Array.isArray(workers) && workers.every((worker) => isObject(worker) && typeof worker.id === 'string')) {
       const page = pageStatus(workersReply.payload, workers.length, 1, 1);
       workerInventoryStatus = page.status === 'complete' ? 'complete' : 'incomplete';
-      if (workerInventoryStatus === 'complete') {
-        for (const name of WORKERS) {
-          workerPresence[name] = workers.some((worker) => worker.id === name) ? 'present' : 'absent';
+      for (const name of WORKERS) {
+        // A positive match is valid even on an incomplete page; absence isn't.
+        if (workers.some((worker) => worker.id === name)) {
+          workerPresence[name] = 'present';
+        } else if (workerInventoryStatus === 'complete') {
+          workerPresence[name] = 'absent';
         }
       }
     } else workerInventoryStatus = 'incomplete';
@@ -132,16 +143,25 @@ export async function auditCloudflareNewsletterAccount({
       break;
     }
     collected.push(...items);
-    const pagination = pageStatus(reply.payload, items.length, page, MAX_NAMESPACE_PAGES);
+    const pagination = pageStatus(
+      reply.payload, items.length, page, MAX_NAMESPACE_PAGES, collected.length
+    );
     namespaceInventoryStatus = pagination.status;
     if (pagination.status !== 'next') break;
   }
   if (namespaceInventoryStatus === 'next') namespaceInventoryStatus = 'incomplete';
   if (namespaceInventoryStatus === 'complete') {
-    // Only names/class labels are inspected; DO IDs and object state are never exported.
-    coordinatorNamespaces = collected.filter((item) =>
-      item.name === COORDINATOR || item.class === COORDINATOR
-    ).length;
+    // Cloudflare marks both name and class optional. Without a usable class,
+    // a namespace cannot be excluded from the candidate coordinator count.
+    if (collected.some((item) =>
+      typeof item.class !== 'string' || !item.class.trim()
+    )) {
+      namespaceInventoryStatus = 'incomplete';
+    } else {
+      coordinatorNamespaces = collected.filter((item) =>
+        item.class === COORDINATOR
+      ).length;
+    }
   }
 
   const workerDev = {};
@@ -156,8 +176,16 @@ export async function auditCloudflareNewsletterAccount({
       continue;
     }
     const value = reply.payload.result;
-    workerDev[name] = isObject(value) && typeof value.enabled === 'boolean'
-      ? { status: 'observed', enabled: value.enabled }
+    // Preview URLs can remain externally routable when the ordinary
+    // workers.dev subdomain is disabled. Both signals are required.
+    workerDev[name] = isObject(value) &&
+      typeof value.enabled === 'boolean' &&
+      typeof value.previews_enabled === 'boolean'
+      ? {
+          status: 'observed',
+          enabled: value.enabled,
+          previewsEnabled: value.previews_enabled,
+        }
       : { status: 'incomplete' };
   }
 
@@ -210,19 +238,26 @@ export async function auditCloudflareNewsletterAccount({
   const domains = Object.fromEntries(DOMAINS.map((host) => [host, { status: 'unverified' }]));
   if (domainReply.status === 'available') {
     const items = domainReply.payload.result;
-    if (Array.isArray(items) && items.every(isObject)) {
+    if (Array.isArray(items) && items.every((item) =>
+      isObject(item) && typeof item.hostname === 'string' && item.hostname
+    )) {
       domainInventoryStatus = pageStatus(domainReply.payload, items.length, 1, 1).status;
-      if (domainInventoryStatus === 'complete') {
-        for (const host of DOMAINS) {
-          const matches = items.filter((item) => item.hostname === host);
-          domains[host] = matches.length === 1 &&
-            typeof matches[0].enabled === 'boolean'
-            ? {
-                status: 'observed',
-                enabled: matches[0].enabled,
-                expectedProductionWorker: matches[0].service === 'vellira-website',
-              }
-            : { status: matches.length === 0 ? 'absent' : 'incomplete' };
+      for (const host of DOMAINS) {
+        const matches = items.filter((item) => item.hostname === host);
+        if (matches.length === 1 &&
+          typeof matches[0].enabled === 'boolean' &&
+          typeof matches[0].previews_enabled === 'boolean' &&
+          typeof matches[0].service === 'string') {
+          domains[host] = {
+            status: 'observed',
+            enabled: matches[0].enabled,
+            previewsEnabled: matches[0].previews_enabled,
+            expectedProductionWorker: matches[0].service === 'vellira-website',
+          };
+        } else if (matches.length === 0 && domainInventoryStatus === 'complete') {
+          domains[host] = { status: 'absent' };
+        } else {
+          domains[host] = { status: matches.length === 0 ? 'unverified' : 'incomplete' };
         }
       }
     } else domainInventoryStatus = 'incomplete';
