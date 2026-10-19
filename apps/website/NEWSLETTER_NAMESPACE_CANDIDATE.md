@@ -142,6 +142,42 @@ References:
 - https://docs.buttondown.com/api-pagination
 - https://docs.buttondown.com/api-rate-limits
 
+### Dashboard CSV fallback when the API returns 403
+
+Buttondown's API authentication documentation defines HTTP 403 as
+**insufficient permissions** for the supplied API key. Do not change,
+regenerate or broaden the existing production key simply to inspect logs.
+
+Use the authenticated Buttondown dashboard at
+https://buttondown.com/requests and select **Export** in the API Requests tab.
+The downloaded CSV can contain request IDs and IP addresses: retain it on
+your trusted device and **do not upload raw data** to GitHub, chat or public
+analysis services. The documented CSV export schema includes
+\`id,path,ip_address,creation_date,status_code,latency\`, but does **not**
+guarantee a \`method\` column.
+
+For an entirely **offline** summary, run from the repository root (replace
+the placeholder path with the real CSV downloaded from your account):
+
+\`\`\`sh
+node apps/website/scripts/buttondown-api-requests-csv-readonly.mjs "$HOME/Downloads/buttondown-api-requests.csv"
+\`\`\`
+
+This command only reads a local regular file (up to 8 MiB and 50,000 records).
+It never contacts Buttondown or Cloudflare. It counts exact
+\`/v1/subscribers\` path entries in the last seven days, grouped by UTC day
+and HTTP status; raw IPs, request IDs, email addresses and CSV contents are
+not emitted. When the export contains a \`method\` column, only POST rows
+are counted. **When the column is absent, GET subscriber-list operations
+cannot be distinguished from subscriber-create POST attempts.** The output
+labels the method as unverified rather than presenting the counts as
+subscriber creates. Even a zero count never proves zero real attempts or
+provider quota.
+
+The original API audit and any live newsletter/Pro settings remain unchanged
+and OFF. This fallback does not verify the account's actual daily creation
+limit, reset schedule, API key coverage or other writers.
+
 ### Offline Wrangler preflight
 
 After installing the existing lockfile dependencies, run:
