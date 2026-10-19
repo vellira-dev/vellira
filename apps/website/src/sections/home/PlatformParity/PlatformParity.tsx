@@ -504,18 +504,18 @@ export function PlatformParity() {
           <div className={styles.tryItCopy}>
             <strong>Want to try Vellira in your own project?</strong>
             <p>
-              Follow a small React and React Native form example. Check
-              controlled state and platform-specific interactions with the
-              published packages, then tell us where the setup gets confusing.
+              Explore a complete workspace with project management, forms,
+              themes, and platform-specific interactions. Install the
+              standalone React or React Native starter and edit the source.
             </p>
           </div>
           <Button asChild appearance='solid' color='primary'>
             <a
-              href='https://github.com/vellira-dev/vellira/tree/main/examples/cross-platform-form'
+              href='https://github.com/vellira-dev/vellira/tree/main/examples/workspace-starter'
               target='_blank'
               rel='noopener noreferrer'
             >
-              Try Vellira locally
+              Try the Workspace Starter
             </a>
           </Button>
         </div>

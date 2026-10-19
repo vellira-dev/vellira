@@ -328,7 +328,10 @@ export default function App() {
                       label='Status'
                       value={filter}
                       onValueChange={(next) => {
-                        if (next === 'all' || (next && isStatus(next))) {
+                        if (
+                          typeof next === 'string' &&
+                          (next === 'all' || isStatus(next))
+                        ) {
                           setFilter(next);
                         }
                       }}
