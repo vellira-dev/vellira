@@ -56,6 +56,50 @@ reset schedule, or inventory of other writers is available here.
 The plan deliberately marks these facts `unverified`, and owner activation
 `not-granted`. No code should treat this plan as deploy authority.
 
+### Evidence needed from Buttondown (no subscriber writes)
+
+The authenticated **GET** rate-limit headers (`X-RateLimit-Limit`,
+`X-RateLimit-Remaining`, `X-RateLimit-Reset`) may describe the
+**600/minute general API limit**, not the **daily POST subscriber-create
+quota**. A successful GET, its reset timestamp, and a 600 limit are
+**not proof** of the newsletter's available daily create capacity.
+
+Ask Buttondown support (support@buttondown.email) or inspect an
+authoritative account-specific quota setting for:
+
+1. The exact `POST /v1/subscribers` ceiling for this newsletter/account,
+   whether it applies across API keys and environments, and how it changes.
+2. The exact window and reset semantics, including timezone, and whether
+   duplicate/suppressed/blocked/failed requests or ambiguous timeouts count.
+3. Whether any other integrations or UI operations consume the same quota,
+   and whether a **read-only** account-specific quota report is available.
+4. A safe reserved-capacity recommendation for an existing public newsletter.
+
+Record **only sanitized evidence**: source, observation date, the
+account-level conclusion, any verified numerical ceiling/window, and
+an owner-approved reserve. Never store tokens, complete response headers,
+subscriber emails, account IDs or provider payloads in the repository.
+Until the evidence is conclusive, leave the global mode OFF.
+
+### Offline Wrangler preflight
+
+After installing the existing lockfile dependencies, run:
+
+```sh
+node --test apps/website/scripts/newsletter-owner-wrangler-dry-run.test.mjs
+```
+
+This invokes the repository-pinned Wrangler with fixed `deploy --dry-run`
+and a temporary bundle output. The test provides **no Cloudflare or Buttondown
+credentials**, disables Wrangler telemetry, blocks outbound proxy access, and
+asserts the compiled bundle exports the expected class without provider
+credentials. It is also part of mandatory `test:cloudflare-cache` CI.
+
+A successful dry-run proves local Wrangler compilation **only**. It
+does not authenticate to Cloudflare, provision namespaces, establish
+cross-Worker bindings, verify any account-scoped namespace identity, or
+authorize a real deployment.
+
 ## Separate approval sequence
 
 1. Merge only after exact-head CI and independent review. Keep both sites OFF.
