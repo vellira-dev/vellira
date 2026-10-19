@@ -72,8 +72,10 @@ jobs:
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test demo scenario admission contracts
-        run: node --test scripts/visual/component-demo-policy.test.mjs
+      - name: Test proof and social demo contracts
+        run: |
+          node --test scripts/visual/component-demo-policy.test.mjs
+          node --test scripts/visual/component-demo-social.test.mjs
 
       - name: Build Storybook dependencies from exact source revision
         run: pnpm exec turbo run build --filter='@vellira-ui/react-storybook^...'
@@ -114,7 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/visual/capture-component-demo.mjs "$VELLIRA_DEMO_NAME"
-          printf '### Component demo\n\nScenario: `%s`\n\nSource: `%s`\n\nResult: post-load GIF, MP4, PNG and SHA-256 manifest for review. Not published.\n' \
+          printf '### Component demo\n\nScenario: `%s`\n\nSource: `%s`\n\nResult: post-load proof media plus 1200px branded social GIF, MP4, PNG and SHA-256 manifest. Review required; not published.\n' \
             "$VELLIRA_DEMO_NAME" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload review-only demo artifacts
