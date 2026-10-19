@@ -4,10 +4,6 @@
   "slug": "when-a-select-renders-behind-a-modal",
   "publishedAt": "2026-10-19",
   "author": "Roman Bakurov",
-  "tags": [
-    "Design Systems",
-    "React",
-    "Accessibility"
-  ],
+  "tags": ["Design Systems", "React", "Accessibility"],
   "draft": true
 }
