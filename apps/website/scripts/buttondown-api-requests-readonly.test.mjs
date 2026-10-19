@@ -82,8 +82,7 @@ test('read-only audit uses fixed GET filters, bounded pagination, and aggregate 
   assert.equal(report.byStatus.http400, 1);
   assert.equal(report.bySourceCategory.integrationOrClient, 1);
   assert.equal(report.bySourceCategory.app, 1);
-  assert.equal(report.distinctApiKeyIdsObserved, 1);
-  assert.equal(report.requestsWithoutApiKeyId, 1);
+  assert.equal(Object.hasOwn(report, 'distinctApiKeyIdsObserved'), false);
   assert.deepEqual(report.byUtcDay, {
     '2026-10-17': 1,
     '2026-10-18': 1,
