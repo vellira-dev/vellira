@@ -3,7 +3,8 @@
 Creates GIF, MP4, PNG, and SHA-256 evidence from **real React Storybook**.
 
 V1 originally proved `dropdown-keyboard`. The same reviewed pipeline now also
-supports `button-confirmation`, using an existing Button Storybook interaction.
+supports `button-confirmation`, `modal-focus`, and `select-keyboard` using existing
+Button, Modal, and Select Storybook interactions.
 No React Native or auto-publishing.
 
 ## Proof before merge
@@ -12,8 +13,9 @@ A dedicated PR workflow runs only when demo tooling changes.
 
 It checks out the exact PR HEAD with read-only repository permissions.
 
-It builds Storybook and captures **both reviewed** Dropdown and Button stories
-in Chromium. Ordinary manual runs capture only the selected scenario.
+It builds Storybook once and captures **all reviewed** Dropdown, Button, Modal,
+and Select stories in Chromium. Ordinary manual runs capture only the selected
+scenario.
 
 No secrets, arbitrary URLs, or write permissions are supplied.
 
@@ -25,18 +27,18 @@ Review its uploaded GIF, MP4, PNG, and manifest before merging.
 
 After merge, open **Actions → Capture Component Demo → Run workflow**.
 
-Choose `main` and either `dropdown-keyboard` or `button-confirmation`.
+Choose `main` and one of `dropdown-keyboard`, `button-confirmation`,
+`modal-focus`, or `select-keyboard`.
 
 The workflow uses reviewed source and never publishes to Buffer.
 
 Its timeout is 18 minutes. Artifacts expire after seven days.
 
-The artifact contains four files:
+Each selected scenario produces seven review-only files:
 
-- `dropdown-keyboard.mp4`: social video.
-- `dropdown-keyboard.gif`: looping GIF, under 8 MiB.
-- `dropdown-keyboard.png`: menu-open preview.
-- `manifest.json`: source SHA, run ID, and SHA-256 checksums.
+- `<scenario>.mp4`, `<scenario>.gif`, `<scenario>.png`: raw proof media.
+- `social/<scenario>-social.mp4`, `.gif`, `.png`: 1200 × 1200 branded media.
+- `manifest.json`: source SHA, run ID, and all six SHA-256 checksums.
 
 The animation uses four verified Storybook states:
 
@@ -126,5 +128,22 @@ Four reviewed phases (`ready`, `opened`, `focused`, `closed`) produce
 `modal-focus.mp4`, `modal-focus.gif`, `modal-focus.png` and their
 branded `social/modal-focus-social.*` counterparts with SHA-256 evidence.
 The focused story and real dialog geometry determine the crop. The existing
-manual workflow now offers three choices; pre-merge demo-tooling validation
-runs Dropdown, Button and Modal in the same isolated proof job.
+manual workflow now offers four choices; pre-merge demo-tooling validation
+runs Dropdown, Button, Modal and Select in the same isolated proof job.
+
+## Select keyboard choice scenario
+
+The allowlisted `select-keyboard` scenario uses the real
+`Components/Select/SimpleUsage` Storybook story. Chromium verifies a collapsed
+combobox showing `Country`, Enter opening the portaled listbox, ArrowDown
+highlighting Germany, and Enter selecting Germany while retaining focus.
+No form submission or backend write occurs.
+
+The four source-verified phases are `ready`, `opened`, `highlighted`, and
+`selected`; the poster uses the highlighted listbox screenshot. Outputs
+include raw `select-keyboard.{mp4,gif,png}` and
+`social/select-keyboard-social.{mp4,gif,png}` plus SHA-256 manifest.
+
+The existing path-filtered PR workflow runs all four scenarios sequentially
+in one Storybook build. Manual captures still select one specific demo.
+No new agent, package, auto-merge, scheduler, or Buffer publisher is added.
