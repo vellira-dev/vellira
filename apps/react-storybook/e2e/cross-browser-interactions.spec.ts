@@ -312,9 +312,10 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await status.focus();
     await status.press('ArrowDown');
     await expect(page.getByRole('listbox')).toBeVisible();
-    await page.keyboard.press('End');
+    await expect(status).toBeFocused();
+    await status.press('End');
     await expect(status).toHaveAttribute('aria-activedescendant', /-option-2$/);
-    await page.keyboard.press('Enter');
+    await status.press('Enter');
 
     await expect(dialog.getByTestId('selected-status')).toHaveText(
       'Selected status: shipped'
