@@ -121,6 +121,15 @@ If the API does not expose request history to the existing key, do not
 grant broader permissions automatically or retry using subscriber writes.
 A failing or incomplete audit must not inform a production capacity decision.
 
+If Buttondown rejects a read-only request, the CLI reports a **fixed HTTP
+status category** without returning any provider response body or headers:
+`400` (filters or request rejected), `401` (authentication rejected),
+`403` (access denied; may be the current key's permissions), `404`
+(endpoint unavailable), `429` (rate limited), or `5xx` (provider
+unavailable). These categories are diagnostic clues, not a license to
+escalate key permissions or assume the provider's daily POST quota.
+Never paste the contents of the local `.dev.vars` file into a conversation.
+
 Test without network or provider credentials:
 
 ```sh
