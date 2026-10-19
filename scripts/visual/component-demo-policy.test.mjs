@@ -43,6 +43,21 @@ test('Button capture is an explicitly reviewed real Storybook story', () => {
   verifyDuration(56 / 12, demo);
 });
 
+test('Modal capture admits the maintained focus-and-Escape Storybook scenario', () => {
+  const modal = getDemo('modal-focus');
+  assert.equal(modal.storyId, 'components-modal--default');
+  assert.equal(
+    getStoryUrl('modal-focus'),
+    `${STORYBOOK_ORIGIN}/iframe.html?id=components-modal--default&viewMode=story&globals=theme:light`
+  );
+  assert.deepEqual(Object.keys(modal.phaseFrames), [
+    'ready', 'opened', 'focused', 'closed',
+  ]);
+  assert.equal(modal.posterPhase, 'opened');
+  assert.equal(getFrameCount(modal), 56);
+  verifyDuration(56 / 12, modal);
+});
+
 test('rejects unknown demos and user-controlled URLs or paths', () => {
   for (const value of ['', '../secret', 'https://example.com', 'dropdown', 'constructor', '__proto__']) {
     assert.throws(() => getDemo(value), /Unknown component demo/);

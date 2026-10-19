@@ -19,6 +19,7 @@ on:
         options:
           - dropdown-keyboard
           - button-confirmation
+          - modal-focus
 
 permissions:
   contents: read
@@ -57,7 +58,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test "$(git rev-parse HEAD)" = "$VELLIRA_DEMO_EXPECTED_SHA"
           case "$VELLIRA_DEMO_NAME" in
-            dropdown-keyboard|button-confirmation) ;;
+            dropdown-keyboard|button-confirmation|modal-focus) ;;
             *) echo '::error::Unsupported demo.'; exit 2 ;;
           esac
 
@@ -117,15 +118,15 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            # Demo infrastructure changes must preserve both reviewed outputs.
-            for scenario in dropdown-keyboard button-confirmation; do
+            # Demo infrastructure changes must preserve all reviewed scenarios.
+            for scenario in dropdown-keyboard button-confirmation modal-focus; do
               node scripts/visual/capture-component-demo.mjs "$scenario"
             done
           else
             node scripts/visual/capture-component-demo.mjs "$VELLIRA_DEMO_NAME"
           fi
           printf '### Component demo\n\nSelection: `%s`\n\nSource: `%s`\n\nResult: post-load proof media plus 1200px branded social GIF, MP4, PNG and SHA-256 manifest. Review required; not published.\n' \
-            "${{ github.event_name == 'pull_request' && 'both reviewed demos' || inputs.demo }}" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+            "${{ github.event_name == 'pull_request' && 'all reviewed demos' || inputs.demo }}" "$VELLIRA_DEMO_EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload review-only demo artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

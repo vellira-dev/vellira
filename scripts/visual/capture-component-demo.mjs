@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { capturePhase } from './component-demo-frames.mjs';
 import { recordButtonConfirmation } from './component-demo-button.mjs';
+import { recordModalFocus } from './component-demo-modal.mjs';
 import {
   encodeSocialMedia,
   getSocialCrop,
@@ -170,9 +171,13 @@ async function main() {
       });
       try {
         const page = await context.newPage();
-        crop = name === 'button-confirmation'
-          ? await recordButtonConfirmation(page, demo, framesDir, png)
-          : await recordDropdown(page, demo, framesDir, png);
+        const recorder = {
+          'dropdown-keyboard': recordDropdown,
+          'button-confirmation': recordButtonConfirmation,
+          'modal-focus': recordModalFocus,
+        }[name];
+        if (!recorder) throw new Error('Unreviewed component demo scenario.');
+        crop = await recorder(page, demo, framesDir, png);
       } finally {
         await context.close();
       }
