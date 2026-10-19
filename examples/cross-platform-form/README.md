@@ -28,14 +28,17 @@ mkdir -p "$HOME/vellira-evaluation"
 cd "$HOME/vellira-evaluation"
 npm create vite@latest web -- --template react-ts
 cp "$REPO_ROOT/examples/cross-platform-form/web/App.tsx" web/src/App.tsx
+cp "$REPO_ROOT/examples/cross-platform-form/web/index.css" web/src/index.css
 cd web
 npm install
 npm install @vellira-ui/react
 npm run dev
 ```
 
-Vellira's web example imports `@vellira-ui/react/styles` itself. Open the local
-URL printed by Vite. To check a production compile: `npm run build`.
+The demo replaces the starter `src/index.css` to avoid create-vite's centered
+page layout and large generic h1 styles. Vellira's web example imports
+`@vellira-ui/react/styles` itself. Open the local URL printed by Vite.
+To check a production compile: `npm run build`.
 
 ## Run the React Native example
 
