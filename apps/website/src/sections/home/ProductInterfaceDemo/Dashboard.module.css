@@ -75,13 +75,15 @@
   gap: 6px;
 }
 .navButton {
-  display: flex;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  min-height: 43px;
+  min-height: 39px;
   padding-inline: 12px;
+  white-space: nowrap;
   text-align: left;
 }
 .navButton[aria-current='page'] {
@@ -153,20 +155,17 @@
 }
 
 .searchField {
-  display: flex;
-  align-items: center;
   flex: 1;
   min-width: 0;
+  width: 100%;
   max-width: 475px;
-  gap: 8px;
-  color: var(--text-secondary);
 }
-.searchField svg {
-  flex: none;
+.searchField > * {
+  width: 100%;
 }
-.searchField > *:last-child {
+.searchField input {
+  width: 100%;
   min-width: 0;
-  flex: 1;
 }
 .toolbarActions {
   display: flex;
@@ -174,6 +173,10 @@
   gap: 12px;
 }
 .toolbarActions button {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   white-space: nowrap;
   gap: 8px;
 }
@@ -334,61 +337,6 @@
   color: var(--text-secondary);
   font-size: 11px;
 }
-.chartGrid {
-  stroke: var(--border-muted);
-  stroke-width: 1;
-  stroke-dasharray: 4 5;
-}
-.trendChart {
-  min-height: 235px;
-}
-.trendPlot {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 540 / 204;
-  margin-top: 8px;
-  background-image: linear-gradient(
-    to bottom,
-    transparent calc(100% - 1px),
-    var(--border-muted) calc(100% - 1px)
-  );
-  background-size: 100% 25%;
-}
-.trendSegment {
-  position: absolute;
-  display: block;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--color-primary-500);
-  transform-origin: left center;
-}
-.trendDot {
-  position: absolute;
-  display: block;
-  width: 12px;
-  height: 12px;
-  border: 3px solid var(--surface-default);
-  border-radius: 50%;
-  background: var(--color-primary-500);
-  box-shadow: 0 0 0 1px var(--color-primary-500);
-  transform: translate(-50%, -50%);
-}
-
-.trendLegend {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: -7px;
-}
-.trendLegend span {
-  overflow: hidden;
-  max-width: 90px;
-  font-size: 10px;
-  color: var(--text-secondary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .pipeline {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -427,10 +375,12 @@
   background: var(--color-primary-500);
   transition: height 0.22s ease;
 }
-.pipelineBar[data-status='active'] {
+.pipelineBar[data-category='active'],
+.pipelineBar[data-category='platform'] {
   background: var(--color-primary-400);
 }
-.pipelineBar[data-status='shipped'] {
+.pipelineBar[data-category='shipped'],
+.pipelineBar[data-category='mobile'] {
   background: var(--color-primary-600);
 }
 .pipelineBar strong {
@@ -540,18 +490,6 @@
   font-size: 11px;
   color: var(--text-secondary);
 }
-.projectProgress {
-  height: 6px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--surface-subtle);
-}
-.projectProgress > div {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-primary-500);
-}
-
 .contentPanel {
   padding: 24px;
 }

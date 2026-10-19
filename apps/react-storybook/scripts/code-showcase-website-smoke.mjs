@@ -287,6 +287,42 @@ try {
             });
             await expect(dashboard).toBeInViewport();
             await expect(dashboard).toBeVisible();
+            // Button icons belong in the supported iconStart slot, not
+            // as SVG children inside the label. Assert real painted geometry.
+            const navButton = dashboard.getByRole('button', {
+              name: 'Dashboard',
+              exact: true,
+            });
+            const addButton = dashboard.getByRole('button', {
+              name: 'New project',
+            });
+            for (const [button, label] of [
+              [navButton, 'Dashboard'],
+              [addButton, 'New project'],
+            ]) {
+              const icon = await button.locator('svg').boundingBox();
+              const word = await button.getByText(label, { exact: true }).boundingBox();
+              assert.ok(icon && word, label + ' needs visible icon and text');
+              assert.ok(
+                Math.abs(
+                  icon.y + icon.height / 2 - (word.y + word.height / 2)
+                ) < 8,
+                label + ' icon and text must share one horizontal row'
+              );
+            }
+            const toolbarSearch = dashboard.getByRole('searchbox', {
+              name: 'Search projects',
+            });
+            await expect(toolbarSearch).toBeVisible();
+            await expect(
+              dashboard.getByText('Search projects', { exact: true })
+            ).toHaveCount(0);
+            const searchBounds = await toolbarSearch.boundingBox();
+            assert.ok(
+              searchBounds && searchBounds.height <= 52,
+              'Toolbar search must use one compact row, without field caption'
+            );
+
             await expect(
               demoSection.getByRole('link', { name: 'View Source' })
             ).toHaveAttribute(
@@ -398,7 +434,7 @@ try {
               .getByRole('button', { name: 'Projects', exact: true })
               .click();
             await expect(
-              mobileDemo.getByRole('textbox', { name: 'Search projects' })
+              mobileDemo.getByRole('searchbox', { name: 'Search projects' })
             ).toBeVisible();
             await page.screenshot({
               path: `${artifactDir}/dashboard-core-live-390.png`,

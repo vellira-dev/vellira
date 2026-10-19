@@ -56,8 +56,16 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('localStorage.setItem');
     expect(standaloneDashboard).toContain('onCheckedChange');
     expect(standaloneDashboard).toContain('Completion Rate');
-    expect(standaloneDashboard).toContain('Progress by project');
-    expect(standaloneDashboard).toContain('Project pipeline');
+    expect(standaloneDashboard).toContain('Projects by status');
+    expect(standaloneDashboard).toContain('Projects by team');
+    expect(standaloneDashboard).toContain("iconStart={<Icon");
+    expect(standaloneDashboard).toContain("iconStart={<Plus");
+    expect(standaloneDashboard).toContain("type='search'");
+    expect(standaloneDashboard).toContain("aria-label='Search projects'");
+    expect(standaloneDashboard).not.toContain("label='Search projects'");
+    expect(standaloneDashboard).not.toContain('ProjectTrend');
+    expect(standaloneDashboard).not.toContain('historical analytics.');
+
     expect(standaloneDashboard).toContain('Active Projects');
   });
 
@@ -91,7 +99,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(model).not.toContain("name: 'Northstar Studio'");
     expect(standaloneDashboard).toContain('workspace.projects.length');
     expect(standaloneDashboard).toContain('completionRate');
-    expect(standaloneDashboard).toContain('statusProgress');
+    expect(standaloneDashboard).not.toContain('statusProgress');
     expect(standaloneDashboard).not.toContain('<svg');
     expect(siteDashboard).not.toContain('<svg');
     expect(standaloneDashboard).toContain("saved.name === 'Northstar Studio'");

@@ -9,7 +9,6 @@ import {
   Home,
   Package,
   Plus,
-  Search,
   Settings,
 } from '@vellira-ui/icons';
 import {
@@ -59,17 +58,13 @@ const teamLabels: Record<Team, string> = {
   platform: 'Platform',
   mobile: 'Mobile',
 };
-const statusProgress: Record<ProjectStatus, number> = {
-  planned: 20,
-  active: 65,
-  shipped: 100,
-};
 const navigation = [
   { id: 'overview', label: 'Dashboard', icon: Home },
   { id: 'projects', label: 'Projects', icon: Package },
   { id: 'settings', label: 'Settings', icon: Settings },
 ] as const;
 const statuses = ['planned', 'active', 'shipped'] as const;
+const teams = ['design', 'platform', 'mobile'] as const;
 
 function recoverWorkspace(raw: string | null): Workspace | null {
   if (!raw) return null;
@@ -88,120 +83,48 @@ function recoverWorkspace(raw: string | null): Workspace | null {
   }
 }
 
-function progressSeries(projects: readonly Project[]) {
-  return projects.slice(0, 6).reverse();
-}
+type BreakdownItem = {
+  id: string;
+  label: string;
+  count: number;
+};
 
-function ProjectTrend({ projects }: { projects: readonly Project[] }) {
-  const selected = progressSeries(projects);
-  const dots = selected.map((project, index) => ({
-    id: project.id,
-    name: project.name,
-    value: statusProgress[project.status],
-    x: selected.length === 1 ? 270 : 28 + (index * 484) / (selected.length - 1),
-    y: 176 - statusProgress[project.status] * 1.4,
-  }));
-  const segments = dots.slice(1).map((to, index) => {
-    const from = dots[index];
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-
-    return {
-      id: to.id,
-      left: (from.x / 540) * 100 + '%',
-      top: (from.y / 204) * 100 + '%',
-      width: (Math.hypot(dx, dy) / 540) * 100 + '%',
-      transform: 'rotate(' + (Math.atan2(dy, dx) * 180) / Math.PI + 'deg)',
-    };
-  });
-
-  return (
-    <div className={styles.trendChart}>
-      {dots.length > 0 ? (
-        <>
-          <div
-            className={styles.trendPlot}
-            role='img'
-            aria-label={
-              'Progress by sample project: ' +
-              dots
-                .map((point) => point.name + ' ' + point.value + ' percent')
-                .join(', ')
-            }
-          >
-            {segments.map((segment) => (
-              <span
-                key={segment.id}
-                className={styles.trendSegment}
-                style={{
-                  left: segment.left,
-                  top: segment.top,
-                  width: segment.width,
-                  transform: segment.transform,
-                }}
-                aria-hidden='true'
-              />
-            ))}
-            {dots.map((point) => (
-              <span
-                key={point.id}
-                className={styles.trendDot}
-                style={{
-                  left: (point.x / 540) * 100 + '%',
-                  top: (point.y / 204) * 100 + '%',
-                }}
-                title={point.name + ': ' + point.value + '% status progress'}
-                aria-hidden='true'
-              />
-            ))}
-          </div>
-          <div className={styles.trendLegend} aria-hidden='true'>
-            {dots.map((point) => (
-              <span key={point.id}>{point.name.split(' ')[0]}</span>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p className={styles.empty}>Create a project to see its progress.</p>
-      )}
-    </div>
-  );
-}
-
-function PipelineChart({ projects }: { projects: readonly Project[] }) {
-  const counts = statuses.map((status) => ({
-    status,
-    count: projects.filter((project) => project.status === status).length,
-  }));
-  const max = Math.max(1, ...counts.map((item) => item.count));
+function BreakdownChart({
+  items,
+  description,
+}: {
+  items: readonly BreakdownItem[];
+  description: string;
+}) {
+  const maximum = Math.max(1, ...items.map((item) => item.count));
 
   return (
     <div
       className={styles.pipeline}
       role='img'
-      aria-label={counts
-        .map(
-          (item) => statusLabels[item.status] + ': ' + item.count + ' projects'
-        )
-        .join(', ')}
+      aria-label={
+        description +
+        ': ' +
+        items.map((item) => item.label + ' ' + item.count).join(', ')
+      }
     >
-      {counts.map((item) => (
-        <div className={styles.pipelineColumn} key={item.status}>
+      {items.map((item) => (
+        <div className={styles.pipelineColumn} key={item.id}>
           <div className={styles.pipelineTrack}>
             <div
               className={styles.pipelineBar}
-              data-status={item.status}
+              data-category={item.id}
               style={{
                 height:
                   item.count === 0
                     ? '0%'
-                    : String(Math.max(14, (item.count / max) * 100)) + '%',
+                    : String(Math.max(14, (item.count / maximum) * 100)) + '%',
               }}
             >
               {item.count > 0 && <strong>{item.count}</strong>}
             </div>
           </div>
-          <span>{statusLabels[item.status]}</span>
+          <span>{item.label}</span>
         </div>
       ))}
     </div>
@@ -346,12 +269,14 @@ export function Dashboard({
                 key={item.id}
                 appearance={view === item.id ? 'soft' : 'ghost'}
                 color={view === item.id ? 'primary' : 'neutral'}
+                shape='rounded'
+                size='sm'
+                iconStart={<Icon size={18} aria-hidden='true' />}
                 className={styles.navButton}
                 aria-current={view === item.id ? 'page' : undefined}
                 onClick={() => setView(item.id)}
               >
-                <Icon size={18} aria-hidden='true' />
-                <span>{item.label}</span>
+                {item.label}
               </Button>
             );
           })}
@@ -370,9 +295,10 @@ export function Dashboard({
       <div className={styles.mainColumn}>
         <div className={styles.toolbar}>
           <div className={styles.searchField}>
-            <Search size={18} aria-hidden='true' />
             <Input
-              label='Search projects'
+              type='search'
+              size='sm'
+              aria-label='Search projects'
               value={query}
               onValueChange={search}
               placeholder='Search projects...'
@@ -380,8 +306,12 @@ export function Dashboard({
           </div>
           <div className={styles.toolbarActions}>
             <span className={styles.localLabel}>Local demo</span>
-            <Button onClick={openCreate}>
-              <Plus size={16} aria-hidden='true' />
+            <Button
+              size='sm'
+              shape='rounded'
+              iconStart={<Plus size={16} aria-hidden='true' />}
+              onClick={openCreate}
+            >
               New project
             </Button>
           </div>
@@ -442,23 +372,40 @@ export function Dashboard({
               <div className={styles.charts}>
                 <section className={styles.chartCard}>
                   <div className={styles.chartHeading}>
-                    <h4>Progress by project</h4>
-                    <span>Live sample data</span>
+                    <h4>Projects by status</h4>
+                    <span>Current workspace</span>
                   </div>
-                  <ProjectTrend projects={workspace.projects} />
+                  <BreakdownChart
+                    description='Current project counts by status'
+                    items={statuses.map((status) => ({
+                      id: status,
+                      label: statusLabels[status],
+                      count: workspace.projects.filter(
+                        (project) => project.status === status
+                      ).length,
+                    }))}
+                  />
                   <p className={styles.chartNote}>
-                    Each point shows the project's current status, not
-                    historical analytics.
+                    Live counts from the sample projects. No historical analytics.
                   </p>
                 </section>
                 <section className={styles.chartCard}>
                   <div className={styles.chartHeading}>
-                    <h4>Project pipeline</h4>
-                    <span>Current totals</span>
+                    <h4>Projects by team</h4>
+                    <span>Current workspace</span>
                   </div>
-                  <PipelineChart projects={workspace.projects} />
+                  <BreakdownChart
+                    description='Current project counts by team'
+                    items={teams.map((team) => ({
+                      id: team,
+                      label: teamLabels[team],
+                      count: workspace.projects.filter(
+                        (project) => project.team === team
+                      ).length,
+                    }))}
+                  />
                   <p className={styles.chartNote}>
-                    Counts update when you create, complete or remove projects.
+                    Updates when projects are created, duplicated or removed.
                   </p>
                 </section>
               </div>
@@ -496,13 +443,6 @@ export function Dashboard({
                       </div>
                       <h5>{project.name}</h5>
                       <p>{project.description}</p>
-                      <div className={styles.projectProgress}>
-                        <div
-                          style={{
-                            width: String(statusProgress[project.status]) + '%',
-                          }}
-                        />
-                      </div>
                       <small>{teamLabels[project.team]} team</small>
                     </article>
                   ))}
