@@ -3,6 +3,48 @@
 export const STORYBOOK_ORIGIN = 'http://127.0.0.1:6006';
 
 const DEMOS = Object.freeze({
+  'button-confirmation': Object.freeze({
+    storyId: 'primitives-button--destructive-confirmation',
+    title: 'Vellira Button — confirmation and loading',
+    subtitle: 'Confirmation and loading feedback',
+    viewport: Object.freeze({ width: 960, height: 540 }),
+    gifWidth: 800,
+    gifFps: 12,
+    phaseFrames: Object.freeze({
+      ready: 9,
+      confirming: 17,
+      loading: 17,
+      closed: 13,
+    }),
+    socialStages: Object.freeze([
+      Object.freeze({
+        name: 'ready',
+        label: '01 / READY',
+        key: 'ENTER',
+        action: 'Request confirmation',
+      }),
+      Object.freeze({
+        name: 'confirming',
+        label: '02 / CONFIRM',
+        key: 'ENTER',
+        action: 'Confirm the action',
+      }),
+      Object.freeze({
+        name: 'loading',
+        label: '03 / LOADING',
+        key: 'BUSY',
+        action: 'Show loading feedback',
+      }),
+      Object.freeze({
+        name: 'closed',
+        label: '04 / RESET',
+        key: 'DONE',
+        action: 'Return to ready',
+      }),
+    ]),
+    posterPhase: 'confirming',
+    maxGifBytes: 8 * 1024 * 1024,
+  }),
   'dropdown-keyboard': Object.freeze({
     storyId: 'components-dropdown--default',
     title: 'Vellira Dropdown — keyboard navigation and Escape',

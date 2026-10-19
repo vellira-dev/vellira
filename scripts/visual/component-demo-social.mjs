@@ -57,8 +57,12 @@ export function getSocialStages(demo) {
   if (!demo || !demo.phaseFrames || !Number.isSafeInteger(demo.gifFps) || demo.gifFps <= 0) {
     throw new Error('Missing reviewed frame plan for social output.');
   }
+  const stages = demo.socialStages ?? STAGES;
+  if (!Array.isArray(stages) || stages.length !== 4) {
+    throw new Error('Social demo must declare exactly four reviewed stages.');
+  }
   let frameIndex = 0;
-  return STAGES.map((stage) => {
+  return stages.map((stage) => {
     const frames = demo.phaseFrames[stage.name];
     if (!Number.isSafeInteger(frames) || frames <= 0) {
       throw new Error('Unreviewed or incomplete social state sequence.');
@@ -105,7 +109,7 @@ export function requireImagePng(file, viewport) {
 }
 
 export function getSocialMarkup({ demo, stage, crop, imageBase64, logoBase64, fontRegular, fontBold }) {
-  if (!STAGES.some((value) => value.name === stage?.name && value.key === stage.key && value.label === stage.label && value.action === stage.action) || !/^[A-Za-z0-9+/]+=*$/.test(imageBase64)) {
+  if (!getSocialStages(demo).some((value) => value.name === stage?.name && value.key === stage.key && value.label === stage.label && value.action === stage.action) || !/^[A-Za-z0-9+/]+=*$/.test(imageBase64)) {
     throw new Error('Unknown social stage or invalid proof image.');
   }
   const { width, height } = demo.viewport;
@@ -117,6 +121,7 @@ export function getSocialMarkup({ demo, stage, crop, imageBase64, logoBase64, fo
   const imageLeft = (-crop.x * scale).toFixed(3);
   const imageTop = (-crop.y * scale).toFixed(3);
   const title = escapeHtml(demo.title.split(' — ')[0].replace(/^Vellira /, ''));
+  const subtitle = escapeHtml(demo.subtitle ?? 'Keyboard navigation and Escape handling');
   const label = escapeHtml(stage.label);
   const key = escapeHtml(stage.key);
   const action = escapeHtml(stage.action);
@@ -163,11 +168,11 @@ body { font-family: 'Vellira Sans', ui-sans-serif, Arial, sans-serif; }
 <main class="social-scene">
   <header class="header">${safeLogo}<div class="tag">REACT / STORYBOOK</div></header>
   <div class="title">${title}</div>
-  <div class="subtitle">Keyboard navigation and Escape handling</div>
+  <div class="subtitle">${subtitle}</div>
   <section class="demo-card" aria-label="Verified component capture">
     <div class="demo-meta"><span><span class="meta-dot"></span>REAL COMPONENT INTERACTION</span><span>WEB / LIGHT</span></div>
     <div class="demo-stage"><div class="capture-window">
-      <img class="capture-image" src="data:image/png;base64,${imageBase64}" alt="Real Storybook Dropdown" />
+      <img class="capture-image" src="data:image/png;base64,${imageBase64}" alt="Real Storybook ${title}" />
     </div></div>
     <div class="demo-status"><span class="stage-label">${label}</span><span class="key">${key}</span><span class="action">${action}</span></div>
   </section>
@@ -175,7 +180,7 @@ body { font-family: 'Vellira Sans', ui-sans-serif, Arial, sans-serif; }
 </main></body></html>`;
 }
 
-export async function renderSocialStages({ browser, demo, sourceFramesDir, tempDir, outputDir, crop, root }) {
+export async function renderSocialStages({ browser, demo, name, sourceFramesDir, tempDir, outputDir, crop, root }) {
   const profile = SOCIAL_PROFILE;
   const { stages } = getSocialXfadePlan(demo, profile);
   const logo = readFileSync(path.join(root, 'marketing/media-kit/logos/vellira-dark.svg'), 'utf8');
@@ -205,8 +210,8 @@ export async function renderSocialStages({ browser, demo, sourceFramesDir, tempD
         throw new Error('Vellira brand font did not load for social capture.');
       }
       await page.screenshot({ path: path.join(socialTemp, `${stage.name}.png`), animations: 'disabled' });
-      if (stage.name === 'opened') {
-        await page.screenshot({ path: path.join(socialOut, 'dropdown-keyboard-social.png'), animations: 'disabled' });
+      if (stage.name === (demo.posterPhase ?? 'opened')) {
+        await page.screenshot({ path: path.join(socialOut, `${name}-social.png`), animations: 'disabled' });
       }
     }
   } finally {
@@ -232,7 +237,7 @@ function ffprobe(file) {
   return { duration: Number(info.format?.duration), width: stream?.width, height: stream?.height };
 }
 
-export function encodeSocialMedia({ demo, socialTemp, socialOut }) {
+export function encodeSocialMedia({ demo, name, socialTemp, socialOut }) {
   const profile = SOCIAL_PROFILE;
   const plan = getSocialXfadePlan(demo, profile);
   const inputs = [];
@@ -246,8 +251,8 @@ export function encodeSocialMedia({ demo, socialTemp, socialOut }) {
     filters.push(`[${previous}][v${i}]xfade=transition=fade:duration=${profile.fadeSeconds}:offset=${plan.offsets[i - 1].toFixed(6)}[${next}]`);
     previous = next;
   }
-  const mp4 = path.join(socialOut, 'dropdown-keyboard-social.mp4');
-  const gif = path.join(socialOut, 'dropdown-keyboard-social.gif');
+  const mp4 = path.join(socialOut, `${name}-social.mp4`);
+  const gif = path.join(socialOut, `${name}-social.gif`);
   runCommand('ffmpeg', [
     '-hide_banner', '-loglevel', 'error', '-y', ...inputs,
     '-filter_complex', filters.join(';'), '-map', `[${previous}]`,
@@ -259,7 +264,7 @@ export function encodeSocialMedia({ demo, socialTemp, socialOut }) {
     '-filter_complex', '[0:v]fps=12,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5[out]',
     '-map', '[out]', '-loop', '0', gif,
   ]);
-  const media = [mp4, gif, path.join(socialOut, 'dropdown-keyboard-social.png')];
+  const media = [mp4, gif, path.join(socialOut, `${name}-social.png`)];
   for (const file of media) {
     if (statSync(file).size <= 0) throw new Error('Empty social render: ' + file);
   }
