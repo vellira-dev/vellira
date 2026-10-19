@@ -270,3 +270,40 @@ test('inconsistent count or invalid next link fails closed', async () => {
     );
   }
 });
+
+test('non-200 diagnostics reveal only a fixed HTTP category, never private provider data', async () => {
+  const secret = 'private-token-and-subscriber@example.invalid';
+  const statuses = [
+    [400, /HTTP 400: request or filters rejected/],
+    [401, /HTTP 401: authentication rejected/],
+    [403, /HTTP 403: access denied/],
+    [404, /HTTP 404: endpoint unavailable/],
+    [429, /HTTP 429: request rate limited/],
+    [503, /HTTP 5xx: provider unavailable/],
+    [418, /unexpected HTTP status/],
+  ];
+  for (const [status, expected] of statuses) {
+    let calls = 0;
+    await assert.rejects(
+      auditButtondownApiRequests({
+        apiKey: 'local-test-only',
+        now,
+        fetcher: async () => {
+          calls += 1;
+          return new Response(secret, {
+            status,
+            headers: { 'X-Private-Provider-Metadata': secret },
+          });
+        },
+      }),
+      (error) => {
+        assert.equal(error.name, 'ButtondownApiRequestAuditError');
+        assert.match(error.message, expected);
+        assert.equal(error.message.includes(secret), false);
+        assert.equal(error.message.includes('local-test-only'), false);
+        return true;
+      }
+    );
+    assert.equal(calls, 1, 'Must not retry failed provider requests');
+  }
+});
