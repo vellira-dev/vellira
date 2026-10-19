@@ -79,7 +79,7 @@ export function addProject(
   const next: Project = {
     id: nextProjectId(workspace.projects),
     name: trimmed,
-    description: 'Created in the Vellira Workspace Starter.',
+    description: 'Created in the Vellira Dashboard Starter.',
     team,
     status,
     completed: status === 'shipped',

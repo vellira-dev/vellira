@@ -54,7 +54,19 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(website).not.toContain('Purchase now');
     expect(website).not.toContain('2.173.0');
     expect(readme).toContain('MIT');
-    expect(starter).toContain('Vellira');
+    expect(starter).toContain('Dashboard');
+  });
+
+  it('shows the same dashboard UI on the homepage and in Vite', () => {
+    expect(website).toContain('<Dashboard');
+    expect(starter).toContain('<Dashboard');
+    expect(sharedDashboard).toContain('Progress by project');
+    expect(sharedDashboard).toContain('Project pipeline');
+    expect(sharedDashboard).toContain('Active Projects');
+    expect(sharedDashboard).toContain('Completion Rate');
+    expect(sharedDashboard).toContain('Demo Workspace');
+    expect(website).toContain('growth/react-native-form-try-it-20261018');
+    expect(website).not.toContain('/blob/main/examples/workspace-starter');
   });
 
   it('removes unrelated fictional branding and retains honest demo metrics', () => {

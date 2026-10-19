@@ -1,7 +1,8 @@
 # Vellira Dashboard Starter — Free Core Demo
 
-A **working, MIT-licensed Core demonstration**, not a screenshot, paywall or
-commercial production template. React and React Native developers can run it,
+A **working, MIT-licensed Core demonstration** with one shared React Dashboard
+component used both by Vellira's homepage and the standalone Vite starter.
+Not a screenshot, paywall or commercial production template. React and React Native developers can run it,
 inspect the Vellira APIs, and adapt the project to their own work.
 
 Both apps pin **Vellira 2.179.1 packages**. They are independently installable
@@ -45,8 +46,8 @@ Verify the distributable app and TypeScript:
 npm run build
 ```
 
-Main files: `web/src/App.tsx`, `web/src/model.ts`,
-`web/src/styles.css`.
+Main files: `web/src/Dashboard.tsx`, `web/src/Dashboard.module.css`,
+`web/src/App.tsx`, `web/src/model.ts`, and `web/src/styles.css`.
 
 ## Run React Native
 
@@ -123,3 +124,12 @@ Commercial packaging and pricing have not been finalized.
 The public demo must remain useful without Pro. No paid implementation, secret,
 production customer data, proprietary template, paid-license mechanism or
 artificially disabled Core correctness checks belong in this directory.
+
+### Preview links before merge
+
+While PR #1760 is open, the homepage's View Source and Use This Starter
+links target the **PR branch**, not `main` (where the files do not exist yet).
+Update links to `main` only as part of public release admission after merge.
+The live homepage and standalone Vite Web app render the same `Dashboard`
+component and stylesheet; the parent theme and storage origin are independent.
+Previously stored Northstar seed names are migrated to Demo Workspace.

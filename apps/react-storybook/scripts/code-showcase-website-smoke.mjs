@@ -270,7 +270,7 @@ try {
               demoSection.getByRole('link', { name: 'View Source' })
             ).toHaveAttribute(
               'href',
-              'https://github.com/vellira-dev/vellira/blob/main/examples/workspace-starter/web/src/App.tsx'
+              'https://github.com/vellira-dev/vellira/blob/growth/react-native-form-try-it-20261018/examples/workspace-starter/web/src/Dashboard.tsx'
             );
 
             await dashboard
