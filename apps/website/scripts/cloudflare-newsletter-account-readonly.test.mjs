@@ -8,6 +8,7 @@ import { auditCloudflareNewsletterAccount } from './cloudflare-newsletter-accoun
 const accountId = 'a'.repeat(32);
 const zoneId = 'b'.repeat(32);
 const version = '11111111-1111-4111-8111-111111111111';
+const secondVersion = '22222222-2222-4222-8222-222222222222';
 const apiRoot = '/client/v4';
 const liveScripts = ['vellira-website-staging', 'vellira-website'];
 const makeResponse = (result, status = 200, resultInfo) =>
@@ -150,6 +151,69 @@ test('observed budget binding is reported, but never equated with enabled enforc
   assert.equal(report.sharedNamespaceIdentity, 'unverified');
   assert.equal(report.newsletterWafCoverage, 'unverified');
   assert.equal(JSON.stringify(report).includes('private-do-namespace'), false);
+});
+
+test('all traffic-serving versions must have the budget binding before reporting true', async () => {
+  for (const secondHasBinding of [false, true]) {
+    const base = mockCloudflare({ withBinding: true });
+    const fetcher = (url, options) => {
+      if (url.pathname.endsWith('/deployments')) {
+        assert.equal(options.method, 'GET');
+        return makeResponse({ deployments: [{ versions: [
+          { version_id: version, percentage: 50 },
+          { version_id: secondVersion, percentage: 50 },
+        ] }] });
+      }
+      if (url.pathname.endsWith('/versions/' + secondVersion)) {
+        assert.equal(options.method, 'GET');
+        return makeResponse({ resources: { bindings: secondHasBinding
+          ? [{ type: 'durable_object_namespace', name: 'NEWSLETTER_GLOBAL_BUDGET' }]
+          : [{ type: 'assets', name: 'ASSETS' }],
+        } });
+      }
+      return base.fetcher(url, options);
+    };
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.deepEqual(report.liveBinding['vellira-website'], {
+      status: 'observed',
+      globalBudgetBindingInServingVersions: secondHasBinding,
+    });
+    assert.equal(JSON.stringify(report).includes(secondVersion), false);
+  }
+});
+
+test('invalid traffic allocations never yield positive binding evidence', async () => {
+  const badSplits = [
+    [{ version_id: version, percentage: 50 }, { version_id: version, percentage: 50 }],
+    [{ version_id: version, percentage: 50 }, { version_id: secondVersion, percentage: 40 }],
+    [{ version_id: version, percentage: 101 }],
+    [{ version_id: version, percentage: 0 }, { version_id: secondVersion, percentage: 100 }],
+    [{ version_id: version, percentage: -50 }, { version_id: secondVersion, percentage: 150 }],
+    [{ version_id: version, percentage: Number.POSITIVE_INFINITY }],
+    [{ version_id: version, percentage: '100' }],
+  ];
+  for (const versions of badSplits) {
+    const base = mockCloudflare({ withBinding: true });
+    let versionReads = 0;
+    const fetcher = (url, options) => {
+      if (url.pathname.endsWith('/deployments')) {
+        return makeResponse({ deployments: [{ versions }] });
+      }
+      if (url.pathname.includes('/versions/')) versionReads += 1;
+      return base.fetcher(url, options);
+    };
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.deepEqual(report.liveBinding['vellira-website'], { status: 'incomplete' });
+    assert.equal(versionReads, 0);
+  }
 });
 
 test('denied Cloudflare permissions stay unverified, never incorrectly absent', async () => {
@@ -458,6 +522,39 @@ test('unpaginated zone routes reject malformed or duplicate entries', async () =
     assert.equal(
       Object.hasOwn(report.zoneRoutes, 'hasNewsletterWebsiteRoute'), false
     );
+  }
+});
+
+test('zone Worker routes require an actual Vellira host, not a path or lookalike', async () => {
+  const patterns = [
+    ['notvellira.dev/*', false],
+    ['myvellira.dev/*', false],
+    ['vellira.dev.example.invalid/*', false],
+    ['https://example.invalid/vellira.dev/*', false],
+    ['*.notvellira.dev/*', false],
+    ['vellira.dev/api/*', true],
+    ['www.vellira.dev/*', true],
+    ['https://www.vellira.dev/api/*', true],
+    ['*.vellira.dev/*', true],
+    ['*vellira.dev/*', true],
+    ['*/*', true],
+  ];
+  for (const [pattern, expected] of patterns) {
+    const base = mockCloudflare();
+    const fetcher = (url, options) => url.pathname.endsWith('/workers/routes')
+      ? makeResponse([{
+        id: '1234567890abcdef1234567890abcdef',
+        pattern,
+        script: 'vellira-website',
+      }])
+      : base.fetcher(url, options);
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.equal(report.zoneRoutes.status, 'observed', pattern);
+    assert.equal(report.zoneRoutes.hasNewsletterWebsiteRoute, expected, pattern);
   }
 });
 
