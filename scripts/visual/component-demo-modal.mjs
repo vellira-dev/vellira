@@ -59,9 +59,27 @@ export async function recordModalFocus(page, demo, framesDir, posterPath) {
   });
   await page.waitForTimeout(220);
 
-  // Background controls may become aria-hidden while the dialog is modal.
-  // Preserve the already-proven trigger geometry from its visible ready phase.
-  const crop = getSocialCrop(openerBox, await dialog.boundingBox(), demo.viewport);
+  // A centered modal is a different composition from a small Dropdown menu.
+  // A union with its background trigger can exceed the reviewed menu crop cap.
+  // Frame the *actual portaled dialog* and confirm the ready trigger stays visible.
+  const dialogBox = await dialog.boundingBox();
+  const crop = getSocialCrop(dialogBox, dialogBox, demo.viewport);
+  const openerCenter = {
+    x: openerBox.x + openerBox.width / 2,
+    y: openerBox.y + openerBox.height / 2,
+  };
+  if (
+    openerCenter.x < crop.x ||
+    openerCenter.x > crop.x + crop.width ||
+    openerCenter.y < crop.y ||
+    openerCenter.y > crop.y + crop.height
+  ) {
+    throw new Error(
+      `Modal trigger is outside approved dialog crop: ${JSON.stringify({
+        openerBox, dialogBox, crop,
+      })}`
+    );
+  }
   next = await capturePhase(
     page, framesDir, next, demo.phaseFrames.opened, posterPath
   );
