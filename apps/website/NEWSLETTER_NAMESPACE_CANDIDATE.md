@@ -197,6 +197,55 @@ does not authenticate to Cloudflare, provision namespaces, establish
 cross-Worker bindings, verify any account-scoped namespace identity, or
 authorize a real deployment.
 
+## Cloudflare account read-only inventory
+
+The namespace candidate is not evidence of a deployed Durable Object.
+
+After merge, run this manual GitHub Actions workflow on `main`:
+
+**Cloudflare Newsletter Account Read-Only Audit**.
+
+The job uses the existing Cloudflare secrets for GET-only API calls.
+It never creates objects, changes routing, or deploys Workers.
+No Buttondown requests or subscriber writes are performed.
+
+The sanitized report checks:
+
+- Expected Worker names and Durable Object class namespaces.
+- Workers.dev exposure and serving-version binding names.
+- Custom domains, zone routes, and basic WAF rule counts.
+
+The serving-version budget binding is reported as present only if **every**
+traffic-serving version in a valid 100% deployment split contains
+`NEWSLETTER_GLOBAL_BUDGET`. Mixed binding states report `false`; an invalid
+or uninspectable traffic split reports `incomplete`. Binding-name presence
+never proves that global budget enforcement is active.
+
+Worker route existence checks match the Vellira zone hostname, including
+documented leading wildcards, rather than incidental text in unrelated domains
+or paths. A route-name match does not prove effective traffic or WAF coverage.
+
+No token, account ID, namespace ID, raw rule, or API body is printed.
+
+Missing permissions remain `unverified`, never interpreted as absence.
+Truncated API pages and unsupported response shapes remain `incomplete`.
+
+The report cannot prove shared Durable Object instance identity.
+It also cannot prove effective WAF coverage for each public hostname.
+Both claims require separate account-side review before activation.
+
+Run the synthetic no-network contract test with:
+
+```sh
+node --test apps/website/scripts/cloudflare-newsletter-account-readonly.test.mjs
+```
+
+References:
+
+- https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/
+- https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
+- https://developers.cloudflare.com/api/resources/rulesets/subresources/phases/methods/get/
+
 ## Separate approval sequence
 
 1. Merge only after exact-head CI and independent review. Keep both sites OFF.
