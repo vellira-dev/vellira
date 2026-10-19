@@ -327,8 +327,46 @@ try {
               return state ? JSON.parse(state).projects.length : null;
             });
             assert.equal(savedProjects, 4);
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(
+              dashboard.getByRole('heading', { name: 'Demo QA Workspace' })
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Overview', exact: true })
+              .click();
+            await dashboard.scrollIntoViewIfNeeded();
             await page.screenshot({
               path: `${artifactDir}/dashboard-core-live-1440.png`,
+            });
+          }
+
+          if (
+            reducedMotion === 'reduce' &&
+            colorScheme === 'light' &&
+            viewport.width === 390
+          ) {
+            const mobileDemo = page.locator('#dashboard-live');
+            await mobileDemo.scrollIntoViewIfNeeded();
+            await expect(mobileDemo).toBeVisible();
+            const rect = await mobileDemo.boundingBox();
+            assert.ok(
+              rect && rect.x >= -1 && rect.x + rect.width <= viewport.width + 1,
+              'Core dashboard must fit mobile viewport without overflow'
+            );
+            await mobileDemo
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              mobileDemo.getByRole('textbox', { name: 'Search projects' })
+            ).toBeVisible();
+            await page.screenshot({
+              path: `${artifactDir}/dashboard-core-live-390.png`,
             });
           }
 
