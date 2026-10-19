@@ -112,7 +112,10 @@ function avatarMarkup({
   ].join('');
 }
 
-async function renderFixture(page: Page, input: Parameters<typeof avatarMarkup>[0]) {
+async function renderFixture(
+  page: Page,
+  input: Parameters<typeof avatarMarkup>[0]
+) {
   await page.setContent(avatarMarkup(input));
   if (input.state !== 'absent') {
     await expect
@@ -207,7 +210,10 @@ test.describe('Avatar V2 browser oracle negative controls', () => {
     await expect(page.getByRole('img', { name: 'Jordan Diaz' })).toHaveCount(1);
     await expect(page.locator('.image')).toHaveAttribute('alt', '');
     await expect(page.locator('.image')).toHaveAttribute('aria-hidden', 'true');
-    await expect(page.locator('.fallback')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('.fallback')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
 
     await renderFixture(page, {
       state: 'failed-hidden',
