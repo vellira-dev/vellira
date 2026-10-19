@@ -34,12 +34,11 @@ The workflow uses reviewed source and never publishes to Buffer.
 
 Its timeout is 18 minutes. Artifacts expire after seven days.
 
-The artifact contains four files:
+Each selected scenario produces seven review-only files:
 
-- `dropdown-keyboard.mp4`: social video.
-- `dropdown-keyboard.gif`: looping GIF, under 8 MiB.
-- `dropdown-keyboard.png`: menu-open preview.
-- `manifest.json`: source SHA, run ID, and SHA-256 checksums.
+- `<scenario>.mp4`, `<scenario>.gif`, `<scenario>.png`: raw proof media.
+- `social/<scenario>-social.mp4`, `.gif`, `.png`: 1200 × 1200 branded media.
+- `manifest.json`: source SHA, run ID, and all six SHA-256 checksums.
 
 The animation uses four verified Storybook states:
 
@@ -129,8 +128,8 @@ Four reviewed phases (`ready`, `opened`, `focused`, `closed`) produce
 `modal-focus.mp4`, `modal-focus.gif`, `modal-focus.png` and their
 branded `social/modal-focus-social.*` counterparts with SHA-256 evidence.
 The focused story and real dialog geometry determine the crop. The existing
-manual workflow now offers three choices; pre-merge demo-tooling validation
-runs Dropdown, Button and Modal in the same isolated proof job.
+manual workflow now offers four choices; pre-merge demo-tooling validation
+runs Dropdown, Button, Modal and Select in the same isolated proof job.
 
 ## Select keyboard choice scenario
 
