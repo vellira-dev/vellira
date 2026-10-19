@@ -1,0 +1,515 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+.application {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 246px minmax(0, 1fr);
+  background: var(--surface-canvas);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 28px 16px 22px;
+  background: var(--surface-subtle);
+  border-right: 1px solid var(--border-muted);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 30px;
+}
+
+.brandMark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: var(--action-primary-solid-default-fg);
+  background: var(--action-primary-solid-default-bg);
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 21px;
+}
+
+.brand > div:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.brand strong {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brand span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.sideNav {
+  display: grid;
+  gap: 5px;
+}
+
+.navButton {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 45px;
+  text-align: left;
+}
+
+.sidebarFoot {
+  margin-top: auto;
+  padding: 16px 12px 0;
+  border-top: 1px solid var(--border-muted);
+}
+
+.sidebarFoot p {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.projectPill {
+  display: inline-flex;
+  padding: 7px 10px;
+  background: var(--surface-default);
+  border-radius: 999px;
+  border: 1px solid var(--border-muted);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.workspace {
+  min-width: 0;
+  width: 100%;
+  padding: 40px clamp(20px, 4vw, 62px) 20px;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-brand);
+}
+
+.topbar h1 {
+  margin: 9px 0 0;
+  font-size: clamp(29px, 3.8vw, 43px);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.topbar p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.topActions,
+.themeButtons,
+.projectActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.topActions {
+  padding-top: 16px;
+}
+
+.notice {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-muted);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.workspace > div > [role='tablist'] {
+  margin-top: 28px;
+}
+
+.viewBody {
+  margin-top: 28px;
+  display: grid;
+  gap: 24px;
+  padding-bottom: 25px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metricCard,
+.surfaceCard {
+  background: var(--surface-default);
+  border: 1px solid var(--border-muted);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.metricCard {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.metricCard span,
+.metricCard small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.metricCard strong {
+  font-size: 36px;
+  line-height: 1;
+  color: var(--text-primary);
+  letter-spacing: -0.035em;
+}
+
+.contentGrid {
+  display: grid;
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1.35fr) minmax(290px, 0.65fr);
+  gap: 16px;
+}
+
+.surfaceCard {
+  min-width: 0;
+  padding: clamp(20px, 2vw, 28px);
+}
+
+.sectionHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.sectionHeading h2,
+.insightCard h2,
+.settingsCard h2 {
+  margin: 6px 0;
+  font-size: clamp(21px, 2.3vw, 28px);
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.sectionHeading p,
+.insightCard p,
+.settingsCard > p {
+  margin: 7px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.projectList {
+  display: grid;
+}
+
+.overviewProject,
+.projectRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.overviewProject {
+  padding: 18px 0;
+}
+
+.initials {
+  display: grid;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.projectCopy {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.projectCopy strong,
+.projectCopy h3 {
+  color: var(--text-primary);
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.projectCopy span:not(.eyebrow, .statusPill),
+.projectCopy p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.statusPill {
+  display: inline-flex;
+  width: max-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-muted);
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.statusPill[data-status='shipped'] {
+  color: var(--color-success-500);
+  border-color: var(--color-success-500);
+}
+
+.statusPill[data-status='active'] {
+  color: var(--text-brand);
+}
+
+.insightCard {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  background: color-mix(in srgb, var(--surface-default) 80%, var(--surface-subtle));
+}
+
+.insightCard p {
+  margin: 0;
+}
+
+.insightCard button {
+  justify-self: start;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 230px);
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.projectRow {
+  padding: 22px 0;
+  align-items: flex-start;
+}
+
+.projectRow .projectCopy {
+  gap: 8px;
+}
+
+.projectActions {
+  flex: none;
+  align-items: flex-end;
+  flex-direction: column;
+}
+
+.settingsCard {
+  display: grid;
+  max-width: 760px;
+  gap: 24px;
+}
+
+.settingsCard h2 {
+  margin-bottom: 0;
+}
+
+.themePicker {
+  display: grid;
+  gap: 12px;
+}
+
+.themePicker > span {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.dialogFields {
+  display: grid;
+  gap: 18px;
+  min-width: min(380px, 72vw);
+}
+
+.empty {
+  padding: 28px 4px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.appFooter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-top: 30px;
+  padding-top: 22px;
+  gap: 16px;
+  border-top: 1px solid var(--border-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.appFooter div {
+  display: flex;
+  gap: 18px;
+}
+
+.appFooter a {
+  color: var(--text-brand);
+}
+
+@media (max-width: 1120px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .application {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    padding: 14px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  .brand {
+    padding: 0 0 12px;
+  }
+
+  .sideNav {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .sidebarFoot {
+    display: none;
+  }
+
+  .workspace {
+    padding: 24px 16px;
+  }
+
+  .topbar {
+    display: grid;
+  }
+
+  .topActions {
+    padding-top: 0;
+  }
+
+  .metrics {
+    gap: 10px;
+  }
+
+  .metricCard {
+    padding: 17px;
+  }
+
+  .metricCard strong {
+    font-size: 28px;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .projectRow {
+    display: grid;
+  }
+
+  .projectActions {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .dialogFields {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .sideNav {
+    overflow-x: auto;
+  }
+
+  .topActions {
+    display: grid;
+  }
+}
