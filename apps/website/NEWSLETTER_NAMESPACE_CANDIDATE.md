@@ -258,6 +258,53 @@ For HTTP 403, the existing `permission_denied` status already carries the
 diagnosis. Do **not** change the production Cloudflare token, assume WAF is
 absent, or infer a zero Durable Object coordinator count from incomplete data.
 
+### Proposed Preview URL exposure reduction (review-only)
+
+Owner screenshots on 2026-10-19 confirmed that `workers.dev` and wildcard
+Preview URLs for both site Workers were available without Access sign-in.
+The Cloudflare Free zone rule `vellira-newsletter-burst-guard` was saved
+**Disabled**; it does not protect either `workers.dev` origin.
+
+**Separate deployment dependencies:** Vellira's staging deployment,
+production preflight, archive recovery, promotion and smoke checks use
+the stable `vellira-website-staging.vellira.workers.dev` and
+`vellira-website.vellira.workers.dev` origins. The maintained CI/workflow
+source does not reference version-prefixed or aliased Preview URLs. This does
+**not** prove that nobody uses old Preview links outside this repository.
+
+A proposed version-controlled mitigation keeps `workers_dev: true` and
+sets `preview_urls: false` explicitly in **both** canonical Wrangler configs.
+This disables Cloudflare Version URLs and `workers.dev` Preview URLs after
+each affected Worker is redeployed, while retaining the stable diagnostic
+origins needed by existing CI. Wrangler does not alter the Preview URL setting
+if `preview_urls` is omitted; an explicit false prevents subsequent config
+drift. The canonical deployment-target validator rejects unintended `true`
+or omitted values. This is **not** a claim that separate Cloudflare Previews
+or other routing mechanisms have been audited.
+
+**MERGE/ROLLOUT HOLD:** A config proposal passing PR CI is not a live
+deployment. Do **not** merge or deploy this change until the owner separately
+approves losing existing version/alias Preview URLs and confirms that no
+external workflows, release recovery runbooks, collaborators or bookmarked
+links depend on them. A website-file merge can trigger normal staging
+deployment automatically; production may deploy after separate admission.
+Both worker changes must therefore be scheduled and independently verified.
+
+After an authorized rollout, run the existing **Cloudflare Newsletter
+Account Read-Only Audit** on `main` and require both Workers to report
+`workerDev.status: observed`, `enabled: true`, and
+`previewsEnabled: false`. A staging-only green observation does not
+prove production exposure is removed. Inspect the Cloudflare Dashboard's
+Domains view as independent evidence. If any stable diagnostic URL stops
+working, halt rollout; do not blindly flip the dashboard toggle. Recovery
+requires a separately reviewed explicit `preview_urls: true` proposal and
+an authorized redeploy—not removal of the false field.
+
+No Worker-wide Access is enabled, no WAF rule activated, no tokens or
+namespace bindings changed, and no provider request is authorized by this
+proposal. The zone WAF rule does not protect `workers.dev`; global Buttondown
+admission and public Pro remain OFF.
+
 ### Independent account-side evidence still required
 
 In the Cloudflare dashboard, view zone `vellira.dev` security settings and
