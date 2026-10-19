@@ -197,45 +197,34 @@ does not authenticate to Cloudflare, provision namespaces, establish
 cross-Worker bindings, verify any account-scoped namespace identity, or
 authorize a real deployment.
 
-## Real Cloudflare account inventory (read-only, no deployment)
+## Cloudflare account read-only inventory
 
-The local candidate does **not** establish a deployed, shared Durable Object.
-To inspect actual Cloudflare account state without provisioning anything,
-use the separate **manual-only** GitHub Actions workflow:
+The namespace candidate is not evidence of a deployed Durable Object.
 
-**Actions → Cloudflare Newsletter Account Read-Only Audit → Run workflow → main.**
+After merge, run this manual GitHub Actions workflow on `main`:
 
-The job runs only for the audited `main` revision. It reuses the already
-configured Cloudflare deployment secrets solely for fixed authenticated
-`GET` calls; it does not upload a Worker, create Durable Objects, modify
-routes, change WAF rules, send requests to Buttondown, or expose account IDs,
-namespace IDs, token values, IP addresses or raw API response JSON in logs.
-No job artifact or full Cloudflare API response is uploaded.
+**Cloudflare Newsletter Account Read-Only Audit**.
 
-The sanitized report checks whether the expected staging/production/owner
-Worker scripts are present, whether the rolling coordinator class has a
-namespace **by its class name** (never its ID), current Workers.dev exposure,
-known custom domains/routes, and whether currently serving Worker versions
-have a `NEWSLETTER_GLOBAL_BUDGET` binding name. It also reads counts of
-rules from account- and zone-level custom firewall and rate-limit entry
-point rulesets, **not** their expressions or private rule configuration.
+The job uses the existing Cloudflare secrets for GET-only API calls.
+It never creates objects, changes routing, or deploys Workers.
+No Buttondown requests or subscriber writes are performed.
 
-A missing permission is reported as `permission_denied` or `unverified`,
-**never** interpreted as evidence that a Worker, namespace, binding or WAF
-rule is absent. Pagination gaps or API schema mismatches are `incomplete`.
-The results deliberately leave `sharedNamespaceIdentity`,
-`newsletterWafCoverage` and `buttondownQuota` as `unverified` even when
-component names and counts match; the account API alone does not prove
-cross-Worker Durable Object **instance** identity or effective rules for
-`workers.dev`, the custom domain and the shared newsletter endpoint.
+The sanitized report checks:
 
-Before any future activation, separately inspect complete effective WAF
-expressions and workers.dev route coverage with an authorized operator.
-Owner approval, synthetic write-free remote namespace proof and exact
-provider quota remain separate blockers. Do not run a different deployment
-workflow or copy Cloudflare tokens into a local terminal to perform this audit.
+- Expected Worker names and Durable Object class namespaces.
+- Workers.dev exposure and serving-version binding names.
+- Custom domains, zone routes, and basic WAF rule counts.
 
-Run the no-network contract tests locally with:
+No token, account ID, namespace ID, raw rule, or API body is printed.
+
+Missing permissions remain `unverified`, never interpreted as absence.
+Truncated API pages and unsupported response shapes remain `incomplete`.
+
+The report cannot prove shared Durable Object instance identity.
+It also cannot prove effective WAF coverage for each public hostname.
+Both claims require separate account-side review before activation.
+
+Run the synthetic no-network contract test with:
 
 ```sh
 node --test apps/website/scripts/cloudflare-newsletter-account-readonly.test.mjs
@@ -245,8 +234,6 @@ References:
 
 - https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/
 - https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
-- https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/
-- https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/subdomain/methods/get/
 - https://developers.cloudflare.com/api/resources/rulesets/subresources/phases/methods/get/
 ## Separate approval sequence
 
