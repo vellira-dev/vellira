@@ -100,6 +100,17 @@ describe('WebOverlayManager', () => {
     expect(manager.getZIndex('custom')).toBe(5000);
   });
 
+  it('keeps a new dropdown above a previously opened modal', () => {
+    const manager = createOverlayManager();
+
+    manager.register({ id: 'dialog', zIndexLevel: 'modal' });
+    manager.register({ id: 'select', zIndexLevel: 'dropdown' });
+
+    expect(manager.getZIndex('dialog')).toBe(1000);
+    expect(manager.getZIndex('select')).toBe(1010);
+    expect(manager.getTopmost()?.id).toBe('select');
+  });
+
   it('notifies subscribers after stack changes', () => {
     const manager = createOverlayManager();
     let calls = 0;
