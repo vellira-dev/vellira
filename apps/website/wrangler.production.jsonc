@@ -8,6 +8,7 @@
     "required": ["BUTTONDOWN_API_KEY"],
   },
   "workers_dev": true,
+  "preview_urls": false,
   "routes": [
     {
       "pattern": "vellira.dev",
