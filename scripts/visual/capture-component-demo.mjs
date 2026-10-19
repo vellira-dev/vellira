@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { capturePhase } from './component-demo-frames.mjs';
+import { recordButtonConfirmation } from './component-demo-button.mjs';
 import {
   encodeSocialMedia,
   getSocialCrop,
@@ -137,7 +138,7 @@ async function recordDropdown(page, demo, framesDir, outputPng) {
 
 async function main() {
   if (process.argv.length !== 3) {
-    throw new Error('Usage: node scripts/visual/capture-component-demo.mjs dropdown-keyboard');
+    throw new Error('Usage: node scripts/visual/capture-component-demo.mjs <reviewed-demo-name>');
   }
   const name = process.argv[2];
   const demo = getDemo(name);
@@ -168,13 +169,17 @@ async function main() {
         reducedMotion: 'reduce',
       });
       try {
-        crop = await recordDropdown(await context.newPage(), demo, framesDir, png);
+        const page = await context.newPage();
+        crop = name === 'button-confirmation'
+          ? await recordButtonConfirmation(page, demo, framesDir, png)
+          : await recordDropdown(page, demo, framesDir, png);
       } finally {
         await context.close();
       }
       socialFrames = await renderSocialStages({
         browser,
         demo,
+        name,
         sourceFramesDir: framesDir,
         tempDir: temporaryDir,
         outputDir,
@@ -186,7 +191,7 @@ async function main() {
     }
 
     convertFrames(framesDir, mp4, gif, demo);
-    const social = encodeSocialMedia({ demo, ...socialFrames });
+    const social = encodeSocialMedia({ demo, name, ...socialFrames });
     const manifest = {
       schemaVersion: 1,
       demo: name,

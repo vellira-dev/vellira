@@ -36,6 +36,42 @@ test('phase selection reads only real proof frame indices and timing', () => {
   assert.throws(() => getSocialXfadePlan({ ...demo, gifFps: 13 }), /rate/);
 });
 
+test('Button stages reuse social format with verified confirmation and loading phases', () => {
+  const button = {
+    ...demo,
+    title: 'Vellira Button — confirmation and loading',
+    subtitle: 'Confirmation and loading feedback',
+    phaseFrames: { ready: 9, confirming: 17, loading: 17, closed: 13 },
+    socialStages: [
+      { name: 'ready', label: '01 / READY', key: 'ENTER', action: 'Request confirmation' },
+      { name: 'confirming', label: '02 / CONFIRM', key: 'ENTER', action: 'Confirm the action' },
+      { name: 'loading', label: '03 / LOADING', key: 'BUSY', action: 'Show loading feedback' },
+      { name: 'closed', label: '04 / RESET', key: 'DONE', action: 'Return to ready' },
+    ],
+    posterPhase: 'confirming',
+  };
+  const stages = getSocialStages(button);
+  assert.deepEqual(stages.map(x => [x.name, x.startFrame]), [
+    ['ready', 0], ['confirming', 9], ['loading', 26], ['closed', 43],
+  ]);
+  assert.equal(getSocialXfadePlan(button).expectedDuration, 56 / 12);
+  const markup = getSocialMarkup({
+    demo: button,
+    stage: stages[2],
+    crop: getSocialCrop(trigger, menu, demo.viewport),
+    imageBase64: Buffer.from('proof').toString('base64'),
+    logoBase64: Buffer.from('<svg/>').toString('base64'),
+  });
+  assert.match(markup, /Confirmation and loading feedback/);
+  assert.match(markup, /Show loading feedback/);
+  assert.match(markup, /<div class="title">Button<\/div>/);
+  assert.match(markup, /alt="Real Storybook Button"/);
+  assert.throws(() => getSocialStages({ ...button, socialStages: [] }), /exactly four reviewed/);
+  assert.throws(() => getSocialStages({
+    ...button, socialStages: [{...stages[0], name: 'wrong'}, ...stages.slice(1)],
+  }), /Unreviewed or incomplete/);
+});
+
 test('social HTML has approved branding, stage text and verified image only', () => {
   const stage = getSocialStages(demo)[2];
   const markup = getSocialMarkup({
