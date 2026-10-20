@@ -174,7 +174,8 @@ export function checkSourceFile(
     const bindings = statement.importClause?.namedBindings;
     if (bindings && ts.isNamedImports(bindings)) {
       for (const specifier of bindings.elements) {
-        if ((specifier.propertyName?.text ?? specifier.name.text) === 'default') {
+        const importedName = specifier.propertyName?.text ?? specifier.name.text;
+        if (importedName === 'default') {
           nextLinkNames.add(specifier.name.text);
         }
       }
