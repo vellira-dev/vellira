@@ -38,6 +38,17 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(website).not.toContain('/blob/main/examples/workspace-starter');
   });
 
+  it('exposes full-screen, mobile and native discovery paths', () => {
+    const fullDemo = read(
+      'apps/website/src/app/(marketing)/demo/dashboard/page.tsx'
+    );
+    expect(fullDemo).toContain("variant='standalone'");
+    expect(website).toContain("href='/demo/dashboard'");
+    expect(website).toContain("setPreview('mobile')");
+    expect(website).toContain("setPreview('desktop')");
+    expect(website).toContain('/examples/workspace-starter/native');
+  });
+
   it('uses real Vellira primitives and maintains local sample behavior', () => {
     for (const component of [
       'Button',
