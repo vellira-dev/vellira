@@ -61,20 +61,39 @@
   line-height: 1.5;
 }
 
-.previewControls {
+.previewToolbar {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 16px;
   margin-top: 36px;
 }
 
-.previewControls a {
-  color: var(--color-primary-500);
+.previewHint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.nativeLink {
+  margin-top: 20px;
+  color: var(--text-secondary);
+  text-align: center;
   font-size: 13px;
+  line-height: 1.6;
+}
+
+.nativeLink a {
+  color: var(--color-primary-500);
   font-weight: 600;
-  padding: 10px 12px;
+}
+
+.mobileFrame {
+  display: block;
+  width: 100%;
+  height: 740px;
+  border: 0;
+  background: var(--surface-canvas);
 }
 
 .stage {
@@ -87,7 +106,7 @@
   scroll-margin-top: 100px;
 }
 .mobileStage {
-  width: min(390px, 100%);
+  width: min(392px, 100%);
   margin-inline: auto;
 }
 
