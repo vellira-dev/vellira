@@ -66,9 +66,7 @@ function noncanonicalNavigationTags(source: string): string[] {
 describe('website footer canonical textual links (#1506)', () => {
   it('uses the shared Vellira link component in both footer navigations', () => {
     for (const source of [read(compactPath), read(sitePath)]) {
-      expect(source).toContain(
-        "from '@/components/navigation/DesignSystemLink'"
-      );
+      expect(source).toContain("from '@/components/navigation/DesignSystemLink'");
       expect(noncanonicalNavigationTags(source)).toEqual([]);
       expect(source).toContain("appearance='bare'");
     }
