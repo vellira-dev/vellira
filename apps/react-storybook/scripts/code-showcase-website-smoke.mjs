@@ -374,7 +374,7 @@ try {
             const mainBox = await dashboard.locator('main').boundingBox();
             assert.ok(settingsBox && mainBox, 'Settings page geometry must exist');
             assert.ok(
-              settingsBox.bottom <= mainBox.bottom + 1,
+              settingsBox.y + settingsBox.height <= mainBox.y + mainBox.height + 1,
               'Settings panel must stay within the main content region'
             );
             // Compare the Core md field geometries without hard-coded pixel values.
