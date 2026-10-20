@@ -30,6 +30,7 @@ test('pinned Wrangler compiles owner candidate without deployment or credentials
   const config = JSON.parse(fs.readFileSync(ownerConfig, 'utf8'));
   assert.equal(config.name, 'vellira-newsletter-budget-owner');
   assert.equal(config.workers_dev, false);
+  assert.equal(config.preview_urls, false);
   assert.equal(config.main, './newsletter-budget-owner-worker.mjs');
   assert.deepEqual(config.exports, {
     NewsletterRollingBudgetCoordinator: {
