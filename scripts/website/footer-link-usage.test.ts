@@ -135,3 +135,18 @@ describe('website footer canonical textual links (#1506)', () => {
     ).toEqual([]);
   });
 });
+
+it('TEMP formatter evidence for CI; remove before merge', async () => {
+  const prettier = await import('prettier');
+  const filename = resolve('scripts/website/footer-link-usage.test.ts');
+  const source = readFileSync(filename, 'utf8');
+  const config = await prettier.resolveConfig(filename);
+  const result = await prettier.format(source, {
+    ...config,
+    filepath: filename,
+  });
+  const encoded = Buffer.from(result, 'utf8').toString('base64');
+  for (let index = 0; index < encoded.length; index += 900) {
+    console.log('FOOTER_PRETTIER_CHUNK_' + index + ' ' + encoded.slice(index, index + 900));
+  }
+});
