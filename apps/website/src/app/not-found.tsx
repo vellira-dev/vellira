@@ -14,7 +14,11 @@ export default function NotFound() {
           The page may have moved, or the URL does not match a Vellira route.
         </p>
 
-        <DesignSystemLink className='not-found-home-link' href='/' appearance='bare'>
+        <DesignSystemLink
+          className='not-found-home-link'
+          href='/'
+          appearance='bare'
+        >
           Back to home
           <ArrowRight size={16} aria-hidden='true' />
         </DesignSystemLink>
