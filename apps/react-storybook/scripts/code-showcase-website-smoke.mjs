@@ -381,6 +381,21 @@ try {
               Math.abs(panelBottom - footerTop) <= 1,
               'Settings panel should extend to the footer'
             );
+            // Compare the Core md field geometries without hard-coded pixel values.
+            const workspaceField = dashboard.getByRole('textbox', { name: 'Workspace name' });
+            const themeSelect = dashboard.getByRole('combobox', { name: 'Theme' });
+            const resetButton = dashboard.getByRole('button', { name: 'Restore sample data' });
+            const controlHeights = await Promise.all(
+              [workspaceField, themeSelect, resetButton].map(async (locator) => {
+                const rect = await locator.boundingBox();
+                assert.ok(rect, 'Settings control must be rendered');
+                return rect.height;
+              })
+            );
+            assert.ok(
+              Math.max(...controlHeights) - Math.min(...controlHeights) <= 2,
+              'Core md Input, Select and Button heights must align'
+            );
             await dashboard
               .getByRole('textbox', { name: 'Workspace name' })
               .fill('Demo QA Workspace');
@@ -422,6 +437,24 @@ try {
             await page.screenshot({
               path: `${artifactDir}/dashboard-core-live-1440.png`,
             });
+            // Search must show filtered results, and the workspace data must
+            // remain available after a browser reload.
+            await dashboard.getByRole('searchbox', { name: 'Search projects' }).fill('Browser smoke project');
+            await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
+            await expect(dashboard.getByText('1 matching projects')).toBeVisible();
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await dashboard.getByRole('button', { name: 'Projects', exact: true }).click();
+            await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
+            await dashboard.getByRole('button', { name: 'Settings', exact: true }).click();
+            await dashboard.getByRole('button', { name: 'Restore sample data' }).click();
+            const resetDialog = page.getByRole('dialog', { name: 'Restore sample data?' });
+            await expect(resetDialog).toBeVisible();
+            await resetDialog.getByRole('button', { name: 'Cancel' }).click();
+            await expect(resetDialog).toBeHidden();
+            await dashboard.getByRole('button', { name: 'Restore sample data' }).click();
+            await resetDialog.getByRole('button', { name: 'Restore data' }).click();
+            await expect(dashboard.getByText('Demo projects restored.')).toBeVisible();
+
           }
 
           if (
