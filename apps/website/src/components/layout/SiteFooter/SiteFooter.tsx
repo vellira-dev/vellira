@@ -32,7 +32,7 @@ const resourceLinks = [
   },
   {
     label: 'GitHub',
-    href: 'https://github.com/vellira-dev/Vellira',
+    href: 'https://github.com/vellira-dev/vellira',
   },
 ] as const;
 
@@ -122,14 +122,15 @@ export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
               <h2>Product</h2>
 
               {productLinks.map((link) => (
-                <Link
+                <DesignSystemLink
                   key={link.label}
+                  appearance='bare'
                   href={link.href}
                   prefetch={link.href.startsWith('/#') ? false : undefined}
                 >
                   <span className={styles.linkMarker} aria-hidden='true' />
                   {link.label}
-                </Link>
+                </DesignSystemLink>
               ))}
             </div>
 
@@ -137,8 +138,9 @@ export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
               <h2>Resources</h2>
 
               {resourceLinks.map((link) => (
-                <a
+                <DesignSystemLink
                   key={link.label}
+                  appearance='bare'
                   href={link.href}
                   target='_blank'
                   rel='noreferrer noopener'
@@ -146,7 +148,7 @@ export function SiteFooter({ startSurface = 'default' }: SiteFooterProps = {}) {
                   <span className={styles.linkMarker} aria-hidden='true' />
                   {link.label}
                   <ArrowRight size={13} aria-hidden='true' />
-                </a>
+                </DesignSystemLink>
               ))}
             </div>
           </nav>

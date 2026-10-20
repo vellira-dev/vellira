@@ -29,6 +29,7 @@ import { deploymentIdentity } from '../cloudflare/build-identity.mjs';
 import {
   ASSET_CONTENT_TYPES,
   archiveAssets,
+  ARCHIVE_IO_BATCH_SIZE,
   assetInventory,
   sha256,
   recordArchivedDeployment,
@@ -400,7 +401,9 @@ test('deployment workflows keep archive preflight before remote build and mutati
     'utf8'
   );
   assert.ok(
-    deploy.indexOf('await requireArchivedDeployment(bucket, previousBuildId)') <
+    deploy.indexOf(
+      'await requireArchivedDeployment(bucket, previousBuildId, {'
+    ) <
       deploy.indexOf('const assets = await archiveAssets')
   );
 });
@@ -599,6 +602,124 @@ test('HTML revalidates; APIs and hashed assets preserve their policy', () => {
       applyCachePolicy(new Request(`https://test${pathname}`), response),
       response
     );
+  }
+});
+
+test('remote archive verification has bounded concurrency and preserves complete hash proofs', async () => {
+  const bytes = Buffer.from('immutable archive batch bytes');
+  const inventory = Array.from({ length: 9 }, (_, index) => ({
+    key: `assets/_next/static/batch-${index}.js`,
+    pathname: `/_next/static/batch-${index}.js`,
+    sha256: sha256(bytes),
+    size: bytes.length,
+    contentType: 'text/javascript; charset=utf-8',
+  }));
+  let active = 0;
+  let maximum = 0;
+  const seen = [];
+  const bucket = {
+    async get(key) {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await new Promise((resolve) => setImmediate(resolve));
+      seen.push(key);
+      active -= 1;
+      return {
+        size: bytes.length,
+        customMetadata: { sha256: sha256(bytes) },
+        httpMetadata: {
+          contentType: 'text/javascript; charset=utf-8',
+          cacheControl: IMMUTABLE_CACHE_CONTROL,
+        },
+        arrayBuffer: async () => bytes,
+      };
+    },
+  };
+  const progress = [];
+  await verifyArchivedAssets(bucket, inventory, {
+    onProgress: ({ completed, total }) => progress.push([completed, total]),
+  });
+  assert.equal(maximum, 4);
+  assert.deepEqual(new Set(seen), new Set(inventory.map(({ key }) => key)));
+  assert.deepEqual(progress, [[4, 9], [8, 9], [9, 9]]);
+
+  const attempted = [];
+  const corruptBucket = {
+    async get(key) {
+      attempted.push(key);
+      const stored = await bucket.get(key);
+      if (key === inventory[1].key)
+        stored.arrayBuffer = async () => Buffer.from('corruption');
+      return stored;
+    },
+  };
+  await assert.rejects(
+    verifyArchivedAssets(corruptBucket, inventory),
+    /IMMUTABLE ASSET COLLISION/
+  );
+  // All in-flight operations settle, but no later batch can start.
+  assert.deepEqual(attempted, inventory.slice(0, 4).map(({ key }) => key));
+});
+
+test('remote create-only archive stops after a failed batch with no later writes', async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-r2-batch-')
+  );
+  try {
+    for (let i = 0; i < 9; i++)
+      await fs.writeFile(path.join(directory, `batch-${i}.js`), `asset-${i}`);
+    const inventory = await assetInventory(directory);
+    const saved = new Map();
+    const writes = [];
+    let concurrent = 0;
+    let maximum = 0;
+    const bucket = {
+      async put(key, bytes, options) {
+        writes.push(key);
+        concurrent += 1;
+        maximum = Math.max(maximum, concurrent);
+        await new Promise((resolve) => setImmediate(resolve));
+        saved.set(key, {
+          bytes: Buffer.from(bytes),
+          size: bytes.length,
+          customMetadata: options.customMetadata,
+          httpMetadata: options.httpMetadata,
+        });
+        concurrent -= 1;
+      },
+      async get(key) {
+        const stored = saved.get(key);
+        if (!stored) return null;
+        return {
+          ...stored,
+          arrayBuffer: async () =>
+            key === inventory[1].key
+              ? Buffer.from('wrong bytes')
+              : stored.bytes,
+        };
+      },
+    };
+    await assert.rejects(
+      archiveAssets(bucket, inventory),
+      /IMMUTABLE ASSET COLLISION/
+    );
+    // File reads complete at nondeterministic times before bucket.put starts.
+    // The contract is a batch ceiling, not four overlapping writes.
+    assert.ok(maximum >= 1 && maximum <= ARCHIVE_IO_BATCH_SIZE);
+    assert.equal(writes.length, ARCHIVE_IO_BATCH_SIZE);
+    assert.deepEqual(
+      new Set(writes),
+      new Set(inventory.slice(0, ARCHIVE_IO_BATCH_SIZE).map(({ key }) => key))
+    );
+    assert.equal(
+      saved.size,
+      ARCHIVE_IO_BATCH_SIZE,
+      'all started create-only writes settle before failure'
+    );
+    // There is no recorded deployment manifest or activation seal on failure.
+    assert.equal(saved.has('deployments/failed-build.json'), false);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
   }
 });
 

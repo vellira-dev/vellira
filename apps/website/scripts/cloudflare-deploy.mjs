@@ -39,6 +39,25 @@ function run(command, args, env = childProcessEnv) {
   assert.equal(result.status, 0, `${command} ${args.join(' ')} failed`);
 }
 
+function archiveProgress(phase) {
+  const startedAt = performance.now();
+  console.log(
+    JSON.stringify({ event: 'cloudflare-archive-phase-start', phase })
+  );
+  return ({ completed, total }) => {
+    if (completed !== total && completed % 64 !== 0) return;
+    console.log(
+      JSON.stringify({
+        event: 'cloudflare-archive-phase-progress',
+        phase,
+        completed,
+        total,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      })
+    );
+  };
+}
+
 async function deploy() {
   // Populate OpenNext's read-only route assets before auditing the final graph.
   // Activation uses Wrangler directly so no further OpenNext mutation can occur
@@ -56,13 +75,31 @@ async function deploy() {
     'Deployment origin must match the target Worker'
   );
   assert.equal(new URL(base).protocol, 'https:');
-  const previous = await fetch(new URL('/BUILD_ID', base), { cache: 'no-store' });
+  // The predecessor GET is read-only and must never silently consume the
+  // entire archive/deploy step budget before the R2 phases can begin.
+  console.log(
+    JSON.stringify({
+      event: 'cloudflare-deploy-phase-start',
+      phase: 'identify-live-predecessor',
+    })
+  );
+  const previous = await fetch(new URL('/BUILD_ID', base), {
+    cache: 'no-store',
+    redirect: 'error',
+    signal: AbortSignal.timeout(30_000),
+  });
   assert.equal(
     previous.status,
     200,
     'Cannot identify the active deployment; activation is blocked'
   );
   const previousBuildId = (await previous.text()).trim();
+  console.log(
+    JSON.stringify({
+      event: 'cloudflare-deploy-phase-complete',
+      phase: 'identify-live-predecessor',
+    })
+  );
 
   const outcome = await executeGuardedDeployment({
     candidateSource: process.env.CANDIDATE_SOURCE,
@@ -71,9 +108,15 @@ async function deploy() {
       await withRemoteArchive(config, async (bucket, bucketName) => {
         // Adoption must not orphan the current live graph. Historical backfill is an
         // explicit archive-only operation, not a silent best-effort migration.
-        await requireArchivedDeployment(bucket, previousBuildId);
-        const assets = await archiveAssets(bucket, inventory);
-        await recordArchivedDeployment(bucket, identity.buildId, assets);
+        await requireArchivedDeployment(bucket, previousBuildId, {
+          onProgress: archiveProgress('verify-live-predecessor'),
+        });
+        const assets = await archiveAssets(bucket, inventory, {
+          onProgress: archiveProgress('create-and-verify-new-graph'),
+        });
+        await recordArchivedDeployment(bucket, identity.buildId, assets, {
+          onProgress: archiveProgress('verify-new-graph-before-seal'),
+        });
         await fs.writeFile(
           path.join(root, '.open-next/archive-evidence.json'),
           JSON.stringify(

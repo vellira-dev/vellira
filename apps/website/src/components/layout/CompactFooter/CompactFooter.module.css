@@ -29,4 +29,9 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .navigation {
+    flex-wrap: wrap;
+    row-gap: var(--space-3);
+  }
 }
