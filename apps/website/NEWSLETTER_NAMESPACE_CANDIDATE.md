@@ -379,6 +379,37 @@ References:
 - https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
 - https://developers.cloudflare.com/api/resources/rulesets/subresources/phases/methods/get/
 
+## Manual private owner provisioning (separately authorized)
+
+The manual-only **Provision Private Newsletter Budget Owner** GitHub Actions
+workflow has two operations. It never runs from push, a PR or a schedule.
+
+1. From `main`, select `preflight` (default). The job checks the exact
+   selected SHA, static isolation guards and pinned Wrangler `--dry-run`,
+   without any Cloudflare credentials or API writes.
+2. `provision` is **not authorized by merging this workflow**. Only after
+   separate owner approval, supply the exact current `main` SHA and type
+   `PROVISION_PRIVATE_BUDGET_OWNER`. A protected `production` environment
+   review must also be approved before the provisioning job starts.
+3. Before its first remote mutation, the provisioning job uses GET-only
+   Cloudflare inventory and GitHub current-main checks. It fails closed if
+   the target Worker already exists, either site is already bound to a
+   global budget, inventory is inconclusive, or `main` has advanced.
+4. The sole Cloudflare write is a pinned Wrangler deployment of the
+   **private owner candidate**, with no public URL, routes, capacity,
+   Buttondown credentials or site binding. A later GET-only audit checks
+   that the Worker exists, `workers.dev` and Preview URLs are both OFF,
+   and the website Workers remain unbound.
+
+Failure after Wrangler starts may mean the Worker was provisioned even
+if postflight verification failed. Never blindly rerun a `provision`
+operation: inspect the read-only audit and Cloudflare dashboard first.
+Namespace/class identity, provider quota and actual budget enforcement
+remain separate proof gates. This workflow does not configure any
+provider request, public Pro activation, staging/production binding, or
+account-level WAF change. The authoritative Buttondown create quota is
+still unverified; the operational budget stays OFF.
+
 ## Separate approval sequence
 
 1. Merge only after exact-head CI and independent review. Keep both sites OFF.
