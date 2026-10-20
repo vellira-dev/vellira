@@ -31,10 +31,8 @@ export function AccountDeletionPanel() {
       <div className={styles.actionRow}>
         <div className={styles.copy}>
           <h4>Delete account</h4>
-          <p>
-            Request permanent closure of your Vellira account. Some records
-            may need to be retained for legal or security reasons.
-          </p>
+          <p>Close your account and request data removal.</p>
+          <p>Some records may be retained for legal reasons.</p>
         </div>
         <Modal
           role='alertdialog'
@@ -44,7 +42,7 @@ export function AccountDeletionPanel() {
           }
           closeOnOutsidePress={false}
         >
-          <Modal.Trigger asChild>
+          <Modal.Trigger asChild disabled={!previewEnabled}>
             <Button
               type='button'
               appearance='outline'
@@ -64,23 +62,15 @@ export function AccountDeletionPanel() {
                   <div>
                     <Modal.Title>Delete your account?</Modal.Title>
                     <Modal.Description>
-                      Before deleting an account, Vellira must verify your
-                      identity and check any linked account data.
+                      Identity verification is required before account deletion.
                     </Modal.Description>
                   </div>
                   <Modal.Close />
                 </Modal.Header>
                 <Modal.Body>
                   <div className={styles.previewMessage}>
-                    <p>
-                      This is a local design preview. No account deletion
-                      request can be submitted here.
-                    </p>
-                    <p>
-                      The real process will explain which data is removed,
-                      which records must be retained and when deletion is
-                      completed.
-                    </p>
+                    <p>This preview never sends a deletion request.</p>
+                    <p>Real deletion will describe removed and retained data.</p>
                   </div>
                 </Modal.Body>
                 <Modal.Footer>
