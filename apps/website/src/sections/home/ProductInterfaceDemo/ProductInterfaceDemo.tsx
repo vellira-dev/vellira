@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Button } from '@vellira-ui/react';
 
 import { Dashboard } from './Dashboard';
@@ -22,6 +24,7 @@ const starterUrl =
 
 export function ProductInterfaceDemo() {
   const { preference, setPreference } = useWebsiteThemeContext();
+  const [preview, setPreview] = useState<'desktop' | 'mobile'>('desktop');
 
   return (
     <section
@@ -46,6 +49,11 @@ export function ProductInterfaceDemo() {
               <a href='#dashboard-live'>Try Live Demo</a>
             </Button>
             <Button asChild appearance='outline' color='neutral'>
+              <a href='/demo/dashboard' target='_blank' rel='noopener noreferrer'>
+                Open Full Demo
+              </a>
+            </Button>
+            <Button asChild appearance='outline' color='neutral'>
               <a href={sourceUrl} target='_blank' rel='noopener noreferrer'>
                 View Source
               </a>
@@ -62,9 +70,21 @@ export function ProductInterfaceDemo() {
           </p>
         </header>
 
+        <div className={styles.previewControls} role='group' aria-label='Preview viewport'>
+          <Button size='sm' appearance={preview === 'desktop' ? 'solid' : 'outline'} color={preview === 'desktop' ? 'primary' : 'neutral'} onClick={() => setPreview('desktop')} aria-pressed={preview === 'desktop'}>
+            Desktop
+          </Button>
+          <Button size='sm' appearance={preview === 'mobile' ? 'solid' : 'outline'} color={preview === 'mobile' ? 'primary' : 'neutral'} onClick={() => setPreview('mobile')} aria-pressed={preview === 'mobile'}>
+            Mobile
+          </Button>
+          <a href={repository + '/tree/' + previewRef + '/examples/workspace-starter/native'} target='_blank' rel='noopener noreferrer'>
+            React Native / Expo setup ↗
+          </a>
+        </div>
+
         <div
           id='dashboard-live'
-          className={styles.stage}
+          className={`${styles.stage} ${preview === 'mobile' ? styles.mobileStage : ''}`}
           tabIndex={-1}
           aria-label='Interactive Vellira Dashboard Demo'
         >
