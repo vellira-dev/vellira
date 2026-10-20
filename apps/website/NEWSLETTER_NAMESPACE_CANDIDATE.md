@@ -21,10 +21,13 @@ authority for a single Buttondown account:
 - Both `vellira-website-staging` and `vellira-website` must eventually
   bind `NEWSLETTER_GLOBAL_BUDGET` to that **same external Worker** through
   `script_name`. No binding or enable flag has been added to either site.
-- The proposed owner has `workers_dev: false`, no public routes, no provider
-  key, no API calls, and **no budget capacity**. Even if someone deployed the
-  owner alone, admission cannot succeed with missing capacity. Deployment
-  still requires explicit approval.
+- The proposed owner has `workers_dev: false` and explicit
+  `preview_urls: false`, no public routes, no provider key, no API calls,
+  and **no budget capacity**. Explicitly disabling both stable and Preview
+  URL exposure prevents a previously enabled remote Preview setting from
+  being silently retained during a separately approved Wrangler deployment.
+  Even if the owner were deployed alone, admission cannot succeed without
+  capacity. Deployment still requires explicit approval.
 
 Matching names in this repository do **not** prove a shared remote namespace.
 Cloudflare environments, accounts, dispatch namespaces, and Worker owners can

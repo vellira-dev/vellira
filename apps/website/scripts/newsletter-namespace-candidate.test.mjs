@@ -17,6 +17,7 @@ test('one offline owner exports only the SQLite rolling coordinator', () => {
   assert.equal(plan.owner.worker, candidate.name);
   assert.equal(candidate.main, './newsletter-budget-owner-worker.mjs');
   assert.equal(candidate.workers_dev, false);
+  assert.equal(candidate.preview_urls, false);
   assert.deepEqual(Object.keys(candidate.exports), [plan.owner.className]);
   assert.deepEqual(candidate.exports[plan.owner.className], {
     type: 'durable-object',
