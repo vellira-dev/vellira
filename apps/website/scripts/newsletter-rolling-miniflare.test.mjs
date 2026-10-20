@@ -280,13 +280,13 @@ test('two independently named site Workers share one atomic account budget', asy
   const attempts = await Promise.all(
     Array.from({ length: 30 }, (_, index) => {
       const caller = index % 2 === 0 ? staging : production;
-      return caller.fetch('https://site.test/attempt?account=other', {
+      return caller.fetch(`https://site.test/attempt?account=forged-${index}`, {
         method: 'POST',
         // Internal service bindings have no browser Origin: Miniflare
         // rejects Origin-bearing service Fetcher requests before this Worker.
         // The real public subscribe route validates Origin independently.
         headers: {
-          'X-Budget-Key': 'client-cannot-choose-namespace',
+          'X-Budget-Key': `attacker-selected-${index}`,
           'X-Purpose': index % 2 === 0 ? 'newsletter' : 'pro_launch',
         },
       });
@@ -312,6 +312,36 @@ test('two independently named site Workers share one atomic account budget', asy
     (await staging.fetch('https://site.test/attempt', { method: 'POST' })).status,
     429
   );
+});
+
+test('production can spend the only permit and staging immediately sees exhaustion', async (t) => {
+  const dir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-production-first-budget-')
+  );
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const mf = createSharedOwnerMiniflare(dir, '1');
+  t.after(() => mf.dispose());
+
+  const production = await mf.getWorker('vellira-website');
+  const staging = await mf.getWorker('vellira-website-staging');
+  const productionAdmit = await production.fetch(
+    'https://site.test/attempt?account=production-forged',
+    {
+      method: 'POST',
+      headers: { 'X-Budget-Key': 'production-forged' },
+    }
+  );
+  assert.equal(productionAdmit.status, 200);
+  assert.equal(productionAdmit.headers.get('cache-control'), 'no-store');
+  const stagingDenied = await staging.fetch(
+    'https://site.test/attempt?account=staging-forged',
+    {
+      method: 'POST',
+      headers: { 'X-Budget-Key': 'staging-forged' },
+    }
+  );
+  assert.equal(stagingDenied.status, 429);
+  assert.equal(stagingDenied.headers.get('cache-control'), 'no-store');
 });
 
 test('a shared budget remains exhausted for both site Workers across restart', async (t) => {

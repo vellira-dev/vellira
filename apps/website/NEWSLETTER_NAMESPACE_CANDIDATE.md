@@ -43,16 +43,18 @@ runs the real candidate SQLite `NewsletterRollingBudgetCoordinator`, with
 each caller using the identical `one-buttondown-account` Durable Object name.
 
 The integration asserts that 30 simultaneous admissions spread across both
-callers yield **at most seven** admissions for an artificial capacity of seven,
-rather than two independently spendable pools. Both callers observe exhaustion,
-and exhaustion survives full Miniflare disposal and restart. A direct request
+callers yield **exactly seven** admissions for an artificial capacity of seven,
+rather than two independently spendable pools, even if each request uses a
+different untrusted account/query hint and budget-key header. A separate
+production-first test proves that production can consume the sole permit
+before staging is denied. Both callers observe exhaustion, and exhausted
+state survives full Miniflare disposal and restart. A direct request
 to the owner Worker's public entrypoint remains 404; only its internal
 Durable Object binding processes admissions. Spoofed caller headers cannot
 choose a different budget namespace in this test harness.
 
-Run with `node --test
-apps/website/scripts/newsletter-rolling-miniflare.test.mjs`; this suite is
-already included in the canonical `test:cloudflare-cache` CI recipe.
+Run with `node --test apps/website/scripts/newsletter-rolling-miniflare.test.mjs`;
+this suite is already included in the canonical `test:cloudflare-cache` CI recipe.
 
 **Scope:** These are synthetic local test Workers, not the production
 Next/OpenNext route, not a live Cloudflare namespace, and not evidence that
