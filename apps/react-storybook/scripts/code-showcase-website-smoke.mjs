@@ -367,6 +367,20 @@ try {
             await dashboard
               .getByRole('button', { name: 'Settings', exact: true })
               .click();
+            // The settings panel must occupy the available main area, not
+            // leave a large unpainted gap above the dashboard footer.
+            const settingsPanel = dashboard.locator('main > section').last();
+            const footer = dashboard.locator('footer');
+            const panelBottom = await settingsPanel.evaluate(
+              (element) => element.getBoundingClientRect().bottom
+            );
+            const footerTop = await footer.evaluate(
+              (element) => element.getBoundingClientRect().top
+            );
+            assert.ok(
+              Math.abs(panelBottom - footerTop) <= 1,
+              'Settings panel should extend to the footer'
+            );
             await dashboard
               .getByRole('textbox', { name: 'Workspace name' })
               .fill('Demo QA Workspace');
