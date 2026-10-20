@@ -7,6 +7,8 @@ import { motion, useReducedMotion } from 'motion/react';
 
 import { Button } from '@vellira-ui/react';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+
 import styles from './FinalCta.module.css';
 
 const secondaryLinks = [
@@ -96,7 +98,8 @@ export function FinalCta() {
 
             <div className={styles.secondaryLinks}>
               {secondaryLinks.map((link) => (
-                <a
+                <DesignSystemLink
+                  appearance='bare'
                   key={link.label}
                   href={link.href}
                   target='_blank'
@@ -104,7 +107,7 @@ export function FinalCta() {
                 >
                   {link.label}
                   <ArrowRight size={14} aria-hidden='true' />
-                </a>
+                </DesignSystemLink>
               ))}
             </div>
           </div>
