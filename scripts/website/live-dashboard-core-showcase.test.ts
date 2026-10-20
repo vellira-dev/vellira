@@ -44,9 +44,10 @@ describe('live Vellira Dashboard Core showcase', () => {
     );
     expect(fullDemo).toContain("variant='standalone'");
     expect(website).toContain("href='/demo/dashboard'");
-    expect(website).toContain("setPreview('mobile')");
-    expect(website).toContain("setPreview('desktop')");
+    expect(website).toContain("<Tabs.Trigger value='mobile'>Mobile</Tabs.Trigger>");
+    expect(website).toContain("<Tabs.Trigger value='desktop'>Desktop</Tabs.Trigger>");
     expect(website).toContain('/examples/workspace-starter/native');
+    expect(website).toContain("src='/demo/dashboard'");
   });
 
   it('uses real Vellira primitives and maintains local sample behavior', () => {
