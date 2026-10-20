@@ -142,6 +142,7 @@ export function Dashboard({
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace);
   const [hydrated, setHydrated] = useState(false);
   const [view, setView] = useState<View>('overview');
+  const viewStorageKey = `${storageKey}-active-view`;
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -156,11 +157,15 @@ export function Dashboard({
     try {
       const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
       if (saved) setWorkspace(saved);
+      const savedView = window.localStorage.getItem(viewStorageKey);
+      if (savedView === 'overview' || savedView === 'projects' || savedView === 'settings') {
+        setView(savedView);
+      }
     } catch {
       // Private browsing may forbid even reading localStorage.
     }
     setHydrated(true);
-  }, [storageKey]);
+  }, [storageKey, viewStorageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -171,6 +176,15 @@ export function Dashboard({
       // The demo remains usable when storage is disabled.
     }
   }, [hydrated, storageKey, theme, variant, workspace]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(viewStorageKey, view);
+    } catch {
+      // Navigation remains available if browser storage is unavailable.
+    }
+  }, [hydrated, view, viewStorageKey]);
 
   const projects = useMemo(
     () => filterProjects(workspace.projects, query, filter),
