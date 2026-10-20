@@ -282,8 +282,10 @@ test('two independently named site Workers share one atomic account budget', asy
       const caller = index % 2 === 0 ? staging : production;
       return caller.fetch('https://site.test/attempt?account=other', {
         method: 'POST',
+        // Miniflare rejects foreign Origin at the site Fetcher boundary.
+        // Valid and absent Origin must both consume the same object budget.
         headers: {
-          Origin: index % 2 === 0 ? 'https://vellira.dev' : 'https://elsewhere.test',
+          ...(index % 2 === 0 ? { Origin: 'https://site.test' } : {}),
           'X-Budget-Key': 'client-cannot-choose-namespace',
         },
       });
