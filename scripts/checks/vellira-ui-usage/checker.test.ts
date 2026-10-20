@@ -53,6 +53,36 @@ describe('Vellira UI usage audit', () => {
     expect(findings).toEqual([]);
   });
 
+  it('detects raw and aliased textual Next links in reviewed navigation', () => {
+    const source = `import Alias from 'next/link';
+      export const Example = () => <nav><a href='/'>Home</a><Alias href='/docs'>Docs</Alias></nav>;`;
+    const findings = checkSourceFile(
+      'apps/website/src/components/layout/CompactFooter/CompactFooter.tsx',
+      source,
+      AUTHORITIES
+    );
+    expect(findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link').map((f) => f.detected)).toEqual(['a', 'Alias']);
+  });
+
+  it('permits canonical links, structural branding, and Button-owned anchors', () => {
+    const findings = checkSourceFile(
+      'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx',
+      `import Link from 'next/link';
+      const X = () => <footer><Link href='/'>Brand</Link><nav><DesignSystemLink href='/'>Home</DesignSystemLink><Button asChild><a href='/join'>Join</a></Button></nav></footer>;`,
+      AUTHORITIES
+    );
+    expect(findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')).toEqual([]);
+  });
+
+  it('does not report example strings or unaudited structural surfaces', () => {
+    const findings = checkSourceFile(
+      'apps/website/src/sections/home/FinalCta/FinalCta.tsx',
+      `const code = "<a href='/'>example</a>"; export const X = () => <DesignSystemLink href='/'>Docs</DesignSystemLink>;`,
+      AUTHORITIES
+    );
+    expect(findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')).toEqual([]);
+  });
+
   it('reports authored button when canonical Button exists', () => {
     const [finding] = checkSourceFile(
       'apps/website/src/example.tsx',
