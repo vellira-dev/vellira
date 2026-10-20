@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import { Button } from '@vellira-ui/react';
 
@@ -53,7 +53,8 @@ export function ComponentHeaderActions({
       </div>
 
       {documentationUrl && (
-        <Link
+        <DesignSystemLink
+          appearance='bare'
           className={styles.documentation}
           href={documentationUrl}
           target='_blank'
@@ -61,7 +62,7 @@ export function ComponentHeaderActions({
         >
           Documentation
           <span aria-hidden='true'>↗</span>
-        </Link>
+        </DesignSystemLink>
       )}
     </div>
   );
