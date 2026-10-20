@@ -289,8 +289,15 @@ test('two independently named site Workers share one atomic account budget', asy
       });
     })
   );
-  assert.equal(attempts.filter((result) => result.status === 200).length, 7);
-  assert.equal(attempts.filter((result) => result.status === 429).length, 23);
+  const statusCounts = Object.fromEntries(
+    [...new Set(attempts.map((result) => result.status))]
+      .sort((a, b) => a - b)
+      .map((status) => [
+        status,
+        attempts.filter((result) => result.status === status).length,
+      ])
+  );
+  assert.deepEqual(statusCounts, { 200: 7, 429: 23 });
   assert.ok(
     attempts.every((result) => result.headers.get('cache-control') === 'no-store')
   );
