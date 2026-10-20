@@ -32,7 +32,7 @@ const resourceLinks = [
   },
   {
     label: 'GitHub',
-    href: 'https://github.com/vellira-dev/Vellira',
+    href: 'https://github.com/vellira-dev/vellira',
   },
 ] as const;
 
