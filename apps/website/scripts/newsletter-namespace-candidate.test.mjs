@@ -105,22 +105,22 @@ test('deployed website configurations and automation remain disconnected', () =>
 });
 
 function validateOwnerProvisioningWorkflow(source) {
-  assert.match(source, /^on:\n  workflow_dispatch:\n/m);
+  assert.match(source, /^on:\n {2}workflow_dispatch:\n/m);
   assert.doesNotMatch(source, /^\s{2}(?:push|pull_request|workflow_run|schedule):/m);
-  assert.match(source, /^permissions:\n  contents: read\n/m);
+  assert.match(source, /^permissions:\n {2}contents: read\n/m);
   assert.match(source, /default: preflight/);
   assert.match(source, /expected_sha:/);
   assert.match(source, /PROVISION_PRIVATE_BUDGET_OWNER/);
-  const preflight = source.split(/^  preflight:\n/m)[1]?.split(/^  approval:\n/m)[0];
-  const approval = source.split(/^  approval:\n/m)[1]?.split(/^  provision:\n/m)[0];
-  const provision = source.split(/^  provision:\n/m)[1];
+  const preflight = source.split(/^ {2}preflight:\n/m)[1]?.split(/^ {2}approval:\n/m)[0];
+  const approval = source.split(/^ {2}approval:\n/m)[1]?.split(/^ {2}provision:\n/m)[0];
+  const provision = source.split(/^ {2}provision:\n/m)[1];
   assert.ok(preflight && approval && provision);
   assert.match(preflight, /if: github\.ref == 'refs\/heads\/main'/);
   assert.match(preflight, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   assert.match(preflight, /test "\$CONFIRMATION" = "PROVISION_PRIVATE_BUDGET_OWNER"/);
   assert.match(preflight, /newsletter-owner-wrangler-dry-run\.test\.mjs/);
   assert.doesNotMatch(preflight, /secrets\./);
-  assert.match(approval, /environment:\n      name: production/);
+  assert.match(approval, /environment:\n {6}name: production/);
   assert.doesNotMatch(approval, /secrets\./);
   assert.match(provision, /needs: \[preflight, approval\]/);
   assert.match(provision, /needs\.approval\.result == 'success'/);
@@ -146,8 +146,10 @@ test('private owner workflow requires manual approved provision and no site acti
     source.replace('default: preflight', 'default: provision'),
     source.replace('      name: production', '      name: staging'),
     source.replace('needs: [preflight, approval]', 'needs: preflight'),
-    source.replace('test "$CONFIRMATION" = "PROVISION_PRIVATE_BUDGET_OWNER"',
-      'test "$CONFIRMATION" = "BYPASS_CONFIRMATION"'),
+    source.replace(
+      'test "$CONFIRMATION" = "PROVISION_PRIVATE_BUDGET_OWNER"',
+      'test "$CONFIRMATION" = "BYPASS_CONFIRMATION"'
+    ),
   ]) {
     assert.throws(() => validateOwnerProvisioningWorkflow(changed));
   }
