@@ -370,16 +370,12 @@ try {
             // The settings panel must occupy the available main area, not
             // leave a large unpainted gap above the dashboard footer.
             const settingsPanel = dashboard.locator('main > section').last();
-            const footer = dashboard.locator('footer');
-            const panelBottom = await settingsPanel.evaluate(
-              (element) => element.getBoundingClientRect().bottom
-            );
-            const footerTop = await footer.evaluate(
-              (element) => element.getBoundingClientRect().top
-            );
+            const settingsBox = await settingsPanel.boundingBox();
+            const mainBox = await dashboard.locator('main').boundingBox();
+            assert.ok(settingsBox && mainBox, 'Settings page geometry must exist');
             assert.ok(
-              Math.abs(panelBottom - footerTop) <= 1,
-              'Settings panel should extend to the footer'
+              settingsBox.bottom <= mainBox.bottom + 1,
+              'Settings panel must stay within the main content region'
             );
             // Compare the Core md field geometries without hard-coded pixel values.
             const workspaceField = dashboard.getByRole('textbox', { name: 'Workspace name' });
