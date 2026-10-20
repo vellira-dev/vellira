@@ -29,6 +29,7 @@ import { deploymentIdentity } from '../cloudflare/build-identity.mjs';
 import {
   ASSET_CONTENT_TYPES,
   archiveAssets,
+  ARCHIVE_IO_BATCH_SIZE,
   assetInventory,
   sha256,
   recordArchivedDeployment,
@@ -702,11 +703,17 @@ test('remote create-only archive stops after a failed batch with no later writes
       archiveAssets(bucket, inventory),
       /IMMUTABLE ASSET COLLISION/
     );
-    assert.equal(maximum, 4);
-    assert.deepEqual(writes, inventory.slice(0, 4).map(({ key }) => key));
+    // File reads complete at nondeterministic times before bucket.put starts.
+    // The contract is a batch ceiling, not four overlapping writes.
+    assert.ok(maximum >= 1 && maximum <= ARCHIVE_IO_BATCH_SIZE);
+    assert.equal(writes.length, ARCHIVE_IO_BATCH_SIZE);
+    assert.deepEqual(
+      new Set(writes),
+      new Set(inventory.slice(0, ARCHIVE_IO_BATCH_SIZE).map(({ key }) => key))
+    );
     assert.equal(
       saved.size,
-      4,
+      ARCHIVE_IO_BATCH_SIZE,
       'all started create-only writes settle before failure'
     );
     // There is no recorded deployment manifest or activation seal on failure.
