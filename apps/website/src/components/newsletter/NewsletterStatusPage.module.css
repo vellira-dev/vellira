@@ -42,31 +42,5 @@
 }
 
 .link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 46px;
   margin-top: var(--space-6);
-  padding: 0 var(--space-5);
-  color: var(--button-primary-solid-default-fg);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  background: var(--button-primary-solid-default-bg);
-  border: 1px solid var(--button-primary-solid-default-border);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  transition:
-    color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease;
-}
-
-.link:hover {
-  color: var(--button-primary-solid-hover-fg);
-  background: var(--button-primary-solid-hover-bg);
-  border-color: var(--button-primary-solid-hover-border);
-}
-
-.link:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--space-1);
 }
