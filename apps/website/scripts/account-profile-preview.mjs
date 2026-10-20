@@ -120,7 +120,7 @@ try {
   await deletionPreview.waitFor();
   assert.equal(await deletionPreview.getByRole('button', { name: 'Confirm deletion' }).isDisabled(), true,
     'A preview must never enable the destructive confirmation');
-  await deletionPreview.getByText('No account deletion request can be submitted here.', { exact: false }).waitFor();
+  await deletionPreview.getByText('This preview never sends a deletion request.', { exact: false }).waitFor();
   await page.keyboard.press('Escape');
   await deletionPreview.waitFor({ state: 'hidden' });
   assert.equal(await deleteTrigger.evaluate((button) => document.activeElement === button), true,
