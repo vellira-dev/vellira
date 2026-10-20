@@ -252,7 +252,8 @@ export function Dashboard({
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden='true'>
-            V
+            <img src='https://vellira.dev/brand/icons/logo-icon-dark.svg' alt='' className={styles.brandLogoDark} width={24} height={24} />
+            <img src='https://vellira.dev/brand/icons/logo-icon-light.svg' alt='' className={styles.brandLogoLight} width={24} height={24} />
           </span>
           <div>
             <strong>Vellira</strong>
@@ -264,11 +265,11 @@ export function Dashboard({
           {navigation.map((item) => {
             const Icon = item.icon;
             return (
-              <Button
+              <Button shape='pill'
                 key={item.id}
                 appearance={view === item.id ? 'soft' : 'ghost'}
                 color={view === item.id ? 'primary' : 'neutral'}
-                shape='rounded'
+                shape='pill'
                 size='sm'
                 iconStart={<Icon size={18} aria-hidden='true' />}
                 className={styles.navButton}
@@ -305,9 +306,9 @@ export function Dashboard({
           </div>
           <div className={styles.toolbarActions}>
             <span className={styles.localLabel}>Local demo</span>
-            <Button
+            <Button shape='pill'
               size='sm'
-              shape='rounded'
+              shape='pill'
               iconStart={<Plus size={16} aria-hidden='true' />}
               onClick={openCreate}
             >
@@ -416,7 +417,7 @@ export function Dashboard({
                     <h4>Active Projects</h4>
                     <p>Track the work inside this sample workspace.</p>
                   </div>
-                  <Button
+                  <Button shape='pill'
                     appearance='outline'
                     color='neutral'
                     onClick={() => setView('projects')}
@@ -463,7 +464,7 @@ export function Dashboard({
                   <h4>All Projects</h4>
                   <p>Search, filter and manage sample work.</p>
                 </div>
-                <Button onClick={openCreate}>Create project</Button>
+                <Button shape='pill' onClick={openCreate}>Create project</Button>
               </div>
               <div className={styles.filters}>
                 <Select
@@ -514,7 +515,7 @@ export function Dashboard({
                       />
                       <Dropdown placement='bottom-end'>
                         <Dropdown.Trigger asChild>
-                          <Button appearance='outline' color='neutral'>
+                          <Button shape='pill' appearance='outline' color='neutral'>
                             Actions
                           </Button>
                         </Dropdown.Trigger>
@@ -600,7 +601,7 @@ export function Dashboard({
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
-                <Button
+                <Button shape='pill'
                   appearance='outline'
                   color='neutral'
                   onClick={resetDemo}
@@ -673,14 +674,14 @@ export function Dashboard({
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button
+              <Button shape='pill'
                 appearance='outline'
                 color='neutral'
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button onClick={createProject}>Create project</Button>
+              <Button shape='pill' onClick={createProject}>Create project</Button>
             </Modal.Footer>
           </Modal.Content>
         </Portal>
