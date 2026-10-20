@@ -165,3 +165,215 @@ test('rolling candidate remains detached from deployed website Workers', () => {
     /export \{ NewsletterRollingBudgetCoordinator \} from '\.\/newsletter-rolling-budget-coordinator\.mjs'/
   );
 });
+
+
+// Offline cross-Worker proof: two independently named website simulations
+// connect to one standalone owner namespace. No canonical website configuration,
+// network provider request, production secret or Cloudflare account is involved.
+function createSharedOwnerMiniflare(persistPath, capacity = '7') {
+  const root = path.resolve(import.meta.dirname, '..');
+  const plan = JSON.parse(
+    readFileSync(
+      path.join(root, 'cloudflare/newsletter-budget-namespace-plan.json'),
+      'utf8'
+    )
+  );
+  const ownerFiles = [
+    'cloudflare/newsletter-budget-owner-worker.mjs',
+    'cloudflare/newsletter-rolling-budget-coordinator.mjs',
+    'cloudflare/newsletter-rolling-window-model.mjs',
+    'cloudflare/newsletter-rolling-response.mjs',
+  ];
+  const ownerWorker = {
+    config: {
+      type: 'worker',
+      name: plan.owner.worker,
+      compatibilityDate: '2026-09-06',
+      manifest: {
+        mainModule: ownerFiles[0],
+        modules: Object.fromEntries(
+          ownerFiles.map((name) => [
+            name,
+            { type: 'esm', contents: readFileSync(path.join(root, name), 'utf8') },
+          ])
+        ),
+      },
+      env: {
+        NEWSLETTER_GLOBAL_BUDGET_CAPACITY: {
+          type: 'text',
+          value: capacity,
+        },
+      },
+      exports: {
+        [plan.owner.className]: {
+          type: 'durable-object',
+          storage: 'sqlite',
+        },
+      },
+    },
+  };
+  const consumerSource = [
+    'export default {',
+    '  fetch(request, env) {',
+    '    const url = new URL(request.url);',
+    "    if (request.method !== 'POST' || url.pathname !== '/attempt')",
+    "      return new Response(null, { status: 404 });",
+    '    return env.NEWSLETTER_GLOBAL_BUDGET.getByName(',
+    '      "one-buttondown-account"',
+    '    ).fetch(new Request("https://budget.internal/admit", { method: "POST" }));',
+    '  },',
+    '};',
+  ].join('\n');
+  const siteWorkers = plan.targets.map((target) => {
+    assert.equal(target.binding.name, 'NEWSLETTER_GLOBAL_BUDGET');
+    assert.equal(target.binding.script_name, plan.owner.worker);
+    assert.equal(target.binding.class_name, plan.owner.className);
+    assert.equal(target.objectName, plan.owner.objectName);
+    assert.equal(target.mode, '0');
+    return {
+      config: {
+        type: 'worker',
+        name: target.websiteWorker,
+        compatibilityDate: '2026-09-06',
+        manifest: {
+          mainModule: 'test-cross-worker-consumer.mjs',
+          modules: {
+            'test-cross-worker-consumer.mjs': {
+              type: 'esm',
+              contents: consumerSource,
+            },
+          },
+        },
+        env: {
+          NEWSLETTER_GLOBAL_BUDGET: {
+            type: 'durable-object',
+            worker: plan.owner.worker,
+            exportName: plan.owner.className,
+          },
+        },
+      },
+    };
+  });
+  return new Miniflare({
+    resourcePersistencePath: persistPath,
+    workers: [ownerWorker, ...siteWorkers],
+  });
+}
+
+test('two independently named site Workers share one atomic account budget', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-shared-budget-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const mf = createSharedOwnerMiniflare(dir, '7');
+  t.after(() => mf.dispose());
+
+  const staging = await mf.getWorker('vellira-website-staging');
+  const production = await mf.getWorker('vellira-website');
+  const owner = await mf.getWorker('vellira-newsletter-budget-owner');
+
+  // The owner entrypoint remains inaccessible as a subscriber endpoint:
+  // only bound Durable Object stubs may reach its /admit method.
+  const publicAttempt = await owner.fetch('https://budget.internal/admit', {
+    method: 'POST',
+  });
+  assert.equal(publicAttempt.status, 404);
+
+  const attempts = await Promise.all(
+    Array.from({ length: 30 }, (_, index) => {
+      const caller = index % 2 === 0 ? staging : production;
+      return caller.fetch(`https://site.test/attempt?account=forged-${index}`, {
+        method: 'POST',
+        // Internal service bindings have no browser Origin: Miniflare
+        // rejects Origin-bearing service Fetcher requests before this Worker.
+        // The real public subscribe route validates Origin independently.
+        headers: {
+          'X-Budget-Key': `attacker-selected-${index}`,
+          'X-Purpose': index % 2 === 0 ? 'newsletter' : 'pro_launch',
+        },
+      });
+    })
+  );
+  const statusCounts = Object.fromEntries(
+    [...new Set(attempts.map((result) => result.status))]
+      .sort((a, b) => a - b)
+      .map((status) => [
+        status,
+        attempts.filter((result) => result.status === status).length,
+      ])
+  );
+  assert.deepEqual(statusCounts, { 200: 7, 429: 23 });
+  assert.ok(
+    attempts.every((result) => result.headers.get('cache-control') === 'no-store')
+  );
+  assert.equal(
+    (await production.fetch('https://site.test/attempt', { method: 'POST' })).status,
+    429
+  );
+  assert.equal(
+    (await staging.fetch('https://site.test/attempt', { method: 'POST' })).status,
+    429
+  );
+});
+
+test('production can spend the only permit and staging immediately sees exhaustion', async (t) => {
+  const dir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'vellira-production-first-budget-')
+  );
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const mf = createSharedOwnerMiniflare(dir, '1');
+  t.after(() => mf.dispose());
+
+  const production = await mf.getWorker('vellira-website');
+  const staging = await mf.getWorker('vellira-website-staging');
+  const productionAdmit = await production.fetch(
+    'https://site.test/attempt?account=production-forged',
+    {
+      method: 'POST',
+      headers: { 'X-Budget-Key': 'production-forged' },
+    }
+  );
+  assert.equal(productionAdmit.status, 200);
+  assert.equal(productionAdmit.headers.get('cache-control'), 'no-store');
+  const stagingDenied = await staging.fetch(
+    'https://site.test/attempt?account=staging-forged',
+    {
+      method: 'POST',
+      headers: { 'X-Budget-Key': 'staging-forged' },
+    }
+  );
+  assert.equal(stagingDenied.status, 429);
+  assert.equal(stagingDenied.headers.get('cache-control'), 'no-store');
+});
+
+test('a shared budget remains exhausted for both site Workers across restart', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-shared-restart-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+
+  const first = createSharedOwnerMiniflare(dir, '1');
+  try {
+    const staging = await first.getWorker('vellira-website-staging');
+    const production = await first.getWorker('vellira-website');
+    assert.equal(
+      (await staging.fetch('https://site.test/attempt', { method: 'POST' })).status,
+      200
+    );
+    assert.equal(
+      (await production.fetch('https://site.test/attempt', { method: 'POST' })).status,
+      429
+    );
+  } finally {
+    await first.dispose();
+  }
+
+  const restarted = createSharedOwnerMiniflare(dir, '1');
+  try {
+    for (const site of ['vellira-website-staging', 'vellira-website']) {
+      const caller = await restarted.getWorker(site);
+      const response = await caller.fetch('https://site.test/attempt', {
+        method: 'POST',
+      });
+      assert.equal(response.status, 429, site);
+    }
+  } finally {
+    await restarted.dispose();
+  }
+});
