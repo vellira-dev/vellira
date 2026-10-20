@@ -21,8 +21,11 @@ authority for a single Buttondown account:
 - Both `vellira-website-staging` and `vellira-website` must eventually
   bind `NEWSLETTER_GLOBAL_BUDGET` to that **same external Worker** through
   `script_name`. No binding or enable flag has been added to either site.
-- The proposed owner has `workers_dev: false`, no public routes, no provider
-  key, no API calls, and **no budget capacity**. Even if someone deployed the
+- The proposed owner has `workers_dev: false` and explicit
+  `preview_urls: false`, no public routes, no provider key, no API calls,
+  and **no budget capacity**. Explicitly disabling both default and Preview
+  URL exposure protects against an existing remote Preview setting being
+  retained during a later, separately approved Wrangler deployment. Even if someone deployed the
   owner alone, admission cannot succeed with missing capacity. Deployment
   still requires explicit approval.
 
