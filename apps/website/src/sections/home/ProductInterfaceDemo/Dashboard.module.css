@@ -664,6 +664,13 @@
   margin-top: 26px;
 }
 
+/* Keep Settings' md Select aligned with Core md Input and Button.
+   Select's rendered trigger is 50px; the other controls are 46px. */
+.settingsFields [role='combobox'] {
+  height: 46px;
+  min-height: 46px;
+}
+
 .modalFields {
   display: grid;
   min-width: min(380px, 76vw);
