@@ -4,6 +4,7 @@
   "main": "./newsletter-budget-owner-worker.mjs",
   "compatibility_date": "2026-09-06",
   "workers_dev": false,
+  "preview_urls": false,
   "exports": {
     "NewsletterRollingBudgetCoordinator": {
       "type": "durable-object",

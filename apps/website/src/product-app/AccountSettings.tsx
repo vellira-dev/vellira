@@ -10,6 +10,7 @@ import { Button, Radio, RadioGroup, Tabs } from '@vellira-ui/react';
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 import { useAppSession } from './AppSession';
 import { BillingPanel } from './BillingSettings';
+import { AccountDeletionPanel } from './AccountDeletionPanel';
 import { AccountProfilePanel } from './AccountProfilePanel';
 
 import styles from './AccountSettings.module.css';
@@ -209,6 +210,7 @@ export function SettingsGeneral({
 
         <Tabs.Content value='account' className={styles.accountTabPanel}>
           <AccountProfilePanel onDirtyChange={handleAccountDirty} />
+          <AccountDeletionPanel />
         </Tabs.Content>
         <Tabs.Content value='security'>
           <SecurityPanel />
