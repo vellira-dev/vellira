@@ -254,8 +254,20 @@ export function Dashboard({
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden='true'>
-            <img src='https://vellira.dev/brand/icons/logo-icon-dark.svg' alt='' className={styles.brandLogoDark} width={24} height={24} />
-            <img src='https://vellira.dev/brand/icons/logo-icon-light.svg' alt='' className={styles.brandLogoLight} width={24} height={24} />
+            <img
+              src='https://vellira.dev/brand/icons/logo-icon-dark.svg'
+              alt=''
+              className={styles.brandLogoDark}
+              width={24}
+              height={24}
+            />
+            <img
+              src='https://vellira.dev/brand/icons/logo-icon-light.svg'
+              alt=''
+              className={styles.brandLogoLight}
+              width={24}
+              height={24}
+            />
           </span>
           <div>
             <strong>Vellira</strong>
@@ -267,7 +279,8 @@ export function Dashboard({
           {navigation.map((item) => {
             const Icon = item.icon;
             return (
-              <Button shape='pill'
+              <Button
+                shape='pill'
                 key={item.id}
                 appearance={view === item.id ? 'soft' : 'ghost'}
                 color={view === item.id ? 'primary' : 'neutral'}
@@ -307,7 +320,8 @@ export function Dashboard({
           </div>
           <div className={styles.toolbarActions}>
             <span className={styles.localLabel}>Local demo</span>
-            <Button shape='pill'
+            <Button
+              shape='pill'
               size='sm'
               iconStart={<Plus size={16} aria-hidden='true' />}
               onClick={openCreate}
@@ -417,7 +431,9 @@ export function Dashboard({
                     <h4>Active Projects</h4>
                     <p>Track the work inside this sample workspace.</p>
                   </div>
-                  <Button shape='pill' size='sm'
+                  <Button
+                    shape='pill'
+                    size='sm'
                     appearance='outline'
                     color='neutral'
                     onClick={() => setView('projects')}
@@ -464,7 +480,9 @@ export function Dashboard({
                   <h4>All Projects</h4>
                   <p>Search, filter and manage sample work.</p>
                 </div>
-                <Button shape='pill' size='sm' onClick={openCreate}>Create project</Button>
+                <Button shape='pill' size='sm' onClick={openCreate}>
+                  Create project
+                </Button>
               </div>
               <div className={styles.filters}>
                 <Select
@@ -516,7 +534,12 @@ export function Dashboard({
                       />
                       <Dropdown placement='bottom-end'>
                         <Dropdown.Trigger asChild>
-                          <Button shape='pill' size='sm' appearance='outline' color='neutral'>
+                          <Button
+                            shape='pill'
+                            size='sm'
+                            appearance='outline'
+                            color='neutral'
+                          >
                             Actions
                           </Button>
                         </Dropdown.Trigger>
@@ -604,7 +627,9 @@ export function Dashboard({
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
-                <Button shape='pill' size='md'
+                <Button
+                  shape='pill'
+                  size='md'
                   appearance='outline'
                   color='neutral'
                   onClick={() => setResetOpen(true)}
@@ -628,13 +653,21 @@ export function Dashboard({
               <div>
                 <Modal.Title>Restore sample data?</Modal.Title>
                 <Modal.Description>
-                  This replaces your locally saved projects and workspace settings with the original examples. This action cannot be undone.
+                  This replaces your locally saved projects and workspace
+                  settings with the original examples. This action cannot be
+                  undone.
                 </Modal.Description>
               </div>
               <Modal.Close />
             </Modal.Header>
             <Modal.Footer>
-              <Button shape='pill' size='sm' appearance='outline' color='neutral' onClick={() => setResetOpen(false)}>
+              <Button
+                shape='pill'
+                size='sm'
+                appearance='outline'
+                color='neutral'
+                onClick={() => setResetOpen(false)}
+              >
                 Cancel
               </Button>
               <Button shape='pill' size='sm' color='danger' onClick={resetDemo}>
@@ -704,14 +737,18 @@ export function Dashboard({
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button shape='pill' size='sm'
+              <Button
+                shape='pill'
+                size='sm'
                 appearance='outline'
                 color='neutral'
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button shape='pill' size='sm' onClick={createProject}>Create project</Button>
+              <Button shape='pill' size='sm' onClick={createProject}>
+                Create project
+              </Button>
             </Modal.Footer>
           </Modal.Content>
         </Portal>
