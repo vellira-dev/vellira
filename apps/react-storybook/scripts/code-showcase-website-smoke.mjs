@@ -500,7 +500,7 @@ try {
           await dashboardNav.focus();
           await expect(dashboardNav).toBeFocused();
           await page.keyboard.press('Enter');
-          await expect(themedDashboard.getByRole('heading', { name: 'Settings' })).toBeVisible();
+          await expect(themedDashboard.getByRole('heading', { name: 'Settings', exact: true, level: 3 })).toBeVisible();
           await themedDashboard.getByRole('button', { name: 'Dashboard', exact: true }).click();
 
           // Review the new homepage narrative in each theme, viewport and
