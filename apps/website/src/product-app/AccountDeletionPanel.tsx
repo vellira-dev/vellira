@@ -62,7 +62,7 @@ export function AccountDeletionPanel() {
                   <div>
                     <Modal.Title>Delete your account?</Modal.Title>
                     <Modal.Description>
-                      Identity verification is required before account deletion.
+                      Identity verification is required before deletion.
                     </Modal.Description>
                   </div>
                   <Modal.Close />
@@ -70,7 +70,7 @@ export function AccountDeletionPanel() {
                 <Modal.Body>
                   <div className={styles.previewMessage}>
                     <p>This preview never sends a deletion request.</p>
-                    <p>Real deletion will describe removed and retained data.</p>
+                    <p>Real deletion requires identity and data checks.</p>
                   </div>
                 </Modal.Body>
                 <Modal.Footer>
@@ -90,7 +90,7 @@ export function AccountDeletionPanel() {
       </div>
       <p id='account-deletion-help' className={styles.help}>
         {previewEnabled
-          ? 'Local UI preview only — this action cannot delete an account.'
+          ? 'Demo only — this action cannot delete an account.'
           : 'Account deletion will be available only after secure identity verification and data erasure are enabled.'}
       </p>
     </section>
