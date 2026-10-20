@@ -146,7 +146,8 @@ test('private owner workflow requires manual approved provision and no site acti
     source.replace('default: preflight', 'default: provision'),
     source.replace('      name: production', '      name: staging'),
     source.replace('needs: [preflight, approval]', 'needs: preflight'),
-    source.replace('PROVISION_PRIVATE_BUDGET_OWNER', 'BYPASS_CONFIRMATION'),
+    source.replace('test "$CONFIRMATION" = "PROVISION_PRIVATE_BUDGET_OWNER"',
+      'test "$CONFIRMATION" = "BYPASS_CONFIRMATION"'),
   ]) {
     assert.throws(() => validateOwnerProvisioningWorkflow(changed));
   }
