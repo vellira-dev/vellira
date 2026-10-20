@@ -21,10 +21,13 @@ authority for a single Buttondown account:
 - Both `vellira-website-staging` and `vellira-website` must eventually
   bind `NEWSLETTER_GLOBAL_BUDGET` to that **same external Worker** through
   `script_name`. No binding or enable flag has been added to either site.
-- The proposed owner has `workers_dev: false`, no public routes, no provider
-  key, no API calls, and **no budget capacity**. Even if someone deployed the
-  owner alone, admission cannot succeed with missing capacity. Deployment
-  still requires explicit approval.
+- The proposed owner has `workers_dev: false` and explicit
+  `preview_urls: false`, no public routes, no provider key, no API calls,
+  and **no budget capacity**. Explicitly disabling both stable and Preview
+  URL exposure prevents a previously enabled remote Preview setting from
+  being silently retained during a separately approved Wrangler deployment.
+  Even if the owner were deployed alone, admission cannot succeed without
+  capacity. Deployment still requires explicit approval.
 
 Matching names in this repository do **not** prove a shared remote namespace.
 Cloudflare environments, accounts, dispatch namespaces, and Worker owners can
@@ -33,6 +36,35 @@ actual Cloudflare account, owner Worker, class export, environment, binding's
 `script_name`, and the same object identity from all relevant writers.
 Record only non-sensitive proof metadata privately or in an approved
 sanitized attestation. Never place account tokens or subscriber data in git.
+
+### Offline cross-Worker authority proof (provider-independent)
+
+The maintained `newsletter-rolling-miniflare.test.mjs` suite now simulates
+both `vellira-website-staging` and `vellira-website` as **independent,
+local-only** Workers bound to one separately named owner Worker. The owner
+runs the real candidate SQLite `NewsletterRollingBudgetCoordinator`, with
+each caller using the identical `one-buttondown-account` Durable Object name.
+
+The integration asserts that 30 simultaneous admissions spread across both
+callers yield **exactly seven** admissions for an artificial capacity of seven,
+rather than two independently spendable pools, even if each request uses a
+different untrusted account/query hint and budget-key header. A separate
+production-first test proves that production can consume the sole permit
+before staging is denied. Both callers observe exhaustion, and exhausted
+state survives full Miniflare disposal and restart. A direct request
+to the owner Worker's public entrypoint remains 404; only its internal
+Durable Object binding processes admissions. Spoofed caller headers cannot
+choose a different budget namespace in this test harness.
+
+Run with `node --test apps/website/scripts/newsletter-rolling-miniflare.test.mjs`;
+this suite is already included in the canonical `test:cloudflare-cache` CI recipe.
+
+**Scope:** These are synthetic local test Workers, not the production
+Next/OpenNext route, not a live Cloudflare namespace, and not evidence that
+another external subscriber writer has been inventoried. Actual Cloudflare
+account/class/binding identity and Buttondown's numerical quota/window
+remain unverified. All candidate infrastructure remains **undeployed** and
+the production/Pro activation mode remains OFF.
 
 ## Provider evidence — unresolved, blocking activation
 

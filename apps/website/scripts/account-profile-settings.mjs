@@ -125,6 +125,17 @@ try {
   assert.equal(await badgeInLabel.locator('svg').count(), 1, 'Verified retains the Check icon');
   const emailUpdate = page.getByRole('button', { name: 'Update email', exact: true });
   assert.equal(await emailUpdate.isDisabled(), true, 'Unsafe email mutation cannot be exposed yet');
+  const danger = page.locator('[data-account-deletion]');
+  await danger.getByRole('heading', { name: 'Danger zone' }).waitFor();
+  const deleteTrigger = danger.getByRole('button', { name: 'Delete account', exact: true });
+  assert.equal(await deleteTrigger.isDisabled(), true,
+    'Production-shaped Account Settings must not expose account deletion before approved backend erasure');
+  assert.ok((await danger.locator('#account-deletion-help').textContent()).includes(
+    'only after secure identity verification'),
+  'Unavailable account deletion must have a truthful explanation');
+  assert.equal(await page.getByRole('alertdialog', { name: 'Delete your account?' }).count(), 0,
+    'No confirmation flow can be rendered for production-shaped sessions');
+
   assert.equal(
     await emailUpdate.getAttribute('aria-describedby'),
     'account-email-change-help',
@@ -238,6 +249,12 @@ try {
   for (const width of [768, 390, 320]) {
     await page.setViewportSize({ width, height: 820 });
     await dirtyBar.waitFor();
+    const dangerBox = await danger.boundingBox();
+    if (!dangerBox) throw new Error('Danger Zone missing on ' + width + 'px viewport');
+    assert.ok(dangerBox.x >= 0 && dangerBox.x + dangerBox.width <= width + 1,
+      'Danger Zone must not overflow ' + width + 'px viewport');
+    assert.equal(await deleteTrigger.isDisabled(), true,
+      'Responsive layout must not enable account deletion');
     const mobileBar = await dirtyBar.boundingBox();
     if (!mobileBar) throw new Error('Dirty action bar is not visible on viewport ' + width);
     assert.ok(mobileBar.x >= 0 && mobileBar.x + mobileBar.width <= width + 1, 'Sticky bar must fit viewport ' + width);
