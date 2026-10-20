@@ -76,9 +76,13 @@ describe('live Vellira Dashboard Core showcase', () => {
         `examples/workspace-starter/web/public/brand/icons/logo-icon-${tone}.svg`
       );
       expect(vendored).toBe(original);
-      expect(standaloneDashboard).toContain(`/brand/icons/logo-icon-${tone}.svg`);
+      expect(standaloneDashboard).toContain(
+        `/brand/icons/logo-icon-${tone}.svg`
+      );
     }
-    expect(standaloneDashboard).not.toContain('https://vellira.dev/brand/icons/');
+    expect(standaloneDashboard).not.toContain(
+      'https://vellira.dev/brand/icons/'
+    );
     expect(siteDashboard).not.toContain('https://vellira.dev/brand/icons/');
   });
 
