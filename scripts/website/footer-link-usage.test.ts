@@ -6,8 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const compactPath =
   'apps/website/src/components/layout/CompactFooter/CompactFooter.tsx';
-const sitePath =
-  'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx';
+const sitePath = 'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx';
 const compactCssPath =
   'apps/website/src/components/layout/CompactFooter/CompactFooter.module.css';
 const read = (file: string) => readFileSync(resolve(file), 'utf8');
