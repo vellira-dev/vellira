@@ -709,11 +709,7 @@ test('remote create-only archive stops after a failed batch with no later writes
     assert.equal(writes.length, ARCHIVE_IO_BATCH_SIZE);
     assert.deepEqual(
       new Set(writes),
-      new Set(
-        inventory
-          .slice(0, ARCHIVE_IO_BATCH_SIZE)
-          .map(({ key }) => key)
-      )
+      new Set(inventory.slice(0, ARCHIVE_IO_BATCH_SIZE).map(({ key }) => key))
     );
     assert.equal(
       saved.size,
