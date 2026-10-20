@@ -61,8 +61,24 @@
   line-height: 1.5;
 }
 
+.previewControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 36px;
+}
+
+.previewControls a {
+  color: var(--color-primary-500);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+}
+
 .stage {
-  margin-top: 50px;
+  margin-top: 14px;
   border: 1px solid var(--border-muted);
   border-radius: 20px;
   background: var(--surface-default);
@@ -70,6 +86,11 @@
   overflow: hidden;
   scroll-margin-top: 100px;
 }
+.mobileStage {
+  width: min(390px, 100%);
+  margin-inline: auto;
+}
+
 .stage:focus-visible {
   outline: 3px solid var(--color-primary-400);
   outline-offset: 4px;
