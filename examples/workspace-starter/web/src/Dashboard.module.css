@@ -35,21 +35,24 @@
 .brandMark {
   display: grid;
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   place-items: center;
-  color: white;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-500),
-    var(--color-primary-600)
-  );
+  background: color-mix(in srgb, var(--color-primary-500) 10%, var(--surface-default));
+  border: 1px solid color-mix(in srgb, var(--color-primary-500) 24%, var(--border-muted));
   border-radius: 12px;
-  font-size: 20px;
-  font-weight: 800;
-  box-shadow: 0 3px 12px
-    color-mix(in srgb, var(--color-primary-500) 20%, transparent);
 }
+.brandMark img {
+  grid-area: 1 / 1;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.brandLogoLight { display: none; }
+[data-vellira-theme='dark'] .brandLogoDark,
+[data-vellira-theme='high-contrast'] .brandLogoDark { display: none; }
+[data-vellira-theme='dark'] .brandLogoLight,
+[data-vellira-theme='high-contrast'] .brandLogoLight { display: block; }
 
 .brand strong,
 .brand small {
