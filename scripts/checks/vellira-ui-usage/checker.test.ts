@@ -61,7 +61,11 @@ describe('Vellira UI usage audit', () => {
       source,
       AUTHORITIES
     );
-    expect(findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link').map((f) => f.detected)).toEqual(['a', 'Alias']);
+    expect(
+      findings
+        .filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')
+        .map((f) => f.detected)
+    ).toEqual(['a', 'Alias']);
   });
 
   it('permits canonical links, structural branding, and Button-owned anchors', () => {
@@ -71,7 +75,9 @@ describe('Vellira UI usage audit', () => {
       const X = () => <footer><Link href='/'>Brand</Link><nav><DesignSystemLink href='/'>Home</DesignSystemLink><Button asChild><a href='/join'>Join</a></Button></nav></footer>;`,
       AUTHORITIES
     );
-    expect(findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')).toEqual([]);
+    expect(
+      findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')
+    ).toEqual([]);
   });
 
   it('does not report example strings or unaudited structural surfaces', () => {
@@ -80,7 +86,9 @@ describe('Vellira UI usage audit', () => {
       `const code = "<a href='/'>example</a>"; export const X = () => <DesignSystemLink href='/'>Docs</DesignSystemLink>;`,
       AUTHORITIES
     );
-    expect(findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')).toEqual([]);
+    expect(
+      findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')
+    ).toEqual([]);
   });
 
   it('reports authored button when canonical Button exists', () => {
