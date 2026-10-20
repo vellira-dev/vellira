@@ -165,7 +165,9 @@ export function checkSourceFile(
       !ts.isImportDeclaration(statement) ||
       !ts.isStringLiteral(statement.moduleSpecifier) ||
       statement.moduleSpecifier.text !== 'next/link'
-    ) continue;
+    ) {
+      continue;
+    }
     if (statement.importClause?.name) {
       nextLinkNames.add(statement.importClause.name.text);
     }
@@ -211,17 +213,25 @@ export function checkSourceFile(
           filePath.includes('/SiteFooter/') &&
           tagName !== 'a' &&
           !hasJsxAncestor(node, 'nav');
-        if (inTextNavigation && isRawLink && !ownedByCanonicalButton && !structuralBrand) {
-          findings.push(findingAtNode({
-            ruleId: 'vellira-ui.noncanonical-text-link',
+        if (
+          inTextNavigation &&
+          isRawLink &&
+          !ownedByCanonicalButton &&
+          !structuralBrand
+        ) {
+          findings.push(
+            findingAtNode({
+              ruleId: 'vellira-ui.noncanonical-text-link',
             filePath,
             sourceFile,
             node,
             detected: tagName,
             canonicalAlternative: 'DesignSystemLink',
             nextAction: 'reuse-existing',
-            message: 'Textual navigation links must use DesignSystemLink or a canonical Button asChild composition.',
-          }));
+              message:
+                'Textual navigation links must use DesignSystemLink or a canonical Button asChild composition.',
+            })
+          );
         }
       }
 
@@ -328,7 +338,10 @@ export function checkStyleFile(
 function hasJsxAncestor(node: ts.Node, tagName: string): boolean {
   let parent = node.parent;
   while (parent) {
-    if (ts.isJsxElement(parent) && parent.openingElement.tagName.getText() === tagName) {
+    if (
+      ts.isJsxElement(parent) &&
+      parent.openingElement.tagName.getText() === tagName
+    ) {
       return true;
     }
     parent = parent.parent;
