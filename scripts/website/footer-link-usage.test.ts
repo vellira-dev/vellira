@@ -66,7 +66,9 @@ function noncanonicalNavigationTags(source: string): string[] {
 describe('website footer canonical textual links (#1506)', () => {
   it('uses the shared Vellira link component in both footer navigations', () => {
     for (const source of [read(compactPath), read(sitePath)]) {
-      expect(source).toContain("from '@/components/navigation/DesignSystemLink'");
+      expect(source).toContain(
+        "from '@/components/navigation/DesignSystemLink'"
+      );
       expect(noncanonicalNavigationTags(source)).toEqual([]);
       expect(source).toContain("appearance='bare'");
     }
@@ -91,7 +93,7 @@ describe('website footer canonical textual links (#1506)', () => {
       "prefetch={link.href.startsWith('/#') ? false : undefined}"
     );
     expect(site).toMatch(/<Link\s+className=\{styles\.brand\}/);
-    expect((site.match(/<Link\b/g) ?? [])).toHaveLength(1);
+    expect(site.match(/<Link\b/g) ?? []).toHaveLength(1);
     expect(site).toContain('https://github.com/vellira-dev/vellira');
     expect(site).toContain('<ArrowRight size={13}');
   });
@@ -134,19 +136,4 @@ describe('website footer canonical textual links (#1506)', () => {
       )
     ).toEqual([]);
   });
-});
-
-it('TEMP formatter evidence for CI; remove before merge', async () => {
-  const prettier = await import('prettier');
-  const filename = resolve('scripts/website/footer-link-usage.test.ts');
-  const source = readFileSync(filename, 'utf8');
-  const config = await prettier.resolveConfig(filename);
-  const result = await prettier.format(source, {
-    ...config,
-    filepath: filename,
-  });
-  const encoded = Buffer.from(result, 'utf8').toString('base64');
-  for (let index = 0; index < encoded.length; index += 900) {
-    console.log('FOOTER_PRETTIER_CHUNK_' + index + ' ' + encoded.slice(index, index + 900));
-  }
 });
