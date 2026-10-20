@@ -158,7 +158,11 @@ export function Dashboard({
       const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
       if (saved) setWorkspace(saved);
       const savedView = window.localStorage.getItem(viewStorageKey);
-      if (savedView === 'overview' || savedView === 'projects' || savedView === 'settings') {
+      if (
+        savedView === 'overview' ||
+        savedView === 'projects' ||
+        savedView === 'settings'
+      ) {
         setView(savedView);
       }
     } catch {

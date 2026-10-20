@@ -49,7 +49,11 @@ export function ProductInterfaceDemo() {
               <a href='#dashboard-live'>Try Live Demo</a>
             </Button>
             <Button asChild appearance='outline' color='neutral'>
-              <a href='/demo/dashboard' target='_blank' rel='noopener noreferrer'>
+              <a
+                href='/demo/dashboard'
+                target='_blank'
+                rel='noopener noreferrer'
+              >
                 Open Full Demo
               </a>
             </Button>
@@ -71,9 +75,12 @@ export function ProductInterfaceDemo() {
         </header>
 
         <div className={styles.previewToolbar}>
-          <Tabs value={preview} onValueChange={(next) => {
-            if (next === 'desktop' || next === 'mobile') setPreview(next);
-          }}>
+          <Tabs
+            value={preview}
+            onValueChange={(next) => {
+              if (next === 'desktop' || next === 'mobile') setPreview(next);
+            }}
+          >
             <Tabs.List aria-label='Web preview size'>
               <Tabs.Trigger value='desktop'>Desktop</Tabs.Trigger>
               <Tabs.Trigger value='mobile'>Mobile</Tabs.Trigger>
@@ -93,11 +100,17 @@ export function ProductInterfaceDemo() {
               <span />
               <span />
             </div>
-            <span className={styles.windowTitle}>Vellira Dashboard Starter</span>
+            <span className={styles.windowTitle}>
+              Vellira Dashboard Starter
+            </span>
             <span className={styles.liveIndicator}>Interactive Core demo</span>
           </div>
           {preview === 'desktop' ? (
-            <Dashboard variant='embedded' theme={preference} onThemeChange={setPreference} />
+            <Dashboard
+              variant='embedded'
+              theme={preference}
+              onThemeChange={setPreference}
+            />
           ) : (
             <iframe
               className={styles.mobileFrame}
@@ -108,8 +121,18 @@ export function ProductInterfaceDemo() {
           )}
         </div>
         <div className={styles.nativeLink}>
-          <strong>React Native / Expo</strong> is a separate native starter, not this mobile Web preview.
-          {' '}<a href={repository + '/tree/' + previewRef + '/examples/workspace-starter/native'} target='_blank' rel='noopener noreferrer'>
+          <strong>React Native / Expo</strong> is a separate native starter, not
+          this mobile Web preview.{' '}
+          <a
+            href={
+              repository +
+              '/tree/' +
+              previewRef +
+              '/examples/workspace-starter/native'
+            }
+            target='_blank'
+            rel='noopener noreferrer'
+          >
             Setup instructions ↗
           </a>
         </div>
