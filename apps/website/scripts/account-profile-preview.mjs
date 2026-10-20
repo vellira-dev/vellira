@@ -113,7 +113,7 @@ try {
   assert.equal(dangerLayout.cardBackground, dangerLayout.profileCardBackground, 'Danger Zone must use the canonical elevated card surface');
   assert.equal(dangerLayout.cardBorder, '1px');
   assert.notEqual(dangerLayout.cardRadius, '0px');
-  assert.ok((await danger.locator('#account-deletion-help').textContent()).includes('Local UI preview only'));
+  assert.ok((await danger.locator('#account-deletion-help').textContent()).includes('Demo only'));
 
   await deleteTrigger.click();
   const deletionPreview = page.getByRole('alertdialog', { name: 'Delete your account?' });
