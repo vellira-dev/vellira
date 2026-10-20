@@ -92,11 +92,62 @@ test('deployed website configurations and automation remain disconnected', () =>
   const workflowDir = path.join(repoRoot, '.github/workflows');
   for (const filename of fs.readdirSync(workflowDir)) {
     if (!/\.ya?ml$/.test(filename)) continue;
+    // The only permitted deployment-capable reference is a manually dispatched,
+    // explicit human-approved private owner provisioning workflow.
+    if (filename === 'provision-newsletter-budget-owner.yml') continue;
     const workflow = fs.readFileSync(path.join(workflowDir, filename), 'utf8');
     assert.doesNotMatch(
       workflow,
       /newsletter-budget-owner\.wrangler\.candidate/,
       filename
     );
+  }
+});
+
+function validateOwnerProvisioningWorkflow(source) {
+  assert.match(source, /^on:\n  workflow_dispatch:\n/m);
+  assert.doesNotMatch(source, /^\s{2}(?:push|pull_request|workflow_run|schedule):/m);
+  assert.match(source, /^permissions:\n  contents: read\n/m);
+  assert.match(source, /default: preflight/);
+  assert.match(source, /expected_sha:/);
+  assert.match(source, /PROVISION_PRIVATE_BUDGET_OWNER/);
+  const preflight = source.split(/^  preflight:\n/m)[1]?.split(/^  approval:\n/m)[0];
+  const approval = source.split(/^  approval:\n/m)[1]?.split(/^  provision:\n/m)[0];
+  const provision = source.split(/^  provision:\n/m)[1];
+  assert.ok(preflight && approval && provision);
+  assert.match(preflight, /if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(preflight, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  assert.match(preflight, /test "\$CONFIRMATION" = "PROVISION_PRIVATE_BUDGET_OWNER"/);
+  assert.match(preflight, /newsletter-owner-wrangler-dry-run\.test\.mjs/);
+  assert.doesNotMatch(preflight, /secrets\./);
+  assert.match(approval, /environment:\n      name: production/);
+  assert.doesNotMatch(approval, /secrets\./);
+  assert.match(provision, /needs: \[preflight, approval\]/);
+  assert.match(provision, /needs\.approval\.result == 'success'/);
+  assert.match(provision, /main advanced since manual approval/);
+  assert.match(provision, /workerPresence\['vellira-newsletter-budget-owner'\], 'absent'/);
+  assert.match(provision, /wrangler deploy --config cloudflare\/newsletter-budget-owner\.wrangler\.candidate\.jsonc/);
+  assert.match(provision, /workerPresence\['vellira-newsletter-budget-owner'\], 'present'/);
+  assert.match(provision, /owner\.previewsEnabled, false/);
+  assert.match(provision, /globalBudgetBindingInServingVersions, false/);
+  assert.equal((source.match(/wrangler deploy --config/g) ?? []).length, 1);
+  assert.doesNotMatch(source, /BUTTONDOWN_API_KEY|api\.buttondown\.com/);
+  assert.doesNotMatch(source, /NEWSLETTER_GLOBAL_BUDGET_ENABLED/);
+}
+
+test('private owner workflow requires manual approved provision and no site activation', () => {
+  const source = fs.readFileSync(
+    path.join(repoRoot, '.github/workflows/provision-newsletter-budget-owner.yml'),
+    'utf8'
+  );
+  validateOwnerProvisioningWorkflow(source);
+  for (const changed of [
+    source.replace('  workflow_dispatch:', '  push:'),
+    source.replace('default: preflight', 'default: provision'),
+    source.replace('      name: production', '      name: staging'),
+    source.replace('needs: [preflight, approval]', 'needs: preflight'),
+    source.replace('PROVISION_PRIVATE_BUDGET_OWNER', 'BYPASS_CONFIRMATION'),
+  ]) {
+    assert.throws(() => validateOwnerProvisioningWorkflow(changed));
   }
 });
