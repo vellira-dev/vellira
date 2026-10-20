@@ -45,15 +45,16 @@ function noncanonicalNavigationTags(source: string): string[] {
 
   const violations: string[] = [];
   const visit = (node: ts.Node, withinNav: boolean) => {
-    const jsx = ts.isJsxElement(node) ? node.openingElement : null;
+    const jsx = ts.isJsxElement(node)
+      ? node.openingElement
+      : ts.isJsxSelfClosingElement(node)
+        ? node
+        : null;
     const inNavigation =
       withinNav || (jsx !== null && jsx.tagName.getText(file) === 'nav');
     if (jsx !== null) {
       const name = jsx.tagName.getText(file);
-      if (
-        inNavigation &&
-        (name === 'a' || nextLinkImports.has(name))
-      ) {
+      if (inNavigation && (name === 'a' || nextLinkImports.has(name))) {
         violations.push(name);
       }
     }
@@ -89,9 +90,12 @@ describe('website footer canonical textual links (#1506)', () => {
 
     expect(site).toContain("target='_blank'");
     expect(site).toContain("rel='noreferrer noopener'");
-    expect(site).toContain("prefetch={link.href.startsWith('/#') ? false : undefined}");
+    expect(site).toContain(
+      "prefetch={link.href.startsWith('/#') ? false : undefined}"
+    );
     expect(site).toMatch(/<Link\s+className=\{styles\.brand\}/);
     expect((site.match(/<Link\b/g) ?? [])).toHaveLength(1);
+    expect(site).toContain('https://github.com/vellira-dev/vellira');
     expect(site).toContain('<ArrowRight size={13}');
   });
 
@@ -116,6 +120,12 @@ describe('website footer canonical textual links (#1506)', () => {
           "const Footer = () => <nav><LocalLink href='/'>Home</LocalLink></nav>;"
       )
     ).toEqual(['LocalLink']);
+    expect(
+      noncanonicalNavigationTags(
+        "import Raw from 'next/link'; const Footer = () => " +
+          "<nav><Raw href='/blog' /></nav>;"
+      )
+    ).toEqual(['Raw']);
   });
 
   it('keeps structural brand anchors outside navigation exempt', () => {
