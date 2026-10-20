@@ -69,6 +69,17 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('Active Projects');
   });
 
+  it('vendors the canonical Vellira icons for standalone offline use', () => {
+    for (const tone of ['dark', 'light']) {
+      const original = read(`packages/assets/brand/icons/logo-icon-${tone}.svg`);
+      const vendored = read(`examples/workspace-starter/web/public/brand/icons/logo-icon-${tone}.svg`);
+      expect(vendored).toBe(original);
+      expect(standaloneDashboard).toContain(`/brand/icons/logo-icon-${tone}.svg`);
+    }
+    expect(standaloneDashboard).not.toContain('https://vellira.dev/brand/icons/');
+    expect(siteDashboard).not.toContain('https://vellira.dev/brand/icons/');
+  });
+
   it('keeps one synchronized Dashboard implementation across both apps', () => {
     const normalizedWebsite = siteDashboard.replace(
       "from '../../../../../../examples/workspace-starter/web/src/model';",
