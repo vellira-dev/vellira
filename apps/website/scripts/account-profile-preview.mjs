@@ -89,6 +89,46 @@ try {
   assert.equal(await panel.locator('[data-profile-save-bar]').count(), 0,
     'Clean preview must not show any floating Save controls');
 
+  // Fourth card is the only added Account surface; it reuses the same
+  // semantic elevation and never submits a deletion request.
+  const danger = page.locator('[data-account-deletion]');
+  await danger.getByRole('heading', { name: 'Danger zone' }).waitFor();
+  const deleteTrigger = danger.getByRole('button', { name: 'Delete account', exact: true });
+  assert.equal(await deleteTrigger.isEnabled(), true, 'Only local preview may open the explanatory dialog');
+  const dangerLayout = await page.evaluate(() => {
+    const profile = document.querySelector('[data-profile-settings]');
+    const preferences = profile?.querySelector('[data-account-block="preferences"]');
+    const card = document.querySelector('[data-account-deletion]');
+    if (!profile || !preferences || !card) throw new Error('Missing approved Danger Zone placement');
+    const cardStyle = getComputedStyle(card);
+    return {
+      belowPreferences: card.getBoundingClientRect().top - preferences.getBoundingClientRect().bottom,
+      cardBackground: cardStyle.backgroundColor,
+      cardBorder: cardStyle.borderTopWidth,
+      cardRadius: cardStyle.borderTopLeftRadius,
+      profileCardBackground: getComputedStyle(preferences).backgroundColor,
+    };
+  });
+  assert.ok(dangerLayout.belowPreferences >= 20, 'Danger Zone must follow Preferences with approved card rhythm');
+  assert.equal(dangerLayout.cardBackground, dangerLayout.profileCardBackground, 'Danger Zone must use the canonical elevated card surface');
+  assert.equal(dangerLayout.cardBorder, '1px');
+  assert.notEqual(dangerLayout.cardRadius, '0px');
+  assert.ok((await danger.locator('#account-deletion-help').textContent()).includes('Demo only'));
+
+  await deleteTrigger.click();
+  const deletionPreview = page.getByRole('alertdialog', { name: 'Delete your account?' });
+  await deletionPreview.waitFor();
+  assert.equal(await deletionPreview.getByRole('button', { name: 'Confirm deletion' }).isDisabled(), true,
+    'A preview must never enable the destructive confirmation');
+  await deletionPreview.getByText('This preview never sends a deletion request.', { exact: false }).waitFor();
+  await page.keyboard.press('Escape');
+  await deletionPreview.waitFor({ state: 'hidden' });
+  assert.equal(await deleteTrigger.evaluate((button) => document.activeElement === button), true,
+    'Canonical Modal must restore focus to the Delete account trigger');
+  await deleteTrigger.click();
+  await deletionPreview.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await deletionPreview.waitFor({ state: 'hidden' });
+
   const fullName = page.getByRole('textbox', { name: 'Full name' });
   const displayName = page.getByRole('textbox', { name: 'Display name' });
   const email = page.getByRole('textbox', { name: 'Email address' });
@@ -248,6 +288,10 @@ try {
       });
       assert.ok(gap >= 16, 'Mobile cards require at least 16px separation (approved rhythm: 20px)');
     }
+    const dangerBox = await danger.boundingBox();
+    if (!dangerBox) throw new Error('Missing Danger Zone on viewport ' + width);
+    assert.ok(dangerBox.x >= 0 && dangerBox.x + dangerBox.width <= width + 1,
+      'Danger Zone must fit viewport ' + width);
     assert.equal(await floatingBar.isVisible(), true, 'Floating actions must show for dirty state');
     const bar = await floatingBar.boundingBox();
     if (!bar) throw new Error('No floating bar on viewport ' + width);
