@@ -81,6 +81,35 @@ All evidence must belong to the same exact Git SHA. A green deploy step with ski
 
 OpenNext must continue to use Workers Static Assets incremental cache with cache interception so prerendered SSG pages use the build-time cache instead of being regenerated inside the Worker.
 
+### Bounded R2 archive verification (staging incident, 2026-10-19)
+
+Staging workflow #39309932420 timed out at the existing **10-minute**
+`Deploy website staging to Cloudflare Workers` step after local route-cache
+population. The failure artifact has no new `archive-evidence.json` or activation
+seal; no new Worker activation can be claimed. An earlier staging run
+#39304563116 activated successfully but failed immutable postflight with a
+Cloudflare HTTP 502 for one JavaScript asset; these are **different** failures.
+
+A deployment validates the complete existing archived predecessor, performs
+create-only writes plus exact-byte read-back of new assets, then validates the
+complete new graph before writing its manifest and activation seal. Serial
+remote R2 GET/PUT requests scale poorly for hundreds of assets. Archive I/O
+now executes in **fixed batches of four** independent assets and logs sanitized
+phase/progress counts. A batch is not complete until all started operations
+settle; any failure blocks the next batch, manifest, Wrangler dry-run and
+Worker activation. All SHA-256, size, metadata and immutable cache assertions
+remain mandatory; no existing archive is overwritten and no 10-minute step
+budget is increased. A partial create-only batch can leave unused objects in
+R2, which is safe and already permitted by the guarded deployment contract.
+
+This is a performance-and-diagnostics correction, **not remote proof** that a
+staging rollout has recovered. Run exactly one owner-authorized, default-OFF
+staging deployment on current `main` only after the PR is independently reviewed
+and merged. Require complete asset postflight, browser/soak and a healthy
+staging promotion receipt; a skipped/no-op workflow is not proof. Do not
+auto-approve production, weaken the HTTP 502 gate, enable Pro/newsletter guard,
+or enable the global Buttondown budget.
+
 ## Supported deployment entry
 
 Use the repository workflows. They install frozen dependencies, validate remote R2 and the live predecessor before activation, build with:

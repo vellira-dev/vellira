@@ -68,9 +68,37 @@ export async function assetInventory(staticRoot) {
   return files.sort((a, b) => a.key.localeCompare(b.key));
 }
 
-export async function verifyArchivedAssets(bucket, inventory) {
+// Bound simultaneous R2 read-backs and create-only writes. The batch barrier
+// settles every started operation before a failure escapes; no subsequent batch
+// or deployment manifest is admitted after any failed verification.
+export const ARCHIVE_IO_BATCH_SIZE = 4;
+
+async function runArchiveBatches(inventory, verify, onProgress) {
+  for (
+    let offset = 0;
+    offset < inventory.length;
+    offset += ARCHIVE_IO_BATCH_SIZE
+  ) {
+    const batch = inventory.slice(offset, offset + ARCHIVE_IO_BATCH_SIZE);
+    const outcomes = await Promise.allSettled(batch.map(verify));
+    const firstFailure = outcomes.find(
+      (outcome) => outcome.status === 'rejected'
+    );
+    if (firstFailure) throw firstFailure.reason;
+    await onProgress?.({
+      completed: Math.min(offset + ARCHIVE_IO_BATCH_SIZE, inventory.length),
+      total: inventory.length,
+    });
+  }
+}
+
+export async function verifyArchivedAssets(
+  bucket,
+  inventory,
+  { onProgress } = {}
+) {
   assert.ok(inventory.length, 'Archive inventory must not be empty');
-  for (const asset of inventory) {
+  await runArchiveBatches(inventory, async (asset) => {
     const stored = await bucket.get(asset.key);
     assert.ok(stored, `Archive object missing: ${asset.pathname}`);
     // Consume the R2 body within its RPC method. Iterating a remote-proxied
@@ -102,16 +130,21 @@ export async function verifyArchivedAssets(bucket, inventory) {
       IMMUTABLE_CACHE_CONTROL,
       `Archive cache policy mismatch: ${asset.pathname}`
     );
-  }
+  }, onProgress);
 }
 
-export async function recordArchivedDeployment(bucket, buildId, inventory) {
+export async function recordArchivedDeployment(
+  bucket,
+  buildId,
+  inventory,
+  { onProgress } = {}
+) {
   assert.match(
     buildId,
     /^[a-zA-Z0-9_-]+$/,
     'Unsafe archived deployment identity'
   );
-  await verifyArchivedAssets(bucket, inventory);
+  await verifyArchivedAssets(bucket, inventory, { onProgress });
   const body = JSON.stringify({ buildId, assets: inventory });
   const key = `deployments/${buildId}.json`;
   await bucket.put(key, body, {
@@ -125,7 +158,11 @@ export async function recordArchivedDeployment(bucket, buildId, inventory) {
   );
 }
 
-export async function requireArchivedDeployment(bucket, buildId) {
+export async function requireArchivedDeployment(
+  bucket,
+  buildId,
+  { onProgress } = {}
+) {
   assert.match(buildId, /^[a-zA-Z0-9_-]+$/);
   const object = await bucket.get(`deployments/${buildId}.json`);
   assert.ok(
@@ -134,11 +171,12 @@ export async function requireArchivedDeployment(bucket, buildId) {
   );
   const record = await object.json();
   assert.equal(record.buildId, buildId);
-  await verifyArchivedAssets(bucket, record.assets);
+  await verifyArchivedAssets(bucket, record.assets, { onProgress });
 }
 
-export async function archiveAssets(bucket, inventory) {
-  for (const asset of inventory) {
+export async function archiveAssets(bucket, inventory, { onProgress } = {}) {
+  assert.ok(inventory.length, 'Cannot archive an empty asset inventory');
+  await runArchiveBatches(inventory, async (asset) => {
     const bytes = await fs.readFile(asset.filename);
     assert.equal(
       sha256(bytes),
@@ -156,7 +194,7 @@ export async function archiveAssets(bucket, inventory) {
       customMetadata: { sha256: asset.sha256 },
     });
     await verifyArchivedAssets(bucket, [asset]);
-  }
+  }, onProgress);
   return inventory.map((asset) =>
     Object.fromEntries(
       Object.entries(asset).filter(([key]) => key !== 'filename')

@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+
+import { Button } from '@vellira-ui/react';
 
 import { Container } from '@/components/layout/Container';
 
@@ -25,9 +29,9 @@ export function NewsletterStatusPage({
             {heading}
           </h1>
           <p className={styles.body}>{body}</p>
-          <Link href='/blog' className={styles.link}>
-            Back to Vellira
-          </Link>
+          <Button asChild appearance='solid' className={styles.link}>
+            <Link href='/blog'>Back to Vellira</Link>
+          </Button>
         </section>
       </Container>
     </main>
