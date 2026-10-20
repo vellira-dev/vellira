@@ -44,6 +44,9 @@ jobs:
           node-version: 22.22.2
           package-manager-cache: false
 
+      - name: Unit-test fail-closed media staging
+        run: node --test scripts/visual/stage-component-demo-assets.test.mjs
+
       - name: Require reviewed immutable source run
         shell: bash
         run: |
