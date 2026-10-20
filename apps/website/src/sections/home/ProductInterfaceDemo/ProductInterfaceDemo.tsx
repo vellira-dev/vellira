@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Button } from '@vellira-ui/react';
+import { Button, Tabs } from '@vellira-ui/react';
 
 import { Dashboard } from './Dashboard';
 
@@ -70,18 +70,17 @@ export function ProductInterfaceDemo() {
           </p>
         </header>
 
-        <div className={styles.previewControls} role='group' aria-label='Preview viewport'>
-          <Button size='sm' appearance={preview === 'desktop' ? 'solid' : 'outline'} color={preview === 'desktop' ? 'primary' : 'neutral'} onClick={() => setPreview('desktop')} aria-pressed={preview === 'desktop'}>
-            Desktop
-          </Button>
-          <Button size='sm' appearance={preview === 'mobile' ? 'solid' : 'outline'} color={preview === 'mobile' ? 'primary' : 'neutral'} onClick={() => setPreview('mobile')} aria-pressed={preview === 'mobile'}>
-            Mobile
-          </Button>
-          <a href={repository + '/tree/' + previewRef + '/examples/workspace-starter/native'} target='_blank' rel='noopener noreferrer'>
-            React Native / Expo setup ↗
-          </a>
+        <div className={styles.previewToolbar}>
+          <Tabs value={preview} onValueChange={(next) => {
+            if (next === 'desktop' || next === 'mobile') setPreview(next);
+          }}>
+            <Tabs.List aria-label='Web preview size'>
+              <Tabs.Trigger value='desktop'>Desktop</Tabs.Trigger>
+              <Tabs.Trigger value='mobile'>Mobile</Tabs.Trigger>
+            </Tabs.List>
+          </Tabs>
+          <span className={styles.previewHint}>Responsive Web preview</span>
         </div>
-
         <div
           id='dashboard-live'
           className={`${styles.stage} ${preview === 'mobile' ? styles.mobileStage : ''}`}
@@ -94,16 +93,25 @@ export function ProductInterfaceDemo() {
               <span />
               <span />
             </div>
-            <span className={styles.windowTitle}>
-              Vellira Dashboard Starter
-            </span>
+            <span className={styles.windowTitle}>Vellira Dashboard Starter</span>
             <span className={styles.liveIndicator}>Interactive Core demo</span>
           </div>
-          <Dashboard
-            variant='embedded'
-            theme={preference}
-            onThemeChange={setPreference}
-          />
+          {preview === 'desktop' ? (
+            <Dashboard variant='embedded' theme={preference} onThemeChange={setPreference} />
+          ) : (
+            <iframe
+              className={styles.mobileFrame}
+              title='Responsive mobile Web Dashboard preview'
+              src='/demo/dashboard'
+              loading='lazy'
+            />
+          )}
+        </div>
+        <div className={styles.nativeLink}>
+          <strong>React Native / Expo</strong> is a separate native starter, not this mobile Web preview.
+          {' '}<a href={repository + '/tree/' + previewRef + '/examples/workspace-starter/native'} target='_blank' rel='noopener noreferrer'>
+            Setup instructions ↗
+          </a>
         </div>
 
         <div className={styles.boundary}>
