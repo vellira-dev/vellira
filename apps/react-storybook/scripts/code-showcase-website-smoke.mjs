@@ -390,7 +390,7 @@ try {
             );
             assert.ok(
               Math.max(...controlHeights) - Math.min(...controlHeights) <= 2,
-              'Core md Input, Select and Button heights must align'
+              `Core md controls differ: Input=${controlHeights[0]}, Select=${controlHeights[1]}, Button=${controlHeights[2]}`
             );
             await dashboard
               .getByRole('textbox', { name: 'Workspace name' })
