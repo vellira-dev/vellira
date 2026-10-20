@@ -438,6 +438,7 @@ try {
             await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
             await expect(dashboard.getByText('1 matching projects')).toBeVisible();
             await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
             await dashboard.getByRole('button', { name: 'Projects', exact: true }).click();
             await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
             await dashboard.getByRole('button', { name: 'Settings', exact: true }).click();
