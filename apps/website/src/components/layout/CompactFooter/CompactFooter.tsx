@@ -12,7 +12,10 @@ export function CompactFooter() {
           Documentation
         </DesignSystemLink>
 
-        <DesignSystemLink href='https://storybook.vellira.dev' appearance='bare'>
+        <DesignSystemLink
+          href='https://storybook.vellira.dev'
+          appearance='bare'
+        >
           Storybook
         </DesignSystemLink>
 
