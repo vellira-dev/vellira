@@ -222,12 +222,12 @@ export function checkSourceFile(
           findings.push(
             findingAtNode({
               ruleId: 'vellira-ui.noncanonical-text-link',
-            filePath,
-            sourceFile,
-            node,
-            detected: tagName,
-            canonicalAlternative: 'DesignSystemLink',
-            nextAction: 'reuse-existing',
+              filePath,
+              sourceFile,
+              node,
+              detected: tagName,
+              canonicalAlternative: 'DesignSystemLink',
+              nextAction: 'reuse-existing',
               message:
                 'Textual navigation links must use DesignSystemLink or a canonical Button asChild composition.',
             })
