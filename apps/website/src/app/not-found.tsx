@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import { ArrowRight } from '@vellira-ui/icons';
 
@@ -14,10 +14,10 @@ export default function NotFound() {
           The page may have moved, or the URL does not match a Vellira route.
         </p>
 
-        <Link className='not-found-home-link' href='/'>
+        <DesignSystemLink className='not-found-home-link' href='/' appearance='bare'>
           Back to home
           <ArrowRight size={16} aria-hidden='true' />
-        </Link>
+        </DesignSystemLink>
       </section>
     </main>
   );
