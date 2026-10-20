@@ -253,7 +253,7 @@ function WorkspaceScreen() {
 
         <Tabs
           value={section}
-          onValueChange={(value) => {
+          onValueChange={(value: string) => {
             if (isSection(value)) setSection(value);
           }}
         >
@@ -322,7 +322,7 @@ function WorkspaceScreen() {
               <Select
                 label='Status filter'
                 value={statusFilter}
-                onValueChange={(value) => {
+                onValueChange={(value: string) => {
                   if (
                     typeof value === 'string' &&
                     (value === 'all' || isStatus(value))
@@ -355,7 +355,7 @@ function WorkspaceScreen() {
                   <Checkbox
                     label='Mark completed'
                     checked={project.completed}
-                    onCheckedChange={(value) =>
+                    onCheckedChange={(value: boolean) =>
                       toggleProject(project.id, value)
                     }
                   />
@@ -400,7 +400,7 @@ function WorkspaceScreen() {
                 <Input
                   label='Workspace name'
                   value={data.name}
-                  onValueChange={(next) =>
+                  onValueChange={(next: string) =>
                     setData((current) => ({ ...current, name: next }))
                   }
                 />
@@ -408,7 +408,7 @@ function WorkspaceScreen() {
                   label='Product notifications'
                   description='Local preference only; no emails are sent.'
                   checked={data.notifications}
-                  onCheckedChange={(notifications) =>
+                  onCheckedChange={(notifications: boolean) =>
                     setData((current) => ({ ...current, notifications }))
                   }
                 />
@@ -467,7 +467,7 @@ function WorkspaceScreen() {
 
       <Modal
         open={createOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           setCreateOpen(open);
           if (!open) setError('');
         }}
@@ -483,7 +483,7 @@ function WorkspaceScreen() {
                 label='Project name'
                 value={name}
                 error={error || undefined}
-                onValueChange={(value) => {
+                onValueChange={(value: string) => {
                   setName(value);
                   setError('');
                 }}
