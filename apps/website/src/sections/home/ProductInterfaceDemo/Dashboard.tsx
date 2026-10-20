@@ -269,7 +269,6 @@ export function Dashboard({
                 key={item.id}
                 appearance={view === item.id ? 'soft' : 'ghost'}
                 color={view === item.id ? 'primary' : 'neutral'}
-                shape='pill'
                 size='sm'
                 iconStart={<Icon size={18} aria-hidden='true' />}
                 className={styles.navButton}
@@ -308,7 +307,6 @@ export function Dashboard({
             <span className={styles.localLabel}>Local demo</span>
             <Button shape='pill'
               size='sm'
-              shape='pill'
               iconStart={<Plus size={16} aria-hidden='true' />}
               onClick={openCreate}
             >
@@ -417,7 +415,7 @@ export function Dashboard({
                     <h4>Active Projects</h4>
                     <p>Track the work inside this sample workspace.</p>
                   </div>
-                  <Button shape='pill'
+                  <Button shape='pill' size='sm'
                     appearance='outline'
                     color='neutral'
                     onClick={() => setView('projects')}
@@ -464,7 +462,7 @@ export function Dashboard({
                   <h4>All Projects</h4>
                   <p>Search, filter and manage sample work.</p>
                 </div>
-                <Button shape='pill' onClick={openCreate}>Create project</Button>
+                <Button shape='pill' size='sm' onClick={openCreate}>Create project</Button>
               </div>
               <div className={styles.filters}>
                 <Select
@@ -515,7 +513,7 @@ export function Dashboard({
                       />
                       <Dropdown placement='bottom-end'>
                         <Dropdown.Trigger asChild>
-                          <Button shape='pill' appearance='outline' color='neutral'>
+                          <Button shape='pill' size='sm' appearance='outline' color='neutral'>
                             Actions
                           </Button>
                         </Dropdown.Trigger>
@@ -601,7 +599,7 @@ export function Dashboard({
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
-                <Button shape='pill'
+                <Button shape='pill' size='sm'
                   appearance='outline'
                   color='neutral'
                   onClick={resetDemo}
@@ -674,14 +672,14 @@ export function Dashboard({
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button shape='pill'
+              <Button shape='pill' size='sm'
                 appearance='outline'
                 color='neutral'
                 onClick={() => setModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button shape='pill' onClick={createProject}>Create project</Button>
+              <Button shape='pill' size='sm' onClick={createProject}>Create project</Button>
             </Modal.Footer>
           </Modal.Content>
         </Portal>
