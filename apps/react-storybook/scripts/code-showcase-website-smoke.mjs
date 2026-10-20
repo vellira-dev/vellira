@@ -488,6 +488,25 @@ try {
             });
           }
 
+          // Theme and responsive smoke for the real Dashboard in every
+          // browser matrix scenario, not only the interactive light desktop case.
+          const themedDashboard = page.locator('#dashboard-live');
+          await expect(themedDashboard).toBeVisible();
+          await expect(
+            themedDashboard.locator('[class*="brandMark"] img')
+          ).toHaveCount(2);
+          const themedBounds = await themedDashboard.boundingBox();
+          assert.ok(themedBounds && themedBounds.width <= viewport.width + 1,
+            'Dashboard must fit all supported viewport/theme combinations');
+          const dashboardNav = themedDashboard.getByRole('button', {
+            name: 'Settings', exact: true,
+          });
+          await dashboardNav.focus();
+          await expect(dashboardNav).toBeFocused();
+          await page.keyboard.press('Enter');
+          await expect(themedDashboard.getByRole('heading', { name: 'Settings' })).toBeVisible();
+          await themedDashboard.getByRole('button', { name: 'Dashboard', exact: true }).click();
+
           // Review the new homepage narrative in each theme, viewport and
           // motion preference, using the same real browser as CodeShowcase.
           const story = page.locator('#why-vellira');
