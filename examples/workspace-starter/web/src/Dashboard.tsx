@@ -565,6 +565,7 @@ export function Dashboard({
               </div>
               <div className={styles.settingsFields}>
                 <Input
+                  size='md'
                   label='Workspace name'
                   value={workspace.name}
                   onValueChange={(name) =>
@@ -601,7 +602,7 @@ export function Dashboard({
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
-                <Button shape='pill' size='sm'
+                <Button shape='pill' size='md'
                   appearance='outline'
                   color='neutral'
                   onClick={resetDemo}
