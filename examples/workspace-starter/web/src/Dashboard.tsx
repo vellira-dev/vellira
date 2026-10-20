@@ -145,6 +145,7 @@ export function Dashboard({
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newTeam, setNewTeam] = useState<Team>('design');
   const [newStatus, setNewStatus] = useState<ProjectStatus>('planned');
@@ -232,6 +233,7 @@ export function Dashboard({
   }
 
   function resetDemo() {
+    setResetOpen(false);
     setWorkspace(initialWorkspace);
     setQuery('');
     setFilter('all');
@@ -605,7 +607,7 @@ export function Dashboard({
                 <Button shape='pill' size='md'
                   appearance='outline'
                   color='neutral'
-                  onClick={resetDemo}
+                  onClick={() => setResetOpen(true)}
                 >
                   Restore sample data
                 </Button>
@@ -617,6 +619,31 @@ export function Dashboard({
           Vellira Core · Free dashboard example · Local sample projects
         </footer>
       </div>
+
+      <Modal open={resetOpen} onOpenChange={setResetOpen}>
+        <Portal>
+          <Modal.Overlay />
+          <Modal.Content>
+            <Modal.Header>
+              <div>
+                <Modal.Title>Restore sample data?</Modal.Title>
+                <Modal.Description>
+                  This replaces your locally saved projects and workspace settings with the original examples. This action cannot be undone.
+                </Modal.Description>
+              </div>
+              <Modal.Close />
+            </Modal.Header>
+            <Modal.Footer>
+              <Button shape='pill' size='sm' appearance='outline' color='neutral' onClick={() => setResetOpen(false)}>
+                Cancel
+              </Button>
+              <Button shape='pill' size='sm' color='danger' onClick={resetDemo}>
+                Restore data
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Portal>
+      </Modal>
 
       <Modal
         open={modalOpen}
