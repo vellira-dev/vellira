@@ -466,6 +466,7 @@ export function Dashboard({
               </div>
               <div className={styles.filters}>
                 <Select
+                  size='sm'
                   label='Status filter'
                   value={filter}
                   onValueChange={(value) => {
@@ -579,6 +580,7 @@ export function Dashboard({
                   }
                 />
                 <Select
+                  size='sm'
                   label='Theme'
                   value={theme}
                   onValueChange={(next) => {
@@ -648,6 +650,7 @@ export function Dashboard({
                   placeholder='e.g. Mobile UI audit'
                 />
                 <Select
+                  size='sm'
                   label='Team'
                   value={newTeam}
                   onValueChange={(value) => {
@@ -659,6 +662,7 @@ export function Dashboard({
                   <Select.Item value='mobile'>Mobile</Select.Item>
                 </Select>
                 <Select
+                  size='sm'
                   label='Status'
                   value={newStatus}
                   onValueChange={(value) => {
