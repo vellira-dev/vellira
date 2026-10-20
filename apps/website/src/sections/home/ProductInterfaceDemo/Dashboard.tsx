@@ -255,14 +255,14 @@ export function Dashboard({
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden='true'>
             <img
-              src='https://vellira.dev/brand/icons/logo-icon-dark.svg'
+              src='/brand/icons/logo-icon-dark.svg'
               alt=''
               className={styles.brandLogoDark}
               width={24}
               height={24}
             />
             <img
-              src='https://vellira.dev/brand/icons/logo-icon-light.svg'
+              src='/brand/icons/logo-icon-light.svg'
               alt=''
               className={styles.brandLogoLight}
               width={24}
