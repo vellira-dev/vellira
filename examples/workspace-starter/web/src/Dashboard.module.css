@@ -823,77 +823,94 @@
 .mainContent > .projectsPanel {
   flex: none;
 }
+
 .projectCount {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
-  min-width: 24px;
+  align-items: center;
   padding: 3px 7px;
-  margin-left: 6px;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
   background: var(--surface-canvas);
   border-radius: 7px;
+  min-width: 24px;
+  margin-left: 6px;
   vertical-align: middle;
 }
+
 .projectsPanel .filters {
   align-items: end;
   gap: 12px;
 }
+
 .projectsPanel .filters > :first-child {
   width: min(280px, 100%);
 }
+
 .projectsPanel .filters > :nth-child(2) {
   width: min(220px, 100%);
 }
+
 .projectMatches {
   margin-left: auto;
   align-self: center;
 }
+
 .projectsPanel .projectList {
   gap: 10px;
 }
+
 .projectsPanel .projectRow {
   padding: 15px;
   background: var(--surface-canvas);
   border: 1px solid var(--border-muted);
   border-radius: 12px;
 }
+
 .projectsPanel .projectRow:first-child {
   border-top: 1px solid var(--border-muted);
 }
+
 .projectEmpty {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  padding: 30px 16px;
+  color: var(--text-primary);
+  text-align: center;
   min-height: 200px;
   gap: 10px;
-  padding: 30px 16px;
-  text-align: center;
-  color: var(--text-primary);
 }
+
 .projectEmpty p {
   margin: 0 0 5px;
-  font-size: 12px;
   color: var(--text-secondary);
+  font-size: 12px;
 }
+
 .emptySymbol {
   display: grid;
-  place-items: center;
   width: 42px;
   height: 42px;
   color: var(--color-primary-500);
-  background: color-mix(in srgb, var(--color-primary-500) 10%, var(--surface-default));
-  border-radius: 12px;
   font-size: 24px;
+  background: color-mix(
+    in srgb,
+    var(--color-primary-500) 10%,
+    var(--surface-default)
+  );
+  border-radius: 12px;
+  place-items: center;
 }
-@media (max-width: 530px) {
+
+@media (width <= 530px) {
   .projectsPanel .filters > :first-child,
   .projectsPanel .filters > :nth-child(2) {
     width: 100%;
   }
+
   .projectMatches {
     margin-left: 0;
   }
