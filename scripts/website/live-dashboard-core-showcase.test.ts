@@ -125,7 +125,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneStyles).toContain('prefers-reduced-motion');
   });
 
-  it('uses Vellira radius tokens across Dashboard and its preview shell', () => {
+  it('uses shared radius tokens across Dashboard and preview', () => {
     const stageStyles = read(
       'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css'
     );
