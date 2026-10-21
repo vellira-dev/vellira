@@ -565,9 +565,13 @@ export function Dashboard({
                             appearance='ghost'
                             color='primary'
                             aria-label={`Actions for ${project.name}`}
+                            className={styles.projectActionTrigger}
                             iconOnly
                             iconStart={
-                              <span className={styles.projectActionIcon} aria-hidden='true'>
+                              <span
+                                className={styles.projectActionIcon}
+                                aria-hidden='true'
+                              >
                                 <span className={styles.projectActionHorizontal}>
                                   <MoreHorizontal size='100%' />
                                 </span>
