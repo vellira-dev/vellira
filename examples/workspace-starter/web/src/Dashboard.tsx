@@ -159,7 +159,7 @@ export function Dashboard({
       const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
       if (saved) setWorkspace(saved);
       const savedFilter = window.localStorage.getItem(filterStorageKey);
-      if (savedFilter === 'all' || isStatus(savedFilter)) {
+      if (savedFilter === 'all' || (savedFilter !== null && isStatus(savedFilter))) {
         setFilter(savedFilter);
       }
       const savedView = window.localStorage.getItem(viewStorageKey);
