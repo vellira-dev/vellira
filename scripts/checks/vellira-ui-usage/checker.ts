@@ -209,12 +209,12 @@ export function checkSourceFile(
           hasJsxAncestor(node, 'nav') ||
           (filePath.includes('/SiteFooter/') && hasJsxAncestor(node, 'footer'));
         const isRawLink = tagName === 'a' || nextLinkNames.has(tagName);
-        const ownedByCanonicalButton = hasJsxAncestor(node, 'Button');
-        // SiteFooter's logo is structural and stays within its canonical wrapper.
+        const ownedByCanonicalButton = hasCanonicalButtonAsChildAncestor(node);
+        // Only the image-logo home link is structural, not arbitrary footer links.
         const structuralBrand =
           filePath.includes('/SiteFooter/') &&
-          tagName !== 'a' &&
-          !hasJsxAncestor(node, 'nav');
+          nextLinkNames.has(tagName) &&
+          isStructuralFooterBrandLink(node);
         if (
           inTextNavigation &&
           isRawLink &&
@@ -349,6 +349,57 @@ function hasJsxAncestor(node: ts.Node, tagName: string): boolean {
     parent = parent.parent;
   }
   return false;
+}
+
+function hasCanonicalButtonAsChildAncestor(node: ts.Node): boolean {
+  let parent = node.parent;
+  while (parent) {
+    if (ts.isJsxElement(parent)) {
+      const opening = parent.openingElement;
+      if (
+        opening.tagName.getText() === 'Button' &&
+        opening.attributes.properties.some(
+          (attribute) =>
+            ts.isJsxAttribute(attribute) &&
+            attribute.name.text === 'asChild' &&
+            (attribute.initializer === undefined ||
+              (ts.isJsxExpression(attribute.initializer) &&
+                attribute.initializer.expression?.kind ===
+                  ts.SyntaxKind.TrueKeyword))
+        )
+      ) {
+        return true;
+      }
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
+function isStructuralFooterBrandLink(
+  node: ts.JsxOpeningElement | ts.JsxSelfClosingElement
+): boolean {
+  if (!ts.isJsxOpeningElement(node)) return false;
+  const classAttribute = node.attributes.properties.find(
+    (attribute) =>
+      ts.isJsxAttribute(attribute) && attribute.name.text === 'className'
+  );
+  const isBrandClass =
+    classAttribute &&
+    ts.isJsxAttribute(classAttribute) &&
+    classAttribute.initializer &&
+    ts.isJsxExpression(classAttribute.initializer) &&
+    classAttribute.initializer.expression?.getText() === 'styles.brand';
+  if (!isBrandClass || jsxStringAttribute(node, 'href') !== '/') return false;
+  const element = node.parent;
+  return (
+    ts.isJsxElement(element) &&
+    element.children.some(
+      (child) =>
+        ts.isJsxSelfClosingElement(child) &&
+        child.tagName.getText() === 'Image'
+    )
+  );
 }
 
 function loadCanonicalAuthorities(root: string): VelliraUiUsageAuthorities {
