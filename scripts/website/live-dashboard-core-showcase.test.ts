@@ -108,7 +108,8 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('No matching projects');
     expect(standaloneDashboard).toContain('No projects yet');
     expect(standaloneDashboard).toContain('Clear filters');
-    expect(standaloneDashboard).toContain("aria-label='Filter project list'");
+    expect(standaloneDashboard).toContain("aria-label='Search projects'");
+    expect(standaloneDashboard).not.toContain("aria-label='Filter project list'");
     expect(standaloneDashboard).toContain('styles.projectsPanel');
   });
 
