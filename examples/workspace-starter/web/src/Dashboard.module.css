@@ -873,7 +873,7 @@
   flex-wrap: nowrap;
 }
 
-.projectsPanel .rowActions button[aria-label^='Actions for'] {
+.projectsPanel .rowActions .projectActionTrigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -886,7 +886,7 @@
   color: var(--color-primary-500);
 }
 
-.projectsPanel .rowActions button[aria-label^='Actions for']:hover {
+.projectsPanel .rowActions .projectActionTrigger:hover {
   color: var(--color-primary-600);
   background: transparent;
 }
@@ -997,7 +997,7 @@
   transform: rotate(-90deg) scale(0.92);
 }
 
-.projectsPanel .rowActions button[aria-label^='Actions for']:is(
+.projectsPanel .rowActions .projectActionTrigger:is(
     :hover,
     :active,
     :focus-visible,
@@ -1007,7 +1007,7 @@
   transform: rotate(90deg) scale(0.92);
 }
 
-.projectsPanel .rowActions button[aria-label^='Actions for']:is(
+.projectsPanel .rowActions .projectActionTrigger:is(
     :hover,
     :active,
     :focus-visible,
