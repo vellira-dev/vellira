@@ -346,7 +346,7 @@ export function Dashboard({
           <div className={styles.searchField}>
             <Input
               type='search'
-              size='sm'
+              size='md'
               aria-label='Search projects'
               value={query}
               onValueChange={search}
@@ -520,18 +520,11 @@ export function Dashboard({
                       {workspace.projects.length}
                     </span>
                   </h4>
-                  <p>Manage your sample projects</p>
+                  
                 </div>
+                <p className={styles.projectsSubtitle}>Manage your sample projects</p>
               </div>
               <div className={styles.filters}>
-                <Input
-                  size='md'
-                  type='search'
-                  aria-label='Filter project list'
-                  placeholder='Search projects...'
-                  value={query}
-                  onValueChange={setQuery}
-                />
                 <Select
                   size='md'
                   aria-label='Status filter'
@@ -584,8 +577,10 @@ export function Dashboard({
                             size='sm'
                             appearance='outline'
                             color='neutral'
+                            aria-label={`Actions for ${project.name}`}
+                            iconOnly
                           >
-                            Actions
+                            <span aria-hidden='true'>⋯</span>
                           </Button>
                         </Dropdown.Trigger>
                         <Dropdown.Content>
