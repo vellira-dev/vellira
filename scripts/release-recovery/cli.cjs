@@ -9,6 +9,7 @@ const {
     createPackageInfo,
     publicPackages,
     publishPackage,
+    verifyPackageCompleteness,
   },
 } = require('../semantic-release-packages.cjs');
 const {
@@ -314,16 +315,34 @@ async function packages() {
   );
   const states = await packageStates();
   const plan = planPackageRecovery(publicPackages, states);
+  const packageInfos = publicPackages.map(createPackageInfo);
+  for (const packageInfo of packageInfos) {
+    assert.equal(packageInfo.version, input.version);
+  }
+
   if (plan.publish.length > 0) {
     assertTrustedPublishingEnvironment();
     for (const packageName of plan.publish) {
       await assertImmutableGitState();
-      const packageInfo = createPackageInfo(packageName);
-      assert.equal(packageInfo.version, input.version);
-      const result = await publishPackage(packageInfo);
+      const packageInfo = packageInfos.find((info) => info.name === packageName);
+      assert.ok(packageInfo, `Missing exact package manifest for ${packageName}`);
+      // A successful npm publish can remain invisible to npm view for longer
+      // than six minutes. Complete every accepted mutation before waiting.
+      const result = await publishPackage(packageInfo, {
+        verifyAfterPublish: false,
+      });
       assert.equal(result.error, undefined, result.error?.message);
+      assert.ok(
+        ['accepted', 'already published'].includes(result.status),
+        `Unexpected npm mutation state for ${packageName}`
+      );
     }
+    // One bounded all-six visibility gate, identical to normal Release.
+    // This is not provenance admission: packageStates below also validates
+    // exact npm integrity and trusted SLSA attestation source for every item.
+    await verifyPackageCompleteness(packageInfos);
   }
+
   const verified = await packageStates();
   const finalPlan = planPackageRecovery(publicPackages, verified);
   assert.deepEqual(

@@ -145,9 +145,18 @@ auto-merge enabled. It does not merely dispatch a second workflow.
 2. Check out `expected_tag_sha` into a separate directory. If packages are
    missing, install and build that checkout, then run canonical version
    preparation there. Only missing package versions are passed to the shared
-   Trusted Publishing implementation. Existing versions are never republished.
-3. Re-read and verify all six package versions. This completeness check gates
-   every later external mutation.
+   Trusted Publishing implementation. Existing versions are not intentionally
+   republished; an npm already-published conflict is not itself proof of
+   integrity or provenance.
+3. Submit all missing-package publish mutations first. Do not run a separate
+   six-minute visibility wait after each accepted publish. If any publish
+   mutation fails, stop immediately. After successful mutations, perform one
+   concurrent six-package registry visibility gate with the normal 20-minute
+   absolute deadline. Then independently re-read the npm metadata and verify
+   all six exact versions, integrity, tarballs, trusted SLSA provenance and
+   source SHA with `packageStates()`. The visibility gate alone cannot
+   authorize GitHub Release creation or version synchronization.
+   This final strict completeness check gates every later external mutation.
 4. Generate notes from the existing tag and its preceding tag. Create the
    GitHub Release only when absent. An existing exact Release is accepted; an
    existing draft, prerelease, name mismatch, or body mismatch stops recovery
@@ -180,13 +189,14 @@ have either been accepted or failed, any true mutation failure stops
 immediately. Otherwise all six exact versions are verified concurrently for
 integrity, tarball metadata, and provenance under one shared absolute deadline.
 
-The normal all-six gate is bounded by
+The normal and manual-recovery all-six gates are bounded by
 `VELLIRA_RELEASE_COMPLETENESS_TIMEOUT_MS` (20 minutes by default). This is one
-wall-clock visibility budget, not six independent waits and not a second retry
-window after per-package verification. The lower-level
+wall-clock visibility budget after the last accepted publish mutation, not six
+independent waits. The lower-level
 `VELLIRA_RELEASE_VERIFICATION_TIMEOUT_MS` remains six minutes by default for
-strict per-package verification used by manual partial-release recovery when it
-must publish a genuinely missing package.
+strict per-package verification callers, but manual release recovery no longer
+uses that per-package visibility wait as its publish sequencing gate. Both
+paths fail closed on missing or mismatched provenance.
 
 Progressive retries log elapsed and remaining time, truncate the final sleep to
 the shared deadline, and make one final registry attempt there. If normal

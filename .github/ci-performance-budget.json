@@ -3,6 +3,7 @@
   "workflow": {
     "name": "CI",
     "file": "ci.yml",
+    "observerJob": "CI Performance Budget",
     "requiredJobs": [
       "Quality & Component Quality",
       "Cloudflare runtime contracts",
@@ -15,7 +16,7 @@
       "Storybook & Browser Tests",
       "Build, Test & Validate"
     ],
-    "allowedNonCriticalJobs": ["PR Impact"]
+    "allowedNonCriticalJobs": ["PR Impact", "CI Performance Budget"]
   },
   "budgets": {
     "normal": {
@@ -46,9 +47,7 @@
   },
   "enforcement": {
     "historyWindow": 5,
-    "requiredExceedancesForFailure": 3,
-    "pollIntervalSeconds": 10,
-    "pollTimeoutSeconds": 900
+    "requiredExceedancesForFailure": 3
   },
   "classification": {
     "sharedPrefixes": [

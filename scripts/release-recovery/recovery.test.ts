@@ -472,7 +472,7 @@ describe('release recovery decisions', () => {
     expect(verify).not.toHaveBeenCalled();
   });
 
-  it('keeps recovery publication on strict per-package verification', async () => {
+  it('keeps a strict per-package verifier available for other callers', async () => {
     const verify = vi.fn(async () => ({
       integrity: 'sha512-dGVzdA==',
       tarball: 'https://registry.example/core.tgz',
@@ -495,6 +495,32 @@ describe('release recovery decisions', () => {
       provenance: 'verified',
     });
     expect(verify).toHaveBeenCalledTimes(1);
+  });
+
+  it('manual recovery defers visibility until all six exact packages can be verified', () => {
+    const script = readFileSync('scripts/release-recovery/cli.cjs', 'utf8');
+    const start = script.indexOf('async function packages() {');
+    const end = script.indexOf('async function githubRelease() {', start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const recovery = script.slice(start, end);
+    const mutateAt = recovery.indexOf('await publishPackage(packageInfo, {');
+    const completenessAt = recovery.indexOf(
+      'await verifyPackageCompleteness(packageInfos)'
+    );
+    const strictRegistryAt = recovery.indexOf(
+      'const verified = await packageStates();'
+    );
+
+    expect(recovery).toContain('verifyAfterPublish: false');
+    expect(recovery).toContain('publicPackages.map(createPackageInfo)');
+    expect(recovery).toContain('await assertImmutableGitState()');
+    expect(recovery).toContain('assert.equal(result.error, undefined');
+    expect(mutateAt).toBeGreaterThan(-1);
+    expect(completenessAt).toBeGreaterThan(mutateAt);
+    expect(strictRegistryAt).toBeGreaterThan(completenessAt);
+    expect(recovery).toContain('planPackageRecovery(publicPackages, verified)');
+    expect(recovery).toContain('Package recovery remains incomplete');
   });
 
   it('does not abandon the shared queue when one worker throws', async () => {
