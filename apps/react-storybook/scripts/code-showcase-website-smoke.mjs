@@ -364,6 +364,21 @@ try {
               dashboard.getByText('Browser smoke project')
             ).toBeVisible();
 
+            const projectActions = dashboard.getByRole('button', {
+              name: 'Actions for Browser smoke project',
+            });
+            await projectActions.hover();
+            await expect(
+              projectActions.locator('[class*="projectActionVertical"]')
+            ).toHaveCSS('opacity', '1');
+            await projectActions.click();
+            await expect(projectActions).toHaveAttribute('data-state', 'open');
+            await expect(
+              page.getByRole('menuitemcheckbox', { name: 'Done' })
+            ).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(projectActions).toHaveAttribute('data-state', 'closed');
+
             await dashboard
               .getByRole('button', { name: 'Settings', exact: true })
               .click();
