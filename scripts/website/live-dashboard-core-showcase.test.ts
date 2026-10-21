@@ -104,6 +104,14 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(siteDashboard).not.toContain('https://vellira.dev/brand/icons/');
   });
 
+  it('uses a compact Projects layout with distinct filtered and empty workspace states', () => {
+    expect(standaloneDashboard).toContain('No matching projects');
+    expect(standaloneDashboard).toContain('No projects yet');
+    expect(standaloneDashboard).toContain('Clear filters');
+    expect(standaloneDashboard).toContain("aria-label='Filter project list'");
+    expect(standaloneDashboard).toContain('styles.projectsPanel');
+  });
+
   it('keeps one synchronized Dashboard implementation across both apps', () => {
     const normalizedWebsite = siteDashboard.replace(
       "from '../../../../../../examples/workspace-starter/web/src/model';",
