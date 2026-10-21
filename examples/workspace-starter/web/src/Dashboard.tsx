@@ -143,6 +143,7 @@ export function Dashboard({
   const [hydrated, setHydrated] = useState(false);
   const [view, setView] = useState<View>('overview');
   const viewStorageKey = `${storageKey}-active-view`;
+  const filterStorageKey = `${storageKey}-project-filter`;
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -157,6 +158,10 @@ export function Dashboard({
     try {
       const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
       if (saved) setWorkspace(saved);
+      const savedFilter = window.localStorage.getItem(filterStorageKey);
+      if (savedFilter === 'all' || isStatus(savedFilter)) {
+        setFilter(savedFilter);
+      }
       const savedView = window.localStorage.getItem(viewStorageKey);
       if (
         savedView === 'overview' ||
@@ -169,7 +174,7 @@ export function Dashboard({
       // Private browsing may forbid even reading localStorage.
     }
     setHydrated(true);
-  }, [storageKey, viewStorageKey]);
+  }, [filterStorageKey, storageKey, viewStorageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -189,6 +194,15 @@ export function Dashboard({
       // Navigation remains available if browser storage is unavailable.
     }
   }, [hydrated, view, viewStorageKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(filterStorageKey, filter);
+    } catch {
+      // Filtering still works if browser storage is unavailable.
+    }
+  }, [filter, filterStorageKey, hydrated]);
 
   const projects = useMemo(
     () => filterProjects(workspace.projects, query, filter),
