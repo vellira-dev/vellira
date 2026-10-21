@@ -894,6 +894,23 @@
   margin: 0;
 }
 
+.projectsPanel .projectDetails {
+  gap: 3px;
+}
+
+.projectsPanel .projectDetails strong {
+  line-height: 1.35;
+}
+
+.projectsPanel .projectDetails small {
+  line-height: 1.45;
+}
+
+.projectsPanel .projectSymbol {
+  width: 40px;
+  height: 40px;
+}
+
 .projectsPanel .projectRow {
   padding: 14px 18px;
   background: var(--surface-canvas);
