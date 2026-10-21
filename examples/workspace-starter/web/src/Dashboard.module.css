@@ -820,8 +820,8 @@
   }
 }
 
-.projectsPanel {
-  flex: none !important;
+.mainContent > .projectsPanel {
+  flex: none;
 }
 .projectCount {
   display: inline-flex;
