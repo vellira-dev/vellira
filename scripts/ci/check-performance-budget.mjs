@@ -6,8 +6,12 @@ import { isReleaseSyncFileSet } from './release-sync-contract.mjs';
 const API_ROOT = 'https://api.github.com';
 const ARTIFACT_DIR = path.resolve('.artifacts/ci-performance');
 const DEFAULT_CONFIG = path.resolve('.github/ci-performance-budget.json');
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const FAILURE_CONCLUSIONS = ['failure', 'cancelled', 'timed_out'];
+const TERMINAL_CONCLUSIONS = new Set([
+  'success',
+  'skipped',
+  ...FAILURE_CONCLUSIONS,
+]);
 
 export function classifyFiles(files, classification) {
   if (files.length === 0) return 'normal';
@@ -18,7 +22,9 @@ export function classifyFiles(files, classification) {
     const normalized = file.replaceAll('\\', '/');
     const basename = normalized.split('/').at(-1) ?? normalized;
     return (
-      classification.docsPrefixes.some((prefix) => normalized.startsWith(prefix)) ||
+      classification.docsPrefixes.some((prefix) =>
+        normalized.startsWith(prefix)
+      ) ||
       classification.docsBasenames.includes(basename) ||
       classification.docsExtensions.some((extension) =>
         normalized.toLowerCase().endsWith(extension.toLowerCase())
@@ -35,7 +41,9 @@ export function classifyFiles(files, classification) {
     return 'shared';
   }
 
-  const packageMatches = files.map((file) => file.match(/^packages\/([^/]+)\//));
+  const packageMatches = files.map((file) =>
+    file.match(/^packages\/([^/]+)\//)
+  );
   if (packageMatches.every(Boolean)) {
     const packages = new Set(packageMatches.map((match) => match[1]));
     if (packages.size === 1) return 'package-local';
@@ -48,15 +56,36 @@ export function analyzeJobs(run, jobs, workflowContract) {
   const required = new Set(workflowContract.requiredJobs);
   const allowed = new Set(workflowContract.allowedNonCriticalJobs ?? []);
   const byName = new Map(jobs.map((job) => [job.name, job]));
-  const missingJobs = workflowContract.requiredJobs.filter((name) => !byName.has(name));
+  const missingJobs = workflowContract.requiredJobs.filter(
+    (name) => !byName.has(name)
+  );
   const unknownJobs = jobs
     .map((job) => job.name)
     .filter((name) => !required.has(name) && !allowed.has(name));
+  const duplicateJobs = jobs
+    .map((job) => job.name)
+    .filter((name, index, names) => names.indexOf(name) !== index);
+  // The observer is still running. Only its completed dependencies determine
+  // correctness and timing; its own duration must never measure itself.
+  const dependencies = jobs.filter(
+    (job) => job.name !== workflowContract.observerJob
+  );
+  const incompleteJobs = dependencies
+    .filter((job) => job.status !== 'completed')
+    .map((job) => job.name);
+  const invalidConclusionJobs = dependencies
+    .filter((job) => !TERMINAL_CONCLUSIONS.has(job.conclusion))
+    .map((job) => job.name);
+  const failedJobs = dependencies
+    .filter((job) => FAILURE_CONCLUSIONS.includes(job.conclusion))
+    .map((job) => job.name);
 
   const requiredJobs = workflowContract.requiredJobs
     .map((name) => byName.get(name))
     .filter(Boolean);
-  const activeRequiredJobs = requiredJobs.filter((job) => job.conclusion !== 'skipped');
+  const activeRequiredJobs = requiredJobs.filter(
+    (job) => job.conclusion !== 'skipped'
+  );
   const executionPath =
     activeRequiredJobs.length === workflowContract.requiredJobs.length
       ? 'full'
@@ -66,10 +95,19 @@ export function analyzeJobs(run, jobs, workflowContract) {
   const timedJobs = requiredJobs.filter(
     (job) => job.started_at && job.completed_at && job.conclusion !== 'skipped'
   );
+  const invalidTimingJobs = activeRequiredJobs
+    .filter((job) => {
+      const start = Date.parse(job.started_at);
+      const end = Date.parse(job.completed_at);
+      return !Number.isFinite(start) || !Number.isFinite(end) || end < start;
+    })
+    .map((job) => job.name);
   const startedMs = timedJobs.map((job) => Date.parse(job.started_at));
   const completedMs = timedJobs.map((job) => Date.parse(job.completed_at));
-  const firstStartedMs = startedMs.length > 0 ? Math.min(...startedMs) : Number.NaN;
-  const lastStartedMs = startedMs.length > 0 ? Math.max(...startedMs) : Number.NaN;
+  const firstStartedMs =
+    startedMs.length > 0 ? Math.min(...startedMs) : Number.NaN;
+  const lastStartedMs =
+    startedMs.length > 0 ? Math.max(...startedMs) : Number.NaN;
   const lastCompletedMs =
     completedMs.length > 0 ? Math.max(...completedMs) : Number.NaN;
 
@@ -93,6 +131,7 @@ export function analyzeJobs(run, jobs, workflowContract) {
   const jobTimings = timedJobs
     .map((job) => ({
       name: job.name,
+      runAttempt: run.run_attempt ?? null,
       conclusion: job.conclusion,
       startedAt: job.started_at,
       completedAt: job.completed_at,
@@ -107,6 +146,11 @@ export function analyzeJobs(run, jobs, workflowContract) {
   return {
     missingJobs,
     unknownJobs,
+    duplicateJobs,
+    incompleteJobs,
+    invalidConclusionJobs,
+    failedJobs,
+    invalidTimingJobs,
     executionPath,
     feedbackSeconds,
     executionFeedbackSeconds,
@@ -118,13 +162,16 @@ export function analyzeJobs(run, jobs, workflowContract) {
       const job = byName.get(name);
       if (!job) return { name, conclusion: 'missing' };
       const timing = jobTimings.find((candidate) => candidate.name === name);
-      return timing ?? {
-        name,
-        conclusion: job.conclusion,
-        startedAt: job.started_at ?? null,
-        completedAt: job.completed_at ?? null,
-        durationSeconds: null,
-      };
+      return (
+        timing ?? {
+          name,
+          runAttempt: run.run_attempt ?? null,
+          conclusion: job.conclusion,
+          startedAt: job.started_at ?? null,
+          completedAt: job.completed_at ?? null,
+          durationSeconds: null,
+        }
+      );
     }),
   };
 }
@@ -167,7 +214,10 @@ export function evaluateBudget({
     };
   }
 
-  const samples = [currentSeconds, ...historicalSeconds].slice(0, historyWindow);
+  const samples = [currentSeconds, ...historicalSeconds].slice(
+    0,
+    historyWindow
+  );
   const exceedances = samples.filter((value) => value > ceilingSeconds).length;
 
   if (currentSeconds <= ceilingSeconds) {
@@ -234,60 +284,180 @@ async function githubJson(endpoint, token) {
   return response.json();
 }
 
-async function fetchChangedFiles(repository, pullRequestNumber, token) {
-  const files = [];
-  for (let page = 1; page <= 20; page += 1) {
-    const batch = await githubJson(
-      `/repos/${repository}/pulls/${pullRequestNumber}/files?per_page=100&page=${page}`,
-      token
+export function parseDependencyResults(value) {
+  const needs = JSON.parse(value ?? '{}');
+  if (
+    !needs ||
+    Array.isArray(needs) ||
+    typeof needs !== 'object' ||
+    !needs.impact
+  ) {
+    throw new Error(
+      'Completed CI dependencies, including PR Impact, are required'
     );
-    files.push(...batch.map((entry) => entry.filename));
-    if (batch.length < 100) break;
+  }
+  const results = Object.fromEntries(
+    Object.entries(needs).map(([id, dependency]) => {
+      if (
+        !['success', 'failure', 'cancelled', 'skipped'].includes(
+          dependency?.result
+        )
+      ) {
+        throw new Error(`CI dependency ${id} has no completed result`);
+      }
+      return [id, dependency.result];
+    })
+  );
+  return results;
+}
+
+export function parseChangedFiles(value) {
+  const files = JSON.parse(value ?? 'null');
+  if (
+    !Array.isArray(files) ||
+    files.some((file) => typeof file !== 'string' || !file)
+  ) {
+    throw new Error('PR Impact must provide its exact changed-file JSON array');
   }
   return files;
 }
 
-async function fetchRunJobs(repository, runId, token) {
-  const response = await githubJson(
-    `/repos/${repository}/actions/runs/${runId}/jobs?per_page=100`,
-    token
-  );
-  return response.jobs;
+export function validateRunIdentity(run, expected) {
+  if (
+    !Number.isSafeInteger(expected.runId) ||
+    expected.runId < 1 ||
+    !Number.isSafeInteger(expected.runAttempt) ||
+    expected.runAttempt < 1 ||
+    run.id !== expected.runId ||
+    run.run_attempt !== expected.runAttempt ||
+    run.head_sha !== expected.headSha ||
+    run.repository?.full_name !== expected.repository ||
+    run.event !== 'pull_request' ||
+    run.path?.split('@')[0] !== `.github/workflows/${expected.workflowFile}`
+  ) {
+    throw new Error(
+      'CI run identity does not match the original PR head and exact run attempt'
+    );
+  }
 }
 
-async function waitForCiRun({
+export async function fetchAttemptJobs({
   repository,
+  runId,
+  runAttempt,
   headSha,
-  workflowFile,
   token,
-  pollIntervalSeconds,
-  pollTimeoutSeconds,
+  request = githubJson,
 }) {
-  const deadline = Date.now() + pollTimeoutSeconds * 1000;
-  while (Date.now() < deadline) {
-    const response = await githubJson(
-      `/repos/${repository}/actions/workflows/${encodeURIComponent(
-        workflowFile
-      )}/runs?event=pull_request&head_sha=${headSha}&per_page=20`,
+  if (typeof headSha !== 'string' || !headSha) {
+    throw new Error(
+      'An original head SHA is required for attempt job identity'
+    );
+  }
+  const jobs = [];
+  for (let page = 1; ; page += 1) {
+    const response = await request(
+      `/repos/${repository}/actions/runs/${runId}/attempts/${runAttempt}/jobs?per_page=100&page=${page}`,
       token
     );
-    const exactRuns = response.workflow_runs
-      .filter((run) => run.head_sha === headSha)
-      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
-    const run = exactRuns[0];
-    if (run?.status === 'completed') return run;
-    await sleep(pollIntervalSeconds * 1000);
+    for (const job of response.jobs) {
+      if (
+        job.run_id !== runId ||
+        job.run_attempt !== runAttempt ||
+        job.head_sha !== headSha
+      ) {
+        throw new Error(
+          `CI job ${job.name ?? job.id} does not belong to the selected run, attempt and original head`
+        );
+      }
+      jobs.push(job);
+    }
+    if (response.jobs.length < 100) break;
   }
-  throw new Error(
-    `Timed out waiting for ${workflowFile} on exact head ${headSha}`
-  );
+  // Do not combine attempts. A partial rerun without the complete inventory is
+  // rejected by the contract, rather than borrowing timing from another attempt.
+  return jobs;
+}
+
+export async function readCurrentAttempt({
+  expected,
+  workflowContract,
+  token,
+  request = githubJson,
+  wait = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds)),
+}) {
+  // Native needs have completed already. Briefly reread only an eventually
+  // consistent API snapshot; never wait for this workflow (which includes us).
+  for (let metadataReads = 1; metadataReads <= 6; metadataReads += 1) {
+    const ciRun = await request(
+      `/repos/${expected.repository}/actions/runs/${expected.runId}/attempts/${expected.runAttempt}`,
+      token
+    );
+    validateRunIdentity(ciRun, expected);
+    const jobs = await fetchAttemptJobs({ ...expected, token, request });
+    const timing = analyzeJobs(ciRun, jobs, workflowContract);
+    const dependencies = jobs.filter(
+      (job) => job.name !== workflowContract.observerJob
+    );
+    const recognizedMetadata = dependencies.every(
+      (job) =>
+        [
+          'completed',
+          'queued',
+          'in_progress',
+          'waiting',
+          'pending',
+          'requested',
+        ].includes(job.status) &&
+        (job.conclusion == null || TERMINAL_CONCLUSIONS.has(job.conclusion))
+    );
+    const invalidCompletedTimings = dependencies.some(
+      (job) =>
+        job.status === 'completed' &&
+        job.conclusion === 'success' &&
+        timing.invalidTimingJobs.includes(job.name)
+    );
+    const transient =
+      recognizedMetadata &&
+      timing.unknownJobs.length === 0 &&
+      timing.duplicateJobs.length === 0 &&
+      timing.failedJobs.length === 0 &&
+      !invalidCompletedTimings &&
+      Number.isFinite(Date.parse(ciRun.created_at)) &&
+      (timing.missingJobs.length > 0 ||
+        timing.incompleteJobs.length > 0 ||
+        dependencies.some((job) => job.conclusion == null));
+    if (!transient || metadataReads === 6)
+      return { ciRun, jobs, timing, metadataReads };
+    await wait(5000);
+  }
+}
+
+export function historicalShape(jobs, executionPath, budgets) {
+  const markerPrefix = 'CI performance shape: ';
+  const markers =
+    jobs
+      .find((job) => job.name === 'PR Impact')
+      ?.steps?.filter(
+        (step) =>
+          step.name.startsWith(markerPrefix) && step.conclusion === 'success'
+      ) ?? [];
+  if (markers.length === 1) {
+    const shape = markers[0].name.slice(markerPrefix.length);
+    return Object.hasOwn(budgets, shape) ? shape : null;
+  }
+  if (markers.length > 0) return null;
+  // Legacy full-path runs share the normal budget, including narrow-shape
+  // fallbacks. Legacy affected runs without immutable classification are omitted.
+  return executionPath === 'full' ? 'normal' : null;
 }
 
 function runPullRequestNumber(run) {
   return run.pull_requests?.[0]?.number ?? null;
 }
 
-async function historicalSamples({
+export async function historicalSamples({
   repository,
   currentRun,
   currentPullRequestNumber,
@@ -295,13 +465,13 @@ async function historicalSamples({
   currentBudget,
   workflowFile,
   workflowContract,
-  classification,
   budgets,
   enforcement,
   baseline,
   token,
+  request = githubJson,
 }) {
-  const response = await githubJson(
+  const response = await request(
     `/repos/${repository}/actions/workflows/${encodeURIComponent(
       workflowFile
     )}/runs?event=pull_request&status=completed&per_page=20`,
@@ -310,13 +480,30 @@ async function historicalSamples({
   const candidates = [];
 
   for (const run of response.workflow_runs) {
-    if (run.id === currentRun.id || run.conclusion !== 'success') continue;
+    if (
+      run.id === currentRun.id ||
+      runPullRequestNumber(run) === currentPullRequestNumber
+    )
+      continue;
+    if (!Number.isSafeInteger(run.run_attempt) || run.run_attempt < 1) continue;
 
-    const jobs = await fetchRunJobs(repository, run.id, token);
+    const jobs = await fetchAttemptJobs({
+      repository,
+      runId: run.id,
+      runAttempt: run.run_attempt,
+      headSha: run.head_sha,
+      token,
+      request,
+    });
     const analysis = analyzeJobs(run, jobs, workflowContract);
     if (
       analysis.missingJobs.length > 0 ||
       analysis.unknownJobs.length > 0 ||
+      analysis.duplicateJobs.length > 0 ||
+      analysis.incompleteJobs.length > 0 ||
+      analysis.invalidConclusionJobs.length > 0 ||
+      analysis.failedJobs.length > 0 ||
+      analysis.invalidTimingJobs.length > 0 ||
       analysis.feedbackSeconds === null ||
       analysis.executionFeedbackSeconds === null ||
       analysis.criticalPathSeconds === null ||
@@ -325,18 +512,18 @@ async function historicalSamples({
       continue;
     }
 
-    let shape = 'normal';
+    // A failure of the performance observer must not erase a slow but otherwise
+    // correct run from history, or sustained regressions would oscillate green.
+    const hasObserver = jobs.some(
+      (job) => job.name === workflowContract.observerJob
+    );
+    if (run.conclusion !== 'success' && !hasObserver) continue;
+    const shape = historicalShape(jobs, analysis.executionPath, budgets);
+    if (shape === null) continue;
     const prNumber = runPullRequestNumber(run);
-    if (prNumber) {
-      try {
-        const files = await fetchChangedFiles(repository, prNumber, token);
-        shape = classifyFiles(files, classification);
-      } catch {
-        shape = 'normal';
-      }
-    }
     const selected = selectBudget(shape, analysis.executionPath, budgets);
     if (
+      selected.unexpectedNarrowing ||
       selected.effective.targetSeconds !== currentBudget.targetSeconds ||
       selected.effective.toleranceSeconds !== currentBudget.toleranceSeconds
     ) {
@@ -345,6 +532,7 @@ async function historicalSamples({
 
     candidates.push({
       workflowRunId: run.id,
+      runAttempt: run.run_attempt,
       headSha: run.head_sha,
       pullRequestNumber: prNumber,
       shape,
@@ -354,6 +542,12 @@ async function historicalSamples({
       schedulerSkewSeconds: analysis.schedulerSkewSeconds,
       criticalPathSeconds: analysis.criticalPathSeconds,
     });
+    if (
+      selectDistinctHistoricalSamples(candidates, currentPullRequestNumber)
+        .length >=
+      enforcement.historyWindow - 1
+    )
+      break;
   }
 
   const samples = selectDistinctHistoricalSamples(
@@ -391,6 +585,68 @@ async function historicalSamples({
   return samples.slice(0, enforcement.historyWindow - 1);
 }
 
+export function checkAttemptContract({
+  timing,
+  budget,
+  shape,
+  dependencyResults,
+}) {
+  if (
+    timing.missingJobs.length > 0 ||
+    timing.unknownJobs.length > 0 ||
+    timing.duplicateJobs.length > 0 ||
+    timing.incompleteJobs.length > 0 ||
+    timing.invalidConclusionJobs.length > 0
+  ) {
+    return {
+      status: 'contract-error',
+      blocking: true,
+      message: `CI attempt job inventory or terminal results are incomplete or changed. Missing: ${timing.missingJobs.join(', ') || 'none'}. Unregistered: ${timing.unknownJobs.join(', ') || 'none'}. Duplicate: ${timing.duplicateJobs.join(', ') || 'none'}. Incomplete: ${timing.incompleteJobs.join(', ') || 'none'}. Invalid conclusions: ${timing.invalidConclusionJobs.join(', ') || 'none'}. All measured jobs must complete with recognized conclusions in this attempt; rerun the full CI workflow if this was a partial rerun. Update inventory changes in the canonical budget contract explicitly.`,
+    };
+  }
+  if (
+    Object.values(dependencyResults).some((result) =>
+      ['failure', 'cancelled'].includes(result)
+    )
+  ) {
+    return {
+      status: 'not-evaluated',
+      blocking: false,
+      message:
+        'CI correctness dependencies failed or were cancelled; timing is preserved but incomplete correctness runs do not change the performance baseline.',
+    };
+  }
+  if (timing.failedJobs.length > 0 || dependencyResults.impact !== 'success') {
+    return {
+      status: 'contract-error',
+      blocking: true,
+      message:
+        'CI dependency results do not confirm the API correctness failure, or PR Impact did not succeed. Inconsistent evidence cannot bypass performance evaluation.',
+    };
+  }
+  if (budget.unexpectedNarrowing) {
+    return {
+      status: 'contract-error',
+      blocking: true,
+      message: `Fail-safe regression: ${shape} changes are configured for the full path but CI executed an affected path.`,
+    };
+  }
+  if (
+    timing.invalidTimingJobs.length > 0 ||
+    !Number.isFinite(timing.feedbackSeconds) ||
+    !Number.isFinite(timing.executionFeedbackSeconds) ||
+    !Number.isFinite(timing.criticalPathSeconds)
+  ) {
+    return {
+      status: 'contract-error',
+      blocking: true,
+      message:
+        'Required job timestamps were incomplete; deterministic feedback and critical-path latency could not be calculated.',
+    };
+  }
+  return null;
+}
+
 function formatSeconds(seconds) {
   if (seconds === null) return 'n/a';
   const minutes = Math.floor(seconds / 60);
@@ -417,6 +673,7 @@ function makeSummary(evidence) {
     '| --- | --- |',
     `| PR shape | ${evidence.pullRequest.shape} |`,
     `| Execution path | ${evidence.executionPath} |`,
+    `| CI run / attempt | ${evidence.ciRun.id} / ${evidence.ciRun.runAttempt} |`,
     `| Total feedback wall clock | ${formatSeconds(evidence.timings.feedbackSeconds)} |`,
     `| Hosted-runner initial queue | ${formatSeconds(evidence.timings.queueDelaySeconds)} |`,
     `| Hosted-runner scheduler skew | ${formatSeconds(evidence.timings.schedulerSkewSeconds)} |`,
@@ -437,7 +694,10 @@ function makeSummary(evidence) {
 
   if (evidence.result.message) lines.push(evidence.result.message, '');
 
-  lines.push('| Required job | Duration | Conclusion |', '| --- | ---: | --- |');
+  lines.push(
+    '| Required job | Duration | Conclusion |',
+    '| --- | ---: | --- |'
+  );
   for (const job of evidence.timings.jobs) {
     lines.push(
       `| ${job.name} | ${formatSeconds(job.durationSeconds ?? null)} | ${job.conclusion} |`
@@ -448,7 +708,7 @@ function makeSummary(evidence) {
     lines.push('', '## Recent comparable samples', '');
     for (const sample of evidence.history.samples) {
       lines.push(
-        `- run ${sample.workflowRunId}: critical path ${formatSeconds(sample.criticalPathSeconds)}, total ${formatSeconds(sample.feedbackSeconds)}, initial queue ${formatSeconds(sample.queueDelaySeconds)}, scheduler skew ${formatSeconds(sample.schedulerSkewSeconds)} (${sample.shape})`
+        `- run ${sample.workflowRunId}${sample.runAttempt ? ` / attempt ${sample.runAttempt}` : ''}: critical path ${formatSeconds(sample.criticalPathSeconds)}, total ${formatSeconds(sample.feedbackSeconds)}, initial queue ${formatSeconds(sample.queueDelaySeconds)}, scheduler skew ${formatSeconds(sample.schedulerSkewSeconds)} (${sample.shape})`
       );
     }
   }
@@ -462,16 +722,23 @@ async function writeEvidence(evidence) {
     path.join(ARTIFACT_DIR, 'timing.json'),
     `${JSON.stringify(evidence, null, 2)}\n`
   );
-  await fs.writeFile(path.join(ARTIFACT_DIR, 'summary.md'), makeSummary(evidence));
+  await fs.writeFile(
+    path.join(ARTIFACT_DIR, 'summary.md'),
+    makeSummary(evidence)
+  );
 }
 
 async function main() {
   const token = process.env.GITHUB_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY;
   const eventPath = process.env.GITHUB_EVENT_PATH;
-  const configPath = path.resolve(process.env.CI_PERFORMANCE_CONFIG ?? DEFAULT_CONFIG);
+  const configPath = path.resolve(
+    process.env.CI_PERFORMANCE_CONFIG ?? DEFAULT_CONFIG
+  );
   if (!token || !repository || !eventPath) {
-    throw new Error('GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_EVENT_PATH are required');
+    throw new Error(
+      'GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_EVENT_PATH are required'
+    );
   }
 
   const [configText, eventText] = await Promise.all([
@@ -482,54 +749,53 @@ async function main() {
   const event = JSON.parse(eventText);
   const pullRequest = event.pull_request;
   if (!pullRequest?.number || !pullRequest.head?.sha) {
-    throw new Error('CI performance budget currently requires a pull_request event');
+    throw new Error(
+      'CI performance budget currently requires a pull_request event'
+    );
   }
 
-  const changedFiles = await fetchChangedFiles(repository, pullRequest.number, token);
+  const dependencyResults = parseDependencyResults(
+    process.env.CI_PERFORMANCE_DEPENDENCIES
+  );
+  const changedFiles =
+    dependencyResults.impact === 'success'
+      ? parseChangedFiles(process.env.CI_PERFORMANCE_CHANGED_FILES)
+      : [];
   const shape = classifyFiles(changedFiles, config.classification);
-  const ciRun = await waitForCiRun({
-    repository,
-    headSha: pullRequest.head.sha,
-    workflowFile: config.workflow.file,
+  const runId = Number(process.env.GITHUB_RUN_ID);
+  const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+  if (
+    !Number.isSafeInteger(runId) ||
+    runId < 1 ||
+    !Number.isSafeInteger(runAttempt) ||
+    runAttempt < 1
+  ) {
+    throw new Error(
+      'GITHUB_RUN_ID and GITHUB_RUN_ATTEMPT must identify this CI attempt'
+    );
+  }
+  const { ciRun, timing, metadataReads } = await readCurrentAttempt({
+    expected: {
+      repository,
+      runId,
+      runAttempt,
+      headSha: pullRequest.head.sha,
+      workflowFile: config.workflow.file,
+    },
+    workflowContract: config.workflow,
     token,
-    ...config.enforcement,
   });
-  const jobs = await fetchRunJobs(repository, ciRun.id, token);
-  const timing = analyzeJobs(ciRun, jobs, config.workflow);
   const budget = selectBudget(shape, timing.executionPath, config.budgets);
 
-  let result;
+  let result = checkAttemptContract({
+    timing,
+    budget,
+    shape,
+    dependencyResults,
+  });
   let history = [];
 
-  if (timing.missingJobs.length > 0 || timing.unknownJobs.length > 0) {
-    result = {
-      status: 'contract-error',
-      blocking: true,
-      message: `CI job inventory changed. Missing: ${timing.missingJobs.join(', ') || 'none'}. Unregistered: ${timing.unknownJobs.join(', ') || 'none'}. Update the canonical budget contract explicitly.`,
-    };
-  } else if (budget.unexpectedNarrowing) {
-    result = {
-      status: 'contract-error',
-      blocking: true,
-      message: `Fail-safe regression: ${shape} changes are configured for the full path but CI executed an affected path.`,
-    };
-  } else if (ciRun.conclusion !== 'success') {
-    result = {
-      status: 'not-evaluated',
-      blocking: false,
-      message: `CI concluded ${ciRun.conclusion}; timing is preserved but incomplete correctness runs do not change the performance baseline.`,
-    };
-  } else if (
-    timing.feedbackSeconds === null ||
-    timing.executionFeedbackSeconds === null ||
-    timing.criticalPathSeconds === null
-  ) {
-    result = {
-      status: 'contract-error',
-      blocking: true,
-      message: 'Required job timestamps were incomplete; deterministic feedback and critical-path latency could not be calculated.',
-    };
-  } else {
+  if (result === null) {
     history = await historicalSamples({
       repository,
       currentRun: ciRun,
@@ -538,7 +804,6 @@ async function main() {
       currentBudget: budget.effective,
       workflowFile: config.workflow.file,
       workflowContract: config.workflow,
-      classification: config.classification,
       budgets: config.budgets,
       enforcement: config.enforcement,
       baseline: config.baseline,
@@ -565,7 +830,7 @@ async function main() {
   }
 
   const evidence = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     repository,
     pullRequest: {
@@ -578,9 +843,13 @@ async function main() {
     ciRun: {
       id: ciRun.id,
       runNumber: ciRun.run_number,
+      runAttempt,
+      metadataReads,
+      workflowSha: process.env.GITHUB_SHA ?? null,
       url: ciRun.html_url,
       createdAt: ciRun.created_at,
       conclusion: ciRun.conclusion,
+      dependencyResults,
     },
     executionPath: timing.executionPath,
     budget,
@@ -596,6 +865,11 @@ async function main() {
     contract: {
       missingJobs: timing.missingJobs,
       unknownJobs: timing.unknownJobs,
+      duplicateJobs: timing.duplicateJobs,
+      incompleteJobs: timing.incompleteJobs,
+      invalidConclusionJobs: timing.invalidConclusionJobs,
+      failedJobs: timing.failedJobs,
+      invalidTimingJobs: timing.invalidTimingJobs,
       externalWorkflowsExcludedFromCriticalPath:
         config.externalWorkflowsExcludedFromCriticalPath,
     },
