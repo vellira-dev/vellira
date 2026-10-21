@@ -45,6 +45,15 @@ const COMPONENT_NAME_ALIASES: Readonly<Record<string, string>> = {
   Menu: 'Dropdown',
 };
 
+// First audited navigation subtrees; broaden only after the remaining website
+// anchors have an evidence-based textual/structural classification (#1808).
+const CANONICAL_TEXT_LINK_SURFACES = new Set([
+  'apps/website/src/components/layout/CompactFooter/CompactFooter.tsx',
+  'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx',
+  'apps/website/src/sections/home/QuickStart/QuickStart.tsx',
+  'apps/website/src/sections/home/FinalCta/FinalCta.tsx',
+]);
+
 const NON_TEXT_INPUT_TYPES = new Set(['color', 'file', 'hidden', 'range']);
 const COLOR_STYLE_PROPERTIES = new Set([
   'background',
@@ -150,6 +159,29 @@ export function checkSourceFile(
     scriptKindFor(filePath)
   );
   const findings: VelliraUiUsageFinding[] = [];
+  const nextLinkNames = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== 'next/link'
+    ) {
+      continue;
+    }
+    if (statement.importClause?.name) {
+      nextLinkNames.add(statement.importClause.name.text);
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const specifier of bindings.elements) {
+        const importedName =
+          specifier.propertyName?.text ?? specifier.name.text;
+        if (importedName === 'default') {
+          nextLinkNames.add(specifier.name.text);
+        }
+      }
+    }
+  }
 
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node)) {
@@ -168,6 +200,41 @@ export function checkSourceFile(
       );
       if (controlFinding) {
         findings.push(controlFinding);
+      }
+
+      if (CANONICAL_TEXT_LINK_SURFACES.has(filePath)) {
+        const inTextNavigation =
+          filePath.includes('/QuickStart/') ||
+          filePath.includes('/FinalCta/') ||
+          hasJsxAncestor(node, 'nav') ||
+          (filePath.includes('/SiteFooter/') && hasJsxAncestor(node, 'footer'));
+        const isRawLink = tagName === 'a' || nextLinkNames.has(tagName);
+        const ownedByCanonicalButton = hasCanonicalButtonAsChildAncestor(node);
+        // Only the image-logo home link is structural, not arbitrary footer links.
+        const structuralBrand =
+          filePath.includes('/SiteFooter/') &&
+          nextLinkNames.has(tagName) &&
+          isStructuralFooterBrandLink(node);
+        if (
+          inTextNavigation &&
+          isRawLink &&
+          !ownedByCanonicalButton &&
+          !structuralBrand
+        ) {
+          findings.push(
+            findingAtNode({
+              ruleId: 'vellira-ui.noncanonical-text-link',
+              filePath,
+              sourceFile,
+              node,
+              detected: tagName,
+              canonicalAlternative: 'DesignSystemLink',
+              nextAction: 'reuse-existing',
+              message:
+                'Textual navigation links must use DesignSystemLink or a canonical Button asChild composition.',
+            })
+          );
+        }
       }
 
       if (tagName === 'svg') {
@@ -268,6 +335,77 @@ export function checkStyleFile(
   }
 
   return findings.sort(compareFindings);
+}
+
+function hasJsxAncestor(node: ts.Node, tagName: string): boolean {
+  let parent = node.parent;
+  while (parent) {
+    if (
+      ts.isJsxElement(parent) &&
+      parent.openingElement.tagName.getText() === tagName
+    ) {
+      return true;
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
+function hasCanonicalButtonAsChildAncestor(node: ts.Node): boolean {
+  let parent = node.parent;
+  while (parent) {
+    if (ts.isJsxElement(parent)) {
+      const opening = parent.openingElement;
+      if (
+        opening.tagName.getText() === 'Button' &&
+        opening.attributes.properties.some(
+          (attribute) =>
+            ts.isJsxAttribute(attribute) &&
+            ts.isIdentifier(attribute.name) &&
+            attribute.name.text === 'asChild' &&
+            (attribute.initializer === undefined ||
+              (ts.isJsxExpression(attribute.initializer) &&
+                attribute.initializer.expression?.kind ===
+                  ts.SyntaxKind.TrueKeyword))
+        )
+      ) {
+        return true;
+      }
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
+function isStructuralFooterBrandLink(
+  node: ts.JsxOpeningElement | ts.JsxSelfClosingElement
+): boolean {
+  if (!ts.isJsxOpeningElement(node)) {
+    return false;
+  }
+  const classAttribute = node.attributes.properties.find(
+    (attribute) =>
+      ts.isJsxAttribute(attribute) &&
+      ts.isIdentifier(attribute.name) &&
+      attribute.name.text === 'className'
+  );
+  const isBrandClass =
+    classAttribute &&
+    ts.isJsxAttribute(classAttribute) &&
+    classAttribute.initializer &&
+    ts.isJsxExpression(classAttribute.initializer) &&
+    classAttribute.initializer.expression?.getText() === 'styles.brand';
+  if (!isBrandClass || jsxStringAttribute(node, 'href') !== '/') {
+    return false;
+  }
+  const element = node.parent;
+  return (
+    ts.isJsxElement(element) &&
+    element.children.some(
+      (child) =>
+        ts.isJsxSelfClosingElement(child) && child.tagName.getText() === 'Image'
+    )
+  );
 }
 
 function loadCanonicalAuthorities(root: string): VelliraUiUsageAuthorities {
