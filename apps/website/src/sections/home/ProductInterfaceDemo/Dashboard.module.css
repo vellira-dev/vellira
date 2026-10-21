@@ -666,7 +666,9 @@
 
 /* Keep Settings' md Select aligned with Core md Input and Button.
    Select's rendered trigger is 50px; the other controls are 46px. */
-.settingsFields [role='combobox'] {
+/* Shared Dashboard control height: matches the Core md Input and Button. */
+.dashboard input:not([type='checkbox']):not([type='radio']),
+.dashboard [role='combobox'] {
   height: 46px;
   min-height: 46px;
 }
@@ -852,11 +854,7 @@
   width: min(240px, 100%);
 }
 
-/* Keep the Core Select trigger aligned to the 46px md search input. */
-.projectsPanel .sectionHeading [role='combobox'] {
-  height: 46px;
-  min-height: 46px;
-}
+
 
 .projectsPanel .projectList {
   gap: 10px;
