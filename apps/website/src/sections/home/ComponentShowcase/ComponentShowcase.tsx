@@ -32,6 +32,8 @@ import {
 } from '@vellira-ui/react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+
 import styles from './ComponentShowcase.module.css';
 
 type ComponentName =
@@ -353,19 +355,19 @@ export function ComponentShowcase() {
               </div>
 
               <nav className={styles.toolbarLinks} aria-label='Component links'>
-                <a href={activeLinks.docs} target='_blank' rel='noreferrer'>
+                <DesignSystemLink appearance='bare' href={activeLinks.docs} target='_blank' rel='noreferrer'>
                   Docs
-                </a>
-                <a
+                </DesignSystemLink>
+                <DesignSystemLink appearance='bare'
                   href={activeLinks.storybook}
                   target='_blank'
                   rel='noreferrer'
                 >
                   Storybook
-                </a>
-                <a href={activeLinks.source} target='_blank' rel='noreferrer'>
+                </DesignSystemLink>
+                <DesignSystemLink appearance='bare' href={activeLinks.source} target='_blank' rel='noreferrer'>
                   Source
-                </a>
+                </DesignSystemLink>
               </nav>
             </motion.div>
           </motion.div>

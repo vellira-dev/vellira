@@ -80,6 +80,19 @@ describe('Vellira UI usage audit', () => {
     ).toEqual([]);
   });
 
+  it('rejects raw textual links in ComponentShowcase toolbar navigation', () => {
+    const findings = checkSourceFile(
+      'apps/website/src/sections/home/ComponentShowcase/ComponentShowcase.tsx',
+      `const X = () => <nav><a href='/docs'>Docs</a></nav>;`,
+      AUTHORITIES
+    );
+    expect(
+      findings.filter(
+        (finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link'
+      )
+    ).toEqual([expect.objectContaining({ detected: 'a' })]);
+  });
+
   it('rejects raw links wrapped in Button without asChild', () => {
     const findings = checkSourceFile(
       'apps/website/src/sections/home/FinalCta/FinalCta.tsx',
