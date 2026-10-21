@@ -669,8 +669,8 @@
 /* Shared Dashboard control height: matches the Core md Input and Button. */
 .dashboard input:not([type='checkbox']):not([type='radio']),
 .dashboard [role='combobox'] {
-  height: 46px;
-  min-height: 46px;
+  height: 40px;
+  min-height: 40px;
 }
 
 .modalFields {
@@ -961,4 +961,25 @@
   .projectsPanel .sectionHeading > :last-child {
     width: 100%;
   }
+}
+
+.dropdownDone {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdownDoneBox {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: white;
+}
+
+.dropdownDoneBox:has(svg) {
+  background: var(--color-primary-500);
+  border-color: var(--color-primary-500);
 }
