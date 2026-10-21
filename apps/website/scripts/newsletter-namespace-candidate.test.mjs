@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { experimental_readRawConfig } from 'wrangler';
 
 const website = path.resolve(import.meta.dirname, '..');
 const repoRoot = path.resolve(website, '../..');
@@ -13,7 +14,7 @@ const candidate = JSON.parse(
 
 test('one offline owner exports only the SQLite rolling coordinator', () => {
   assert.equal(plan.schemaVersion, 1);
-  assert.equal(plan.status, 'candidate-only-no-deployment');
+  assert.equal(plan.status, 'private-owner-provisioned-staging-off-config-proposed');
   assert.equal(plan.owner.worker, candidate.name);
   assert.equal(candidate.main, './newsletter-budget-owner-worker.mjs');
   assert.equal(candidate.workers_dev, false);
@@ -80,13 +81,29 @@ test('Buttondown account-specific quota evidence is not falsely approved', () =>
   assert.equal(plan.providerEvidence.ownerApproval, 'not-granted');
 });
 
-test('deployed website configurations and automation remain disconnected', () => {
-  for (const name of ['wrangler.jsonc', 'wrangler.production.jsonc']) {
-    const config = read(name);
-    assert.doesNotMatch(config, /NEWSLETTER_GLOBAL_BUDGET/);
-    assert.doesNotMatch(config, /vellira-newsletter-budget-owner/);
-    assert.doesNotMatch(config, /newsletter-budget-owner\.wrangler\.candidate/);
-  }
+test('staging binding targets the existing owner while budget is OFF', () => {
+  const staging = experimental_readRawConfig({
+    config: path.join(website, 'wrangler.jsonc'),
+  }).rawConfig;
+  const production = experimental_readRawConfig({
+    config: path.join(website, 'wrangler.production.jsonc'),
+  }).rawConfig;
+  assert.equal(staging.name, plan.targets[0].websiteWorker);
+  assert.equal(staging.vars.NEWSLETTER_GLOBAL_BUDGET_ENABLED, '0');
+  assert.deepEqual(staging.durable_objects?.bindings, [plan.targets[0].binding]);
+  assert.equal(staging.exports, undefined);
+  assert.equal(staging.migrations, undefined);
+  assert.equal(production.name, plan.targets[1].websiteWorker);
+  assert.equal(production.vars?.NEWSLETTER_GLOBAL_BUDGET_ENABLED, undefined);
+  assert.equal(production.durable_objects, undefined);
+  assert.equal(production.exports, undefined);
+  assert.equal(production.migrations, undefined);
+});
+
+test('website runtime has no owner class and workflows cannot auto-reprovision', () => {
+  assert.doesNotMatch(read('wrangler.production.jsonc'), /NEWSLETTER_GLOBAL_BUDGET/);
+  assert.doesNotMatch(read('wrangler.production.jsonc'), /vellira-newsletter-budget-owner/);
+  assert.doesNotMatch(read('wrangler.jsonc'), /newsletter-budget-owner[.]wrangler[.]candidate/);
   assert.doesNotMatch(read('cloudflare-worker.mjs'), /NewsletterRollingBudgetCoordinator/);
 
   const workflowDir = path.join(repoRoot, '.github/workflows');
