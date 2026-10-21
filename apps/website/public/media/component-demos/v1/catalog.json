@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "vellira-dev/vellira",
+    "commitSha": "260850f9e5f2fb51e9095b739e63952ce6a7e1cc",
+    "githubRunId": "39277740730",
+    "artifactId": "12199925799",
+    "publishing": "manual-review-required"
+  },
+  "profile": "square-1200-v1",
+  "demos": [
+    {
+      "id": "dropdown-keyboard",
+      "title": "Vellira Dropdown — keyboard navigation and Escape",
+      "storyId": "components-dropdown--default",
+      "files": {
+        "mp4": {
+          "url": "/media/component-demos/v1/dropdown-keyboard/dropdown-keyboard-social.mp4",
+          "bytes": 99844,
+          "sha256": "85b42b2b21b3784edfb251a6e0de108c5205c274dc47dc66dbbae2905ab1c241"
+        },
+        "gif": {
+          "url": "/media/component-demos/v1/dropdown-keyboard/dropdown-keyboard-social.gif",
+          "bytes": 700965,
+          "sha256": "f3d3783238ff26321f2ccab9c60a2bf9b755f508cc565bd86b91c0d6900a148f"
+        },
+        "png": {
+          "url": "/media/component-demos/v1/dropdown-keyboard/dropdown-keyboard-social.png",
+          "bytes": 447028,
+          "sha256": "154377bc2c339874d2a7023e8bf9ab80d4d9b39b7391036966078af599ab82b8"
+        }
+      }
+    },
+    {
+      "id": "button-confirmation",
+      "title": "Vellira Button — confirmation and loading",
+      "storyId": "primitives-button--destructive-confirmation",
+      "files": {
+        "mp4": {
+          "url": "/media/component-demos/v1/button-confirmation/button-confirmation-social.mp4",
+          "bytes": 104219,
+          "sha256": "cab7db232ce04f7c48ce55519be057dad542ea14eadcfa2c1f2d94bb2fc4a886"
+        },
+        "gif": {
+          "url": "/media/component-demos/v1/button-confirmation/button-confirmation-social.gif",
+          "bytes": 647975,
+          "sha256": "cde62cd097c1a694a28c7f45d6aa0795748d3707c3aa63fc2b1e110093524f6f"
+        },
+        "png": {
+          "url": "/media/component-demos/v1/button-confirmation/button-confirmation-social.png",
+          "bytes": 455340,
+          "sha256": "dd1a8b364cd228d23fd40500f1074712448c2f6fab17636c07431e584df6cd63"
+        }
+      }
+    },
+    {
+      "id": "modal-focus",
+      "title": "Vellira Modal — focus and Escape dismissal",
+      "storyId": "components-modal--default",
+      "files": {
+        "mp4": {
+          "url": "/media/component-demos/v1/modal-focus/modal-focus-social.mp4",
+          "bytes": 115530,
+          "sha256": "88b4f8a6715ae7f55d31d78b81b93a648b63f3d05cc6ea7648d5bd59d7678d0f"
+        },
+        "gif": {
+          "url": "/media/component-demos/v1/modal-focus/modal-focus-social.gif",
+          "bytes": 784746,
+          "sha256": "295eadf6b0ebe301e0d4b31f179e10aaa8cd363ed40c82c2f1f73f6706a981dd"
+        },
+        "png": {
+          "url": "/media/component-demos/v1/modal-focus/modal-focus-social.png",
+          "bytes": 471574,
+          "sha256": "8df64e4526f2fead0164d2d9abac6fa913acd698fc330a10f809496d0155c644"
+        }
+      }
+    },
+    {
+      "id": "select-keyboard",
+      "title": "Vellira Select — keyboard choice",
+      "storyId": "components-select--simple-usage",
+      "files": {
+        "mp4": {
+          "url": "/media/component-demos/v1/select-keyboard/select-keyboard-social.mp4",
+          "bytes": 96273,
+          "sha256": "c0545294376afaebe0ca18c9ff17eca7ffb1cca83efc14a6f89cf7b0d88304a4"
+        },
+        "gif": {
+          "url": "/media/component-demos/v1/select-keyboard/select-keyboard-social.gif",
+          "bytes": 683447,
+          "sha256": "66439b9250b69cf173001f71aee1423f753b114ab39d63df4033323fa010cb8f"
+        },
+        "png": {
+          "url": "/media/component-demos/v1/select-keyboard/select-keyboard-social.png",
+          "bytes": 441209,
+          "sha256": "a6ee29726f566cc3609e645bb128e1fe908e6ccab496bd73ea4b332ea547624d"
+        }
+      }
+    },
+    {
+      "id": "tabs-keyboard",
+      "title": "Vellira Tabs — keyboard navigation",
+      "storyId": "components-tabs--controlled",
+      "files": {
+        "mp4": {
+          "url": "/media/component-demos/v1/tabs-keyboard/tabs-keyboard-social.mp4",
+          "bytes": 110395,
+          "sha256": "fb8e817804d76479c6c40eb2c7ccc79ea7813ddb1cb92e3e15817fadd60a310d"
+        },
+        "gif": {
+          "url": "/media/component-demos/v1/tabs-keyboard/tabs-keyboard-social.gif",
+          "bytes": 650859,
+          "sha256": "000943a6548d7ef2120a91b91eb0002245d019b4f6a3953d3a1f4de6f4b553e1"
+        },
+        "png": {
+          "url": "/media/component-demos/v1/tabs-keyboard/tabs-keyboard-social.png",
+          "bytes": 443376,
+          "sha256": "d7df78b5c7260e01eea6ea89b65bedf4589ae0d7e37e5809441da4ef447892a1"
+        }
+      }
+    }
+  ]
+}
