@@ -8,6 +8,7 @@ import {
   Grid,
   Home,
   Package,
+  MoreHorizontal,
   Plus,
   Settings,
 } from '@vellira-ui/icons';
@@ -550,12 +551,6 @@ export function Dashboard({
                     <div className={styles.projectDetails}>
                       <strong>{project.name}</strong>
                       <small>{project.description}</small>
-                      <span
-                        className={styles.statusPill}
-                        data-status={project.status}
-                      >
-                        {statusLabels[project.status]}
-                      </span>
                     </div>
                     <div className={styles.rowActions}>
                       <Checkbox
@@ -577,10 +572,19 @@ export function Dashboard({
                             aria-label={`Actions for ${project.name}`}
                             iconOnly
                           >
-                            <span aria-hidden='true'>⋯</span>
+                            <MoreHorizontal size={18} aria-hidden='true' />
                           </Button>
                         </Dropdown.Trigger>
                         <Dropdown.Content>
+                          <Dropdown.Item
+                            onSelect={() => {
+                              setWorkspace((current) =>
+                                toggleProject(current, project.id, !project.completed)
+                              );
+                            }}
+                          >
+                            {project.completed ? 'Mark as incomplete' : 'Mark as done'}
+                          </Dropdown.Item>
                           <Dropdown.Item
                             onSelect={() => {
                               setWorkspace((current) =>
