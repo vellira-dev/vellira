@@ -3,6 +3,7 @@ export type VelliraUiUsageRuleId =
   | 'vellira-ui.local-component-duplicate'
   | 'vellira-ui.third-party-bypass'
   | 'vellira-ui.missing-component'
+  | 'vellira-ui.noncanonical-text-link'
   | 'vellira-ui.noncanonical-icon'
   | 'vellira-ui.noncanonical-token-value'
   | 'vellira-ui.missing-token-resource';
