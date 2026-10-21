@@ -553,21 +553,15 @@ export function Dashboard({
                       <small>{project.description}</small>
                     </div>
                     <div className={styles.rowActions}>
-                      <Checkbox
-                        label='Done'
-                        checked={project.completed}
-                        onCheckedChange={(checked) =>
-                          setWorkspace((current) =>
-                            toggleProject(current, project.id, checked)
-                          )
-                        }
-                      />
+                      <span className={styles.statusPill} data-status={project.status}>
+                        {statusLabels[project.status]}
+                      </span>
                       <Dropdown placement='bottom-end'>
                         <Dropdown.Trigger asChild>
                           <Button
                             shape='pill'
                             size='sm'
-                            appearance='outline'
+                            appearance='bare'
                             color='neutral'
                             aria-label={`Actions for ${project.name}`}
                             iconStart={<MoreHorizontal size={18} aria-hidden='true' />}
