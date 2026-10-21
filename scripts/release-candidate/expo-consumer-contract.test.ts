@@ -70,7 +70,7 @@ describe('clean Expo consumer workflow contract', () => {
       'utf8'
     );
 
-    expect(script).toContain("expo: '57.0.30'");
+    expect(script).toContain("expo: '57.0.31'");
     expect(script).toContain("'@expo/metro-runtime': '57.0.17'");
     expect(script).toContain("expoBin, 'install', '--check'");
   });
