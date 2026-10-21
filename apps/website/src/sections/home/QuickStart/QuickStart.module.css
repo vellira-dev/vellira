@@ -517,24 +517,13 @@
 }
 
 .footer a {
-  color: var(--text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
-  text-decoration: none;
-  transition:
-    color 180ms ease,
-    transform 180ms ease;
+  transition: transform 180ms ease;
 }
 
 .footer a:hover {
-  color: var(--color-primary-500);
   transform: translateY(-1px);
-}
-
-.footer a:focus-visible {
-  border-radius: var(--radius-sm);
-  outline: 2px solid var(--color-primary-400);
-  outline-offset: 4px;
 }
 
 @keyframes status-pulse {
