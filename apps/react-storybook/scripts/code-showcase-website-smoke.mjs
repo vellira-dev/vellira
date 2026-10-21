@@ -404,7 +404,11 @@ try {
             );
             assert.ok(
               Math.max(...controlHeights) - Math.min(...controlHeights) <= 2,
-              `Core md controls differ: Input=${controlHeights[0]}, Select=${controlHeights[1]}, Button=${controlHeights[2]}`
+              `Dashboard Settings controls differ: Input=${controlHeights[0]}, Select=${controlHeights[1]}, Button=${controlHeights[2]}`
+            );
+            assert.ok(
+              controlHeights.every((height) => Math.abs(height - 40) <= 1),
+              `Dashboard controls should be 40px: ${controlHeights.join(', ')}`
             );
             await dashboard
               .getByRole('textbox', { name: 'Workspace name' })
