@@ -63,6 +63,32 @@ test('canonical website targets preserve stable workers.dev but disable Preview 
   }
 });
 
+test('canonical target validator rejects ON, cross-owner and production budget binding drift', async () => {
+  const { readDeploymentConfig, validateDeploymentTarget } =
+    await import('./cloudflare-target-config.mjs');
+  const staging = readDeploymentConfig(path.join(root, 'wrangler.jsonc'));
+  const production = readDeploymentConfig(
+    path.join(root, 'wrangler.production.jsonc')
+  );
+  const binding = staging.durable_objects.bindings[0];
+  for (const changed of [
+    { ...staging, vars: { ...staging.vars, NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1' } },
+    { ...staging, vars: { ...staging.vars, NEWSLETTER_GLOBAL_BUDGET_ENABLED: undefined } },
+    { ...staging, durable_objects: undefined },
+    { ...staging, durable_objects: { bindings: [{ ...binding, script_name: 'other-owner' }] } },
+    { ...staging, durable_objects: { bindings: [{ ...binding, environment: 'staging' }] } },
+    { ...staging, durable_objects: { bindings: [binding, { ...binding, name: 'EXTRA' }] } },
+  ]) {
+    assert.throws(() => validateDeploymentTarget(changed));
+  }
+  for (const changed of [
+    { ...production, vars: { NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1' } },
+    { ...production, durable_objects: { bindings: [binding] } },
+  ]) {
+    assert.throws(() => validateDeploymentTarget(changed));
+  }
+});
+
 test('website deploy and recovery still use the existing unversioned worker origins', async () => {
   const workflows = [
     ['deploy-website-cloudflare-staging.yml', [
@@ -113,6 +139,38 @@ test('projection: preserves cache bindings, compatibility and relative paths', (
   ]) {
     assert.deepEqual(local[key], source[key], key);
   }
+});
+
+test('local projection strips the exact private owner binding and preserves OFF', async () => {
+  const { experimental_readRawConfig } = await import('wrangler');
+  const { rawConfig: source } = experimental_readRawConfig({
+    config: path.join(root, 'wrangler.jsonc'),
+  });
+  const before = structuredClone(source);
+  const local = createLocalCacheConfig(source);
+  assert.deepEqual(source, before);
+  assert.equal(source.vars.NEWSLETTER_GLOBAL_BUDGET_ENABLED, '0');
+  assert.equal(local.vars.NEWSLETTER_GLOBAL_BUDGET_ENABLED, '0');
+  assert.equal(local.durable_objects, undefined);
+  assert.equal(local.workers_dev, false);
+  assert.equal(local.preview_urls, false);
+
+  for (const altered of [
+    { ...source.durable_objects.bindings[0], script_name: 'independent-owner' },
+    { ...source.durable_objects.bindings[0], class_name: 'SeparateBudget' },
+    { ...source.durable_objects.bindings[0], remote: true },
+  ]) {
+    const changed = structuredClone(source);
+    changed.durable_objects.bindings = [altered];
+    assert.throws(() => createLocalCacheConfig(changed));
+  }
+  const multiple = structuredClone(source);
+  multiple.durable_objects.bindings.push({
+    name: 'EXTRA_BUDGET',
+    class_name: 'SeparateBudget',
+    script_name: 'independent-owner',
+  });
+  assert.throws(() => createLocalCacheConfig(multiple));
 });
 
 test('projection: cannot masquerade as a public deployment target', () => {

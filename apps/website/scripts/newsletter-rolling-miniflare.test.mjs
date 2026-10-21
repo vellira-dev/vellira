@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { Miniflare } from 'miniflare';
+import { experimental_readRawConfig } from 'wrangler';
 
 function createMiniflare(persistPath, capacity = '7') {
   const root = path.resolve(import.meta.dirname, '..');
@@ -141,29 +142,31 @@ test('persisted null fails closed without resetting the budget', async (t) => {
   }
 });
 
-test('rolling candidate remains detached from deployed website Workers', () => {
+test('rolling owner is external-only and staging keeps admission OFF', () => {
   const root = path.resolve(import.meta.dirname, '..');
-  for (const name of [
-    'cloudflare-worker.mjs',
-    'wrangler.jsonc',
-    'wrangler.production.jsonc',
-  ]) {
+  for (const name of ['cloudflare-worker.mjs', 'wrangler.production.jsonc']) {
     const source = readFileSync(path.join(root, name), 'utf8');
     assert.doesNotMatch(source, /NewsletterRollingBudgetCoordinator/);
     assert.doesNotMatch(source, /newsletter-rolling-budget-coordinator/);
     assert.doesNotMatch(source, /vellira-newsletter-budget-owner/);
   }
-
-  // The *undeployed* dedicated owner may export this candidate class.
-  // It is not an activation path for either canonical website Worker.
+  const staging = experimental_readRawConfig({
+    config: path.join(root, 'wrangler.jsonc'),
+  }).rawConfig;
+  assert.equal(staging.vars.NEWSLETTER_GLOBAL_BUDGET_ENABLED, '0');
+  assert.deepEqual(staging.durable_objects.bindings, [{
+    name: 'NEWSLETTER_GLOBAL_BUDGET',
+    class_name: 'NewsletterRollingBudgetCoordinator',
+    script_name: 'vellira-newsletter-budget-owner',
+  }]);
+  // The deployed private owner is external; OFF makes no admission requests.
   const owner = readFileSync(
     path.join(root, 'cloudflare/newsletter-budget-owner-worker.mjs'),
     'utf8'
   );
-  assert.match(
-    owner,
-    /export \{ NewsletterRollingBudgetCoordinator \} from '\.\/newsletter-rolling-budget-coordinator\.mjs'/
-  );
+  assert.ok(owner.includes(
+    "export { NewsletterRollingBudgetCoordinator } from './newsletter-rolling-budget-coordinator.mjs'"
+  ));
 });
 
 
