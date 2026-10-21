@@ -664,14 +664,13 @@
   margin-top: 26px;
 }
 
-/* Keep Settings' md Select aligned with Core md Input and Button.
-   Select's rendered trigger is 50px; the other controls are 46px. */
+/* Keep the Settings reset action aligned with the 40px form controls. */
 .settingsFields > button {
   height: 40px;
   min-height: 40px;
 }
 
-/* Shared Dashboard control height: matches the Core md Input and Button. */
+/* Compact Dashboard controls share the same 40px rendered height. */
 .dashboard input:not([type='checkbox']):not([type='radio']),
 .dashboard [role='combobox'] {
   height: 40px;
@@ -967,7 +966,6 @@
     width: 100%;
   }
 }
-
 
 .projectActionIcon {
   position: relative;
