@@ -441,6 +441,13 @@ try {
             await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
             await dashboard.getByRole('button', { name: 'Projects', exact: true }).click();
             await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
+            // A selected Projects status must survive reload just like the view.
+            await dashboard.getByRole('combobox', { name: 'Status filter' }).click();
+            await page.getByRole('option', { name: 'Shipped', exact: true }).click();
+            await expect(dashboard.getByRole('combobox', { name: 'Status filter' })).toContainText('Shipped');
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
+            await expect(dashboard.getByRole('combobox', { name: 'Status filter' })).toContainText('Shipped');
             await dashboard.getByRole('button', { name: 'Settings', exact: true }).click();
             await dashboard.getByRole('button', { name: 'Restore sample data' }).click();
             const resetDialog = page.getByRole('dialog', { name: 'Restore sample data?' });
