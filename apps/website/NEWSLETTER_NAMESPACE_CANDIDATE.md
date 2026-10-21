@@ -238,7 +238,11 @@ authorize a real deployment.
 
 ## Cloudflare account read-only inventory
 
-The namespace candidate is not evidence of a deployed Durable Object.
+The separate private owner Worker is already deployed (approved provisioning
+run #39608321816), but the Worker presence or website binding **does not**
+establish namespace uniqueness, owner/class metadata, storage persistence or
+a shared Durable Object instance. The current read-only audit only counts
+namespaces by class when it can demonstrate a complete list.
 
 After merge, run this manual GitHub Actions workflow on `main`:
 
@@ -281,8 +285,17 @@ allowlisted fields: `namespaceInventoryDiagnostic` and
 `domainInventoryDiagnostic`. `null` means no extra diagnostic; it is **not**
 proof of completeness. Incomplete status can carry one of these codes:
 
-- `pagination_metadata_missing`: no provable `total_pages`; a short
-  response is not proof that a list is exhaustive.
+- `pagination_metadata_missing`: no provable `total_pages` in a
+  single-page inventory that has no safe terminal proof (for example, the
+  independent Worker domain inventory). Short pages alone are not proof.
+- `pagination_mode_changed`: namespace pages switched between an explicit
+  total-pages response and the no-metadata terminal-page convention.
+- `pagination_sparse_page`: a second nonempty namespace page followed a
+  short page when no total-pages metadata was available.
+- `namespace_id_duplicate`: the same namespace identifier appeared more
+  than once, potentially because an API ignored `page`.
+- `namespace_id_uninspectable`: multiple nonempty pages cannot be
+  safely de-duplicated because namespace identifiers are missing.
 - `pagination_metadata_invalid`: page or count metadata is inconsistent.
 - `pagination_page_limit`: more pages than the bounded audit can inspect.
 - `records_uninspectable`: unexpected list shape or record type.
@@ -296,6 +309,46 @@ IDs, domain inventory, provider messages, raw responses or token values.
 For HTTP 403, the existing `permission_denied` status already carries the
 diagnosis. Do **not** change the production Cloudflare token, assume WAF is
 absent, or infer a zero Durable Object coordinator count from incomplete data.
+
+#### Bounded namespace pagination with optional API metadata (Evidence V3)
+
+Cloudflare's [namespace list API](https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/)
+documents `result_info` as **optional**. The original audit required
+`result_info.total_pages` before declaring completion, which prevented
+further inspection after otherwise valid 200 responses without metadata.
+
+The revised **GET-only** audit still accepts explicit, consistent
+`total_pages`, and additionally permits a metadata-less inventory only
+when an **extra** page requested with `page=N&per_page=100` is explicitly
+empty. A short nonempty page is never sufficient. Each page must pass
+shape/metadata checks; page-mode changes, repeated IDs, ambiguous IDs
+across multiple nonempty pages, sparse pages and incomplete/failed follow-up
+reads remain `incomplete` or `permission_denied`, **not** zero. The request
+budget is bounded to three namespace pages. No namespace IDs, raw response
+bodies or account IDs are logged. A verified single class namespace count
+does **not** independently establish the same remote instance used by
+every environment.
+
+[Account audit #39673225554](https://github.com/vellira-dev/vellira/actions/runs/39673225554)
+on 2026-10-21 reported `namespaceInventoryStatus: incomplete` because
+`pagination_metadata_missing`, while confirming the named staging binding
+in all traffic-serving versions, production binding absent, private owner
+URLs disabled, `remoteWrites: 0` and `providerWrites: 0`.
+Re-run this audit **only after** the diagnostic PR is reviewed/merged and
+the mandatory CI is GREEN; do not edit production Wrangler or the owner.
+
+For WAF inspection, current zone/account entrypoint GETs return
+`permission_denied`. Cloudflare documents read-only permissions
+[`Zone WAF Read`](https://developers.cloudflare.com/waf/custom-rules/custom-rulesets/)
+and [`Account WAF Read` / `Account Rulesets Read`](https://developers.cloudflare.com/ruleset-engine/basic-operations/view-rulesets/)
+for inspecting relevant rulesets. The preferred next step is a **manual
+Cloudflare dashboard inspection** of the `vellira.dev` zone and any
+account-level WAF controls, not broadening the CI/deployment token.
+If API evidence later becomes necessary, use a separately approved,
+minimally scoped **read-only** credential and continue to report effective
+coverage as `unverified` until route/path and bypass behavior are proven.
+Do not enable the currently disabled burst-guard rule without separate
+owner approval.
 
 ### Proposed Preview URL exposure reduction (review-only)
 

@@ -85,6 +85,36 @@ function pageStatus(payload, count, page, maximum, accumulated = count) {
   return { status: page === total ? 'complete' : 'next' };
 }
 
+// The namespaces endpoint may legitimately omit result_info (Cloudflare's
+// schema marks it optional). Never assume a *short* page is terminal: for
+// metadata-less listings, require a subsequent explicitly empty page.
+// This only changes the account's GET-only diagnostic; no DO stub is invoked.
+function namespacePageStatus(payload, count, page, accumulated) {
+  const info = payload.result_info;
+  if (info !== undefined && !isObject(info)) {
+    return { status: 'incomplete', diagnostic: 'pagination_metadata_invalid' };
+  }
+  if (info && Object.hasOwn(info, 'total_pages')) {
+    return { ...pageStatus(payload, count, page, MAX_NAMESPACE_PAGES, accumulated), mode: 'metadata' };
+  }
+  if (info && (
+    (info.page !== undefined && info.page !== page) ||
+    (info.count !== undefined && info.count !== count) ||
+    (info.per_page !== undefined &&
+      (!Number.isSafeInteger(info.per_page) || info.per_page < count ||
+        info.per_page !== PAGE_SIZE)) ||
+    (info.total_count !== undefined &&
+      (!Number.isSafeInteger(info.total_count) || info.total_count < accumulated))
+  )) {
+    return { status: 'incomplete', diagnostic: 'pagination_metadata_invalid' };
+  }
+  if (count === 0) return { status: 'complete', mode: 'terminal-empty' };
+  if (page === MAX_NAMESPACE_PAGES) {
+    return { status: 'incomplete', diagnostic: 'pagination_page_limit', mode: 'terminal-empty' };
+  }
+  return { status: 'next', mode: 'terminal-empty' };
+}
+
 // List Worker Scripts and List Worker Routes are documented as unpaginated
 // result arrays. Never require result_info there: real 200 responses omit it.
 // Reject malformed items, duplicates, or unexpected *incomplete* pagination
@@ -181,6 +211,12 @@ export async function auditCloudflareNewsletterAccount({
   let namespaceInventoryDiagnostic = null;
   let coordinatorNamespaces = null;
   const collected = [];
+  const seenNamespaceIds = new Set();
+  let namespacePagingMode = null;
+  let namespaceNonemptyPages = 0;
+  let namespaceMissingIds = false;
+  let priorShortPage = false;
+  let advertisedTotalCount = null;
   for (let page = 1; page <= MAX_NAMESPACE_PAGES; page += 1) {
     const reply = await get(root + '/workers/durable_objects/namespaces?page=' +
       String(page) + '&per_page=' + String(PAGE_SIZE));
@@ -195,13 +231,68 @@ export async function auditCloudflareNewsletterAccount({
       namespaceInventoryDiagnostic = 'records_uninspectable';
       break;
     }
-    collected.push(...items);
-    const pagination = pageStatus(
-      reply.payload, items.length, page, MAX_NAMESPACE_PAGES, collected.length
+
+    const pagination = namespacePageStatus(
+      reply.payload, items.length, page, collected.length + items.length
     );
+    const mode = pagination.mode;
+    if (namespacePagingMode && mode && mode !== namespacePagingMode) {
+      namespaceInventoryStatus = 'incomplete';
+      namespaceInventoryDiagnostic = 'pagination_mode_changed';
+      break;
+    }
+    if (pagination.status === 'incomplete') {
+      namespaceInventoryStatus = 'incomplete';
+      namespaceInventoryDiagnostic = pagination.diagnostic;
+      break;
+    }
+    if (mode) namespacePagingMode = mode;
+
+    const totalCount = reply.payload.result_info?.total_count;
+    if (totalCount !== undefined) {
+      if (advertisedTotalCount !== null && advertisedTotalCount !== totalCount) {
+        namespaceInventoryStatus = 'incomplete';
+        namespaceInventoryDiagnostic = 'pagination_metadata_invalid';
+        break;
+      }
+      advertisedTotalCount = totalCount;
+    }
+    if (items.length) namespaceNonemptyPages += 1;
+    for (const item of items) {
+      if (typeof item.id !== 'string' || !item.id.trim()) {
+        namespaceMissingIds = true;
+      } else if (seenNamespaceIds.has(item.id)) {
+        namespaceInventoryStatus = 'incomplete';
+        namespaceInventoryDiagnostic = 'namespace_id_duplicate';
+        break;
+      } else {
+        seenNamespaceIds.add(item.id);
+      }
+    }
+    if (namespaceInventoryStatus === 'incomplete') break;
+    if (namespaceNonemptyPages > 1 && namespaceMissingIds) {
+      namespaceInventoryStatus = 'incomplete';
+      namespaceInventoryDiagnostic = 'namespace_id_uninspectable';
+      break;
+    }
+    // Prefer proving a duplicated namespace ID over the weaker sparse-page
+    // diagnostic. Either condition blocks the completeness claim.
+    if (items.length && priorShortPage && namespacePagingMode === 'terminal-empty') {
+      namespaceInventoryStatus = 'incomplete';
+      namespaceInventoryDiagnostic = 'pagination_sparse_page';
+      break;
+    }
+    collected.push(...items);
     namespaceInventoryStatus = pagination.status;
     namespaceInventoryDiagnostic = pagination.diagnostic ?? null;
-    if (pagination.status !== 'next') break;
+    if (pagination.status !== 'next') {
+      if (advertisedTotalCount !== null && collected.length !== advertisedTotalCount) {
+        namespaceInventoryStatus = 'incomplete';
+        namespaceInventoryDiagnostic = 'pagination_metadata_invalid';
+      }
+      break;
+    }
+    priorShortPage = items.length < PAGE_SIZE;
   }
   if (namespaceInventoryStatus === 'next') {
     namespaceInventoryStatus = 'incomplete';
