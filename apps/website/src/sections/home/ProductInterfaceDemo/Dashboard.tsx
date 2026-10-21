@@ -506,17 +506,15 @@ export function Dashboard({
           )}
 
           {view === 'projects' && (
-            <section className={styles.contentPanel}>
+            <section className={`${styles.contentPanel} ${styles.projectsPanel}`}>
               <div className={styles.sectionHeading}>
                 <div>
-                  <h4>All Projects</h4>
+                  <h4>All projects <span className={styles.projectCount}>{workspace.projects.length}</span></h4>
                   <p>Search, filter and manage sample work.</p>
                 </div>
-                <Button shape='pill' size='sm' onClick={openCreate}>
-                  Create project
-                </Button>
               </div>
               <div className={styles.filters}>
+                <Input size='md' type='search' aria-label='Filter project list' placeholder='Search projects...' value={query} onValueChange={setQuery} />
                 <Select
                   size='md'
                   label='Status filter'
@@ -535,7 +533,7 @@ export function Dashboard({
                   <Select.Item value='active'>In progress</Select.Item>
                   <Select.Item value='shipped'>Shipped</Select.Item>
                 </Select>
-                <span>{projects.length} matching projects</span>
+                <span className={styles.projectMatches}>{projects.length} matching projects</span>
               </div>
               <div className={styles.projectList}>
                 {projects.map((project) => (
@@ -603,10 +601,16 @@ export function Dashboard({
                   </article>
                 ))}
                 {projects.length === 0 && (
-                  <p className={styles.empty}>
-                    No matching projects. Change the filter or create a new
-                    project.
-                  </p>
+                  <div className={styles.projectEmpty}>
+                    <div className={styles.emptySymbol} aria-hidden='true'>{workspace.projects.length === 0 ? '＋' : '⌕'}</div>
+                    <strong>{workspace.projects.length === 0 ? 'No projects yet' : 'No matching projects'}</strong>
+                    <p>{workspace.projects.length === 0 ? 'Create your first project to get started.' : 'Try another search or clear your filters.'}</p>
+                    {workspace.projects.length === 0 ? (
+                      <Button shape='pill' size='sm' onClick={openCreate}>Create project</Button>
+                    ) : (
+                      <Button shape='pill' size='sm' appearance='outline' color='neutral' onClick={() => { setQuery(''); setFilter('all'); }}>Clear filters</Button>
+                    )}
+                  </div>
                 )}
               </div>
             </section>
