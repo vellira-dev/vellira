@@ -9,6 +9,7 @@ import {
   Home,
   Package,
   MoreHorizontal,
+  MoreVertical,
   Plus,
   Settings,
 } from '@vellira-ui/icons';
@@ -561,11 +562,20 @@ export function Dashboard({
                           <Button
                             shape='pill'
                             size='sm'
-                            appearance='bare'
-                            color='neutral'
+                            appearance='ghost'
+                            color='primary'
                             aria-label={`Actions for ${project.name}`}
-                            iconStart={<MoreHorizontal size={18} aria-hidden='true' />}
                             iconOnly
+                            iconStart={
+                              <span className={styles.projectActionIcon} aria-hidden='true'>
+                                <span className={styles.projectActionHorizontal}>
+                                  <MoreHorizontal size='100%' />
+                                </span>
+                                <span className={styles.projectActionVertical}>
+                                  <MoreVertical size='100%' />
+                                </span>
+                              </span>
+                            }
                           />
                         </Dropdown.Trigger>
                         <Dropdown.Content>
