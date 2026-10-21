@@ -361,6 +361,7 @@ function hasCanonicalButtonAsChildAncestor(node: ts.Node): boolean {
         opening.attributes.properties.some(
           (attribute) =>
             ts.isJsxAttribute(attribute) &&
+            ts.isIdentifier(attribute.name) &&
             attribute.name.text === 'asChild' &&
             (attribute.initializer === undefined ||
               (ts.isJsxExpression(attribute.initializer) &&
@@ -379,10 +380,14 @@ function hasCanonicalButtonAsChildAncestor(node: ts.Node): boolean {
 function isStructuralFooterBrandLink(
   node: ts.JsxOpeningElement | ts.JsxSelfClosingElement
 ): boolean {
-  if (!ts.isJsxOpeningElement(node)) return false;
+  if (!ts.isJsxOpeningElement(node)) {
+    return false;
+  }
   const classAttribute = node.attributes.properties.find(
     (attribute) =>
-      ts.isJsxAttribute(attribute) && attribute.name.text === 'className'
+      ts.isJsxAttribute(attribute) &&
+      ts.isIdentifier(attribute.name) &&
+      attribute.name.text === 'className'
   );
   const isBrandClass =
     classAttribute &&
@@ -390,7 +395,9 @@ function isStructuralFooterBrandLink(
     classAttribute.initializer &&
     ts.isJsxExpression(classAttribute.initializer) &&
     classAttribute.initializer.expression?.getText() === 'styles.brand';
-  if (!isBrandClass || jsxStringAttribute(node, 'href') !== '/') return false;
+  if (!isBrandClass || jsxStringAttribute(node, 'href') !== '/') {
+    return false;
+  }
   const element = node.parent;
   return (
     ts.isJsxElement(element) &&
