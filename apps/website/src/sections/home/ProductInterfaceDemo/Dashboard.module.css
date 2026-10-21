@@ -841,31 +841,30 @@
 
 .projectsPanel .sectionHeading {
   margin-bottom: 18px;
+  align-items: center;
 }
 
-.projectsPanel .sectionHeading p {
-  margin-top: 0;
+.projectsSubtitle {
+  margin: 0;
+  text-align: right;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .projectsPanel .filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
-  align-items: end;
-  gap: 12px;
-  margin: 18px 0;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 18px;
 }
 
- .projectsPanel .filters > :first-child {
-  width: 100%;
+.projectsPanel .filters > :first-child {
+  width: min(240px, 100%);
 }
 
-.projectsPanel .filters > :nth-child(2) {
-  width: 100%;
-}
-
-.projectMatches {
-  margin-left: auto;
-  align-self: center;
+/* The Core md Select trigger is 50px by default; match the 46px md search input. */
+.projectsPanel .filters [role='combobox'] {
+  height: 46px;
+  min-height: 46px;
 }
 
 .projectsPanel .projectList {
@@ -925,12 +924,15 @@
 }
 
 @media (width <= 530px) {
-  .projectsPanel .filters > :first-child,
-  .projectsPanel .filters > :nth-child(2) {
-    width: 100%;
+  .projectsPanel .sectionHeading {
+    align-items: flex-start;
   }
 
-  .projectsPanel .filters {
-    grid-template-columns: 1fr;
+  .projectsSubtitle {
+    text-align: left;
+  }
+
+  .projectsPanel .filters > :first-child {
+    width: 100%;
   }
 }
