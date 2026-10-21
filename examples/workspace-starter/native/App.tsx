@@ -16,11 +16,15 @@ import {
 type NativeTheme = 'light' | 'dark' | 'highContrast';
 type Section = 'overview' | 'projects' | 'settings';
 type Status = 'planned' | 'active' | 'shipped';
+type Team = 'design' | 'platform' | 'mobile';
 type Project = {
   id: number;
   name: string;
+  description: string;
+  team: Team;
   status: Status;
   completed: boolean;
+  previousStatus?: 'planned' | 'active';
 };
 type Workspace = {
   name: string;
@@ -34,9 +38,30 @@ const initialWorkspace: Workspace = {
   name: 'Demo Workspace',
   notifications: true,
   projects: [
-    { id: 1, name: 'Design token refresh', status: 'active', completed: false },
-    { id: 2, name: 'Mobile onboarding', status: 'planned', completed: false },
-    { id: 3, name: 'Dashboard rollout', status: 'shipped', completed: true },
+    {
+      id: 1,
+      name: 'Design token refresh',
+      description: 'Unify semantic colors and spacing.',
+      team: 'design',
+      status: 'active',
+      completed: false,
+    },
+    {
+      id: 2,
+      name: 'Mobile onboarding',
+      description: 'Bring the first-run experience to native.',
+      team: 'mobile',
+      status: 'planned',
+      completed: false,
+    },
+    {
+      id: 3,
+      name: 'Dashboard rollout',
+      description: 'Ship the verified workspace interface.',
+      team: 'platform',
+      status: 'shipped',
+      completed: true,
+    },
   ],
 };
 
@@ -46,6 +71,10 @@ function isSection(value: string): value is Section {
 
 function isStatus(value: string): value is Status {
   return value === 'planned' || value === 'active' || value === 'shipped';
+}
+
+function isTeam(value: unknown): value is Team {
+  return value === 'design' || value === 'platform' || value === 'mobile';
 }
 
 function restoreWorkspace(value: unknown): Workspace | null {
@@ -67,13 +96,26 @@ function restoreWorkspace(value: unknown): Workspace | null {
       ids.has(item.id) ||
       typeof item.name !== 'string' ||
       !isStatus(item.status) ||
-      typeof item.completed !== 'boolean'
+      typeof item.completed !== 'boolean' ||
+      (item.description !== undefined && typeof item.description !== 'string') ||
+      (item.team !== undefined && !isTeam(item.team)) ||
+      (item.previousStatus !== undefined &&
+        item.previousStatus !== 'planned' &&
+        item.previousStatus !== 'active')
     ) {
       return null;
     }
     ids.add(item.id);
   }
-  return data as Workspace;
+  // Previously saved projects lacked a team and description.
+  return {
+    ...(data as Workspace),
+    projects: data.projects.map((item) => ({
+      ...item,
+      description: item.description ?? '',
+      team: item.team ?? 'design',
+    })),
+  };
 }
 
 function nextId(projects: readonly Project[]): number {
@@ -86,8 +128,12 @@ function WorkspaceScreen() {
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [team, setTeam] = useState<Team>('design');
+  const [status, setStatus] = useState<Status>('planned');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
@@ -137,11 +183,32 @@ function WorkspaceScreen() {
       statusFilter === 'all' || project.status === statusFilter;
     return (
       sameStatus &&
-      project.name.toLowerCase().includes(query.trim().toLowerCase())
+      (project.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+        project.description.toLowerCase().includes(query.trim().toLowerCase()))
     );
   });
 
-  function createProject() {
+  function openCreate() {
+    setEditingId(null);
+    setName('');
+    setDescription('');
+    setTeam('design');
+    setStatus('planned');
+    setError('');
+    setCreateOpen(true);
+  }
+
+  function openEdit(project: Project) {
+    setEditingId(project.id);
+    setName(project.name);
+    setDescription(project.description);
+    setTeam(project.team);
+    setStatus(project.status);
+    setError('');
+    setCreateOpen(true);
+  }
+
+  function saveProject() {
     const trimmed = name.trim();
     if (!trimmed) {
       setError('Enter a project name.');
@@ -149,21 +216,41 @@ function WorkspaceScreen() {
     }
     setData((current) => ({
       ...current,
-      projects: [
-        {
-          id: nextId(current.projects),
-          name: trimmed,
-          status: 'planned',
-          completed: false,
-        },
-        ...current.projects,
-      ],
+      projects:
+        editingId === null
+          ? [
+              {
+                id: nextId(current.projects),
+                name: trimmed,
+                description: description.trim(),
+                team,
+                status,
+                completed: status === 'shipped',
+                previousStatus: status === 'shipped' ? 'active' : undefined,
+              },
+              ...current.projects,
+            ]
+          : current.projects.map((project) =>
+              project.id === editingId
+                ? {
+                    ...project,
+                    name: trimmed,
+                    description: description.trim(),
+                    team,
+                    status,
+                    completed: status === 'shipped',
+                    previousStatus:
+                      status === 'shipped'
+                        ? (project.previousStatus ??
+                          (project.status === 'planned' ? 'planned' : 'active'))
+                        : undefined,
+                  }
+                : project
+            ),
     }));
-    setName('');
-    setError('');
     setCreateOpen(false);
     setSection('projects');
-    setNotice('Project created in your local workspace.');
+    setNotice(editingId === null ? 'Project created locally.' : 'Project updated locally.');
   }
 
   function toggleProject(id: number, completed: boolean) {
@@ -174,7 +261,14 @@ function WorkspaceScreen() {
           ? {
               ...project,
               completed,
-              status: completed ? 'shipped' : 'active',
+              status: completed
+                ? 'shipped'
+                : (project.previousStatus ?? 'active'),
+              previousStatus: completed
+                ? project.status === 'shipped'
+                  ? (project.previousStatus ?? 'active')
+                  : project.status
+                : undefined,
             }
           : project
       ),
@@ -194,6 +288,7 @@ function WorkspaceScreen() {
             name: project.name + ' copy',
             completed: false,
             status: 'planned',
+            previousStatus: undefined,
           },
           ...current.projects,
         ],
@@ -244,7 +339,7 @@ function WorkspaceScreen() {
           >
             {themeName === 'light' ? 'Dark theme' : 'Light theme'}
           </Button>
-          <Button onPress={() => setCreateOpen(true)}>New project</Button>
+          <Button onPress={openCreate}>New project</Button>
         </View>
 
         {notice ? (
@@ -368,6 +463,13 @@ function WorkspaceScreen() {
                       gap: 10,
                     }}
                   >
+                    <Button
+                      appearance='outline'
+                      color='neutral'
+                      onPress={() => openEdit(project)}
+                    >
+                      Edit
+                    </Button>
                     <Button
                       appearance='outline'
                       color='neutral'
@@ -506,8 +608,10 @@ function WorkspaceScreen() {
         <Modal.Overlay>
           <Modal.Content>
             <Modal.Header>
-              <Modal.Title>Create a project</Modal.Title>
-              <Modal.Description>Local project, no backend.</Modal.Description>
+              <Modal.Title>
+                {editingId === null ? 'Create a project' : 'Edit project'}
+              </Modal.Title>
+              <Modal.Description>Changes stay on this device.</Modal.Description>
             </Modal.Header>
             <Modal.Body>
               <Input
@@ -520,6 +624,36 @@ function WorkspaceScreen() {
                 }}
                 placeholder='New project name'
               />
+              <Input
+                label='Description'
+                value={description}
+                onValueChange={setDescription}
+                placeholder='Describe the project'
+              />
+              <Select
+                label='Team'
+                value={team}
+                onValueChange={(value: string) => {
+                  if (isTeam(value)) setTeam(value);
+                }}
+                presentation='modal'
+              >
+                <Select.Item value='design' label='Design' />
+                <Select.Item value='platform' label='Platform' />
+                <Select.Item value='mobile' label='Mobile' />
+              </Select>
+              <Select
+                label='Status'
+                value={status}
+                onValueChange={(value: string) => {
+                  if (isStatus(value)) setStatus(value);
+                }}
+                presentation='modal'
+              >
+                <Select.Item value='planned' label='Planned' />
+                <Select.Item value='active' label='In progress' />
+                <Select.Item value='shipped' label='Shipped' />
+              </Select>
             </Modal.Body>
             <Modal.Footer>
               <Button
@@ -529,7 +663,9 @@ function WorkspaceScreen() {
               >
                 Cancel
               </Button>
-              <Button onPress={createProject}>Create project</Button>
+              <Button onPress={saveProject}>
+                {editingId === null ? 'Create project' : 'Save changes'}
+              </Button>
             </Modal.Footer>
           </Modal.Content>
         </Modal.Overlay>
