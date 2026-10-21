@@ -282,6 +282,10 @@
 }
 
 .notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: -8px 0 20px;
   padding: 10px 12px;
   font-size: 12px;

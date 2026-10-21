@@ -72,7 +72,8 @@ export function addProject(
   workspace: Workspace,
   name: string,
   team: Team,
-  status: ProjectStatus
+  status: ProjectStatus,
+  description = ''
 ): Workspace {
   const trimmed = name.trim();
   if (!trimmed) return workspace;
@@ -80,7 +81,8 @@ export function addProject(
   const next: Project = {
     id: nextProjectId(workspace.projects),
     name: trimmed,
-    description: 'Created in the Vellira Dashboard Starter.',
+    description:
+      description.trim() || 'Created in the Vellira Dashboard Starter.',
     team,
     status,
     completed: status === 'shipped',
@@ -141,6 +143,43 @@ export function toggleProject(
         : project
     ),
   };
+}
+
+export function updateProject(
+  workspace: Workspace,
+  id: number,
+  name: string,
+  description: string,
+  team: Team,
+  status: ProjectStatus
+): Workspace {
+  const trimmed = name.trim();
+  if (!trimmed) return workspace;
+  return {
+    ...workspace,
+    projects: workspace.projects.map((project) =>
+      project.id === id
+        ? {
+            ...project,
+            name: trimmed,
+            description: description.trim(),
+            team,
+            status,
+            completed: status === 'shipped',
+            previousStatus:
+              status === 'shipped'
+                ? (project.previousStatus ??
+                  (project.status === 'planned' ? 'planned' : 'active'))
+                : undefined,
+          }
+        : project
+    ),
+  };
+}
+
+export function restoreProject(workspace: Workspace, project: Project): Workspace {
+  if (workspace.projects.some((item) => item.id === project.id)) return workspace;
+  return { ...workspace, projects: [project, ...workspace.projects] };
 }
 
 export function filterProjects(

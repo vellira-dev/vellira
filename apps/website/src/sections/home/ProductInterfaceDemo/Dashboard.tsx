@@ -32,7 +32,10 @@ import {
   isTeam,
   readStoredWorkspace,
   removeProject,
+  restoreProject,
   toggleProject,
+  updateProject,
+  type Project,
   type ProjectStatus,
   type Team,
   type Workspace,
@@ -150,6 +153,9 @@ export function Dashboard({
   const [modalOpen, setModalOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [removedProject, setRemovedProject] = useState<Project | null>(null);
   const [newTeam, setNewTeam] = useState<Team>('design');
   const [newStatus, setNewStatus] = useState<ProjectStatus>('planned');
   const [nameError, setNameError] = useState('');
@@ -272,27 +278,56 @@ export function Dashboard({
   ];
 
   function openCreate() {
+    setEditingId(null);
     setNewName('');
+    setNewDescription('');
     setNewTeam('design');
     setNewStatus('planned');
     setNameError('');
     setModalOpen(true);
   }
 
-  function createProject() {
+  function openEdit(project: Project) {
+    setEditingId(project.id);
+    setNewName(project.name);
+    setNewDescription(project.description);
+    setNewTeam(project.team);
+    setNewStatus(project.status);
+    setNameError('');
+    setModalOpen(true);
+  }
+
+  function saveProject() {
     if (!newName.trim()) {
       setNameError('Enter a project name.');
       return;
     }
-    setWorkspace((current) => addProject(current, newName, newTeam, newStatus));
+    setWorkspace((current) =>
+      editingId === null
+        ? addProject(current, newName, newTeam, newStatus, newDescription)
+        : updateProject(
+            current,
+            editingId,
+            newName,
+            newDescription,
+            newTeam,
+            newStatus
+          )
+    );
     setModalOpen(false);
     setView('projects');
-    setFeedback('Project created in this browser.');
+    setRemovedProject(null);
+    setFeedback(
+      editingId === null
+        ? 'Project created in this browser.'
+        : 'Project updated locally.'
+    );
   }
 
   function resetDemo() {
     setResetOpen(false);
     setWorkspace(initialWorkspace);
+    setRemovedProject(null);
     setQuery('');
     setFilter('all');
     setFeedback('Demo projects restored.');
@@ -413,10 +448,26 @@ export function Dashboard({
           </div>
 
           {feedback && (
-            <p role='status' className={styles.notice}>
-              {feedback}
-            </p>
-          )}
+            <div role='status' className={styles.notice}>
+              <span>{feedback}</span>
+              {removedProject && (
+                <Button
+                  size='sm'
+                  appearance='ghost'
+                  color='primary'
+                  onClick={() => {
+                    setWorkspace((current) =>
+                      restoreProject(current, removedProject)
+                    );
+                    setRemovedProject(null);
+                    setFeedback('Project restored.');
+                  }}
+                >
+                  Undo
+                </Button>
+              )}
+            </div>
+          )
 
           {view === 'overview' && (
             <div className={styles.overview}>
@@ -614,8 +665,12 @@ export function Dashboard({
                           >
                             Done
                           </Dropdown.CheckboxItem>
+                          <Dropdown.Item onSelect={() => openEdit(project)}>
+                            Edit
+                          </Dropdown.Item>
                           <Dropdown.Item
                             onSelect={() => {
+                              setRemovedProject(null);
                               setWorkspace((current) =>
                                 duplicateProject(current, project.id)
                               );
@@ -627,6 +682,7 @@ export function Dashboard({
                           <Dropdown.Item
                             color='danger'
                             onSelect={() => {
+                              setRemovedProject(project);
                               setWorkspace((current) =>
                                 removeProject(current, project.id)
                               );
@@ -789,9 +845,11 @@ export function Dashboard({
           <Modal.Content>
             <Modal.Header>
               <div>
-                <Modal.Title>Create a project</Modal.Title>
+                <Modal.Title>
+                  {editingId === null ? 'Create a project' : 'Edit project'}
+                </Modal.Title>
                 <Modal.Description>
-                  Add a sample project. Nothing is sent to a server.
+                  Changes stay in your browser. Nothing is sent to a server.
                 </Modal.Description>
               </div>
               <Modal.Close />
@@ -808,6 +866,12 @@ export function Dashboard({
                     setNameError('');
                   }}
                   placeholder='e.g. Mobile UI audit'
+                />
+                <Input
+                  label='Description'
+                  value={newDescription}
+                  onValueChange={setNewDescription}
+                  placeholder='What is this project about?'
                 />
                 <Select
                   size='md'
@@ -845,8 +909,8 @@ export function Dashboard({
               >
                 Cancel
               </Button>
-              <Button shape='pill' size='sm' onClick={createProject}>
-                Create project
+              <Button shape='pill' size='sm' onClick={saveProject}>
+                {editingId === null ? 'Create project' : 'Save changes'}
               </Button>
             </Modal.Footer>
           </Modal.Content>
