@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Vellira Dashboard Starter",
+    "slug": "vellira-dashboard-starter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "dev.vellira.workspace.starter"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

@@ -24,35 +24,48 @@ async function checkGeometry(control) {
 }
 
 async function ensurePickerPainted(picker) {
-  await picker.evaluate((element) =>
-    element.scrollIntoView({
-      behavior: 'instant',
-      block: 'center',
-      inline: 'center',
-    })
-  );
-  await expect(picker).toBeInViewport();
   await expect
     .poll(
       () =>
         picker.evaluate((element) => {
+          // React hydration can reposition the picker after a one-shot scroll.
+          // On every poll, scroll the current DOM node and recheck real paint.
+          element.scrollIntoView({
+            behavior: 'instant',
+            block: 'center',
+            inline: 'center',
+          });
+          const rect = element.getBoundingClientRect();
+          if (
+            rect.width <= 0 ||
+            rect.height <= 0 ||
+            rect.top < -1 ||
+            rect.left < -1 ||
+            rect.bottom > window.innerHeight + 1 ||
+            rect.right > window.innerWidth + 1
+          ) {
+            return false;
+          }
           for (let node = element; node; node = node.parentElement) {
             const style = getComputedStyle(node);
             if (
               Number(style.opacity) < 1 ||
               style.visibility !== 'visible' ||
               style.display === 'none'
-            )
+            ) {
               return false;
+            }
           }
-          const rect = element.getBoundingClientRect();
           const hit = document.elementFromPoint(
-            rect.x + rect.width / 2,
-            rect.y + rect.height / 2
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2
           );
           return hit !== null && (hit === element || element.contains(hit));
         }),
-      { message: 'Picker must be fully painted and unobscured', timeout: 15000 }
+      {
+        message: 'Picker must be in viewport, fully painted and unobscured',
+        timeout: 20000,
+      }
     )
     .toBe(true);
 }
@@ -85,8 +98,9 @@ try {
             picker.getByRole('button', { name, exact: true });
           const code = section.locator('pre code');
 
-          await picker.scrollIntoViewIfNeeded();
           await expect(picker).toBeVisible();
+          // ensurePickerPainted already scrolls, checks viewport and verifies
+          // real hit-testing. Avoid a redundant actionability wait during hydration.
           await ensurePickerPainted(picker);
           await expect(picker.getByRole('button')).toHaveCount(4);
           await expect(
@@ -253,6 +267,410 @@ try {
             page.locator('[data-vellira-theme]').first()
           ).toHaveAttribute('data-vellira-theme', colorScheme);
 
+          // Exercise the real Core dashboard in the existing website browser
+          // session. This is not a screenshot mockup or a separate marketing
+          // route; only one desktop scenario performs the complete interaction
+          // sequence to avoid multiplying CI runtime across theme variants.
+          if (
+            reducedMotion === 'reduce' &&
+            colorScheme === 'light' &&
+            viewport.width === 1440
+          ) {
+            const demoSection = page.locator('#interface');
+            const dashboard = page.locator('#dashboard-live');
+            await expect(dashboard).toBeVisible();
+            await page.evaluate(() => {
+              document.getElementById('dashboard-live')?.scrollIntoView({
+                behavior: 'instant',
+                block: 'start',
+              });
+            });
+            await expect(dashboard).toBeInViewport();
+            await expect(dashboard).toBeVisible();
+            // Button icons belong in the supported iconStart slot, not
+            // as SVG children inside the label. Assert real painted geometry.
+            const navButton = dashboard.getByRole('button', {
+              name: 'Dashboard',
+              exact: true,
+            });
+            const addButton = dashboard.getByRole('button', {
+              name: 'New project',
+            });
+            for (const [button, label] of [
+              [navButton, 'Dashboard'],
+              [addButton, 'New project'],
+            ]) {
+              const icon = await button.locator('svg').boundingBox();
+              const word = await button
+                .getByText(label, { exact: true })
+                .boundingBox();
+              assert.ok(icon && word, label + ' needs visible icon and text');
+              assert.ok(
+                Math.abs(
+                  icon.y + icon.height / 2 - (word.y + word.height / 2)
+                ) < 8,
+                label + ' icon and text must share one horizontal row'
+              );
+            }
+            const toolbarSearch = dashboard.getByRole('searchbox', {
+              name: 'Search projects',
+            });
+            await expect(toolbarSearch).toBeVisible();
+            await expect(
+              dashboard.getByText('Search projects', { exact: true })
+            ).toHaveCount(0);
+            const searchBounds = await toolbarSearch.boundingBox();
+            assert.ok(
+              searchBounds && searchBounds.height <= 52,
+              'Toolbar search must use one compact row, without field caption'
+            );
+
+            await expect(
+              demoSection.getByRole('link', { name: 'View Source' })
+            ).toHaveAttribute(
+              'href',
+              'https://github.com/vellira-dev/vellira/blob/main/examples/workspace-starter/web/src/Dashboard.tsx'
+            );
+
+            await dashboard
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await dashboard
+              .getByRole('button', { name: 'New project' })
+              .click();
+
+            const dialog = page.getByRole('dialog', {
+              name: 'Create a project',
+            });
+            await expect(dialog).toBeVisible();
+            await dialog
+              .getByRole('textbox', { name: 'Project name' })
+              .fill('Browser smoke project');
+
+            await dialog.getByRole('combobox', { name: 'Team' }).click();
+            const mobileOption = page.getByRole('option', {
+              name: 'Mobile',
+              exact: true,
+            });
+            await expect(mobileOption).toBeVisible();
+            await mobileOption.click();
+            await expect(dialog).toBeVisible();
+
+            await dialog.getByRole('combobox', { name: 'Status' }).click();
+            await page.getByRole('option', { name: 'Shipped' }).click();
+            await dialog
+              .getByRole('button', { name: 'Create project' })
+              .click();
+            await expect(dialog).toBeHidden();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+
+            // Full Demo is another window on the same origin: the workspace
+            // created in the homepage must be available without re-entry.
+            const fullscreen = await page.context().newPage();
+            await fullscreen.goto(
+              new URL('/demo/dashboard', page.url()).toString(),
+              { waitUntil: 'domcontentloaded' }
+            );
+            await fullscreen
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              fullscreen.getByText('Browser smoke project')
+            ).toBeVisible();
+            await fullscreen
+              .getByRole('button', { name: 'Settings', exact: true })
+              .click();
+            const fullTheme = fullscreen.getByRole('combobox', {
+              name: 'Theme',
+            });
+            await fullTheme.click();
+            await fullscreen
+              .getByRole('option', { name: 'Light', exact: true })
+              .click();
+            await fullTheme.click();
+            await fullscreen
+              .getByRole('option', { name: 'System', exact: true })
+              .click();
+            await expect(fullTheme).toContainText('System');
+            await fullscreen.close();
+
+            const projectActions = dashboard.getByRole('button', {
+              name: 'Actions for Browser smoke project',
+            });
+            await projectActions.hover();
+            await expect(
+              projectActions.locator('[class*="projectActionVertical"]')
+            ).toHaveCSS('opacity', '1');
+            await projectActions.click();
+            await expect(projectActions).toHaveAttribute('data-state', 'open');
+            await expect(
+              page.getByRole('menuitemcheckbox', { name: 'Done' })
+            ).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(projectActions).toHaveAttribute(
+              'data-state',
+              'closed'
+            );
+
+            await dashboard
+              .getByRole('button', { name: 'Settings', exact: true })
+              .click();
+            // The settings panel must occupy the available main area, not
+            // leave a large unpainted gap above the dashboard footer.
+            const settingsPanel = dashboard.locator('main > section').last();
+            await expect(settingsPanel).toBeVisible();
+            const settingsBox = await settingsPanel.boundingBox();
+            assert.ok(
+              settingsBox && settingsBox.width > 0 && settingsBox.height > 0,
+              'Settings panel must have visible dimensions'
+            );
+            // Compare the Core md field geometries without hard-coded pixel values.
+            const workspaceField = dashboard.getByRole('textbox', {
+              name: 'Workspace name',
+            });
+            const themeSelect = dashboard.getByRole('combobox', {
+              name: 'Theme',
+            });
+            const resetButton = dashboard.getByRole('button', {
+              name: 'Restore sample data',
+            });
+            const controlHeights = await Promise.all(
+              [workspaceField, themeSelect, resetButton].map(
+                async (locator) => {
+                  const rect = await locator.boundingBox();
+                  assert.ok(rect, 'Settings control must be rendered');
+                  return rect.height;
+                }
+              )
+            );
+            assert.ok(
+              Math.max(...controlHeights) - Math.min(...controlHeights) <= 2,
+              `Dashboard Settings controls differ: Input=${controlHeights[0]}, Select=${controlHeights[1]}, Button=${controlHeights[2]}`
+            );
+            assert.ok(
+              controlHeights.every((height) => Math.abs(height - 40) <= 1),
+              `Dashboard controls should be 40px: ${controlHeights.join(', ')}`
+            );
+            await dashboard
+              .getByRole('textbox', { name: 'Workspace name' })
+              .fill('Demo QA Workspace');
+            await dashboard
+              .getByRole('button', { name: 'Dashboard', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Demo QA Workspace', { exact: true })
+            ).toHaveCount(2);
+
+            const savedProjects = await page.evaluate(() => {
+              const state = localStorage.getItem(
+                'vellira-dashboard-live-core-v1'
+              );
+              return state ? JSON.parse(state).workspace.projects.length : null;
+            });
+            assert.equal(savedProjects, 4);
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(
+              dashboard.getByText('Demo QA Workspace', { exact: true })
+            ).toHaveCount(2);
+            await dashboard
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Dashboard', exact: true })
+              .click();
+            await expect(dashboard).toBeVisible();
+            await page.evaluate(() => {
+              document.getElementById('dashboard-live')?.scrollIntoView({
+                behavior: 'instant',
+                block: 'start',
+              });
+            });
+            await expect(dashboard).toBeInViewport();
+            await page.screenshot({
+              path: `${artifactDir}/dashboard-core-live-1440.png`,
+            });
+            // Search must show filtered results, and the workspace data must
+            // remain available after a browser reload.
+            await dashboard
+              .getByRole('searchbox', { name: 'Search projects' })
+              .fill('Browser smoke project');
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            await dashboard
+              .getByRole('searchbox', { name: 'Search projects' })
+              .fill('not-a-real-project');
+            await expect(
+              dashboard.getByText('No matching projects', { exact: true })
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Clear filters' })
+              .click();
+            await expect(
+              dashboard.getByRole('searchbox', { name: 'Search projects' })
+            ).toHaveValue('');
+
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(
+              dashboard.getByRole('heading', {
+                name: 'Projects',
+                exact: true,
+                level: 3,
+              })
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            // A selected Projects status must survive reload just like the view.
+            await dashboard
+              .getByRole('combobox', { name: 'Status filter' })
+              .click();
+            await page
+              .getByRole('option', { name: 'Shipped', exact: true })
+              .click();
+            await expect(
+              dashboard.getByRole('combobox', { name: 'Status filter' })
+            ).toContainText('Shipped');
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await expect(
+              dashboard.getByRole('heading', {
+                name: 'Projects',
+                exact: true,
+                level: 3,
+              })
+            ).toBeVisible();
+            await expect(
+              dashboard.getByRole('combobox', { name: 'Status filter' })
+            ).toContainText('Shipped');
+            const actionsAfterReload = dashboard.getByRole('button', {
+              name: 'Actions for Browser smoke project',
+            });
+            await actionsAfterReload.click();
+            await page
+              .getByRole('menuitem', { name: 'Edit', exact: true })
+              .click();
+            const editDialog = page.getByRole('dialog', {
+              name: 'Edit project',
+            });
+            await expect(editDialog).toBeVisible();
+            await editDialog
+              .getByRole('textbox', { name: 'Description' })
+              .fill('Edited using real Vellira controls.');
+            await editDialog
+              .getByRole('button', { name: 'Save changes' })
+              .click();
+            await expect(editDialog).toBeHidden();
+            await expect(
+              dashboard.getByText('Edited using real Vellira controls.')
+            ).toBeVisible();
+
+            await actionsAfterReload.click();
+            await page
+              .getByRole('menuitem', { name: 'Remove', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeHidden();
+            await dashboard.getByRole('button', { name: 'Undo' }).click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+
+            await dashboard
+              .getByRole('button', { name: 'Settings', exact: true })
+              .click();
+            await dashboard
+              .getByRole('button', { name: 'Restore sample data' })
+              .click();
+            const resetDialog = page.getByRole('dialog', {
+              name: 'Restore sample data?',
+            });
+            await expect(resetDialog).toBeVisible();
+            await resetDialog.getByRole('button', { name: 'Cancel' }).click();
+            await expect(resetDialog).toBeHidden();
+            await dashboard
+              .getByRole('button', { name: 'Restore sample data' })
+              .click();
+            await resetDialog
+              .getByRole('button', { name: 'Restore data' })
+              .click();
+            await expect(
+              dashboard.getByText('Demo projects restored.')
+            ).toBeVisible();
+          }
+
+          if (
+            reducedMotion === 'reduce' &&
+            colorScheme === 'light' &&
+            viewport.width === 390
+          ) {
+            const mobileDemo = page.locator('#dashboard-live');
+            await expect(mobileDemo).toBeVisible();
+            await page.evaluate(() => {
+              document.getElementById('dashboard-live')?.scrollIntoView({
+                behavior: 'instant',
+                block: 'start',
+              });
+            });
+            await expect(mobileDemo).toBeInViewport();
+            await expect(mobileDemo).toBeVisible();
+            const rect = await mobileDemo.boundingBox();
+            assert.ok(
+              rect && rect.x >= -1 && rect.x + rect.width <= viewport.width + 1,
+              'Core dashboard must fit mobile viewport without overflow'
+            );
+            await mobileDemo
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              mobileDemo.getByRole('searchbox', { name: 'Search projects' })
+            ).toBeVisible();
+            await page.screenshot({
+              path: `${artifactDir}/dashboard-core-live-390.png`,
+            });
+          }
+
+          // Theme and responsive smoke for the real Dashboard in every
+          // browser matrix scenario, not only the interactive light desktop case.
+          const themedDashboard = page.locator('#dashboard-live');
+          await expect(themedDashboard).toBeVisible();
+          await expect(
+            themedDashboard.locator('[class*="brandMark"] img')
+          ).toHaveCount(2);
+          const themedBounds = await themedDashboard.boundingBox();
+          assert.ok(
+            themedBounds && themedBounds.width <= viewport.width + 1,
+            'Dashboard must fit all supported viewport/theme combinations'
+          );
+          const dashboardNav = themedDashboard.getByRole('button', {
+            name: 'Settings',
+            exact: true,
+          });
+          await dashboardNav.focus();
+          await expect(dashboardNav).toBeFocused();
+          await page.keyboard.press('Enter');
+          await expect(
+            themedDashboard.getByRole('heading', {
+              name: 'Settings',
+              exact: true,
+              level: 3,
+            })
+          ).toBeVisible();
+          await themedDashboard
+            .getByRole('button', { name: 'Dashboard', exact: true })
+            .click();
+
           // Review the new homepage narrative in each theme, viewport and
           // motion preference, using the same real browser as CodeShowcase.
           const story = page.locator('#why-vellira');
@@ -351,9 +769,12 @@ try {
               })
             )
             .toBe(true);
-          await quickStart.locator('pre').nth(1).screenshot({
-            path: `${artifactDir}/${scenario}-quick-start-import.png`,
-          });
+          await quickStart
+            .locator('pre')
+            .nth(1)
+            .screenshot({
+              path: `${artifactDir}/${scenario}-quick-start-import.png`,
+            });
 
           assert.deepEqual(pageErrors, [], 'unexpected page errors');
           evidence.push({
