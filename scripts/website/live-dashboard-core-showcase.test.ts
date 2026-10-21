@@ -113,6 +113,17 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('styles.projectsPanel');
   });
 
+  it('matches the Storybook icon-only dropdown animation without an enclosing circle', () => {
+    expect(standaloneDashboard).toContain('<MoreHorizontal');
+    expect(standaloneDashboard).toContain('<MoreVertical');
+    expect(standaloneDashboard).toContain('styles.projectActionHorizontal');
+    expect(standaloneDashboard).toContain('styles.projectActionVertical');
+    expect(standaloneDashboard).toContain('<Dropdown.CheckboxItem');
+    expect(standaloneStyles).toContain("[data-state='open']");
+    expect(standaloneStyles).toContain('rotate(90deg) scale(0.92)');
+    expect(standaloneStyles).toContain('prefers-reduced-motion');
+  });
+
   it('keeps one synchronized Dashboard implementation across both apps', () => {
     const normalizedWebsite = siteDashboard.replace(
       "from '../../../../../../examples/workspace-starter/web/src/model';",
