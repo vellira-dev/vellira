@@ -647,8 +647,136 @@ const textareaComponentTokenAdditionMigrationsV1 =
  * Generator V2 owns this array. It contains only deterministic first-
  * materialization addition evidence for governed component-token families.
  */
-const generatedComponentTokenAdditionMigrationsV1 =
-  [] as const satisfies readonly TokenMigrationEntry[];
+const generatedComponentTokenAdditionMigrationsV1 = [
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-default-bg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.default.bg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-default-border',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.default.border',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-default-fg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.default.fg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-disabled-bg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.disabled.bg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-disabled-border',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.disabled.border',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-disabled-fg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.disabled.fg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-error-border',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.error.border',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-error-fg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.error.fg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-error-ring',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.error.ring',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-focusRing',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.focusRing',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-hover-bg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.hover.bg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-hover-border',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.hover.border',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-hover-fg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.hover.fg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-pressed-bg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.pressed.bg',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-pressed-border',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.pressed.border',
+  },
+  {
+    id: '560-generator-v2-component-token-addition-components-avatar-pressed-fg',
+    kind: 'addition',
+    issue: '#560',
+    reason:
+      'Authorize a first-materialized canonical component-token leaf produced by Generator V2.',
+    to: 'components.avatar.pressed.fg',
+  },
+] as const satisfies readonly TokenMigrationEntry[];
 
 const boldFontWeightAdditionV1 = {
   id: '927-font-weight-bold-addition',

@@ -6,6 +6,7 @@ describe('public API', () => {
   it('exports only documented runtime entries', () => {
     expect(Object.keys(api).sort()).toEqual([
       'Accordion',
+      'Avatar',
       'Button',
       'Checkbox',
       'Dropdown',
