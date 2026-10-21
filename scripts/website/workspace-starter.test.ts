@@ -8,7 +8,9 @@ import {
   nextProjectId,
   readStoredWorkspace,
   removeProject,
+  restoreProject,
   toggleProject,
+  updateProject,
 } from '../../examples/workspace-starter/web/src/model';
 
 describe('Vellira Workspace Starter state model', () => {
@@ -49,11 +51,40 @@ describe('Vellira Workspace Starter state model', () => {
     });
     const reopened = toggleProject(completed, 4, false);
     expect(reopened.projects[0]).toMatchObject({
-      status: 'active',
+      status: 'planned',
       completed: false,
     });
     expect(removeProject(reopened, 4).projects).toHaveLength(3);
     expect(duplicateProject(initialWorkspace, 999)).toBe(initialWorkspace);
+  });
+
+  it('restores original status, edits details and reverses removal', () => {
+    const completed = toggleProject(initialWorkspace, 2, true);
+    const reopened = toggleProject(completed, 2, false);
+    expect(reopened.projects[1].status).toBe('planned');
+
+    const edited = updateProject(
+      initialWorkspace,
+      2,
+      '  New mobile onboarding  ',
+      'Updated mobile UX',
+      'platform',
+      'active'
+    );
+    expect(edited.projects[1]).toMatchObject({
+      name: 'New mobile onboarding',
+      description: 'Updated mobile UX',
+      team: 'platform',
+      status: 'active',
+      completed: false,
+    });
+
+    const removed = removeProject(initialWorkspace, 2);
+    const restored = restoreProject(removed, initialWorkspace.projects[1]);
+    expect(restored.projects).toHaveLength(3);
+    expect(restoreProject(restored, initialWorkspace.projects[1])).toBe(
+      restored
+    );
   });
 
   it('filters by status and text without mutating projects', () => {
@@ -88,6 +119,14 @@ describe('Vellira Workspace Starter state model', () => {
       readStoredWorkspace({
         ...initialWorkspace,
         projects: [{ ...initialWorkspace.projects[0], status: 'invalid' }],
+      })
+    ).toBeNull();
+    expect(
+      readStoredWorkspace({
+        ...initialWorkspace,
+        projects: [
+          { ...initialWorkspace.projects[0], previousStatus: 'shipped' },
+        ],
       })
     ).toBeNull();
   });

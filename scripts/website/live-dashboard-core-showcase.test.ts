@@ -82,7 +82,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).not.toContain('ProjectTrend');
     expect(standaloneDashboard).toMatch(/No historical\s+analytics\./);
 
-    expect(standaloneDashboard).toContain('Active Projects');
+    expect(standaloneDashboard).toContain('Project Snapshot');
   });
 
   it('vendors the canonical Vellira icons for standalone offline use', () => {
@@ -138,6 +138,28 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneStyles).toContain('border-radius: var(--radius-lg);');
     expect(standaloneStyles).toContain('border-radius: var(--radius-full);');
     expect(stageStyles).toContain('border-radius: var(--radius-xl);');
+  });
+
+  it('preserves edits across previews and supports reversible actions', () => {
+    const page = read('apps/website/src/app/(marketing)/demo/dashboard/page.tsx');
+    const native = read('examples/workspace-starter/native/App.tsx');
+    expect(standaloneDashboard).toContain(
+      "const storageKey = 'vellira-dashboard-live-core-v1'"
+    );
+    expect(standaloneDashboard).toContain("'storage', syncWorkspace");
+    expect(standaloneDashboard).toContain('workspaceDisplayName');
+    expect(standaloneDashboard).toContain('restoreProject(');
+    expect(standaloneDashboard).toContain('updateProject(');
+    expect(standaloneDashboard).toContain('Project Snapshot');
+    expect(standaloneDashboard).toContain("theme === 'system'");
+    expect(page).not.toContain('<main');
+    expect(native).toContain('themeStorageKey');
+    expect(native).toContain('setResetOpen(true)');
+    expect(native).toContain('openEdit(project)');
+    expect(native).toContain("label='Team'");
+    expect(native).toContain("label='Status'");
+    expect(native).toContain('Undo');
+    expect(native).toContain('theme.tokens.radius.lg');
   });
 
   it('keeps one synchronized Dashboard implementation across both apps', () => {

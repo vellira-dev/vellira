@@ -16,7 +16,7 @@ source remains available under the repository's MIT license.
 | Overview with live project counts       | Yes                  | Yes                 |
 | Project search and status filtering     | Yes                  | Yes                 |
 | Create projects using Vellira Modal     | Yes                  | Yes                 |
-| Complete, duplicate, or remove projects | Yes                  | Yes                 |
+| Complete, edit, duplicate, remove or undo projects | Yes                  | Yes                 |
 | Navigate with Vellira Tabs              | Yes                  | Yes                 |
 | Edit workspace via Input and Checkbox   | Yes                  | Yes                 |
 | Switch light/dark/high-contrast themes  | Yes                  | Yes                 |
@@ -75,8 +75,8 @@ and native overlays before relying on those behaviors in production.
 ## Try the actual interactions
 
 1. Visit Projects, search and filter by status.
-2. Create a new project using the modal, then duplicate or remove it.
-3. Mark a project complete and watch the Overview counters change.
+2. Create or edit projects with descriptions, teams and statuses; try Remove and Undo.
+3. Mark a project complete, then uncheck Done to restore its earlier status.
 4. Edit the workspace name and notification preference.
 5. Switch themes, reload or restart the app, and check locally saved changes.
 6. Read the source and adapt the UI to your own product.
@@ -94,6 +94,20 @@ Changes are stored locally when device/browser storage is available.
 This is a **starting point**, not an audited production application. Before
 shipping an adapted version, integrate your own backend and validate
 accessibility, security and device/browser support.
+
+The Web demo deliberately uses **40px compact controls**. Published Core
+size tokens remain unchanged: `sm=38px`, `md=46px`, and `lg=52px`.
+This scoped density is not a new public component size. Native controls
+retain platform-specific sizes.
+
+The website's embedded Desktop, Mobile Web iframe and Full Demo share data
+when served from the same origin. The standalone Vite starter runs on its
+own browser origin and intentionally has separate local storage.
+
+Native release validation needs a real iOS and Android device: test nested
+Select in Modal, create/edit/Undo, reset confirmation, theme persistence,
+high-contrast, touch targets and screen-reader announcements. Expo CI
+currently checks TypeScript and configuration, not device interaction.
 
 Both apps intentionally live outside the root pnpm workspace. Running
 `npm install` in the individual app directory uses the public npm packages,
