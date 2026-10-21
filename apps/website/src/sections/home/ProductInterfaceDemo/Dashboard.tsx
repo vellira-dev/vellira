@@ -570,10 +570,9 @@ export function Dashboard({
                             appearance='outline'
                             color='neutral'
                             aria-label={`Actions for ${project.name}`}
+                            iconStart={<MoreHorizontal size={18} aria-hidden='true' />}
                             iconOnly
-                          >
-                            <MoreHorizontal size={18} aria-hidden='true' />
-                          </Button>
+                          />
                         </Dropdown.Trigger>
                         <Dropdown.Content>
                           <Dropdown.Item
