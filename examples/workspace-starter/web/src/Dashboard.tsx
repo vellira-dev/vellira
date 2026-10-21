@@ -576,7 +576,12 @@ export function Dashboard({
                               );
                             }}
                           >
-                            {project.completed ? 'Mark as incomplete' : 'Mark as done'}
+                            <span className={styles.dropdownDone}>
+                              <span className={styles.dropdownDoneBox} aria-hidden='true'>
+                                {project.completed ? <Check size={14} /> : null}
+                              </span>
+                              Done
+                            </span>
                           </Dropdown.Item>
                           <Dropdown.Item
                             onSelect={() => {
