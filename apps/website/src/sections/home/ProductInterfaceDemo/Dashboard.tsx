@@ -569,20 +569,16 @@ export function Dashboard({
                           />
                         </Dropdown.Trigger>
                         <Dropdown.Content>
-                          <Dropdown.Item
-                            onSelect={() => {
+                          <Dropdown.CheckboxItem
+                            checked={project.completed}
+                            onCheckedChange={(checked) => {
                               setWorkspace((current) =>
-                                toggleProject(current, project.id, !project.completed)
+                                toggleProject(current, project.id, checked)
                               );
                             }}
                           >
-                            <span className={styles.dropdownDone}>
-                              <span className={styles.dropdownDoneBox} aria-hidden='true'>
-                                {project.completed ? <Check size={14} /> : null}
-                              </span>
-                              Done
-                            </span>
-                          </Dropdown.Item>
+                            Done
+                          </Dropdown.CheckboxItem>
                           <Dropdown.Item
                             onSelect={() => {
                               setWorkspace((current) =>
