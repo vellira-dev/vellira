@@ -5,9 +5,14 @@ component used both by Vellira's homepage and the standalone Vite starter.
 Not a screenshot, paywall or commercial production template. React and React Native developers can run it,
 inspect the Vellira APIs, and adapt the project to their own work.
 
-Both apps pin **Vellira 2.179.1 packages**. They are independently installable
+Both apps pin **Vellira 2.185.0 packages**. They are independently installable
 and work without a Vellira account, backend or Pro subscription. The public
 source remains available under the repository's MIT license.
+
+After a complete published Vellira release, the Workspace Starter Release Sync
+workflow opens a reviewable PR to update these exact pins. The PR must pass
+fresh npm Web/Expo consumer checks before it is merged; no versions are pushed
+directly to `main` or changed for existing users without review.
 
 ## What you can do
 

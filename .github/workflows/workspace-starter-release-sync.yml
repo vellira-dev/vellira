@@ -1,0 +1,165 @@
+name: Workspace Starter Release Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: workspace-starter-release-sync
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.head_commit.message, 'chore(release): sync package versions')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout canonical release-sync main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node for npm registry verification
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          registry-url: https://registry.npmjs.org
+
+      - name: Deny stale main and read canonical version
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then
+            echo "::error::Main moved from $EXPECTED_SHA to $current_sha; refusing a stale version-sync proposal."
+            exit 1
+          fi
+          version="$(node -p "require('./package.json').version")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Expected a stable exact root package version, got '$version'."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify complete published GitHub and npm release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ steps.source.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/releases/tags/v$VERSION" \
+            | jq -e --arg tag "v$VERSION" \
+                '.tag_name == $tag and .draft == false and .prerelease == false' \
+            > /dev/null
+
+          for package in \
+            @vellira-ui/core \
+            @vellira-ui/types \
+            @vellira-ui/tokens \
+            @vellira-ui/icons \
+            @vellira-ui/react \
+            @vellira-ui/react-native; do
+            published="$(npm view "$package@$VERSION" version --json \
+              --registry=https://registry.npmjs.org \
+              --fetch-retries=2 --fetch-timeout=30000 | jq -r '.')"
+            if [[ "$published" != "$VERSION" ]]; then
+              echo "::error::$package@$VERSION is not fully published; got '$published'."
+              exit 1
+            fi
+          done
+          echo "Published v$VERSION: all six npm packages verified."
+
+      - name: Update only exact Vellira Starter dependency pins
+        env:
+          VERSION: ${{ steps.source.outputs.version }}
+        run: |
+          node scripts/sync-workspace-starter-versions.cjs "$VERSION"
+          node scripts/sync-workspace-starter-versions.cjs "$VERSION" --check
+          node --test scripts/sync-workspace-starter-versions.test.cjs
+
+      - name: Enforce narrow non-publishing change scope
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          unexpected="$(git diff --name-only -- . \
+            ':!examples/workspace-starter/web/package.json' \
+            ':!examples/workspace-starter/native/package.json' \
+            ':!examples/workspace-starter/README.md')"
+          if [[ -n "$unexpected" ]]; then
+            echo "::error::Unexpected release-sync modifications:"
+            echo "$unexpected"
+            exit 1
+          fi
+          if git diff --quiet -- \
+            examples/workspace-starter/web/package.json \
+            examples/workspace-starter/native/package.json \
+            examples/workspace-starter/README.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Starter already matches the published release."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release-sync GitHub App token
+        if: steps.changes.outputs.changed == 'true'
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Propose synchronized Starter through a reviewable PR
+        if: steps.changes.outputs.changed == 'true'
+        id: pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        env:
+          HUSKY: '0'
+        with:
+          token: ${{ steps.app.outputs.token }}
+          base: main
+          branch: chore/workspace-starter-release-sync
+          delete-branch: true
+          add-paths: |
+            examples/workspace-starter/web/package.json
+            examples/workspace-starter/native/package.json
+            examples/workspace-starter/README.md
+          commit-message: 'chore(starter): sync Vellira to v${{ steps.source.outputs.version }}'
+          title: 'chore(starter): sync Vellira to v${{ steps.source.outputs.version }}'
+          body: |
+            Update both MIT-licensed Workspace Starters to the same published Vellira v${{ steps.source.outputs.version }}.
+
+            Source: verified GitHub Release, plus exact versions of all six public npm packages.
+            Changed: only the Web/Native exact Vellira dependency pins and Starter README.
+            Validation: Workspace Starter Consumer Verification (fresh npm installs, build, Expo typecheck/config), with a synchronization guard and unit tests.
+
+            No root release changes, auto-merge, direct `main` pushes, production changes or new paid services. Review and merge only after CI passes.
+
+      - name: Require reviewable PR when pins changed
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pull-request-number }}
+        run: |
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "::error::Starter pins changed but no PR was created or updated."
+            exit 1
+          fi
