@@ -1,0 +1,55 @@
+name: Workspace Starter Consumer Verification
+
+on:
+  pull_request:
+    paths:
+      - 'examples/workspace-starter/**'
+      - '.github/workflows/workspace-starter-consumers.yml'
+      - 'apps/website/src/sections/home/ProductInterfaceDemo/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-clean-room:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/workspace-starter/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - name: Install from published npm packages
+        run: npm install --no-audit --no-fund
+      - name: Assert no workspace links for Vellira packages
+        run: |
+          node -e "const p=require('./node_modules/@vellira-ui/react/package.json'); if (!p.version || p.version !== '2.179.1') process.exit(1)"
+      - name: Typecheck and build Vite Starter
+        run: npm run build
+
+  expo-clean-room:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: examples/workspace-starter/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - name: Install from published npm packages
+        run: npm install --no-audit --no-fund
+      - name: Assert no workspace links for Vellira Native
+        run: |
+          node -e "const p=require('./node_modules/@vellira-ui/react-native/package.json'); if (!p.version || p.version !== '2.179.1') process.exit(1)"
+      - name: Typecheck Expo Starter
+        run: npm run typecheck
+      - name: Verify Expo configuration
+        run: npx expo config --json > /dev/null
