@@ -363,13 +363,20 @@ test('minimal validator preserves canonical valid and invalid title outcomes', (
 });
 
 test('ready transition does not rerun unchanged-SHA validation', () => {
-  for (const name of ['ci', 'ci-performance-budget', 'pr-title']) {
+  for (const name of ['ci', 'pr-title']) {
     const triggers = section(workflow(name), 'on');
     assert.doesNotMatch(triggers, /ready_for_review/);
     assert.match(triggers, /opened/);
     assert.match(triggers, /synchronize/);
     assert.match(triggers, /reopened/);
   }
+
+  // The final performance job inherits CI's exact trigger policy.
+  assert.match(
+    section(workflow('ci'), 'jobs'),
+    /^  performance-budget:\n {4}name: CI Performance Budget\n/m
+  );
+  assert.throws(() => workflow('ci-performance-budget'), { code: 'ENOENT' });
 
   const dependabot = section(workflow('dependabot-auto-merge-metadata'), 'on');
   assert.match(dependabot, /ready_for_review/);
