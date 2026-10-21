@@ -437,6 +437,11 @@ try {
             await dashboard.getByRole('searchbox', { name: 'Search projects' }).fill('Browser smoke project');
             await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
             await expect(dashboard.getByText('1 matching projects')).toBeVisible();
+            await dashboard.getByRole('textbox', { name: 'Filter project list' }).fill('not-a-real-project');
+            await expect(dashboard.getByText('No matching projects', { exact: true })).toBeVisible();
+            await dashboard.getByRole('button', { name: 'Clear filters' }).click();
+            await expect(dashboard.getByRole('textbox', { name: 'Filter project list' })).toHaveValue('');
+
             await page.reload({ waitUntil: 'domcontentloaded' });
             await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
             await dashboard.getByRole('button', { name: 'Projects', exact: true }).click();
