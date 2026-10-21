@@ -49,6 +49,17 @@ npm run build
 Main files: `web/src/Dashboard.tsx`, `web/src/Dashboard.module.css`,
 `web/src/App.tsx`, `web/src/model.ts`, and `web/src/styles.css`.
 
+To update the website showcase after editing the Web source, run from the
+repository root:
+
+```sh
+node scripts/website/sync-dashboard-starter.mjs
+node scripts/website/sync-dashboard-starter.mjs --check
+```
+
+The website keeps generated JSX/CSS copies for independent deployments; only
+the relative model import changes. The checked-in parity test catches drift.
+
 ## Run React Native
 
 Requires Expo SDK 57 / React Native 0.86 and an iOS or Android emulator, or a
