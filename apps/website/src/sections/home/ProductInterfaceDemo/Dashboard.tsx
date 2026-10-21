@@ -520,11 +520,8 @@ export function Dashboard({
                       {workspace.projects.length}
                     </span>
                   </h4>
-                  
+                  <p>Manage your sample projects</p>
                 </div>
-                <p className={styles.projectsSubtitle}>Manage your sample projects</p>
-              </div>
-              <div className={styles.filters}>
                 <Select
                   size='md'
                   aria-label='Status filter'
