@@ -29,6 +29,7 @@ type Workspace = {
 };
 
 const storageKey = 'vellira-workspace-native-starter-v1';
+const themeStorageKey = 'vellira-workspace-native-theme-v1';
 const initialWorkspace: Workspace = {
   name: 'Demo Workspace',
   notifications: true,
@@ -85,6 +86,7 @@ function WorkspaceScreen() {
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
   const [createOpen, setCreateOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -123,7 +125,7 @@ function WorkspaceScreen() {
   const subtleText = theme.semantic.text.subtle;
   const cardStyle = {
     padding: 18,
-    borderRadius: 18,
+    borderRadius: theme.tokens.radius.lg,
     borderWidth: 1,
     borderColor: border,
     backgroundColor: surface.subtle,
@@ -442,11 +444,7 @@ function WorkspaceScreen() {
                 <Button
                   appearance='outline'
                   color='neutral'
-                  onPress={() => {
-                    setData(initialWorkspace);
-                    setTheme('light');
-                    setNotice('Sample data restored.');
-                  }}
+                  onPress={() => setResetOpen(true)}
                 >
                   Restore sample data
                 </Button>
@@ -464,6 +462,39 @@ function WorkspaceScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal open={resetOpen} onOpenChange={setResetOpen}>
+        <Modal.Overlay>
+          <Modal.Content>
+            <Modal.Header>
+              <Modal.Title>Restore sample data?</Modal.Title>
+              <Modal.Description>
+                This replaces saved projects and settings. It cannot be undone.
+              </Modal.Description>
+            </Modal.Header>
+            <Modal.Footer>
+              <Button
+                appearance='outline'
+                color='neutral'
+                onPress={() => setResetOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                color='danger'
+                onPress={() => {
+                  setData(initialWorkspace);
+                  setTheme('light');
+                  setResetOpen(false);
+                  setNotice('Sample data restored.');
+                }}
+              >
+                Restore data
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Overlay>
+      </Modal>
 
       <Modal
         open={createOpen}
@@ -509,6 +540,34 @@ function WorkspaceScreen() {
 
 export default function App() {
   const [theme, setTheme] = useState<NativeTheme>('light');
+  const [themeLoaded, setThemeLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(themeStorageKey)
+      .then((saved) => {
+        if (!mounted) return;
+        if (saved === 'light' || saved === 'dark' || saved === 'highContrast') {
+          setTheme(saved);
+        }
+      })
+      .catch(() => {
+        // Defaults still work when persistence is unavailable.
+      })
+      .finally(() => {
+        if (mounted) setThemeLoaded(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!themeLoaded) return;
+    AsyncStorage.setItem(themeStorageKey, theme).catch(() => {
+      // Theme switching remains usable without persistence.
+    });
+  }, [theme, themeLoaded]);
 
   return (
     <SafeAreaProvider>
