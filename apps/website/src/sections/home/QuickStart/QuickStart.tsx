@@ -6,6 +6,8 @@ import { Check, Copy } from '@vellira-ui/icons';
 import { Button, Checkbox } from '@vellira-ui/react';
 import { motion, useReducedMotion } from 'motion/react';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+
 import styles from './QuickStart.module.css';
 
 type Appearance = 'solid' | 'outline' | 'ghost';
@@ -327,29 +329,32 @@ export function QuickStart() {
           </div>
 
           <footer className={styles.footer}>
-            <a
+            <DesignSystemLink
+              appearance='bare'
               href='https://docs.vellira.dev/start/getting-started'
               target='_blank'
               rel='noreferrer'
             >
               Getting started
-            </a>
+            </DesignSystemLink>
 
-            <a
+            <DesignSystemLink
+              appearance='bare'
               href='https://storybook.vellira.dev'
               target='_blank'
               rel='noreferrer'
             >
               Explore Storybook
-            </a>
+            </DesignSystemLink>
 
-            <a
+            <DesignSystemLink
+              appearance='bare'
               href='https://github.com/vellira-dev/vellira'
               target='_blank'
               rel='noreferrer'
             >
               View source
-            </a>
+            </DesignSystemLink>
           </footer>
         </motion.div>
       </div>
