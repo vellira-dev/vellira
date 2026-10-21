@@ -7,12 +7,12 @@ export default function FullDashboardDemoPage() {
   const { preference, setPreference } = useWebsiteThemeContext();
 
   return (
-    <main aria-label='Full-screen Vellira Core Dashboard'>
+    <div aria-label='Full-screen Vellira Core Dashboard'>
       <Dashboard
         variant='standalone'
         theme={preference}
         onThemeChange={setPreference}
       />
-    </main>
+    </div>
   );
 }

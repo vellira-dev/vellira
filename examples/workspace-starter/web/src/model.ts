@@ -8,6 +8,7 @@ export interface Project {
   team: Team;
   status: ProjectStatus;
   completed: boolean;
+  previousStatus?: 'planned' | 'active';
 }
 
 export interface Workspace {
@@ -83,6 +84,7 @@ export function addProject(
     team,
     status,
     completed: status === 'shipped',
+    previousStatus: status === 'shipped' ? 'active' : undefined,
   };
 
   return { ...workspace, projects: [next, ...workspace.projects] };
@@ -101,6 +103,7 @@ export function duplicateProject(workspace: Workspace, id: number): Workspace {
         name: existing.name + ' copy',
         status: 'planned',
         completed: false,
+        previousStatus: undefined,
       },
       ...workspace.projects,
     ],
@@ -126,7 +129,14 @@ export function toggleProject(
         ? {
             ...project,
             completed,
-            status: completed ? 'shipped' : 'active',
+            status: completed
+              ? 'shipped'
+              : (project.previousStatus ?? 'active'),
+            previousStatus: completed
+              ? project.status === 'shipped'
+                ? (project.previousStatus ?? 'active')
+                : project.status
+              : undefined,
           }
         : project
     ),
@@ -170,7 +180,10 @@ export function readStoredWorkspace(value: unknown): Workspace | null {
       typeof project.description !== 'string' ||
       typeof project.completed !== 'boolean' ||
       !isStatus(project.status) ||
-      !isTeam(project.team)
+      !isTeam(project.team) ||
+      (project.previousStatus !== undefined &&
+        project.previousStatus !== 'planned' &&
+        project.previousStatus !== 'active')
     ) {
       return null;
     }

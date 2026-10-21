@@ -137,10 +137,9 @@ export function Dashboard({
   theme,
   onThemeChange,
 }: DashboardProps) {
-  const storageKey =
-    variant === 'embedded'
-      ? 'vellira-dashboard-live-core-v1'
-      : 'vellira-workspace-starter-v1';
+  // All website previews share workspace state on the same origin.
+  const storageKey = 'vellira-dashboard-live-core-v1';
+  const legacyStorageKey = 'vellira-workspace-starter-v1';
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace);
   const [hydrated, setHydrated] = useState(false);
   const [view, setView] = useState<View>('overview');
@@ -158,7 +157,10 @@ export function Dashboard({
 
   useEffect(() => {
     try {
-      const saved = recoverWorkspace(window.localStorage.getItem(storageKey));
+      const saved = recoverWorkspace(
+        window.localStorage.getItem(storageKey) ??
+          window.localStorage.getItem(legacyStorageKey)
+      );
       if (saved) setWorkspace(saved);
       const savedFilter = window.localStorage.getItem(filterStorageKey);
       if (
@@ -179,17 +181,30 @@ export function Dashboard({
       // Private browsing may forbid even reading localStorage.
     }
     setHydrated(true);
-  }, [filterStorageKey, storageKey, viewStorageKey]);
+  }, [filterStorageKey, legacyStorageKey, storageKey, viewStorageKey]);
+
+  useEffect(() => {
+    const syncWorkspace = (event: StorageEvent) => {
+      if (event.key !== storageKey) return;
+      const saved = recoverWorkspace(event.newValue);
+      if (!saved) return;
+      setWorkspace((current) =>
+        JSON.stringify(current) === JSON.stringify(saved) ? current : saved
+      );
+    };
+    window.addEventListener('storage', syncWorkspace);
+    return () => window.removeEventListener('storage', syncWorkspace);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
     try {
-      const stored = variant === 'embedded' ? workspace : { workspace, theme };
+      const stored = { workspace };
       window.localStorage.setItem(storageKey, JSON.stringify(stored));
     } catch {
       // The demo remains usable when storage is disabled.
     }
-  }, [hydrated, storageKey, theme, variant, workspace]);
+  }, [hydrated, storageKey, workspace]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -213,6 +228,12 @@ export function Dashboard({
     () => filterProjects(workspace.projects, query, filter),
     [workspace.projects, query, filter]
   );
+  const workspaceDisplayName = workspace.name.trim() || 'Untitled workspace';
+  const workspaceInitials = workspaceDisplayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('');
   const total = workspace.projects.length;
   const completed = workspace.projects.filter((item) => item.completed).length;
   const active = workspace.projects.filter(
@@ -334,10 +355,10 @@ export function Dashboard({
         </nav>
         <div className={styles.sidebarFoot}>
           <div className={styles.userAvatar} aria-hidden='true'>
-            DW
+            {workspaceInitials}
           </div>
           <div>
-            <strong>Demo Workspace</strong>
+            <strong>{workspaceDisplayName}</strong>
             <small>Local-only sample account</small>
           </div>
         </div>
@@ -387,7 +408,7 @@ export function Dashboard({
               </p>
             </div>
             <span className={styles.workspaceName}>
-              {workspace.name.trim() || 'Untitled workspace'}
+              {workspaceDisplayName}
             </span>
           </div>
 
@@ -465,8 +486,8 @@ export function Dashboard({
               <section className={styles.recentSection}>
                 <div className={styles.sectionHeading}>
                   <div>
-                    <h4>Active Projects</h4>
-                    <p>Track the work inside this sample workspace.</p>
+                    <h4>Project Snapshot</h4>
+                    <p>A quick look at the projects in this workspace.</p>
                   </div>
                   <Button
                     shape='pill'
@@ -701,7 +722,7 @@ export function Dashboard({
                   <Select.Item value='light'>Light</Select.Item>
                   <Select.Item value='dark'>Dark</Select.Item>
                   <Select.Item value='high-contrast'>High contrast</Select.Item>
-                  {variant === 'embedded' && (
+                  {(variant === 'embedded' || theme === 'system') && (
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
