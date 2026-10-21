@@ -133,6 +133,6 @@ describe('homepage product facts', () => {
 
     expect(componentShowcaseSource).toContain('<span>Projects</span>');
     expect(themeStudioSource).toContain('<span>Members</span>');
-    expect(productInterfaceDemoSource).toContain("label: 'Projects'");
+    expect(productInterfaceDemoSource).toContain('<Dashboard');
   });
 });

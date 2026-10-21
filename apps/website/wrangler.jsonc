@@ -11,6 +11,16 @@
   },
   "vars": {
     "NEWSLETTER_ABUSE_GUARD_ENABLED": "0",
+    "NEWSLETTER_GLOBAL_BUDGET_ENABLED": "0",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEWSLETTER_GLOBAL_BUDGET",
+        "class_name": "NewsletterRollingBudgetCoordinator",
+        "script_name": "vellira-newsletter-budget-owner"
+      }
+    ]
   },
   "ratelimits": [
     {

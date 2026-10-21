@@ -58,12 +58,53 @@ function validateRoutes(config) {
   );
 }
 
+const stagingOwnerBinding = {
+  name: 'NEWSLETTER_GLOBAL_BUDGET',
+  class_name: 'NewsletterRollingBudgetCoordinator',
+  script_name: 'vellira-newsletter-budget-owner',
+};
+
+function validateGlobalBudgetBoundary(config) {
+  const bindings = config.durable_objects?.bindings;
+  if (config.name === 'vellira-website-staging') {
+    assert.equal(
+      config.vars?.NEWSLETTER_GLOBAL_BUDGET_ENABLED,
+      '0',
+      'Staging shared Buttondown admission must be explicitly OFF'
+    );
+    assert.ok(Array.isArray(bindings), 'Staging must have one external DO binding');
+    assert.equal(bindings.length, 1, 'Staging must have exactly one budget DO');
+    const binding = bindings[0];
+    assert.deepEqual(
+      {
+        name: binding.name,
+        class_name: binding.class_name,
+        script_name: binding.script_name,
+      },
+      stagingOwnerBinding,
+      'Staging must reference the existing private owner/class'
+    );
+    assert.equal(binding.environment, undefined, 'No isolated DO environment');
+    assert.notEqual(binding.remote, true, 'No remote dev-only DO binding');
+  } else {
+    assert.equal(
+      config.vars?.NEWSLETTER_GLOBAL_BUDGET_ENABLED,
+      undefined,
+      'Production global budget must stay absent'
+    );
+    assert.equal(bindings?.length ?? 0, 0, 'Production DO bindings must stay absent');
+  }
+  assert.equal(Object.keys(config.exports ?? {}).length, 0, 'Website must not own DO classes');
+  assert.equal(config.migrations?.length ?? 0, 0, 'Website must not create DO namespaces');
+}
+
 export function validateDeploymentTarget(config) {
   assert.ok(
     Object.hasOwn(archives, config.name),
     'Unrecognized deployment target'
   );
   validateRoutes(config);
+  validateGlobalBudgetBoundary(config);
   // Stable workers.dev origins are required by staging/prod deploy and recovery.
   // Version/aliased Preview URLs are not an authorized public entry point.
   assert.equal(

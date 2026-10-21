@@ -499,6 +499,26 @@ export function PlatformParity() {
             ))}
           </ul>
         </div>
+
+        <div className={styles.tryIt}>
+          <div className={styles.tryItCopy}>
+            <strong>Want to try Vellira in your own project?</strong>
+            <p>
+              Explore a complete workspace with project management, forms,
+              themes, and platform-specific interactions. Install the standalone
+              React or React Native starter and edit the source.
+            </p>
+          </div>
+          <Button asChild appearance='solid' color='primary'>
+            <a
+              href='https://github.com/vellira-dev/vellira/tree/growth/react-native-form-try-it-20261018/examples/workspace-starter'
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              Try the Dashboard Starter
+            </a>
+          </Button>
+        </div>
       </div>
     </section>
   );

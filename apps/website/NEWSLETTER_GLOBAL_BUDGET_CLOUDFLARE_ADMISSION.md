@@ -1,14 +1,22 @@
 # Newsletter global budget — Cloudflare deployment admission
 
-Status: **design only**. Tracking: #1728 and #1712.
+Status: **private owner deployed; staging OFF binding proposed**.
+Tracking: #1728 and #1712.
 
-No Durable Object namespace, binding, deployment, or provider quota enforcement is activated by this document.
+[Protected owner provision #39608321816](https://github.com/vellira-dev/vellira/actions/runs/39608321816)
+created a private SQLite owner, with its default/Preview URLs disabled.
+No global budget enforcement is active. Remote namespace identity, provider
+quota and authoritative account-wide reset remain unverified.
 
 ## Current state
 
-The newsletter handler has an optional global admission callback before the Buttondown subscriber-create request. Missing or `0` mode leaves this callback disabled.
-
-The coordinator currently stores a monotonically increasing `spent` count with no quota window or reset. It is **not a daily budget implementation**. Neither production nor staging declares a global budget Durable Object binding.
+The newsletter handler has an optional global admission callback before
+Buttondown subscriber creation. Missing or `0` mode leaves the callback
+disabled. Production has no global budget binding; staging proposes exactly
+one external binding with `NEWSLETTER_GLOBAL_BUDGET_ENABLED: "0"`.
+The owner exports the SQLite rolling coordinator, but no real operational
+capacity is configured. The accepted provider-specific limit/window and
+independent remote namespace identity are still unverified.
 
 ## One authoritative namespace
 
