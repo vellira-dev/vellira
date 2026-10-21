@@ -403,8 +403,7 @@ function isStructuralFooterBrandLink(
     ts.isJsxElement(element) &&
     element.children.some(
       (child) =>
-        ts.isJsxSelfClosingElement(child) &&
-        child.tagName.getText() === 'Image'
+        ts.isJsxSelfClosingElement(child) && child.tagName.getText() === 'Image'
     )
   );
 }

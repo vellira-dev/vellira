@@ -87,7 +87,9 @@ describe('Vellira UI usage audit', () => {
       AUTHORITIES
     );
     expect(
-      findings.filter((finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link')
+      findings.filter(
+        (finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link'
+      )
     ).toEqual([expect.objectContaining({ detected: 'a' })]);
   });
 
@@ -98,7 +100,9 @@ describe('Vellira UI usage audit', () => {
       AUTHORITIES
     );
     expect(
-      findings.filter((finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link')
+      findings.filter(
+        (finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link'
+      )
     ).toEqual([expect.objectContaining({ detected: 'Link' })]);
   });
 
