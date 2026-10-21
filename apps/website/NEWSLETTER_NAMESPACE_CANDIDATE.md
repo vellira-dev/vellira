@@ -1,13 +1,21 @@
 # Newsletter budget — isolated namespace-owner candidate
 
 Tracking: [#1728](https://github.com/vellira-dev/vellira/issues/1728).
-Status: **offline candidate; no Cloudflare upload, namespace, binding or activation**.
+Status: **private owner deployed; staging OFF binding proposed, not yet deployed;
+production unbound; global admission OFF**.
 
-This increment points the already-dormant budget owner Worker at the
-SQLite-backed `NewsletterRollingBudgetCoordinator`. The non-default
-`cloudflare/newsletter-budget-owner.wrangler.candidate.jsonc` is a **proposal
-only**. No existing staging/production Wrangler file or deploy workflow
-references it. Never deploy this config simply because its PR was merged.
+The isolated SQLite owner `vellira-newsletter-budget-owner` was deployed
+once with explicit protected approval on 2026-10-21:
+[Provision run #39608321816](https://github.com/vellira-dev/vellira/actions/runs/39608321816).
+A GET-only postflight observed the private Worker with `workers.dev` and
+Preview URLs disabled. Exact remote namespace identity is **not yet proven**.
+
+This change proposes an **external binding on staging only**, in
+`wrangler.jsonc`, with `NEWSLETTER_GLOBAL_BUDGET_ENABLED: "0"`. The
+production config is unchanged. Merely creating a Draft PR does not deploy
+staging; an authorized merge of website files may trigger the standard
+staging workflow and protected production promotion. Do not rerun the
+one-time private-owner provisioning workflow.
 
 ## Single account authority
 
@@ -15,19 +23,17 @@ references it. Never deploy this config simply because its PR was merged.
 authority for a single Buttondown account:
 
 - One owner Worker: `vellira-newsletter-budget-owner`.
-- One live class if deployed: `NewsletterRollingBudgetCoordinator`, SQLite.
+- One exported SQLite class: `NewsletterRollingBudgetCoordinator`.
+  The deployed Worker is observed, but its namespace identity is unverified.
 - One logical object name: `one-buttondown-account`, matching the existing
   admission adapter's `idFromName()` key.
-- Both `vellira-website-staging` and `vellira-website` must eventually
-  bind `NEWSLETTER_GLOBAL_BUDGET` to that **same external Worker** through
-  `script_name`. No binding or enable flag has been added to either site.
-- The proposed owner has `workers_dev: false` and explicit
-  `preview_urls: false`, no public routes, no provider key, no API calls,
-  and **no budget capacity**. Explicitly disabling both stable and Preview
-  URL exposure prevents a previously enabled remote Preview setting from
-  being silently retained during a separately approved Wrangler deployment.
-  Even if the owner were deployed alone, admission cannot succeed without
-  capacity. Deployment still requires explicit approval.
+- Staging proposes exactly one `NEWSLETTER_GLOBAL_BUDGET` binding to the
+  **existing external owner** via `script_name`, with mode fixed at `0`.
+  Production remains unbound. Correct names alone do not prove identity.
+- The deployed owner has `workers_dev: false` and
+  `preview_urls: false`, no public routes, no Buttondown key, no API
+  calls, and **no budget capacity**. The staging binding does not spend
+  permits while the trusted mode remains OFF.
 
 Matching names in this repository do **not** prove a shared remote namespace.
 Cloudflare environments, accounts, dispatch namespaces, and Worker owners can
@@ -63,8 +69,9 @@ this suite is already included in the canonical `test:cloudflare-cache` CI recip
 Next/OpenNext route, not a live Cloudflare namespace, and not evidence that
 another external subscriber writer has been inventoried. Actual Cloudflare
 account/class/binding identity and Buttondown's numerical quota/window
-remain unverified. All candidate infrastructure remains **undeployed** and
-the production/Pro activation mode remains OFF.
+remain unverified. Only the private owner has been deployed. The proposed
+staging binding requires a separately approved rollout, and global admission
+and public Pro remain OFF.
 
 ## Provider evidence — unresolved, blocking activation
 
@@ -379,21 +386,59 @@ References:
 - https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
 - https://developers.cloudflare.com/api/resources/rulesets/subresources/phases/methods/get/
 
+## Manual private owner provisioning (separately authorized)
+
+The manual-only **Provision Private Newsletter Budget Owner** GitHub Actions
+workflow has two operations. It never runs from push, a PR or a schedule.
+Its one-time `provision` operation **already succeeded** as run #39608321816.
+Do not rerun `provision` now that the private owner exists.
+
+1. From `main`, select `preflight` (default). The job checks the exact
+   selected SHA, static isolation guards and pinned Wrangler `--dry-run`,
+   without any Cloudflare credentials or API writes.
+2. `provision` is **not authorized by merging this workflow**. Only after
+   separate owner approval, supply the exact current `main` SHA and type
+   `PROVISION_PRIVATE_BUDGET_OWNER`. A protected `production` environment
+   review must also be approved before the provisioning job starts.
+3. Before its first remote mutation, the provisioning job uses GET-only
+   Cloudflare inventory and GitHub current-main checks. It fails closed if
+   the target Worker already exists, either site is already bound to a
+   global budget, inventory is inconclusive, or `main` has advanced.
+4. The sole Cloudflare write is a pinned Wrangler deployment of the
+   **private owner candidate**, with no public URL, routes, capacity,
+   Buttondown credentials or site binding. A later GET-only audit checks
+   that the Worker exists, `workers.dev` and Preview URLs are both OFF,
+   and the website Workers remain unbound.
+
+Failure after Wrangler starts may mean the Worker was provisioned even
+if postflight verification failed. Never blindly rerun a `provision`
+operation: inspect the read-only audit and Cloudflare dashboard first.
+Namespace/class identity, provider quota and actual budget enforcement
+remain separate proof gates. This workflow does not configure any
+provider request, public Pro activation, staging/production binding, or
+account-level WAF change. The authoritative Buttondown create quota is
+still unverified; the operational budget stays OFF.
+
 ## Separate approval sequence
 
-1. Merge only after exact-head CI and independent review. Keep both sites OFF.
-2. Confirm Buttondown quota, account scope, other writers and reset semantics.
-3. Confirm Cloudflare account ownership and operational permissions; review
-   namespace lifecycle and Workers.dev/WAF coverage.
-4. With explicit owner approval, run an **offline dry-run validation** of the
-   standalone candidate config. It must not call Buttondown or write Cloudflare.
-5. Separately approve a namespace-owner deployment, and test persistent
-   storage/concurrency remotely using synthetic traffic **without** a provider
-   call. The candidate cannot be treated as deployed merely because it exists.
-6. Propose and review both website remote bindings and test OFF-mode behavior.
-   Only after a further, explicit approval can a short staging ON test occur,
-   with synthetic request handling and a verified OFF rollback.
-7. Production/global budget and public Pro activation remain separate decisions.
+1. **Completed:** offline shared-owner Miniflare proof, pinned Wrangler dry-run
+   and private-owner provisioning with a GET-only privacy postflight.
+2. **Proposed, not approved for remote rollout:** staging-only external binding
+   with fixed OFF mode. Review the exact PR diff, pinned local-cache
+   isolation, regression tests and CI before any merge. A website-file merge
+   can trigger normal staging deployment.
+3. **After an explicitly approved staging deployment:** run Cloudflare's
+   GET-only account audit. Confirm staging has the binding in every
+   traffic-serving version, the owner has no public URLs, and production
+   remains unbound. Binding-name presence does **not** prove the remote
+   namespace identity or active admission; obtain separate class/namespace
+   evidence without exposing identifiers.
+4. Confirm the real Buttondown create quota, accounting window/reset,
+   shared provider writers, WAF coverage and reserved capacity.
+5. Review no-provider-write synthetic staging tests and explicit ON/OFF
+   rollback before any temporary staging activation.
+6. Production/global admission and public Pro remain OFF until separate
+   authorization and proof.
 
 References:
 

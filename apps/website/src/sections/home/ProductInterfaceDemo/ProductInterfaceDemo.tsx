@@ -10,17 +10,16 @@ import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 
 import styles from './ProductInterfaceDemo.module.css';
 
-// Until PR #1760 is merged, main does not contain this source tree.
-// Preview URLs are real source links; switch to main in release admission.
-const previewRef = 'growth/react-native-form-try-it-20261018';
+// Public release source is maintained on the canonical main branch.
+const sourceRef = 'main';
 const repository = 'https://github.com/vellira-dev/vellira';
 const sourceUrl =
   repository +
   '/blob/' +
-  previewRef +
+  sourceRef +
   '/examples/workspace-starter/web/src/Dashboard.tsx';
 const starterUrl =
-  repository + '/tree/' + previewRef + '/examples/workspace-starter';
+  repository + '/tree/' + sourceRef + '/examples/workspace-starter';
 
 export function ProductInterfaceDemo() {
   const { preference, setPreference } = useWebsiteThemeContext();
@@ -127,7 +126,7 @@ export function ProductInterfaceDemo() {
             href={
               repository +
               '/tree/' +
-              previewRef +
+              sourceRef +
               '/examples/workspace-starter/native'
             }
             target='_blank'

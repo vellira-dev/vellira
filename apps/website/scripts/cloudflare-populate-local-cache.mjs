@@ -28,6 +28,24 @@ export function createLocalCacheConfig(source) {
   }
   rejectRemote(config);
 
+  // The staging Worker has an external Durable Object reference, but the
+  // OpenNext cache projection runs entirely locally. Strip only the reviewed
+  // binding: never resolve the remote private owner during local preparation.
+  if (config.durable_objects !== undefined) {
+    assert.deepEqual(
+      config.durable_objects,
+      {
+        bindings: [{
+          name: 'NEWSLETTER_GLOBAL_BUDGET',
+          class_name: 'NewsletterRollingBudgetCoordinator',
+          script_name: 'vellira-newsletter-budget-owner',
+        }],
+      },
+      'Only the reviewed staging DO binding may be stripped locally'
+    );
+  }
+  delete config.durable_objects;
+
   // Derive a local-only projection; never edit either deployment configuration.
   // An explicit empty list also prevents Wrangler from loading .dev.vars keys.
   config.name = localWorkerName;

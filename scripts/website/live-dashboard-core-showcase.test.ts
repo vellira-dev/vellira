@@ -34,8 +34,8 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(website).toContain('Try Live Demo');
     expect(website).toContain('View Source');
     expect(website).toContain('Use This Starter');
-    expect(website).toContain('growth/react-native-form-try-it-20261018');
-    expect(website).not.toContain('/blob/main/examples/workspace-starter');
+    expect(website).toContain("const sourceRef = 'main'");
+    expect(website).not.toContain('growth/react-native-form-try-it-20261018');
   });
 
   it('exposes full-screen, mobile and native discovery paths', () => {

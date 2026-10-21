@@ -150,11 +150,10 @@ The public demo must remain useful without Pro. No paid implementation, secret,
 production customer data, proprietary template, paid-license mechanism or
 artificially disabled Core correctness checks belong in this directory.
 
-### Preview links before merge
+### Published source links
 
-While PR #1760 is open, the homepage's View Source and Use This Starter
-links target the **PR branch**, not `main` (where the files do not exist yet).
-Update links to `main` only as part of public release admission after merge.
-The live homepage and standalone Vite Web app render the same `Dashboard`
-component and stylesheet; the parent theme and storage origin are independent.
+The homepage's View Source and Use This Starter links point to the canonical
+`main` branch and become available once the release PR is merged.
+Website and Vite Starter keep synchronized `Dashboard` implementations;
+browser storage stays scoped to each website origin.
 Previously stored Northstar seed names are migrated to Demo Workspace.
