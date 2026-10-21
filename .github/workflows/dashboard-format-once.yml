@@ -1,0 +1,50 @@
+name: One-time Dashboard Prettier
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    paths:
+      - 'scripts/website/.dashboard-format-once'
+
+permissions:
+  contents: write
+
+jobs:
+  format-dashboard:
+    if: ${{ github.event.pull_request.number == 1760 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Format just the Dashboard PR files
+        run: |
+          npm exec --yes --package=prettier@3.9.8 -- prettier --write \
+            'apps/website/src/sections/home/ProductInterfaceDemo/Dashboard.tsx' \
+            'apps/website/src/sections/home/ProductInterfaceDemo/Dashboard.module.css' \
+            'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css' \
+            'apps/website/src/app/(marketing)/demo/dashboard/page.tsx' \
+            'examples/workspace-starter/web/src/Dashboard.tsx' \
+            'examples/workspace-starter/web/src/Dashboard.module.css' \
+            'examples/workspace-starter/web/src/model.ts' \
+            'examples/workspace-starter/native/App.tsx' \
+            'examples/workspace-starter/README.md' \
+            'scripts/website/workspace-starter.test.ts' \
+            'scripts/website/live-dashboard-core-showcase.test.ts' \
+            'scripts/website/sync-dashboard-starter.mjs' \
+            'apps/react-storybook/scripts/code-showcase-website-smoke.mjs'
+      - name: Commit formatted files when needed
+        run: |
+          git add 'apps/website/src/sections/home/ProductInterfaceDemo/Dashboard.tsx' 'apps/website/src/sections/home/ProductInterfaceDemo/Dashboard.module.css' 'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css' 'apps/website/src/app/(marketing)/demo/dashboard/page.tsx' 'examples/workspace-starter/web/src/Dashboard.tsx' 'examples/workspace-starter/web/src/Dashboard.module.css' 'examples/workspace-starter/web/src/model.ts' 'examples/workspace-starter/native/App.tsx' 'examples/workspace-starter/README.md' 'scripts/website/workspace-starter.test.ts' 'scripts/website/live-dashboard-core-showcase.test.ts' 'scripts/website/sync-dashboard-starter.mjs' 'apps/react-storybook/scripts/code-showcase-website-smoke.mjs'
+          if git diff --cached --quiet; then
+            echo "All Dashboard files are already formatted"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style(dashboard): apply Prettier formatting"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
