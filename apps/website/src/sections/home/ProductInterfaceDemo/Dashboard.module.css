@@ -1,4 +1,5 @@
 .dashboard {
+  --dashboard-control-height: 40px;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   min-width: 0;
@@ -668,17 +669,22 @@
   margin-top: 26px;
 }
 
-/* Keep the Settings reset action aligned with the 40px form controls. */
-.settingsFields > button {
-  height: 40px;
-  min-height: 40px;
+/* Scoped compact density: Core's public sm/md/lg sizes remain unchanged. */
+.dashboardModal {
+  --dashboard-control-height: 40px;
 }
 
-/* Compact Dashboard controls share the same 40px rendered height. */
+.settingsFields > button {
+  height: var(--dashboard-control-height);
+  min-height: var(--dashboard-control-height);
+}
+
 .dashboard input:not([type='checkbox']):not([type='radio']),
-.dashboard [role='combobox'] {
-  height: 40px;
-  min-height: 40px;
+.dashboard [role='combobox'],
+.dashboardModal input:not([type='checkbox']):not([type='radio']),
+.dashboardModal [role='combobox'] {
+  height: var(--dashboard-control-height);
+  min-height: var(--dashboard-control-height);
 }
 
 .modalFields {

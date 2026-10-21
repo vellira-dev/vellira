@@ -342,6 +342,7 @@ export function Dashboard({
     <div
       className={styles.dashboard}
       data-layout={variant}
+      data-density='compact'
       aria-label='Vellira interactive Dashboard Starter'
     >
       <aside className={styles.sidebar}>
@@ -803,7 +804,7 @@ export function Dashboard({
       <Modal open={resetOpen} onOpenChange={setResetOpen}>
         <Portal>
           <Modal.Overlay />
-          <Modal.Content>
+          <Modal.Content className={styles.dashboardModal}>
             <Modal.Header>
               <div>
                 <Modal.Title>Restore sample data?</Modal.Title>
@@ -842,7 +843,7 @@ export function Dashboard({
       >
         <Portal>
           <Modal.Overlay />
-          <Modal.Content>
+          <Modal.Content className={styles.dashboardModal}>
             <Modal.Header>
               <div>
                 <Modal.Title>
