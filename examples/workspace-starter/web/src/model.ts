@@ -177,8 +177,12 @@ export function updateProject(
   };
 }
 
-export function restoreProject(workspace: Workspace, project: Project): Workspace {
-  if (workspace.projects.some((item) => item.id === project.id)) return workspace;
+export function restoreProject(
+  workspace: Workspace,
+  project: Project
+): Workspace {
+  if (workspace.projects.some((item) => item.id === project.id))
+    return workspace;
   return { ...workspace, projects: [project, ...workspace.projects] };
 }
 

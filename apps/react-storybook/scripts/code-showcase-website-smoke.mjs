@@ -301,7 +301,9 @@ try {
               [addButton, 'New project'],
             ]) {
               const icon = await button.locator('svg').boundingBox();
-              const word = await button.getByText(label, { exact: true }).boundingBox();
+              const word = await button
+                .getByText(label, { exact: true })
+                .boundingBox();
               assert.ok(icon && word, label + ' needs visible icon and text');
               assert.ok(
                 Math.abs(
@@ -392,7 +394,10 @@ try {
               page.getByRole('menuitemcheckbox', { name: 'Done' })
             ).toBeVisible();
             await page.keyboard.press('Escape');
-            await expect(projectActions).toHaveAttribute('data-state', 'closed');
+            await expect(projectActions).toHaveAttribute(
+              'data-state',
+              'closed'
+            );
 
             await dashboard
               .getByRole('button', { name: 'Settings', exact: true })
@@ -407,15 +412,23 @@ try {
               'Settings panel must have visible dimensions'
             );
             // Compare the Core md field geometries without hard-coded pixel values.
-            const workspaceField = dashboard.getByRole('textbox', { name: 'Workspace name' });
-            const themeSelect = dashboard.getByRole('combobox', { name: 'Theme' });
-            const resetButton = dashboard.getByRole('button', { name: 'Restore sample data' });
+            const workspaceField = dashboard.getByRole('textbox', {
+              name: 'Workspace name',
+            });
+            const themeSelect = dashboard.getByRole('combobox', {
+              name: 'Theme',
+            });
+            const resetButton = dashboard.getByRole('button', {
+              name: 'Restore sample data',
+            });
             const controlHeights = await Promise.all(
-              [workspaceField, themeSelect, resetButton].map(async (locator) => {
-                const rect = await locator.boundingBox();
-                assert.ok(rect, 'Settings control must be rendered');
-                return rect.height;
-              })
+              [workspaceField, themeSelect, resetButton].map(
+                async (locator) => {
+                  const rect = await locator.boundingBox();
+                  assert.ok(rect, 'Settings control must be rendered');
+                  return rect.height;
+                }
+              )
             );
             assert.ok(
               Math.max(...controlHeights) - Math.min(...controlHeights) <= 2,
@@ -468,43 +481,89 @@ try {
             });
             // Search must show filtered results, and the workspace data must
             // remain available after a browser reload.
-            await dashboard.getByRole('searchbox', { name: 'Search projects' }).fill('Browser smoke project');
-            await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
-            await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
-            await dashboard.getByRole('searchbox', { name: 'Search projects' }).fill('not-a-real-project');
-            await expect(dashboard.getByText('No matching projects', { exact: true })).toBeVisible();
-            await dashboard.getByRole('button', { name: 'Clear filters' }).click();
-            await expect(dashboard.getByRole('searchbox', { name: 'Search projects' })).toHaveValue('');
+            await dashboard
+              .getByRole('searchbox', { name: 'Search projects' })
+              .fill('Browser smoke project');
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+            await dashboard
+              .getByRole('searchbox', { name: 'Search projects' })
+              .fill('not-a-real-project');
+            await expect(
+              dashboard.getByText('No matching projects', { exact: true })
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Clear filters' })
+              .click();
+            await expect(
+              dashboard.getByRole('searchbox', { name: 'Search projects' })
+            ).toHaveValue('');
 
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
-            await dashboard.getByRole('button', { name: 'Projects', exact: true }).click();
-            await expect(dashboard.getByText('Browser smoke project')).toBeVisible();
+            await expect(
+              dashboard.getByRole('heading', {
+                name: 'Projects',
+                exact: true,
+                level: 3,
+              })
+            ).toBeVisible();
+            await dashboard
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
             // A selected Projects status must survive reload just like the view.
-            await dashboard.getByRole('combobox', { name: 'Status filter' }).click();
-            await page.getByRole('option', { name: 'Shipped', exact: true }).click();
-            await expect(dashboard.getByRole('combobox', { name: 'Status filter' })).toContainText('Shipped');
+            await dashboard
+              .getByRole('combobox', { name: 'Status filter' })
+              .click();
+            await page
+              .getByRole('option', { name: 'Shipped', exact: true })
+              .click();
+            await expect(
+              dashboard.getByRole('combobox', { name: 'Status filter' })
+            ).toContainText('Shipped');
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
-            await expect(dashboard.getByRole('combobox', { name: 'Status filter' })).toContainText('Shipped');
+            await expect(
+              dashboard.getByRole('heading', {
+                name: 'Projects',
+                exact: true,
+                level: 3,
+              })
+            ).toBeVisible();
+            await expect(
+              dashboard.getByRole('combobox', { name: 'Status filter' })
+            ).toContainText('Shipped');
             const actionsAfterReload = dashboard.getByRole('button', {
               name: 'Actions for Browser smoke project',
             });
             await actionsAfterReload.click();
-            await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
-            const editDialog = page.getByRole('dialog', { name: 'Edit project' });
+            await page
+              .getByRole('menuitem', { name: 'Edit', exact: true })
+              .click();
+            const editDialog = page.getByRole('dialog', {
+              name: 'Edit project',
+            });
             await expect(editDialog).toBeVisible();
             await editDialog
               .getByRole('textbox', { name: 'Description' })
               .fill('Edited using real Vellira controls.');
-            await editDialog.getByRole('button', { name: 'Save changes' }).click();
+            await editDialog
+              .getByRole('button', { name: 'Save changes' })
+              .click();
             await expect(editDialog).toBeHidden();
             await expect(
               dashboard.getByText('Edited using real Vellira controls.')
             ).toBeVisible();
 
             await actionsAfterReload.click();
-            await page.getByRole('menuitem', { name: 'Remove', exact: true }).click();
+            await page
+              .getByRole('menuitem', { name: 'Remove', exact: true })
+              .click();
             await expect(
               dashboard.getByText('Browser smoke project')
             ).toBeHidden();
@@ -513,16 +572,27 @@ try {
               dashboard.getByText('Browser smoke project')
             ).toBeVisible();
 
-            await dashboard.getByRole('button', { name: 'Settings', exact: true }).click();
-            await dashboard.getByRole('button', { name: 'Restore sample data' }).click();
-            const resetDialog = page.getByRole('dialog', { name: 'Restore sample data?' });
+            await dashboard
+              .getByRole('button', { name: 'Settings', exact: true })
+              .click();
+            await dashboard
+              .getByRole('button', { name: 'Restore sample data' })
+              .click();
+            const resetDialog = page.getByRole('dialog', {
+              name: 'Restore sample data?',
+            });
             await expect(resetDialog).toBeVisible();
             await resetDialog.getByRole('button', { name: 'Cancel' }).click();
             await expect(resetDialog).toBeHidden();
-            await dashboard.getByRole('button', { name: 'Restore sample data' }).click();
-            await resetDialog.getByRole('button', { name: 'Restore data' }).click();
-            await expect(dashboard.getByText('Demo projects restored.')).toBeVisible();
-
+            await dashboard
+              .getByRole('button', { name: 'Restore sample data' })
+              .click();
+            await resetDialog
+              .getByRole('button', { name: 'Restore data' })
+              .click();
+            await expect(
+              dashboard.getByText('Demo projects restored.')
+            ).toBeVisible();
           }
 
           if (
@@ -564,16 +634,27 @@ try {
             themedDashboard.locator('[class*="brandMark"] img')
           ).toHaveCount(2);
           const themedBounds = await themedDashboard.boundingBox();
-          assert.ok(themedBounds && themedBounds.width <= viewport.width + 1,
-            'Dashboard must fit all supported viewport/theme combinations');
+          assert.ok(
+            themedBounds && themedBounds.width <= viewport.width + 1,
+            'Dashboard must fit all supported viewport/theme combinations'
+          );
           const dashboardNav = themedDashboard.getByRole('button', {
-            name: 'Settings', exact: true,
+            name: 'Settings',
+            exact: true,
           });
           await dashboardNav.focus();
           await expect(dashboardNav).toBeFocused();
           await page.keyboard.press('Enter');
-          await expect(themedDashboard.getByRole('heading', { name: 'Settings', exact: true, level: 3 })).toBeVisible();
-          await themedDashboard.getByRole('button', { name: 'Dashboard', exact: true }).click();
+          await expect(
+            themedDashboard.getByRole('heading', {
+              name: 'Settings',
+              exact: true,
+              level: 3,
+            })
+          ).toBeVisible();
+          await themedDashboard
+            .getByRole('button', { name: 'Dashboard', exact: true })
+            .click();
 
           // Review the new homepage narrative in each theme, viewport and
           // motion preference, using the same real browser as CodeShowcase.
@@ -673,9 +754,12 @@ try {
               })
             )
             .toBe(true);
-          await quickStart.locator('pre').nth(1).screenshot({
-            path: `${artifactDir}/${scenario}-quick-start-import.png`,
-          });
+          await quickStart
+            .locator('pre')
+            .nth(1)
+            .screenshot({
+              path: `${artifactDir}/${scenario}-quick-start-import.png`,
+            });
 
           assert.deepEqual(pageErrors, [], 'unexpected page errors');
           evidence.push({

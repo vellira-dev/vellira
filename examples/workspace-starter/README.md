@@ -11,17 +11,17 @@ source remains available under the repository's MIT license.
 
 ## What you can do
 
-| Interaction                             | React Web            | React Native        |
-| --------------------------------------- | -------------------- | ------------------- |
-| Overview with live project counts       | Yes                  | Yes                 |
-| Project search and status filtering     | Yes                  | Yes                 |
-| Create projects using Vellira Modal     | Yes                  | Yes                 |
+| Interaction                                        | React Web            | React Native        |
+| -------------------------------------------------- | -------------------- | ------------------- |
+| Overview with live project counts                  | Yes                  | Yes                 |
+| Project search and status filtering                | Yes                  | Yes                 |
+| Create projects using Vellira Modal                | Yes                  | Yes                 |
 | Complete, edit, duplicate, remove or undo projects | Yes                  | Yes                 |
-| Navigate with Vellira Tabs              | Yes                  | Yes                 |
-| Edit workspace via Input and Checkbox   | Yes                  | Yes                 |
-| Switch light/dark/high-contrast themes  | Yes                  | Yes                 |
-| Keep edits after restarting             | Browser localStorage | Device AsyncStorage |
-| Remote server/account/payment required  | No                   | No                  |
+| Navigate with Vellira Tabs                         | Yes                  | Yes                 |
+| Edit workspace via Input and Checkbox              | Yes                  | Yes                 |
+| Switch light/dark/high-contrast themes             | Yes                  | Yes                 |
+| Keep edits after restarting                        | Browser localStorage | Device AsyncStorage |
+| Remote server/account/payment required             | No                   | No                  |
 
 Web demonstrates Dropdown action menus; native uses touch-oriented Button
 actions. The shared product intention is stable, but rendering, event semantics,

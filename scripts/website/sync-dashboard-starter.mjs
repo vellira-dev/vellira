@@ -5,7 +5,10 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../..');
 const web = resolve(root, 'examples/workspace-starter/web/src');
-const site = resolve(root, 'apps/website/src/sections/home/ProductInterfaceDemo');
+const site = resolve(
+  root,
+  'apps/website/src/sections/home/ProductInterfaceDemo'
+);
 const source = readFileSync(resolve(web, 'Dashboard.tsx'), 'utf8');
 const expectedJsx = source.replace(
   "from './model';",

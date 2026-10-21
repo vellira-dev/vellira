@@ -868,8 +868,6 @@
   width: min(240px, 100%);
 }
 
-
-
 .projectsPanel .projectList {
   gap: 10px;
 }
@@ -1007,22 +1005,18 @@
   transform: rotate(-90deg) scale(0.92);
 }
 
-.projectsPanel .rowActions .projectActionTrigger:is(
-    :hover,
-    :active,
-    :focus-visible,
-    [data-state='open']
-  ) .projectActionHorizontal {
+.projectsPanel
+  .rowActions
+  .projectActionTrigger:is(:hover, :active, :focus-visible, [data-state='open'])
+  .projectActionHorizontal {
   opacity: 0;
   transform: rotate(90deg) scale(0.92);
 }
 
-.projectsPanel .rowActions .projectActionTrigger:is(
-    :hover,
-    :active,
-    :focus-visible,
-    [data-state='open']
-  ) .projectActionVertical {
+.projectsPanel
+  .rowActions
+  .projectActionTrigger:is(:hover, :active, :focus-visible, [data-state='open'])
+  .projectActionVertical {
   opacity: 1;
   transform: rotate(0deg) scale(1);
 }

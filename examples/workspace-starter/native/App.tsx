@@ -97,7 +97,8 @@ function restoreWorkspace(value: unknown): Workspace | null {
       typeof item.name !== 'string' ||
       !isStatus(item.status) ||
       typeof item.completed !== 'boolean' ||
-      (item.description !== undefined && typeof item.description !== 'string') ||
+      (item.description !== undefined &&
+        typeof item.description !== 'string') ||
       (item.team !== undefined && !isTeam(item.team)) ||
       (item.previousStatus !== undefined &&
         item.previousStatus !== 'planned' &&
@@ -252,7 +253,11 @@ function WorkspaceScreen() {
     setCreateOpen(false);
     setRemovedProject(null);
     setSection('projects');
-    setNotice(editingId === null ? 'Project created locally.' : 'Project updated locally.');
+    setNotice(
+      editingId === null
+        ? 'Project created locally.'
+        : 'Project updated locally.'
+    );
   }
 
   function toggleProject(id: number, completed: boolean) {
@@ -358,7 +363,9 @@ function WorkspaceScreen() {
                 appearance='ghost'
                 onPress={() => {
                   setData((current) =>
-                    current.projects.some((item) => item.id === removedProject.id)
+                    current.projects.some(
+                      (item) => item.id === removedProject.id
+                    )
                       ? current
                       : {
                           ...current,
@@ -642,7 +649,9 @@ function WorkspaceScreen() {
               <Modal.Title>
                 {editingId === null ? 'Create a project' : 'Edit project'}
               </Modal.Title>
-              <Modal.Description>Changes stay on this device.</Modal.Description>
+              <Modal.Description>
+                Changes stay on this device.
+              </Modal.Description>
             </Modal.Header>
             <Modal.Body>
               <Input

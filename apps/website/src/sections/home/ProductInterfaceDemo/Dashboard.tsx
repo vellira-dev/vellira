@@ -443,9 +443,7 @@ export function Dashboard({
                     : 'Customize the local demo workspace.'}
               </p>
             </div>
-            <span className={styles.workspaceName}>
-              {workspaceDisplayName}
-            </span>
+            <span className={styles.workspaceName}>{workspaceDisplayName}</span>
           </div>
 
           {feedback && (
@@ -627,7 +625,10 @@ export function Dashboard({
                       <small>{project.description}</small>
                     </div>
                     <div className={styles.rowActions}>
-                      <span className={styles.statusPill} data-status={project.status}>
+                      <span
+                        className={styles.statusPill}
+                        data-status={project.status}
+                      >
                         {statusLabels[project.status]}
                       </span>
                       <Dropdown placement='bottom-end'>
@@ -645,7 +646,9 @@ export function Dashboard({
                                 className={styles.projectActionIcon}
                                 aria-hidden='true'
                               >
-                                <span className={styles.projectActionHorizontal}>
+                                <span
+                                  className={styles.projectActionHorizontal}
+                                >
                                   <MoreHorizontal size='100%' />
                                 </span>
                                 <span className={styles.projectActionVertical}>

@@ -109,7 +109,9 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('No projects yet');
     expect(standaloneDashboard).toContain('Clear filters');
     expect(standaloneDashboard).toContain("aria-label='Search projects'");
-    expect(standaloneDashboard).not.toContain("aria-label='Filter project list'");
+    expect(standaloneDashboard).not.toContain(
+      "aria-label='Filter project list'"
+    );
     expect(standaloneDashboard).toContain('styles.projectsPanel');
   });
 
@@ -141,7 +143,9 @@ describe('live Vellira Dashboard Core showcase', () => {
   });
 
   it('preserves edits across previews and supports reversible actions', () => {
-    const page = read('apps/website/src/app/(marketing)/demo/dashboard/page.tsx');
+    const page = read(
+      'apps/website/src/app/(marketing)/demo/dashboard/page.tsx'
+    );
     const native = read('examples/workspace-starter/native/App.tsx');
     expect(standaloneDashboard).toContain(
       "const storageKey = 'vellira-dashboard-live-core-v1'"
