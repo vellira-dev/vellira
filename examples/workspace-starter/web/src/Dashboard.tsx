@@ -520,7 +520,7 @@ export function Dashboard({
                       {workspace.projects.length}
                     </span>
                   </h4>
-                  <p>Search, filter and manage sample work.</p>
+                  <p>Manage your sample projects</p>
                 </div>
               </div>
               <div className={styles.filters}>
@@ -534,7 +534,7 @@ export function Dashboard({
                 />
                 <Select
                   size='md'
-                  label='Status filter'
+                  aria-label='Status filter'
                   value={filter}
                   onValueChange={(value) => {
                     if (
@@ -550,9 +550,6 @@ export function Dashboard({
                   <Select.Item value='active'>In progress</Select.Item>
                   <Select.Item value='shipped'>Shipped</Select.Item>
                 </Select>
-                <span className={styles.projectMatches}>
-                  {projects.length} matching projects
-                </span>
               </div>
               <div className={styles.projectList}>
                 {projects.map((project) => (
@@ -567,8 +564,7 @@ export function Dashboard({
                         className={styles.statusPill}
                         data-status={project.status}
                       >
-                        {statusLabels[project.status]} ·{' '}
-                        {teamLabels[project.team]}
+                        {statusLabels[project.status]}
                       </span>
                     </div>
                     <div className={styles.rowActions}>
