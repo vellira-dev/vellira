@@ -17,7 +17,7 @@ source remains available under the repository's MIT license.
 | Project search and status filtering                | Yes                  | Yes                 |
 | Create projects using Vellira Modal                | Yes                  | Yes                 |
 | Complete, edit, duplicate, remove or undo projects | Yes                  | Yes                 |
-| Navigate with Vellira components                  | Buttons              | Tabs                |
+| Navigate with Vellira components                   | Buttons              | Tabs                |
 | Edit workspace via Input and Checkbox              | Yes                  | Yes                 |
 | Switch light/dark/high-contrast themes             | Yes                  | Yes                 |
 | Keep edits after restarting                        | Browser localStorage | Device AsyncStorage |

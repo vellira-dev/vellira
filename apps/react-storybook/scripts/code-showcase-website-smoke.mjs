@@ -382,7 +382,9 @@ try {
             await fullscreen
               .getByRole('button', { name: 'Settings', exact: true })
               .click();
-            const fullTheme = fullscreen.getByRole('combobox', { name: 'Theme' });
+            const fullTheme = fullscreen.getByRole('combobox', {
+              name: 'Theme',
+            });
             await fullTheme.click();
             await fullscreen
               .getByRole('option', { name: 'Light', exact: true })
