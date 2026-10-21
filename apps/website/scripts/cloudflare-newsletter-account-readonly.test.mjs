@@ -295,23 +295,197 @@ test('unexpected provider payloads and network errors do not print sensitive err
   assert.equal(JSON.stringify(report).includes('private-test-token'), false);
 });
 
-test('namespace pagination omission gives a fixed diagnostic, never false zero', async () => {
-  for (const resultInfo of [undefined, { page: 1, count: 1 }]) {
-    const base = mockCloudflare();
-    const fetcher = (url, options) => url.pathname.includes('/durable_objects/namespaces')
-      ? makeResponse([{ id: 'private-namespace-id', class: 'OtherClass' }], 200, resultInfo)
-      : base.fetcher(url, options);
-    const report = await auditCloudflareNewsletterAccount({
-      accountId,
-      apiToken: 'private-test-token',
-      fetcher,
-    });
-    assert.equal(report.namespaceInventoryStatus, 'incomplete');
-    assert.equal(report.namespaceInventoryDiagnostic, 'pagination_metadata_missing');
-    assert.equal(report.coordinatorClassNamespaceCount, null);
-    assert.equal(JSON.stringify(report).includes('private-namespace-id'), false);
-    assert.equal(report.remoteWrites, 0);
+// Cloudflare's namespace list API declares result_info optional. Mock exactly
+// which pages are returned: the audit must observe a terminal empty page
+// rather than treating a short first response as an exhaustive inventory.
+async function auditNamespacePages(pages) {
+  const fixture = mockCloudflare();
+  const queriedPages = [];
+  const fetcher = (url, options) => {
+    if (!url.pathname.includes('/durable_objects/namespaces')) {
+      return fixture.fetcher(url, options);
+    }
+    assert.equal(options.method, 'GET');
+    assert.equal(options.body, undefined);
+    assert.equal(url.searchParams.get('per_page'), '100');
+    const page = Number(url.searchParams.get('page'));
+    assert.ok(Number.isSafeInteger(page) && page >= 1);
+    queriedPages.push(page);
+    assert.ok(page <= pages.length, 'Unexpected namespace API page');
+    const fixturePage = pages[page - 1];
+    if (fixturePage.status === 403) return makeResponse(null, 403);
+    return makeResponse(fixturePage.records, 200, fixturePage.info);
+  };
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.equal(report.remoteWrites, 0);
+  assert.equal(report.providerWrites, 0);
+  assert.equal(report.sharedNamespaceIdentity, 'unverified');
+  assert.equal(report.newsletterWafCoverage, 'unverified');
+  return { report, queriedPages };
+}
+
+test('metadata-less namespace enumeration requires an observed terminal empty page', async () => {
+  const namespace = {
+    id: 'private-namespace-id',
+    class: 'NewsletterRollingBudgetCoordinator',
+    script: 'vellira-newsletter-budget-owner',
+    use_sqlite: true,
+  };
+  for (const firstInfo of [
+    undefined,
+    { page: 1, count: 1 },
+    { page: 1, count: 1, per_page: 100, total_count: 1 },
+  ]) {
+    const secondInfo = firstInfo
+      ? { page: 2, count: 0, ...(firstInfo.total_count === undefined
+        ? {} : { total_count: 1 }) }
+      : undefined;
+    const { report, queriedPages } = await auditNamespacePages([
+      { records: [namespace], info: firstInfo },
+      { records: [], info: secondInfo },
+    ]);
+    assert.deepEqual(queriedPages, [1, 2]);
+    assert.equal(report.namespaceInventoryStatus, 'complete');
+    assert.equal(report.namespaceInventoryDiagnostic, null);
+    assert.equal(report.coordinatorClassNamespaceCount, 1);
+    assert.ok(!JSON.stringify(report).includes('private-namespace-id'));
+    // An account-wide class count does not establish the bound DO instance.
+    assert.equal(report.sharedNamespaceIdentity, 'unverified');
   }
+});
+
+test('missing namespace pagination cannot stop after a short but nonempty page', async () => {
+  const { report, queriedPages } = await auditNamespacePages([
+    { records: [{ id: 'private-namespace-id', class: 'OtherClass' }] },
+    { status: 403 },
+  ]);
+  assert.deepEqual(queriedPages, [1, 2]);
+  assert.equal(report.namespaceInventoryStatus, 'permission_denied');
+  assert.equal(report.coordinatorClassNamespaceCount, null);
+  assert.ok(!JSON.stringify(report).includes('private-namespace-id'));
+});
+
+test('namespace pagination cannot accept repeated pages or an ignored page parameter', async () => {
+  const namespace = { id: 'private-namespace-id', class: 'OtherClass' };
+  for (const info of [undefined, { count: 1 }]) {
+    const { report, queriedPages } = await auditNamespacePages([
+      { records: [namespace], info },
+      { records: [namespace], info },
+    ]);
+    assert.deepEqual(queriedPages, [1, 2]);
+    assert.equal(report.namespaceInventoryStatus, 'incomplete');
+    assert.equal(report.namespaceInventoryDiagnostic, 'namespace_id_duplicate');
+    assert.equal(report.coordinatorClassNamespaceCount, null);
+    assert.ok(!JSON.stringify(report).includes(namespace.id));
+  }
+});
+
+test('namespace pagination rejects sparse pages and inconsistent partial metadata', async () => {
+  const scenarios = [
+    {
+      pages: [
+        { records: [{ id: 'private-id-1', class: 'OtherClass' }] },
+        { records: [{ id: 'private-id-2', class: 'OtherClass' }] },
+      ],
+      diagnostic: 'pagination_sparse_page',
+    },
+    {
+      pages: [
+        { records: [{ id: 'private-id-1', class: 'OtherClass' }],
+          info: { page: 1, count: 1 } },
+        { records: [],
+          info: { page: 1, count: 0 } },
+      ],
+      diagnostic: 'pagination_metadata_invalid',
+    },
+    {
+      pages: [
+        { records: [{ id: 'private-id-1', class: 'OtherClass' }],
+          info: { total_count: 2 } },
+        { records: [],
+          info: { total_count: 2 } },
+      ],
+      diagnostic: 'pagination_metadata_invalid',
+    },
+    {
+      pages: [
+        { records: [{ id: 'private-id-1', class: 'OtherClass' }],
+          info: { count: 1 } },
+        { records: [],
+          info: { count: 0, total_count: 0 } },
+      ],
+      diagnostic: 'pagination_metadata_invalid',
+    },
+    {
+      pages: [
+        { records: [{ id: 'private-id-1', class: 'OtherClass' }],
+          info: { per_page: 20 } },
+      ],
+      diagnostic: 'pagination_metadata_invalid',
+    },
+    {
+      pages: [
+        { records: [{ id: 'private-id-1', class: 'OtherClass' }],
+          info: { total_pages: 2 } },
+        { records: [] },
+      ],
+      diagnostic: 'pagination_mode_changed',
+    },
+  ];
+  for (const { pages, diagnostic } of scenarios) {
+    const { report } = await auditNamespacePages(pages);
+    assert.equal(report.namespaceInventoryStatus, 'incomplete', diagnostic);
+    assert.equal(report.namespaceInventoryDiagnostic, diagnostic);
+    assert.equal(report.coordinatorClassNamespaceCount, null);
+    assert.ok(!JSON.stringify(report).includes('private-id-1'));
+  }
+});
+
+test('namespace enumeration never infers completeness at the bounded page limit', async () => {
+  const pages = Array.from({ length: 3 }, (_, page) => ({
+    records: Array.from({ length: 100 }, (_, offset) => ({
+      id: 'private-id-' + (page * 100 + offset),
+      class: 'OtherClass',
+    })),
+  }));
+  const { report, queriedPages } = await auditNamespacePages(pages);
+  assert.deepEqual(queriedPages, [1, 2, 3]);
+  assert.equal(report.namespaceInventoryStatus, 'incomplete');
+  assert.equal(report.namespaceInventoryDiagnostic, 'pagination_page_limit');
+  assert.equal(report.coordinatorClassNamespaceCount, null);
+});
+
+test('namespace IDs must be unique when explicit pagination metadata claims completion', async () => {
+  const { report, queriedPages } = await auditNamespacePages([{
+    records: [
+      { id: 'private-namespace-id', class: 'NewsletterRollingBudgetCoordinator' },
+      { id: 'private-namespace-id', class: 'NewsletterRollingBudgetCoordinator' },
+    ],
+    info: { total_pages: 1 },
+  }]);
+  assert.deepEqual(queriedPages, [1]);
+  assert.equal(report.namespaceInventoryStatus, 'incomplete');
+  assert.equal(report.namespaceInventoryDiagnostic, 'namespace_id_duplicate');
+  assert.equal(report.coordinatorClassNamespaceCount, null);
+  assert.ok(!JSON.stringify(report).includes('private-namespace-id'));
+});
+
+test('metadata-less multiple nonempty pages require inspectable distinct IDs', async () => {
+  const first = Array.from({ length: 100 }, (_, i) => ({
+    id: 'private-' + i, class: 'OtherClass',
+  }));
+  const { report, queriedPages } = await auditNamespacePages([
+    { records: first },
+    { records: [{ class: 'OtherClass' }] },
+  ]);
+  assert.deepEqual(queriedPages, [1, 2]);
+  assert.equal(report.namespaceInventoryStatus, 'incomplete');
+  assert.equal(report.namespaceInventoryDiagnostic, 'namespace_id_uninspectable');
+  assert.equal(report.coordinatorClassNamespaceCount, null);
 });
 
 test('pagination inconsistency and malformed namespace records are distinguishable', async () => {
