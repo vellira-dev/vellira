@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "candidate-only-no-deployment",
+  "status": "private-owner-provisioned-staging-off-config-proposed",
   "owner": {
     "worker": "vellira-newsletter-budget-owner",
     "config": "cloudflare/newsletter-budget-owner.wrangler.candidate.jsonc",
