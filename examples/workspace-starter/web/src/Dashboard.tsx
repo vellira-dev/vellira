@@ -467,7 +467,7 @@ export function Dashboard({
                 </Button>
               )}
             </div>
-          )
+          )}
 
           {view === 'overview' && (
             <div className={styles.overview}>
