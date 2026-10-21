@@ -868,6 +868,12 @@
 
 .projectsPanel .projectRow .rowActions {
   gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.projectsPanel .rowActions .statusPill {
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .projectsPanel .projectRow {
