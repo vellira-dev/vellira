@@ -364,6 +364,21 @@ try {
               dashboard.getByText('Browser smoke project')
             ).toBeVisible();
 
+            // Full Demo is another window on the same origin: the workspace
+            // created in the homepage must be available without re-entry.
+            const fullscreen = await page.context().newPage();
+            await fullscreen.goto(
+              new URL('/demo/dashboard', page.url()).toString(),
+              { waitUntil: 'domcontentloaded' }
+            );
+            await fullscreen
+              .getByRole('button', { name: 'Projects', exact: true })
+              .click();
+            await expect(
+              fullscreen.getByText('Browser smoke project')
+            ).toBeVisible();
+            await fullscreen.close();
+
             const projectActions = dashboard.getByRole('button', {
               name: 'Actions for Browser smoke project',
             });
@@ -418,19 +433,19 @@ try {
               .click();
             await expect(
               dashboard.getByText('Demo QA Workspace', { exact: true })
-            ).toBeVisible();
+            ).toHaveCount(2);
 
             const savedProjects = await page.evaluate(() => {
               const state = localStorage.getItem(
                 'vellira-dashboard-live-core-v1'
               );
-              return state ? JSON.parse(state).projects.length : null;
+              return state ? JSON.parse(state).workspace.projects.length : null;
             });
             assert.equal(savedProjects, 4);
             await page.reload({ waitUntil: 'domcontentloaded' });
             await expect(
               dashboard.getByText('Demo QA Workspace', { exact: true })
-            ).toBeVisible();
+            ).toHaveCount(2);
             await dashboard
               .getByRole('button', { name: 'Projects', exact: true })
               .click();
@@ -472,6 +487,32 @@ try {
             await page.reload({ waitUntil: 'domcontentloaded' });
             await expect(dashboard.getByRole('heading', { name: 'Projects', exact: true, level: 3 })).toBeVisible();
             await expect(dashboard.getByRole('combobox', { name: 'Status filter' })).toContainText('Shipped');
+            const actionsAfterReload = dashboard.getByRole('button', {
+              name: 'Actions for Browser smoke project',
+            });
+            await actionsAfterReload.click();
+            await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+            const editDialog = page.getByRole('dialog', { name: 'Edit project' });
+            await expect(editDialog).toBeVisible();
+            await editDialog
+              .getByRole('textbox', { name: 'Description' })
+              .fill('Edited using real Vellira controls.');
+            await editDialog.getByRole('button', { name: 'Save changes' }).click();
+            await expect(editDialog).toBeHidden();
+            await expect(
+              dashboard.getByText('Edited using real Vellira controls.')
+            ).toBeVisible();
+
+            await actionsAfterReload.click();
+            await page.getByRole('menuitem', { name: 'Remove', exact: true }).click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeHidden();
+            await dashboard.getByRole('button', { name: 'Undo' }).click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeVisible();
+
             await dashboard.getByRole('button', { name: 'Settings', exact: true }).click();
             await dashboard.getByRole('button', { name: 'Restore sample data' }).click();
             const resetDialog = page.getByRole('dialog', { name: 'Restore sample data?' });
