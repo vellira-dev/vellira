@@ -72,12 +72,34 @@ describe('Vellira UI usage audit', () => {
     const findings = checkSourceFile(
       'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx',
       `import Link from 'next/link';
-      const X = () => <footer><Link href='/'>Brand</Link><nav><DesignSystemLink href='/'>Home</DesignSystemLink><Button asChild><a href='/join'>Join</a></Button></nav></footer>;`,
+      const X = () => <footer><Link className={styles.brand} href='/'><Image src='/logo.svg' /></Link><nav><DesignSystemLink href='/'>Home</DesignSystemLink><Button asChild><a href='/join'>Join</a></Button></nav></footer>;`,
       AUTHORITIES
     );
     expect(
       findings.filter((f) => f.ruleId === 'vellira-ui.noncanonical-text-link')
     ).toEqual([]);
+  });
+
+  it('rejects raw links wrapped in Button without asChild', () => {
+    const findings = checkSourceFile(
+      'apps/website/src/sections/home/FinalCta/FinalCta.tsx',
+      `const X = () => <Button><a href='/docs'>Docs</a></Button>;`,
+      AUTHORITIES
+    );
+    expect(
+      findings.filter((finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link')
+    ).toEqual([expect.objectContaining({ detected: 'a' })]);
+  });
+
+  it('rejects arbitrary Next links outside SiteFooter navigation', () => {
+    const findings = checkSourceFile(
+      'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx',
+      `import Link from 'next/link'; const X = () => <footer><Link href='/support'>Support</Link></footer>;`,
+      AUTHORITIES
+    );
+    expect(
+      findings.filter((finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link')
+    ).toEqual([expect.objectContaining({ detected: 'Link' })]);
   });
 
   it('does not report example strings or unaudited structural surfaces', () => {
