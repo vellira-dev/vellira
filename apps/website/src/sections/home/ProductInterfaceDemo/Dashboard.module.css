@@ -840,29 +840,20 @@
 }
 
 .projectsPanel .sectionHeading {
-  margin-bottom: 18px;
   align-items: center;
+  margin-bottom: 18px;
 }
 
-.projectsSubtitle {
-  margin: 0;
-  text-align: right;
-  color: var(--text-secondary);
-  font-size: 12px;
+.projectsPanel .sectionHeading p {
+  margin-top: 6px;
 }
 
-.projectsPanel .filters {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0 0 18px;
-}
-
-.projectsPanel .filters > :first-child {
+.projectsPanel .sectionHeading > :last-child {
   width: min(240px, 100%);
 }
 
-/* The Core md Select trigger is 50px by default; match the 46px md search input. */
-.projectsPanel .filters [role='combobox'] {
+/* Keep the Core Select trigger aligned to the 46px md search input. */
+.projectsPanel .sectionHeading [role='combobox'] {
   height: 46px;
   min-height: 46px;
 }
@@ -925,14 +916,10 @@
 
 @media (width <= 530px) {
   .projectsPanel .sectionHeading {
-    align-items: flex-start;
+    align-items: stretch;
   }
 
-  .projectsSubtitle {
-    text-align: left;
-  }
-
-  .projectsPanel .filters > :first-child {
+  .projectsPanel .sectionHeading > :last-child {
     width: 100%;
   }
 }
