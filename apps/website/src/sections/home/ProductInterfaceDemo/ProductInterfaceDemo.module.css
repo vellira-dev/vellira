@@ -107,7 +107,7 @@
 .stage {
   margin-top: 14px;
   border: 1px solid var(--border-muted);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   background: var(--surface-default);
   box-shadow: var(--shadow-xl);
   overflow: hidden;
@@ -142,7 +142,7 @@
 .windowDots span {
   width: 9px;
   height: 9px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--border-strong);
 }
 .windowTitle {
