@@ -155,7 +155,8 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneDashboard).toContain('restoreProject(');
     expect(standaloneDashboard).toContain('updateProject(');
     expect(standaloneDashboard).toContain('Project Snapshot');
-    expect(standaloneDashboard).toContain("theme === 'system'");
+    expect(standaloneDashboard).toContain('supportsSystemTheme');
+    expect(page).toContain('allowSystemTheme');
     expect(page).not.toContain('<main');
     expect(native).toContain('themeStorageKey');
     expect(native).toContain('setResetOpen(true)');

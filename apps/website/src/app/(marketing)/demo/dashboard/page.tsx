@@ -9,6 +9,7 @@ export default function FullDashboardDemoPage() {
   return (
     <div aria-label='Full-screen Vellira Core Dashboard'>
       <Dashboard
+        allowSystemTheme
         variant='standalone'
         theme={preference}
         onThemeChange={setPreference}

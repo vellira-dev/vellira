@@ -17,7 +17,7 @@ source remains available under the repository's MIT license.
 | Project search and status filtering                | Yes                  | Yes                 |
 | Create projects using Vellira Modal                | Yes                  | Yes                 |
 | Complete, edit, duplicate, remove or undo projects | Yes                  | Yes                 |
-| Navigate with Vellira Tabs                         | Yes                  | Yes                 |
+| Navigate with Vellira components                  | Buttons              | Tabs                |
 | Edit workspace via Input and Checkbox              | Yes                  | Yes                 |
 | Switch light/dark/high-contrast themes             | Yes                  | Yes                 |
 | Keep edits after restarting                        | Browser localStorage | Device AsyncStorage |
@@ -92,8 +92,8 @@ and native overlays before relying on those behaviors in production.
 5. Switch themes, reload or restart the app, and check locally saved changes.
 6. Read the source and adapt the UI to your own product.
 
-The Web starter uses a Vellira Modal, Dropdown, Tabs, Select, Input, Checkbox,
-Button and ThemeProvider. The Native starter uses platform-appropriate Vellira
+The Web starter uses Vellira Modal, Dropdown, Button, Select, Input,
+Checkbox and ThemeProvider. The Native starter uses platform-appropriate Vellira
 implementations of the same fundamental building blocks.
 
 ## What this starter does not implement

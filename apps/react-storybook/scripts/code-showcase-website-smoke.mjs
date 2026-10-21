@@ -379,6 +379,19 @@ try {
             await expect(
               fullscreen.getByText('Browser smoke project')
             ).toBeVisible();
+            await fullscreen
+              .getByRole('button', { name: 'Settings', exact: true })
+              .click();
+            const fullTheme = fullscreen.getByRole('combobox', { name: 'Theme' });
+            await fullTheme.click();
+            await fullscreen
+              .getByRole('option', { name: 'Light', exact: true })
+              .click();
+            await fullTheme.click();
+            await fullscreen
+              .getByRole('option', { name: 'System', exact: true })
+              .click();
+            await expect(fullTheme).toContainText('System');
             await fullscreen.close();
 
             const projectActions = dashboard.getByRole('button', {

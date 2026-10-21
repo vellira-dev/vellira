@@ -48,6 +48,7 @@ export type DashboardTheme = 'light' | 'dark' | 'high-contrast' | 'system';
 
 interface DashboardProps {
   variant?: 'embedded' | 'standalone';
+  allowSystemTheme?: boolean;
   theme: DashboardTheme;
   onThemeChange: (next: DashboardTheme) => void;
 }
@@ -137,9 +138,11 @@ function BreakdownChart({
 
 export function Dashboard({
   variant = 'standalone',
+  allowSystemTheme = false,
   theme,
   onThemeChange,
 }: DashboardProps) {
+  const supportsSystemTheme = variant === 'embedded' || allowSystemTheme;
   // All website previews share workspace state on the same origin.
   const storageKey = 'vellira-dashboard-live-core-v1';
   const legacyStorageKey = 'vellira-workspace-starter-v1';
@@ -773,7 +776,7 @@ export function Dashboard({
                       next === 'light' ||
                       next === 'dark' ||
                       next === 'high-contrast' ||
-                      (variant === 'embedded' && next === 'system')
+                      (supportsSystemTheme && next === 'system')
                     ) {
                       onThemeChange(next);
                     }
@@ -782,7 +785,7 @@ export function Dashboard({
                   <Select.Item value='light'>Light</Select.Item>
                   <Select.Item value='dark'>Dark</Select.Item>
                   <Select.Item value='high-contrast'>High contrast</Select.Item>
-                  {(variant === 'embedded' || theme === 'system') && (
+                  {supportsSystemTheme && (
                     <Select.Item value='system'>System</Select.Item>
                   )}
                 </Select>
