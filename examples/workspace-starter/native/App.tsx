@@ -129,6 +129,7 @@ function WorkspaceScreen() {
   const [section, setSection] = useState<Section>('overview');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [removedProject, setRemovedProject] = useState<Project | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -249,6 +250,7 @@ function WorkspaceScreen() {
             ),
     }));
     setCreateOpen(false);
+    setRemovedProject(null);
     setSection('projects');
     setNotice(editingId === null ? 'Project created locally.' : 'Project updated locally.');
   }
@@ -294,10 +296,14 @@ function WorkspaceScreen() {
         ],
       };
     });
+    setRemovedProject(null);
     setNotice('Project duplicated.');
   }
 
   function deleteProject(id: number) {
+    const selected = data.projects.find((project) => project.id === id);
+    if (!selected) return;
+    setRemovedProject(selected);
     setData((current) => ({
       ...current,
       projects: current.projects.filter((project) => project.id !== id),
@@ -343,9 +349,30 @@ function WorkspaceScreen() {
         </View>
 
         {notice ? (
-          <Text accessibilityLiveRegion='polite' style={{ color: mainText }}>
-            {notice}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text accessibilityLiveRegion='polite' style={{ color: mainText }}>
+              {notice}
+            </Text>
+            {removedProject ? (
+              <Button
+                appearance='ghost'
+                onPress={() => {
+                  setData((current) =>
+                    current.projects.some((item) => item.id === removedProject.id)
+                      ? current
+                      : {
+                          ...current,
+                          projects: [removedProject, ...current.projects],
+                        }
+                  );
+                  setRemovedProject(null);
+                  setNotice('Project restored.');
+                }}
+              >
+                Undo
+              </Button>
+            ) : null}
+          </View>
         ) : null}
 
         <Tabs
@@ -448,6 +475,9 @@ function WorkspaceScreen() {
                       {project.name}
                     </Text>
                     <Text style={{ color: subtleText }}>{project.status}</Text>
+                    <Text style={{ color: subtleText }}>
+                      {project.description}
+                    </Text>
                   </View>
                   <Checkbox
                     label='Mark completed'
@@ -586,6 +616,7 @@ function WorkspaceScreen() {
                 color='danger'
                 onPress={() => {
                   setData(initialWorkspace);
+                  setRemovedProject(null);
                   setTheme('light');
                   setResetOpen(false);
                   setNotice('Sample data restored.');
