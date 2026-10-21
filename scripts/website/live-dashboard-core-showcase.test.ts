@@ -125,6 +125,21 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(standaloneStyles).toContain('prefers-reduced-motion');
   });
 
+  it('uses Vellira radius tokens across Dashboard and its preview shell', () => {
+    const stageStyles = read(
+      'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css'
+    );
+    const hardcodedRadius = /border-radius:\s*[^;]*(?:\d+px|\d+%)/;
+    expect(standaloneStyles).not.toMatch(hardcodedRadius);
+    expect(siteStyles).not.toMatch(hardcodedRadius);
+    expect(stageStyles).not.toMatch(hardcodedRadius);
+    expect(standaloneStyles).toContain('border-radius: var(--radius-sm);');
+    expect(standaloneStyles).toContain('border-radius: var(--radius-md);');
+    expect(standaloneStyles).toContain('border-radius: var(--radius-lg);');
+    expect(standaloneStyles).toContain('border-radius: var(--radius-full);');
+    expect(stageStyles).toContain('border-radius: var(--radius-xl);');
+  });
+
   it('keeps one synchronized Dashboard implementation across both apps', () => {
     const normalizedWebsite = siteDashboard.replace(
       "from '../../../../../../examples/workspace-starter/web/src/model';",
