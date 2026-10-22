@@ -68,7 +68,7 @@ overrides:
   # CVE-2026-102422 / GHSA-pqg4-j6r4-53mv: shell-quote command injection, fixed in 1.11.0.
   'shell-quote@>=1.8.4 <1.11.0': 1.12.0
 
-  sharp: 0.35.4
+  sharp: 0.35.5
 
   'undici@<7': 6.28.1
   'undici@>=7 <8': 7.29.1
@@ -108,5 +108,5 @@ patchedDependencies:
   # Wrangler 4.136.3 bundles two legacy bare punycode imports in wrangler-dist/cli.js.
   # Route those exact bundled imports to the declared userland package until upstream removes them.
   'wrangler@4.136.3': patches/wrangler@4.136.3.patch
-  next@16.3.8: patches/next@16.3.8.patch
+  next@16.4.2: patches/next@16.4.2.patch
 allowUnusedPatches: false
