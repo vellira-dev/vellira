@@ -13,6 +13,11 @@ export type ReadOnlyPageCheckResult = {
   stderr: string;
 };
 
+type RunOptions = {
+  concurrency?: number;
+  execute?: (job: ReadOnlyPageCheck) => Promise<ReadOnlyPageCheckResult>;
+};
+
 function executeReadOnlyCheck(
   job: ReadOnlyPageCheck
 ): Promise<ReadOnlyPageCheckResult> {
@@ -20,66 +25,57 @@ function executeReadOnlyCheck(
     const child = spawn(job.executable, job.args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-    let spawnError: string | null = null;
+    let stdout = '';
+    let stderr = '';
 
-    child.stdout?.on('data', (chunk: Buffer) => stdout.push(chunk));
-    child.stderr?.on('data', (chunk: Buffer) => stderr.push(chunk));
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString('utf8');
+    });
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8');
+    });
     child.on('error', (error) => {
-      spawnError = error.message;
+      stderr += error.message;
     });
     child.on('close', (code) => {
-      const capturedError = Buffer.concat(stderr).toString('utf8');
       resolve({
         componentName: job.componentName,
         status: code ?? 1,
-        stdout: Buffer.concat(stdout).toString('utf8'),
-        stderr: spawnError ? `${capturedError}\n${spawnError}` : capturedError,
+        stdout,
+        stderr,
       });
     });
   });
 }
 
 /**
- * A bounded, read-only alternative to sequential generator check subprocesses.
- * Every component is still checked; results are returned in input order,
- * independent of completion order. Write/generate mode must not use this.
+ * Run all read-only generator checks with bounded concurrency.
+ * Preserve input order for human and JSON output. Generation is sequential.
  */
 export async function runReadOnlyComponentPageChecks(
   jobs: readonly ReadOnlyPageCheck[],
-  {
-    concurrency = 2,
-    execute = executeReadOnlyCheck,
-  }: {
-    concurrency?: number;
-    execute?: (job: ReadOnlyPageCheck) => Promise<ReadOnlyPageCheckResult>;
-  } = {}
+  options: RunOptions = {}
 ): Promise<ReadOnlyPageCheckResult[]> {
+  const { concurrency = 2, execute = executeReadOnlyCheck } = options;
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 2) {
     throw new Error('Read-only page check concurrency must be 1 or 2.');
   }
-  if (
-    jobs.some(
-      (job) =>
-        !job.componentName ||
-        !job.executable ||
-        !job.args.includes('--check')
-    )
-  ) {
-    throw new Error('Parallel component page jobs must be read-only checks.');
+
+  for (const job of jobs) {
+    if (!job.componentName || !job.executable || !job.args.includes('--check')) {
+      throw new Error('Parallel component page jobs must be read-only checks.');
+    }
   }
 
   const results = new Array<ReadOnlyPageCheckResult>(jobs.length);
   let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, jobs.length) }, async () => {
-      while (next < jobs.length) {
-        const index = next++;
-        results[index] = await execute(jobs[index]!);
-      }
-    })
-  );
-
+  const workerCount = Math.min(concurrency, jobs.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (next < jobs.length) {
+      const index = next++;
+      results[index] = await execute(jobs[index]!);
+    }
+  });
+  await Promise.all(workers);
   return results;
 }
