@@ -47,6 +47,13 @@ Accessibility-minded • Cross-platform • Modular
 
 ---
 
+**Our direction: governed cross-platform UI production.** Vellira is being
+developed to connect explicit component intent, platform-native implementation,
+deterministic quality validation and maintained UI consistency. The open-source
+React + React Native Core and Dashboard Starter are available today; broader
+AI-assisted production workflows, external-project automation, Pro and Studio
+are future work, **not** currently shipped public capabilities.
+
 ## Try the Dashboard Starter
 
 Start with a working application built from published Vellira Core packages.
@@ -461,8 +468,7 @@ Work planned or in development includes:
 - React Native expansion and real-device validation
 - Advanced data entry components
 - More starter examples
-- Figma resources
-- More design tokens
+- Targeted token additions when validated component and design-resource gaps require them
 - Governed UI workflows and AI-assisted developer tools
 - Performance optimizations
 
