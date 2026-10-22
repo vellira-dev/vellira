@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import { getGeneratedComponentPageComponents } from './component-page-components';
 import { componentPageScriptCommand } from './helpers/command';
+import { runReadOnlyComponentPageChecks } from './read-only-page-checks';
 
 const args = process.argv.slice(2);
 
@@ -50,47 +51,58 @@ const componentResults: {
   staleFiles: string[];
 }[] = [];
 
-for (const componentName of generatedComponentPageComponents) {
-  if (!json) {
-    console.log(
-      check
-        ? `=== Checking ${componentName} ===`
-        : `=== Generating ${componentName} ===`
+if (check) {
+  // Dry-run checks are read-only. Bounded concurrency avoids spawning all
+  // independent TypeScript/Prettier processes at once on hosted CI runners.
+  // Preserve the canonical component order in human and JSON output.
+  const jobs = generatedComponentPageComponents.map((componentName) => {
+    const [executable, ...commandArgs] = componentPageScriptCommand(
+      'create-component-page.ts',
+      [componentName, '--force', '--check', ...(json ? ['--json'] : [])]
     );
-  }
-
-  const [command, ...commandArgs] = componentPageScriptCommand(
-    'create-component-page.ts',
-    [
-      componentName,
-      '--force',
-      ...(check ? ['--check'] : []),
-      ...(json ? ['--json'] : []),
-    ]
-  );
-
-  const result = spawnSync(command, commandArgs, {
-    encoding: 'utf8',
-    stdio: json ? 'pipe' : 'inherit',
+    return { componentName, executable, args: commandArgs };
   });
+  const checks = await runReadOnlyComponentPageChecks(jobs);
 
-  if (json && check) {
-    try {
-      const payload = JSON.parse(result.stdout);
-      componentResults.push({
-        componentName: payload.componentName,
-        status: payload.status,
-        staleFiles: payload.staleFiles,
-      });
-    } catch {
-      console.error(result.stderr || result.stdout);
-      failures.push(componentName);
-      continue;
+  for (const result of checks) {
+    if (!json) {
+      console.log(`=== Checking ${result.componentName} ===`);
+      if (result.stdout) process.stdout.write(result.stdout);
+      if (result.stderr) process.stderr.write(result.stderr);
+    } else {
+      try {
+        const payload = JSON.parse(result.stdout);
+        componentResults.push({
+          componentName: payload.componentName,
+          status: payload.status,
+          staleFiles: payload.staleFiles,
+        });
+      } catch {
+        console.error(result.stderr || result.stdout);
+        failures.push(result.componentName);
+        continue;
+      }
+    }
+
+    if (result.status !== 0) {
+      failures.push(result.componentName);
     }
   }
+} else {
+  // Generation retains its original strictly sequential write semantics.
+  for (const componentName of generatedComponentPageComponents) {
+    if (!json) console.log(`=== Generating ${componentName} ===`);
 
-  if (result.status !== 0) {
-    failures.push(componentName);
+    const [command, ...commandArgs] = componentPageScriptCommand(
+      'create-component-page.ts',
+      [componentName, '--force', ...(json ? ['--json'] : [])]
+    );
+    const result = spawnSync(command, commandArgs, {
+      encoding: 'utf8',
+      stdio: json ? 'pipe' : 'inherit',
+    });
+
+    if (result.status !== 0) failures.push(componentName);
   }
 }
 
