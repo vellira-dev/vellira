@@ -35,22 +35,27 @@ migration and recovery checks. Do **not** turn off `workers_dev` or put
 Cloudflare Access in front of the entire Worker: that would break existing
 diagnostic and staging smoke requests.
 
-A proposed upstream-write gate in the newsletter **server handler** rejects
-valid subscriber-create candidates arriving on any `*.workers.dev` hostname
-**before** reading `BUTTONDOWN_API_KEY`, obtaining Durable Object admission
-or calling Buttondown. It uses the incoming Request URL hostname, not
-user-controlled `Origin` or forwarding headers. It affects both the ordinary
-newsletter and future Pro purpose equally. Canonical public
-`https://vellira.dev` is unchanged; its ordinary signup path remains
-available according to existing consent and provider handling.
+The proposed protection enforces a **provider-write denial at the outer
+Cloudflare Worker fetch entry**, ahead of Next/OpenNext URL rewriting. Any
+`POST /api/newsletter/subscribe` on `*.workers.dev` (including normalized
+path aliases) returns `503 temporarily_unavailable`, `Cache-Control:
+no-store` before OpenNext, Buttondown API access or DO budget admission.
+Neither `Origin` nor forwarding headers can override the incoming Worker
+URL hostname. The existing Next subscriber handler retains a second
+defense-in-depth check for direct requests. The public `https://vellira.dev`
+newsletter remains unchanged, subject to its existing validation, provider
+and quota boundaries.
 
-The existing staging smoke still needs malformed-address and missing-consent
-requests on `vellira-website-staging.vellira.workers.dev`. Those requests
-must continue to return `400` **without any provider write**, whereas a
-well-formed address on `workers.dev` must fail with `503` and `no-store`
-before touching either the provider or global budget. A Pro OFF request
-also remains `503`, with no subscriber creation. This gate does not close
-any diagnostic GET/HEAD routes or static assets.
+Staging and Pro smoke checks still use synthetic malformed/missing-consent
+requests on `vellira-website-staging.vellira.workers.dev`, but they now
+expect **`503 temporarily_unavailable` at the outer Worker** before any
+Next handler evaluation or provider write. An explicitly approved staging
+burst-guard preview still exercises its limiter first and can return `429`
+after prior `503` denials; it never admits a subscriber. Direct isolated
+Next-handler tests continue to verify `400 invalid_email` and
+`400 consent_required` independently. Public production Pro OFF smoke
+remains `503`, with no subscriber creation. Diagnostic GET/HEAD paths and
+static assets remain reachable.
 
 **Security boundary:** This is a **provider-create protection**, not
 authentication, DDoS filtering, per-IP fairness or a verified global daily
@@ -63,9 +68,10 @@ Rate Limiting bindings can guarantee a global provider account quota.
 **Rollout HOLD:** Draft code alone changes no remote traffic. Merging
 `apps/website/**` may automatically deploy staging and subsequently offer
 an independently protected production promotion. Review exact-head CI,
-unit tests for both `workers.dev` hosts and forwarded-header attempts,
-no-provider-write staging probes, and the normal website runtime/browser
-checks before authorizing any staging rollout. Production promotion remains
+unit and outer-Worker integration tests for both `workers.dev` hosts,
+normalized URL aliases and forged forwarded headers, updated no-write
+staging/Pro smoke probes, and normal website runtime/browser checks before
+authorizing any staging rollout. Production promotion remains
 a separate decision. Do not use real email addresses to test this boundary.
 Cloudflare Zero Trust onboarding is not necessary for this narrow control;
 future broader Access policies must be separately approved and evaluated
@@ -106,10 +112,11 @@ observability and protections against distributed abuse.
   permitted when the guard mode is OFF. The workflow temporarily sets only
   the staging Wrangler variable to `1` on its ephemeral runner; it does
   not commit the change.
-- The staging smoke sends malformed addresses only, which the existing
-  server rejects before provider creation. OFF expects one 400/invalid_email.
-  ON sends at most 32 such calls and requires an observed 429/rate_limited,
-  with no subscriber writes. The 429 is a bounded empirical check, **not**
+- The staging smoke sends malformed addresses only, which the **outer
+  Worker** rejects before OpenNext and any provider creation. OFF expects
+  one 503/temporarily_unavailable. In the separately approved ON mode,
+  the existing actor/route limiters run before the ingress denial; at most
+  32 calls must yield a 429/rate_limited, with no subscriber writes. The 429 is a bounded empirical check, **not**
   evidence of global rate accuracy, all-colo enforcement, or perfect protection.
 - Staging is still a **public origin** and uses the real Buttondown account.
   The ON preview is not an invitation to generate live subscriber requests.

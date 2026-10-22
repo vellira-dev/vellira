@@ -45,6 +45,28 @@ test('preview verifies rendered form and rejects missing consent before any prov
   });
 });
 
+test('workers.dev Pro preview shows form but denies subscribe at Worker ingress', async () => {
+  const { calls, fetcher } = responses({
+    visible: true,
+    status: 503,
+    code: 'temporarily_unavailable',
+  });
+  assert.equal(
+    await verifyProInterestLive({
+      siteUrl: 'https://vellira-website-staging.vellira.workers.dev',
+      enabled: true,
+      fetcher,
+    }),
+    'preview'
+  );
+  assert.equal(calls.length, 2);
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    email: 'vellira-pro-smoke@example.invalid',
+    purpose: 'pro_launch',
+    consent: false,
+  });
+});
+
 test('default and production OFF verify hidden form and gated API', async () => {
   const { calls, fetcher } = responses({
     visible: false,

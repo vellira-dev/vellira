@@ -44,12 +44,17 @@ export async function verifyProInterestLive({ siteUrl, enabled, fetcher = fetch 
       signal: AbortSignal.timeout(TIMEOUT_MS),
     }
   );
-  assert.equal(response.status, enabled ? 400 : 503);
+  // Staging uses workers.dev: its outer Worker denies subscriber POSTs
+  // before OpenNext for both OFF and preview modes. Public custom-domain
+  // Pro preview consent checks remain unchanged.
+  const workerIngress = origin.hostname.endsWith('.workers.dev');
+  assert.equal(response.status, workerIngress ? 503 : enabled ? 400 : 503);
   const payload = await response.json();
   assert.equal(payload.ok, false);
   assert.equal(
     payload.code,
-    enabled ? 'consent_required' : 'temporarily_unavailable'
+    workerIngress ? 'temporarily_unavailable'
+      : enabled ? 'consent_required' : 'temporarily_unavailable'
   );
   return enabled ? 'preview' : 'off';
 }
