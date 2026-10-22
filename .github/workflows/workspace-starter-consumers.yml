@@ -20,7 +20,7 @@ jobs:
         working-directory: examples/workspace-starter/web
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org
@@ -40,7 +40,7 @@ jobs:
         working-directory: examples/workspace-starter/native
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org
