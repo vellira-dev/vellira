@@ -51,7 +51,7 @@ Accessibility-minded • Cross-platform • Modular
 developed to connect explicit component intent, platform-native implementation,
 deterministic quality validation and maintained UI consistency. The open-source
 React + React Native Core and Dashboard Starter are available today; broader
-AI-assisted production workflows, external-project automation, Pro and Studio
+AI-assisted production workflows, external-project automation, and Pro
 are future work, **not** currently shipped public capabilities.
 
 ## Try the Dashboard Starter
@@ -134,7 +134,7 @@ machine-readable component metadata, quality validation and the free
 
 **Longer-term direction:** governed UI workflows that help people and AI create,
 validate and maintain consistent interfaces. End-to-end autonomous UI
-production, Vellira Pro and Vellira Studio are **not** shipping features of the
+production and Vellira Pro are **not** shipping features of the
 public Core packages today.
 
 ---
