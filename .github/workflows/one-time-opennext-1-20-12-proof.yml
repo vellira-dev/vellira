@@ -68,9 +68,17 @@ jobs:
           const typeOld = /export declare function transformBuildCondition\(conditionMap: \{[\s\S]*?\}, condition: string\): \{[\s\S]*?transformedExports: \{[\s\S]*?\};/;
           if (!typeOld.test(decl)) throw new Error('OpenNext type declaration changed; manual review required');
           decl = decl.replace(typeOld, 'export declare function transformBuildCondition(conditionMap: unknown, condition: string): {\n    transformedExports: unknown;');
-          const mapOld = /    exports\?: \{\n        \[key: string\]: unknown;\n    \};\n    imports\?: \{\n        \[key: string\]: unknown;\n    \};/;
-          if (!mapOld.test(decl)) throw new Error('OpenNext package declarations changed; manual review required');
-          decl = decl.replace(mapOld, '    exports?: unknown;\n    imports?: unknown;');
+          // The newer OpenNext declaration may format these fields differently.
+          // Match their declared types independently, never widen unrelated fields.
+          for (const field of ['exports', 'imports']) {
+            const declaration = new RegExp('(^\\\\s*' + field + '\\\\?:\\\\s*)\\\\{[^{}]*\\\\}(;)', 'm');
+            const current = new RegExp('^\\\\s*' + field + '\\\\?:\\\\s*unknown;', 'm');
+            if (declaration.test(decl)) {
+              decl = decl.replace(declaration, '$1unknown$2');
+            } else if (!current.test(decl)) {
+              throw new Error('Unexpected OpenNext ' + field + ' declaration; manual review required');
+            }
+          }
           fs.writeFileSync(dts, decl);
           NODE
           pnpm patch-commit "$RUNNER_TEMP/opennext-patch-edit" --patches-dir patches
