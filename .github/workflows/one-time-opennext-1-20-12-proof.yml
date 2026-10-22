@@ -62,15 +62,15 @@ jobs:
           const needle = 'export function transformBuildCondition(conditionMap, condition) {';
           if (src.split(needle).length !== 2) throw new Error('OpenNext workerd.js API changed: manual review required');
           if (src.includes('typeof conditionMap !== "object"')) throw new Error('Upstream already includes fix: review patch removal');
-          fs.writeFileSync(js, src.replace(needle, needle + '\\n    if (typeof conditionMap !== "object" || conditionMap === null) {\\n        return { transformedExports: conditionMap, hasBuildCondition: false };\\n    }'));
+          fs.writeFileSync(js, src.replace(needle, needle + '\n    if (typeof conditionMap !== "object" || conditionMap === null) {\n        return { transformedExports: conditionMap, hasBuildCondition: false };\n    }'));
           const dts = path.join(base, 'workerd.d.ts');
           let decl = fs.readFileSync(dts, 'utf8');
-          const typeOld = /export declare function transformBuildCondition\\(conditionMap: \\{[\\s\\S]*?\\}, condition: string\\): \\{[\\s\\S]*?transformedExports: \\{[\\s\\S]*?\\};/;
+          const typeOld = /export declare function transformBuildCondition\(conditionMap: \{[\s\S]*?\}, condition: string\): \{[\s\S]*?transformedExports: \{[\s\S]*?\};/;
           if (!typeOld.test(decl)) throw new Error('OpenNext type declaration changed; manual review required');
-          decl = decl.replace(typeOld, 'export declare function transformBuildCondition(conditionMap: unknown, condition: string): {\\n    transformedExports: unknown;');
-          const mapOld = /    exports\\?: \\{\\n        \\[key: string\\]: unknown;\\n    \\};\\n    imports\\?: \\{\\n        \\[key: string\\]: unknown;\\n    \\};/;
+          decl = decl.replace(typeOld, 'export declare function transformBuildCondition(conditionMap: unknown, condition: string): {\n    transformedExports: unknown;');
+          const mapOld = /    exports\?: \{\n        \[key: string\]: unknown;\n    \};\n    imports\?: \{\n        \[key: string\]: unknown;\n    \};/;
           if (!mapOld.test(decl)) throw new Error('OpenNext package declarations changed; manual review required');
-          decl = decl.replace(mapOld, '    exports?: unknown;\\n    imports?: unknown;');
+          decl = decl.replace(mapOld, '    exports?: unknown;\n    imports?: unknown;');
           fs.writeFileSync(dts, decl);
           NODE
           pnpm patch-commit "$RUNNER_TEMP/opennext-patch-edit" --patches-dir patches
