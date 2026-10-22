@@ -24,22 +24,18 @@ function executeReadOnlyCheck(
     const stderr: Buffer[] = [];
     let spawnError: string | null = null;
 
-    child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
-    child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
+    child.stdout?.on('data', (chunk: Buffer) => stdout.push(chunk));
+    child.stderr?.on('data', (chunk: Buffer) => stderr.push(chunk));
     child.on('error', (error) => {
       spawnError = error.message;
     });
     child.on('close', (code) => {
+      const capturedError = Buffer.concat(stderr).toString('utf8');
       resolve({
         componentName: job.componentName,
         status: code ?? 1,
         stdout: Buffer.concat(stdout).toString('utf8'),
-        stderr: [
-          Buffer.concat(stderr).toString('utf8'),
-          spawnError ?? '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
+        stderr: spawnError ? `${capturedError}\n${spawnError}` : capturedError,
       });
     });
   });
@@ -57,9 +53,7 @@ export async function runReadOnlyComponentPageChecks(
     execute = executeReadOnlyCheck,
   }: {
     concurrency?: number;
-    execute?: (
-      job: ReadOnlyPageCheck
-    ) => Promise<ReadOnlyPageCheckResult>;
+    execute?: (job: ReadOnlyPageCheck) => Promise<ReadOnlyPageCheckResult>;
   } = {}
 ): Promise<ReadOnlyPageCheckResult[]> {
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 2) {
@@ -82,7 +76,7 @@ export async function runReadOnlyComponentPageChecks(
     Array.from({ length: Math.min(concurrency, jobs.length) }, async () => {
       while (next < jobs.length) {
         const index = next++;
-        results[index] = await execute(jobs[index]);
+        results[index] = await execute(jobs[index]!);
       }
     })
   );
