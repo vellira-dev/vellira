@@ -69,7 +69,13 @@ jobs:
             const count = (text.match(/const fetchOptions = \{\s*cache: 'no-store',/g)||[]).length;
             if(count!==1) throw Error(relative+' must include one forced no-store, found '+count);
           }
-          const nativePkg = JSON.parse(fs.readFileSync(resolveFrom('apps/native-storybook','@storybook/react-native'),'utf8'));
+          const nativeCandidatePaths = [
+            path.resolve('apps/native-storybook/node_modules/@storybook/react-native/package.json'),
+            path.resolve('node_modules/@storybook/react-native/package.json'),
+          ];
+          const nativePkgFile = nativeCandidatePaths.find(candidate => fs.existsSync(candidate));
+          if (!nativePkgFile) throw Error('Cannot locate installed Storybook package metadata');
+          const nativePkg = JSON.parse(fs.readFileSync(nativePkgFile,'utf8'));
           if(nativePkg.version !== '10.7.0') throw Error('Storybook installed version '+nativePkg.version);
           const worktreeFiles = require('node:child_process')
             .execFileSync('git',['status','--porcelain','--untracked-files=all'],{encoding:'utf8'})
