@@ -27,6 +27,50 @@ change confirmation flows, or activate the public Pro form.
   bindings, errors, or invalid runtime mode fail closed as HTTP 503 when ON.
   No retry of a subscriber creation request is performed by the Worker.
 
+## Narrow the public subscriber-write entrypoints (review-only)
+
+The website Workers must retain their stable `workers.dev` origins for
+Cloudflare archive-before-activation, local/remote runtime identity, browser
+migration and recovery checks. Do **not** turn off `workers_dev` or put
+Cloudflare Access in front of the entire Worker: that would break existing
+diagnostic and staging smoke requests.
+
+A proposed upstream-write gate in the newsletter **server handler** rejects
+valid subscriber-create candidates arriving on any `*.workers.dev` hostname
+**before** reading `BUTTONDOWN_API_KEY`, obtaining Durable Object admission
+or calling Buttondown. It uses the incoming Request URL hostname, not
+user-controlled `Origin` or forwarding headers. It affects both the ordinary
+newsletter and future Pro purpose equally. Canonical public
+`https://vellira.dev` is unchanged; its ordinary signup path remains
+available according to existing consent and provider handling.
+
+The existing staging smoke still needs malformed-address and missing-consent
+requests on `vellira-website-staging.vellira.workers.dev`. Those requests
+must continue to return `400` **without any provider write**, whereas a
+well-formed address on `workers.dev` must fail with `503` and `no-store`
+before touching either the provider or global budget. A Pro OFF request
+also remains `503`, with no subscriber creation. This gate does not close
+any diagnostic GET/HEAD routes or static assets.
+
+**Security boundary:** This is a **provider-create protection**, not
+authentication, DDoS filtering, per-IP fairness or a verified global daily
+limit. It does not prevent incoming HTTP traffic or Worker execution on
+`workers.dev`, and it does not make the still-public canonical newsletter
+endpoint safe from malicious account-quota consumption. The zone WAF rule is
+currently Disabled; neither a zone rule nor existing local Cloudflare
+Rate Limiting bindings can guarantee a global provider account quota.
+
+**Rollout HOLD:** Draft code alone changes no remote traffic. Merging
+`apps/website/**` may automatically deploy staging and subsequently offer
+an independently protected production promotion. Review exact-head CI,
+unit tests for both `workers.dev` hosts and forwarded-header attempts,
+no-provider-write staging probes, and the normal website runtime/browser
+checks before authorizing any staging rollout. Production promotion remains
+a separate decision. Do not use real email addresses to test this boundary.
+Cloudflare Zero Trust onboarding is not necessary for this narrow control;
+future broader Access policies must be separately approved and evaluated
+against CI/recovery requirements.
+
 ## Limits and deliberately incomplete guarantees
 
 The first staging-only configuration uses two built-in Cloudflare Worker

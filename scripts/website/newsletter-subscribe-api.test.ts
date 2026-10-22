@@ -80,6 +80,93 @@ describe('newsletter subscribe API', () => {
     expect(subscribe).not.toHaveBeenCalled();
   });
 
+  it('blocks valid subscriber creates on workers.dev before secrets, admission, or provider calls', async () => {
+    const getApiKey = vi.fn(async () => 'test-buttondown-key');
+    const getAdmission = vi.fn(async () => undefined);
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const route = createNewsletterSubscribeHandler({
+      getApiKey,
+      getAdmission,
+      subscribe,
+      proInterestEnabled: true,
+    });
+
+    for (const origin of [
+      'https://vellira-website.vellira.workers.dev',
+      'https://vellira-website-staging.vellira.workers.dev',
+      'https://version-vellira-website.vellira.workers.dev',
+    ]) {
+      for (const purpose of [undefined, 'pro_launch'] as const) {
+        for (const withOrigin of [false, true]) {
+          const url = new URL('/api/newsletter/subscribe', origin);
+          const candidate = new Request(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(withOrigin
+                ? {
+                    Origin: origin,
+                    'X-Forwarded-Host': 'vellira.dev',
+                  }
+                : {}),
+            },
+            body: JSON.stringify({
+              email: 'candidate@example.invalid',
+              ...(purpose ? { purpose, consent: true } : {}),
+            }),
+          });
+          const response = await route(candidate);
+          expect(response.status).toBe(503);
+          expect(response.headers.get('Cache-Control')).toBe('no-store');
+          expect(await response.json()).toEqual({
+            ok: false,
+            code: 'temporarily_unavailable',
+            message: newsletterErrors.temporarily_unavailable,
+          });
+        }
+      }
+    }
+    expect(getApiKey).not.toHaveBeenCalled();
+    expect(getAdmission).not.toHaveBeenCalled();
+    expect(subscribe).not.toHaveBeenCalled();
+  });
+
+  it('retains invalid-email and missing-consent no-write staging probes', async () => {
+    const subscribe = vi.fn(async () => ({ ok: true }) as const);
+    const getApiKey = vi.fn(async () => 'test-buttondown-key');
+    const route = createNewsletterSubscribeHandler({
+      getApiKey,
+      subscribe,
+      proInterestEnabled: true,
+    });
+    const origin = 'https://vellira-website-staging.vellira.workers.dev';
+
+    for (const body of [
+      { email: 'not-an-email' },
+      { email: 'valid@example.invalid', purpose: 'pro_launch' },
+    ]) {
+      const response = await route(
+        new Request(origin + '/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: origin,
+          },
+          body: JSON.stringify(body),
+        })
+      );
+      expect(response.status).toBe(400);
+      const result = await response.json();
+      expect(result.ok).toBe(false);
+      expect(result.code).toBe(
+        body.purpose ? 'consent_required' : 'invalid_email'
+      );
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+    }
+    expect(getApiKey).not.toHaveBeenCalled();
+    expect(subscribe).not.toHaveBeenCalled();
+  });
+
   it('normalizes valid email and forwards a trusted Cloudflare IP', async () => {
     const subscribe = vi.fn(async () => ({ ok: true }) as const);
     const route = handler({ subscribe });
