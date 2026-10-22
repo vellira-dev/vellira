@@ -108,5 +108,4 @@ patchedDependencies:
   # Wrangler 4.136.3 bundles two legacy bare punycode imports in wrangler-dist/cli.js.
   # Route those exact bundled imports to the declared userland package until upstream removes them.
   'wrangler@4.136.3': patches/wrangler@4.136.3.patch
-  next@16.3.8: patches/next@16.3.8.patch
 allowUnusedPatches: false
