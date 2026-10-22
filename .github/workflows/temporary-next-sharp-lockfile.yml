@@ -51,8 +51,20 @@ jobs:
           const root = path.dirname(require.resolve('next/package.json', {paths: [path.resolve('apps/website')]}));
           const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
           if (pkg.version !== '16.4.2') throw new Error('Unexpected Next version: ' + pkg.version);
-          const sharpRoot = path.dirname(require.resolve('sharp/package.json', {paths: [root]}));
-          const sharp = JSON.parse(fs.readFileSync(path.join(sharpRoot, 'package.json'), 'utf8'));
+          const sharpEntry = require.resolve('sharp', {paths: [root]});
+          let sharpDir = path.dirname(sharpEntry);
+          let sharp = null;
+          for (let i = 0; i < 8; i++) {
+            const candidate = path.join(sharpDir, 'package.json');
+            if (fs.existsSync(candidate)) {
+              const found = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+              if (found.name === 'sharp') { sharp = found; break; }
+            }
+            const parent = path.dirname(sharpDir);
+            if (parent === sharpDir) break;
+            sharpDir = parent;
+          }
+          if (!sharp) throw new Error('Could not locate installed sharp package from Next resolver');
           if (sharp.version !== '0.35.5') throw new Error('Unsafe sharp resolved from Next: ' + sharp.version);
           for (const rel of [
             'dist/client/components/router-reducer/fetch-server-response.js',
