@@ -355,17 +355,28 @@ export function ComponentShowcase() {
               </div>
 
               <nav className={styles.toolbarLinks} aria-label='Component links'>
-                <DesignSystemLink appearance='bare' href={activeLinks.docs} target='_blank' rel='noreferrer'>
+                <DesignSystemLink
+                  appearance='bare'
+                  href={activeLinks.docs}
+                  target='_blank'
+                  rel='noreferrer'
+                >
                   Docs
                 </DesignSystemLink>
-                <DesignSystemLink appearance='bare'
+                <DesignSystemLink
+                  appearance='bare'
                   href={activeLinks.storybook}
                   target='_blank'
                   rel='noreferrer'
                 >
                   Storybook
                 </DesignSystemLink>
-                <DesignSystemLink appearance='bare' href={activeLinks.source} target='_blank' rel='noreferrer'>
+                <DesignSystemLink
+                  appearance='bare'
+                  href={activeLinks.source}
+                  target='_blank'
+                  rel='noreferrer'
+                >
                   Source
                 </DesignSystemLink>
               </nav>
