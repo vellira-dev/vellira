@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
           pnpm install --no-frozen-lockfile
-          test "$(node -p "require('./apps/website/node_modules/next/package.json').version")" = "16.4.2"
+          test "$(pnpm --filter @vellira-ui/website exec node -p "require('next/package.json').version")" = "16.4.2"
           pnpm patch next@16.4.2 --edit-dir "$RUNNER_TEMP/next-edit"
 
       - name: Reapply exact no-store behavior to Next's two router distributions
@@ -97,7 +97,7 @@ jobs:
             'dist/esm/client/components/router-reducer/fetch-server-response.js',
           ]) {
             if (!patch.includes(rel)) throw new Error('Patch missing ' + rel);
-            const installed = fs.readFileSync(path.join('apps/website/node_modules/next', rel), 'utf8');
+            const installed = fs.readFileSync(path.join(path.dirname(require.resolve('next/package.json', { paths: [path.resolve('apps/website')] })), rel), 'utf8');
             if (!/const fetchOptions = \{\s*cache: 'no-store',/.test(installed)) {
               throw new Error('Installed Next package missing no-store in ' + rel);
             }
