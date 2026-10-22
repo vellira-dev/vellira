@@ -4,51 +4,94 @@ on:
   pull_request:
     paths:
       - 'examples/workspace-starter/**'
+      - 'scripts/sync-workspace-starter-versions.cjs'
+      - 'scripts/sync-workspace-starter-versions.test.cjs'
       - '.github/workflows/workspace-starter-consumers.yml'
+      - '.github/workflows/workspace-starter-release-sync.yml'
       - 'apps/website/src/sections/home/ProductInterfaceDemo/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: workspace-starter-consumers-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  pin-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - name: Unit tests for safe and deterministic Starter pin synchronization
+        run: node --test scripts/sync-workspace-starter-versions.test.cjs
+      - name: Verify both Starter manifests and README agree with root release
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          node scripts/sync-workspace-starter-versions.cjs "$version" --check
+
   web-clean-room:
+    needs: pin-contract
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
         working-directory: examples/workspace-starter/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: '24'
+          node-version: 24.21.0
           registry-url: https://registry.npmjs.org
       - name: Install from published npm packages
         run: npm install --no-audit --no-fund
-      - name: Assert no workspace links for Vellira packages
+      - name: Assert all direct Vellira pins resolve from public npm
         run: |
-          node -e "const p=require('./node_modules/@vellira-ui/react/package.json'); if (!p.version || p.version !== '2.179.1') process.exit(1)"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifest = require('./package.json');
+          for (const name of ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons']) {
+            const installed = JSON.parse(fs.readFileSync(path.join('node_modules', name, 'package.json'), 'utf8'));
+            if (installed.version !== manifest.dependencies[name]) {
+              throw new Error(`${name}: ${installed.version} != ${manifest.dependencies[name]}`);
+            }
+          }
+          NODE
       - name: Typecheck and build Vite Starter
         run: npm run build
 
   expo-clean-room:
+    needs: pin-contract
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: examples/workspace-starter/native
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: '24'
+          node-version: 24.21.0
           registry-url: https://registry.npmjs.org
       - name: Install from published npm packages
         run: npm install --no-audit --no-fund
-      - name: Assert no workspace links for Vellira Native
+      - name: Assert Native Vellira pin resolves from public npm
         run: |
-          node -e "const p=require('./node_modules/@vellira-ui/react-native/package.json'); if (!p.version || p.version !== '2.179.1') process.exit(1)"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifest = require('./package.json');
+          const name = '@vellira-ui/react-native';
+          const installed = JSON.parse(fs.readFileSync(path.join('node_modules', name, 'package.json'), 'utf8'));
+          if (installed.version !== manifest.dependencies[name]) {
+            throw new Error(`${name}: ${installed.version} != ${manifest.dependencies[name]}`);
+          }
+          NODE
       - name: Typecheck Expo Starter
         run: npm run typecheck
       - name: Verify Expo configuration

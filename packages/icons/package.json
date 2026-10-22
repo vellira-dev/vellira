@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/icons",
-  "version": "2.184.1",
+  "version": "2.186.0",
   "description": "Cross-platform icon package for Vellira Design System",
   "keywords": [
     "vellira",
@@ -90,7 +90,7 @@
     "@types/react": "^19.3.0",
     "fast-glob": "^3.3.3",
     "lottie-web": "^5.13.0",
-    "react": "19.3.0",
+    "react": "19.3.1",
     "react-native": "0.86.3",
     "react-native-svg": "15.15.5"
   },
