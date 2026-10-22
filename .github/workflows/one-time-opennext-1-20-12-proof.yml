@@ -52,6 +52,29 @@ jobs:
           NODE
           pnpm install --no-frozen-lockfile
           pnpm install --frozen-lockfile
+          pnpm patch @opennextjs/cloudflare@1.20.12 --edit-dir "$RUNNER_TEMP/opennext-patch-edit"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const base = path.join(process.env.RUNNER_TEMP, 'opennext-patch-edit', 'dist/cli/build/utils');
+          const js = path.join(base, 'workerd.js');
+          const src = fs.readFileSync(js, 'utf8');
+          const needle = 'export function transformBuildCondition(conditionMap, condition) {';
+          if (src.split(needle).length !== 2) throw new Error('OpenNext workerd.js API changed: manual review required');
+          if (src.includes('typeof conditionMap !== "object"')) throw new Error('Upstream already includes fix: review patch removal');
+          fs.writeFileSync(js, src.replace(needle, needle + '\\n    if (typeof conditionMap !== "object" || conditionMap === null) {\\n        return { transformedExports: conditionMap, hasBuildCondition: false };\\n    }'));
+          const dts = path.join(base, 'workerd.d.ts');
+          let decl = fs.readFileSync(dts, 'utf8');
+          const typeOld = /export declare function transformBuildCondition\\(conditionMap: \\{[\\s\\S]*?\\}, condition: string\\): \\{[\\s\\S]*?transformedExports: \\{[\\s\\S]*?\\};/;
+          if (!typeOld.test(decl)) throw new Error('OpenNext type declaration changed; manual review required');
+          decl = decl.replace(typeOld, 'export declare function transformBuildCondition(conditionMap: unknown, condition: string): {\\n    transformedExports: unknown;');
+          const mapOld = /    exports\\?: \\{\\n        \\[key: string\\]: unknown;\\n    \\};\\n    imports\\?: \\{\\n        \\[key: string\\]: unknown;\\n    \\};/;
+          if (!mapOld.test(decl)) throw new Error('OpenNext package declarations changed; manual review required');
+          decl = decl.replace(mapOld, '    exports?: unknown;\\n    imports?: unknown;');
+          fs.writeFileSync(dts, decl);
+          NODE
+          pnpm patch-commit "$RUNNER_TEMP/opennext-patch-edit" --patches-dir patches
+          pnpm install --frozen-lockfile
 
       - name: Prove OpenNext shorthand exports compatibility
         shell: bash
@@ -93,6 +116,7 @@ jobs:
             apps/website/package.json
             pnpm-workspace.yaml
             pnpm-lock.yaml
+            patches/@opennextjs__cloudflare@1.20.12.patch
             apps/website/.open-next/local-runtime-contract.json
             apps/website/.open-next/asset-audit-preactivation.json
           if-no-files-found: warn
