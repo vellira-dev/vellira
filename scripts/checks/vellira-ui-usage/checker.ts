@@ -52,6 +52,7 @@ const CANONICAL_TEXT_LINK_SURFACES = new Set([
   'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx',
   'apps/website/src/sections/home/QuickStart/QuickStart.tsx',
   'apps/website/src/sections/home/FinalCta/FinalCta.tsx',
+  'apps/website/src/sections/home/ComponentShowcase/ComponentShowcase.tsx',
 ]);
 
 const NON_TEXT_INPUT_TYPES = new Set(['color', 'file', 'hidden', 'range']);
@@ -206,6 +207,8 @@ export function checkSourceFile(
         const inTextNavigation =
           filePath.includes('/QuickStart/') ||
           filePath.includes('/FinalCta/') ||
+          (filePath.includes('/ComponentShowcase/') &&
+            hasJsxAncestor(node, 'nav')) ||
           hasJsxAncestor(node, 'nav') ||
           (filePath.includes('/SiteFooter/') && hasJsxAncestor(node, 'footer'));
         const isRawLink = tagName === 'a' || nextLinkNames.has(tagName);
