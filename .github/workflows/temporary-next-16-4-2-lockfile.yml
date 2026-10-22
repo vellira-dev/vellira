@@ -1,0 +1,148 @@
+# TEMPORARY owner-reviewed branch-only lockfile/patch generation.
+# The successful job deletes this workflow before it pushes the result.
+name: Temporary Next.js 16.4.2 patch and lockfile proof
+
+on:
+  push:
+    branches:
+      - security/next-16-4-2-20261023
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.repository == 'vellira-dev/vellira' && github.ref == 'refs/heads/security/next-16-4-2-20261023'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact temporary repair branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+
+      - name: Set up approved pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          registry-url: https://registry.npmjs.org
+
+      - name: Regenerate resolution under normal supply-chain policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node -p "require('./apps/website/package.json').dependencies.next")" = "16.4.2"
+          grep -Fx "allowUnusedPatches: false" pnpm-workspace.yaml
+          if grep -q 'next@16.3.8' pnpm-workspace.yaml; then
+            echo 'Old version-specific Next patch is still configured' >&2
+            exit 1
+          fi
+          pnpm install --no-frozen-lockfile
+          test "$(node -p "require('./apps/website/node_modules/next/package.json').version")" = "16.4.2"
+          pnpm patch next@16.4.2 --edit-dir "$RUNNER_TEMP/next-edit"
+
+      - name: Reapply exact no-store behavior to Next's two router distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = path.join(process.env.RUNNER_TEMP, 'next-edit');
+          for (const rel of [
+            'dist/client/components/router-reducer/fetch-server-response.js',
+            'dist/esm/client/components/router-reducer/fetch-server-response.js',
+          ]) {
+            const file = path.join(root, rel);
+            const old = fs.readFileSync(file, 'utf8');
+            const pattern = /(\bconst fetchOptions = \{\r?\n)([ \t]*)(\/\/ Backwards compat for older browsers\.)/g;
+            const matches = [...old.matchAll(pattern)];
+            if (matches.length !== 1) {
+              throw new Error(rel + ': expected one unchanged fetchOptions anchor, found ' + matches.length);
+            }
+            const replacement = old.replace(
+              pattern,
+              (_whole, beginning, indent, comment) => beginning + indent + "cache: 'no-store',\n" + indent + comment
+            );
+            if (replacement === old) throw new Error(rel + ': expected change was absent');
+            fs.writeFileSync(file, replacement, 'utf8');
+            console.log('Patched exactly one client RSC fetchOptions object in ' + rel);
+          }
+          NODE
+          pnpm patch-commit "$RUNNER_TEMP/next-edit"
+
+      - name: Prove frozen install with all existing patches enforced
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const pkg = require('./apps/website/package.json');
+          const ws = fs.readFileSync('pnpm-workspace.yaml', 'utf8');
+          if (pkg.dependencies.next !== '16.4.2') throw new Error('Next version drift');
+          if (!ws.includes('next@16.4.2') || !ws.includes('patches/next@16.4.2.patch')) {
+            throw new Error('Missing new patchedDependencies mapping');
+          }
+          if (!ws.includes('allowUnusedPatches: false') || ws.includes('next@16.3.8')) {
+            throw new Error('Patch policy weakened or old Next mapping remains');
+          }
+          const patch = fs.readFileSync('patches/next@16.4.2.patch', 'utf8');
+          for (const rel of [
+            'dist/client/components/router-reducer/fetch-server-response.js',
+            'dist/esm/client/components/router-reducer/fetch-server-response.js',
+          ]) {
+            if (!patch.includes(rel)) throw new Error('Patch missing ' + rel);
+            const installed = fs.readFileSync(path.join('apps/website/node_modules/next', rel), 'utf8');
+            if (!/const fetchOptions = \{\s*cache: 'no-store',/.test(installed)) {
+              throw new Error('Installed Next package missing no-store in ' + rel);
+            }
+          }
+          console.log('VERIFIED: Next 16.4.2, both installed no-store sites, all patches, frozen lock');
+          NODE
+
+      - name: Retain exact dependency resolution evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: next-16-4-2-security-candidate
+          path: |
+            pnpm-lock.yaml
+            pnpm-workspace.yaml
+            patches/next@16.4.2.patch
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove temporary privileged workflow and commit only approved files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm patches/next@16.3.8.patch .github/workflows/temporary-next-16-4-2-lockfile.yml
+          git add pnpm-lock.yaml pnpm-workspace.yaml patches/next@16.4.2.patch
+          node <<'NODE'
+          const cp = require('node:child_process');
+          const files = cp.execFileSync('git', ['diff', '--cached', '--name-only'], { encoding: 'utf8' })
+            .trim().split('\n').filter(Boolean);
+          const allowlist = new Set([
+            '.github/workflows/temporary-next-16-4-2-lockfile.yml',
+            'patches/next@16.3.8.patch',
+            'patches/next@16.4.2.patch',
+            'pnpm-lock.yaml',
+            'pnpm-workspace.yaml',
+          ]);
+          for (const file of files) {
+            if (!allowlist.has(file)) throw new Error('Unexpected staged file ' + file);
+          }
+          for (const required of allowlist) {
+            if (!files.includes(required)) throw new Error('Missing required staged file ' + required);
+          }
+          console.log('Staged paths match the exact expected allowlist.');
+          NODE
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(security): preserve router no-store on Next.js 16.4.2"
+          git push origin HEAD:refs/heads/security/next-16-4-2-20261023
