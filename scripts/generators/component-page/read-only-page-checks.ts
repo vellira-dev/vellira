@@ -62,7 +62,11 @@ export async function runReadOnlyComponentPageChecks(
   }
 
   for (const job of jobs) {
-    if (!job.componentName || !job.executable || !job.args.includes('--check')) {
+    if (
+      !job.componentName ||
+      !job.executable ||
+      !job.args.includes('--check')
+    ) {
       throw new Error('Parallel component page jobs must be read-only checks.');
     }
   }
