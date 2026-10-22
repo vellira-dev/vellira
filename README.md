@@ -47,6 +47,23 @@ Accessibility-minded • Cross-platform • Modular
 
 ---
 
+## Try the Dashboard Starter
+
+Start with a working application built from published Vellira Core packages.
+The free, MIT-licensed Dashboard Starter is available for **React Web** and
+**React Native / Expo**, with editable projects, themes and local persistence.
+No Vellira account, backend or Pro subscription is needed.
+
+- [Try the interactive Web demo](https://vellira.dev/demo/dashboard)
+- [Get the Web and React Native source, setup and limitations](./examples/workspace-starter/README.md)
+
+The Starter uses fictional data and browser/device storage. It does **not**
+include authentication, a persistence API, billing or multiuser collaboration.
+Validate accessibility, security and real-device behavior before adapting it
+for production use.
+
+---
+
 ## React + React Native, one shared foundation
 
 Install the renderer you need:
@@ -100,9 +117,18 @@ handling, accessibility props, and rendering stay platform-appropriate.
 
 ## What is Vellira?
 
-Vellira is an open-source cross-platform design system for React and React Native.
+Vellira is an open-source, TypeScript-first design system and developer tooling
+for React and React Native. It combines shared design tokens, reusable
+interaction logic, platform-native components and public quality checks.
 
-It combines shared design tokens, reusable interaction logic and platform-native components into a consistent developer experience.
+**Available today:** Core components and packages, documentation, Storybook,
+machine-readable component metadata, quality validation and the free
+[Dashboard Starter](./examples/workspace-starter/README.md).
+
+**Longer-term direction:** governed UI workflows that help people and AI create,
+validate and maintain consistent interfaces. End-to-end autonomous UI
+production, Vellira Pro and Vellira Studio are **not** shipping features of the
+public Core packages today.
 
 ---
 
@@ -426,18 +452,21 @@ Explore every component interactively.
 
 ## Roadmap
 
-The first public release is just the beginning.
+The free [Dashboard Starter](./examples/workspace-starter/README.md) is
+available today for React Web and React Native / Expo.
 
-Upcoming work includes:
+Work planned or in development includes:
 
 - More components
-- React Native expansion
+- React Native expansion and real-device validation
 - Advanced data entry components
-- Starter templates
+- More starter examples
 - Figma resources
 - More design tokens
-- AI-powered developer tools
+- Governed UI workflows and AI-assisted developer tools
 - Performance optimizations
+
+Roadmap items are not current public Core capabilities.
 
 ---
 
