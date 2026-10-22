@@ -42,8 +42,8 @@
     "lottie-web": "^5.13.0",
     "motion": "^13.4.1",
     "next": "16.3.8",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "react-native-web": "^0.21.2",
     "shiki": "^4.4.2"
   },
