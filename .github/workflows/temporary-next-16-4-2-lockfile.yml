@@ -136,7 +136,12 @@ jobs:
           for (const file of files) {
             if (!allowlist.has(file)) throw new Error('Unexpected staged file ' + file);
           }
-          for (const required of allowlist) {
+          for (const required of [
+            '.github/workflows/temporary-next-16-4-2-lockfile.yml',
+            'patches/next@16.4.2.patch',
+            'pnpm-lock.yaml',
+            'pnpm-workspace.yaml',
+          ]) {
             if (!files.includes(required)) throw new Error('Missing required staged file ' + required);
           }
           console.log('Staged paths match the exact expected allowlist.');
