@@ -65,7 +65,7 @@
     "@vellira-ui/types": "workspace:*"
   },
   "devDependencies": {
-    "@storybook/react-native": "^10.6.0",
+    "@storybook/react-native": "^10.7.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "^5.0.5",
