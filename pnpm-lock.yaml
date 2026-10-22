@@ -37,7 +37,7 @@ overrides:
   qs: 6.16.0
   vue@>=3.5.0 <3.5.42: 3.5.42
   shell-quote@>=1.8.4 <1.11.0: 1.12.0
-  sharp: 0.35.4
+  sharp: 0.35.5
   undici@<7: 6.28.1
   undici@>=7 <8: 7.29.1
   ip-address: 10.7.1
@@ -54,7 +54,7 @@ overrides:
 patchedDependencies:
   '@opennextjs/cloudflare@1.20.6': 4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115
   braces@3.0.3: cecdb90ea3f216ffb13f31d757e9e26239b040179ba9235326e1a6041cb3b055
-  next@16.3.8: 496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b
+  next@16.4.2: dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6
   node-forge@1.4.0: 4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0
   sprintf-js@1.0.3: 5ab824202ac5896cae9cee1075a8ca1311ee7c4830bc0b16a2d06553c3707b36
   tr46@0.0.3: 79bdc14cbadfa8868f5ee3574fa637e8f7b9f1fb8fec3d79730d548d680f0131
@@ -559,8 +559,8 @@ importers:
         specifier: ^13.4.1
         version: 13.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       next:
-        specifier: 16.3.8
-        version: 16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1)
+        specifier: 16.4.2
+        version: 16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1)
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -582,7 +582,7 @@ importers:
         version: 16.3.6(@mdx-js/loader@3.1.1(supports-color@10.2.2)(webpack@5.108.3(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.23)(uglify-js@3.19.3)))(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.1))
       '@opennextjs/cloudflare':
         specifier: 1.20.6
-        version: 1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2))
+        version: 1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2))
       '@playwright/test':
         specifier: 1.61.1
         version: 1.61.1
@@ -734,7 +734,7 @@ importers:
     dependencies:
       '@react-native-picker/picker':
         specifier: '>=2'
-        version: 2.11.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
+        version: 2.11.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2))(react@19.3.1)
       '@vellira-ui/core':
         specifier: workspace:*
         version: link:../core
@@ -3158,8 +3158,8 @@ packages:
   '@neoconfetti/react@1.0.0':
     resolution: {integrity: sha512-klcSooChXXOzIm+SE5IISIAn3bYzYfPjbX7D7HoqZL84oAfgREeSg5vSIaSFH+DaGzzvImTyWe1OyrJ67vik4A==}
 
-  '@next/env@16.3.8':
-    resolution: {integrity: sha512-Al9zqHVV7TJv0eFuOU4U7Lvv74PTih4Ch63sk2xCIpSTkE3udFnaOcnzP2lQVymiL7yS9Cj2iClUXlR3EQ5sEw==}
+  '@next/env@16.4.2':
+    resolution: {integrity: sha512-nTUTFH7G5/J/fmpkjVLegOkqyKOP0CEsJcMsyO4UCYeN1su+YMW/MfaSErnJskL7XM+UDK6aTvslxsRCyya/sA==}
 
   '@next/eslint-plugin-next@16.3.6':
     resolution: {integrity: sha512-jowwDX+7DOlDIjJLgTMxudw+k37QnWu1JkZLkSi9MaJBfDYcfhAPMKBhXL0idYzFN/AGg//axnOR4cLkHX/Rng==}
@@ -3175,54 +3175,54 @@ packages:
       '@mdx-js/react':
         optional: true
 
-  '@next/swc-darwin-arm64@16.3.8':
-    resolution: {integrity: sha512-2JPRMh2nmQG5CiL7cXGL9AGwnPWJQ//cTtAUCT+w511QHk79SYz3LGv/pc5X643B/WEO0rvu3Yww0hqwt3kgeA==}
+  '@next/swc-darwin-arm64@16.4.2':
+    resolution: {integrity: sha512-ONkhFvZNFWlsEHOM/81AtxdyuJP2KRYKYR0JxPwvcu1AuPMMMgcL+wW2luldJvMtZwKtUxoSkCychW5wIeoYSw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@next/swc-darwin-x64@16.3.8':
-    resolution: {integrity: sha512-GZtCCOBKJ4leVIT/Th0llWKhD1ca92lzbQiS5R5ON9QkoiFnilFsebDae1JU2a3HWoKMEmEZWGs1AGLavVM72Q==}
+  '@next/swc-darwin-x64@16.4.2':
+    resolution: {integrity: sha512-luPCMbOsCoaF+kXJEUjmjmOZg1lC3BflhmUu+ZmW4tBu2vW/4AXak8JBFvePizGkxVmNiAw/r9ra+6UviCWtWQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@next/swc-linux-arm64-gnu@16.3.8':
-    resolution: {integrity: sha512-O659ygeQYqneJ1fBKMpFxIFqYkYswu8IAS1OCKK/4f3ZgJJm1dRz4fVJZRi/kLLWjnBKnebOePA4WNv+sV1pVA==}
+  '@next/swc-linux-arm64-gnu@16.4.2':
+    resolution: {integrity: sha512-xhwFTAncJyaCNy5KqKKuKaIIdCy1/1ZV1s5S1G0hhT7wGMkDTlfJ6aQbfRFnIG/s3/kDrxQ8aycVe+c5QnP8ow==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@next/swc-linux-arm64-musl@16.3.8':
-    resolution: {integrity: sha512-dSjKSyWpzxoO1d3DIZZcP4XJcNaKeLmxQMFOiYl5vuBRMmweIqnAhty8tAmRsvTss779cK1FtYnDMj40e4TQlg==}
+  '@next/swc-linux-arm64-musl@16.4.2':
+    resolution: {integrity: sha512-T1PNmfbPcxr5ndtWUL/3wQtLXsz808lq6sc2GrNT5k2oquF7UyqZddHSuAewHVsWsGXe6nsl9HoN1YNriVjuSg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@next/swc-linux-x64-gnu@16.3.8':
-    resolution: {integrity: sha512-lbqOuz3RPRcv+o9msNsJw5x4+Y1ZwPTs6vmL6DCf7i0fZfvng/F59wyeDwqHIvV0mK//RBy/jJkZ+nCKsSMXjQ==}
+  '@next/swc-linux-x64-gnu@16.4.2':
+    resolution: {integrity: sha512-N9cDUOCGtkJG5PNKDFZUF3xXndrJJcpLp121uAGjIGvO/U2p9tfdNOM9htj7+5f72l0m8rMw/cvYacUJBQoudg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@next/swc-linux-x64-musl@16.3.8':
-    resolution: {integrity: sha512-+316WswI8ScVgZeUd+1KGaXkHhaYQzCjvH/05TZSpJ8zBizb1a4G7DtO7F12jcBIqMOtsz9ji1t48fmKtzqsGA==}
+  '@next/swc-linux-x64-musl@16.4.2':
+    resolution: {integrity: sha512-yY2uh1YhX6ufuYy2FCbw1dqblbhI57GLYAJfCkqD9auTv6pLrH67Uccjc3QMKBeCYAG6lkgu08ExmX1bbjejjQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@next/swc-win32-arm64-msvc@16.3.8':
-    resolution: {integrity: sha512-ji0gd4kMYUxO+1fJBIbiBVRCjzG/lloiyCccnlebvb1ZJ5qXCPZqYg4Jl1DrrixnWNMKylzgpmMWx0yNDYXlzw==}
+  '@next/swc-win32-arm64-msvc@16.4.2':
+    resolution: {integrity: sha512-j/ArWRIHpMMB6wYLMhr2puTguBt70lNU/Cmjl9p6dTDE8DGknYJMP9PdwPk2dqpCNL/KIX9yfngDvIesxJPmsg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
 
-  '@next/swc-win32-x64-msvc@16.3.8':
-    resolution: {integrity: sha512-WcTlaKt/TWkh5kUjdJcUmB1XgZ+1c6fz4Y9fDHL73YNSdGaUWjceeWrrlwF0nv19iABYWC4iAq1oX1w4Bn0vfg==}
+  '@next/swc-win32-x64-msvc@16.4.2':
+    resolution: {integrity: sha512-AA4edyWHDko3NCSo0x6GomsdgFb0oR1J3MXU1b5xt6FRFg4AucrMPW3S0hCe/9onU0O1BbpGQBsqo1r0Gneu1g==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -6040,11 +6040,6 @@ packages:
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
-  baseline-browser-mapping@2.11.25:
-    resolution: {integrity: sha512-gMmEShwwq7FJqMwvfRwvCl00v4kN+KOfJqXn+f4nrufak5gNHJOksd/60Dvjuz7sI8Y5WiSFBa8FEYr+zoyqCw==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
-
   baseline-browser-mapping@2.11.30:
     resolution: {integrity: sha512-YJs6Pz17RMNv8HoyKREtCY38E3BV1nPkWVmIb+XN1uHC1Vqt3KZCH/uJH9ZKRoiKb/icZ6tvehyee6RZNbFfRA==}
     engines: {node: '>=6.0.0'}
@@ -6175,9 +6170,6 @@ packages:
   camelcase@6.3.0:
     resolution: {integrity: sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==}
     engines: {node: '>=10'}
-
-  caniuse-lite@1.0.30001810:
-    resolution: {integrity: sha512-TITQPUkaz+aVk5GL6NhOdwk1aEaNTSDPsGFWrTuhKGtjTF70jL/Oht2W4c6rXUe5fu7Ie19VIahAXHIIiWWNeg==}
 
   caniuse-lite@1.0.30001816:
     resolution: {integrity: sha512-+8Yx7BXCoqk6IF8yTicjfUR6D/ldJzdlsodlEOiOSPmhK844WIgk67/zIQaGAOxNkZyyvBlrRFnLvqKIoqbAFw==}
@@ -9132,8 +9124,8 @@ packages:
     resolution: {integrity: sha512-eonl3sLUha+S1GzTPxychyhnUzKyeQkZ7jLjKrBagJgPla13F+uQ71HgpFefyHgqrjEbCPkDArxYsjY8/+gLKA==}
     engines: {node: '>= 0.4.0'}
 
-  next@16.3.8:
-    resolution: {integrity: sha512-U7QEZaTini6wKrb8A8hqLLqYQyCetegKjCpJOyxk642vWoMoU1x5PyZCJFvgYgiptA8xc5j/9xYlZFO7w9Sjmw==}
+  next@16.4.2:
+    resolution: {integrity: sha512-r+oBJojfefUjOiWkBhXgLS+igxX/7BWyK59uHnyOyplMSLtBZ+QLP3okrdYTbrfrbrmNTVWLBPaHDX9KRaIt3w==}
     engines: {node: '>=20.9.0'}
     hasBin: true
     peerDependencies:
@@ -9977,10 +9969,6 @@ packages:
       react: ^19.2.8
       react-dom: ^19.2.8
       webpack: ^5.59.0
-
-  react@19.3.0:
-    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
-    engines: {node: '>=0.10.0'}
 
   react@19.3.1:
     resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
@@ -14648,7 +14636,7 @@ snapshots:
 
   '@neoconfetti/react@1.0.0': {}
 
-  '@next/env@16.3.8': {}
+  '@next/env@16.4.2': {}
 
   '@next/eslint-plugin-next@16.3.6(eslint@9.39.5(jiti@2.6.1)(supports-color@10.2.2))':
     dependencies:
@@ -14664,28 +14652,28 @@ snapshots:
       '@mdx-js/loader': 3.1.1(supports-color@10.2.2)(webpack@5.108.3(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.23)(uglify-js@3.19.3))
       '@mdx-js/react': 3.1.1(@types/react@19.3.0)(react@19.3.1)
 
-  '@next/swc-darwin-arm64@16.3.8':
+  '@next/swc-darwin-arm64@16.4.2':
     optional: true
 
-  '@next/swc-darwin-x64@16.3.8':
+  '@next/swc-darwin-x64@16.4.2':
     optional: true
 
-  '@next/swc-linux-arm64-gnu@16.3.8':
+  '@next/swc-linux-arm64-gnu@16.4.2':
     optional: true
 
-  '@next/swc-linux-arm64-musl@16.3.8':
+  '@next/swc-linux-arm64-musl@16.4.2':
     optional: true
 
-  '@next/swc-linux-x64-gnu@16.3.8':
+  '@next/swc-linux-x64-gnu@16.4.2':
     optional: true
 
-  '@next/swc-linux-x64-musl@16.3.8':
+  '@next/swc-linux-x64-musl@16.4.2':
     optional: true
 
-  '@next/swc-win32-arm64-msvc@16.3.8':
+  '@next/swc-win32-arm64-msvc@16.4.2':
     optional: true
 
-  '@next/swc-win32-x64-msvc@16.3.8':
+  '@next/swc-win32-x64-msvc@16.4.2':
     optional: true
 
   '@noble/ciphers@1.3.0': {}
@@ -14793,7 +14781,7 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 29.0.1
 
-  '@opennextjs/aws@4.1.4(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)':
+  '@opennextjs/aws@4.1.4(next@16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@aws-sdk/client-cloudfront': 3.984.0
@@ -14809,24 +14797,24 @@ snapshots:
       cookie: 1.1.1
       esbuild: 0.25.4
       express: 5.2.1(supports-color@10.2.2)
-      next: 16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1)
+      next: 16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1)
       path-to-regexp: 6.3.0
       urlpattern-polyfill: 10.1.0
       yaml: 2.9.0
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2))':
+  '@opennextjs/cloudflare@1.20.6(patch_hash=4286809a7355f1088a5a7c070b16eb83b52d4ef194198320b8f965854f216115)(next@16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)(wrangler@4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
-      '@opennextjs/aws': 4.1.4(next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)
+      '@opennextjs/aws': 4.1.4(next@16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1))(supports-color@10.2.2)
       ci-info: 4.4.0
       cloudflare: 4.5.0
       comment-json: 4.6.2
       enquirer: 2.4.1
       glob: 12.0.0
-      next: 16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1)
+      next: 16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1)
       ts-tqdm: 0.8.6
       wrangler: 4.136.3(patch_hash=5a2850814777b09a50bfa9f792ee2c5bfb3bae97a46bb08ee76389ebe868351e)(@types/node@26.6.2)
       yargs: 18.1.0
@@ -15151,11 +15139,6 @@ snapshots:
 
   '@react-native-community/slider@5.2.0': {}
 
-  '@react-native-picker/picker@2.11.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)':
-    dependencies:
-      react: 19.3.0
-      react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
-
   '@react-native-picker/picker@2.11.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2))(react@19.3.1)':
     dependencies:
       react: 19.3.1
@@ -15292,15 +15275,6 @@ snapshots:
   '@react-native/normalize-colors@0.74.89': {}
 
   '@react-native/normalize-colors@0.86.3': {}
-
-  '@react-native/virtualized-lists@0.86.3(@types/react@19.3.0)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)':
-    dependencies:
-      invariant: 2.2.4
-      nullthrows: 1.1.1
-      react: 19.3.0
-      react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
-    optionalDependencies:
-      '@types/react': 19.3.0
 
   '@react-native/virtualized-lists@0.86.3(@types/react@19.3.0)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2))(react@19.3.1)':
     dependencies:
@@ -17628,8 +17602,6 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  baseline-browser-mapping@2.11.25: {}
-
   baseline-browser-mapping@2.11.30: {}
 
   basic-ftp@6.2.1: {}
@@ -17718,8 +17690,8 @@ snapshots:
 
   browserslist@4.28.9:
     dependencies:
-      baseline-browser-mapping: 2.11.25
-      caniuse-lite: 1.0.30001810
+      baseline-browser-mapping: 2.11.30
+      caniuse-lite: 1.0.30001816
       electron-to-chromium: 1.5.427
       node-releases: 2.0.55
       update-browserslist-db: 1.3.3(browserslist@4.28.9)
@@ -17784,8 +17756,6 @@ snapshots:
   camelcase@5.3.1: {}
 
   camelcase@6.3.0: {}
-
-  caniuse-lite@1.0.30001810: {}
 
   caniuse-lite@1.0.30001816: {}
 
@@ -21480,25 +21450,25 @@ snapshots:
 
   netmask@2.1.1: {}
 
-  next@16.3.8(patch_hash=496359c1eea7bd3e9f4a3cbe5ae080c6f92742c2a59d18fcb774d832108d4b0b)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1):
+  next@16.4.2(patch_hash=dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6)(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.61.1)(@types/node@26.6.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.104.1):
     dependencies:
-      '@next/env': 16.3.8
+      '@next/env': 16.4.2
       '@swc/helpers': 0.5.23
-      baseline-browser-mapping: 2.11.25
-      caniuse-lite: 1.0.30001810
+      baseline-browser-mapping: 2.11.30
+      caniuse-lite: 1.0.30001816
       postcss: 8.5.23
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       styled-jsx: 5.1.6(@babel/core@7.29.7(supports-color@10.2.2))(react@19.3.1)
     optionalDependencies:
-      '@next/swc-darwin-arm64': 16.3.8
-      '@next/swc-darwin-x64': 16.3.8
-      '@next/swc-linux-arm64-gnu': 16.3.8
-      '@next/swc-linux-arm64-musl': 16.3.8
-      '@next/swc-linux-x64-gnu': 16.3.8
-      '@next/swc-linux-x64-musl': 16.3.8
-      '@next/swc-win32-arm64-msvc': 16.3.8
-      '@next/swc-win32-x64-msvc': 16.3.8
+      '@next/swc-darwin-arm64': 16.4.2
+      '@next/swc-darwin-x64': 16.4.2
+      '@next/swc-linux-arm64-gnu': 16.4.2
+      '@next/swc-linux-arm64-musl': 16.4.2
+      '@next/swc-linux-x64-gnu': 16.4.2
+      '@next/swc-linux-x64-musl': 16.4.2
+      '@next/swc-win32-arm64-msvc': 16.4.2
+      '@next/swc-win32-x64-msvc': 16.4.2
       '@playwright/test': 1.61.1
       babel-plugin-react-compiler: 1.0.0
       sass: 1.104.1
@@ -22334,51 +22304,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2):
-    dependencies:
-      '@react-native/assets-registry': 0.86.3
-      '@react-native/codegen': 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))
-      '@react-native/community-cli-plugin': 0.86.3(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(supports-color@10.2.2)
-      '@react-native/gradle-plugin': 0.86.3
-      '@react-native/js-polyfills': 0.86.3
-      '@react-native/normalize-colors': 0.86.3
-      '@react-native/virtualized-lists': 0.86.3(@types/react@19.3.0)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
-      abort-controller: 3.0.0
-      anser: 1.4.10
-      ansi-regex: 5.0.1
-      babel-plugin-syntax-hermes-parser: 0.36.0
-      base64-js: 1.5.1
-      commander: 12.1.0
-      flow-enums-runtime: 0.0.6
-      hermes-compiler: 250829098.0.17
-      invariant: 2.2.4
-      memoize-one: 5.2.1
-      metro-runtime: 0.84.5
-      metro-source-map: 0.84.5(supports-color@10.2.2)
-      nullthrows: 1.1.1
-      pretty-format: 29.7.0
-      promise: 8.3.0
-      react: 19.3.0
-      react-devtools-core: 6.1.5
-      react-refresh: 0.14.2
-      regenerator-runtime: 0.13.11
-      scheduler: 0.27.0
-      semver: 7.8.5
-      stacktrace-parser: 0.1.11
-      tinyglobby: 0.2.17
-      whatwg-fetch: 3.6.20
-      ws: 7.5.13
-      yargs: 17.7.3
-    optionalDependencies:
-      '@types/react': 19.3.0
-    transitivePeerDependencies:
-      - '@babel/core'
-      - '@react-native-community/cli'
-      - '@react-native/metro-config'
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-
   react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2):
     dependencies:
       '@react-native/assets-registry': 0.86.3
@@ -22445,8 +22370,6 @@ snapshots:
       webpack: 5.108.3(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.23)(uglify-js@3.19.3)
       webpack-sources: 3.5.1
     optional: true
-
-  react@19.3.0: {}
 
   react@19.3.1: {}
 
