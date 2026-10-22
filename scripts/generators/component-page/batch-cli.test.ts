@@ -22,6 +22,7 @@ function fixture() {
   for (const file of [
     'check-component-pages.ts',
     'generate-component-pages.ts',
+    'read-only-page-checks.ts',
     'helpers/command.ts',
   ]) {
     fs.copyFileSync(
