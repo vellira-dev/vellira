@@ -68,7 +68,7 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
           jq '{authorized: .changes, requiresOwnerReview: .ownerReview, alreadyPatched: .alreadyPatched}' \
             .runtime-candidate/plan.json >> "$GITHUB_STEP_SUMMARY"
-      - name: Verify source main has not advanced and no candidate PR is open
+      - name: Inspect authenticated existing runtime candidate
         if: steps.plan.outputs.count != '0'
         id: authority
         env:
@@ -78,11 +78,30 @@ jobs:
           set -euo pipefail
           current="$(gh api "repos/${REPOSITORY}/branches/main" --jq '.commit.sha')"
           test "$current" = "$GITHUB_SHA"
-          existing="$(gh api --paginate "repos/${REPOSITORY}/pulls?state=open&per_page=100" | jq -s \
-            '[.[][] | select(.title == "chore(security): propose bounded runtime fixes" and .base.ref == "main")] | length')"
-          if [[ "$existing" != '0' ]]; then
+          branch="automation/runtime-security-${GITHUB_SHA:0:12}"
+          gh api "repos/${REPOSITORY}/git/matching-refs/heads/${branch}" \
+            > .runtime-candidate/refs.json
+          gh api --paginate "repos/${REPOSITORY}/pulls?state=open&per_page=100" \
+            | jq -s 'add' > .runtime-candidate/pulls.json
+          branch_sha="$(jq -r --arg branch "refs/heads/${branch}" \
+            '[.[] | select(.ref == $branch) | .object.sha] | if length > 1 then error("ambiguous candidate branch") else .[0] // empty end' \
+            .runtime-candidate/refs.json)"
+          if [[ -n "$branch_sha" ]]; then
+            gh api "repos/${REPOSITORY}/commits/${branch_sha}" \
+              > .runtime-candidate/commit.json
+          else
+            echo null > .runtime-candidate/commit.json
+          fi
+          node scripts/ci/dependabot-runtime-candidate-authority.mjs \
+            .runtime-candidate/refs.json \
+            .runtime-candidate/pulls.json \
+            .runtime-candidate/commit.json \
+            "$REPOSITORY" "$GITHUB_SHA" \
+            > .runtime-candidate/authority.json
+          if jq -e '.authenticatedPR != null' .runtime-candidate/authority.json >/dev/null; then
             echo 'open=true' >> "$GITHUB_OUTPUT"
-            echo 'Runtime candidate PR already open; not creating a duplicate.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Authenticated same-repository candidate PR exists; no duplicate needed.' \
+              >> "$GITHUB_STEP_SUMMARY"
           else
             echo 'open=false' >> "$GITHUB_OUTPUT"
           fi
@@ -132,21 +151,63 @@ jobs:
           private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
-      - name: Publish Draft candidate only; never auto-merge
+      - name: Publish or recover an authenticated Draft candidate
         if: steps.plan.outputs.count != '0' && steps.authority.outputs.open == 'false'
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+          current="$(gh api "repos/${REPOSITORY}/branches/main" --jq '.commit.sha')"
+          test "$current" = "$GITHUB_SHA"
           branch="automation/runtime-security-${GITHUB_SHA:0:12}"
-          if gh api "repos/${REPOSITORY}/git/ref/heads/${branch}" >/dev/null 2>&1; then
-            echo 'Exact main already has a runtime candidate branch.' >> "$GITHUB_STEP_SUMMARY"
+          expected_tree="$(git rev-parse 'HEAD^{tree}')"
+          # Read the branch and PR again: another run may have published first.
+          read_state() {
+            gh api "repos/${REPOSITORY}/git/matching-refs/heads/${branch}" \
+              > .runtime-candidate/refs.json
+            gh api --paginate "repos/${REPOSITORY}/pulls?state=open&per_page=100" \
+              | jq -s 'add' > .runtime-candidate/pulls.json
+            branch_sha="$(jq -r --arg branch "refs/heads/${branch}" \
+              '[.[] | select(.ref == $branch) | .object.sha] | if length > 1 then error("ambiguous candidate branch") else .[0] // empty end' \
+              .runtime-candidate/refs.json)"
+            if [[ -n "$branch_sha" ]]; then
+              gh api "repos/${REPOSITORY}/commits/${branch_sha}" \
+                > .runtime-candidate/commit.json
+            else
+              echo null > .runtime-candidate/commit.json
+            fi
+            node scripts/ci/dependabot-runtime-candidate-authority.mjs \
+              .runtime-candidate/refs.json \
+              .runtime-candidate/pulls.json \
+              .runtime-candidate/commit.json \
+              "$REPOSITORY" "$GITHUB_SHA" "$expected_tree" \
+              > .runtime-candidate/authority.json
+          }
+          read_state
+          remote_sha="$(jq -r '.branchSha // empty' .runtime-candidate/authority.json)"
+          if [[ -z "$remote_sha" ]]; then
+            git remote set-url origin \
+              "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+            git push origin "HEAD:refs/heads/${branch}"
+          else
+            echo 'Existing candidate branch is verified and recoverable.' \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # A leftover branch without a PR must be retried, not skipped.
+          read_state
+          remote_sha="$(jq -r '.branchSha // empty' .runtime-candidate/authority.json)"
+          test -n "$remote_sha"
+          if jq -e '.authenticatedPR != null' .runtime-candidate/authority.json >/dev/null; then
+            echo 'Exact candidate PR already exists and matches generated tree.' \
+              >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          cat > .runtime-candidate/pr-body.md <<'BODY'
-          <!-- vellira-change-intent:v1:bounded-runtime-security-automation -->
-
+          printf '<!-- vellira-change-intent:v1:bounded-runtime-security-automation -->\n\n' \
+            > .runtime-candidate/pr-body.md
+          printf '<!-- vellira-runtime-security-candidate:v1 source-sha=%s candidate-sha=%s -->\n\n' \
+            "$GITHUB_SHA" "$remote_sha" >> .runtime-candidate/pr-body.md
+          cat >> .runtime-candidate/pr-body.md <<'BODY'
           Proposed by the bounded runtime security candidate workflow on exact main. Only allowlisted same-major transitive pnpm overrides and the regenerated lockfile are authorized.
 
           - The authoritative source is the live authenticated Dependabot alert feed.
@@ -156,8 +217,10 @@ jobs:
           BODY
           jq -r '.changes[] | "- \(.name): \(.from) -> \(.to) (alerts \(.alertNumbers | join(", ")))"' \
             .runtime-candidate/plan.json >> .runtime-candidate/pr-body.md
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push origin "HEAD:refs/heads/${branch}"
           gh pr create --repo "$REPOSITORY" --base main --head "$branch" \
             --title 'chore(security): propose bounded runtime fixes' \
             --body-file .runtime-candidate/pr-body.md --draft
+          # If creation fails after push, a future run will recover.
+          read_state
+          jq -e '.authenticatedPR.number > 0' .runtime-candidate/authority.json \
+            >/dev/null
