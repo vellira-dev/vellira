@@ -37,7 +37,7 @@
 }
 
 .eyebrow {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -55,7 +55,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -168,7 +168,7 @@
 .toolbarLinks a::after {
   display: inline-block;
   margin-left: 5px;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   content: '↗';
   transition: transform 160ms ease;
 }
@@ -671,7 +671,7 @@
 }
 
 .pageEyebrow {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -709,7 +709,7 @@
 .activityItem svg {
   width: 18px;
   height: 18px;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
 }
 
 .activityItem strong {

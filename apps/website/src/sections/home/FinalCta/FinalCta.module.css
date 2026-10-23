@@ -21,7 +21,7 @@
 
 .eyebrow {
   margin-bottom: var(--space-12);
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
@@ -41,13 +41,7 @@
 .title span {
   display: block;
   margin-top: var(--space-2);
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-400),
-    var(--color-primary-600)
-  );
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-brand);
 }
 
 .description {
@@ -145,7 +139,7 @@
 }
 
 .commandCapsule > span {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-family: var(--font-family-regular);
   font-size: var(--font-size-sm);
 }

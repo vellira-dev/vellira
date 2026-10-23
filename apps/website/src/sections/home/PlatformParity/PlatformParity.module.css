@@ -38,7 +38,7 @@
 }
 
 .eyebrow {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -55,7 +55,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -283,7 +283,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   gap: 12px;
 }
 
@@ -473,7 +473,7 @@
 }
 
 .featuresLabel {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -601,7 +601,7 @@
 }
 
 .features li small {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
