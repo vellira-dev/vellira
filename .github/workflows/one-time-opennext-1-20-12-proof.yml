@@ -97,6 +97,22 @@ jobs:
           pnpm exec turbo run build --filter='@vellira-ui/website^...'
           pnpm --dir apps/website run sync:brand
           pnpm --dir apps/website run build:opennext
+          mkdir -p apps/website/.open-next
+          {
+            echo '=== Next build identity ==='
+            cat apps/website/.next/BUILD_ID
+            echo
+            echo '=== OpenNext cache directory layout ==='
+            find apps/website/.open-next/cache -maxdepth 5 -type f | sort | head -200 || true
+            echo '=== Next route manifest samples ==='
+            node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const root = 'apps/website/';
+          const manifest = JSON.parse(fs.readFileSync(root + '.next/prerender-manifest.json','utf8'));
+          console.log(JSON.stringify(Object.keys(manifest.routes).slice(0,20), null, 2));
+          NODE
+          } > apps/website/.open-next/cache-layout-diagnostic.txt 2>&1
+          cat apps/website/.open-next/cache-layout-diagnostic.txt
           node apps/website/scripts/cloudflare-populate-local-cache.mjs
           node apps/website/scripts/cloudflare-local-runtime.mjs
 
@@ -112,6 +128,7 @@ jobs:
             patches/@opennextjs__cloudflare@1.20.12.patch
             apps/website/.open-next/local-runtime-contract.json
             apps/website/.open-next/asset-audit-preactivation.json
+            apps/website/.open-next/cache-layout-diagnostic.txt
           if-no-files-found: warn
           retention-days: 14
           include-hidden-files: true
