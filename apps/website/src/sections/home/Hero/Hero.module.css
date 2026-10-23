@@ -168,7 +168,7 @@
 .title span {
   display: block;
   margin-top: 8px;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -419,7 +419,7 @@
 .previewMeta strong {
   flex: 0 0 auto;
   gap: 6px;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .previewMetaIcon {
@@ -427,7 +427,7 @@
   justify-content: center;
   width: 44px;
   height: 24px;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   background: color-mix(
     in srgb,
     var(--action-primary-muted-bg) 58%,

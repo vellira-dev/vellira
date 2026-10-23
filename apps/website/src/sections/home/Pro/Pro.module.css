@@ -45,7 +45,7 @@
 .eyebrow,
 .panelEyebrow,
 .cardEyebrow {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -63,7 +63,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -242,7 +242,7 @@
 .proBadge {
   min-height: calc(calc(var(--space-8) + var(--space-1)) + var(--space-1));
   padding: 0 calc(var(--space-3) + var(--space-1));
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   background: color-mix(
     in srgb,
     var(--color-primary-500) 12%,
@@ -349,7 +349,7 @@
   place-items: center;
   width: calc(var(--space-8) + var(--space-1) / 2);
   height: calc(var(--space-8) + var(--space-1) / 2);
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-xs);
   font-weight: 700;
@@ -370,7 +370,7 @@
 }
 
 .proDirections article > div > span {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-xs);
   font-weight: 700;

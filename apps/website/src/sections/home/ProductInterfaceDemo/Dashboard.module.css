@@ -113,7 +113,7 @@
 }
 
 .navButton[aria-current='page'] {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   background: color-mix(
     in srgb,
     var(--color-primary-500) 14%,
@@ -155,7 +155,7 @@
   flex: none;
   width: 36px;
   height: 36px;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-size: 12px;
   font-weight: 800;
   background: color-mix(
@@ -528,7 +528,7 @@
   flex: none;
   width: 36px;
   height: 36px;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-size: 14px;
   font-weight: 700;
   background: color-mix(
@@ -557,7 +557,7 @@
 }
 
 .statusPill[data-status='active'] {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   background: color-mix(
     in srgb,
     var(--color-primary-500) 9%,
@@ -891,11 +891,11 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
 }
 
 .projectsPanel .rowActions .projectActionTrigger:hover {
-  color: var(--color-primary-600);
+  color: var(--text-brand);
   background: transparent;
 }
 
@@ -954,7 +954,7 @@
   display: grid;
   width: 42px;
   height: 42px;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-size: 24px;
   background: color-mix(
     in srgb,
