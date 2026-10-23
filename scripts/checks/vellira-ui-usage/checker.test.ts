@@ -93,6 +93,19 @@ describe('Vellira UI usage audit', () => {
     ).toEqual([expect.objectContaining({ detected: 'a' })]);
   });
 
+  it('classifies SocialProof text links and preserves Button asChild CTAs', () => {
+    const findings = checkSourceFile(
+      'apps/website/src/sections/home/SocialProof/SocialProof.tsx',
+      `const X = () => <><a href='/ci'>View live CI</a><Button asChild><a href='/source'>View source</a></Button></>;`,
+      AUTHORITIES
+    );
+    expect(
+      findings.filter(
+        (finding) => finding.ruleId === 'vellira-ui.noncanonical-text-link'
+      )
+    ).toEqual([expect.objectContaining({ detected: 'a' })]);
+  });
+
   it('rejects raw links wrapped in Button without asChild', () => {
     const findings = checkSourceFile(
       'apps/website/src/sections/home/FinalCta/FinalCta.tsx',

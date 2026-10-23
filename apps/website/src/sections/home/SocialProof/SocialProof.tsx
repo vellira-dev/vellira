@@ -15,6 +15,7 @@ import {
 } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 import { PublishedNpmVersion } from '@/components/release/PublishedNpmVersion';
 import type { HomepageProductFacts } from '@/config/homepageProductFacts';
 import styles from './SocialProof.module.css';
@@ -294,14 +295,15 @@ export function SocialProof({
                     <span>
                       <Clock size={13} aria-hidden='true' /> Pipeline example
                     </span>
-                    <a
+                    <DesignSystemLink
+                      appearance='bare'
                       className={styles.commitLink}
                       href='https://github.com/vellira-dev/vellira/actions/workflows/ci.yml'
                       target='_blank'
                       rel='noreferrer'
                     >
                       View live CI
-                    </a>
+                    </DesignSystemLink>
                   </div>
                 </div>
 
