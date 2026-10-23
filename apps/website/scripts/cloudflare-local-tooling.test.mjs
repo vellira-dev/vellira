@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { createRequire } from 'node:module';
 import {
   createLocalCacheConfig,
   populateLocalCache,
@@ -19,6 +20,9 @@ const root = path.resolve(import.meta.dirname, '..');
 const repo = path.resolve(root, '../..');
 const configs = ['wrangler.jsonc', 'wrangler.production.jsonc'];
 const requiredSecrets = ['BUTTONDOWN_API_KEY'];
+const { getRouteCacheKey } = createRequire(import.meta.url)(
+  'next/dist/server/lib/route-cache-key.js'
+);
 
 function sampleConfig() {
   return {
@@ -326,9 +330,36 @@ async function fixture(t, filename = 'wrangler.jsonc') {
   await fs.mkdir(path.join(directory, '.open-next/cache/fixture-build'), {
     recursive: true,
   });
+  const owner = { kind: 'APP_PAGE', sourceRoute: '/page' };
+  const key = getRouteCacheKey('/', owner);
+  const meta = { routeCache: { key, owner, isFallback: false } };
+  const cachePath = path.join(
+    directory,
+    '.open-next/cache/fixture-build',
+    `${key}.cache`
+  );
+  await fs.mkdir(path.dirname(cachePath), { recursive: true });
   await fs.writeFile(
-    path.join(directory, '.open-next/cache/fixture-build/index.cache'),
-    JSON.stringify({ type: 'app', html: '<h1>fixture</h1>' })
+    cachePath,
+    JSON.stringify({
+      type: 'app',
+      meta,
+      html: '<h1>fixture</h1>',
+      rsc: 'fixture-flight',
+    })
+  );
+  await fs.mkdir(path.join(directory, '.next/server/app'), { recursive: true });
+  await fs.writeFile(
+    path.join(directory, '.next/server/app/index.meta'),
+    JSON.stringify(meta)
+  );
+  await fs.writeFile(
+    path.join(directory, '.next/server/app/index.html'),
+    '<h1>fixture</h1>'
+  );
+  await fs.writeFile(
+    path.join(directory, '.next/server/app/index.rsc'),
+    'fixture-flight'
   );
   const configPath = path.join(directory, filename);
   await fs.writeFile(configPath, JSON.stringify(rawConfig));
