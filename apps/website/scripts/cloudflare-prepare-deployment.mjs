@@ -9,6 +9,7 @@ import {
   verifyShippedTransport,
 } from './next-rsc-patch-check.mjs';
 import { auditWebsite } from './cloudflare-build-runtime-audit.mjs';
+import { verifyPublishedRouteCache } from './cloudflare-route-cache.mjs';
 
 export function assertOpenNextBuildIdentity(source, expected) {
   const ast = ts.createSourceFile(
@@ -60,22 +61,12 @@ export function prepareDeployment(root, env = process.env) {
     !config.deploymentId,
     'deploymentId changes BUILD_ID semantics and requires architecture review'
   );
-  const namespace = path.join(root, '.open-next/cache', buildId);
-  assert.ok(
-    fs.existsSync(namespace),
-    'Missing deployment-scoped OpenNext cache namespace'
-  );
   assert.equal(
     fs.readFileSync(path.join(root, '.open-next/assets/_headers'), 'utf8'),
     fs.readFileSync(path.join(root, 'public/_headers'), 'utf8'),
     'Workers Assets immutable header policy was not copied'
   );
-  assert.ok(
-    fs.existsSync(
-      path.join(root, '.open-next/assets/cdn-cgi/_next_cache', buildId)
-    ),
-    'OpenNext route cache was not populated in the deployment namespace before activation'
-  );
+  verifyPublishedRouteCache(root);
   const report = auditWebsite(root);
   const directHtml = fs
     .readdirSync(path.join(root, '.open-next/assets'), { recursive: true })

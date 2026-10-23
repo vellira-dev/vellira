@@ -204,9 +204,106 @@ test('integration: a denied request is stopped before OpenNext and remains trace
   assert.equal(JSON.stringify(events).includes(PRIVATE_EMAIL), false);
 
   env.NEWSLETTER_ABUSE_GUARD_ENABLED = '0';
-  const passed = await worker.fetch(post(), env, {});
-  assert.equal(passed.status, 201);
+  const workersDevDenied = await worker.fetch(post(), env, {});
+  assert.equal(workersDevDenied.status, 503);
+  assert.equal((await workersDevDenied.json()).code, 'temporarily_unavailable');
+  assert.equal(forwarded, 0);
+
+  // The actual public custom-domain newsletter stays operational.
+  const publicPassed = await worker.fetch(
+    post('https://vellira.dev/api/newsletter/subscribe'),
+    env,
+    {}
+  );
+  assert.equal(publicPassed.status, 201);
   assert.equal(forwarded, 1);
+});
+
+test('outer Worker denies workers.dev subscriber POSTs before OpenNext URL rewriting', async () => {
+  let forwarded = 0;
+  const events = [];
+  const handler = {
+    async fetch(request) {
+      forwarded += 1;
+      // Simulate Next/OpenNext replacing the public URL with an internal one.
+      // The inner runtime could normalize the original URL to a public
+      // host; it must never be reached for the workers.dev POST path.
+      return Response.json({
+        forwarded: new URL(request.url).hostname,
+      });
+    },
+  };
+  const worker = createWebsiteWorker(handler, 'test-ingress-123-1', (event) => events.push(event));
+  const env = { NEWSLETTER_ABUSE_GUARD_ENABLED: '0' };
+  for (const origin of [
+    'https://vellira-website.vellira.workers.dev',
+    'https://vellira-website-staging.vellira.workers.dev',
+    'https://version-vellira-website.vellira.workers.dev',
+  ]) {
+    for (const pathname of [
+      '/api/newsletter/subscribe',
+      '/api/newsletter/subscribe/',
+      '/api/newsletter/%73ubscribe',
+      '/api//newsletter/subscribe',
+    ]) {
+      const response = await worker.fetch(post(origin + pathname, {
+        Origin: 'https://vellira.dev',
+        'X-Forwarded-Host': 'vellira.dev',
+      }), env, {});
+      assert.equal(response.status, 503, origin + pathname);
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      assert.equal((await response.json()).code, 'temporarily_unavailable');
+      assert.ok(response.headers.get('x-vellira-request-id'));
+    }
+  }
+  assert.equal(forwarded, 0);
+  assert.equal(events.length, 12);
+  assert.ok(events.every((event) => event.status === 503));
+  assert.equal(JSON.stringify(events).includes(PRIVATE_EMAIL), false);
+
+  const canonical = await worker.fetch(
+    post('https://vellira.dev/api/newsletter/subscribe'),
+    env,
+    {}
+  );
+  assert.equal(canonical.status, 200);
+  assert.equal(forwarded, 1);
+  const diagnostic = await worker.fetch(
+    new Request(ORIGIN + '/__vellira_runtime'),
+    env,
+    {}
+  );
+  assert.equal(diagnostic.status, 200);
+  assert.equal(forwarded, 1);
+  const unrelated = await worker.fetch(
+    post(ORIGIN + '/api/blog-metrics/articles/test/like'),
+    env,
+    {}
+  );
+  assert.equal(unrelated.status, 200);
+  assert.equal(forwarded, 2);
+});
+
+test('manual staging burst limiter runs before workers.dev provider-write gate', async () => {
+  let forwarded = 0;
+  const worker = createWebsiteWorker(
+    { async fetch() { forwarded += 1; return new Response('unsafe', { status: 201 }); } },
+    'test-ingress-preview-1',
+    () => {}
+  );
+  const passedActor = limiter();
+  const passedRoute = limiter();
+  const mode = enabled(passedRoute, passedActor);
+  const blockedBeforeProvider = await worker.fetch(post(), mode, {});
+  assert.equal(blockedBeforeProvider.status, 503);
+  assert.equal(passedActor.calls.length, 1);
+  assert.equal(passedRoute.calls.length, 1);
+
+  const rateDeniedMode = enabled(limiter(), limiter({ success: false }));
+  const rateDenied = await worker.fetch(post(), rateDeniedMode, {});
+  assert.equal(rateDenied.status, 429);
+  assert.equal((await rateDenied.json()).code, 'rate_limited');
+  assert.equal(forwarded, 0);
 });
 
 // The manual staging workflow intentionally turns its untracked runner copy

@@ -147,10 +147,10 @@ function providerWriteFreeFetcher({ denyAfter = 4 } = {}) {
       return Response.json(
         {
           ok: false,
-          code: blocked ? 'rate_limited' : 'invalid_email',
+          code: blocked ? 'rate_limited' : 'temporarily_unavailable',
         },
         {
-          status: blocked ? 429 : 400,
+          status: blocked ? 429 : 503,
           headers: {
             'Cache-Control': 'no-store',
             ...(blocked ? { 'Retry-After': '60' } : {}),
@@ -161,7 +161,7 @@ function providerWriteFreeFetcher({ denyAfter = 4 } = {}) {
   };
 }
 
-test('default OFF smoke sends only one provider-write-free malformed address', async () => {
+test('default OFF smoke confirms Worker ingress denial with one malformed address', async () => {
   const { calls, fetcher } = providerWriteFreeFetcher({ denyAfter: 9 });
   assert.equal(
     await verifyNewsletterGuardLive({ siteUrl: URL, enabled: false, fetcher }),
@@ -177,7 +177,7 @@ test('default OFF smoke sends only one provider-write-free malformed address', a
   assert.equal(calls[0].url.origin, URL);
 });
 
-test('approved ON smoke proves HTTP 429 with bounded invalid POSTs and no writes', async () => {
+test('approved ON smoke proves limiter 429 precedes Worker ingress denial', async () => {
   const { calls, fetcher } = providerWriteFreeFetcher();
   assert.equal(
     await verifyNewsletterGuardLive({ siteUrl: URL, enabled: true, fetcher }),
