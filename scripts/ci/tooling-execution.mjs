@@ -36,6 +36,7 @@ export function createToolingTasks({
     'scripts/ci/pr-change-intent.test.mjs',
     'scripts/smoke/utils.test.mjs',
     'scripts/ci/dependabot-security-remediation.test.mjs',
+    'scripts/ci/dependabot-runtime-candidates.test.mjs',
     'scripts/ci/dependabot-verified-backports.test.mjs',
     'scripts/ci/security-patched-dependencies.test.mjs',
     'scripts/seo/external-audit-regressions.test.mjs',
