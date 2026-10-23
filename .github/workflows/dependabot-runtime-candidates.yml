@@ -1,0 +1,226 @@
+name: Dependabot Runtime Security Candidates
+
+on:
+  schedule:
+    - cron: '53 9 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/dependabot-runtime-candidates.yml'
+      - 'scripts/ci/dependabot-runtime-candidates.mjs'
+      - 'scripts/ci/dependabot-runtime-candidates.test.mjs'
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: read
+
+concurrency:
+  group: dependabot-runtime-candidates
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout trusted exact main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify main identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+      - name: Verify pure runtime candidate policy
+        run: node --test scripts/ci/dependabot-runtime-candidates.test.mjs
+      - name: Read authenticated open Dependabot alerts
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}"
+          mkdir -p .runtime-candidate
+          gh api --paginate -H 'Accept: application/vnd.github+json' \
+            "/repos/${REPOSITORY}/dependabot/alerts?state=open&per_page=100" \
+            | jq -s 'add' > .runtime-candidate/alerts.json
+          jq -e 'type == "array"' .runtime-candidate/alerts.json >/dev/null
+      - name: Prepare immutable allowlisted candidate plan
+        id: plan
+        run: |
+          set -euo pipefail
+          node scripts/ci/dependabot-runtime-candidates.mjs plan \
+            .runtime-candidate/alerts.json .runtime-candidate/plan.json
+          count="$(jq '.changes | length' .runtime-candidate/plan.json)"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          jq '{authorized: .changes, requiresOwnerReview: .ownerReview, alreadyPatched: .alreadyPatched}' \
+            .runtime-candidate/plan.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Inspect authenticated existing runtime candidate
+        if: steps.plan.outputs.count != '0'
+        id: authority
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${REPOSITORY}/branches/main" --jq '.commit.sha')"
+          test "$current" = "$GITHUB_SHA"
+          branch="automation/runtime-security-${GITHUB_SHA:0:12}"
+          gh api "repos/${REPOSITORY}/git/matching-refs/heads/${branch}" \
+            > .runtime-candidate/refs.json
+          gh api --paginate "repos/${REPOSITORY}/pulls?state=open&per_page=100" \
+            | jq -s 'add' > .runtime-candidate/pulls.json
+          branch_sha="$(jq -r --arg branch "refs/heads/${branch}" \
+            '[.[] | select(.ref == $branch) | .object.sha] | if length > 1 then error("ambiguous candidate branch") else .[0] // empty end' \
+            .runtime-candidate/refs.json)"
+          if [[ -n "$branch_sha" ]]; then
+            gh api "repos/${REPOSITORY}/commits/${branch_sha}" \
+              > .runtime-candidate/commit.json
+          else
+            echo null > .runtime-candidate/commit.json
+          fi
+          node scripts/ci/dependabot-runtime-candidate-authority.mjs \
+            .runtime-candidate/refs.json \
+            .runtime-candidate/pulls.json \
+            .runtime-candidate/commit.json \
+            "$REPOSITORY" "$GITHUB_SHA" \
+            > .runtime-candidate/authority.json
+          if jq -e '.authenticatedPR != null' .runtime-candidate/authority.json >/dev/null; then
+            echo 'open=true' >> "$GITHUB_OUTPUT"
+            echo 'Authenticated same-repository candidate PR exists; no duplicate needed.' \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'open=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate published patch releases
+        if: steps.plan.outputs.count != '0' && steps.authority.outputs.open == 'false'
+        run: |
+          set -euo pipefail
+          jq -cr '.changes[] | [.name,.to] | @tsv' .runtime-candidate/plan.json |
+            while IFS=$'\t' read -r name version; do
+              resolved="$(npm view "${name}@${version}" version --json)"
+              test "${resolved//\"/}" = "$version"
+            done
+      - name: Apply exact runtime scope and regenerate lockfile
+        if: steps.plan.outputs.count != '0' && steps.authority.outputs.open == 'false'
+        run: |
+          set -euo pipefail
+          node scripts/ci/dependabot-runtime-candidates.mjs apply \
+            .runtime-candidate/alerts.json .runtime-candidate/plan.json
+          pnpm install --lockfile-only
+          pnpm install --frozen-lockfile
+          node scripts/ci/dependabot-runtime-candidates.mjs verify \
+            .runtime-candidate/alerts.json .runtime-candidate/plan.json
+          node --test scripts/ci/dependabot-runtime-candidates.test.mjs
+          git diff --check
+          test -z "$(git diff --name-only -- . ':!pnpm-workspace.yaml' ':!pnpm-lock.yaml')"
+          test -n "$(git diff --name-only -- pnpm-workspace.yaml pnpm-lock.yaml)"
+      - name: Recheck exact main and prepare signed-off branch commit
+        if: steps.plan.outputs.count != '0' && steps.authority.outputs.open == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${REPOSITORY}/branches/main" --jq '.commit.sha')"
+          test "$current" = "$GITHUB_SHA"
+          git config user.name 'vellira-security-automation'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- pnpm-workspace.yaml pnpm-lock.yaml
+          git diff --cached --check
+          git commit -m 'chore(security): propose bounded runtime patches'
+      - name: Mint temporary GitHub App token only after validation
+        if: steps.plan.outputs.count != '0' && steps.authority.outputs.open == 'false'
+        id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Publish or recover an authenticated Draft candidate
+        if: steps.plan.outputs.count != '0' && steps.authority.outputs.open == 'false'
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${REPOSITORY}/branches/main" --jq '.commit.sha')"
+          test "$current" = "$GITHUB_SHA"
+          branch="automation/runtime-security-${GITHUB_SHA:0:12}"
+          expected_tree="$(git rev-parse 'HEAD^{tree}')"
+          # Read the branch and PR again: another run may have published first.
+          read_state() {
+            gh api "repos/${REPOSITORY}/git/matching-refs/heads/${branch}" \
+              > .runtime-candidate/refs.json
+            gh api --paginate "repos/${REPOSITORY}/pulls?state=open&per_page=100" \
+              | jq -s 'add' > .runtime-candidate/pulls.json
+            branch_sha="$(jq -r --arg branch "refs/heads/${branch}" \
+              '[.[] | select(.ref == $branch) | .object.sha] | if length > 1 then error("ambiguous candidate branch") else .[0] // empty end' \
+              .runtime-candidate/refs.json)"
+            if [[ -n "$branch_sha" ]]; then
+              gh api "repos/${REPOSITORY}/commits/${branch_sha}" \
+                > .runtime-candidate/commit.json
+            else
+              echo null > .runtime-candidate/commit.json
+            fi
+            node scripts/ci/dependabot-runtime-candidate-authority.mjs \
+              .runtime-candidate/refs.json \
+              .runtime-candidate/pulls.json \
+              .runtime-candidate/commit.json \
+              "$REPOSITORY" "$GITHUB_SHA" "$expected_tree" \
+              > .runtime-candidate/authority.json
+          }
+          read_state
+          remote_sha="$(jq -r '.branchSha // empty' .runtime-candidate/authority.json)"
+          if [[ -z "$remote_sha" ]]; then
+            git remote set-url origin \
+              "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+            git push origin "HEAD:refs/heads/${branch}"
+          else
+            echo 'Existing candidate branch is verified and recoverable.' \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # A leftover branch without a PR must be retried, not skipped.
+          read_state
+          remote_sha="$(jq -r '.branchSha // empty' .runtime-candidate/authority.json)"
+          test -n "$remote_sha"
+          if jq -e '.authenticatedPR != null' .runtime-candidate/authority.json >/dev/null; then
+            echo 'Exact candidate PR already exists and matches generated tree.' \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          printf '<!-- vellira-change-intent:v1:bounded-runtime-security-automation -->\n\n' \
+            > .runtime-candidate/pr-body.md
+          printf '<!-- vellira-runtime-security-candidate:v1 source-sha=%s candidate-sha=%s -->\n\n' \
+            "$GITHUB_SHA" "$remote_sha" >> .runtime-candidate/pr-body.md
+          cat >> .runtime-candidate/pr-body.md <<'BODY'
+          Proposed by the bounded runtime security candidate workflow on exact main. Only allowlisted same-major transitive pnpm overrides and the regenerated lockfile are authorized.
+
+          - The authoritative source is the live authenticated Dependabot alert feed.
+          - Next/OpenNext and custom-patched packages are NOT automatically upgraded.
+          - The repository patch and release-age policy must remain unchanged.
+          - Draft requires full hosted CI, owner review and explicit merge. Production deploy is not authorized.
+          BODY
+          jq -r '.changes[] | "- \(.name): \(.from) -> \(.to) (alerts \(.alertNumbers | join(", ")))"' \
+            .runtime-candidate/plan.json >> .runtime-candidate/pr-body.md
+          gh pr create --repo "$REPOSITORY" --base main --head "$branch" \
+            --title 'chore(security): propose bounded runtime fixes' \
+            --body-file .runtime-candidate/pr-body.md --draft
+          # If creation fails after push, a future run will recover.
+          read_state
+          jq -e '.authenticatedPR.number > 0' .runtime-candidate/authority.json \
+            >/dev/null
