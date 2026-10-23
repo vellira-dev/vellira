@@ -19,7 +19,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       startsWith(github.event.head_commit.message, 'chore(release): sync package versions')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
@@ -94,6 +94,30 @@ jobs:
           node scripts/sync-workspace-starter-versions.cjs "$VERSION" --check
           node --test scripts/sync-workspace-starter-versions.test.cjs
 
+      - name: Regenerate integrity-locked public npm dependency trees
+        run: |
+          set -euo pipefail
+          for project in web native; do
+            (
+              cd "examples/workspace-starter/$project"
+              npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+              node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          assert.equal(lock.lockfileVersion, 3);
+          assert.deepEqual(lock.packages[''].dependencies, manifest.dependencies);
+          assert.deepEqual(lock.packages[''].devDependencies, manifest.devDependencies);
+          for (const [name, version] of Object.entries(manifest.dependencies)) {
+            if (!name.startsWith('@vellira-ui/')) continue;
+            const entry = lock.packages['node_modules/' + name];
+            assert.equal(entry?.version, version, 'Published Vellira pin mismatch: ' + name);
+            assert.match(entry?.integrity ?? '', /^sha512-/, 'Missing registry integrity for ' + name);
+          }
+          NODE
+            )
+          done
       - name: Enforce narrow non-publishing change scope
         id: changes
         shell: bash
@@ -103,6 +127,8 @@ jobs:
           unexpected="$(git diff --name-only -- . \
             ':!examples/workspace-starter/web/package.json' \
             ':!examples/workspace-starter/native/package.json' \
+            ':!examples/workspace-starter/web/package-lock.json' \
+            ':!examples/workspace-starter/native/package-lock.json' \
             ':!examples/workspace-starter/README.md')"
           if [[ -n "$unexpected" ]]; then
             echo "::error::Unexpected release-sync modifications:"
@@ -112,6 +138,8 @@ jobs:
           if git diff --quiet -- \
             examples/workspace-starter/web/package.json \
             examples/workspace-starter/native/package.json \
+            examples/workspace-starter/web/package-lock.json \
+            examples/workspace-starter/native/package-lock.json \
             examples/workspace-starter/README.md; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Starter already matches the published release."
@@ -143,6 +171,8 @@ jobs:
           add-paths: |
             examples/workspace-starter/web/package.json
             examples/workspace-starter/native/package.json
+            examples/workspace-starter/web/package-lock.json
+            examples/workspace-starter/native/package-lock.json
             examples/workspace-starter/README.md
           commit-message: 'chore(starter): sync Vellira to v${{ steps.source.outputs.version }}'
           title: 'chore(starter): sync Vellira to v${{ steps.source.outputs.version }}'
@@ -150,8 +180,8 @@ jobs:
             Update both MIT-licensed Workspace Starters to the same published Vellira v${{ steps.source.outputs.version }}.
 
             Source: verified GitHub Release, plus exact versions of all six public npm packages.
-            Changed: only the Web/Native exact Vellira dependency pins and Starter README.
-            Validation: Workspace Starter Consumer Verification (fresh npm installs, build, Expo typecheck/config), with a synchronization guard and unit tests.
+            Changed: exact Web/Native Vellira pins, integrity-locked npm dependency trees, and Starter README.
+            Validation: Workspace Starter Consumer Verification (npm ci from checked-in integrity locks, build, Expo typecheck/config), with synchronization guard and unit tests.
 
             No root release changes, auto-merge, direct `main` pushes, production changes or new paid services. Review and merge only after CI passes.
 
