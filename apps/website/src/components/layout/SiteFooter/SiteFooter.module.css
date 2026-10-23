@@ -221,7 +221,7 @@
 
 .foundationTitle svg {
   flex: 0 0 auto;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .foundationMap {
@@ -264,7 +264,7 @@
 }
 
 .foundationMap span:nth-child(2) {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   border-color: color-mix(
     in srgb,
     var(--color-primary-500) 28%,

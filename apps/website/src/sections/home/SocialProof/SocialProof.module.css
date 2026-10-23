@@ -38,7 +38,7 @@
 
 .eyebrow,
 .cardEyebrow {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.08em;
@@ -56,7 +56,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -409,7 +409,7 @@
 }
 
 .workflowBadgeRunning {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--color-primary-500) 7%, transparent);
 }
@@ -517,7 +517,7 @@
 
 .runningCheck .checkIndicator,
 .runningCheck .checkResult {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
 }
 
 .passedCheck .checkIndicator,
@@ -666,7 +666,7 @@
 .metricCard > strong {
   display: block;
   margin-top: var(--space-5);
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-size: clamp(58px, 7vw, 68px);
   line-height: 1;
   letter-spacing: 0;
@@ -722,7 +722,7 @@
 
 .releaseMetric > svg {
   flex: 0 0 auto;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
 }
 
 .releaseMetric > div {
