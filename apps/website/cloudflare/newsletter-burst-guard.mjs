@@ -78,6 +78,20 @@ async function check(limiter, key) {
 }
 
 /**
+ * The stable workers.dev website origin stays reachable for CI, archives and
+ * deployment recovery, but it is never an approved subscriber-create origin.
+ * Run this at the outer Worker before OpenNext can normalize Request.url or
+ * forward headers. Only POSTs to the newsletter route are affected.
+ */
+export function denyWorkersDevNewsletterSubscribe(request) {
+  if (request.method !== 'POST') return null;
+  const url = new URL(request.url);
+  if (!url.hostname.endsWith('.workers.dev') || !guardedPath(url.pathname))
+    return null;
+  return unavailable();
+}
+
+/**
  * Return null to continue to OpenNext, or a safe response to stop before
  * the Buttondown-backed route. Nothing is persisted or logged here.
  */

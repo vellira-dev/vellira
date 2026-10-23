@@ -144,6 +144,14 @@ function isSameOriginRequest(request: Request): boolean {
   return !origin || origin === new URL(request.url).origin;
 }
 
+function isWorkersDevIngress(request: Request): boolean {
+  // Both website Workers expose their stable workers.dev origins for CI and
+  // recovery. Never let a request via any workers.dev alias spend the real
+  // Buttondown subscriber-create account quota, even without Origin.
+  // Use the incoming URL host, not untrusted forwarding/origin headers.
+  return new URL(request.url).hostname.endsWith('.workers.dev');
+}
+
 async function getButtondownApiKey(): Promise<string | undefined> {
   const { env } = await getCloudflareContext({ async: true });
   const apiKey = (env as CloudflareSecretBindings).BUTTONDOWN_API_KEY;
@@ -188,6 +196,20 @@ export function createNewsletterSubscribeHandler(
         },
         503
       );
+
+    // Preserve safe malformed-address/consent smoke behavior, but stop every
+    // valid subscriber-create candidate on workers.dev before reading secrets,
+    // contacting the Durable Object or sending anything to Buttondown.
+    if (isWorkersDevIngress(request))
+      return response(
+        {
+          ok: false,
+          code: 'temporarily_unavailable',
+          message: newsletterErrors.temporarily_unavailable,
+        },
+        503
+      );
+
     let apiKey: string | undefined;
     try {
       apiKey = await dependencies.getApiKey();
