@@ -29,6 +29,10 @@ jobs:
           node-version: 22.22.2
       - name: Unit tests for safe and deterministic Starter pin synchronization
         run: node --test scripts/sync-workspace-starter-versions.test.cjs
+      - name: Validate npm integrity locks and lockfile policy
+        run: |
+          node --test scripts/sync-workspace-starter-lockfiles.test.cjs
+          node scripts/sync-workspace-starter-lockfiles.cjs --check
       - name: Verify both Starter manifests and README agree with root release
         run: |
           version="$(node -p "require('./package.json').version")"

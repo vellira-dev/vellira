@@ -94,30 +94,17 @@ jobs:
           node scripts/sync-workspace-starter-versions.cjs "$VERSION" --check
           node --test scripts/sync-workspace-starter-versions.test.cjs
 
-      - name: Regenerate integrity-locked public npm dependency trees
+      - name: Set up locked npm release-sync toolchain
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+
+      - name: Regenerate and validate integrity-locked public npm dependency trees
         run: |
-          set -euo pipefail
-          for project in web native; do
-            (
-              cd "examples/workspace-starter/$project"
-              npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-              node - <<'NODE'
-          const fs = require('node:fs');
-          const assert = require('node:assert/strict');
-          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-          assert.equal(lock.lockfileVersion, 3);
-          assert.deepEqual(lock.packages[''].dependencies, manifest.dependencies);
-          assert.deepEqual(lock.packages[''].devDependencies, manifest.devDependencies);
-          for (const [name, version] of Object.entries(manifest.dependencies)) {
-            if (!name.startsWith('@vellira-ui/')) continue;
-            const entry = lock.packages['node_modules/' + name];
-            assert.equal(entry?.version, version, 'Published Vellira pin mismatch: ' + name);
-            assert.match(entry?.integrity ?? '', /^sha512-/, 'Missing registry integrity for ' + name);
-          }
-          NODE
-            )
-          done
+          node scripts/sync-workspace-starter-lockfiles.cjs
+          node scripts/sync-workspace-starter-lockfiles.cjs --check
+          node --test scripts/sync-workspace-starter-lockfiles.test.cjs
       - name: Enforce narrow non-publishing change scope
         id: changes
         shell: bash
