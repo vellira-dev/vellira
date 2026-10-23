@@ -1,0 +1,56 @@
+name: Temporary published Starter integrity refresh
+on:
+  push:
+    branches:
+      - 'security/starter-cleanroom-npm-integrity-20261023'
+permissions:
+  contents: write
+jobs:
+  locks:
+    if: >-
+      github.event.head_commit.message == 'chore(security): refresh published Starter integrity pins'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+      - name: Verify latest published Vellira version and npm integrity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          version="$(node -p "require('./package.json').version")"
+          test "$version" = '2.186.4'
+          for name in react tokens icons react-native; do
+            actual="$(npm view "@vellira-ui/$name@$version" version --json | tr -d '"')"
+            test "$actual" = "$version"
+          done
+          node scripts/sync-workspace-starter-versions.cjs "$version" --check
+          for project in web native; do
+            (
+              cd "examples/workspace-starter/$project"
+              npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+              npm ci --no-audit --no-fund
+            )
+          done
+          git diff --check
+          test -z "$(git diff --name-only -- . ':!examples/workspace-starter/web/package-lock.json' ':!examples/workspace-starter/native/package-lock.json')"
+      - name: Commit only refreshed Web and Native npm lockfiles
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- examples/workspace-starter/web/package-lock.json examples/workspace-starter/native/package-lock.json
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git commit -m 'chore(security): refresh published npm integrity lockfiles'
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "HEAD:refs/heads/security/starter-cleanroom-npm-integrity-20261023"
