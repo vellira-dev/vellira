@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { createRequire } from 'node:module';
 import {
   createLocalCacheConfig,
   populateLocalCache,
@@ -19,6 +21,9 @@ const root = path.resolve(import.meta.dirname, '..');
 const repo = path.resolve(root, '../..');
 const configs = ['wrangler.jsonc', 'wrangler.production.jsonc'];
 const requiredSecrets = ['BUTTONDOWN_API_KEY'];
+const { getRouteCacheKey } = createRequire(import.meta.url)(
+  'next/dist/server/lib/route-cache-key.js'
+);
 
 function sampleConfig() {
   return {
@@ -326,9 +331,36 @@ async function fixture(t, filename = 'wrangler.jsonc') {
   await fs.mkdir(path.join(directory, '.open-next/cache/fixture-build'), {
     recursive: true,
   });
+  const owner = { kind: 'APP_PAGE', sourceRoute: '/page' };
+  const key = getRouteCacheKey('/', owner);
+  const meta = { routeCache: { key, owner, isFallback: false } };
+  const cachePath = path.join(
+    directory,
+    '.open-next/cache/fixture-build',
+    `${key}.cache`
+  );
+  await fs.mkdir(path.dirname(cachePath), { recursive: true });
   await fs.writeFile(
-    path.join(directory, '.open-next/cache/fixture-build/index.cache'),
-    JSON.stringify({ type: 'app', html: '<h1>fixture</h1>' })
+    cachePath,
+    JSON.stringify({
+      type: 'app',
+      meta,
+      html: '<h1>fixture</h1>',
+      rsc: 'fixture-flight',
+    })
+  );
+  await fs.mkdir(path.join(directory, '.next/server/app'), { recursive: true });
+  await fs.writeFile(
+    path.join(directory, '.next/server/app/index.meta'),
+    JSON.stringify(meta)
+  );
+  await fs.writeFile(
+    path.join(directory, '.next/server/app/index.html'),
+    '<h1>fixture</h1>'
+  );
+  await fs.writeFile(
+    path.join(directory, '.next/server/app/index.rsc'),
+    'fixture-flight'
   );
   const configPath = path.join(directory, filename);
   await fs.writeFile(configPath, JSON.stringify(rawConfig));
@@ -404,6 +436,67 @@ test('local population uses only the upstream local command and propagates proce
   assert.equal(calls, 1);
   await assert.rejects(fs.access(generated), { code: 'ENOENT' });
 });
+
+for (const scenario of [
+  'complete',
+  'extra generated',
+  'extra published',
+  'absent publication',
+]) {
+  test(`local cache validation runs at the correct population stages: ${scenario}`, async (t) => {
+    const { directory, configPath } = await fixture(t);
+    const generated = path.join(directory, '.open-next/cache');
+    const published = path.join(
+      directory,
+      '.open-next/assets/cdn-cgi/_next_cache'
+    );
+    if (scenario === 'extra generated')
+      await fs.writeFile(
+        path.join(generated, 'fixture-build/index.cache'),
+        'foreign'
+      );
+    let calls = 0;
+    const action = populateLocalCache(configPath, {
+      execute() {
+        calls += 1;
+        assert.equal(
+          existsSync(published),
+          false,
+          'published cache is not required before populateCache'
+        );
+        assert.equal(
+          existsSync(
+            path.join(directory, '.open-next/route-cache-evidence.json')
+          ),
+          true
+        );
+        if (scenario !== 'absent publication')
+          cpSync(generated, published, { recursive: true });
+        if (scenario === 'extra published') {
+          mkdirSync(path.join(published, 'fixture-build'), { recursive: true });
+          writeFileSync(
+            path.join(published, 'fixture-build/index.cache'),
+            'foreign'
+          );
+        }
+        return { status: 0 };
+      },
+    });
+    if (scenario === 'complete') await action;
+    else
+      await assert.rejects(
+        action,
+        scenario === 'absent publication' ? /ENOENT/ : /inventory mismatch/
+      );
+    assert.equal(calls, scenario === 'extra generated' ? 0 : 1);
+    assert.deepEqual(
+      (await fs.readdir(directory)).filter((name) =>
+        name.startsWith('.wrangler-local-cache-')
+      ),
+      []
+    );
+  });
+}
 
 test('Cloudflare tooling imports emit no punycode deprecation', async () => {
   for (const moduleName of [

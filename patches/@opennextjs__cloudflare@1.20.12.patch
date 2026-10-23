@@ -1,5 +1,5 @@
 diff --git a/dist/cli/build/utils/workerd.d.ts b/dist/cli/build/utils/workerd.d.ts
-index 7edbfd0c9846b303abdee57e3c3d4eac7ffff91d..a0e6c0de11abd88f446c2ef7971b2d80de852ca6 100644
+index bdd7d76b422b1914fbc611182bf772bec57a2bd0..a0e6c0de11abd88f446c2ef7971b2d80de852ca6 100644
 --- a/dist/cli/build/utils/workerd.d.ts
 +++ b/dist/cli/build/utils/workerd.d.ts
 @@ -8,22 +8,14 @@ import type { BuildOptions } from "@opennextjs/aws/build/helper.js";
@@ -18,7 +18,7 @@ index 7edbfd0c9846b303abdee57e3c3d4eac7ffff91d..a0e6c0de11abd88f446c2ef7971b2d80
  };
  interface PackageJson {
      name: string;
--    exports?: {
+-    exports?: string | {
 -        [key: string]: unknown;
 -    };
 -    imports?: {
@@ -30,7 +30,7 @@ index 7edbfd0c9846b303abdee57e3c3d4eac7ffff91d..a0e6c0de11abd88f446c2ef7971b2d80
  /**
   *
 diff --git a/dist/cli/build/utils/workerd.js b/dist/cli/build/utils/workerd.js
-index 2567f7c3bb76d65b8703946e57c9d442814a2bc9..c196085d51977d0c2c5d329b656b0d8cfd215f51 100644
+index 1069d378086e09f5e1c50c2c729ca4aef2025ad8..d13949807c1c20d1d498010981b8d875c04b2ebd 100644
 --- a/dist/cli/build/utils/workerd.js
 +++ b/dist/cli/build/utils/workerd.js
 @@ -13,6 +13,9 @@ import { getCrossPlatformPathRegex } from "@opennextjs/aws/utils/regex.js";
