@@ -14,6 +14,54 @@ const {
   normalizePagePath,
 } = require('next/dist/shared/lib/page-path/normalize-page-path.js');
 
+function assertRouteCacheInventory(root, directory, { buildId, entries }) {
+  let ancestor = root;
+  for (const part of directory.split('/')) {
+    ancestor = path.join(ancestor, part);
+    assert.ok(
+      fs.lstatSync(ancestor).isDirectory(),
+      `Unsafe cache directory (including symlink): ${ancestor}`
+    );
+  }
+  const actual = [];
+  const pending = [''];
+  while (pending.length) {
+    const relative = pending.pop();
+    for (const name of fs.readdirSync(path.join(root, directory, relative))) {
+      assert.ok(
+        !name.includes('\\') &&
+          [...name].every((character) => {
+            const code = character.charCodeAt(0);
+            return code > 31 && code !== 127;
+          }),
+        `Unsafe cache path: ${JSON.stringify(name)}`
+      );
+      const entry = relative ? `${relative}/${name}` : name;
+      const stat = fs.lstatSync(path.join(root, directory, entry));
+      assert.ok(
+        stat.isDirectory() || stat.isFile(),
+        `Unsafe cache entry (including symlink): ${directory}/${entry}`
+      );
+      if (stat.isDirectory()) pending.push(entry);
+      // AWS createCacheAssets puts response .cache files under <buildId> and
+      // fetch data under __fetch/<buildId>. Fetch keys may also end in .cache.
+      // Inspect all response namespaces, including stale builds, without a
+      // depth limit. Other regular artifacts are not response-cache entries.
+      else if (!entry.startsWith('__fetch/') && entry.endsWith('.cache'))
+        actual.push(entry);
+    }
+  }
+  const expected = new Set(entries.map(({ key }) => `${buildId}${key}.cache`));
+  assert.equal(expected.size, entries.length, 'Duplicate route cache keys');
+  const actualSet = new Set(actual);
+  const missing = [...expected].filter((entry) => !actualSet.has(entry)).sort();
+  const unexpected = actual.filter((entry) => !expected.has(entry)).sort();
+  assert.ok(
+    !missing.length && !unexpected.length,
+    `${directory}: route cache inventory mismatch; missing=${JSON.stringify(missing)}; unexpected=${JSON.stringify(unexpected)}`
+  );
+}
+
 // OpenNext Cloudflare 1.20.12 (AWS 4.1.11) already emits Next's owner keys.
 // Validate those artifacts before populateCache copies them into private static
 // assets. Never manufacture pathname aliases or repair a missing owner entry.
@@ -27,7 +75,7 @@ export function prepareRouteCache(root) {
   const prerender = read('.next/prerender-manifest.json');
   const appPaths = read('.next/app-path-routes-manifest.json');
   const cacheRoot = path.join(root, '.open-next/cache', buildId);
-  const entries = [];
+  const expected = [];
   for (const [pathname, route] of Object.entries(prerender.routes)) {
     const owners = Object.keys(appPaths)
       .map((sourceRoute) => ({
@@ -47,6 +95,16 @@ export function prepareRouteCache(root) {
       target.startsWith(`${cacheRoot}${path.sep}`),
       'Route cache path escaped build namespace'
     );
+    expected.push({ pathname, owner, key });
+  }
+  assert.ok(expected.length, 'No prerender route cache entries');
+  assertRouteCacheInventory(root, '.open-next/cache', {
+    buildId,
+    entries: expected,
+  });
+  const entries = [];
+  for (const { pathname, owner, key } of expected) {
+    const target = path.join(cacheRoot, `${key}.cache`);
     const bytes = fs.readFileSync(target);
     const value = JSON.parse(bytes);
     assert.equal(
@@ -114,10 +172,13 @@ export function prepareRouteCache(root) {
       sha256: createHash('sha256').update(bytes).digest('hex'),
     });
   }
-  assert.ok(entries.length, 'No prerender route cache entries');
   const evidence = { buildId, entries };
   const evidencePath = path.join(root, '.open-next/route-cache-evidence.json');
   if (fs.existsSync(evidencePath)) {
+    assert.ok(
+      fs.lstatSync(evidencePath).isFile(),
+      'Unsafe route cache evidence'
+    );
     assert.deepEqual(
       read('.open-next/route-cache-evidence.json'),
       evidence,
@@ -127,6 +188,34 @@ export function prepareRouteCache(root) {
     fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2), {
       flag: 'wx',
     });
+  }
+  return evidence;
+}
+
+// Only call after populateCache: the upstream static-assets publisher copies
+// the whole cache tree and does not remove stale destination entries.
+export function verifyPublishedRouteCache(root) {
+  const evidencePath = path.join(root, '.open-next/route-cache-evidence.json');
+  assert.ok(fs.lstatSync(evidencePath).isFile(), 'Unsafe route cache evidence');
+  const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+  // Require the original evidence before revalidating generation. Publication
+  // cannot establish a new digest baseline or silently replace existing proof.
+  assert.deepEqual(prepareRouteCache(root), evidence);
+  const directory = '.open-next/assets/cdn-cgi/_next_cache';
+  assertRouteCacheInventory(root, directory, evidence);
+  for (const entry of evidence.entries) {
+    const relative = `${evidence.buildId}${entry.key}.cache`;
+    const bytes = fs.readFileSync(path.join(root, directory, relative));
+    assert.equal(
+      bytes.length,
+      entry.bytes,
+      `Published cache size mismatch: ${relative}`
+    );
+    assert.equal(
+      createHash('sha256').update(bytes).digest('hex'),
+      entry.sha256,
+      `Published cache SHA-256 mismatch: ${relative}`
+    );
   }
   return evidence;
 }

@@ -6,7 +6,31 @@ import { test } from 'node:test';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { createCacheAssets } from '@opennextjs/aws/build/createAssets.js';
-import { prepareRouteCache } from './cloudflare-route-cache.mjs';
+import {
+  prepareRouteCache,
+  verifyPublishedRouteCache,
+} from './cloudflare-route-cache.mjs';
+
+const { populateCache } = await import(
+  new URL(
+    '../cli/commands/populate-cache.js',
+    import.meta.resolve('@opennextjs/cloudflare')
+  )
+);
+async function publish(root) {
+  await populateCache(
+    { outputDir: path.join(root, '.open-next') },
+    {
+      default: {
+        override: { incrementalCache: 'cf-static-assets-incremental-cache' },
+      },
+    },
+    {},
+    { target: 'local' },
+    {}
+  );
+}
+const publishedRoot = '.open-next/assets/cdn-cgi/_next_cache';
 
 const require = createRequire(import.meta.url);
 const { getRouteCacheKey } = require('next/dist/server/lib/route-cache-key.js');
@@ -29,6 +53,9 @@ function fixture(t) {
   };
   write('.next/BUILD_ID', 'build-1');
   write('.next/required-server-files.json', { config: {} });
+  // Legitimate fetch artifacts are copied by the same upstream generator and
+  // publisher. A .cache suffix does not make them route-cache entries.
+  write('.next/cache/fetch-cache/fetch-key.cache', { kind: 'FETCH', tags: [] });
   write('.next/standalone/.next/server/pages-manifest.json', {});
   const routes = [
     {
@@ -214,7 +241,10 @@ test('missing or wrong-kind cache fails, even when a legacy pathname alias exist
   assert.throws(() => prepareRouteCache(root), /Cache kind mismatch/);
   write('.open-next/cache/build-1/index.cache', value);
   fs.unlinkSync(path.join(root, cache));
-  assert.throws(() => prepareRouteCache(root), /ENOENT/);
+  assert.throws(
+    () => prepareRouteCache(root),
+    /inventory mismatch; missing=\["build-1.*; unexpected=\["build-1\/index.cache"\]/
+  );
   assert.equal(
     fs.existsSync(path.join(root, cache)),
     false,
@@ -293,7 +323,182 @@ test('conflicting generated owner entry and previous evidence are never overwrit
 test('another build namespace cannot satisfy a missing entry and unsafe IDs are rejected', (t) => {
   const { root, write } = fixture(t);
   write('.next/BUILD_ID', 'build-2');
-  assert.throws(() => prepareRouteCache(root), /ENOENT/);
+  assert.throws(
+    () => prepareRouteCache(root),
+    /inventory mismatch; missing=\["build-2.*; unexpected=\["build-1/
+  );
   write('.next/BUILD_ID', '../build-1');
   assert.throws(() => prepareRouteCache(root), /Invalid route cache build ID/);
+});
+
+test('complete generated and published inventories retain original SHA-256 evidence and fetch artifacts', async (t) => {
+  const { root, routes } = fixture(t);
+  const evidence = prepareRouteCache(root);
+  const evidencePath = path.join(root, '.open-next/route-cache-evidence.json');
+  const before = fs.readFileSync(evidencePath);
+  assert.equal(fs.existsSync(path.join(root, publishedRoot)), false);
+  await publish(root);
+  assert.deepEqual(verifyPublishedRouteCache(root), evidence);
+  for (const route of routes) {
+    assert.deepEqual(
+      fs.readFileSync(
+        path.join(root, publishedRoot, `build-1${route.key}.cache`)
+      ),
+      fs.readFileSync(path.join(root, route.cache))
+    );
+  }
+  assert.deepEqual(
+    fs.readFileSync(
+      path.join(root, publishedRoot, '__fetch/build-1/fetch-key.cache')
+    ),
+    fs.readFileSync(path.join(root, '.next/cache/fetch-cache/fetch-key.cache'))
+  );
+  assert.deepEqual(fs.readFileSync(evidencePath), before);
+});
+
+for (const mutation of [
+  'foreign owner',
+  'legacy alias',
+  'wrong build',
+  'missing',
+]) {
+  test(`generated inventory rejects ${mutation} without repairing payloads or evidence`, (t) => {
+    const { root, write, routes } = fixture(t);
+    prepareRouteCache(root);
+    const evidencePath = path.join(
+      root,
+      '.open-next/route-cache-evidence.json'
+    );
+    const before = fs.readFileSync(evidencePath);
+    const bytes = fs.readFileSync(path.join(root, routes[0].cache));
+    let entry;
+    if (mutation === 'foreign owner')
+      entry = `build-1${getRouteCacheKey('/', { kind: 'APP_PAGE', sourceRoute: '/(foreign)/page' })}.cache`;
+    if (mutation === 'legacy alias') entry = 'build-1/index.cache';
+    if (mutation === 'wrong build') entry = `stale-build${routes[0].key}.cache`;
+    if (mutation === 'missing') fs.unlinkSync(path.join(root, routes[0].cache));
+    else write(`.open-next/cache/${entry}`, bytes);
+    assert.throws(
+      () => prepareRouteCache(root),
+      (error) => {
+        assert.match(error.message, /route cache inventory mismatch/);
+        if (mutation === 'missing')
+          assert.ok(
+            error.message.includes(`missing=["build-1${routes[0].key}.cache"]`)
+          );
+        else assert.ok(error.message.includes(`unexpected=["${entry}"]`));
+        return true;
+      }
+    );
+    if (entry)
+      assert.deepEqual(
+        fs.readFileSync(path.join(root, '.open-next/cache', entry)),
+        bytes
+      );
+    else assert.equal(fs.existsSync(path.join(root, routes[0].cache)), false);
+    assert.deepEqual(fs.readFileSync(evidencePath), before);
+  });
+}
+
+for (const mutation of ['extra', 'wrong build', 'missing', 'bytes']) {
+  test(`published inventory rejects ${mutation} independently of valid generation`, async (t) => {
+    const { root, write, routes } = fixture(t);
+    const evidence = prepareRouteCache(root);
+    const evidencePath = path.join(
+      root,
+      '.open-next/route-cache-evidence.json'
+    );
+    const before = fs.readFileSync(evidencePath);
+    // Upstream cp merges its destination: an old alias must survive population
+    // so our post-population validation, not the generator, detects it.
+    if (mutation === 'extra')
+      write(`${publishedRoot}/build-1/index.cache`, 'stale');
+    if (mutation === 'wrong build')
+      write(`${publishedRoot}/old-build/index.cache`, 'stale');
+    await publish(root);
+    const file = path.join(
+      root,
+      publishedRoot,
+      `build-1${routes[0].key}.cache`
+    );
+    if (mutation === 'missing') fs.unlinkSync(file);
+    if (mutation === 'bytes') {
+      const bytes = fs.readFileSync(file);
+      bytes[bytes.indexOf('flight:')] = 'F'.charCodeAt(0);
+      fs.writeFileSync(file, bytes); // Same size, different SHA-256.
+    }
+    assert.throws(
+      () => verifyPublishedRouteCache(root),
+      mutation === 'bytes'
+        ? /Published cache SHA-256 mismatch/
+        : /route cache inventory mismatch/
+    );
+    assert.deepEqual(prepareRouteCache(root), evidence);
+    assert.deepEqual(fs.readFileSync(evidencePath), before);
+  });
+}
+
+for (const stage of ['generated', 'published']) {
+  for (const name of ['back\\slash.cache', 'control\u001f.cache']) {
+    test(`${stage} inventory rejects unsafe filename ${JSON.stringify(name)}`, async (t) => {
+      const { root, write } = fixture(t);
+      const directory =
+        stage === 'generated' ? '.open-next/cache' : publishedRoot;
+      if (stage === 'published') {
+        prepareRouteCache(root);
+        await publish(root);
+      }
+      write(`${directory}/build-1/${name}`, 'foreign');
+      assert.throws(
+        () =>
+          stage === 'generated'
+            ? prepareRouteCache(root)
+            : verifyPublishedRouteCache(root),
+        /Unsafe cache path/
+      );
+    });
+  }
+  for (const link of ['file', 'directory', 'namespace', 'fetch']) {
+    test(`${stage} inventory rejects ${link} symlinks`, async (t) => {
+      const { root, routes } = fixture(t);
+      const directory =
+        stage === 'generated' ? '.open-next/cache' : publishedRoot;
+      if (stage === 'published') {
+        prepareRouteCache(root);
+        await publish(root);
+      }
+      const relative =
+        link === 'file'
+          ? `build-1${routes[0].key}.cache`
+          : link === 'directory'
+            ? 'build-1'
+            : link === 'fetch'
+              ? '__fetch'
+              : '';
+      const target = path.join(root, directory, relative);
+      const saved = path.join(root, 'linked-cache');
+      fs.renameSync(target, saved);
+      fs.symlinkSync(saved, target);
+      assert.throws(
+        () =>
+          stage === 'generated'
+            ? prepareRouteCache(root)
+            : verifyPublishedRouteCache(root),
+        /Unsafe cache (entry|directory)/
+      );
+    });
+  }
+}
+
+test('post-population validation cannot create missing evidence', async (t) => {
+  const { root } = fixture(t);
+  await publish(root);
+  assert.throws(
+    () => verifyPublishedRouteCache(root),
+    /ENOENT.*route-cache-evidence/
+  );
+  assert.equal(
+    fs.existsSync(path.join(root, '.open-next/route-cache-evidence.json')),
+    false
+  );
 });

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -435,6 +436,67 @@ test('local population uses only the upstream local command and propagates proce
   assert.equal(calls, 1);
   await assert.rejects(fs.access(generated), { code: 'ENOENT' });
 });
+
+for (const scenario of [
+  'complete',
+  'extra generated',
+  'extra published',
+  'absent publication',
+]) {
+  test(`local cache validation runs at the correct population stages: ${scenario}`, async (t) => {
+    const { directory, configPath } = await fixture(t);
+    const generated = path.join(directory, '.open-next/cache');
+    const published = path.join(
+      directory,
+      '.open-next/assets/cdn-cgi/_next_cache'
+    );
+    if (scenario === 'extra generated')
+      await fs.writeFile(
+        path.join(generated, 'fixture-build/index.cache'),
+        'foreign'
+      );
+    let calls = 0;
+    const action = populateLocalCache(configPath, {
+      execute() {
+        calls += 1;
+        assert.equal(
+          existsSync(published),
+          false,
+          'published cache is not required before populateCache'
+        );
+        assert.equal(
+          existsSync(
+            path.join(directory, '.open-next/route-cache-evidence.json')
+          ),
+          true
+        );
+        if (scenario !== 'absent publication')
+          cpSync(generated, published, { recursive: true });
+        if (scenario === 'extra published') {
+          mkdirSync(path.join(published, 'fixture-build'), { recursive: true });
+          writeFileSync(
+            path.join(published, 'fixture-build/index.cache'),
+            'foreign'
+          );
+        }
+        return { status: 0 };
+      },
+    });
+    if (scenario === 'complete') await action;
+    else
+      await assert.rejects(
+        action,
+        scenario === 'absent publication' ? /ENOENT/ : /inventory mismatch/
+      );
+    assert.equal(calls, scenario === 'extra generated' ? 0 : 1);
+    assert.deepEqual(
+      (await fs.readdir(directory)).filter((name) =>
+        name.startsWith('.wrangler-local-cache-')
+      ),
+      []
+    );
+  });
+}
 
 test('Cloudflare tooling imports emit no punycode deprecation', async () => {
   for (const moduleName of [

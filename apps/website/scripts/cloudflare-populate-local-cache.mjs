@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { prepareRouteCache } from './cloudflare-route-cache.mjs';
+import {
+  prepareRouteCache,
+  verifyPublishedRouteCache,
+} from './cloudflare-route-cache.mjs';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -100,7 +103,8 @@ export async function populateLocalCache(
   { env = process.env, execute = spawnSync } = {}
 ) {
   return withLocalCacheConfig(configPath, (localPath) => {
-    prepareRouteCache(path.dirname(path.resolve(root, configPath)));
+    const buildRoot = path.dirname(path.resolve(root, configPath));
+    prepareRouteCache(buildRoot);
     // Only local preparation is exposed; no arbitrary command/flag passthrough.
     const args = [
       'exec',
@@ -112,6 +116,7 @@ export async function populateLocalCache(
     const result = execute('pnpm', args, { cwd: root, env, stdio: 'inherit' });
     if (result.error) throw result.error;
     assert.equal(result.status, 0, 'Local OpenNext cache preparation failed');
+    verifyPublishedRouteCache(buildRoot);
   });
 }
 
