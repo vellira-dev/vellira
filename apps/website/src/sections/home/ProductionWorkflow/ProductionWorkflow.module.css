@@ -39,7 +39,7 @@
 .eyebrow,
 .panelEyebrow,
 .stepLabel {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -57,7 +57,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -303,7 +303,7 @@
   width: 42px;
   height: 42px;
   margin-top: var(--space-8);
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   background: color-mix(
     in srgb,
     var(--color-primary-500) 10%,
@@ -406,7 +406,7 @@
 .releaseVersion {
   display: inline-flex;
   align-items: center;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -478,7 +478,7 @@
 
 .releaseAutomation strong,
 .releaseSignal strong {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -646,7 +646,7 @@
 
 .publishLink:hover .publishArrow,
 .publishLink:focus-visible .publishArrow {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   opacity: 1;
   transform: translate(1px, -1px);
 }
@@ -758,7 +758,7 @@
 
 @keyframes step-icon-confirm {
   0% {
-    color: var(--color-primary-500);
+    color: var(--text-brand);
     background: color-mix(
       in srgb,
       var(--color-primary-500) 10%,
@@ -772,7 +772,7 @@
   }
 
   42% {
-    color: var(--color-primary-500);
+    color: var(--text-brand);
     background: color-mix(
       in srgb,
       var(--color-primary-500) 15%,

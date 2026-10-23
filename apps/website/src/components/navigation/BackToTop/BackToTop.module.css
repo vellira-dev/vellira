@@ -36,7 +36,7 @@
 }
 
 .button:hover {
-  color: var(--color-primary-500);
+  color: var(--text-brand);
   background: var(--surface-default);
   border-color: color-mix(
     in srgb,

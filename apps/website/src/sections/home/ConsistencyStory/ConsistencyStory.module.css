@@ -125,7 +125,7 @@
 }
 
 .list li::marker {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .note {

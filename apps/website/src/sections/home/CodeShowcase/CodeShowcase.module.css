@@ -38,7 +38,7 @@
 
 .eyebrow,
 .previewLabel {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -56,7 +56,7 @@
 
 .title span {
   display: block;
-  color: var(--color-primary-400);
+  color: var(--text-brand);
 }
 
 .description {
@@ -378,7 +378,7 @@
 }
 
 .importDifference code {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: 600;
 }
@@ -646,7 +646,7 @@
 }
 
 .command > span {
-  color: var(--color-primary-400);
+  color: var(--text-brand);
   font-weight: 700;
 }
 
