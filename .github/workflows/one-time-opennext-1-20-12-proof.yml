@@ -63,23 +63,8 @@ jobs:
           if (src.split(needle).length !== 2) throw new Error('OpenNext workerd.js API changed: manual review required');
           if (src.includes('typeof conditionMap !== "object"')) throw new Error('Upstream already includes fix: review patch removal');
           fs.writeFileSync(js, src.replace(needle, needle + '\n    if (typeof conditionMap !== "object" || conditionMap === null) {\n        return { transformedExports: conditionMap, hasBuildCondition: false };\n    }'));
-          const dts = path.join(base, 'workerd.d.ts');
-          let decl = fs.readFileSync(dts, 'utf8');
-          const typeOld = /export declare function transformBuildCondition\(conditionMap: \{[\s\S]*?\}, condition: string\): \{[\s\S]*?transformedExports: \{[\s\S]*?\};/;
-          if (!typeOld.test(decl)) throw new Error('OpenNext type declaration changed; manual review required');
-          decl = decl.replace(typeOld, 'export declare function transformBuildCondition(conditionMap: unknown, condition: string): {\n    transformedExports: unknown;');
-          // The newer OpenNext declaration may format these fields differently.
-          // Match their declared types independently, never widen unrelated fields.
-          for (const field of ['exports', 'imports']) {
-            const declaration = new RegExp('(^\\\\s*' + field + '\\\\?:\\\\s*)\\\\{[^{}]*\\\\}(;)', 'm');
-            const current = new RegExp('^\\\\s*' + field + '\\\\?:\\\\s*unknown;', 'm');
-            if (declaration.test(decl)) {
-              decl = decl.replace(declaration, '$1unknown$2');
-            } else if (!current.test(decl)) {
-              throw new Error('Unexpected OpenNext ' + field + ' declaration; manual review required');
-            }
-          }
-          fs.writeFileSync(dts, decl);
+          // Runtime fix only. Upstream TypeScript declarations are left intact;
+          // the existing behavior tests must pass before candidate promotion.
           NODE
           pnpm patch-commit "$RUNNER_TEMP/opennext-patch-edit" --patches-dir patches
           pnpm install --frozen-lockfile
