@@ -6,8 +6,8 @@ const TIMEOUT_MS = 12_000;
 const MAX_ATTEMPTS = 32;
 
 /**
- * Live staging proof: only malformed addresses are sent; the existing API
- * rejects them before making any Buttondown subscriber mutation.
+ * Live staging proof: only malformed addresses are sent. The outer Worker
+ * denies POSTs on workers.dev before OpenNext can write to Buttondown.
  */
 export async function verifyNewsletterGuardLive({
   siteUrl,
@@ -51,8 +51,8 @@ export async function verifyNewsletterGuardLive({
       assert.equal(result.headers.get('retry-after'), '60');
       return 'preview-denial-proven';
     }
-    assert.equal(result.status, 400);
-    assert.equal(payload.code, 'invalid_email');
+    assert.equal(result.status, 503);
+    assert.equal(payload.code, 'temporarily_unavailable');
   }
 
   if (enabled)
