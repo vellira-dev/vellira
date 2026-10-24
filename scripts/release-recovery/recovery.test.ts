@@ -510,7 +510,9 @@ describe('release recovery decisions', () => {
     const prepareAt = recovery.indexOf(
       'const candidate = prepareReleaseCandidate(packageInfos, {'
     );
-    const candidateProofAt = recovery.indexOf('assertRecoveryCandidateArtifacts(');
+    const candidateProofAt = recovery.indexOf(
+      'assertRecoveryCandidateArtifacts('
+    );
     const packedLookupAt = recovery.indexOf('candidate.packageInfos.find(');
     const mutateAt = recovery.indexOf('await publishPackage(packageInfo, {');
     const completenessAt = recovery.indexOf(
@@ -533,7 +535,6 @@ describe('release recovery decisions', () => {
     expect(recovery).toContain('planPackageRecovery(publicPackages, verified)');
     expect(recovery).toContain('Package recovery remains incomplete');
   });
-
 
   it('rejects raw workspace publication and non-installable registry metadata', () => {
     const version = '2.186.6';
