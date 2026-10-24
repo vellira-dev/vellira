@@ -144,9 +144,11 @@ auto-merge enabled. It does not merely dispatch a second workflow.
    subject digest, trusted workflow, and provenance source are verified.
 2. Check out `expected_tag_sha` into a separate directory. If packages are
    missing, install and build that checkout, then run canonical version
-   preparation there. Only missing package versions are passed to the shared
-   Trusted Publishing implementation. Existing versions are not intentionally
-   republished; an npm already-published conflict is not itself proof of
+   preparation there. Reuse the normal release-candidate packer to generate
+   and validate exact `pnpm pack` archives (including a clean npm install,
+   resolved internal dependencies, and artifact integrity). Only missing
+   versions are published from these verified `.tgz` archives, never raw
+   workspace directories. Existing versions are not intentionally republished; an npm already-published conflict is not itself proof of
    integrity or provenance.
 3. Submit all missing-package publish mutations first. Do not run a separate
    six-minute visibility wait after each accepted publish. If any publish
@@ -175,6 +177,8 @@ A Vellira release is complete only when:
 
 - all six exact package versions exist on npm;
 - all six have integrity, tarball metadata, and expected provenance;
+- published manifests have no `workspace:*` dependency specifiers and pin
+  internal Vellira dependencies to the same exact release version;
 - the tag exists at the intended commit;
 - a non-draft, non-prerelease GitHub Release exists for that tag;
 - the repository version-sync PR has completed.
@@ -203,6 +207,16 @@ the shared deadline, and make one final registry attempt there. If normal
 release stops after external state becomes complete, a later push may reconcile
 repository state automatically. If external state is incomplete or conflicting,
 the workflow remains fail-closed and manual recovery is required.
+
+## 2026-10-23 v2.186.5 recovery packaging incident
+
+Manual recovery published npm packages directly from monorepo directories,
+where dependency specifiers still contained `workspace:*`. The independent
+Web and Expo Starter npm consumers correctly failed installation. Although
+all six packages had valid npm attestations, these alone did not establish
+installability. npm releases are immutable: do not overwrite `v2.186.5`,
+bypass its consumer gates, or delete its release tag. Fix the recovery packer,
+then publish a fresh patch release using the validated candidate tarballs.
 
 ## Incident record
 
