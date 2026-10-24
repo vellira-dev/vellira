@@ -64,7 +64,7 @@ export function inventoryLinks(source: string, filename: string): LinkInventoryE
       if (tag === 'a') kind = 'raw-anchor';
       else if (nextLinks.has(tag)) kind = 'next-link';
       else if (canonicalLinks.has(tag)) kind = 'canonical-link';
-      else if (buttons.has(tag) && node.attributes.properties.some((a) => ts.isJsxAttribute(a) && a.name.text === 'asChild')) kind = 'canonical-button';
+      else if (buttons.has(tag) && node.attributes.properties.some((a) => ts.isJsxAttribute(a) && ts.isIdentifier(a.name) && a.name.text === 'asChild')) kind = 'canonical-button';
       else if (/Link$/.test(tag)) kind = 'unresolved';
       if (kind) {
         const position = ast.getLineAndCharacterOfPosition(node.getStart(ast));
