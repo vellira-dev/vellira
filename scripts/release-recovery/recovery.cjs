@@ -1,4 +1,8 @@
 const assert = require('node:assert/strict');
+const {
+  workspaceProtocolDependencies,
+  mismatchedInternalDependencies,
+} = require('../release-candidate/package-artifacts.cjs');
 
 const CONFIRMATION = 'RECOVER_EXISTING_RELEASE';
 const REPOSITORY = 'vellira-dev/vellira';
@@ -136,10 +140,71 @@ function isTrustedRecoveryProvenanceSource({
   );
 }
 
+
+function assertInstallableRegistryPackage({ packageName, version, manifest }) {
+  assert.ok(
+    manifest && typeof manifest === 'object' && !Array.isArray(manifest),
+    `${packageName}@${version} is missing published npm manifest metadata`
+  );
+  assert.equal(
+    manifest.name,
+    packageName,
+    'Published npm package name mismatch'
+  );
+  assert.equal(
+    manifest.version,
+    version,
+    'Published npm package version mismatch'
+  );
+  const unresolved = workspaceProtocolDependencies(manifest);
+  assert.equal(
+    unresolved.length,
+    0,
+    `${packageName}@${version} contains unresolved workspace dependencies: ${unresolved.join(', ')}`
+  );
+  const mismatched = mismatchedInternalDependencies(manifest, version);
+  assert.equal(
+    mismatched.length,
+    0,
+    `${packageName}@${version} has non-exact Vellira dependencies: ${mismatched.join(', ')}`
+  );
+}
+
+function assertRecoveryCandidateArtifacts(packageInfos, expectedNames, version) {
+  assert.ok(
+    Array.isArray(packageInfos),
+    'Recovery needs verified packed artifacts'
+  );
+  assert.deepEqual(
+    packageInfos.map((info) => info.name).sort(),
+    [...expectedNames].sort(),
+    'Recovery candidate must contain exactly the public packages'
+  );
+  for (const info of packageInfos) {
+    assert.equal(info.version, version, `Wrong packed version for ${info.name}`);
+    assert.match(
+      info.publishTarget ?? '',
+      /\.tgz$/,
+      `${info.name} recovery publication requires a packed .tgz target`
+    );
+    assert.match(
+      info.candidateIntegrity ?? '',
+      /^sha512-[A-Za-z0-9+/]+={0,2}$/,
+      `${info.name} is missing packed integrity evidence`
+    );
+    assert.match(
+      info.candidateShasum ?? '',
+      /^[a-f0-9]{40}$/,
+      `${info.name} is missing packed shasum evidence`
+    );
+  }
+}
+
 function verifyRegistryEvidence(
-  { packageName, version, dist, attestations },
+  { packageName, version, dist, attestations, manifest },
   { allowedSourceShas }
 ) {
+  assertInstallableRegistryPackage({ packageName, version, manifest });
   assert.ok(dist?.integrity, `${packageName}@${version} has no integrity`);
   assert.ok(dist?.tarball, `${packageName}@${version} has no tarball`);
   const expectedDigest = integrityHex(dist.integrity);
@@ -259,6 +324,8 @@ function assertNoCloudflareChanges(paths) {
 
 module.exports = {
   CONFIRMATION,
+  assertInstallableRegistryPackage,
+  assertRecoveryCandidateArtifacts,
   RELEASE_WORKFLOW,
   REPOSITORY,
   assessGithubRelease,
