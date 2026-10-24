@@ -664,6 +664,30 @@ try {
             await expect(actionsAfterReload).toBeFocused();
             await dashboardSearch.fill('');
 
+            // Editing a status under a status filter can unmount the
+            // invoking row. Restore to stable Projects navigation instead.
+            await actionsAfterReload.click();
+            await page
+              .getByRole('menuitem', { name: 'Edit', exact: true })
+              .click();
+            const filteredEditDialog = page.getByRole('dialog', {
+              name: 'Edit project',
+            });
+            await filteredEditDialog
+              .getByRole('combobox', { name: 'Status' })
+              .click();
+            await page
+              .getByRole('option', { name: 'Planned', exact: true })
+              .click();
+            await filteredEditDialog
+              .getByRole('button', { name: 'Save changes' })
+              .click();
+            await expect(filteredEditDialog).toBeHidden();
+            await expect(actionsAfterReload).toBeHidden();
+            await expect(
+              dashboard.getByRole('button', { name: 'Projects', exact: true })
+            ).toBeFocused();
+
             await dashboard
               .getByRole('button', { name: 'Settings', exact: true })
               .click();
