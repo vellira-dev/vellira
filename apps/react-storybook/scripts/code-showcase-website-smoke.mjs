@@ -582,10 +582,40 @@ try {
             await expect(
               dashboard.getByText('Browser smoke project')
             ).toBeHidden();
+            // Removing the focused row must not strand keyboard users on body.
+            // With another visible project, focus the next row's action.
+            await expect(
+              dashboard.getByRole('button', {
+                name: 'Actions for Dashboard rollout',
+              })
+            ).toBeFocused();
             await dashboard.getByRole('button', { name: 'Undo' }).click();
             await expect(
               dashboard.getByText('Browser smoke project')
             ).toBeVisible();
+            // Undo removes its own button: focus the restored row instead.
+            await expect(actionsAfterReload).toBeFocused();
+
+            // When the filter leaves no neighbouring row, focus Undo itself.
+            const dashboardSearch = dashboard.getByRole('searchbox', {
+              name: 'Search projects',
+            });
+            await dashboardSearch.fill('Browser smoke project');
+            await expect(actionsAfterReload).toBeVisible();
+            await actionsAfterReload.click();
+            await page
+              .getByRole('menuitem', { name: 'Remove', exact: true })
+              .click();
+            await expect(
+              dashboard.getByText('Browser smoke project')
+            ).toBeHidden();
+            const undoLastProject = dashboard.getByRole('button', {
+              name: 'Undo',
+            });
+            await expect(undoLastProject).toBeFocused();
+            await undoLastProject.click();
+            await expect(actionsAfterReload).toBeFocused();
+            await dashboardSearch.fill('');
 
             await dashboard
               .getByRole('button', { name: 'Settings', exact: true })
