@@ -26,7 +26,7 @@ function fixture(t) {
         'node_modules/' + dep,
         { version: version.startsWith('^') ? '6.0.3' : version,
           resolved: 'https://registry.npmjs.org/' +
-            dep.replace('/', '%2f') + '/-/package.tgz',
+            dep.replaceAll('/', '%2f') + '/-/package.tgz',
           integrity: 'sha512-QUJDRA==' },
       ])
     );
