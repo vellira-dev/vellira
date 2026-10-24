@@ -12,10 +12,12 @@ const {
     verifyPackageCompleteness,
   },
 } = require('../semantic-release-packages.cjs');
+const { prepareReleaseCandidate } = require('../release-candidate/package-artifacts.cjs');
 const {
   RELEASE_WORKFLOW,
   REPOSITORY,
   assessGithubRelease,
+  assertRecoveryCandidateArtifacts,
   assertVerifiedExistingRelease,
   assertTaggedCheckout,
   assertTaggedSourceChanges,
@@ -220,6 +222,7 @@ async function registryState(packageName) {
       version: input.version,
       dist: metadata.dist,
       attestations,
+      manifest: metadata,
     },
     { allowedSourceShas }
   );
@@ -322,9 +325,21 @@ async function packages() {
 
   if (plan.publish.length > 0) {
     assertTrustedPublishingEnvironment();
+    // Reuse the normal candidate packer: raw npm publish of workspace
+    // directories retains workspace:* and breaks external npm consumers.
+    const candidate = prepareReleaseCandidate(packageInfos, {
+      expectedSourceSha: input.expectedTagSha,
+    });
+    assertRecoveryCandidateArtifacts(
+      candidate.packageInfos,
+      publicPackages,
+      input.version
+    );
     for (const packageName of plan.publish) {
       await assertImmutableGitState();
-      const packageInfo = packageInfos.find((info) => info.name === packageName);
+      const packageInfo = candidate.packageInfos.find(
+        (info) => info.name === packageName
+      );
       assert.ok(packageInfo, `Missing exact package manifest for ${packageName}`);
       // A successful npm publish can remain invisible to npm view for longer
       // than six minutes. Complete every accepted mutation before waiting.
@@ -340,7 +355,7 @@ async function packages() {
     // One bounded all-six visibility gate, identical to normal Release.
     // This is not provenance admission: packageStates below also validates
     // exact npm integrity and trusted SLSA attestation source for every item.
-    await verifyPackageCompleteness(packageInfos);
+    await verifyPackageCompleteness(candidate.packageInfos);
   }
 
   const verified = await packageStates();

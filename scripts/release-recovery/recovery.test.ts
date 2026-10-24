@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 const require = createRequire(import.meta.url);
 const {
   assessGithubRelease,
+  assertInstallableRegistryPackage,
+  assertRecoveryCandidateArtifacts,
   assertVerifiedExistingRelease,
   assertNoCloudflareChanges,
   assertTaggedCheckout,
@@ -438,6 +440,7 @@ describe('release recovery decisions', () => {
           version: '2.104.1',
           dist: { integrity, tarball: 'https://registry.example/icons.tgz' },
           attestations: [attestation],
+          manifest: { name: '@vellira-ui/icons', version: '2.104.1' },
         },
         { allowedSourceShas: [sha] }
       ).sourceShas
@@ -504,9 +507,14 @@ describe('release recovery decisions', () => {
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const recovery = script.slice(start, end);
+    const prepareAt = recovery.indexOf(
+      'const candidate = prepareReleaseCandidate(packageInfos, {'
+    );
+    const candidateProofAt = recovery.indexOf('assertRecoveryCandidateArtifacts(');
+    const packedLookupAt = recovery.indexOf('candidate.packageInfos.find(');
     const mutateAt = recovery.indexOf('await publishPackage(packageInfo, {');
     const completenessAt = recovery.indexOf(
-      'await verifyPackageCompleteness(packageInfos)'
+      'await verifyPackageCompleteness(candidate.packageInfos)'
     );
     const strictRegistryAt = recovery.indexOf(
       'const verified = await packageStates();'
@@ -516,11 +524,71 @@ describe('release recovery decisions', () => {
     expect(recovery).toContain('publicPackages.map(createPackageInfo)');
     expect(recovery).toContain('await assertImmutableGitState()');
     expect(recovery).toContain('assert.equal(result.error, undefined');
-    expect(mutateAt).toBeGreaterThan(-1);
+    expect(prepareAt).toBeGreaterThan(-1);
+    expect(candidateProofAt).toBeGreaterThan(prepareAt);
+    expect(packedLookupAt).toBeGreaterThan(candidateProofAt);
+    expect(mutateAt).toBeGreaterThan(packedLookupAt);
     expect(completenessAt).toBeGreaterThan(mutateAt);
     expect(strictRegistryAt).toBeGreaterThan(completenessAt);
     expect(recovery).toContain('planPackageRecovery(publicPackages, verified)');
     expect(recovery).toContain('Package recovery remains incomplete');
+  });
+
+
+  it('rejects raw workspace publication and non-installable registry metadata', () => {
+    const version = '2.186.6';
+    const packed = packages.map((name) => ({
+      name,
+      version,
+      publishTarget: `/tmp/vellira-candidate/${name.split('/')[1]}.tgz`,
+      candidateIntegrity: 'sha512-dGVzdA==',
+      candidateShasum: 'a'.repeat(40),
+    }));
+    expect(() =>
+      assertRecoveryCandidateArtifacts(packed, packages, version)
+    ).not.toThrow();
+    expect(() =>
+      assertRecoveryCandidateArtifacts(
+        [{ ...packed[0], publishTarget: './packages/core' }, ...packed.slice(1)],
+        packages,
+        version
+      )
+    ).toThrow('packed .tgz target');
+    expect(() =>
+      assertRecoveryCandidateArtifacts(
+        [{ ...packed[0], candidateIntegrity: undefined }, ...packed.slice(1)],
+        packages,
+        version
+      )
+    ).toThrow('packed integrity evidence');
+
+    const base = { packageName: '@vellira-ui/react', version };
+    const manifest = {
+      name: base.packageName,
+      version,
+      dependencies: { '@vellira-ui/core': version },
+    };
+    expect(() =>
+      assertInstallableRegistryPackage({ ...base, manifest })
+    ).not.toThrow();
+    expect(() =>
+      assertInstallableRegistryPackage({
+        ...base,
+        manifest: {
+          ...manifest,
+          dependencies: { '@vellira-ui/core': 'workspace:*' },
+        },
+      })
+    ).toThrow('unresolved workspace dependencies');
+    expect(() =>
+      assertInstallableRegistryPackage({
+        ...base,
+        manifest: {
+          ...manifest,
+          dependencies: { '@vellira-ui/core': '^2.186.6' },
+        },
+      })
+    ).toThrow('non-exact Vellira dependencies');
   });
 
   it('does not abandon the shared queue when one worker throws', async () => {
