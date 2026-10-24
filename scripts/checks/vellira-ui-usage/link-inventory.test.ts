@@ -21,11 +21,18 @@ describe('website link inventory (#1808 evidence)', () => {
   });
 
   it('does not treat example markup embedded in strings as JSX links', () => {
-    expect(inventoryLinks(`const sample = "<a href='/'>Sample</a>";`, 'example.tsx')).toEqual([]);
+    expect(
+      inventoryLinks(`const sample = "<a href='/'>Sample</a>";`, 'example.tsx')
+    ).toEqual([]);
   });
 
   it('flags unresolved link wrappers for human classification', () => {
-    expect(inventoryLinks(`const Example = () => <CustomLink href='/'>Go</CustomLink>;`, 'example.tsx')[0]).toMatchObject({
+    expect(
+      inventoryLinks(
+        `const Example = () => <CustomLink href='/'>Go</CustomLink>;`,
+        'example.tsx'
+      )[0]
+    ).toMatchObject({
       kind: 'unresolved',
       tag: 'CustomLink',
     });
