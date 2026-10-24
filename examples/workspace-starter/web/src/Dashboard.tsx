@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 
 import {
   Check,
@@ -164,6 +165,7 @@ export function Dashboard({
   const [nameError, setNameError] = useState('');
   const [feedback, setFeedback] = useState('');
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const modalReturnFocusRef = useRef<HTMLElement | null>(null);
   const [pendingFocus, setPendingFocus] = useState<
     { kind: 'project'; id: number } | { kind: 'undo' } | null
   >(null);
@@ -310,6 +312,11 @@ export function Dashboard({
   ];
 
   function openCreate() {
+    // The toolbar action is stable even when Create comes from an empty row.
+    modalReturnFocusRef.current =
+      dashboardRef.current?.querySelector<HTMLButtonElement>(
+        '[data-create-project-trigger]'
+      ) ?? null;
     setEditingId(null);
     setNewName('');
     setNewDescription('');
@@ -320,6 +327,11 @@ export function Dashboard({
   }
 
   function openEdit(project: Project) {
+    // The menuitem is temporary; the row's action trigger is not.
+    modalReturnFocusRef.current =
+      dashboardRef.current?.querySelector<HTMLButtonElement>(
+        `[data-project-focus-id="${project.id}"]`
+      ) ?? null;
     setEditingId(project.id);
     setNewName(project.name);
     setNewDescription(project.description);
@@ -333,6 +345,33 @@ export function Dashboard({
     if (!newName.trim()) {
       setNameError('Enter a project name.');
       return;
+    }
+    if (editingId !== null) {
+      const previous = workspace.projects.find(
+        (project) => project.id === editingId
+      );
+      const stillVisible =
+        previous &&
+        filterProjects(
+          [
+            {
+              ...previous,
+              name: newName.trim(),
+              description: newDescription.trim(),
+              team: newTeam,
+              status: newStatus,
+            },
+          ],
+          query,
+          filter
+        ).length > 0;
+      if (!stillVisible) {
+        // Saving may remove the edited row from the current search/filter.
+        modalReturnFocusRef.current =
+          dashboardRef.current?.querySelector<HTMLButtonElement>(
+            '[data-projects-navigation]'
+          ) ?? null;
+      }
     }
     setWorkspace((current) =>
       editingId === null
@@ -455,6 +494,7 @@ export function Dashboard({
               size='sm'
               iconStart={<Plus size={16} aria-hidden='true' />}
               onClick={openCreate}
+              data-create-project-trigger=''
             >
               New project
             </Button>
@@ -888,6 +928,7 @@ export function Dashboard({
 
       <Modal
         open={modalOpen}
+        finalFocus={modalReturnFocusRef as RefObject<HTMLElement>}
         onOpenChange={(next) => {
           setModalOpen(next);
           if (!next) setNameError('');

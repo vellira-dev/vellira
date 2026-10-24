@@ -335,24 +335,53 @@ try {
             await dashboard
               .getByRole('button', { name: 'Projects', exact: true })
               .click();
-            await dashboard
-              .getByRole('button', { name: 'New project' })
-              .click();
+            const createTrigger = dashboard.getByRole('button', {
+              name: 'New project',
+            });
+            await createTrigger.click();
 
             const dialog = page.getByRole('dialog', {
               name: 'Create a project',
             });
             await expect(dialog).toBeVisible();
+            await expect(dialog).toHaveAttribute('aria-modal', 'true');
+            await expect(dialog.locator(':focus')).toHaveCount(1);
+            // The modal wraps keyboard focus from its last action to Close,
+            // then back to the last action in reverse tab order.
+            const createAction = dialog.getByRole('button', {
+              name: 'Create project',
+            });
+            await createAction.focus();
+            await page.keyboard.press('Tab');
+            await expect(
+              dialog.getByRole('button', { name: 'Close dialog' })
+            ).toBeFocused();
+            await page.keyboard.press('Shift+Tab');
+            await expect(createAction).toBeFocused();
+            await page.keyboard.press('Escape');
+            await expect(dialog).toBeHidden();
+            await expect(createTrigger).toBeFocused();
+            await createTrigger.click();
+            await expect(dialog.locator(':focus')).toHaveCount(1);
             await dialog
               .getByRole('textbox', { name: 'Project name' })
               .fill('Browser smoke project');
 
-            await dialog.getByRole('combobox', { name: 'Team' }).click();
+            const createTeam = dialog.getByRole('combobox', {
+              name: 'Team',
+            });
+            await createTeam.click();
             const mobileOption = page.getByRole('option', {
               name: 'Mobile',
               exact: true,
             });
             await expect(mobileOption).toBeVisible();
+            // Escape in a nested Select closes the list, not its dialog.
+            await page.keyboard.press('Escape');
+            await expect(dialog).toBeVisible();
+            await expect(mobileOption).toBeHidden();
+            await expect(createTeam).toBeFocused();
+            await createTeam.click();
             await mobileOption.click();
             await expect(dialog).toBeVisible();
 
@@ -362,6 +391,7 @@ try {
               .getByRole('button', { name: 'Create project' })
               .click();
             await expect(dialog).toBeHidden();
+            await expect(createTrigger).toBeFocused();
             await expect(
               dashboard.getByText('Browser smoke project')
             ).toBeVisible();
@@ -564,6 +594,22 @@ try {
               name: 'Edit project',
             });
             await expect(editDialog).toBeVisible();
+            await expect(editDialog.locator(':focus')).toHaveCount(1);
+            // The Edit invoker is the row trigger, not the transient menuitem.
+            await editDialog.getByRole('button', { name: 'Cancel' }).click();
+            await expect(editDialog).toBeHidden();
+            await expect(actionsAfterReload).toBeFocused();
+
+            await actionsAfterReload.click();
+            await page
+              .getByRole('menuitem', { name: 'Edit', exact: true })
+              .click();
+            await expect(editDialog.locator(':focus')).toHaveCount(1);
+            const editTeam = editDialog.getByRole('combobox', { name: 'Team' });
+            await editTeam.click();
+            await page.keyboard.press('Escape');
+            await expect(editDialog).toBeVisible();
+            await expect(editTeam).toBeFocused();
             await editDialog
               .getByRole('textbox', { name: 'Description' })
               .fill('Edited using real Vellira controls.');
@@ -571,6 +617,7 @@ try {
               .getByRole('button', { name: 'Save changes' })
               .click();
             await expect(editDialog).toBeHidden();
+            await expect(actionsAfterReload).toBeFocused();
             await expect(
               dashboard.getByText('Edited using real Vellira controls.')
             ).toBeVisible();
@@ -616,6 +663,30 @@ try {
             await undoLastProject.click();
             await expect(actionsAfterReload).toBeFocused();
             await dashboardSearch.fill('');
+
+            // Editing a status under a status filter can unmount the
+            // invoking row. Restore to stable Projects navigation instead.
+            await actionsAfterReload.click();
+            await page
+              .getByRole('menuitem', { name: 'Edit', exact: true })
+              .click();
+            const filteredEditDialog = page.getByRole('dialog', {
+              name: 'Edit project',
+            });
+            await filteredEditDialog
+              .getByRole('combobox', { name: 'Status' })
+              .click();
+            await page
+              .getByRole('option', { name: 'Planned', exact: true })
+              .click();
+            await filteredEditDialog
+              .getByRole('button', { name: 'Save changes' })
+              .click();
+            await expect(filteredEditDialog).toBeHidden();
+            await expect(actionsAfterReload).toBeHidden();
+            await expect(
+              dashboard.getByRole('button', { name: 'Projects', exact: true })
+            ).toBeFocused();
 
             await dashboard
               .getByRole('button', { name: 'Settings', exact: true })
@@ -669,6 +740,38 @@ try {
             await page.screenshot({
               path: `${artifactDir}/dashboard-core-live-390.png`,
             });
+            // Run real keyboard flows at the narrow viewport, not just layout.
+            const mobileCreateTrigger = mobileDemo.getByRole('button', {
+              name: 'New project',
+            });
+            await mobileCreateTrigger.click();
+            const mobileCreateDialog = page.getByRole('dialog', {
+              name: 'Create a project',
+            });
+            await expect(mobileCreateDialog.locator(':focus')).toHaveCount(1);
+            await page.keyboard.press('Escape');
+            await expect(mobileCreateDialog).toBeHidden();
+            await expect(mobileCreateTrigger).toBeFocused();
+
+            const mobileSearch = mobileDemo.getByRole('searchbox', {
+              name: 'Search projects',
+            });
+            await mobileSearch.fill('Dashboard rollout');
+            const mobileRowAction = mobileDemo.getByRole('button', {
+              name: 'Actions for Dashboard rollout',
+            });
+            await expect(mobileRowAction).toBeVisible();
+            await mobileRowAction.click();
+            await page
+              .getByRole('menuitem', { name: 'Remove', exact: true })
+              .click();
+            const mobileUndo = mobileDemo.getByRole('button', {
+              name: 'Undo',
+            });
+            await expect(mobileUndo).toBeFocused();
+            await mobileUndo.click();
+            await expect(mobileRowAction).toBeFocused();
+            await mobileSearch.fill('');
           }
 
           // Theme and responsive smoke for the real Dashboard in every
