@@ -36,12 +36,12 @@ const reactModalApiSections: readonly ComponentApiSection[] = [
       },
       {
         name: 'initialFocus',
-        type: 'RefObject<HTMLElement>',
+        type: 'RefObject<HTMLElement | null>',
         description: 'Element that should receive focus when the modal opens.',
       },
       {
         name: 'finalFocus',
-        type: 'RefObject<HTMLElement>',
+        type: 'RefObject<HTMLElement | null>',
         description: 'Element that should receive focus when the modal closes.',
       },
       {

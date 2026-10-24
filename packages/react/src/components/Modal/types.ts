@@ -31,10 +31,10 @@ export interface ModalProps extends BaseModalProps {
   preventScroll?: boolean;
   /** Keeps keyboard focus inside the modal while open. */
   trapFocus?: boolean;
-  /** Element that should receive focus when the modal opens. */
-  initialFocus?: RefObject<HTMLElement>;
-  /** Element that should receive focus when the modal closes. */
-  finalFocus?: RefObject<HTMLElement>;
+  /** Element that should receive focus when the modal opens. Nullable until mounted. */
+  initialFocus?: RefObject<HTMLElement | null>;
+  /** Element that should receive focus when the modal closes. Nullable if absent. */
+  finalFocus?: RefObject<HTMLElement | null>;
   /** Called before focus moves into the modal after opening. */
   onOpenAutoFocus?: (event: ModalAutoFocusEvent) => void;
   /** Called before focus is restored after closing. */

@@ -1,4 +1,4 @@
-import { act } from 'react';
+import { act, useRef } from 'react';
 
 import { expectNoA11yViolations } from '@test-utils/a11y';
 import { render } from '@test-utils/render';
@@ -358,6 +358,50 @@ describe('Modal', () => {
     });
 
     expect(document.activeElement).toBe(trigger);
+
+    unmount();
+  });
+
+  it('accepts nullable focus refs and restores focus to the connected final target', async () => {
+    function NullableFocusHarness({ open }: { open: boolean }) {
+      const initialFocus = useRef<HTMLButtonElement | null>(null);
+      const finalFocus = useRef<HTMLButtonElement | null>(null);
+
+      return (
+        <>
+          <button ref={finalFocus} type='button'>
+            Focus return target
+          </button>
+          <Modal open={open} initialFocus={initialFocus} finalFocus={finalFocus}>
+            <Portal>
+              <Modal.Overlay />
+              <Modal.Content ariaLabel='Nullable focus refs'>
+                <button type='button' ref={initialFocus}>
+                  Initial dialog focus
+                </button>
+              </Modal.Content>
+            </Portal>
+          </Modal>
+        </>
+      );
+    }
+
+    const { container, rerender, unmount } = render(
+      <NullableFocusHarness open={false} />
+    );
+    const returnTarget = container.querySelector<HTMLButtonElement>('button');
+    returnTarget?.focus();
+
+    rerender(<NullableFocusHarness open />);
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    const dialogButton = document.querySelector<HTMLButtonElement>(
+      '[role="dialog"] button'
+    );
+    expect(document.activeElement).toBe(dialogButton);
+
+    rerender(<NullableFocusHarness open={false} />);
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(document.activeElement).toBe(returnTarget);
 
     unmount();
   });
