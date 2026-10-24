@@ -362,7 +362,7 @@ describe('Modal', () => {
     unmount();
   });
 
-  it('accepts nullable focus refs and restores focus to the connected final target', async () => {
+  it('supports nullable initial and final focus refs', async () => {
     function NullableFocusHarness({ open }: { open: boolean }) {
       const initialFocus = useRef<HTMLButtonElement | null>(null);
       const finalFocus = useRef<HTMLButtonElement | null>(null);
@@ -372,7 +372,11 @@ describe('Modal', () => {
           <button ref={finalFocus} type='button'>
             Focus return target
           </button>
-          <Modal open={open} initialFocus={initialFocus} finalFocus={finalFocus}>
+          <Modal
+            open={open}
+            initialFocus={initialFocus}
+            finalFocus={finalFocus}
+          >
             <Portal>
               <Modal.Overlay />
               <Modal.Content ariaLabel='Nullable focus refs'>
