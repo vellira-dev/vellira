@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 
 import {
   Check,
@@ -927,7 +928,7 @@ export function Dashboard({
 
       <Modal
         open={modalOpen}
-        finalFocus={modalReturnFocusRef}
+        finalFocus={modalReturnFocusRef as RefObject<HTMLElement>}
         onOpenChange={(next) => {
           setModalOpen(next);
           if (!next) setNameError('');
