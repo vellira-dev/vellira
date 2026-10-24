@@ -32,6 +32,8 @@ storybook-static
 **/.vitepress/dist/
 .idea
 package-lock.json
+!examples/workspace-starter/web/package-lock.json
+!examples/workspace-starter/native/package-lock.json
 
 coverage/
 **/coverage/
