@@ -19,8 +19,8 @@ export type ModalContextValue = {
   contentId: string;
   contentRef: MutableRefObject<HTMLElement | null>;
   descriptionId: string;
-  finalFocus?: RefObject<HTMLElement>;
-  initialFocus?: RefObject<HTMLElement>;
+  finalFocus?: RefObject<HTMLElement | null>;
+  initialFocus?: RefObject<HTMLElement | null>;
   zIndex?: number;
   modal: boolean;
   onCloseAutoFocus?: (event: ModalAutoFocusEvent) => void;
