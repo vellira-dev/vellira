@@ -5,6 +5,11 @@ description: Prepare Vellira for production with accessibility, testing, CI/CD, 
 
 # Production
 
+This page covers deploying applications that consume Vellira. For the governed
+path Vellira uses to turn approved component intent into validated React and
+React Native component candidates, see
+[Component Production](/project/component-production).
+
 Install only the renderer and supporting packages your application requires.
 
 ## Installation
