@@ -414,7 +414,9 @@ export function Dashboard({
                 size='sm'
                 iconStart={<Icon size={18} aria-hidden='true' />}
                 className={styles.navButton}
-                data-projects-navigation={item.id === 'projects' ? '' : undefined}
+                data-projects-navigation={
+                  item.id === 'projects' ? '' : undefined
+                }
                 aria-current={view === item.id ? 'page' : undefined}
                 onClick={() => setView(item.id)}
               >
