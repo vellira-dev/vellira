@@ -536,60 +536,43 @@ describe('release recovery decisions', () => {
     expect(recovery).toContain('Package recovery remains incomplete');
   });
 
-  it('rejects raw workspace publication and non-installable registry metadata', () => {
-    const version = '2.186.6';
-    const packed = packages.map((name) => ({
+  it('requires verified packed npm artifacts for recovery', () => {
+    const infos = packages.map((name) => ({
       name,
-      version,
-      publishTarget: `/tmp/vellira-candidate/${name.split('/')[1]}.tgz`,
+      version: '2.186.6',
+      publishTarget: '/tmp/candidate.tgz',
       candidateIntegrity: 'sha512-dGVzdA==',
       candidateShasum: 'a'.repeat(40),
     }));
-    expect(() =>
-      assertRecoveryCandidateArtifacts(packed, packages, version)
-    ).not.toThrow();
-    expect(() =>
-      assertRecoveryCandidateArtifacts(
-        [{ ...packed[0], publishTarget: './packages/core' }, ...packed.slice(1)],
-        packages,
-        version
-      )
-    ).toThrow('packed .tgz target');
-    expect(() =>
-      assertRecoveryCandidateArtifacts(
-        [{ ...packed[0], candidateIntegrity: undefined }, ...packed.slice(1)],
-        packages,
-        version
-      )
-    ).toThrow('packed integrity evidence');
+    const valid = () =>
+      assertRecoveryCandidateArtifacts(infos, packages, '2.186.6');
 
-    const base = { packageName: '@vellira-ui/react', version };
+    expect(valid).not.toThrow();
+    infos[0].publishTarget = './packages/core';
+    expect(valid).toThrow('packed .tgz target');
+    infos[0].publishTarget = '/tmp/candidate.tgz';
+    infos[0].candidateIntegrity = '';
+    expect(valid).toThrow('packed integrity evidence');
+    infos[0].candidateIntegrity = 'sha512-dGVzdA==';
+    infos[0].candidateShasum = '';
+    expect(valid).toThrow('packed shasum evidence');
+  });
+
+  it('rejects unresolved npm registry dependency metadata', () => {
+    const version = '2.186.6';
     const manifest = {
-      name: base.packageName,
+      name: '@vellira-ui/react',
       version,
       dependencies: { '@vellira-ui/core': version },
     };
-    expect(() =>
-      assertInstallableRegistryPackage({ ...base, manifest })
-    ).not.toThrow();
-    expect(() =>
-      assertInstallableRegistryPackage({
-        ...base,
-        manifest: {
-          ...manifest,
-          dependencies: { '@vellira-ui/core': 'workspace:*' },
-        },
-      })
-    ).toThrow('unresolved workspace dependencies');
-    expect(() =>
-      assertInstallableRegistryPackage({
-        ...base,
-        manifest: {
-          ...manifest,
-          dependencies: { '@vellira-ui/core': '^2.186.6' },
-        },
-      })
-    ).toThrow('non-exact Vellira dependencies');
+    const info = { packageName: manifest.name, version, manifest };
+    const verify = () => assertInstallableRegistryPackage(info);
+
+    expect(verify).not.toThrow();
+    manifest.dependencies['@vellira-ui/core'] = 'workspace:*';
+    expect(verify).toThrow('unresolved workspace dependencies');
+    manifest.dependencies['@vellira-ui/core'] = '^2.186.6';
+    expect(verify).toThrow('non-exact Vellira dependencies');
   });
 
   it('does not abandon the shared queue when one worker throws', async () => {
