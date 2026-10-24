@@ -29,6 +29,10 @@ jobs:
           node-version: 22.22.2
       - name: Unit tests for safe and deterministic Starter pin synchronization
         run: node --test scripts/sync-workspace-starter-versions.test.cjs
+      - name: Validate npm integrity locks and lockfile policy
+        run: |
+          node --test scripts/sync-workspace-starter-lockfiles.test.cjs
+          node scripts/sync-workspace-starter-lockfiles.cjs --check
       - name: Verify both Starter manifests and README agree with root release
         run: |
           version="$(node -p "require('./package.json').version")"
@@ -48,7 +52,7 @@ jobs:
           node-version: 24.21.0
           registry-url: https://registry.npmjs.org
       - name: Install from published npm packages
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Assert all direct Vellira pins resolve from public npm
         run: |
           node <<'NODE'
@@ -79,7 +83,7 @@ jobs:
           node-version: 24.21.0
           registry-url: https://registry.npmjs.org
       - name: Install from published npm packages
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Assert Native Vellira pin resolves from public npm
         run: |
           node <<'NODE'

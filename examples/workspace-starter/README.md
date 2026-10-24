@@ -9,8 +9,11 @@ Both apps pin **Vellira 2.186.7 packages**. They are independently installable
 and work without a Vellira account, backend or Pro subscription. The public
 source remains available under the repository's MIT license.
 
+Both examples check in npm integrity-locked dependency trees. Use `npm ci` to
+install the reviewed, reproducible published npm dependency graph.
+
 After a complete published Vellira release, the Workspace Starter Release Sync
-workflow opens a reviewable PR to update these exact pins. The PR must pass
+workflow opens a reviewable PR to update these exact pins and npm lockfiles. The PR must pass
 fresh npm Web/Expo consumer checks before it is merged; no versions are pushed
 directly to `main` or changed for existing users without review.
 
@@ -39,7 +42,7 @@ Node.js 22+ is recommended.
 ```sh
 git clone https://github.com/vellira-dev/vellira.git
 cd vellira/examples/workspace-starter/web
-npm install
+npm ci
 npm run dev
 ```
 
@@ -72,7 +75,7 @@ compatible development device. From the repository:
 
 ```sh
 cd examples/workspace-starter/native
-npm install
+npm ci
 npm run start
 ```
 
