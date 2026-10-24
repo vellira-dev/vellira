@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   Check,
@@ -163,6 +163,10 @@ export function Dashboard({
   const [newStatus, setNewStatus] = useState<ProjectStatus>('planned');
   const [nameError, setNameError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const [pendingFocus, setPendingFocus] = useState<
+    { kind: 'project'; id: number } | { kind: 'undo' } | null
+  >(null);
 
   useEffect(() => {
     try {
@@ -237,6 +241,31 @@ export function Dashboard({
     () => filterProjects(workspace.projects, query, filter),
     [workspace.projects, query, filter]
   );
+
+  // Dropdown restores focus to its trigger on selection, but Remove unmounts
+  // that trigger. After React commits the new rows and the menu closes, move
+  // focus to a surviving control rather than leaving it on document.body.
+  useEffect(() => {
+    if (!pendingFocus) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const root = dashboardRef.current;
+      const preferred =
+        pendingFocus.kind === 'project'
+          ? root?.querySelector<HTMLButtonElement>(
+              `[data-project-focus-id="${pendingFocus.id}"]`
+            )
+          : root?.querySelector<HTMLButtonElement>('[data-project-undo]');
+      const fallback =
+        root?.querySelector<HTMLButtonElement>('[data-project-undo]') ??
+        root?.querySelector<HTMLButtonElement>('[data-projects-navigation]');
+
+      (preferred ?? fallback)?.focus();
+      setPendingFocus(null);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingFocus, projects]);
   const workspaceDisplayName = workspace.name.trim() || 'Untitled workspace';
   const workspaceInitials = workspaceDisplayName
     .split(/\s+/)
@@ -343,6 +372,7 @@ export function Dashboard({
 
   return (
     <div
+      ref={dashboardRef}
       className={styles.dashboard}
       data-layout={variant}
       data-density='compact'
@@ -384,6 +414,7 @@ export function Dashboard({
                 size='sm'
                 iconStart={<Icon size={18} aria-hidden='true' />}
                 className={styles.navButton}
+                data-projects-navigation={item.id === 'projects' ? '' : undefined}
                 aria-current={view === item.id ? 'page' : undefined}
                 onClick={() => setView(item.id)}
               >
@@ -457,7 +488,9 @@ export function Dashboard({
                   size='sm'
                   appearance='ghost'
                   color='primary'
+                  data-project-undo=''
                   onClick={() => {
+                    setPendingFocus({ kind: 'project', id: removedProject.id });
                     setWorkspace((current) =>
                       restoreProject(current, removedProject)
                     );
@@ -642,6 +675,7 @@ export function Dashboard({
                             appearance='ghost'
                             color='primary'
                             aria-label={`Actions for ${project.name}`}
+                            data-project-focus-id={project.id}
                             className={styles.projectActionTrigger}
                             iconOnly
                             iconStart={
@@ -689,6 +723,16 @@ export function Dashboard({
                           <Dropdown.Item
                             color='danger'
                             onSelect={() => {
+                              const index = projects.findIndex(
+                                (visible) => visible.id === project.id
+                              );
+                              const neighbour =
+                                projects[index + 1] ?? projects[index - 1];
+                              setPendingFocus(
+                                neighbour
+                                  ? { kind: 'project', id: neighbour.id }
+                                  : { kind: 'undo' }
+                              );
                               setRemovedProject(project);
                               setWorkspace((current) =>
                                 removeProject(current, project.id)
