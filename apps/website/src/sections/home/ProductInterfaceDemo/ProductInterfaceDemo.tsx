@@ -6,6 +6,8 @@ import { Button, Tabs } from '@vellira-ui/react';
 
 import { Dashboard } from './Dashboard';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 
 import styles from './ProductInterfaceDemo.module.css';
@@ -122,7 +124,7 @@ export function ProductInterfaceDemo() {
         <div className={styles.nativeLink}>
           <strong>React Native / Expo</strong> is a separate native starter, not
           this mobile Web preview.{' '}
-          <a
+          <DesignSystemLink
             href={
               repository +
               '/tree/' +
@@ -133,7 +135,7 @@ export function ProductInterfaceDemo() {
             rel='noopener noreferrer'
           >
             Setup instructions ↗
-          </a>
+          </DesignSystemLink>
         </div>
 
         <div className={styles.boundary}>
@@ -143,7 +145,9 @@ export function ProductInterfaceDemo() {
             Pro tiers focus on managed workflows, advanced automation, and
             separately licensed production application kits.
           </p>
-          <a href='#pro'>Explore the Pro roadmap →</a>
+          <DesignSystemLink href='#pro'>
+            Explore the Pro roadmap →
+          </DesignSystemLink>
         </div>
       </div>
     </section>
