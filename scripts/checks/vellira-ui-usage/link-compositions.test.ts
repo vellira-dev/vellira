@@ -87,8 +87,10 @@ describe('link composition evidence', () => {
     const snippet =
       "import { AuthTextLink } from './AuthTextLink'; const X = () => <AuthTextLink href='/login'>Log in</AuthTextLink>;";
     expect(
-      classifyWebsiteSource(snippet, 'apps/website/src/product-app/AuthFlows.tsx')[0]
-        .reviewStatus
+      classifyWebsiteSource(
+        snippet,
+        'apps/website/src/product-app/AuthFlows.tsx'
+      )[0].reviewStatus
     ).toBe('confirmed-canonical');
     expect(classifyWebsiteSource(snippet, filename)[0].reviewStatus).toBe(
       'needs-review'

@@ -52,11 +52,11 @@ function navigableChild(
       attribute.initializer !== undefined &&
       (allowDynamic ||
         (ts.isStringLiteral(attribute.initializer)
-        ? attribute.initializer.text.trim().length > 0
-        : ts.isJsxExpression(attribute.initializer) &&
-          attribute.initializer.expression !== undefined &&
-          ts.isStringLiteralLike(attribute.initializer.expression) &&
-          attribute.initializer.expression.text.trim().length > 0))
+          ? attribute.initializer.text.trim().length > 0
+          : ts.isJsxExpression(attribute.initializer) &&
+            attribute.initializer.expression !== undefined &&
+            ts.isStringLiteralLike(attribute.initializer.expression) &&
+            attribute.initializer.expression.text.trim().length > 0))
   );
 }
 
@@ -95,7 +95,8 @@ export function classifyWebsiteSource(
         if (
           (moduleName === '@/product-app/AuthTextLink' ||
             (moduleName === './AuthTextLink' &&
-              path.posix.dirname(filename) === 'apps/website/src/product-app')) &&
+              path.posix.dirname(filename) ===
+                'apps/website/src/product-app')) &&
           original === 'AuthTextLink'
         )
           authNames.add(item.name.text);
