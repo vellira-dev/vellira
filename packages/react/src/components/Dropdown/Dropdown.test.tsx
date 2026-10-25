@@ -688,7 +688,7 @@ describe('Dropdown', () => {
     unmount();
   });
 
-  it('moves active descendant into submenu and activates items from keyboard', () => {
+  it('activates submenu items using keyboard navigation', () => {
     const onPdf = vi.fn();
     const onArchive = vi.fn();
     const { container, unmount } = render(
@@ -701,7 +701,9 @@ describe('Dropdown', () => {
             <Dropdown.SubContent>
               <Dropdown.Item disabled>Unavailable</Dropdown.Item>
               <Dropdown.Item onSelect={onPdf}>Export as PDF</Dropdown.Item>
-              <Dropdown.Item onSelect={onArchive}>Download archive</Dropdown.Item>
+              <Dropdown.Item onSelect={onArchive}>
+                Download archive
+              </Dropdown.Item>
             </Dropdown.SubContent>
           </Dropdown.Sub>
         </Dropdown.Content>
@@ -721,8 +723,9 @@ describe('Dropdown', () => {
     pressKey(menu, 'ArrowRight');
 
     const submenu = document.querySelectorAll<HTMLElement>('[role="menu"]')[1];
-    const pdf = Array.from(submenu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
-      .find((node) => node.textContent?.includes('Export as PDF'))!;
+    const pdf = Array.from(
+      submenu.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    ).find((node) => node.textContent?.includes('Export as PDF'))!;
     const archive = Array.from(
       submenu.querySelectorAll<HTMLElement>('[role="menuitem"]')
     ).find((node) => node.textContent?.includes('Download archive'))!;
@@ -745,7 +748,7 @@ describe('Dropdown', () => {
     unmount();
   });
 
-  it('closes only a nested menu on Escape/Left and keyboard-toggles submenu checkboxes', () => {
+  it('handles submenu Escape/Left and keyboard checkbox activation', () => {
     const onCheckedChange = vi.fn();
     const { container, unmount } = render(
       <Dropdown closeOnSelect={false}>
