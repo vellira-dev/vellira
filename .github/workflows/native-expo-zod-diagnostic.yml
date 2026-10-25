@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/native-expo-zod-diagnostic.yml'
       - 'examples/workspace-starter/native/scripts/security-zod-bounded.cjs'
+      - 'examples/workspace-starter/native/scripts/security-expo-zod-callsite-inventory.cjs'
   workflow_dispatch:
 
 permissions:
@@ -29,6 +30,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Bounded Zod 3 collection proof
         run: node scripts/security-zod-bounded.cjs
+      - name: Inventory installed Expo CLI Zod callsites
+        run: node scripts/security-expo-zod-callsite-inventory.cjs
       - name: Verify existing node-forge backport unchanged
         run: npm run security:verify-patch
       - name: Typecheck Native Starter
