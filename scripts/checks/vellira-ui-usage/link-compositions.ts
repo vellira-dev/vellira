@@ -90,8 +90,10 @@ export function classifyWebsiteSource(
           nextNames.add(item.name.text);
         if (moduleName === '@vellira-ui/react' && original === 'Button')
           buttonNames.add(item.name.text);
-        if (moduleName === '@/product-app/AuthTextLink' &&
-          original === 'AuthTextLink')
+        if (
+          moduleName === '@/product-app/AuthTextLink' &&
+          original === 'AuthTextLink'
+        )
           authNames.add(item.name.text);
       }
     }
