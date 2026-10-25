@@ -692,6 +692,48 @@ shellTest('Starter sync auto-merge retries only for the exact bot PR', (t) => {
     ].join('\n'),
     { mode: 0o755 }
   );
+  // The CI Playwright image intentionally has no jq. Exercise the workflow's
+  // Bash and JSON decision flow with a faithful, narrow jq fixture instead.
+  writeFileSync(
+    path.join(bin, 'jq'),
+    [
+      '#!/usr/bin/env node',
+      "const fs = require('node:fs');",
+      'const args = process.argv.slice(2);',
+      'const vars = {};',
+      'let filter;',
+      'for (let i = 0; i < args.length; i++) {',
+      '  if (args[i] === "-e") continue;',
+      '  if (args[i] === "--arg") {',
+      '    vars[args[i + 1]] = args[i + 2];',
+      '    i += 2;',
+      '    continue;',
+      '  }',
+      '  filter = args[i];',
+      '}',
+      'const pr = JSON.parse(fs.readFileSync(0, "utf8"));',
+      'if (filter === ".auto_merge != null") {',
+      '  process.exit(pr.auto_merge == null ? 1 : 0);',
+      '}',
+      'const required = [',
+      '  ".state", ".draft", ".base.ref", ".head.ref",',
+      '  ".head.sha", ".user.login", ".title"',
+      '];',
+      'if (!filter || !required.every((part) => filter.includes(part))) {',
+      '  process.stderr.write("Unexpected jq filter in workflow fixture");',
+      '  process.exit(2);',
+      '}',
+      'const valid = pr.state === "open" && pr.draft === false &&',
+      '  pr.base?.ref === "main" &&',
+      '  pr.head?.ref === "chore/workspace-starter-release-sync" &&',
+      '  pr.head?.sha === vars.head &&',
+      '  pr.user?.login === "vellira-release-sync[bot]" &&',
+      '  pr.title === vars.title;',
+      'process.exit(valid ? 0 : 1);',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
   writeFileSync(path.join(bin, 'sleep'), '#!/bin/sh\nexit 0\n', {
     mode: 0o755,
   });
