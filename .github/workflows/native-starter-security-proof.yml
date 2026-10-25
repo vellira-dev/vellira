@@ -34,5 +34,15 @@ jobs:
         run: npm run security:certificate-proof
       - name: Diagnose malformed nested ASN.1 DigestAlgorithm
         run: node scripts/security-asn1-adversarial.cjs
+      - name: Prove fixed-behavior assertion fails on vulnerable package
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node scripts/security-asn1-adversarial.cjs --require-rejection > "$RUNNER_TEMP/rsa-rejection.txt" 2>&1; then
+            echo "::error::Known-vulnerable node-forge unexpectedly passed the fixed-behavior regression."
+            exit 1
+          fi
+          grep -F 'malformed DigestAlgorithm must be rejected' "$RUNNER_TEMP/rsa-rejection.txt"
+          echo "Expected red regression confirmed; dependency is NOT remediated." >> "$GITHUB_STEP_SUMMARY"
       - name: Typecheck Starter
         run: npm run typecheck
