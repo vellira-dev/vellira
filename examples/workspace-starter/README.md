@@ -79,6 +79,20 @@ npm ci
 npm run start
 ```
 
+The Native Starter currently applies a pinned, locally reviewed `node-forge@1.4.0`
+RSA backport during standard `npm ci` via its root `postinstall`. This is a
+temporary mitigation for GHSA-86w9-cpqp-85rv, not a patched upstream npm
+release. Before **direct** `npx expo`, `node`, custom builds or repackaging,
+run `npm run security:verify-patch` in the Native directory. This checks the
+installed `rsa.js` SHA-256 and fails on unpatched or modified bytes.
+
+Do **not** treat `npm ci --ignore-scripts` as a secure installation: it
+skips `postinstall` and leaves the vulnerable upstream file until you run
+`node scripts/apply-node-forge-patch.cjs` and
+`npm run security:verify-patch` explicitly. Reinstalling, copying or
+archiving `node_modules` requires the same verification before use.
+Dependabot alert #141 remains open; see issue #1890.
+
 Follow Expo's device/emulator instructions. To typecheck:
 
 ```sh
