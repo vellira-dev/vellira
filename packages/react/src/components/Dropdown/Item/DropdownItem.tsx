@@ -92,7 +92,7 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
       : item.type === 'item'
         ? item.props.rel
         : undefined;
-  const Component = href ? 'a' : 'li';
+  const Component = href ? 'a' : isSubTrigger ? 'div' : 'li';
   const hasIndicator = isCheckbox || isRadio;
   const child =
     props.asChild && isValidElement<DropdownItemChildProps>(props.children)
@@ -153,7 +153,7 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
 
   if (child) {
     return (
-      <>
+      <DropdownItemSurface isSubTrigger={isSubTrigger}>
         {cloneElement(child, {
           id: itemId,
           role,
@@ -193,12 +193,12 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
         {renderSubMenu(item, itemId, isSubTrigger, isSubOpen, () =>
           context.setOpenSubId(item.id)
         )}
-      </>
+      </DropdownItemSurface>
     );
   }
 
   return (
-    <>
+    <DropdownItemSurface isSubTrigger={isSubTrigger}>
       <Component
         id={itemId}
         role={role}
@@ -241,7 +241,7 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
         )}
 
         {isSubTrigger && (
-          <span className={styles.itemShortcut} aria-hidden='true'>
+          <span className={styles.subChevron} aria-hidden='true'>
             <ChevronRight />
           </span>
         )}
@@ -250,11 +250,29 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
       {renderSubMenu(item, itemId, isSubTrigger, isSubOpen, () =>
         context.setOpenSubId(item.id)
       )}
-    </>
+    </DropdownItemSurface>
   );
 };
 
 DropdownItemRow.displayName = 'DropdownItemRow';
+
+// The submenu needs a positioned containing block at its trigger row,
+// without placing another menu inside a menuitem's accessible name.
+function DropdownItemSurface({
+  children,
+  isSubTrigger,
+}: {
+  children: ReactNode;
+  isSubTrigger: boolean;
+}) {
+  return isSubTrigger ? (
+    <li role='none' className={styles.subWrapper}>
+      {children}
+    </li>
+  ) : (
+    <>{children}</>
+  );
+}
 
 function createDropdownSelectEvent(
   originalEvent: DropdownSelectEvent['originalEvent']

@@ -31,6 +31,12 @@ $dropdown-colors: primary, neutral, success, warning, danger;
   padding: 4px;
   overflow: hidden auto;
   overscroll-behavior: contain;
+
+  // A desktop submenu is a flyout, so the parent must not clip its children.
+  // Retain ordinary menu scrolling while no submenu is open.
+  &[data-submenu-open='true'] {
+    overflow: visible;
+  }
   color: var(--dropdown-content-fg);
   background-color: var(--dropdown-content-bg);
   border: 1px solid var(--dropdown-content-current-border);
@@ -151,5 +157,11 @@ $dropdown-colors: primary, neutral, success, warning, danger;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     transform-origin: bottom;
     animation-name: dropdown-sheet-in;
+
+    // On narrow screens the expanded submenu stays in the bottom sheet.
+    &[data-submenu-open='true'] {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
   }
 }
