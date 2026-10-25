@@ -1,9 +1,15 @@
 {
-  "title": "Component Metadata as a Source of Truth for a Design System",
-  "description": "How a machine-readable component registry can reduce design-system drift and drive generation, completeness checks, documentation, platform validation, and quality tooling.",
+  "title": "Component Metadata: A Source of Truth for Design Systems",
+  "description": "Learn how machine-readable component metadata connects React and React Native docs, generation, quality checks, and platform contracts to reduce design-system drift.",
   "slug": "component-metadata-source-of-truth",
   "publishedAt": "2026-09-05",
   "author": "Roman Bakurov",
-  "tags": ["Design Systems", "TypeScript", "Tooling", "React", "React Native"],
+  "tags": [
+    "Design Systems",
+    "TypeScript",
+    "Tooling",
+    "React",
+    "React Native"
+  ],
   "draft": false
 }
