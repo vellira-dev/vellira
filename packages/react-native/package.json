@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react-native",
-  "version": "2.186.15",
+  "version": "2.186.18",
   "description": "React Native components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -39,7 +39,7 @@
   },
   "files": [
     "dist/index.js",
-    "dist/index.d.ts",
+    "dist/**/*.d.ts",
     "README.md",
     "LICENSE"
   ],

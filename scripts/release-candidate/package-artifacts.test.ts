@@ -1,10 +1,14 @@
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const {
   collectExportTargets,
+  findUnresolvedPackedDeclarations,
   forbiddenPackedFiles,
   mismatchedInternalDependencies,
   validatePackedPackage,
@@ -45,6 +49,52 @@ function coreFixture(): any {
 }
 
 describe('release candidate artifact validation', () => {
+  it('rejects declarations that reference files excluded from a packed tarball', () => {
+    const packageRoot = mkdtempSync(
+      path.join(tmpdir(), 'vellira-dts-closure-')
+    );
+    const dist = path.join(packageRoot, 'dist');
+    const button = path.join(dist, 'primitives', 'Button');
+
+    try {
+      mkdirSync(dist, { recursive: true });
+      writeFileSync(
+        path.join(dist, 'index.d.ts'),
+        [
+          "export type { ButtonProps } from './primitives/Button';",
+          "export { Button } from './primitives/Button';",
+          '',
+        ].join('\n')
+      );
+
+      expect(
+        findUnresolvedPackedDeclarations(packageRoot, ['dist/index.d.ts'])
+      ).toEqual([
+        { file: 'dist/index.d.ts', specifier: './primitives/Button' },
+        { file: 'dist/index.d.ts', specifier: './primitives/Button' },
+      ]);
+
+      mkdirSync(button, { recursive: true });
+      writeFileSync(
+        path.join(button, 'index.d.ts'),
+        [
+          'export interface ButtonProps { disabled?: boolean }',
+          'export declare const Button: (props: ButtonProps) => unknown;',
+          '',
+        ].join('\n')
+      );
+
+      expect(
+        findUnresolvedPackedDeclarations(packageRoot, [
+          'dist/index.d.ts',
+          'dist/primitives/Button/index.d.ts',
+        ])
+      ).toEqual([]);
+    } finally {
+      rmSync(packageRoot, { recursive: true, force: true });
+    }
+  });
+
   it('validates dist-only package exports and ignores workspace-only source conditions', () => {
     const fixture = coreFixture();
 
