@@ -322,6 +322,11 @@ export const DropdownRoot = ({
         // First Escape closes only the submenu. The parent menu remains
         // focused, with its active descendant restored to the subtrigger.
         event.preventDefault();
+        if (event.key === 'Escape') {
+          // Prevent a parent overlay or the document-level dismiss manager
+          // from closing the entire menu on the first nested Escape.
+          event.stopPropagation();
+        }
         setPointerSubId(undefined);
         return;
       }
