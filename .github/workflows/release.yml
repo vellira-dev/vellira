@@ -258,6 +258,472 @@ jobs:
             "chromatic"
           )
 
+          # A docs-only PR intentionally skips expensive typecheck/test suites.
+          # Verify its exact changed-file set before accepting those skips.
+          gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$REPOSITORY/pulls/$pr_number/files?per_page=100" \
+            --jq '.[].filename' > /tmp/release-pr-files.txt
+
+          docs_only=false
+          if [[ -s /tmp/release-pr-files.txt ]] &&
+             ! grep -Ev '^apps/docs/src/[^[:space:]]+\\.md
+            check_state="$(
+              jq -r \
+                --arg name "$check_name" \
+                '[
+                  .check_runs[]
+                  | select(.name == $name)
+                ]
+                | sort_by(.completed_at // "", .id)
+                | last
+                | if . == null
+                  then "missing"
+                  else "\(.status):\(.conclusion // "none")"
+                  end' \
+                /tmp/release-checks.json
+            )"
+
+            if [[ "$check_state" == "completed:skipped" && "$docs_only" == true ]]; then
+              skippable=false
+              for docs_check in "${docs_skippable_checks[@]}"; do
+                if [[ "$check_name" == "$docs_check" ]]; then
+                  skippable=true
+                  break
+                fi
+              done
+              if [[ "$skippable" == true ]]; then
+                echo "Accepted docs-only CI skip for $check_name on exact PR #$pr_number."
+                continue
+              fi
+            fi
+
+            if [[ "$check_state" != "completed:success" ]]; then
+              echo "::error::Release source PR #$pr_number check '$check_name' is $check_state; refusing to duplicate or bypass PR validation."
+              exit 1
+            fi
+          done
+
+          echo "Verified release source PR #$pr_number ($head_sha): all required PR checks passed or strictly verified docs-only checks were skipped."
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # The exact merged PR is already validated above. Rebuild only the
+      # publishable package artifacts in this trusted release environment.
+      - name: Build publishable packages
+        run: pnpm build
+
+      - name: Smoke packages
+        run: pnpm ci:smoke
+
+      - name: Verify npm CLI and registry
+        run: |
+          pnpm exec npm --version
+          pnpm exec npm ping --registry=https://registry.npmjs.org
+
+      - name: Set up Trusted Publishing runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Verify Trusted Publishing runtime
+        run: |
+          node --version
+          npm --version
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! pnpm exec semantic-release; then
+            echo "::error::semantic-release failed after it may have created immutable external state. Do not delete or move the tag. Use this workflow's manual release-recovery path after forensic review."
+            exit 1
+          fi
+
+      - name: Retain exact npm release candidate
+        if: always() && hashFiles('.release-candidate/candidate.json') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: npm-release-candidate-${{ github.sha }}
+          path: |
+            .release-candidate/*.tgz
+            .release-candidate/candidate.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+      - name: Detect version sync changes
+        id: version-sync
+        shell: bash
+        run: |
+          release_paths=(
+            package.json
+            pnpm-lock.yaml
+            packages/*/package.json
+          )
+
+          if git diff --quiet -- "${release_paths[@]}"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No release-managed files changed; skipping version sync PR."
+            exit 0
+          fi
+
+          version="$(node -p "require('./package.json').version")"
+
+          if [ -z "$version" ]; then
+            echo "Unable to determine the prepared release version."
+            exit 1
+          fi
+
+          git diff --check -- "${release_paths[@]}"
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "branch=chore/sync-release-$version" >> "$GITHUB_OUTPUT"
+          echo "Release-managed files changed for version $version."
+
+      - name: Create release sync GitHub App token
+        if: steps.version-sync.outputs.changed == 'true'
+        id: release-sync-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Close superseded version sync PRs
+        if: steps.version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.release-sync-token.outputs.token }}
+          CURRENT_VERSION: ${{ steps.version-sync.outputs.version }}
+          CURRENT_BRANCH: ${{ steps.version-sync.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          while IFS=$'\t' read -r pr_number head_branch; do
+            if [ -z "$pr_number" ] || [ -z "$head_branch" ]; then
+              continue
+            fi
+
+            if [ "$head_branch" = "$CURRENT_BRANCH" ]; then
+              echo "Keeping current release sync PR #$pr_number ($head_branch)."
+              continue
+            fi
+
+            echo "Closing superseded version sync PR #$pr_number ($head_branch)."
+
+            gh pr close "$pr_number" \
+              --comment "Superseded by release sync for v${CURRENT_VERSION}."
+          done < <(
+            gh pr list \
+              --state open \
+              --base main \
+              --json number,headRefName \
+              --jq '.[] |
+                select(.headRefName | startswith("chore/sync-release-")) |
+                [.number, .headRefName] |
+                @tsv'
+          )
+
+      - name: Seed version sync branch at exact main
+        if: steps.version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ steps.version-sync.outputs.branch }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Release sync seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api             "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH"             > /tmp/release-sync-refs.json
+          matching_count="$(
+            jq               --arg ref "refs/heads/$BRANCH"               '[.[] | select(.ref == $ref)] | length'               /tmp/release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Release sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r                 --arg ref "refs/heads/$BRANCH"                 '.[] | select(.ref == $ref) | .object.sha'                 /tmp/release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api                 --method PATCH                 "repos/$REPOSITORY/git/refs/heads/$BRANCH"                 -f sha="$BASE_SHA"                 -F force=true                 > /dev/null
+            fi
+          else
+            gh api               --method POST               "repos/$REPOSITORY/git/refs"               -f ref="refs/heads/$BRANCH"               -f sha="$BASE_SHA"               > /dev/null
+          fi
+
+      - name: Create version sync PR
+        if: steps.version-sync.outputs.changed == 'true'
+        id: version-sync-pr
+        env:
+          HUSKY: '0'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ steps.release-sync-token.outputs.token }}
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            packages/*/package.json
+          branch: ${{ steps.version-sync.outputs.branch }}
+          commit-message: 'chore(release): sync package versions'
+          delete-branch: true
+          title: 'chore(release): sync package versions'
+          body: |
+            Sync package manifests and lockfile with version ${{ steps.version-sync.outputs.version }} prepared by semantic-release.
+
+      - name: Verify version sync PR creation
+        if: steps.version-sync.outputs.changed == 'true'
+        env:
+          VERSION_SYNC_PR: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+        run: |
+          if [ -z "$VERSION_SYNC_PR" ]; then
+            echo "Release-managed files changed, but no version sync PR was created or found."
+            exit 1
+          fi
+
+      - name: Enable auto-merge for version sync PR
+        if: steps.version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.release-sync-token.outputs.token }}
+        run: |
+          gh pr merge ${{ steps.version-sync-pr.outputs.pull-request-number }} \
+            --auto \
+            --squash \
+            --delete-branch
+
+  recover-existing-release:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ inputs.release_version }}
+      EXPECTED_TAG_SHA: ${{ inputs.expected_tag_sha }}
+      RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+
+    steps:
+      - name: Check out recovery controls from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Fail-closed recovery preflight
+        id: recovery
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-recovery/cli.cjs preflight
+
+      - name: Check out exact tagged package source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          path: tagged-source
+          ref: ${{ inputs.expected_tag_sha }}
+
+      - name: Install exact tagged dependencies
+        if: steps.recovery.outputs.missing_count != '0'
+        working-directory: tagged-source
+        run: pnpm install --frozen-lockfile
+
+      - name: Build exact tagged packages
+        if: steps.recovery.outputs.missing_count != '0'
+        working-directory: tagged-source
+        run: pnpm build
+
+      - name: Prepare exact tagged package manifests
+        if: steps.recovery.outputs.missing_count != '0'
+        working-directory: tagged-source
+        run: |
+          node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
+          pnpm install --lockfile-only
+
+      - name: Set up Trusted Publishing runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          scope: '@vellira-ui'
+
+      - name: Verify Trusted Publishing runtime
+        run: |
+          node --version
+          npm --version
+
+      - name: Reconcile and verify all npm packages
+        working-directory: tagged-source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ../scripts/release-recovery/cli.cjs packages
+
+      - name: Create or verify GitHub Release on existing tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release-recovery/cli.cjs github-release
+
+      - name: Restore canonical version synchronization
+        run: |
+          node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
+          pnpm install --lockfile-only
+
+      - name: Detect and verify version-sync changes
+        id: recovery-version-sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(git diff --name-only -- . ':!package.json' ':!pnpm-lock.yaml' ':!packages/*/package.json')"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected recovery changes:"
+            echo "$unexpected"
+            exit 1
+          fi
+          git diff --check -- package.json pnpm-lock.yaml packages/*/package.json
+          if git diff --quiet -- package.json pnpm-lock.yaml packages/*/package.json; then
+            node -e "if (require('./package.json').version !== process.env.RELEASE_VERSION) process.exit(1)"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create recovery release sync GitHub App token
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        id: recovery-release-sync-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Seed recovery version sync branch at exact main
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: chore/sync-release-${{ inputs.release_version }}
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(
+            gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          )"
+          if [[ "$current_main_sha" != "$BASE_SHA" ]]; then
+            echo "::error::Recovery version sync seed is stale: expected main $BASE_SHA but current main is $current_main_sha."
+            exit 1
+          fi
+
+          gh api             "repos/$REPOSITORY/git/matching-refs/heads/$BRANCH"             > /tmp/recovery-release-sync-refs.json
+          matching_count="$(
+            jq               --arg ref "refs/heads/$BRANCH"               '[.[] | select(.ref == $ref)] | length'               /tmp/recovery-release-sync-refs.json
+          )"
+          if [[ "$matching_count" -gt 1 ]]; then
+            echo "::error::Recovery version sync branch authority is ambiguous."
+            exit 1
+          fi
+
+          if [[ "$matching_count" -eq 1 ]]; then
+            existing_sha="$(
+              jq -r                 --arg ref "refs/heads/$BRANCH"                 '.[] | select(.ref == $ref) | .object.sha'                 /tmp/recovery-release-sync-refs.json
+            )"
+            if [[ "$existing_sha" != "$BASE_SHA" ]]; then
+              gh api                 --method PATCH                 "repos/$REPOSITORY/git/refs/heads/$BRANCH"                 -f sha="$BASE_SHA"                 -F force=true                 > /dev/null
+            fi
+          else
+            gh api               --method POST               "repos/$REPOSITORY/git/refs"               -f ref="refs/heads/$BRANCH"               -f sha="$BASE_SHA"               > /dev/null
+          fi
+
+      - name: Create version sync PR
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        id: version-sync-pr
+        env:
+          HUSKY: '0'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ steps.recovery-release-sync-token.outputs.token }}
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            packages/*/package.json
+          branch: chore/sync-release-${{ inputs.release_version }}
+          commit-message: 'chore(release): sync package versions'
+          delete-branch: true
+          title: 'chore(release): sync package versions'
+          body: |
+            Sync package manifests and lockfile with recovered version ${{ inputs.release_version }} after all external release state was verified.
+
+      - name: Verify version sync PR creation
+        if: steps.recovery-version-sync.outputs.changed == 'true'
+        env:
+          VERSION_SYNC_PR: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+        run: |
+          if [ -z "$VERSION_SYNC_PR" ]; then
+            echo "Recovery completed externally, but no version-sync PR was created or found."
+            exit 1
+          fi
+
+      - name: Enable auto-merge for recovered version sync PR
+        if: steps.recovery-version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.recovery-release-sync-token.outputs.token }}
+        run: |
+          gh pr merge ${{ steps.version-sync-pr.outputs.pull-request-number }} \
+            --auto \
+            --squash \
+            --delete-branch
+ /tmp/release-pr-files.txt; then
+            docs_only=true
+          fi
+
+          docs_skippable_checks=(
+            "Typecheck & API Contracts"
+            "Tooling & IndexNow Tests"
+            "Storybook & Browser Tests"
+            "Unit & Coverage Tests"
+          )
+
           for check_name in "${required_checks[@]}"; do
             check_state="$(
               jq -r \
