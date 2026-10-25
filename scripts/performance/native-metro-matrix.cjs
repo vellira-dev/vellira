@@ -74,7 +74,7 @@ function app(kind) {
       ? "React.createElement(Text, null, 'Metro baseline')"
       : kind === 'button'
         ? "React.createElement(Button, null, 'Metro Button')"
-        : "React.createElement(View, null, React.createElement(Button, null, 'Metro Button'), React.createElement(Select, null))";
+        : "React.createElement(View, null, React.createElement(Button, null, 'Metro Button'), React.createElement(Select, { label: 'Choice', options: [{ value: 'one', label: 'One' }], defaultValue: 'one' }))";
   return (
     "import React from 'react';\n" +
     "import { View, Text } from 'react-native';\n" +
