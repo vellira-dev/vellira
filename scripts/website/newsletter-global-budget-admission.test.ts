@@ -110,7 +110,7 @@ describe('dormant global newsletter budget binding adapter', () => {
     }
   );
 
-  it('fails closed on malformed JSON, binding lookup failure and request failure', async () => {
+  it('fails closed on invalid JSON, lookup failures and timeouts', async () => {
     const failureCases = [
       {
         idFromName: () => {
@@ -152,7 +152,7 @@ describe('dormant global newsletter budget binding adapter', () => {
     }
   });
 
-  it('uses one fixed logical account identity across independent calls', async () => {
+  it('uses a fixed account identity across parallel calls', async () => {
     const idFromName = vi.fn((name: string) => name);
     const fetch = vi.fn(async (_request: Request) =>
       Response.json(
@@ -164,23 +164,22 @@ describe('dormant global newsletter budget binding adapter', () => {
       NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
       NEWSLETTER_GLOBAL_BUDGET: { idFromName, get: () => ({ fetch }) },
     });
-    expect(await Promise.all(Array.from({ length: 12 }, () => admit?.()))).toEqual(
-      Array(12).fill('exhausted')
+    const decisions = await Promise.all(
+      Array.from({ length: 12 }, () => admit?.())
     );
+    expect(decisions).toEqual(Array(12).fill('exhausted'));
     expect(idFromName).toHaveBeenCalledTimes(12);
-    expect(
-      idFromName.mock.calls.every(
-        ([name]) => name === 'one-buttondown-account'
-      )
-    ).toBe(true);
+    const allSameAccount = idFromName.mock.calls.every(
+      ([name]) => name === 'one-buttondown-account'
+    );
+    expect(allSameAccount).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(12);
-    expect(
-      fetch.mock.calls.every(
-        ([request]) =>
-          request.method === 'POST' &&
-          new URL(request.url).pathname === '/admit' &&
-          request.body === null
-      )
-    ).toBe(true);
+    const validRequests = fetch.mock.calls.every(
+      ([request]) =>
+        request.method === 'POST' &&
+        new URL(request.url).pathname === '/admit' &&
+        request.body === null
+    );
+    expect(validRequests).toBe(true);
   });
 });
