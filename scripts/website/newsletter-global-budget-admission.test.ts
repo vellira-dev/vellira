@@ -85,4 +85,74 @@ describe('dormant global newsletter budget binding adapter', () => {
     expect(await admit?.()).toBe('unavailable');
     expect(binding.fetch).toHaveBeenCalledTimes(1);
   });
+  it.each([
+    [200, { ok: true, code: 'admitted' }, 'max-age=60'],
+    [200, { ok: true, code: 'unknown' }, 'no-store'],
+    [200, { code: 'admitted' }, 'no-store'],
+    [200, null, 'no-store'],
+    [200, ['admitted'], 'no-store'],
+    [429, { code: 'rate_limited' }, 'public'],
+  ] as const)(
+    'fails closed on malformed coordinator protocol %#',
+    async (status, payload, cache) => {
+      const fetch = vi.fn(async () =>
+        Response.json(payload, { status, headers: { 'Cache-Control': cache } })
+      );
+      const admit = createNewsletterBudgetAdmission({
+        NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
+        NEWSLETTER_GLOBAL_BUDGET: {
+          idFromName: () => 'account',
+          get: () => ({ fetch }),
+        },
+      });
+      // Missing or unusual payload fields must never independently grant capacity.
+      const decision = await admit?.();
+      if (status === 200 && payload && !Array.isArray(payload) &&
+          'code' in payload && payload.code === 'admitted' && cache === 'no-store') {
+        expect(decision).toBe('admitted');
+      } else {
+        expect(decision).toBe('unavailable');
+      }
+    }
+  );
+
+  it('fails closed on malformed JSON, binding lookup failure and request failure', async () => {
+    const failureCases = [
+      { idFromName: () => { throw new Error('object id failure'); }, get: () => ({ fetch: vi.fn() }) },
+      { idFromName: () => 'account', get: () => { throw new Error('binding unavailable'); } },
+      { idFromName: () => 'account', get: () => ({ fetch: async () => new Response('{invalid', { status: 200, headers: { 'Cache-Control': 'no-store' } }) }) },
+      { idFromName: () => 'account', get: () => ({ fetch: async () => { throw new Error('network timeout'); } }) },
+    ];
+    for (const binding of failureCases) {
+      const admit = createNewsletterBudgetAdmission({
+        NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
+        NEWSLETTER_GLOBAL_BUDGET: binding,
+      });
+      expect(await admit?.()).toBe('unavailable');
+    }
+  });
+
+  it('uses one fixed logical account identity across independent calls', async () => {
+    const idFromName = vi.fn((name: string) => name);
+    const fetch = vi.fn(async () => Response.json(
+      { code: 'rate_limited' },
+      { status: 429, headers: { 'Cache-Control': 'no-store' } }
+    ));
+    const admit = createNewsletterBudgetAdmission({
+      NEWSLETTER_GLOBAL_BUDGET_ENABLED: '1',
+      NEWSLETTER_GLOBAL_BUDGET: { idFromName, get: () => ({ fetch }) },
+    });
+    expect(await Promise.all(Array.from({ length: 12 }, () => admit?.())))
+      .toEqual(Array(12).fill('exhausted'));
+    expect(idFromName).toHaveBeenCalledTimes(12);
+    expect(idFromName.mock.calls.every(([name]) => name === 'one-buttondown-account'))
+      .toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(12);
+    expect(fetch.mock.calls.every(([request]) =>
+      request.method === 'POST' &&
+      new URL(request.url).pathname === '/admit' &&
+      request.body === null
+    )).toBe(true);
+  });
+
 });
