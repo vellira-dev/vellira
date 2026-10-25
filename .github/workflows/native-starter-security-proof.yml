@@ -32,5 +32,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify installed code signing and basic RSA behavior
         run: npm run security:certificate-proof
-      - name: Diagnose malformed nested ASN.1 DigestAlgorithm\n        run: node scripts/security-asn1-adversarial.cjs\n      - name: Typecheck Starter
+      - name: Diagnose malformed nested ASN.1 DigestAlgorithm
+        run: node scripts/security-asn1-adversarial.cjs
+      - name: Typecheck Starter
         run: npm run typecheck
