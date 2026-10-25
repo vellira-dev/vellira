@@ -133,7 +133,7 @@ describe('dormant global newsletter budget binding adapter', () => {
 
   it('uses one fixed logical account identity across independent calls', async () => {
     const idFromName = vi.fn((name: string) => name);
-    const fetch = vi.fn(async () => Response.json(
+    const fetch = vi.fn(async (_request: Request) => Response.json(
       { code: 'rate_limited' },
       { status: 429, headers: { 'Cache-Control': 'no-store' } }
     ));
