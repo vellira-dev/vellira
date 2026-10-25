@@ -830,9 +830,8 @@ describe('Dropdown', () => {
     const submenu = document.querySelectorAll<HTMLElement>('[role="menu"]')[1];
     expect(wrapper?.contains(submenu)).toBe(true);
     expect(menu.dataset.submenuOpen).toBe('true');
-    expect(
-      trigger.querySelector('svg')?.parentElement?.className
-    ).toContain(itemStyles.subChevron);
+    const chevron = trigger.querySelector('svg')?.parentElement;
+    expect(chevron?.className).toContain(itemStyles.subChevron);
 
     unmount();
   });
