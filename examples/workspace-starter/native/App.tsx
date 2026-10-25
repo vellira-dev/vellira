@@ -686,7 +686,9 @@ function WorkspaceScreen() {
                 label='Status'
                 value={status}
                 onValueChange={(value: string | null) => {
-                  if (typeof value === 'string' && isStatus(value)) setStatus(value);
+                  if (typeof value === 'string' && isStatus(value)) {
+                    setStatus(value);
+                  }
                 }}
                 presentation='modal'
               >
