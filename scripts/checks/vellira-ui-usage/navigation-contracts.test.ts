@@ -48,9 +48,7 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(attribute(link, 'href')?.getText(ast)).toContain(
       'workspaceContextRequested'
     );
-    expect(attribute(link, 'aria-current')?.getText(ast)).toContain(
-      'activeSlug'
-    );
+    expect(attribute(link, 'aria-current')?.getText(ast)).toContain('activeSlug');
     expect(attribute(link, 'onClick')?.getText(ast)).toContain('onNavigate');
   });
 
@@ -60,9 +58,7 @@ describe('website structural navigation contracts (source evidence)', () => {
       attribute(link, 'href')?.getText(ast).includes("'/app'")
     );
     const components = matches.find((link) =>
-      attribute(link, 'href')
-        ?.getText(ast)
-        .includes("'/components?from=app'")
+      attribute(link, 'href')?.getText(ast).includes("'/components?from=app'")
     );
     expect(overview).toBeDefined();
     expect(components).toBeDefined();
