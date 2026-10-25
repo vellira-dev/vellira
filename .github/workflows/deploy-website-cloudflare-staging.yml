@@ -315,6 +315,50 @@ jobs:
           check_route '/sitemap.xml' '<urlset'
           check_route '/robots.txt' 'User-Agent: *'
 
+      - name: Verify deployed SEO canonical and sitemap contracts
+        shell: bash
+        env:
+          SEO_BASE_URL: ${{ env.STAGING_URL }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+
+          const origin = 'https://vellira.dev';
+          const base = process.env.SEO_BASE_URL;
+          assert.ok(base?.startsWith('https://'), 'staging origin must use HTTPS');
+
+          async function get(path) {
+            const response = await fetch(new URL(path, base), {
+              headers: { 'Cache-Control': 'no-cache' },
+              signal: AbortSignal.timeout(20_000),
+            });
+            assert.equal(response.status, 200, `${path}: HTTP ${response.status}`);
+            return response.text();
+          }
+
+          const sitemap = await get('/sitemap.xml');
+          const robots = await get('/robots.txt');
+          assert.match(sitemap, /<urlset(?:\s|>)/);
+          assert.match(robots, /Sitemap:\s*https:\/\/vellira\.dev\/sitemap\.xml/i);
+
+          for (const path of ['/components', '/components/button', '/components/select', '/components/textarea', '/blog/ai-ui-consistency']) {
+            const expected = `${origin}${path}`;
+            const html = await get(path);
+            const linkTags = html.match(/<link\b[^>]*>/gi) ?? [];
+            const canonicalTags = linkTags.filter((tag) => /\brel=["']canonical["']/i.test(tag));
+            assert.equal(canonicalTags.length, 1, `${path}: expected exactly one canonical link`);
+            assert.ok(
+              canonicalTags[0].includes(`href="${expected}"`) || canonicalTags[0].includes(`href='${expected}'`),
+              `${path}: unexpected canonical ${canonicalTags[0]}`
+            );
+            assert.ok(
+              sitemap.includes(`<loc>${expected}</loc>`),
+              `${path}: missing production canonical URL in sitemap`
+            );
+            console.log(`SEO smoke OK: ${path} -> ${expected}`);
+          }
+          NODE
+
       - name: Inspect verified npm release and registry availability
         # Advisory for optional metadata: preserve website deployment gates.
         # Log safe response evidence so a GREEN browser soak cannot be

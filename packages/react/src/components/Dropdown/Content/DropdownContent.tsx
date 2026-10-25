@@ -62,11 +62,7 @@ export const DropdownContent: DropdownSlotComponent<DropdownContentProps> = ({
       autoFocus
       tabIndex={-1}
       aria-labelledby={context.triggerId}
-      aria-activedescendant={
-        context.activeIndex >= 0 && context.activeIndex < context.items.length
-          ? context.getItemId(context.activeIndex)
-          : undefined
-      }
+      aria-activedescendant={context.activeDescendantId}
       onKeyDown={context.onKeyDown}
       style={{ ...context.surfaceStyle, ...context.contentProps?.style }}
       className={contentClassName}
