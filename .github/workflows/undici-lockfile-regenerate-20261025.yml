@@ -1,0 +1,71 @@
+name: Temporary Undici Lockfile Regeneration
+
+on:
+  push:
+    branches:
+      - security/patch-undici-three-major-lines-20261025
+    paths:
+      - .github/workflows/undici-lockfile-regenerate-20261025.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - name: Regenerate exact dependency lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const lock = fs.readFileSync('pnpm-lock.yaml', 'utf8');
+          for (const target of ['undici@6.29.1:', 'undici@7.30.1:', 'undici@8.12.2:']) {
+            if (!lock.includes('  ' + target)) throw Error('Missing patched package: ' + target);
+          }
+          for (const old of ['undici@6.28.1:', 'undici@7.29.1:', 'undici@8.10.2:']) {
+            if (lock.includes('  ' + old)) throw Error('Vulnerable package retained: ' + old);
+          }
+          for (const key of ['next@16.4.2:', 'node-forge@1.4.0:', '@opennextjs/cloudflare@1.20.12:']) {
+            if (!lock.includes('  ' + key)) throw Error('Retained patch package missing: ' + key);
+          }
+          NODE
+          git diff --check
+          test "$(git diff --name-only | wc -l | tr -d ' ')" = 1
+          test "$(git diff --name-only)" = pnpm-lock.yaml
+      - name: Verify frozen install
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Create app write token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.RELEASE_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+      - name: Push exact lockfile commit to PR branch
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'vellira-release-sync[bot]'
+          git config user.email 'vellira-release-sync[bot]@users.noreply.github.com'
+          git add -- pnpm-lock.yaml
+          git commit -m "fix(security): regenerate undici patched dependency lockfile"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:refs/heads/security/patch-undici-three-major-lines-20261025"
