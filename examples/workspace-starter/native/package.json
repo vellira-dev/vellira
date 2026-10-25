@@ -9,7 +9,8 @@
     "android": "expo start --android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "security:certificate-proof": "node scripts/security-certificate-proof.cjs"
+    "security:certificate-proof": "node scripts/security-certificate-proof.cjs",
+    "postinstall": "node scripts/apply-node-forge-patch.cjs"
   },
   "dependencies": {
     "@vellira-ui/react-native": "2.186.15",
