@@ -1,12 +1,17 @@
 name: Native Starter Package-Exact Security Proof
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-starter-security-proof.yml'
+      - 'examples/workspace-starter/native/**'
   push:
     branches:
+      - main
       - security/native-expo-package-exact-proof-20261025
     paths:
       - '.github/workflows/native-starter-security-proof.yml'
-      - 'examples/workspace-starter/native/package.json'
+      - 'examples/workspace-starter/native/**'
       - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
       - 'examples/workspace-starter/native/scripts/security-asn1-adversarial.cjs'
       - 'examples/workspace-starter/native/scripts/security-expo-certificate-contract.cjs'
@@ -70,6 +75,23 @@ jobs:
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
+          cp node_modules/node-forge/lib/rsa.js "$RUNNER_TEMP/rsa-known-good.js"
+          printf '\\n// altered installed bytes\\n' >> node_modules/node-forge/lib/rsa.js
+          if node scripts/apply-node-forge-patch.cjs --verify > "$RUNNER_TEMP/tampered-rsa.log" 2>&1; then
+            echo "::error::Tampered RSA file passed verification"
+            exit 1
+          fi
+          grep -F 'Unrecognized or partially modified' "$RUNNER_TEMP/tampered-rsa.log"
+          cp "$RUNNER_TEMP/rsa-known-good.js" node_modules/node-forge/lib/rsa.js
+          cp scripts/node-forge-1.4.0-candidate.patch "$RUNNER_TEMP/rsa-known-good.patch"
+          printf '\\n# altered patch bytes\\n' >> scripts/node-forge-1.4.0-candidate.patch
+          if node scripts/apply-node-forge-patch.cjs --verify > "$RUNNER_TEMP/tampered-patch.log" 2>&1; then
+            echo "::error::Tampered RSA patch passed verification"
+            exit 1
+          fi
+          grep -F 'Pinned RSA patch integrity mismatch' "$RUNNER_TEMP/tampered-patch.log"
+          cp "$RUNNER_TEMP/rsa-known-good.patch" scripts/node-forge-1.4.0-candidate.patch
+          npm run security:verify-patch
           npm ci --no-audit --no-fund
           npm run security:verify-patch
           node scripts/security-asn1-adversarial.cjs --require-rejection
