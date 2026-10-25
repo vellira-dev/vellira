@@ -55,8 +55,11 @@ jobs:
           test "$(grep -c '^@@ ' scripts/node-forge-1.4.0-candidate.patch)" -eq 3
           cp node_modules/node-forge/lib/rsa.js "$RUNNER_TEMP/rsa-original.js"
           trap 'cp "$RUNNER_TEMP/rsa-original.js" node_modules/node-forge/lib/rsa.js' EXIT
-          git apply --check --unsafe-paths scripts/node-forge-1.4.0-candidate.patch
-          git apply --unsafe-paths scripts/node-forge-1.4.0-candidate.patch
+          patch --dry-run --batch -p1 < scripts/node-forge-1.4.0-candidate.patch
+          patch --batch -p1 < scripts/node-forge-1.4.0-candidate.patch
+          grep -Fq '_encodeDigestInfo' node_modules/node-forge/lib/rsa.js
+          grep -Fq "var expected =" node_modules/node-forge/lib/rsa.js
+          ! cmp -s "$RUNNER_TEMP/rsa-original.js" node_modules/node-forge/lib/rsa.js
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
