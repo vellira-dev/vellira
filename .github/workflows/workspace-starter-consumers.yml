@@ -98,5 +98,7 @@ jobs:
           NODE
       - name: Typecheck Expo Starter
         run: npm run typecheck
+      - name: Verify pinned RSA source before direct Expo CLI
+        run: npm run security:verify-patch
       - name: Verify Expo configuration
         run: npx expo config --json > /dev/null
