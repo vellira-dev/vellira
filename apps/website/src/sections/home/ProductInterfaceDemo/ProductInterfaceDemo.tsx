@@ -145,7 +145,9 @@ export function ProductInterfaceDemo() {
             Pro tiers focus on managed workflows, advanced automation, and
             separately licensed production application kits.
           </p>
-          <DesignSystemLink href='#pro'>Explore the Pro roadmap →</DesignSystemLink>
+          <DesignSystemLink href='#pro'>
+            Explore the Pro roadmap →
+          </DesignSystemLink>
         </div>
       </div>
     </section>
