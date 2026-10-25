@@ -1367,8 +1367,8 @@ import { Button, Modal, Portal } from '@vellira-ui/react';
 | `trapFocus`            | `boolean`                              | No       | Keeps focus inside the dialog.        |
 | `role`                 | `'dialog' \| 'alertdialog'`            | No       | Dialog semantic role.                 |
 | `modal`                | `boolean`                              | No       | —                                     |
-| `initialFocus`         | `RefObject<HTMLElement>`               | No       | —                                     |
-| `finalFocus`           | `RefObject<HTMLElement>`               | No       | —                                     |
+| `initialFocus`         | `RefObject<HTMLElement \| null>`       | No       | —                                     |
+| `finalFocus`           | `RefObject<HTMLElement \| null>`       | No       | —                                     |
 | `onOpenAutoFocus`      | `(event: ModalAutoFocusEvent) => void` | No       | —                                     |
 | `onCloseAutoFocus`     | `(event: ModalAutoFocusEvent) => void` | No       | —                                     |
 | `onEscapeKeyDown`      | `(event: KeyboardEvent) => void`       | No       | —                                     |
