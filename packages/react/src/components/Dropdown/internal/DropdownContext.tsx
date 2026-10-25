@@ -18,7 +18,9 @@ import type {
 import type { DropdownCollectionItem, DropdownRenderEntry } from './types';
 
 export type DropdownContextValue = {
+  activeDescendantId?: string;
   activeIndex: number;
+  activeSubIndex: number;
   closeOnSelect: boolean;
   color: DropdownColor;
   contentReadyToFocus: boolean;
@@ -47,6 +49,7 @@ export type DropdownContextValue = {
     event: DropdownSelectEvent
   ) => void;
   setActiveIndex: (index: number) => void;
+  setActiveSubIndex: (index: number) => void;
   setContentRef: RefCallback<HTMLElement>;
   setOpenSubId: (id: string | undefined) => void;
   setRadioValue: (groupId: string, value: string) => void;
