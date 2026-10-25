@@ -83,6 +83,31 @@ describe('link composition evidence', () => {
     }
   });
 
+  it('recognizes reviewed relative AuthTextLink only within product-app', () => {
+    const snippet =
+      "import { AuthTextLink } from './AuthTextLink'; const X = () => <AuthTextLink href='/login'>Log in</AuthTextLink>;";
+    expect(
+      classifyWebsiteSource(snippet, 'apps/website/src/product-app/AuthFlows.tsx')[0]
+        .reviewStatus
+    ).toBe('confirmed-canonical');
+    expect(classifyWebsiteSource(snippet, filename)[0].reviewStatus).toBe(
+      'needs-review'
+    );
+  });
+
+  it('groups dynamic href composition without granting PASS', () => {
+    const entries = classifyWebsiteSource(
+      `import { Button } from '@vellira-ui/react'; import Link from 'next/link';
+      const X = () => <Button asChild><Link href={destination}>Go</Link></Button>;`,
+      filename
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      memberCount: 2,
+      reviewStatus: 'needs-review',
+    });
+  });
+
   it('retains raw links outside valid canonical compositions', () => {
     const entries = classifyWebsiteSource(
       `const X = () => <a href='/'>Home</a>;`,
