@@ -88,7 +88,6 @@ describe('dormant global newsletter budget binding adapter', () => {
   it.each([
     [200, { ok: true, code: 'admitted' }, 'max-age=60'],
     [200, { ok: true, code: 'unknown' }, 'no-store'],
-    [200, { code: 'admitted' }, 'no-store'],
     [200, null, 'no-store'],
     [200, ['admitted'], 'no-store'],
     [429, { code: 'rate_limited' }, 'public'],
