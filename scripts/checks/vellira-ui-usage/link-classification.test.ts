@@ -11,7 +11,12 @@ describe('website link classification evidence', () => {
       'apps/website/src/example.tsx'
     );
     const report = createClassificationReport(entries);
-    expect(report).toMatchObject({ total: 3, confirmed: 1, needsReview: 2, complete: false });
+    expect(report).toMatchObject({
+      total: 3,
+      confirmed: 1,
+      needsReview: 2,
+      complete: false,
+    });
     expect(report.entries.map((entry) => entry.reviewStatus)).toEqual([
       'confirmed-canonical',
       'needs-review',

@@ -9,7 +9,11 @@ export interface ClassifiedLink extends LinkInventoryEntry {
 
 export function classifyLink(entry: LinkInventoryEntry): ClassifiedLink {
   if (entry.kind === 'canonical-link') {
-    return { ...entry, reviewStatus: 'confirmed-canonical', reason: 'Canonical DesignSystemLink import' };
+    return {
+      ...entry,
+      reviewStatus: 'confirmed-canonical',
+      reason: 'Canonical DesignSystemLink import',
+    };
   }
   // Button asChild requires validation of the actual JSX prop value and child.
   // Import-only recognition is insufficient evidence of a valid composition.
@@ -27,9 +31,13 @@ export function classifyLink(entry: LinkInventoryEntry): ClassifiedLink {
   };
 }
 
-export function createClassificationReport(entries: readonly LinkInventoryEntry[]) {
+export function createClassificationReport(
+  entries: readonly LinkInventoryEntry[]
+) {
   const classified = entries.map(classifyLink);
-  const needsReview = classified.filter((entry) => entry.reviewStatus === 'needs-review');
+  const needsReview = classified.filter(
+    (entry) => entry.reviewStatus === 'needs-review'
+  );
   return {
     schemaVersion: 1,
     policy: 'evidence-only',
