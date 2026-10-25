@@ -128,6 +128,86 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await expect(trigger).toBeFocused();
   });
 
+  test('Dropdown submenu is painted, anchored and pointer-selectable', async ({
+    isMobile,
+    page,
+  }) => {
+    await openStory(page, 'components-dropdown--submenus');
+
+    const root = page.getByRole('menu', { name: 'Actions' });
+    const exportTrigger = root.getByRole('menuitem', {
+      name: 'Export',
+      exact: true,
+    });
+    const submenu = page.getByRole('menu', { name: 'Export' });
+    const pdf = submenu.getByRole('menuitem', { name: 'Export as PDF' });
+
+    if (isMobile) {
+      await exportTrigger.tap();
+    } else {
+      await exportTrigger.hover();
+    }
+
+    await expect(submenu).toBeVisible();
+    await expect(root).toHaveAttribute('data-submenu-open', 'true');
+    await expect(exportTrigger).toHaveAttribute('aria-expanded', 'true');
+
+    const parent = await exportTrigger.boundingBox();
+    const flyout = await submenu.boundingBox();
+    const arrow = await exportTrigger.locator('svg').last().boundingBox();
+    expect(parent).not.toBeNull();
+    expect(flyout).not.toBeNull();
+    expect(arrow).not.toBeNull();
+
+    // Catch a real clipped submenu: Playwright toBeVisible() alone is
+    // insufficient when overflow hides all pixels outside the menu.
+    const painted = await pdf.evaluate((item) => {
+      const rect = item.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      return (
+        x >= 0 &&
+        x <= window.innerWidth &&
+        y >= 0 &&
+        y <= window.innerHeight &&
+        Boolean(hit && item.contains(hit))
+      );
+    });
+    expect(painted).toBe(true);
+
+    // The chevron must use optical geometric centering, not the SVG's
+    // default inline-text baseline.
+    expect(
+      Math.abs(
+        (arrow!.top + arrow!.height / 2) -
+          (parent!.top + parent!.height / 2)
+      )
+    ).toBeLessThanOrEqual(2);
+
+    const viewport = page.viewportSize()!;
+    if (isMobile) {
+      expect(flyout!.x).toBeGreaterThanOrEqual(-1);
+      expect(flyout!.x + flyout!.width).toBeLessThanOrEqual(
+        viewport.width + 1
+      );
+      expect(flyout!.y).toBeGreaterThanOrEqual(parent!.y + parent!.height - 2);
+    } else {
+      expect(flyout!.x).toBeGreaterThanOrEqual(parent!.x + parent!.width - 2);
+      expect(Math.abs(flyout!.y - parent!.y)).toBeLessThanOrEqual(4);
+      expect(flyout!.x + flyout!.width).toBeLessThanOrEqual(
+        viewport.width + 1
+      );
+    }
+
+    if (isMobile) {
+      await pdf.tap();
+    } else {
+      await pdf.click();
+    }
+    await expect(root).toBeHidden();
+  });
+
   test('Select keeps focus on the trigger, handles keyboard dismissal, portals content, and uses its mobile sheet', async ({
     isMobile,
     page,
