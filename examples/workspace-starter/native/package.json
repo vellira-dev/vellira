@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "android": "expo start --android",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "security:certificate-proof": "node scripts/security-certificate-proof.cjs"
   },
   "dependencies": {
     "@vellira-ui/react-native": "2.186.15",
