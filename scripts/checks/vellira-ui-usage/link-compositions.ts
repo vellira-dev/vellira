@@ -48,7 +48,13 @@ function navigableChild(
       ts.isJsxAttribute(attribute) &&
       ts.isIdentifier(attribute.name) &&
       attribute.name.text === 'href' &&
-      attribute.initializer !== undefined
+      attribute.initializer !== undefined &&
+      (ts.isStringLiteral(attribute.initializer)
+        ? attribute.initializer.text.trim().length > 0
+        : ts.isJsxExpression(attribute.initializer) &&
+          attribute.initializer.expression !== undefined &&
+          ts.isStringLiteralLike(attribute.initializer.expression) &&
+          attribute.initializer.expression.text.trim().length > 0)
   );
 }
 
@@ -84,7 +90,8 @@ export function classifyWebsiteSource(
           nextNames.add(item.name.text);
         if (moduleName === '@vellira-ui/react' && original === 'Button')
           buttonNames.add(item.name.text);
-        if (moduleName.endsWith('/AuthTextLink') && original === 'AuthTextLink')
+        if (moduleName === '@/product-app/AuthTextLink' &&
+          original === 'AuthTextLink')
           authNames.add(item.name.text);
       }
     }
