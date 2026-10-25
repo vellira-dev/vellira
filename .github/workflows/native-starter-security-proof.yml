@@ -1,0 +1,102 @@
+name: Native Starter Package-Exact Security Proof
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-starter-security-proof.yml'
+      - 'examples/workspace-starter/native/**'
+  push:
+    branches:
+      - main
+      - security/native-expo-package-exact-proof-20261025
+    paths:
+      - '.github/workflows/native-starter-security-proof.yml'
+      - 'examples/workspace-starter/native/**'
+      - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
+      - 'examples/workspace-starter/native/scripts/security-asn1-adversarial.cjs'
+      - 'examples/workspace-starter/native/scripts/security-expo-certificate-contract.cjs'
+      - 'examples/workspace-starter/native/scripts/node-forge-1.4.0-candidate.patch'
+      - 'examples/workspace-starter/native/scripts/apply-node-forge-patch.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-exact-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: examples/workspace-starter/native
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - name: Install exact npm lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Prove lifecycle-disabled install is blocked at verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npm run security:verify-patch > "$RUNNER_TEMP/unpatched.txt" 2>&1; then
+            echo "::error::Unpatched installation unexpectedly passed RSA verification"
+            exit 1
+          fi
+          grep -F 'Unpatched node-forge' "$RUNNER_TEMP/unpatched.txt"
+      - name: Verify installed code signing and basic RSA behavior
+        run: npm run security:certificate-proof
+      - name: Diagnose malformed nested ASN.1 DigestAlgorithm
+        run: node scripts/security-asn1-adversarial.cjs
+      - name: Prove fixed-behavior assertion fails on vulnerable package
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node scripts/security-asn1-adversarial.cjs --require-rejection > "$RUNNER_TEMP/rsa-rejection.txt" 2>&1; then
+            echo "::error::Known-vulnerable node-forge unexpectedly passed the fixed-behavior regression."
+            exit 1
+          fi
+          grep -F 'malformed DigestAlgorithm must be rejected' "$RUNNER_TEMP/rsa-rejection.txt"
+          echo "Expected red regression confirmed; dependency is NOT remediated." >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify offline lifecycle application and clean npm install
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -c '^@@ ' scripts/node-forge-1.4.0-candidate.patch)" -eq 3
+          sha256sum node_modules/node-forge/lib/rsa.js scripts/node-forge-1.4.0-candidate.patch
+          node scripts/apply-node-forge-patch.cjs
+          sha256sum node_modules/node-forge/lib/rsa.js
+          node scripts/apply-node-forge-patch.cjs
+          grep -Fq '_encodeDigestInfo' node_modules/node-forge/lib/rsa.js
+          node scripts/security-asn1-adversarial.cjs --require-rejection
+          npm run security:certificate-proof
+          node scripts/security-expo-certificate-contract.cjs
+          cp node_modules/node-forge/lib/rsa.js "$RUNNER_TEMP/rsa-known-good.js"
+          printf '\\n// altered installed bytes\\n' >> node_modules/node-forge/lib/rsa.js
+          if node scripts/apply-node-forge-patch.cjs --verify > "$RUNNER_TEMP/tampered-rsa.log" 2>&1; then
+            echo "::error::Tampered RSA file passed verification"
+            exit 1
+          fi
+          grep -F 'Unrecognized or partially modified' "$RUNNER_TEMP/tampered-rsa.log"
+          cp "$RUNNER_TEMP/rsa-known-good.js" node_modules/node-forge/lib/rsa.js
+          cp scripts/node-forge-1.4.0-candidate.patch "$RUNNER_TEMP/rsa-known-good.patch"
+          printf '\\n# altered patch bytes\\n' >> scripts/node-forge-1.4.0-candidate.patch
+          if node scripts/apply-node-forge-patch.cjs --verify > "$RUNNER_TEMP/tampered-patch.log" 2>&1; then
+            echo "::error::Tampered RSA patch passed verification"
+            exit 1
+          fi
+          grep -F 'Pinned RSA patch integrity mismatch' "$RUNNER_TEMP/tampered-patch.log"
+          cp "$RUNNER_TEMP/rsa-known-good.patch" scripts/node-forge-1.4.0-candidate.patch
+          npm run security:verify-patch
+          npm ci --no-audit --no-fund
+          npm run security:verify-patch
+          node scripts/security-asn1-adversarial.cjs --require-rejection
+          npm run security:certificate-proof
+          node scripts/security-expo-certificate-contract.cjs
+          echo "Clean standard npm ci applied pinned patch automatically and retained RSA/Expo compatibility." >> "$GITHUB_STEP_SUMMARY"
+      - name: Typecheck Starter
+        run: npm run typecheck
