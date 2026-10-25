@@ -166,13 +166,7 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
       const hit = document.elementFromPoint(x, y);
-      return (
-        x >= 0 &&
-        x <= window.innerWidth &&
-        y >= 0 &&
-        y <= window.innerHeight &&
-        Boolean(hit && item.contains(hit))
-      );
+      return hit !== null && item.contains(hit);
     });
     expect(painted).toBe(true);
 
@@ -182,19 +176,18 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     const itemCenter = parent!.y + parent!.height / 2;
     expect(Math.abs(chevronCenter - itemCenter)).toBeLessThanOrEqual(2);
 
-    const viewport = page.viewportSize()!;
+    const submenuRight = flyout!.x + flyout!.width;
+    const itemRight = parent!.x + parent!.width;
+    const itemBottom = parent!.y + parent!.height;
+    const viewportWidth = page.viewportSize()!.width;
+
+    expect(submenuRight).toBeLessThanOrEqual(viewportWidth + 1);
     if (isMobile) {
       expect(flyout!.x).toBeGreaterThanOrEqual(-1);
-      expect(flyout!.x + flyout!.width).toBeLessThanOrEqual(
-        viewport.width + 1
-      );
-      expect(flyout!.y).toBeGreaterThanOrEqual(parent!.y + parent!.height - 2);
+      expect(flyout!.y).toBeGreaterThanOrEqual(itemBottom - 2);
     } else {
-      expect(flyout!.x).toBeGreaterThanOrEqual(parent!.x + parent!.width - 2);
+      expect(flyout!.x).toBeGreaterThanOrEqual(itemRight - 2);
       expect(Math.abs(flyout!.y - parent!.y)).toBeLessThanOrEqual(4);
-      expect(flyout!.x + flyout!.width).toBeLessThanOrEqual(
-        viewport.width + 1
-      );
     }
 
     if (isMobile) {
