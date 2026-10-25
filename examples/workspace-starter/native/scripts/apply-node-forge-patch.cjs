@@ -5,6 +5,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
+const EXPECTED = Object.freeze({
+  original: 'fd4740238145ec26470eb3f06a627c72039538ce1307dbdce40521f94dfd0a50',
+  patched: 'f1c736cb0dcd2615e9e8225ab894cd4cab55a384f6f07df221da1436096f3761',
+  patch: '85b8d466c47d1e1ae85a28a2be6b6db12ce72e412245bcc39f848b97a5c65065',
+});
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 const root = path.resolve(__dirname, '..');
 const target = path.join(root, 'node_modules', 'node-forge', 'lib', 'rsa.js');
@@ -13,7 +20,9 @@ const patchFile = path.join(__dirname, 'node-forge-1.4.0-candidate.patch');
 assert.equal(JSON.parse(fs.readFileSync(packagePath, 'utf8')).version, '1.4.0',
   'Unsupported node-forge version; review the security patch before proceeding');
 
-const patch = fs.readFileSync(patchFile, 'utf8').replace(/\r\n/g, '\n');
+const patchBytes = fs.readFileSync(patchFile);
+assert.equal(sha256(patchBytes), EXPECTED.patch, 'Pinned RSA patch integrity mismatch');
+const patch = patchBytes.toString('utf8').replace(/\r\n/g, '\n');
 const hunks = [];
 let current = null;
 for (const line of patch.split('\n')) {
@@ -29,7 +38,11 @@ for (const line of patch.split('\n')) {
 }
 assert.equal(hunks.length, 3, 'Unexpected upstream RSA patch shape');
 
-const input = fs.readFileSync(target, 'utf8');
+const rawSource = fs.readFileSync(target);
+const baselineHash = sha256(rawSource);
+assert.ok([EXPECTED.original, EXPECTED.patched].includes(baselineHash),
+  'Unrecognized or partially modified node-forge rsa.js; refusing patch');
+const input = rawSource.toString('utf8');
 assert.ok(input.endsWith('\n'), 'Expected newline-terminated rsa.js');
 let content = input.slice(0, -1).split('\n');
 let changed = false;
@@ -53,6 +66,8 @@ for (const hunk of hunks) {
   }
 }
 const output = content.join('\n') + '\n';
+assert.equal(sha256(Buffer.from(output)), EXPECTED.patched,
+  'Patched RSA result does not match reviewed SHA-256');
 assert.ok(output.includes('_encodeDigestInfo') && output.includes('var expected ='),
   'Canonical DER enforcement missing');
 if (changed) {
