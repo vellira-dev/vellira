@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/expo-zod-pinned-patch-candidate.yml'
       - 'examples/workspace-starter/native/scripts/security-expo-zod-patch-candidate.cjs'
+      - 'examples/workspace-starter/native/scripts/security-expo-zod-negative-runtime-proof.cjs'
   workflow_dispatch:
 
 permissions:
@@ -27,5 +28,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Verify exact original bytes and source-shape candidate
         run: node scripts/security-expo-zod-patch-candidate.cjs
+      - name: Reject candidate through real installed runtime negative test
+        run: node scripts/security-expo-zod-negative-runtime-proof.cjs
       - name: Preserve existing RSA patch
         run: npm run security:verify-patch
