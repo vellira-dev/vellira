@@ -347,6 +347,48 @@ describe('Dropdown', () => {
     unmount();
   });
 
+  it('toggles checkbox menu items with Enter and Space', async () => {
+    const onCheckedChange = vi.fn();
+    const { container, unmount } = render(
+      <Dropdown>
+        <Dropdown.Trigger>Actions</Dropdown.Trigger>
+        <Dropdown.Content>
+          <Dropdown.CheckboxItem
+            defaultChecked
+            onCheckedChange={onCheckedChange}
+          >
+            Done
+          </Dropdown.CheckboxItem>
+        </Dropdown.Content>
+      </Dropdown>
+    );
+    const trigger = container.querySelector<HTMLButtonElement>('button');
+    pressKey(trigger!, 'Enter');
+
+    const menu = document.querySelector<HTMLElement>('[role="menu"]');
+    await waitFor(() => expect(document.activeElement).toBe(menu));
+    expect(menu?.getAttribute('aria-activedescendant')).toBe(
+      `${menu?.id}-item-0`
+    );
+    const checkbox = document.querySelector<HTMLElement>(
+      '[role="menuitemcheckbox"]'
+    );
+    expect(checkbox?.getAttribute('aria-checked')).toBe('true');
+
+    pressKey(menu!, 'Enter');
+    expect(onCheckedChange).toHaveBeenCalledTimes(1);
+    expect(onCheckedChange).toHaveBeenLastCalledWith(false);
+    expect(checkbox?.getAttribute('aria-checked')).toBe('false');
+    expect(menu?.isConnected).toBe(true);
+
+    pressKey(menu!, ' ');
+    expect(onCheckedChange).toHaveBeenCalledTimes(2);
+    expect(onCheckedChange).toHaveBeenLastCalledWith(true);
+    expect(checkbox?.getAttribute('aria-checked')).toBe('true');
+
+    unmount();
+  });
+
   it('supports checkbox and radio action items', () => {
     const onCheckedChange = vi.fn();
     const onValueChange = vi.fn();
