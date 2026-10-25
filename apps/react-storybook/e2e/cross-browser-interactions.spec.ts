@@ -178,12 +178,9 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
 
     // The chevron must use optical geometric centering, not the SVG's
     // default inline-text baseline.
-    expect(
-      Math.abs(
-        (arrow!.y + arrow!.height / 2) -
-          (parent!.y + parent!.height / 2)
-      )
-    ).toBeLessThanOrEqual(2);
+    const chevronCenter = arrow!.y + arrow!.height / 2;
+    const itemCenter = parent!.y + parent!.height / 2;
+    expect(Math.abs(chevronCenter - itemCenter)).toBeLessThanOrEqual(2);
 
     const viewport = page.viewportSize()!;
     if (isMobile) {
