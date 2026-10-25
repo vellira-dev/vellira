@@ -180,8 +180,8 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     // default inline-text baseline.
     expect(
       Math.abs(
-        (arrow!.top + arrow!.height / 2) -
-          (parent!.top + parent!.height / 2)
+        (arrow!.y + arrow!.height / 2) -
+          (parent!.y + parent!.height / 2)
       )
     ).toBeLessThanOrEqual(2);
 
