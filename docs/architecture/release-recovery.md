@@ -226,32 +226,3 @@ for the incident that established the recovery contract and
 [`2026-09-28-v2.124.0.md`](../release-incidents/2026-09-28-v2.124.0.md) for
 the npm visibility incident that established the single global completeness
 budget.
-
-## 2026-10-25 Workspace Starter v2.186.16 auto-merge incident
-
-The Starter release-sync job verified all six published npm packages, prepared
-the two integrity-locked Starter trees and opened bot PR #1909. Its final
-`gh pr merge --auto` request returned a GitHub GraphQL error, leaving auto-merge
-disabled. Normal pull-request validation runs were also initially absent;
-reopening that existing PR made the full checks appear, exposing a real
-TypeScript failure in three Native Starter `Select.onValueChange` callbacks.
-The type contract permits `string | null`, but the Starter handlers had
-accepted only `string`.
-
-After verifying both published-package clean consumers in PR #1910, the owner
-merged the precise native callback fix plus all five **byte-identical** sync
-files. The older failing #1909 was then closed as superseded, not falsely
-declared green.
-
-The guarded release-sync auto-merge handoff now retries a transient GraphQL
-failure at most three times, re-reading the exact bot PR identity, HEAD, title,
-base and five-file allowlist **before each attempt**. A response failure that
-nevertheless left `auto_merge` enabled is treated as success only after a fresh
-read verifies the existing state. Persistent errors fail closed, leaving the PR
-for review. Retries do not bypass branch protection, reviews, required checks,
-or allow changes outside the verified Starter sync surface.
-
-The separate *missing PR workflow event* incident is **not automatically
-repaired** by these retries. A missing required check must not be counted as
-passed; exceptional event recovery requires exact-head review, deliberate
-re-triggering and an observed full CI result before merge.
