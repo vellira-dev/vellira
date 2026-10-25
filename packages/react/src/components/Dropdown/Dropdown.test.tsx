@@ -688,6 +688,115 @@ describe('Dropdown', () => {
     unmount();
   });
 
+  it('moves active descendant into submenu and activates items from keyboard', () => {
+    const onPdf = vi.fn();
+    const onArchive = vi.fn();
+    const { container, unmount } = render(
+      <Dropdown>
+        <Dropdown.Trigger>Actions</Dropdown.Trigger>
+        <Dropdown.Content>
+          <Dropdown.Item>Copy</Dropdown.Item>
+          <Dropdown.Sub>
+            <Dropdown.SubTrigger>Export</Dropdown.SubTrigger>
+            <Dropdown.SubContent>
+              <Dropdown.Item disabled>Unavailable</Dropdown.Item>
+              <Dropdown.Item onSelect={onPdf}>Export as PDF</Dropdown.Item>
+              <Dropdown.Item onSelect={onArchive}>Download archive</Dropdown.Item>
+            </Dropdown.SubContent>
+          </Dropdown.Sub>
+        </Dropdown.Content>
+      </Dropdown>
+    );
+
+    const trigger = container.querySelector<HTMLButtonElement>('button');
+    pressKey(trigger!, 'Enter');
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    pressKey(menu, 'ArrowDown');
+
+    const parent = Array.from(
+      document.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    ).find((node) => node.textContent?.includes('Export'))!;
+
+    expect(menu.getAttribute('aria-activedescendant')).toBe(parent.id);
+    pressKey(menu, 'ArrowRight');
+
+    const submenu = document.querySelectorAll<HTMLElement>('[role="menu"]')[1];
+    const pdf = Array.from(submenu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      .find((node) => node.textContent?.includes('Export as PDF'))!;
+    const archive = Array.from(
+      submenu.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    ).find((node) => node.textContent?.includes('Download archive'))!;
+
+    expect(submenu.getAttribute('aria-labelledby')).toBe(parent.id);
+    expect(menu.getAttribute('aria-activedescendant')).toBe(pdf.id);
+    expect(pdf.dataset.active).toBe('true');
+
+    pressKey(menu, 'ArrowDown');
+    expect(menu.getAttribute('aria-activedescendant')).toBe(archive.id);
+    pressKey(menu, 'Home');
+    expect(menu.getAttribute('aria-activedescendant')).toBe(pdf.id);
+    pressKey(menu, 'End');
+    expect(menu.getAttribute('aria-activedescendant')).toBe(archive.id);
+    pressKey(menu, 'Enter');
+
+    expect(onArchive).toHaveBeenCalledTimes(1);
+    expect(onPdf).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    unmount();
+  });
+
+  it('closes only a nested menu on Escape/Left and keyboard-toggles submenu checkboxes', () => {
+    const onCheckedChange = vi.fn();
+    const { container, unmount } = render(
+      <Dropdown closeOnSelect={false}>
+        <Dropdown.Trigger>Actions</Dropdown.Trigger>
+        <Dropdown.Content>
+          <Dropdown.Sub>
+            <Dropdown.SubTrigger>Share</Dropdown.SubTrigger>
+            <Dropdown.SubContent>
+              <Dropdown.Item>Email</Dropdown.Item>
+              <Dropdown.CheckboxItem onCheckedChange={onCheckedChange}>
+                Include notes
+              </Dropdown.CheckboxItem>
+            </Dropdown.SubContent>
+          </Dropdown.Sub>
+        </Dropdown.Content>
+      </Dropdown>
+    );
+
+    const trigger = container.querySelector<HTMLButtonElement>('button');
+    pressKey(trigger!, 'Enter');
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    const parent = document.querySelector<HTMLElement>('[role="menuitem"]')!;
+    pressKey(menu, 'ArrowRight');
+
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(2);
+    pressKey(menu, 'Escape');
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
+    expect(menu.getAttribute('aria-activedescendant')).toBe(parent.id);
+
+    pressKey(menu, 'ArrowRight');
+    const checkbox = document.querySelector<HTMLElement>(
+      '[role="menuitemcheckbox"]'
+    )!;
+    pressKey(menu, 'ArrowDown');
+    expect(menu.getAttribute('aria-activedescendant')).toBe(checkbox.id);
+    pressKey(menu, ' ');
+
+    expect(onCheckedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(checkbox.getAttribute('aria-checked')).toBe('true');
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(2);
+
+    pressKey(menu, 'ArrowLeft');
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
+    expect(menu.getAttribute('aria-activedescendant')).toBe(parent.id);
+
+    pressKey(menu, 'ArrowRight');
+    pressKey(menu, 'Tab');
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    unmount();
+  });
+
   it('opens submenu from click and cancels delayed hover opening on leave', () => {
     vi.useFakeTimers();
 
