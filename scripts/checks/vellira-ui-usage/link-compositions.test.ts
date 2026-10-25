@@ -50,6 +50,39 @@ describe('link composition evidence', () => {
     expect(unknown[0].reviewStatus).toBe('needs-review');
   });
 
+  it('does not certify empty or unresolved href expressions', () => {
+    for (const href of [
+      "href=''",
+      "href='   '",
+      'href={undefined}',
+      'href={null}',
+      'href={destination}',
+      'href={""}',
+    ]) {
+      const entries = classifyWebsiteSource(
+        `import { Button } from '@vellira-ui/react'; const X = () => <Button asChild><a ${href}>Docs</a></Button>;`,
+        filename
+      );
+      expect(
+        entries.some((entry) => entry.reviewStatus === 'confirmed-composition')
+      ).toBe(false);
+    }
+  });
+
+  it('does not trust unrelated modules named AuthTextLink', () => {
+    for (const moduleName of [
+      './AuthTextLink',
+      '@/other/AuthTextLink',
+      'some-package/AuthTextLink',
+    ]) {
+      const entries = classifyWebsiteSource(
+        `import { AuthTextLink } from '${moduleName}'; const X = () => <AuthTextLink href='/'>Sign in</AuthTextLink>;`,
+        filename
+      );
+      expect(entries[0].reviewStatus).toBe('needs-review');
+    }
+  });
+
   it('retains raw links outside valid canonical compositions', () => {
     const entries = classifyWebsiteSource(
       `const X = () => <a href='/'>Home</a>;`,
