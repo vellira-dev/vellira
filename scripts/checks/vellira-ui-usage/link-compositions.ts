@@ -143,7 +143,7 @@ export function compositionReport(root = process.cwd()) {
       if (item.name.startsWith('.') || ['node_modules', 'dist', 'coverage'].includes(item.name)) continue;
       const absolute = path.join(folder, item.name);
       if (item.isDirectory()) walk(absolute);
-      else if (item.isFile() && /\\.(tsx|jsx)$/.test(item.name)) {
+      else if (item.isFile() && /\.(tsx|jsx)$/.test(item.name)) {
         entries.push(...classifyWebsiteSource(
           fs.readFileSync(absolute, 'utf8'),
           path.relative(root, absolute).split(path.sep).join('/')
@@ -167,5 +167,5 @@ export function compositionReport(root = process.cwd()) {
 }
 
 if (process.argv[1]?.endsWith('link-compositions.ts')) {
-  process.stdout.write(JSON.stringify(compositionReport(), null, 2) + '\\n');
+  process.stdout.write(JSON.stringify(compositionReport(), null, 2) + '\n');
 }
