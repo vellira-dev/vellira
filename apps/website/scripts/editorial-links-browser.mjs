@@ -1,3 +1,4 @@
+/* global document */
 import assert from 'node:assert/strict';
 
 import { chromium } from '@playwright/test';
