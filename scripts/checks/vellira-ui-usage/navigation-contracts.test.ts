@@ -48,7 +48,9 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(attribute(link, 'href')?.getText(ast)).toContain(
       'workspaceContextRequested'
     );
-    expect(attribute(link, 'aria-current')?.getText(ast)).toContain('activeSlug');
+    expect(attribute(link, 'aria-current')?.getText(ast)).toContain(
+      'activeSlug'
+    );
     expect(attribute(link, 'onClick')?.getText(ast)).toContain('onNavigate');
   });
 
