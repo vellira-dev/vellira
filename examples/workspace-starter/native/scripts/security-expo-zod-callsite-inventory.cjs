@@ -57,6 +57,30 @@ assert.match(managerSource, /DevToolsPlugin\(pluginInfo/,
   'Installed plugin metadata to constructor handoff changed');
 assert.match(schemaSource, /commands:\s*[^\n]*\.array\(/,
   'Installed commands array schema changed');
+// Exact installed-source trace for plugin subprocess output -> JSON -> Zod.
+const executorSource = installedBuildSource('DevToolsPluginCliExtensionExecutor.js');
+const resultsSource = installedBuildSource('DevToolsPluginCliExtensionResults.js');
+assert.ok(executorSource.includes('DevToolsPluginCliExtensionResults'),
+  'Installed plugin executor no longer creates output collector');
+assert.ok(executorSource.includes('.stdout.on(') && executorSource.includes('.stderr.on('),
+  'Installed plugin subprocess output handlers moved');
+assert.ok(resultsSource.includes('DevToolsPluginOutputSchema.safeParse'),
+  'Installed plugin output validation entrypoint changed');
+assert.ok(resultsSource.includes('JSON.parse('),
+  'Installed plugin JSON input parsing changed');
+assert.ok(resultsSource.includes('MAX_OUTPUT_LENGTH'),
+  'Installed output length guard changed');
+assert.ok(schemaSource.includes('DevToolsPluginOutputSchema') &&
+  schemaSource.includes('.array('),
+  'Installed DevTools output array schema changed');
+const outputBoundary = {
+  origin: 'installed DevTools CLI plugin child-process stdout/stderr',
+  collector: 'build/src/start/server/DevToolsPluginCliExtensionResults.js',
+  executor: 'build/src/start/server/DevToolsPluginCliExtensionExecutor.js',
+  parser: 'JSON.parse(text) then DevToolsPluginOutputSchema.safeParse(...)',
+  observation: 'An overall string-length guard exists; the schema itself is an array without a proven element-count cap',
+  caveat: 'Static trace only. No proof of network exposure, arbitrary plugin installation, or bounded worst-case resource use.',
+};
 const trustBoundary = {
   source: 'local autolinked DevTools plugin metadata',
   loader: 'build/src/start/server/DevToolsPluginManager.js',
@@ -74,6 +98,7 @@ const trustBoundary = {
 const summary = {
   installedExpoCli: meta.version,
   trustBoundary,
+  outputBoundary,
   installedZodConstraint: meta.dependencies.zod,
   scannedJsFiles: scanned,
   filesReferencingZod: findings.length,
