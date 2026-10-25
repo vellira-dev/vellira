@@ -45,5 +45,22 @@ jobs:
           fi
           grep -F 'malformed DigestAlgorithm must be rejected' "$RUNNER_TEMP/rsa-rejection.txt"
           echo "Expected red regression confirmed; dependency is NOT remediated." >> "$GITHUB_STEP_SUMMARY"
+      - name: Test pinned upstream candidate in isolated installed tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_sha=9842c3d3cf6f560270b4f42ab3c0c28c68e6f78e
+          candidate="$RUNNER_TEMP/forge-candidate"
+          git clone --no-checkout --filter=blob:none https://github.com/digitalbazaar/forge.git "$candidate"
+          git -C "$candidate" fetch --depth=1 origin "$candidate_sha"
+          test "$(git -C "$candidate" rev-parse FETCH_HEAD)" = "$candidate_sha"
+          git -C "$candidate" checkout --detach "$candidate_sha"
+          node -e "const f=require('node-forge'); if(require('node-forge/package.json').version!=='1.4.0') throw Error('unexpected forge baseline')"
+          cp node_modules/node-forge/lib/rsa.js "$RUNNER_TEMP/rsa-original.js"
+          trap 'cp "$RUNNER_TEMP/rsa-original.js" node_modules/node-forge/lib/rsa.js' EXIT
+          cp "$candidate/lib/rsa.js" node_modules/node-forge/lib/rsa.js
+          node scripts/security-asn1-adversarial.cjs --require-rejection
+          npm run security:certificate-proof
+          echo "Pinned upstream candidate RSA regression PASS in disposable node_modules (not released or installed in production)." >> "$GITHUB_STEP_SUMMARY"
       - name: Typecheck Starter
         run: npm run typecheck
