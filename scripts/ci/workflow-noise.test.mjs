@@ -656,3 +656,104 @@ test('production fixture shards are exhaustive and disjoint, including future na
     assert.equal(Number(unit.test(name)) + Number(remaining.test(name)), 1, name);
   }
 });
+
+shellTest('Starter sync auto-merge retries only for the exact bot PR', (t) => {
+  const body = script(
+    workflow('workspace-starter-release-sync'),
+    'Enable guarded auto-merge for verified Starter sync'
+  );
+  assert.match(body, /for attempt in 1 2 3; do/);
+  assert.doesNotMatch(body, /--admin|--force/);
+
+  const directory = sandbox(t);
+  const bin = path.join(directory, 'bin');
+  mkdirSync(bin);
+  const calls = path.join(directory, 'merge-attempts.txt');
+  writeFileSync(calls, '');
+  writeFileSync(
+    path.join(bin, 'gh'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [[ "$1" == "api" ]]; then',
+      '  if [[ "$2" == "--paginate" ]]; then',
+      '    printf "%s\\n" "$GH_TEST_FILES"',
+      '  else',
+      '    printf "%s\\n" "$GH_TEST_PR_JSON"',
+      '  fi',
+      'elif [[ "$1" == "pr" && "$2" == "merge" ]]; then',
+      '  printf "attempt\\n" >> "$GH_TEST_CALLS"',
+      '  if [[ "$GH_TEST_MODE" == "always-fail" ]]; then exit 1; fi',
+      '  test "$(wc -l < "$GH_TEST_CALLS")" -gt 1',
+      'else',
+      '  exit 80',
+      'fi',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
+  writeFileSync(path.join(bin, 'sleep'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+
+  const sha = 'a'.repeat(40);
+  const pr = {
+    state: 'open',
+    draft: false,
+    base: { ref: 'main' },
+    head: { ref: 'chore/workspace-starter-release-sync', sha },
+    user: { login: 'vellira-release-sync[bot]' },
+    title: 'chore(starter): sync Vellira to v2.186.16',
+    auto_merge: null,
+  };
+  const allowedFiles = [
+    'examples/workspace-starter/web/package.json',
+    'examples/workspace-starter/native/package.json',
+    'examples/workspace-starter/web/package-lock.json',
+    'examples/workspace-starter/native/package-lock.json',
+    'examples/workspace-starter/README.md',
+  ].join('\n');
+  const env = {
+    PATH: bin + ':' + process.env.PATH,
+    REPOSITORY: 'vellira-dev/vellira',
+    PR_NUMBER: '1909',
+    EXPECTED_HEAD: sha,
+    EXPECTED_VERSION: '2.186.16',
+    GH_TEST_CALLS: calls,
+    GH_TEST_MODE: 'transient',
+    GH_TEST_FILES: allowedFiles,
+    GH_TEST_PR_JSON: JSON.stringify(pr),
+  };
+
+  const transient = shell(body, directory, env);
+  assert.equal(transient.status, 0, transient.stderr);
+  assert.equal(readFileSync(calls, 'utf8'), 'attempt\nattempt\n');
+
+  writeFileSync(calls, '');
+  const alreadyEnabled = shell(body, directory, {
+    ...env,
+    GH_TEST_PR_JSON: JSON.stringify({ ...pr, auto_merge: { merge_method: 'SQUASH' } }),
+  });
+  assert.equal(alreadyEnabled.status, 0, alreadyEnabled.stderr);
+  assert.equal(readFileSync(calls, 'utf8'), '');
+
+  const stale = shell(body, directory, {
+    ...env,
+    GH_TEST_PR_JSON: JSON.stringify({ ...pr, head: { ...pr.head, sha: 'b'.repeat(40) } }),
+  });
+  assert.notEqual(stale.status, 0);
+  assert.equal(readFileSync(calls, 'utf8'), '');
+
+  const outsideScope = shell(body, directory, {
+    ...env,
+    GH_TEST_FILES: allowedFiles + '\n.github/workflows/release.yml',
+  });
+  assert.notEqual(outsideScope.status, 0);
+  assert.equal(readFileSync(calls, 'utf8'), '');
+
+  const persistent = shell(body, directory, {
+    ...env,
+    GH_TEST_MODE: 'always-fail',
+  });
+  assert.notEqual(persistent.status, 0);
+  assert.match(persistent.stderr, /Could not enable guarded Starter auto-merge/);
+  assert.equal(readFileSync(calls, 'utf8'), 'attempt\nattempt\nattempt\n');
+});
