@@ -453,7 +453,7 @@ function WorkspaceScreen() {
               <Select
                 label='Status filter'
                 value={statusFilter}
-                onValueChange={(value: string) => {
+                onValueChange={(value: string | null) => {
                   if (
                     typeof value === 'string' &&
                     (value === 'all' || isStatus(value))
@@ -673,7 +673,7 @@ function WorkspaceScreen() {
               <Select
                 label='Team'
                 value={team}
-                onValueChange={(value: string) => {
+                onValueChange={(value: string | null) => {
                   if (isTeam(value)) setTeam(value);
                 }}
                 presentation='modal'
@@ -685,8 +685,10 @@ function WorkspaceScreen() {
               <Select
                 label='Status'
                 value={status}
-                onValueChange={(value: string) => {
-                  if (isStatus(value)) setStatus(value);
+                onValueChange={(value: string | null) => {
+                  if (typeof value === 'string' && isStatus(value)) {
+                    setStatus(value);
+                  }
                 }}
                 presentation='modal'
               >
