@@ -1,105 +1,155 @@
-import Link from 'next/link';
+'use client';
 
-import styles from './ConsistencyStory.module.css';
+import { useState } from 'react';
 
-const available = [
-  'React and React Native component packages',
-  'Shared tokens and accessible interaction foundations',
-  'Documentation, Storybook and public source',
-] as const;
+import { Button, Tabs } from '@vellira-ui/react';
 
-const checks = [
-  'Machine-readable component metadata',
-  'Completeness and quality checks',
-  'Tests, public APIs and documented expectations',
-] as const;
+import { Dashboard } from './Dashboard';
 
-export function ConsistencyStory() {
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+
+import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
+
+import styles from './ProductInterfaceDemo.module.css';
+
+// Public release source is maintained on the canonical main branch.
+const sourceRef = 'main';
+const repository = 'https://github.com/vellira-dev/vellira';
+const sourceUrl =
+  repository +
+  '/blob/' +
+  sourceRef +
+  '/examples/workspace-starter/web/src/Dashboard.tsx';
+const starterUrl =
+  repository + '/tree/' + sourceRef + '/examples/workspace-starter';
+
+export function ProductInterfaceDemo() {
+  const { preference, setPreference } = useWebsiteThemeContext();
+  const [preview, setPreview] = useState<'desktop' | 'mobile'>('desktop');
+
   return (
     <section
-      id='why-vellira'
+      id='interface'
       className={styles.section}
-      aria-labelledby='consistency-story-title'
+      aria-labelledby='product-interface-demo-title'
     >
       <div className={styles.container}>
-        <header className={styles.header}>
-          <span className={styles.eyebrow}>Why Vellira exists</span>
-          <h2 id='consistency-story-title' className={styles.title}>
-            AI can generate more UI.
-            <span>Who keeps it consistent?</span>
+        <header className={styles.intro}>
+          <span className={styles.eyebrow}>Build with Vellira Core</span>
+          <h2 id='product-interface-demo-title' className={styles.headline}>
+            Vellira Dashboard Starter.
+            <span>Real components. Working interface.</span>
           </h2>
           <p className={styles.description}>
-            A component can look correct on its own and still drift from the
-            design system around it. Vellira starts with usable cross-platform
-            foundations and public quality checks. The wider ambition is to make
-            consistency easier to maintain as people and AI ship more changes.
+            A real, interactive project dashboard built with our free React
+            components. Try it, inspect the source, then use the same dashboard
+            in your own project. No registration or Pro plan needed.
+          </p>
+          <nav className={styles.ctas} aria-label='Try Vellira Dashboard'>
+            <Button asChild appearance='solid' color='primary'>
+              <a href='#dashboard-live'>Try Live Demo</a>
+            </Button>
+            <Button asChild appearance='outline' color='neutral'>
+              <a
+                href='/demo/dashboard'
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                Open Full Demo
+              </a>
+            </Button>
+            <Button asChild appearance='outline' color='neutral'>
+              <a href={sourceUrl} target='_blank' rel='noopener noreferrer'>
+                View Source
+              </a>
+            </Button>
+            <Button asChild appearance='ghost' color='neutral'>
+              <a href={starterUrl} target='_blank' rel='noopener noreferrer'>
+                Use This Starter
+              </a>
+            </Button>
+          </nav>
+          <p className={styles.freeStatement}>
+            Free Core demo · MIT source · Local sample data · No Pro
+            subscription
           </p>
         </header>
 
-        <div className={styles.cards}>
-          <article className={styles.card}>
-            <span className={styles.status}>Available now</span>
-            <h3>Build on shared foundations</h3>
-            <p>
-              Use real open-source components today, and check each platform's
-              documented API before adopting it.
-            </p>
-            <ul className={styles.list}>
-              {available.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <Link href='/components' className={styles.link}>
-              Explore components <span aria-hidden='true'>→</span>
-            </Link>
-          </article>
-
-          <article className={styles.card}>
-            <span className={styles.status}>Inspectable today</span>
-            <h3>Quality beyond compilation</h3>
-            <p>
-              Public metadata and automated checks make component expectations
-              more explicit. These are verifiable engineering controls, not a
-              claim that all UI can already be generated autonomously.
-            </p>
-            <ul className={styles.list}>
-              {checks.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <Link
-              href='/blog/quality-gates-before-component-growth'
-              className={styles.link}
-            >
-              Read about quality gates <span aria-hidden='true'>→</span>
-            </Link>
-          </article>
-
-          <article className={styles.card}>
-            <span className={styles.status}>In development</span>
-            <h3>Keep future changes coherent</h3>
-            <p>
-              Vellira is evolving toward stronger governed workflows for UI
-              changes. End-to-end autonomous production and future Pro tooling
-              are not part of today's public component packages.
-            </p>
-            <div className={styles.note}>
-              The roadmap describes a direction, not a currently shipping
-              product feature.
+        <div className={styles.previewToolbar}>
+          <Tabs
+            value={preview}
+            onValueChange={(next) => {
+              if (next === 'desktop' || next === 'mobile') setPreview(next);
+            }}
+          >
+            <Tabs.List aria-label='Web preview size'>
+              <Tabs.Trigger value='desktop'>Desktop</Tabs.Trigger>
+              <Tabs.Trigger value='mobile'>Mobile</Tabs.Trigger>
+            </Tabs.List>
+          </Tabs>
+          <span className={styles.previewHint}>Responsive Web preview</span>
+        </div>
+        <div
+          id='dashboard-live'
+          className={`${styles.stage} ${preview === 'mobile' ? styles.mobileStage : ''}`}
+          tabIndex={-1}
+          aria-label='Interactive Vellira Dashboard Demo'
+        >
+          <div className={styles.windowBar}>
+            <div className={styles.windowDots} aria-hidden='true'>
+              <span />
+              <span />
+              <span />
             </div>
-            <Link href='/blog/ai-ui-consistency' className={styles.link}>
-              Why AI changes the problem <span aria-hidden='true'>→</span>
-            </Link>
-          </article>
+            <span className={styles.windowTitle}>
+              Vellira Dashboard Starter
+            </span>
+            <span className={styles.liveIndicator}>Interactive Core demo</span>
+          </div>
+          {preview === 'desktop' ? (
+            <Dashboard
+              variant='embedded'
+              theme={preference}
+              onThemeChange={setPreference}
+            />
+          ) : (
+            <iframe
+              className={styles.mobileFrame}
+              title='Responsive mobile Web Dashboard preview'
+              src='/demo/dashboard'
+              loading='lazy'
+            />
+          )}
+        </div>
+        <div className={styles.nativeLink}>
+          <strong>React Native / Expo</strong> is a separate native starter, not
+          this mobile Web preview.{' '}
+          <DesignSystemLink
+            href={
+              repository +
+              '/tree/' +
+              sourceRef +
+              '/examples/workspace-starter/native'
+            }
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            Setup instructions ↗
+          </DesignSystemLink>
         </div>
 
-        <div className={styles.footer}>
-          <p>Start with what ships. Inspect the source. Follow the roadmap.</p>
-          <Link href='https://github.com/vellira-dev/vellira'>
-            View public repository <span aria-hidden='true'>→</span>
-          </Link>
+        <div className={styles.boundary}>
+          <p>
+            <strong>Core remains free.</strong> This example uses published
+            Vellira controls and stores only local demonstration data. Future
+            Pro tiers focus on managed workflows, advanced automation, and
+            separately licensed production application kits.
+          </p>
+          <DesignSystemLink href='#pro'>Explore the Pro roadmap →</DesignSystemLink>
         </div>
       </div>
     </section>
   );
 }
+
+ProductInterfaceDemo.displayName = 'ProductInterfaceDemo';
