@@ -33,8 +33,5 @@ const replacement = [
 const updated = source.replace(pattern, replacement);
 assert.notEqual(updated, source);
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: sha(Buffer.from(updated)), candidateOnly: true };
-if (process.argv.includes('--apply')) {
-  fs.writeFileSync(target, updated);
-  assert.equal(sha(fs.readFileSync(target)), report.patchedSha256);
-}
+assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
 console.log(JSON.stringify(report, null, 2));
