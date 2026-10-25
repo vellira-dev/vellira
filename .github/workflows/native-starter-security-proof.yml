@@ -34,6 +34,15 @@ jobs:
           node-version: 22.22.2
       - name: Install exact npm lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Prove lifecycle-disabled install is blocked at verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npm run security:verify-patch > "$RUNNER_TEMP/unpatched.txt" 2>&1; then
+            echo "::error::Unpatched installation unexpectedly passed RSA verification"
+            exit 1
+          fi
+          grep -F 'Unpatched node-forge' "$RUNNER_TEMP/unpatched.txt"
       - name: Verify installed code signing and basic RSA behavior
         run: npm run security:certificate-proof
       - name: Diagnose malformed nested ASN.1 DigestAlgorithm
@@ -62,6 +71,7 @@ jobs:
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
           npm ci --no-audit --no-fund
+          npm run security:verify-patch
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
