@@ -31,7 +31,8 @@ function asChildEnabled(node: ts.JsxOpeningElement): boolean {
 
 function navigableChild(
   node: ts.JsxElement,
-  nextNames: ReadonlySet<string>
+  nextNames: ReadonlySet<string>,
+  allowDynamic = false
 ): boolean {
   const children = node.children.filter(
     (child) => !ts.isJsxText(child) || child.getText().trim().length > 0
@@ -49,12 +50,13 @@ function navigableChild(
       ts.isIdentifier(attribute.name) &&
       attribute.name.text === 'href' &&
       attribute.initializer !== undefined &&
-      (ts.isStringLiteral(attribute.initializer)
-        ? attribute.initializer.text.trim().length > 0
-        : ts.isJsxExpression(attribute.initializer) &&
-          attribute.initializer.expression !== undefined &&
-          ts.isStringLiteralLike(attribute.initializer.expression) &&
-          attribute.initializer.expression.text.trim().length > 0)
+      (allowDynamic ||
+        (ts.isStringLiteral(attribute.initializer)
+          ? attribute.initializer.text.trim().length > 0
+          : ts.isJsxExpression(attribute.initializer) &&
+            attribute.initializer.expression !== undefined &&
+            ts.isStringLiteralLike(attribute.initializer.expression) &&
+            attribute.initializer.expression.text.trim().length > 0))
   );
 }
 
@@ -91,7 +93,10 @@ export function classifyWebsiteSource(
         if (moduleName === '@vellira-ui/react' && original === 'Button')
           buttonNames.add(item.name.text);
         if (
-          moduleName === '@/product-app/AuthTextLink' &&
+          (moduleName === '@/product-app/AuthTextLink' ||
+            (moduleName === './AuthTextLink' &&
+              path.posix.dirname(filename) ===
+                'apps/website/src/product-app')) &&
           original === 'AuthTextLink'
         )
           authNames.add(item.name.text);
@@ -119,12 +124,13 @@ export function classifyWebsiteSource(
         index !== undefined &&
         preliminary[index].kind === 'canonical-button'
       ) {
-        const valid =
-          asChildEnabled(opening) && navigableChild(node, nextNames);
+        const structural =
+          asChildEnabled(opening) && navigableChild(node, nextNames, true);
+        const valid = structural && navigableChild(node, nextNames);
         const child = node.children.find(
           (item) => ts.isJsxElement(item) || ts.isJsxSelfClosingElement(item)
         );
-        if (valid && child) {
+        if (structural && child) {
           const childOpening = ts.isJsxElement(child)
             ? child.openingElement
             : (child as ts.JsxSelfClosingElement);
@@ -139,9 +145,10 @@ export function classifyWebsiteSource(
             consumed.add(index);
             compositions.push({
               ...preliminary[index],
-              reviewStatus: 'confirmed-composition',
-              reason:
-                'Imported Vellira Button with literal asChild and one navigable href child',
+              reviewStatus: valid ? 'confirmed-composition' : 'needs-review',
+              reason: valid
+                ? 'Imported Vellira Button with literal asChild and one navigable href child'
+                : 'Structural Button asChild pair with unverified dynamic href',
               memberCount: 2,
             });
           }

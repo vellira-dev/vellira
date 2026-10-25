@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
 import styles from './ConsistencyStory.module.css';
 
@@ -49,9 +49,9 @@ export function ConsistencyStory() {
                 <li key={item}>{item}</li>
               ))}
             </ul>
-            <Link href='/components' className={styles.link}>
+            <DesignSystemLink href='/components' className={styles.link}>
               Explore components <span aria-hidden='true'>→</span>
-            </Link>
+            </DesignSystemLink>
           </article>
 
           <article className={styles.card}>
@@ -67,12 +67,12 @@ export function ConsistencyStory() {
                 <li key={item}>{item}</li>
               ))}
             </ul>
-            <Link
+            <DesignSystemLink
               href='/blog/quality-gates-before-component-growth'
               className={styles.link}
             >
               Read about quality gates <span aria-hidden='true'>→</span>
-            </Link>
+            </DesignSystemLink>
           </article>
 
           <article className={styles.card}>
@@ -87,17 +87,20 @@ export function ConsistencyStory() {
               The roadmap describes a direction, not a currently shipping
               product feature.
             </div>
-            <Link href='/blog/ai-ui-consistency' className={styles.link}>
+            <DesignSystemLink
+              href='/blog/ai-ui-consistency'
+              className={styles.link}
+            >
               Why AI changes the problem <span aria-hidden='true'>→</span>
-            </Link>
+            </DesignSystemLink>
           </article>
         </div>
 
         <div className={styles.footer}>
           <p>Start with what ships. Inspect the source. Follow the roadmap.</p>
-          <Link href='https://github.com/vellira-dev/vellira'>
+          <DesignSystemLink href='https://github.com/vellira-dev/vellira'>
             View public repository <span aria-hidden='true'>→</span>
-          </Link>
+          </DesignSystemLink>
         </div>
       </div>
     </section>
