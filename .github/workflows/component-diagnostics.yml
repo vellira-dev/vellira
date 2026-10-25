@@ -9,6 +9,10 @@ on:
         description: 'Exact 40-character lowercase commit SHA in this repository.'
         required: true
         type: string
+      native_version:
+        description: 'Exact published native package version (required only for native-metro).'
+        required: false
+        type: string
       profile:
         description: 'Repository-owned diagnostic suite; arbitrary commands are not accepted.'
         required: true
@@ -37,6 +41,7 @@ jobs:
     env:
       DIAGNOSTIC_REVISION: ${{ inputs.revision }}
       DIAGNOSTIC_PROFILE: ${{ inputs.profile }}
+      NATIVE_VERSION_INPUT: ${{ inputs.native_version }}
 
     steps:
       - name: Validate immutable diagnostics inputs
@@ -45,6 +50,10 @@ jobs:
           set -euo pipefail
           if [[ ! "$DIAGNOSTIC_REVISION" =~ ^[0-9a-f]{40}$ ]]; then
             echo '::error::An exact lowercase commit SHA is required.'
+            exit 2
+          fi
+          if [[ "$DIAGNOSTIC_PROFILE" == 'native-metro' ]] && [[ ! "$NATIVE_VERSION_INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::Native Metro requires an exact published version.'
             exit 2
           fi
           case "$DIAGNOSTIC_PROFILE" in
@@ -107,7 +116,7 @@ jobs:
               token-semantic) pnpm check:tokens-semantic:strict ;;
               tooling) pnpm test:tooling ;;
               native-metro)
-                VELLIRA_NATIVE_VERSION="$(npm view @vellira-ui/react-native version)"
+                VELLIRA_NATIVE_VERSION="$NATIVE_VERSION_INPUT"
                 export VELLIRA_NATIVE_VERSION
                 VELLIRA_METRO_EVIDENCE="$RUNNER_TEMP/vellira-diagnostics/native-metro-matrix.json"
                 export VELLIRA_METRO_EVIDENCE
