@@ -39,15 +39,31 @@ describe('release candidate artifact wiring', () => {
       'scripts/release-candidate/package-artifacts.cjs',
       'utf8'
     );
-    const resolverIndex = validator.indexOf(
+    const graphCheckerStart = validator.indexOf(
+      'function findUnresolvedPackedDeclarations'
+    );
+    const graphCheckerEnd = validator.indexOf('function inspectTarball');
+    const resolverStart = validator.indexOf(
       'function verifyTypescriptResolution'
     );
-    const typescriptRequireIndex = validator.indexOf(
+    const resolverEnd = validator.indexOf('function verifyNodeResolution');
+
+    expect(graphCheckerStart).toBeGreaterThanOrEqual(0);
+    expect(graphCheckerEnd).toBeGreaterThan(graphCheckerStart);
+    expect(resolverStart).toBeGreaterThan(graphCheckerEnd);
+    expect(resolverEnd).toBeGreaterThan(resolverStart);
+
+    // Both validators must load TypeScript lazily. Recovery can load
+    // package-artifacts.cjs without installing candidate-only dependencies.
+    expect(validator.slice(0, graphCheckerStart)).not.toContain(
+      "require('typescript')"
+    );
+    expect(validator.slice(graphCheckerStart, graphCheckerEnd)).toContain(
       "const ts = require('typescript')"
     );
-
-    expect(resolverIndex).toBeGreaterThanOrEqual(0);
-    expect(typescriptRequireIndex).toBeGreaterThan(resolverIndex);
+    expect(validator.slice(resolverStart, resolverEnd)).toContain(
+      "const ts = require('typescript')"
+    );
   });
 
   it('retains the exact release candidate even when publication later fails', () => {
