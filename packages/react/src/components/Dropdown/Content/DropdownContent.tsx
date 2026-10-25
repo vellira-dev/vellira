@@ -67,6 +67,7 @@ export const DropdownContent: DropdownSlotComponent<DropdownContentProps> = ({
       style={{ ...context.surfaceStyle, ...context.contentProps?.style }}
       className={contentClassName}
       data-color={context.color}
+      data-submenu-open={context.openSubId ? 'true' : undefined}
     >
       {context.searchable && (
         <li
