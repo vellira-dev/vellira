@@ -1261,7 +1261,15 @@ try {
   await navigateByLink(
     '/blog',
     '/blog/component-metadata-source-of-truth',
-    'Component Metadata as a Source of Truth for a Design System'
+    JSON.parse(
+      await fs.readFile(
+        new URL(
+          '../../website/content/blog/component-metadata-source-of-truth/metadata.json',
+          import.meta.url
+        ),
+        'utf8'
+      )
+    ).title
   );
   await navigateByLink(
     '/blog',
