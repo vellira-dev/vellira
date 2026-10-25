@@ -166,7 +166,9 @@ export function Dashboard({
   const dashboardRef = useRef<HTMLDivElement>(null);
   const modalReturnFocusRef = useRef<HTMLElement | null>(null);
   const [pendingFocus, setPendingFocus] = useState<
-    { kind: 'project'; id: number } | { kind: 'undo' } | null
+    | { kind: 'project'; id: number }
+    | { kind: 'undo' | 'projects' | 'search' }
+    | null
   >(null);
 
   useEffect(() => {
@@ -256,7 +258,15 @@ export function Dashboard({
           ? root?.querySelector<HTMLButtonElement>(
               `[data-project-focus-id="${pendingFocus.id}"]`
             )
-          : root?.querySelector<HTMLButtonElement>('[data-project-undo]');
+          : pendingFocus.kind === 'undo'
+            ? root?.querySelector<HTMLButtonElement>('[data-project-undo]')
+            : pendingFocus.kind === 'search'
+              ? root?.querySelector<HTMLInputElement>(
+                  '[aria-label="Search projects"]'
+                )
+              : root?.querySelector<HTMLButtonElement>(
+                  '[data-projects-navigation]'
+                );
       const fallback =
         root?.querySelector<HTMLButtonElement>('[data-project-undo]') ??
         root?.querySelector<HTMLButtonElement>('[data-projects-navigation]');
@@ -621,7 +631,10 @@ export function Dashboard({
                     size='sm'
                     appearance='outline'
                     color='neutral'
-                    onClick={() => setView('projects')}
+                    onClick={() => {
+                      setPendingFocus({ kind: 'projects' });
+                      setView('projects');
+                    }}
                   >
                     View all projects
                   </Button>
@@ -740,6 +753,33 @@ export function Dashboard({
                           <Dropdown.CheckboxItem
                             checked={project.completed}
                             onCheckedChange={(checked) => {
+                              const nextStatus = checked
+                                ? 'shipped'
+                                : (project.previousStatus ?? 'active');
+                              const staysVisible =
+                                filterProjects(
+                                  [
+                                    {
+                                      ...project,
+                                      completed: checked,
+                                      status: nextStatus,
+                                    },
+                                  ],
+                                  query,
+                                  filter
+                                ).length > 0;
+                              if (!staysVisible) {
+                                const index = projects.findIndex(
+                                  (visible) => visible.id === project.id
+                                );
+                                const neighbour =
+                                  projects[index + 1] ?? projects[index - 1];
+                                setPendingFocus(
+                                  neighbour
+                                    ? { kind: 'project', id: neighbour.id }
+                                    : { kind: 'projects' }
+                                );
+                              }
                               setWorkspace((current) =>
                                 toggleProject(current, project.id, checked)
                               );
@@ -814,6 +854,7 @@ export function Dashboard({
                         appearance='outline'
                         color='neutral'
                         onClick={() => {
+                          setPendingFocus({ kind: 'search' });
                           setQuery('');
                           setFilter('all');
                         }}

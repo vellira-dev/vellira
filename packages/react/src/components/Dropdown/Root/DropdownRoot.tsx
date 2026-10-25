@@ -231,6 +231,20 @@ export const DropdownRoot = ({
 
       if ((event.key === 'Enter' || event.key === ' ') && activeItem) {
         event.preventDefault();
+        if (activeItem.type === 'checkbox') {
+          // Route keyboard activation through the same controlled/uncontrolled
+          // checkbox handler as pointer activation, without double-toggling.
+          const activeNode = document.getElementById(
+            `${contentId}-item-${activeIndex}`
+          );
+          if (
+            activeNode instanceof HTMLElement &&
+            contentRef.current?.contains(activeNode)
+          ) {
+            activeNode.click();
+          }
+          return;
+        }
         const selectEvent = createDropdownSelectEvent(event);
         selectItem(activeItem, selectEvent);
         return;
@@ -242,7 +256,7 @@ export const DropdownRoot = ({
         triggerRef.current?.focus();
       }
     },
-    [activeIndex, filteredParsed.items, onKeyDown, openSubId, selectItem]
+    [activeIndex, contentId, filteredParsed.items, onKeyDown, openSubId, selectItem]
   );
 
   const handleClick = useCallback(

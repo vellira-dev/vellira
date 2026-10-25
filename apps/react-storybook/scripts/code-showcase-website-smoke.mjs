@@ -332,9 +332,23 @@ try {
               'https://github.com/vellira-dev/vellira/blob/main/examples/workspace-starter/web/src/Dashboard.tsx'
             );
 
-            await dashboard
-              .getByRole('button', { name: 'Projects', exact: true })
-              .click();
+            // The overview action unmounts after navigation. Keyboard focus
+            // must land on the persistent Projects navigation control.
+            const viewAllProjects = dashboard.getByRole('button', {
+              name: 'View all projects',
+            });
+            await viewAllProjects.focus();
+            await page.keyboard.press('Enter');
+            await expect(
+              dashboard.getByRole('heading', {
+                name: 'Projects',
+                exact: true,
+                level: 3,
+              })
+            ).toBeVisible();
+            await expect(
+              dashboard.getByRole('button', { name: 'Projects', exact: true })
+            ).toBeFocused();
             const createTrigger = dashboard.getByRole('button', {
               name: 'New project',
             });
@@ -547,6 +561,9 @@ try {
             await expect(
               dashboard.getByRole('searchbox', { name: 'Search projects' })
             ).toHaveValue('');
+            await expect(
+              dashboard.getByRole('searchbox', { name: 'Search projects' })
+            ).toBeFocused();
 
             await page.reload({ waitUntil: 'domcontentloaded' });
             await expect(
@@ -684,6 +701,25 @@ try {
               .click();
             await expect(filteredEditDialog).toBeHidden();
             await expect(actionsAfterReload).toBeHidden();
+            await expect(
+              dashboard.getByRole('button', { name: 'Projects', exact: true })
+            ).toBeFocused();
+
+            // The only remaining Shipped row disappears when Done is toggled.
+            // Activate the menu checkbox using the keyboard, then verify
+            // focus moves to stable navigation instead of document.body.
+            const lastShippedAction = dashboard.getByRole('button', {
+              name: 'Actions for Dashboard rollout',
+            });
+            await lastShippedAction.focus();
+            await page.keyboard.press('Enter');
+            const shippedActionMenu = page.getByRole('menu');
+            await expect(shippedActionMenu).toBeFocused();
+            await expect(
+              page.getByRole('menuitemcheckbox', { name: 'Done' })
+            ).toHaveAttribute('aria-checked', 'true');
+            await page.keyboard.press('Enter');
+            await expect(lastShippedAction).toBeHidden();
             await expect(
               dashboard.getByRole('button', { name: 'Projects', exact: true })
             ).toBeFocused();
