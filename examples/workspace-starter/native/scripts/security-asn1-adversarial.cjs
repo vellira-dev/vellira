@@ -48,3 +48,8 @@ const outcome = {
 };
 console.log(JSON.stringify(outcome, null, 2));
 assert.equal(typeof accepted, 'boolean');
+// Future patched behavior must reject the malformed structure. This switch
+// deliberately fails on unpatched node-forge 1.4.0.
+if (process.argv.includes('--require-rejection')) {
+  assert.equal(accepted, false, 'CVE-2026-85393: malformed DigestAlgorithm must be rejected');
+}
