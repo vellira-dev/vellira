@@ -256,7 +256,14 @@ export const DropdownRoot = ({
         triggerRef.current?.focus();
       }
     },
-    [activeIndex, contentId, filteredParsed.items, onKeyDown, openSubId, selectItem]
+    [
+      activeIndex,
+      contentId,
+      filteredParsed.items,
+      onKeyDown,
+      openSubId,
+      selectItem,
+    ]
   );
 
   const handleClick = useCallback(
