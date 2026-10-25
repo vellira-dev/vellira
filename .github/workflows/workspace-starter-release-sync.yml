@@ -193,24 +193,44 @@ jobs:
           EXPECTED_VERSION: ${{ steps.source.outputs.version }}
         run: |
           set -euo pipefail
-          pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
-          jq -e \
-            --arg head "$EXPECTED_HEAD" \
-            --arg title "chore(starter): sync Vellira to v$EXPECTED_VERSION" \
-            '.state == "open" and .draft == false and .base.ref == "main" and
-             .head.ref == "chore/workspace-starter-release-sync" and
-             .head.sha == $head and .user.login == "vellira-release-sync[bot]" and
-             .title == $title' <<< "$pr" > /dev/null
-          files="$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" --jq '.[].filename')"
-          [[ -n "$files" ]] || { echo "::error::Empty Starter sync PR"; exit 1; }
-          while IFS= read -r file; do
-            case "$file" in
-              examples/workspace-starter/web/package.json|\
-              examples/workspace-starter/native/package.json|\
-              examples/workspace-starter/web/package-lock.json|\
-              examples/workspace-starter/native/package-lock.json|\
-              examples/workspace-starter/README.md) ;;
-              *) echo "::error::Unexpected Starter PR file: $file"; exit 1 ;;
-            esac
-          done <<< "$files"
-          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash --delete-branch
+          # A transient GitHub GraphQL failure may happen after the PR was created.
+          # Retry only the auto-merge request, and reauthenticate the exact PR and
+          # allowed file surface on EVERY attempt. Never bypass merge protection.
+          for attempt in 1 2 3; do
+            pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
+            jq -e \
+              --arg head "$EXPECTED_HEAD" \
+              --arg title "chore(starter): sync Vellira to v$EXPECTED_VERSION" \
+              '.state == "open" and .draft == false and .base.ref == "main" and
+               .head.ref == "chore/workspace-starter-release-sync" and
+               .head.sha == $head and .user.login == "vellira-release-sync[bot]" and
+               .title == $title' <<< "$pr" > /dev/null
+            files="$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" --jq '.[].filename')"
+            [[ -n "$files" ]] || { echo "::error::Empty Starter sync PR"; exit 1; }
+            while IFS= read -r file; do
+              case "$file" in
+                examples/workspace-starter/web/package.json|\
+                examples/workspace-starter/native/package.json|\
+                examples/workspace-starter/web/package-lock.json|\
+                examples/workspace-starter/native/package-lock.json|\
+                examples/workspace-starter/README.md) ;;
+                *) echo "::error::Unexpected Starter PR file: $file"; exit 1 ;;
+              esac
+            done <<< "$files"
+
+            # An earlier GraphQL timeout may have enabled auto-merge even though
+            # the command reported an error. Do not send a second mutation then.
+            if jq -e '.auto_merge != null' <<< "$pr" > /dev/null; then
+              echo "Guarded Starter auto-merge is already enabled."
+              exit 0
+            fi
+            if gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash --delete-branch; then
+              echo "Guarded Starter auto-merge enabled (attempt $attempt)."
+              exit 0
+            fi
+            if [[ "$attempt" == "3" ]]; then
+              echo "::error::Could not enable guarded Starter auto-merge after 3 verified attempts."
+              exit 1
+            fi
+            sleep "$((attempt * 2))"
+          done
