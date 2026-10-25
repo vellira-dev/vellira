@@ -9,6 +9,7 @@ on:
       - 'examples/workspace-starter/native/package.json'
       - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
       - 'examples/workspace-starter/native/scripts/security-asn1-adversarial.cjs'
+      - 'examples/workspace-starter/native/scripts/security-expo-certificate-contract.cjs'
   workflow_dispatch:
 
 permissions:
@@ -78,6 +79,7 @@ jobs:
           cp "$candidate/lib/rsa.js" node_modules/node-forge/lib/rsa.js
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
+          node scripts/security-expo-certificate-contract.cjs
           echo "Pinned upstream candidate RSA regression PASS in disposable node_modules (not released or installed in production)." >> "$GITHUB_STEP_SUMMARY"
       - name: Typecheck Starter
         run: npm run typecheck
