@@ -50,7 +50,9 @@ function coreFixture(): any {
 
 describe('release candidate artifact validation', () => {
   it('rejects declarations that reference files excluded from a packed tarball', () => {
-    const packageRoot = mkdtempSync(path.join(tmpdir(), 'vellira-dts-closure-'));
+    const packageRoot = mkdtempSync(
+      path.join(tmpdir(), 'vellira-dts-closure-')
+    );
     const dist = path.join(packageRoot, 'dist');
     const button = path.join(dist, 'primitives', 'Button');
 
