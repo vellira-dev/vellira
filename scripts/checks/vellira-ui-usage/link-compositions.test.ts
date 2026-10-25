@@ -28,8 +28,12 @@ describe('link composition evidence', () => {
         `import { Button } from '@vellira-ui/react'; const X = () => ${jsx};`,
         filename
       );
-      expect(entries.some((entry) => entry.reviewStatus === 'confirmed-composition')).toBe(false);
-      expect(entries.some((entry) => entry.reviewStatus === 'needs-review')).toBe(true);
+      expect(
+        entries.some((entry) => entry.reviewStatus === 'confirmed-composition')
+      ).toBe(false);
+      expect(
+        entries.some((entry) => entry.reviewStatus === 'needs-review')
+      ).toBe(true);
     }
   });
 
@@ -47,7 +51,10 @@ describe('link composition evidence', () => {
   });
 
   it('retains raw links outside valid canonical compositions', () => {
-    const entries = classifyWebsiteSource(`const X = () => <a href='/'>Home</a>;`, filename);
+    const entries = classifyWebsiteSource(
+      `const X = () => <a href='/'>Home</a>;`,
+      filename
+    );
     expect(entries).toHaveLength(1);
     expect(entries[0].reviewStatus).toBe('needs-review');
   });
