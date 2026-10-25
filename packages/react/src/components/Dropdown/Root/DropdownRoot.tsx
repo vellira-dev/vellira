@@ -69,6 +69,7 @@ export const DropdownRoot = ({
   const triggerRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLElement | null>(null);
   const [openSubId, setOpenSubId] = useState<string | undefined>();
+  const [activeSubIndex, setActiveSubIndex] = useState(-1);
   const [radioValues, setRadioValues] = useState<
     Record<string, string | undefined>
   >({});
@@ -141,6 +142,13 @@ export const DropdownRoot = ({
     loop,
   });
 
+  useEffect(() => {
+    if (!isOpen) {
+      setOpenSubId(undefined);
+      setActiveSubIndex(-1);
+    }
+  }, [isOpen]);
+
   const {
     floatingStyles,
     isMobileSheet,
@@ -176,17 +184,30 @@ export const DropdownRoot = ({
     enabled: modal,
   });
 
+  const setPointerSubId = useCallback((id: string | undefined) => {
+    setOpenSubId(id);
+    setActiveSubIndex(-1);
+  }, []);
+
+  const openKeyboardSubmenu = useCallback((item: DropdownCollectionItem) => {
+    if (item.type !== 'subTrigger' || item.disabled) return;
+
+    setOpenSubId(item.id);
+    setActiveSubIndex(item.subItems.findIndex((entry) => !entry.disabled));
+  }, []);
+
   const closeAndFocusTrigger = useCallback(() => {
     closeDropdown();
+    setPointerSubId(undefined);
     triggerRef.current?.focus();
-  }, [closeDropdown]);
+  }, [closeDropdown, setPointerSubId]);
 
   const selectItem = useCallback(
     (item: DropdownCollectionItem, event: DropdownSelectEvent) => {
       if (item.disabled || loading) return;
 
       if (item.type === 'subTrigger') {
-        setOpenSubId(item.id);
+        openKeyboardSubmenu(item);
         return;
       }
 
@@ -210,27 +231,118 @@ export const DropdownRoot = ({
         closeAndFocusTrigger();
       }
     },
-    [closeAndFocusTrigger, closeOnSelect, loading]
+    [closeAndFocusTrigger, closeOnSelect, loading, openKeyboardSubmenu]
   );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
       const activeItem = filteredParsed.items[activeIndex];
+      const parentIndex = filteredParsed.items.findIndex(
+        (item) => item.type === 'subTrigger' && item.id === openSubId
+      );
+      const parentItem = filteredParsed.items[parentIndex];
 
-      if (event.key === 'ArrowRight' && activeItem?.type === 'subTrigger') {
+      if (parentItem?.type === 'subTrigger' && activeSubIndex >= 0) {
+        const subItems = parentItem.subItems;
+        const firstIndex = subItems.findIndex((item) => !item.disabled);
+        const lastIndex = subItems.reduce(
+          (last, item, index) => (item.disabled ? last : index),
+          -1
+        );
+
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          setActiveSubIndex(
+            nextSubmenuIndex(
+              subItems,
+              activeSubIndex,
+              event.key === 'ArrowDown' ? 1 : -1,
+              loop
+            )
+          );
+          return;
+        }
+
+        if (event.key === 'Home' || event.key === 'End') {
+          event.preventDefault();
+          setActiveSubIndex(event.key === 'Home' ? firstIndex : lastIndex);
+          return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          const item = subItems[activeSubIndex];
+          const node = document.getElementById(
+            `${contentId}-item-${parentIndex}-${activeSubIndex}`
+          );
+
+          if (
+            item &&
+            !item.disabled &&
+            node instanceof HTMLElement &&
+            contentRef.current?.contains(node)
+          ) {
+            // Use the same onClick path for keyboard and pointer, including
+            // checkbox/radio state, links and preventDefault behavior.
+            node.click();
+          }
+          return;
+        }
+
+        if (
+          event.key.length === 1 &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey
+        ) {
+          const query = event.key.toLocaleLowerCase();
+          const match = subItems.findIndex(
+            (item, index) =>
+              index > activeSubIndex &&
+              !item.disabled &&
+              item.label.toLocaleLowerCase().startsWith(query)
+          );
+          const wrapped =
+            match < 0
+              ? subItems.findIndex(
+                  (item) =>
+                    !item.disabled &&
+                    item.label.toLocaleLowerCase().startsWith(query)
+                )
+              : match;
+          if (wrapped >= 0) {
+            event.preventDefault();
+            setActiveSubIndex(wrapped);
+            return;
+          }
+        }
+      }
+
+      if (openSubId && (event.key === 'ArrowLeft' || event.key === 'Escape')) {
+        // First Escape closes only the submenu. The parent menu remains
+        // focused, with its active descendant restored to the subtrigger.
         event.preventDefault();
-        setOpenSubId(activeItem.id);
+        if (event.key === 'Escape') {
+          // Prevent a parent overlay or the document-level dismiss manager
+          // from closing the entire menu on the first nested Escape.
+          event.stopPropagation();
+        }
+        setPointerSubId(undefined);
         return;
       }
 
-      if (event.key === 'ArrowLeft' && openSubId) {
+      if (event.key === 'ArrowRight' && activeItem?.type === 'subTrigger') {
         event.preventDefault();
-        setOpenSubId(undefined);
+        openKeyboardSubmenu(activeItem);
         return;
       }
 
       if ((event.key === 'Enter' || event.key === ' ') && activeItem) {
         event.preventDefault();
+        if (activeItem.type === 'subTrigger') {
+          openKeyboardSubmenu(activeItem);
+          return;
+        }
         if (activeItem.type === 'checkbox') {
           // Route keyboard activation through the same controlled/uncontrolled
           // checkbox handler as pointer activation, without double-toggling.
@@ -258,11 +370,15 @@ export const DropdownRoot = ({
     },
     [
       activeIndex,
+      activeSubIndex,
       contentId,
       filteredParsed.items,
+      loop,
       onKeyDown,
+      openKeyboardSubmenu,
       openSubId,
       selectItem,
+      setPointerSubId,
     ]
   );
 
@@ -322,8 +438,25 @@ export const DropdownRoot = ({
     onKeyDown: handleKeyDown,
   };
 
+  const openSubParentIndex = filteredParsed.items.findIndex(
+    (item) => item.type === 'subTrigger' && item.id === openSubId
+  );
+  const openSubParent = filteredParsed.items[openSubParentIndex];
+  const activeSubItem =
+    openSubParent?.type === 'subTrigger'
+      ? openSubParent.subItems[activeSubIndex]
+      : undefined;
+  const activeDescendantId =
+    activeSubItem && !activeSubItem.disabled
+      ? `${contentId}-item-${openSubParentIndex}-${activeSubIndex}`
+      : activeIndex >= 0 && activeIndex < filteredParsed.items.length
+        ? `${contentId}-item-${activeIndex}`
+        : undefined;
+
   const dropdownContext = {
+    activeDescendantId,
     activeIndex,
+    activeSubIndex,
     closeOnSelect,
     color,
     contentReadyToFocus: isMobileSheet || isPositioned,
@@ -352,8 +485,9 @@ export const DropdownRoot = ({
     searchable: isSearchable,
     selectItem,
     setActiveIndex,
+    setActiveSubIndex,
     setContentRef,
-    setOpenSubId,
+    setOpenSubId: setPointerSubId,
     setRadioValue: (groupId: string, value: string) => {
       setRadioValues((current) => ({ ...current, [groupId]: value }));
     },
@@ -379,6 +513,26 @@ export const DropdownRoot = ({
 };
 
 DropdownRoot.displayName = 'DropdownRoot';
+
+function nextSubmenuIndex(
+  items: DropdownCollectionItem[],
+  current: number,
+  direction: -1 | 1,
+  loop: boolean
+): number {
+  let index = current;
+
+  for (let step = 0; step < items.length; step++) {
+    const next = index + direction;
+
+    if (!loop && (next < 0 || next >= items.length)) return current;
+
+    index = (next + items.length) % items.length;
+    if (!items[index]?.disabled) return index;
+  }
+
+  return current;
+}
 
 function createDropdownSelectEvent(
   originalEvent: DropdownSelectEvent['originalEvent']

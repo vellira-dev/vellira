@@ -33,6 +33,7 @@ export const DropdownItem = createDropdownSlot<DropdownItemProps>(
 
 type DropdownItemChildProps = {
   'aria-checked'?: boolean;
+  'aria-controls'?: string;
   'aria-disabled'?: boolean;
   'aria-expanded'?: boolean;
   'aria-haspopup'?: string;
@@ -161,6 +162,8 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
           'aria-checked': isCheckbox || isRadio ? isChecked : undefined,
           'aria-haspopup': isSubTrigger ? 'menu' : undefined,
           'aria-expanded': isSubTrigger ? isSubOpen : undefined,
+          'aria-controls':
+            isSubTrigger && isSubOpen ? `${itemId}-submenu` : undefined,
           'data-active': isActive || undefined,
           'data-state': isSubOpen ? 'open' : undefined,
           className: cn(child.props.className, itemClassName),
@@ -208,6 +211,9 @@ export const DropdownItemRow = ({ item, itemIndex }: DropdownItemRowProps) => {
         aria-checked={isCheckbox || isRadio ? isChecked : undefined}
         aria-haspopup={isSubTrigger ? 'menu' : undefined}
         aria-expanded={isSubTrigger ? isSubOpen : undefined}
+        aria-controls={
+          isSubTrigger && isSubOpen ? `${itemId}-submenu` : undefined
+        }
         data-active={isActive || undefined}
         data-state={isSubOpen ? 'open' : undefined}
         className={itemClassName}
@@ -277,7 +283,13 @@ function renderSubMenu(
   if (item.subEntries.length === 0) return null;
 
   return (
-    <ul role='menu' className={styles.subContent} onMouseEnter={onMouseEnter}>
+    <ul
+      id={`${itemId}-submenu`}
+      role='menu'
+      aria-labelledby={itemId}
+      className={styles.subContent}
+      onMouseEnter={onMouseEnter}
+    >
       {item.subEntries.map((entry) => {
         if (entry.type === 'label') {
           return (
@@ -304,6 +316,7 @@ function renderSubMenu(
           <SubMenuItemRow
             key={entry.item.id}
             item={entry.item}
+            itemIndex={entry.itemIndex}
             id={`${itemId}-${entry.itemIndex}`}
           />
         );
@@ -315,9 +328,11 @@ function renderSubMenu(
 function SubMenuItemRow({
   id,
   item,
+  itemIndex,
 }: {
   id: string;
   item: DropdownCollectionItem;
+  itemIndex: number;
 }) {
   const context = useDropdownContext();
   const [uncontrolledChecked, setUncontrolledChecked] = useState(
@@ -342,6 +357,7 @@ function SubMenuItemRow({
   const content = slots.content.length ? slots.content : props.children;
   const itemColor = 'color' in props ? props.color : undefined;
   const disabled = context.loading || item.disabled;
+  const isActive = context.activeSubIndex === itemIndex;
   const href = item.type === 'item' ? item.props.href : undefined;
   const target = item.type === 'item' ? item.props.target : undefined;
   const download = item.type === 'item' ? item.props.download : undefined;
@@ -382,11 +398,13 @@ function SubMenuItemRow({
       target={Component === 'a' && !disabled ? target : undefined}
       rel={Component === 'a' ? rel : undefined}
       download={Component === 'a' && !disabled ? download : undefined}
-      tabIndex={disabled ? -1 : 0}
+      tabIndex={-1}
       aria-disabled={disabled || undefined}
       aria-checked={isCheckbox || isRadio ? isChecked : undefined}
+      data-active={isActive || undefined}
       className={cn(
         styles.item,
+        { [styles.active]: isActive },
         styles[context.size],
         {
           [styles.disabled]: disabled,
@@ -395,6 +413,9 @@ function SubMenuItemRow({
         itemColor && itemColor !== 'default' ? styles[itemColor] : undefined
       )}
       onClick={handleSelect}
+      onMouseEnter={() => {
+        if (!disabled) context.setActiveSubIndex(itemIndex);
+      }}
     >
       {hasIndicator && (
         <span className={styles.indicator} aria-hidden='true'>
