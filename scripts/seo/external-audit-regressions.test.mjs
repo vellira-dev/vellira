@@ -250,3 +250,19 @@ test('component sitemap and canonical metadata share the production origin and r
     assert.equal(canonical.pathname, `/components/${slug}`);
   }
 });
+
+test('public Storybook uses crawlable noindex rather than blocking Googlebot', async () => {
+  const [robots, managerHead, previewHead] = await Promise.all([
+    read('apps/react-storybook/public/robots.txt'),
+    read('apps/react-storybook/.storybook/manager-head.html'),
+    read('apps/react-storybook/.storybook/preview-head.html'),
+  ]);
+
+  assert.match(robots, /^User-agent: \*$/m);
+  assert.match(robots, /^Allow: \/$/m);
+  assert.doesNotMatch(robots, /^Disallow: \/$/m);
+  for (const html of [managerHead, previewHead]) {
+    assert.match(html, /<meta name="robots" content="noindex,/);
+    assert.match(html, /<meta name="googlebot" content="noindex,/);
+  }
+});
