@@ -85,6 +85,7 @@ import { Textarea } from '@vellira-ui/react-native';
 
 export function MessageField() {
   const [message, setMessage] = useState('');
+  const invalid = message.length > 0 && message.trim().length === 0;
 
   return (
     <View>
@@ -96,12 +97,8 @@ export function MessageField() {
         numberOfLines={4}
         maxLength={500}
         required
-        invalid={message.length > 0 && message.trim().length === 0}
-        error={
-          message.length > 0 && message.trim().length === 0
-            ? 'Enter a message before submitting.'
-            : undefined
-        }
+        invalid={invalid}
+        error={invalid ? 'Enter a message before submitting.' : undefined}
       />
     </View>
   );
