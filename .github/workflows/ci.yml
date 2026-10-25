@@ -709,6 +709,8 @@ jobs:
             WEBSITE_URL=http://127.0.0.1:3101 \
               pnpm --filter @vellira-ui/react-storybook exec node \
               scripts/newsletter-website-smoke.mjs
+            WEBSITE_URL=http://127.0.0.1:3101 \
+              pnpm --filter @vellira-ui/website test:editorial-links-browser
           ) > /tmp/vellira-blog-browser.log 2>&1 &
           blog_pid=$!
 
@@ -808,6 +810,9 @@ jobs:
           WEBSITE_URL=http://127.0.0.1:3100 \
             pnpm --filter @vellira-ui/react-storybook exec node \
             scripts/newsletter-website-smoke.mjs
+
+          WEBSITE_URL=http://127.0.0.1:3100 \
+            pnpm --filter @vellira-ui/website test:editorial-links-browser
 
       - name: Core account browser acceptance
         if: ${{ needs.impact.outputs.shape != 'docs-only' && (needs.impact.outputs.execution_path != 'affected' || contains(fromJSON(needs.impact.outputs.affected_workspaces), '@vellira-ui/website')) }}
