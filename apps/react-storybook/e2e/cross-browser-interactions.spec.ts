@@ -86,7 +86,10 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await menu.focus();
 
     await page.keyboard.press('ArrowDown');
-    const exportTrigger = menu.getByRole('menuitem', { name: 'Export' });
+    const exportTrigger = menu.getByRole('menuitem', {
+      name: 'Export',
+      exact: true,
+    });
     await expect(menu).toHaveAttribute(
       'aria-activedescendant',
       (await exportTrigger.getAttribute('id'))!
