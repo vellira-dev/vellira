@@ -24,3 +24,27 @@ test('rejects JSON objects and malformed JSON', () => {
 test('allows exactly the item budget', () => {
   assert.equal(parseBoundedPluginOutput(JSON.stringify(Array(MAX_OUTPUT_ITEMS).fill(null))).length, MAX_OUTPUT_ITEMS);
 });
+
+test('accepts empty output and small multi-item payload', () => {
+  assert.deepEqual(parseBoundedPluginOutput('[]'), []);
+  assert.equal(parseBoundedPluginOutput(JSON.stringify([
+    { type: 'text', text: 'a', level: 'info' },
+    { type: 'text', text: 'b', level: 'warning' },
+  ])).length, 2);
+});
+test('rejects nonstring inputs before JSON parsing', () => {
+  assert.throws(() => parseBoundedPluginOutput(Buffer.from('[]')), RangeError);
+  assert.throws(() => parseBoundedPluginOutput(null), RangeError);
+});
+test('rejects overly large nested JSON before parsing even with one array item', () => {
+  const nested = JSON.stringify([{ text: 'x'.repeat(MAX_JSON_BYTES) }]);
+  assert.throws(() => parseBoundedPluginOutput(nested), RangeError);
+});
+test('a small valid payload parses independently across repeated chunks', () => {
+  const chunks = [
+    '[{"type":"text","text":"first","level":"info"}]',
+    '[{"type":"text","text":"second","level":"warning"}]',
+  ];
+  assert.deepEqual(chunks.flatMap(parseBoundedPluginOutput).map((entry) => entry.text),
+    ['first', 'second']);
+});
