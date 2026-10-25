@@ -1,0 +1,49 @@
+name: Dependabot Cross-Lockfile Triage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '25 8 * * *'
+
+permissions:
+  contents: read
+  security-events: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Configure Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - name: Test alert grouping
+        run: node --test scripts/ci/dependabot-cross-lockfile-triage.test.mjs
+      - name: Read open alerts
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}"
+          gh api --paginate -H 'Accept: application/vnd.github+json' \
+            "/repos/$GH_REPO/dependabot/alerts?state=open&per_page=100" \
+            | jq -s 'add // []' > "$RUNNER_TEMP/alerts.json"
+      - name: Group alerts by package and manifest
+        run: |
+          set -euo pipefail
+          node scripts/ci/dependabot-cross-lockfile-triage.mjs \
+            "$RUNNER_TEMP/alerts.json" "$RUNNER_TEMP/triage.md"
+          cat "$RUNNER_TEMP/triage.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain read-only report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dependabot-cross-lockfile-triage
+          path: ${{ runner.temp }}/triage.md
+          retention-days: 7
