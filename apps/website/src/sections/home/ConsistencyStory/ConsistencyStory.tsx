@@ -87,7 +87,10 @@ export function ConsistencyStory() {
               The roadmap describes a direction, not a currently shipping
               product feature.
             </div>
-            <DesignSystemLink href='/blog/ai-ui-consistency' className={styles.link}>
+            <DesignSystemLink
+              href='/blog/ai-ui-consistency'
+              className={styles.link}
+            >
               Why AI changes the problem <span aria-hidden='true'>→</span>
             </DesignSystemLink>
           </article>
