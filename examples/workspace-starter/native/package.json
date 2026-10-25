@@ -19,7 +19,7 @@
     "security:verify-patch": "node scripts/apply-node-forge-patch.cjs --verify"
   },
   "dependencies": {
-    "@vellira-ui/react-native": "2.186.16",
+    "@vellira-ui/react-native": "2.186.17",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-picker/picker": "2.11.4",
     "@react-native-community/datetimepicker": "^9.2.1",
