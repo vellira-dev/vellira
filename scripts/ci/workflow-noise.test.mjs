@@ -754,6 +754,6 @@ shellTest('Starter sync auto-merge retries only for the exact bot PR', (t) => {
     GH_TEST_MODE: 'always-fail',
   });
   assert.notEqual(persistent.status, 0);
-  assert.match(persistent.stderr, /Could not enable guarded Starter auto-merge/);
+  assert.match(persistent.stdout, /Could not enable guarded Starter auto-merge/);
   assert.equal(readFileSync(calls, 'utf8'), 'attempt\nattempt\nattempt\n');
 });
