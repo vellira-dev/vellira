@@ -800,6 +800,43 @@ describe('Dropdown', () => {
     unmount();
   });
 
+  it('renders submenu inside a trigger-anchored presentation row', () => {
+    const { container, unmount } = render(
+      <Dropdown>
+        <Dropdown.Trigger>Actions</Dropdown.Trigger>
+        <Dropdown.Content>
+          <Dropdown.Sub>
+            <Dropdown.SubTrigger>Export</Dropdown.SubTrigger>
+            <Dropdown.SubContent>
+              <Dropdown.Item>Export as PDF</Dropdown.Item>
+            </Dropdown.SubContent>
+          </Dropdown.Sub>
+        </Dropdown.Content>
+      </Dropdown>
+    );
+
+    act(() => container.querySelector('button')?.click());
+
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    const trigger = document.querySelector<HTMLElement>('[role="menuitem"]')!;
+    const wrapper = trigger.parentElement;
+
+    expect(wrapper?.tagName).toBe('LI');
+    expect(wrapper?.getAttribute('role')).toBe('none');
+    expect(wrapper?.querySelector('[role="menuitem"]')).toBe(trigger);
+
+    act(() => trigger.click());
+
+    const submenu = document.querySelectorAll<HTMLElement>('[role="menu"]')[1];
+    expect(wrapper?.contains(submenu)).toBe(true);
+    expect(menu.dataset.submenuOpen).toBe('true');
+    expect(
+      trigger.querySelector('svg')?.parentElement?.className
+    ).toContain(itemStyles.subChevron);
+
+    unmount();
+  });
+
   it('opens submenu from click and cancels delayed hover opening on leave', () => {
     vi.useFakeTimers();
 
