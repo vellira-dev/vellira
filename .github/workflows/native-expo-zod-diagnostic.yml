@@ -1,0 +1,35 @@
+name: Native Expo Zod Bounded Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-expo-zod-diagnostic.yml'
+      - 'examples/workspace-starter/native/scripts/security-zod-bounded.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-zod-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/workspace-starter/native
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+      - name: Exact npm dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Bounded Zod 3 collection proof
+        run: node scripts/security-zod-bounded.cjs
+      - name: Verify existing node-forge backport unchanged
+        run: npm run security:verify-patch
+      - name: Typecheck Native Starter
+        run: npm run typecheck
