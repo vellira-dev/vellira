@@ -10,7 +10,13 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "security:certificate-proof": "node scripts/security-certificate-proof.cjs",
-    "postinstall": "node scripts/apply-node-forge-patch.cjs"
+    "postinstall": "node scripts/apply-node-forge-patch.cjs",
+    "prestart": "node scripts/apply-node-forge-patch.cjs --verify",
+    "preios": "node scripts/apply-node-forge-patch.cjs --verify",
+    "preandroid": "node scripts/apply-node-forge-patch.cjs --verify",
+    "preweb": "node scripts/apply-node-forge-patch.cjs --verify",
+    "pretypecheck": "node scripts/apply-node-forge-patch.cjs --verify",
+    "security:verify-patch": "node scripts/apply-node-forge-patch.cjs --verify"
   },
   "dependencies": {
     "@vellira-ui/react-native": "2.186.15",
