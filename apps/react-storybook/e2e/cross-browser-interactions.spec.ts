@@ -75,6 +75,56 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
     await expect(trigger).toBeFocused();
   });
 
+  test('Dropdown submenu supports APG keyboard focus, Escape, and activation', async ({
+    page,
+  }) => {
+    await openStory(page, 'components-dropdown--submenus');
+
+    const trigger = page.getByRole('button', { name: 'Actions' });
+    const menu = page.getByRole('menu', { name: 'Actions' });
+    await expect(menu).toBeVisible();
+    await menu.focus();
+
+    await page.keyboard.press('ArrowDown');
+    const exportTrigger = menu.getByRole('menuitem', { name: 'Export' });
+    await expect(menu).toHaveAttribute(
+      'aria-activedescendant',
+      (await exportTrigger.getAttribute('id'))!
+    );
+
+    await page.keyboard.press('ArrowRight');
+    const subMenu = page.getByRole('menu', { name: 'Export' });
+    const pdf = subMenu.getByRole('menuitem', { name: 'Export as PDF' });
+    const archive = subMenu.getByRole('menuitem', {
+      name: 'Download archive',
+    });
+    await expect(subMenu).toBeVisible();
+    await expect(menu).toHaveAttribute(
+      'aria-activedescendant',
+      (await pdf.getAttribute('id'))!
+    );
+    await expect(menu).toBeFocused();
+
+    await page.keyboard.press('ArrowDown');
+    await expect(menu).toHaveAttribute(
+      'aria-activedescendant',
+      (await archive.getAttribute('id'))!
+    );
+    await page.keyboard.press('Escape');
+    await expect(subMenu).toBeHidden();
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveAttribute(
+      'aria-activedescendant',
+      (await exportTrigger.getAttribute('id'))!
+    );
+
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(menu).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
   test('Select keeps focus on the trigger, handles keyboard dismissal, portals content, and uses its mobile sheet', async ({
     isMobile,
     page,
