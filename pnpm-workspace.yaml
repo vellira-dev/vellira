@@ -22,6 +22,7 @@ minimumReleaseAgeExclude:
   - compression@1.8.2
   - sharp@0.35.5
   - handlebars@4.7.10
+  - fast-uri@3.1.9
 nodeLinker: hoisted
 
 overrides:
@@ -94,6 +95,8 @@ overrides:
   proxy-addr@>=1.1.0 <2.0.8: ^2.0.8
   sharp@<0.35.5: ^0.35.5
   source-map-js@>=1.0.0 <1.2.2: ^1.2.2
+  fast-uri@>=3.0.0 <3.1.9: ^3.1.9
+  fast-uri@>=3.1.3 <3.1.9: ^3.1.9
 
 patchedDependencies:
   # CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm: upstream braces#72 depth-bound backport.
