@@ -4,12 +4,6 @@
   "slug": "component-metadata-source-of-truth",
   "publishedAt": "2026-09-05",
   "author": "Roman Bakurov",
-  "tags": [
-    "Design Systems",
-    "TypeScript",
-    "Tooling",
-    "React",
-    "React Native"
-  ],
+  "tags": ["Design Systems", "TypeScript", "Tooling", "React", "React Native"],
   "draft": false
 }
