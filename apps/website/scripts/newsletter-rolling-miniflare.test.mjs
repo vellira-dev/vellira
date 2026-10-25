@@ -380,3 +380,52 @@ test('a shared budget remains exhausted for both site Workers across restart', a
     await restarted.dispose();
   }
 });
+
+test('ambiguous provider outcome never refunds the shared permit across Workers', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-cross-retry-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const mf = createSharedOwnerMiniflare(dir, '1');
+  t.after(() => mf.dispose());
+  const staging = await mf.getWorker('vellira-website-staging');
+  const production = await mf.getWorker('vellira-website');
+
+  // A successful admission is durable even when the caller cannot determine
+  // whether the subsequent (unmodeled) provider request succeeded.
+  const first = await staging.fetch('https://site.test/attempt', {
+    method: 'POST',
+  });
+  assert.equal(first.status, 200);
+
+  const retries = await Promise.all(
+    Array.from({ length: 16 }, (_, index) => {
+      const caller = index % 2 === 0 ? staging : production;
+      return caller.fetch('https://site.test/attempt?retry=1', {
+        method: 'POST',
+        headers: { 'X-Budget-Key': 'forged-retry' },
+      });
+    })
+  );
+  assert.ok(retries.every((response) => response.status === 429));
+  assert.ok(
+    retries.every(
+      (response) => response.headers.get('cache-control') === 'no-store'
+    )
+  );
+});
+
+test('an invalid owner capacity fails closed from both independent Workers', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-cross-invalid-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const mf = createSharedOwnerMiniflare(dir, 'invalid');
+  t.after(() => mf.dispose());
+
+  for (const worker of ['vellira-website-staging', 'vellira-website']) {
+    const caller = await mf.getWorker(worker);
+    const response = await caller.fetch('https://site.test/attempt', {
+      method: 'POST',
+    });
+    assert.equal(response.status, 503, worker);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal((await response.json()).code, 'unavailable');
+  }
+});
