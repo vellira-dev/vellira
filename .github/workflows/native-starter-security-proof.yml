@@ -53,7 +53,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(grep -c '^@@ ' scripts/node-forge-1.4.0-candidate.patch)" -eq 3
+          sha256sum node_modules/node-forge/lib/rsa.js scripts/node-forge-1.4.0-candidate.patch
           node scripts/apply-node-forge-patch.cjs
+          sha256sum node_modules/node-forge/lib/rsa.js
           node scripts/apply-node-forge-patch.cjs
           grep -Fq '_encodeDigestInfo' node_modules/node-forge/lib/rsa.js
           node scripts/security-asn1-adversarial.cjs --require-rejection
