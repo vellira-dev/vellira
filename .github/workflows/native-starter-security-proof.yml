@@ -8,6 +8,7 @@ on:
       - '.github/workflows/native-starter-security-proof.yml'
       - 'examples/workspace-starter/native/package.json'
       - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
+      - 'examples/workspace-starter/native/scripts/security-asn1-adversarial.cjs'
   workflow_dispatch:
 
 permissions:
