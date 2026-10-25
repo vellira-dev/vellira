@@ -338,14 +338,14 @@ jobs:
 
           const sitemap = await get('/sitemap.xml');
           const robots = await get('/robots.txt');
-          assert.match(sitemap, /<urlset(?:\\s|>)/);
-          assert.match(robots, /Sitemap:\\s*https:\\/\\/vellira\\.dev\\/sitemap\\.xml/i);
+          assert.match(sitemap, /<urlset(?:\s|>)/);
+          assert.match(robots, /Sitemap:\s*https:\/\/vellira\.dev\/sitemap\.xml/i);
 
           for (const path of ['/components', '/components/button', '/components/select', '/components/textarea', '/blog/ai-ui-consistency']) {
             const expected = `${origin}${path}`;
             const html = await get(path);
-            const linkTags = html.match(/<link\\b[^>]*>/gi) ?? [];
-            const canonicalTags = linkTags.filter((tag) => /\\brel=["']canonical["']/i.test(tag));
+            const linkTags = html.match(/<link\b[^>]*>/gi) ?? [];
+            const canonicalTags = linkTags.filter((tag) => /\brel=["']canonical["']/i.test(tag));
             assert.equal(canonicalTags.length, 1, `${path}: expected exactly one canonical link`);
             assert.ok(
               canonicalTags[0].includes(`href="${expected}"`) || canonicalTags[0].includes(`href='${expected}'`),
