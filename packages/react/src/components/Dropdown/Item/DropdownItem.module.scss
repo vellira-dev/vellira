@@ -2,6 +2,13 @@
 
 $dropdown-item-colors: primary, success, warning, danger;
 
+.subWrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  list-style: none;
+}
+
 .item {
   position: relative;
   display: flex;
@@ -81,7 +88,8 @@ $dropdown-item-colors: primary, success, warning, danger;
 .item:active:not(.disabled),
 .item.active:not(:focus-visible) {
   .itemShortcut,
-  .itemDescription {
+  .itemDescription,
+  .subChevron {
     opacity: 1;
   }
 }
@@ -179,6 +187,24 @@ $dropdown-item-colors: primary, success, warning, danger;
   opacity: 0.72;
 }
 
+.subChevron {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  color: inherit;
+  opacity: 0.72;
+
+  svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+  }
+}
+
 .itemDescription {
   margin-top: 2px;
   color: inherit;
@@ -262,6 +288,18 @@ $dropdown-item-colors: primary, success, warning, danger;
   list-style: none;
   transform-origin: top left;
   animation: dropdown-sub-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (width <= 640px) {
+  .subContent {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    max-height: min(260px, 40vh);
+    margin-top: var(--space-1);
+    box-shadow: none;
+  }
 }
 
 .subLabel {

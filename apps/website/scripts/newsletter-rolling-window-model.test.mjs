@@ -84,3 +84,68 @@ test('ambiguous provider outcome never refunds spent capacity', () => {
   );
   assert.deepEqual(admitted.next.attempts, [1_000]);
 });
+
+import {
+  admitFixedUtcNewsletterAttempt,
+  UTC_DAY_MS,
+} from '../cloudflare/newsletter-fixed-utc-day-model.mjs';
+
+const fixedEmpty = () => ({ dayStart: 0, spent: 0, lastSeen: 0 });
+
+test('fixed UTC budget resets at midnight rather than after rolling 24 hours', () => {
+  const before = UTC_DAY_MS - 1;
+  const first = admitFixedUtcNewsletterAttempt(fixedEmpty(), 1, before);
+  assert.equal(first.outcome, 'admitted');
+  assert.equal(
+    admitFixedUtcNewsletterAttempt(first.next, 1, before).outcome,
+    'exhausted'
+  );
+  const after = admitFixedUtcNewsletterAttempt(first.next, 1, UTC_DAY_MS);
+  assert.equal(after.outcome, 'admitted');
+  assert.deepEqual(after.next, {
+    dayStart: UTC_DAY_MS,
+    spent: 1,
+    lastSeen: UTC_DAY_MS,
+  });
+});
+
+test('fixed UTC budget never refunds ambiguous upstream outcomes', () => {
+  const first = admitFixedUtcNewsletterAttempt(fixedEmpty(), 1, 1_000);
+  assert.equal(first.outcome, 'admitted');
+  const retry = admitFixedUtcNewsletterAttempt(first.next, 1, 2_000);
+  assert.equal(retry.outcome, 'exhausted');
+  assert.equal(retry.next.spent, 1);
+});
+
+test('fixed UTC budget rejects bad state, lowered capacity and clock rollback', () => {
+  const first = admitFixedUtcNewsletterAttempt(fixedEmpty(), 2, 2_000);
+  assert.equal(first.outcome, 'admitted');
+  const invalid = [
+    [first.next, 0, 2_001],
+    [first.next, 1, 1_999],
+    [{ dayStart: 1, spent: 0, lastSeen: 2_000 }, 2, 2_001],
+    [{ dayStart: 0, spent: -1, lastSeen: 2_000 }, 2, 2_001],
+    [{ dayStart: 0, spent: 3, lastSeen: 2_000 }, 2, 2_001],
+    [{ dayStart: 0, spent: 0, lastSeen: UTC_DAY_MS }, 2, UTC_DAY_MS],
+  ];
+  for (const [state, capacity, now] of invalid) {
+    assert.equal(
+      admitFixedUtcNewsletterAttempt(state, capacity, now).outcome,
+      'unavailable'
+    );
+  }
+});
+
+test('fixed UTC budget has one conservative spent counter per day', () => {
+  let state = fixedEmpty();
+  for (let i = 0; i < 5; i += 1) {
+    const result = admitFixedUtcNewsletterAttempt(state, 5, i + 1);
+    assert.equal(result.outcome, 'admitted');
+    state = result.next;
+  }
+  assert.equal(state.spent, 5);
+  assert.equal(
+    admitFixedUtcNewsletterAttempt(state, 5, 100).outcome,
+    'exhausted'
+  );
+});
