@@ -37,8 +37,43 @@ while (queue.length) {
 }
 assert.ok(scanned > 0, 'No installed Expo CLI build files found');
 assert.ok(findings.length > 0, 'No bundled Zod imports found; inspect updated CLI structure');
+// Lock the trust-boundary trace to the installed Expo CLI, not upstream main.
+// These are source-shape checks; they do not assert network exploitability.
+function installedBuildSource(name) {
+  const file = path.join(cliRoot, 'build', 'src', 'start', 'server', name);
+  assert.ok(fs.existsSync(file), 'Installed Expo CLI source moved: ' + name);
+  return fs.readFileSync(file, 'utf8');
+}
+const pluginSource = installedBuildSource('DevToolsPlugin.js');
+const managerSource = installedBuildSource('DevToolsPluginManager.js');
+const schemaSource = installedBuildSource('DevToolsPlugin.schema.js');
+assert.match(pluginSource, /PluginSchema\\.safeParse\\(plugin\\)/,
+  'No direct PluginSchema.safeParse(plugin) in installed DevToolsPlugin');
+assert.match(managerSource, /queryAutolinkedPluginsAsync/,
+  'Installed DevTools plugin loader changed');
+assert.match(managerSource, /scanExpoModuleResolutionsForPlatform/,
+  'Installed DevTools plugin autolinking source changed');
+assert.match(managerSource, /new\\s+[^\\n]*DevToolsPlugin\\(pluginInfo/,
+  'Installed plugin metadata to constructor handoff changed');
+assert.match(schemaSource, /commands:\\s*[^\\n]*\\.array\\(/,
+  'Installed commands array schema changed');
+const trustBoundary = {
+  source: 'local autolinked DevTools plugin metadata',
+  loader: 'build/src/start/server/DevToolsPluginManager.js',
+  validator: 'build/src/start/server/DevToolsPlugin.js',
+  schema: 'build/src/start/server/DevToolsPlugin.schema.js',
+  evidence: [
+    'scanExpoModuleResolutionsForPlatform',
+    'queryAutolinkedPluginsAsync',
+    'new DevToolsPlugin(pluginInfo, ...)',
+    'PluginSchema.safeParse(plugin)',
+    'commands: z.array(...)',
+  ],
+  caveat: 'This is a static installed-source trace, not proof that attacker-controlled remote data can reach Zod.',
+};
 const summary = {
   installedExpoCli: meta.version,
+  trustBoundary,
   installedZodConstraint: meta.dependencies.zod,
   scannedJsFiles: scanned,
   filesReferencingZod: findings.length,
