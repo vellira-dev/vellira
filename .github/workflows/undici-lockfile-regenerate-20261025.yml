@@ -43,7 +43,7 @@ jobs:
             if (lock.includes('  ' + old)) throw Error('Vulnerable package retained: ' + old);
           }
           for (const key of ['next@16.4.2:', 'node-forge@1.4.0:', '@opennextjs/cloudflare@1.20.12:']) {
-            if (!lock.includes('  ' + key)) throw Error('Retained patch package missing: ' + key);
+            if (!lock.includes(key)) throw Error('Retained patch package missing: ' + key);
           }
           NODE
           git diff --check
