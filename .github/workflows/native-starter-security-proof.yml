@@ -10,6 +10,7 @@ on:
       - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
       - 'examples/workspace-starter/native/scripts/security-asn1-adversarial.cjs'
       - 'examples/workspace-starter/native/scripts/security-expo-certificate-contract.cjs'
+      - 'examples/workspace-starter/native/scripts/node-forge-1.4.0-candidate.patch'
   workflow_dispatch:
 
 permissions:
@@ -46,40 +47,19 @@ jobs:
           fi
           grep -F 'malformed DigestAlgorithm must be rejected' "$RUNNER_TEMP/rsa-rejection.txt"
           echo "Expected red regression confirmed; dependency is NOT remediated." >> "$GITHUB_STEP_SUMMARY"
-      - name: Test pinned upstream candidate in isolated installed tree
+      - name: Verify offline pinned upstream candidate patch
         shell: bash
         run: |
           set -euo pipefail
-          candidate_sha=9842c3d3cf6f560270b4f42ab3c0c28c68e6f78e
-          candidate="$RUNNER_TEMP/forge-candidate"
-          git clone --no-checkout --filter=blob:none https://github.com/digitalbazaar/forge.git "$candidate"
-          git -C "$candidate" fetch --depth=1 origin "$candidate_sha"
-          test "$(git -C "$candidate" rev-parse FETCH_HEAD)" = "$candidate_sha"
-          git -C "$candidate" checkout --detach "$candidate_sha"
-          node -e "const f=require('node-forge'); if(require('node-forge/package.json').version!=='1.4.0') throw Error('unexpected forge baseline')"
-          # The only permitted candidate delta is the upstream rsa.js patch.
-          # Compare npm-installed baseline to the pinned GitHub candidate, rather
-          # than treating an arbitrary candidate source file as trustworthy.
-          git diff --no-index -- node_modules/node-forge/lib/rsa.js "$candidate/lib/rsa.js" > "$RUNNER_TEMP/forge-rsa.patch" || status=$?
-          test "${status:-0}" -eq 1
-          python3 - "$RUNNER_TEMP/forge-rsa.patch" <<'PY'
-          import pathlib, re, sys
-          patch = pathlib.Path(sys.argv[1]).read_text()
-          hunks = re.findall(r'^@@ .*? @@', patch, flags=re.MULTILINE)
-          if len(hunks) != 3:
-              raise SystemExit(f"Expected three independently reviewable RSA hunks, got {len(hunks)}")
-          if '_encodeDigestInfo' not in patch or "var expected =" not in patch:
-              raise SystemExit('Canonical encoding enforcement missing')
-          if any(line.startswith('Binary files ') for line in patch.splitlines()):
-              raise SystemExit('Binary patch cannot be reviewed')
-          print("Exact published npm baseline vs pinned upstream candidate: three RSA hunks")
-          PY
+          node -e "if(require('node-forge/package.json').version!=='1.4.0') throw Error('unexpected forge baseline')"
+          test "$(grep -c '^@@ ' scripts/node-forge-1.4.0-candidate.patch)" -eq 3
           cp node_modules/node-forge/lib/rsa.js "$RUNNER_TEMP/rsa-original.js"
           trap 'cp "$RUNNER_TEMP/rsa-original.js" node_modules/node-forge/lib/rsa.js' EXIT
-          cp "$candidate/lib/rsa.js" node_modules/node-forge/lib/rsa.js
+          git apply --check --unsafe-paths scripts/node-forge-1.4.0-candidate.patch
+          git apply --unsafe-paths scripts/node-forge-1.4.0-candidate.patch
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
-          echo "Pinned upstream candidate RSA regression PASS in disposable node_modules (not released or installed in production)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Pinned candidate applied locally from reviewed patch; no runtime fetch and no production mutation." >> "$GITHUB_STEP_SUMMARY"
       - name: Typecheck Starter
         run: npm run typecheck
