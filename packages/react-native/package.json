@@ -39,7 +39,7 @@
   },
   "files": [
     "dist/index.js",
-    "dist/index.d.ts",
+    "dist/**/*.d.ts",
     "README.md",
     "LICENSE"
   ],
