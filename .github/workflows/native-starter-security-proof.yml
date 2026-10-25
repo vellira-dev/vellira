@@ -11,6 +11,7 @@ on:
       - 'examples/workspace-starter/native/scripts/security-asn1-adversarial.cjs'
       - 'examples/workspace-starter/native/scripts/security-expo-certificate-contract.cjs'
       - 'examples/workspace-starter/native/scripts/node-forge-1.4.0-candidate.patch'
+      - 'examples/workspace-starter/native/scripts/apply-node-forge-patch.cjs'
   workflow_dispatch:
 
 permissions:
@@ -47,22 +48,21 @@ jobs:
           fi
           grep -F 'malformed DigestAlgorithm must be rejected' "$RUNNER_TEMP/rsa-rejection.txt"
           echo "Expected red regression confirmed; dependency is NOT remediated." >> "$GITHUB_STEP_SUMMARY"
-      - name: Verify offline pinned upstream candidate patch
+      - name: Verify offline lifecycle application and clean npm install
         shell: bash
         run: |
           set -euo pipefail
-          node -e "if(require('node-forge/package.json').version!=='1.4.0') throw Error('unexpected forge baseline')"
           test "$(grep -c '^@@ ' scripts/node-forge-1.4.0-candidate.patch)" -eq 3
-          cp node_modules/node-forge/lib/rsa.js "$RUNNER_TEMP/rsa-original.js"
-          trap 'cp "$RUNNER_TEMP/rsa-original.js" node_modules/node-forge/lib/rsa.js' EXIT
-          patch --dry-run --batch -p1 < scripts/node-forge-1.4.0-candidate.patch
-          patch --batch -p1 < scripts/node-forge-1.4.0-candidate.patch
+          node scripts/apply-node-forge-patch.cjs
+          node scripts/apply-node-forge-patch.cjs
           grep -Fq '_encodeDigestInfo' node_modules/node-forge/lib/rsa.js
-          grep -Fq "var expected =" node_modules/node-forge/lib/rsa.js
-          ! cmp -s "$RUNNER_TEMP/rsa-original.js" node_modules/node-forge/lib/rsa.js
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
-          echo "Pinned candidate applied locally from reviewed patch; no runtime fetch and no production mutation." >> "$GITHUB_STEP_SUMMARY"
+          npm ci --no-audit --no-fund
+          node scripts/security-asn1-adversarial.cjs --require-rejection
+          npm run security:certificate-proof
+          node scripts/security-expo-certificate-contract.cjs
+          echo "Clean standard npm ci applied pinned patch automatically and retained RSA/Expo compatibility." >> "$GITHUB_STEP_SUMMARY"
       - name: Typecheck Starter
         run: npm run typecheck
