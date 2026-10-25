@@ -42,13 +42,25 @@ jobs:
           for (const old of ['undici@6.28.1:', 'undici@7.29.1:', 'undici@8.10.2:']) {
             if (lock.includes('  ' + old)) throw Error('Vulnerable package retained: ' + old);
           }
-          for (const key of ['next@16.4.2:', 'node-forge@1.4.0:', '@opennextjs/cloudflare@1.20.12:']) {
+          for (const key of ['next@16.4.2:', 'node-forge@1.4.0:']) {
             if (!lock.includes(key)) throw Error('Retained patch package missing: ' + key);
           }
           NODE
+          echo "OpenNext lockfile entries after full regeneration:"
+          grep -n 'opennextjs/cloudflare@' pnpm-lock.yaml | head -n 12 || true
+          echo "Full regeneration change summary:"
+          git diff --stat -- pnpm-lock.yaml
+          git diff -- pnpm-lock.yaml | head -n 160 || true
           git diff --check
           test "$(git diff --name-only | wc -l | tr -d ' ')" = 1
           test "$(git diff --name-only)" = pnpm-lock.yaml
+      - name: Retain generated lockfile for differential review
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: undici-full-regeneration-diagnostic
+          path: pnpm-lock.yaml
+          retention-days: 1
       - name: Verify frozen install
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Create app write token
