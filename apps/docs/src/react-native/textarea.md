@@ -100,5 +100,4 @@ Set `numberOfLines` for the initial multiline height and `maxLength` for
 the text limit. To display validation feedback, use the `invalid` and
 `error` props. Unlike the HTML `textarea`, React Native renders native
 `TextInput`. See also the [React Textarea documentation](/react/textarea).
-
 <!-- vellira-component-docs:authored:end -->
