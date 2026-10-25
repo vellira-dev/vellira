@@ -30,8 +30,35 @@ tampered.signature = String.fromCharCode(tampered.signature.charCodeAt(0) ^ 1) +
 assert.throws(() => expo.validateSelfSignedCertificate(tampered, keys));
 const mismatched = forge.pki.rsa.generateKeyPair({ bits: 1024, e: 0x10001 });
 assert.throws(() => expo.validateSelfSignedCertificate(certificate, mismatched));
+
+const intermediateKeys=forge.pki.rsa.generateKeyPair({bits:1024,e:65537});
+const intermediate=forge.pki.createCertificate();
+intermediate.publicKey=intermediateKeys.publicKey;
+intermediate.serialNumber='02';
+intermediate.validity.notBefore=new Date(Date.now()-60000);
+intermediate.validity.notAfter=new Date(Date.now()+60000);
+intermediate.setSubject([{name:'commonName',value:'vellira-intermediate'}]);
+intermediate.setIssuer(certificate.subject.attributes);
+intermediate.setExtensions([{name:'basicConstraints',cA:true},{name:'keyUsage',keyCertSign:true}]);
+intermediate.sign(keys.privateKey,forge.md.sha256.create());
+const leafKeys=forge.pki.rsa.generateKeyPair({bits:1024,e:65537});
+const leaf=forge.pki.createCertificate();
+leaf.publicKey=leafKeys.publicKey;
+leaf.serialNumber='03';
+leaf.validity.notBefore=new Date(Date.now()-60000);
+leaf.validity.notAfter=new Date(Date.now()+60000);
+leaf.setSubject([{name:'commonName',value:'vellira-development-leaf'}]);
+leaf.setIssuer(intermediate.subject.attributes);
+leaf.setExtensions([{name:'basicConstraints',cA:false},{name:'keyUsage',digitalSignature:true},{name:'extKeyUsage',codeSigning:true}]);
+leaf.sign(intermediateKeys.privateKey,forge.md.sha256.create());
+const store=forge.pki.createCaStore([certificate]);
+assert.doesNotThrow(()=>forge.pki.verifyCertificateChain(store,[leaf,intermediate]));
+const bad=forge.pki.certificateFromPem(forge.pki.certificateToPem(leaf));
+bad.signature=String.fromCharCode(bad.signature.charCodeAt(0)^1)+bad.signature.slice(1);
+assert.throws(()=>forge.pki.verifyCertificateChain(store,[bad,intermediate]));
+
 console.log(JSON.stringify({
-  result: 'PASS', scope: 'self-signed-certificate-only',
+  result: 'PASS', scope: 'synthetic-root-intermediate-leaf-chain',
   positive: ['valid-self-signed-certificate', 'signed-manifest-buffer'],
   negative: ['tampered-certificate-signature', 'mismatched-key-pair'],
   notProven: ['Expo-EAS-network-certificate-chain', 'attacker-reachability', 'Zod-advisory', 'node-forge-upstream-release'],
