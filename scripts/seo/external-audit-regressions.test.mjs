@@ -227,21 +227,21 @@ test('component sitemap and canonical metadata share the production origin and r
     read('apps/website/src/component-catalog/registry/componentPresentation.ts'),
   ]);
 
-  const metadataBase = layout.match(/metadataBase:\\s*new URL\\('([^']+)'\\)/)?.[1];
+  const metadataBase = layout.match(/metadataBase:\s*new URL\('([^']+)'\)/)?.[1];
   const sitemapOrigin = sitemap.match(/const SITE_URL = '([^']+)'/)?.[1];
 
   assert.equal(metadataBase, 'https://vellira.dev');
   assert.equal(sitemapOrigin, metadataBase);
 
-  assert.match(index, /canonical:\\s*'\\/components'/);
-  assert.match(detail, /const url = `\\/components\\/\\$\\{component\\.slug\\}`/);
-  assert.match(detail, /canonical:\\s*url/);
-  assert.match(sitemap, /url:\\s*`\\$\\{SITE_URL\\}\\/components\\/\\$\\{component\\.slug\\}`/);
-  assert.match(detail, /getComponentBySlug\\(slug\\)/);
-  assert.match(detail, /webComponents\\.map\\(/);
-  assert.match(sitemap, /webComponents\\.map\\(/);
+  assert.match(index, /canonical:\s*'\/components'/);
+  assert.match(detail, /const url = `\/components\/\$\{component\.slug\}`/);
+  assert.match(detail, /canonical:\s*url/);
+  assert.match(sitemap, /url:\s*`\$\{SITE_URL\}\/components\/\$\{component\.slug\}`/);
+  assert.match(detail, /getComponentBySlug\(slug\)/);
+  assert.match(detail, /webComponents\.map\(/);
+  assert.match(sitemap, /webComponents\.map\(/);
 
-  const slugs = [...presentation.matchAll(/^\\s*slug: '([^']+)',/gm)].map((match) => match[1]);
+  const slugs = [...presentation.matchAll(/^\s*slug: '([^']+)',/gm)].map((match) => match[1]);
   assert.ok(slugs.length >= 10, 'expected published component catalog slugs');
   assert.equal(new Set(slugs).size, slugs.length, 'duplicate component slugs');
   for (const slug of slugs) {
