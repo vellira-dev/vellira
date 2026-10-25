@@ -74,8 +74,9 @@ overrides:
 
   sharp: 0.35.5
 
-  'undici@<7': 6.28.1
-  'undici@>=7 <8': 7.29.1
+  'undici@>=6 <7': 6.29.1
+  'undici@>=7 <8': 7.30.1
+  'undici@>=8 <9': 8.12.2
 
   # CVE-2026-101911/-101912: parser bound and cross-family subnet fixes.
   # GHSA-rxp7-6hxx-x8q5 / CVE-2026-111997: bounded IPv6 parsing.
