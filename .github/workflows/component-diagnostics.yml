@@ -19,6 +19,7 @@ on:
           - component-quality
           - token-semantic
           - tooling
+          - native-metro
 
 permissions:
   contents: read
@@ -28,7 +29,7 @@ jobs:
     name: Diagnose immutable component revision
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     cache-mode: none
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
@@ -47,7 +48,7 @@ jobs:
             exit 2
           fi
           case "$DIAGNOSTIC_PROFILE" in
-            component-production|component-quality|token-semantic|tooling) ;;
+            component-production|component-quality|token-semantic|tooling|native-metro) ;;
             *) echo '::error::Unsupported diagnostics profile.'; exit 2 ;;
           esac
 
@@ -81,9 +82,11 @@ jobs:
           package-manager-cache: false
 
       - name: Install frozen dependencies
+        if: inputs.profile != 'native-metro'
         run: pnpm install --frozen-lockfile
 
       - name: Build tooling dist-fallback prerequisites
+        if: inputs.profile != 'native-metro'
         run: >-
           pnpm exec turbo run build
           --filter=@vellira-ui/react
@@ -103,6 +106,13 @@ jobs:
               component-quality) pnpm check:component-quality --all ;;
               token-semantic) pnpm check:tokens-semantic:strict ;;
               tooling) pnpm test:tooling ;;
+              native-metro)
+                VELLIRA_NATIVE_VERSION="$(npm view @vellira-ui/react-native version)"
+                export VELLIRA_NATIVE_VERSION
+                VELLIRA_METRO_EVIDENCE="$RUNNER_TEMP/vellira-diagnostics/native-metro-matrix.json"
+                export VELLIRA_METRO_EVIDENCE
+                node scripts/performance/native-metro-matrix.cjs
+                ;;
               *) echo '::error::Unsupported diagnostics profile.'; return 2 ;;
             esac
           }
