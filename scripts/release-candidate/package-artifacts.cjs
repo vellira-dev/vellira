@@ -301,6 +301,58 @@ function findPackageLocalDeclarationImports(packageRoot, files) {
   return findings;
 }
 
+// Validate relative type exports from the unpacked candidate, not from the
+// monorepo source tree. TypeScript's resolver handles both file and directory
+// re-exports and extension substitutions (for example .js -> .d.ts).
+function findUnresolvedPackedDeclarations(packageRoot, files) {
+  const ts = require('typescript');
+  const compilerOptions = {
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+  };
+  const root = path.resolve(packageRoot);
+  const rootPrefix = root + path.sep;
+  const packedPaths = new Set(files);
+  const findings = [];
+
+  for (const filePath of files) {
+    if (!filePath.endsWith('.d.ts')) continue;
+
+    const declarationFile = path.join(root, filePath);
+    const source = fs.readFileSync(declarationFile, 'utf8');
+    const references = ts.preProcessFile(source, true, true).importedFiles;
+    for (const reference of references) {
+      const specifier = reference.fileName;
+      if (!specifier.startsWith('./') && !specifier.startsWith('../')) {
+        continue;
+      }
+
+      const resolution = ts.resolveModuleName(
+        specifier,
+        declarationFile,
+        compilerOptions,
+        ts.sys
+      ).resolvedModule;
+      const resolvedPath = resolution?.resolvedFileName
+        ? path.resolve(resolution.resolvedFileName)
+        : null;
+      const relativePath = resolvedPath
+        ? path.relative(root, resolvedPath).replaceAll('\\', '/')
+        : null;
+
+      if (
+        !resolvedPath ||
+        !resolvedPath.startsWith(rootPrefix) ||
+        !packedPaths.has(relativePath)
+      ) {
+        findings.push({ file: filePath, specifier });
+      }
+    }
+  }
+
+  return findings;
+}
+
 function inspectTarball(tarballPath) {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'vellira-packed-artifact-')
@@ -329,6 +381,8 @@ function inspectTarball(tarballPath) {
       files,
       packageLocalDeclarationImports:
         findPackageLocalDeclarationImports(packageRoot, files),
+      unresolvedPackedDeclarations:
+        findUnresolvedPackedDeclarations(packageRoot, files),
       unpackedSize,
     };
   } finally {
@@ -383,6 +437,7 @@ function packPackage(packageInfo, artifactDir) {
     packedManifest,
     files,
     packageLocalDeclarationImports,
+    unresolvedPackedDeclarations,
     unpackedSize,
   } = inspectTarball(tarballPath);
 
@@ -391,6 +446,16 @@ function packPackage(packageInfo, artifactDir) {
       packageInfo.name +
         ' tarball declarations retain package-local imports: ' +
         packageLocalDeclarationImports
+          .map(({ file, specifier }) => file + ' -> ' + specifier)
+          .join(', ') +
+        '.'
+    );
+  }
+  if (unresolvedPackedDeclarations.length > 0) {
+    throw new Error(
+      packageInfo.name +
+        ' tarball has unresolved relative declarations: ' +
+        unresolvedPackedDeclarations
           .map(({ file, specifier }) => file + ' -> ' + specifier)
           .join(', ') +
         '.'
@@ -715,6 +780,7 @@ function prepareReleaseCandidate(packageInfos, options = {}) {
 
 module.exports = {
   collectExportTargets,
+  findUnresolvedPackedDeclarations,
   findPackageLocalDeclarationImports,
   forbiddenPackedFiles,
   loadReleaseCandidate,
