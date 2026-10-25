@@ -42,6 +42,12 @@ const rawSource = fs.readFileSync(target);
 const baselineHash = sha256(rawSource);
 assert.ok([EXPECTED.original, EXPECTED.patched].includes(baselineHash),
   'Unrecognized or partially modified node-forge rsa.js; refusing patch');
+if (process.argv.includes('--verify')) {
+  assert.equal(baselineHash, EXPECTED.patched,
+    'Unpatched node-forge; install with lifecycle scripts or apply pinned patch explicitly');
+  console.log('Pinned node-forge RSA SHA-256 verified');
+  process.exit(0);
+}
 const input = rawSource.toString('utf8');
 assert.ok(input.endsWith('\n'), 'Expected newline-terminated rsa.js');
 let content = input.slice(0, -1).split('\n');
