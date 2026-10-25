@@ -18,18 +18,19 @@ try {
       const page = await context.newPage();
       await page.goto(new URL('/', baseUrl).href);
 
-      for (const [name, expectedHref] of [
-        ['Explore components', '/components'],
-        ['Read about quality gates', '/blog/quality-gates-before-component-growth'],
-        ['Why AI changes the problem', '/blog/ai-ui-consistency'],
-        ['View public repository', 'https://github.com/vellira-dev/vellira'],
+      for (const [selector, name, expectedHref] of [
+        ["#why-vellira", 'Explore components', '/components'],
+        ["#why-vellira", 'Read about quality gates', '/blog/quality-gates-before-component-growth'],
+        ["#why-vellira", 'Why AI changes the problem', '/blog/ai-ui-consistency'],
+        ["#why-vellira", 'View public repository', 'https://github.com/vellira-dev/vellira'],
         [
+          '#interface',
           'Setup instructions',
           'https://github.com/vellira-dev/vellira/tree/main/examples/workspace-starter/native',
         ],
-        ['Explore the Pro roadmap', '#pro'],
+        ['#interface', 'Explore the Pro roadmap', '#pro'],
       ]) {
-        const link = page.getByRole('link', { name: new RegExp(name) });
+        const link = page.locator(selector).getByRole('link', { name: new RegExp(name) });
         assert.equal(await link.count(), 1, `${width}px: unique link ${name}`);
         assert.equal(
           await link.getAttribute('href'),
