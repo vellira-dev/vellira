@@ -692,7 +692,9 @@ shellTest('Starter sync auto-merge retries only for the exact bot PR', (t) => {
     ].join('\n'),
     { mode: 0o755 }
   );
-  writeFileSync(path.join(bin, 'sleep'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  writeFileSync(path.join(bin, 'sleep'), '#!/bin/sh\nexit 0\n', {
+    mode: 0o755,
+  });
 
   const sha = 'a'.repeat(40);
   const pr = {
@@ -730,14 +732,20 @@ shellTest('Starter sync auto-merge retries only for the exact bot PR', (t) => {
   writeFileSync(calls, '');
   const alreadyEnabled = shell(body, directory, {
     ...env,
-    GH_TEST_PR_JSON: JSON.stringify({ ...pr, auto_merge: { merge_method: 'SQUASH' } }),
+    GH_TEST_PR_JSON: JSON.stringify({
+      ...pr,
+      auto_merge: { merge_method: 'SQUASH' },
+    }),
   });
   assert.equal(alreadyEnabled.status, 0, alreadyEnabled.stderr);
   assert.equal(readFileSync(calls, 'utf8'), '');
 
   const stale = shell(body, directory, {
     ...env,
-    GH_TEST_PR_JSON: JSON.stringify({ ...pr, head: { ...pr.head, sha: 'b'.repeat(40) } }),
+    GH_TEST_PR_JSON: JSON.stringify({
+      ...pr,
+      head: { ...pr.head, sha: 'b'.repeat(40) },
+    }),
   });
   assert.notEqual(stale.status, 0);
   assert.equal(readFileSync(calls, 'utf8'), '');
