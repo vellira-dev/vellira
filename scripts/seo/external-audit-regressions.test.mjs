@@ -217,3 +217,36 @@ test('React Checkbox select-all docs include controlled children and a live exam
   assert.match(content, /https:\/\/vellira\.dev\/components\/checkbox/);
   assert.match(content, /\[React Native Checkbox\]\(\/react-native\/checkbox\)/);
 });
+
+test('component sitemap and canonical metadata share the production origin and route', async () => {
+  const [layout, sitemap, index, detail, presentation] = await Promise.all([
+    read('apps/website/src/app/layout.tsx'),
+    read('apps/website/src/app/sitemap.ts'),
+    read('apps/website/src/app/(marketing)/components/page.tsx'),
+    read('apps/website/src/app/(marketing)/components/[slug]/page.tsx'),
+    read('apps/website/src/component-catalog/registry/componentPresentation.ts'),
+  ]);
+
+  const metadataBase = layout.match(/metadataBase:\s*new URL\('([^']+)'\)/)?.[1];
+  const sitemapOrigin = sitemap.match(/const SITE_URL = '([^']+)'/)?.[1];
+
+  assert.equal(metadataBase, 'https://vellira.dev');
+  assert.equal(sitemapOrigin, metadataBase);
+
+  assert.match(index, /canonical:\s*'\/components'/);
+  assert.match(detail, /const url = `\/components\/\$\{component\.slug\}`/);
+  assert.match(detail, /canonical:\s*url/);
+  assert.match(sitemap, /url:\s*`\$\{SITE_URL\}\/components\/\$\{component\.slug\}`/);
+  assert.match(detail, /getComponentBySlug\(slug\)/);
+  assert.match(detail, /webComponents\.map\(/);
+  assert.match(sitemap, /webComponents\.map\(/);
+
+  const slugs = [...presentation.matchAll(/^\s*slug: '([^']+)',/gm)].map((match) => match[1]);
+  assert.ok(slugs.length >= 10, 'expected published component catalog slugs');
+  assert.equal(new Set(slugs).size, slugs.length, 'duplicate component slugs');
+  for (const slug of slugs) {
+    const canonical = new URL(`/components/${slug}`, metadataBase);
+    assert.equal(canonical.origin, sitemapOrigin);
+    assert.equal(canonical.pathname, `/components/${slug}`);
+  }
+});
