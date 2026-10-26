@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActionSheetIOS, Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActionSheetIOS,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import {
   Filter,
   Folder,
@@ -418,7 +426,6 @@ function WorkspaceScreen() {
       { text: 'Remove', style: 'destructive', onPress: remove },
     ]);
   }
-
 
   return (
     <SafeAreaView
@@ -895,56 +902,164 @@ function WorkspaceScreen() {
                   gap: 10,
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
                   <View
                     accessibilityLabel={'Team: ' + project.team}
-                    style={{ width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: border, backgroundColor: surface.canvas, justifyContent: 'center', alignItems: 'center' }}
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      borderWidth: 1,
+                      borderColor: border,
+                      backgroundColor: surface.canvas,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
                   >
-                    <Text style={{ color: mainText, fontWeight: '700', fontSize: 13 }}>
-                      {project.team === 'design' ? 'DS' : project.team === 'mobile' ? 'MB' : 'PL'}
+                    <Text
+                      style={{
+                        color: mainText,
+                        fontWeight: '700',
+                        fontSize: 13,
+                      }}
+                    >
+                      {project.team === 'design'
+                        ? 'DS'
+                        : project.team === 'mobile'
+                          ? 'MB'
+                          : 'PL'}
                     </Text>
                   </View>
                   <Pressable
                     accessibilityRole='button'
                     accessibilityLabel={'Edit ' + project.name}
                     onPress={() => openEdit(project)}
-                    style={{ flex: 1, minWidth: 0, justifyContent: 'center', gap: 4, minHeight: 44 }}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      justifyContent: 'center',
+                      gap: 4,
+                      minHeight: 44,
+                    }}
                   >
-                    <Text numberOfLines={1} style={{ color: mainText, fontSize: 15, fontWeight: '700' }}>{project.name}</Text>
-                    <Text numberOfLines={1} style={{ color: subtleText, fontSize: 12 }}>{project.description || 'No description'}</Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        color: mainText,
+                        fontSize: 15,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {project.name}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{ color: subtleText, fontSize: 12 }}
+                    >
+                      {project.description || 'No description'}
+                    </Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole='button'
                     accessibilityLabel={'Actions for ' + project.name}
                     onPress={() => showProjectActions(project)}
                     hitSlop={8}
-                    style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
                   >
                     <MoreHorizontal size={24} color={mainText} />
                   </Pressable>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 48, gap: 12 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingLeft: 48,
+                    gap: 12,
+                  }}
+                >
                   <View
                     style={{
                       borderRadius: 12,
                       paddingHorizontal: 10,
                       paddingVertical: 5,
-                      backgroundColor: project.status === 'shipped' ? palette.successBg : project.status === 'active' ? palette.brandBg : palette.track,
+                      backgroundColor:
+                        project.status === 'shipped'
+                          ? palette.successBg
+                          : project.status === 'active'
+                            ? palette.brandBg
+                            : palette.track,
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: project.status === 'shipped' ? palette.success : project.status === 'active' ? palette.brand : mainText }}>
-                      {project.status === 'shipped' ? 'Shipped' : project.status === 'active' ? 'In progress' : 'Planned'}
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color:
+                          project.status === 'shipped'
+                            ? palette.success
+                            : project.status === 'active'
+                              ? palette.brand
+                              : mainText,
+                      }}
+                    >
+                      {project.status === 'shipped'
+                        ? 'Shipped'
+                        : project.status === 'active'
+                          ? 'In progress'
+                          : 'Planned'}
                     </Text>
                   </View>
                   <Pressable
                     accessibilityRole='checkbox'
                     accessibilityLabel={'Complete ' + project.name}
                     accessibilityState={{ checked: project.completed }}
-                    onPress={() => toggleProject(project.id, !project.completed)}
-                    style={{ width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' }}
+                    onPress={() =>
+                      toggleProject(project.id, !project.completed)
+                    }
+                    style={{
+                      width: 44,
+                      height: 44,
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                    }}
                   >
-                    <View style={{ width: 22, height: 22, borderWidth: 2, borderRadius: 5, borderColor: project.completed ? palette.brand : border, backgroundColor: project.completed ? palette.brand : surface.canvas, justifyContent: 'center', alignItems: 'center' }}>
-                      {project.completed ? <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>✓</Text> : null}
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderWidth: 2,
+                        borderRadius: 5,
+                        borderColor: project.completed ? palette.brand : border,
+                        backgroundColor: project.completed
+                          ? palette.brand
+                          : surface.canvas,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {project.completed ? (
+                        <Text
+                          style={{
+                            color: '#FFFFFF',
+                            fontSize: 14,
+                            fontWeight: '700',
+                          }}
+                        >
+                          ✓
+                        </Text>
+                      ) : null}
                     </View>
                   </Pressable>
                 </View>
@@ -1108,10 +1223,12 @@ function WorkspaceScreen() {
               justifyContent: 'center',
               alignItems: 'center',
               gap: 2,
-
             }}
           >
-            <IconComponent size={22} color={section === value ? palette.brand : subtleText} />
+            <IconComponent
+              size={22}
+              color={section === value ? palette.brand : subtleText}
+            />
             <Text
               style={{
                 color: section === value ? palette.brand : subtleText,
