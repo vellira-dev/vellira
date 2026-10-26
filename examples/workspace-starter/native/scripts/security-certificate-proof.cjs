@@ -19,7 +19,7 @@ const locked = (name) => {
 
 assert.equal(locked('node-forge'), '1.4.0');
 assert.equal(locked('zod'), '3.25.76');
-assert.equal(locked('@expo/code-signing-certificates'), '0.0.6');
+assert.equal(locked('@expo/code-signing-certificates'), '0.0.7');
 
 const forge = requireFromStarter('node-forge');
 const certificates = requireFromStarter('@expo/code-signing-certificates');

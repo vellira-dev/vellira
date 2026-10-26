@@ -1,11 +1,11 @@
-name: Expo Zod Pinned Patch Candidate
+name: Expo Zod Pinned Runtime Guard
 
 on:
   pull_request:
     paths:
       - '.github/workflows/expo-zod-pinned-patch-candidate.yml'
-      - 'examples/workspace-starter/native/scripts/security-expo-zod-patch-candidate.cjs'
-      - 'examples/workspace-starter/native/scripts/security-expo-zod-negative-runtime-proof.cjs'
+      - 'examples/workspace-starter/native/scripts/security-expo-58-guard.cjs'
+      - 'examples/workspace-starter/native/package.json'
   workflow_dispatch:
 
 permissions:
@@ -27,12 +27,12 @@ jobs:
           node-version: 22.22.2
       - run: npm ci --no-audit --no-fund
       - name: Verify installed Expo guard after normal npm ci
-        run: node scripts/security-expo-zod-patch-candidate.cjs --verify
+        run: node scripts/security-expo-58-guard.cjs --verify
       - name: Verify repeated application is idempotent
         run: |
-          node scripts/security-expo-zod-patch-candidate.cjs --apply
-          node scripts/security-expo-zod-patch-candidate.cjs --apply
-          node scripts/security-expo-zod-patch-candidate.cjs --verify
+          node scripts/security-expo-58-guard.cjs --apply
+          node scripts/security-expo-58-guard.cjs --apply
+          node scripts/security-expo-58-guard.cjs --verify
       - name: Reject modified Expo CLI bytes (fail closed)
         shell: bash
         run: |
@@ -41,7 +41,7 @@ jobs:
           cp "$target" "$target.backup"
           trap 'mv -f "$target.backup" "$target"' EXIT
           printf '\n// tamper fixture\n' >> "$target"
-          if node scripts/security-expo-zod-patch-candidate.cjs --verify; then
+          if node scripts/security-expo-58-guard.cjs --verify; then
             echo '::error::Tampered installed Expo CLI was accepted'
             exit 1
           fi
