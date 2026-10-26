@@ -102,7 +102,7 @@ try {
     "import type { ButtonProps as RootButtonProps } from '@vellira-ui/react-native';",
     'export type ConsumerTypes = [ButtonProps, ThemeProviderProps, RootButtonProps];',
     '',
-  ].join('\\n'));
+  ].join(String.fromCharCode(10)));
   const compilerOptions = {
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
