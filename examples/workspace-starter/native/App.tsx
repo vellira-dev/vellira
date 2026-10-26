@@ -315,9 +315,6 @@ function WorkspaceScreen() {
     setNotice('Project removed.');
   }
 
-  const actionProject = data.projects.find(
-    (item) => item.id === actionProjectId
-  );
   const completedCount = data.projects.filter((item) => item.completed).length;
   const activeCount = data.projects.filter(
     (item) => item.status === 'active'
@@ -534,139 +531,63 @@ function WorkspaceScreen() {
 
         {section === 'projects' ? (
           <View style={{ gap: 12 }}>
-            <Input
-              label='Search projects'
-              value={query}
-              onValueChange={setQuery}
-              placeholder='Search by name or description'
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-            >
-              {(
-                [
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: mainText, fontSize: 17, fontWeight: '700' }}>
+                All projects · {visibleProjects.length}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable accessibilityRole='button' accessibilityLabel='Search projects' accessibilityState={{ expanded: showSearch }} onPress={() => { setShowSearch(!showSearch); if (showSearch) setQuery(''); }} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                  <Search size={22} color={mainText} />
+                </Pressable>
+                <Pressable accessibilityRole='button' accessibilityLabel='Filter projects' accessibilityState={{ expanded: showFilters }} onPress={() => setShowFilters(!showFilters)} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                  <Filter size={22} color={mainText} />
+                </Pressable>
+              </View>
+            </View>
+            {showSearch ? <Input label='Search projects' value={query} onValueChange={setQuery} placeholder='Search projects' /> : null}
+            {showFilters ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                {([
                   ['all', 'All'],
                   ['planned', 'Planned'],
                   ['active', 'In progress'],
                   ['shipped', 'Shipped'],
-                ] as const
-              ).map(([value, label]) => (
-                <Pressable
-                  key={value}
-                  accessibilityRole='button'
-                  accessibilityState={{ selected: statusFilter === value }}
-                  accessibilityLabel={`Filter: ${label}`}
-                  onPress={() => setStatusFilter(value)}
-                  style={{
-                    paddingHorizontal: 16,
-                    minHeight: 44,
-                    justifyContent: 'center',
-                    borderRadius: 22,
-                    borderWidth: 1,
-                    borderColor: statusFilter === value ? accent : border,
-                    backgroundColor:
-                      statusFilter === value ? surface.subtle : surface.canvas,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: mainText,
-                      fontWeight: statusFilter === value ? '700' : '500',
-                    }}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Text style={{ color: subtleText, fontSize: 12 }}>
-              {visibleProjects.length}{' '}
-              {visibleProjects.length === 1 ? 'project' : 'projects'}
-            </Text>
+                ] as const).map(([value, label]) => (
+                  <Pressable key={value} accessibilityRole='button' accessibilityState={{ selected: statusFilter === value }} onPress={() => setStatusFilter(value)} style={{ paddingHorizontal: 15, minHeight: 44, justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: statusFilter === value ? mainText : border, backgroundColor: statusFilter === value ? surface.subtle : surface.canvas }}>
+                    <Text style={{ color: mainText, fontWeight: statusFilter === value ? '700' : '500' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
             {visibleProjects.map((project) => (
-              <View key={project.id} style={{ ...cardStyle, gap: 10 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-                    <Text
-                      style={{
-                        color: mainText,
-                        fontSize: 17,
-                        fontWeight: '700',
-                      }}
-                    >
-                      {project.name}
-                    </Text>
-                    <Text style={{ color: subtleText, fontSize: 12 }}>
-                      {project.status === 'active'
-                        ? 'In progress'
-                        : project.status === 'shipped'
-                          ? 'Shipped'
-                          : 'Planned'}{' '}
-                      · {project.team}
-                    </Text>
+              <View key={project.id} style={{ ...cardStyle, gap: 10, padding: 14 }}>
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  <View accessibilityLabel={`Team: ${project.team}`} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: surface.canvas, borderWidth: 1, borderColor: border }}>
+                    <Text style={{ color: mainText, fontSize: 13, fontWeight: '700' }}>{project.team.slice(0, 2).toUpperCase()}</Text>
                   </View>
-                  <Pressable
-                    accessibilityRole='button'
-                    accessibilityLabel={`Actions for ${project.name}`}
-                    accessibilityHint='Edit, duplicate, or remove this project'
-                    onPress={() => setActionProjectId(project.id)}
-                    hitSlop={8}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: border,
-                    }}
-                  >
-                    <Text style={{ fontSize: 23, color: mainText }}>⋯</Text>
+                  <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
+                    <Text numberOfLines={2} style={{ color: mainText, fontSize: 16, fontWeight: '700' }}>{project.name}</Text>
+                    <Text style={{ color: subtleText, fontSize: 12 }}>{project.status === 'active' ? 'In progress' : project.status === 'shipped' ? 'Shipped' : 'Planned'}</Text>
+                  </View>
+                  <Pressable accessibilityRole='button' accessibilityLabel={`Actions for ${project.name}`} accessibilityState={{ expanded: actionProjectId === project.id }} onPress={() => setActionProjectId(actionProjectId === project.id ? null : project.id)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                    <MoreHorizontal size={24} color={mainText} />
                   </Pressable>
                 </View>
-                {project.description ? (
-                  <Text
-                    numberOfLines={2}
-                    style={{ color: subtleText, lineHeight: 20 }}
-                  >
-                    {project.description}
-                  </Text>
+                {project.description ? <Text numberOfLines={2} style={{ color: subtleText, lineHeight: 19 }}>{project.description}</Text> : null}
+                {actionProjectId === project.id ? (
+                  <View style={{ borderTopWidth: 1, borderColor: border, paddingTop: 8, gap: 8 }}>
+                    <Pressable accessibilityRole='button' onPress={() => { setActionProjectId(null); openEdit(project); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Edit project</Text></Pressable>
+                    <Pressable accessibilityRole='button' onPress={() => { setActionProjectId(null); duplicateProject(project.id); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Duplicate project</Text></Pressable>
+                    <Pressable accessibilityRole='button' onPress={() => { setActionProjectId(null); deleteProject(project.id); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Remove project</Text></Pressable>
+                  </View>
                 ) : null}
-                <Checkbox
-                  label='Mark completed'
-                  checked={project.completed}
-                  onCheckedChange={(value: boolean) =>
-                    toggleProject(project.id, value)
-                  }
-                />
+                <Checkbox label='Mark completed' checked={project.completed} onCheckedChange={(value: boolean) => toggleProject(project.id, value)} />
               </View>
             ))}
             {visibleProjects.length === 0 ? (
               <View style={{ ...cardStyle, alignItems: 'center', gap: 10 }}>
-                <Text style={{ color: mainText, fontWeight: '700' }}>
-                  No matching projects
-                </Text>
-                <Text style={{ color: subtleText, textAlign: 'center' }}>
-                  Try another search or clear the status filter.
-                </Text>
-                <Button
-                  appearance='outline'
-                  color='neutral'
-                  onPress={() => {
-                    setQuery('');
-                    setStatusFilter('all');
-                  }}
-                >
-                  Clear filters
-                </Button>
+                <Text style={{ color: mainText, fontWeight: '700' }}>No matching projects</Text>
+                <Button appearance='outline' color='neutral' onPress={() => { setQuery(''); setStatusFilter('all'); setShowSearch(false); setShowFilters(false); }}>Clear filters</Button>
               </View>
             ) : null}
           </View>
@@ -784,66 +705,6 @@ function WorkspaceScreen() {
           </Pressable>
         ))}
       </View>
-      <Modal
-        open={actionProjectId !== null}
-        onOpenChange={(open: boolean) => {
-          if (!open) setActionProjectId(null);
-        }}
-      >
-        <Modal.Overlay>
-          <Modal.Content>
-            <Modal.Header>
-              <Modal.Title>Project actions</Modal.Title>
-              <Modal.Description>
-                {actionProject?.name ?? 'Select an action'}
-              </Modal.Description>
-            </Modal.Header>
-            <Modal.Body>
-              <View style={{ gap: 12 }}>
-                <Button
-                  appearance='outline'
-                  color='neutral'
-                  onPress={() => {
-                    if (actionProject) openEdit(actionProject);
-                    setActionProjectId(null);
-                  }}
-                >
-                  Edit project
-                </Button>
-                <Button
-                  appearance='outline'
-                  color='neutral'
-                  onPress={() => {
-                    if (actionProject) duplicateProject(actionProject.id);
-                    setActionProjectId(null);
-                  }}
-                >
-                  Duplicate project
-                </Button>
-                <Button
-                  color='danger'
-                  onPress={() => {
-                    if (actionProject) deleteProject(actionProject.id);
-                    setActionProjectId(null);
-                  }}
-                >
-                  Remove project
-                </Button>
-              </View>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                appearance='outline'
-                color='neutral'
-                onPress={() => setActionProjectId(null)}
-              >
-                Cancel
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Overlay>
-      </Modal>
-
       <Modal open={resetOpen} onOpenChange={setResetOpen}>
         <Modal.Overlay>
           <Modal.Content>
