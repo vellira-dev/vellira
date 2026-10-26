@@ -105,6 +105,33 @@ jobs:
           fi
           cp "$RUNNER_TEMP/expo58-known-good.js" "$target"
           node "$script" "$RUNNER_TEMP/expo58" --verify
+      - name: Verify normal npm ci with Expo 58 and both security patches
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          set -euo pipefail
+          cp examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs "$RUNNER_TEMP/expo58/scripts/security-expo-58-guard.cjs"
+          cd "$RUNNER_TEMP/expo58"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const rsa = 'node scripts/apply-node-forge-patch.cjs';
+          const zod = 'node scripts/security-expo-58-guard.cjs';
+          pkg.scripts.postinstall = rsa + ' && ' + zod + ' --apply';
+          const verify = rsa + ' --verify && ' + zod + ' --verify';
+          for (const name of ['prestart', 'preios', 'preandroid', 'preweb', 'pretypecheck', 'security:verify-patch'])
+            pkg.scripts[name] = verify;
+          fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          npm run security:verify-patch
+          npm run typecheck
+          npx --no-install expo install --check
+          npx --yes expo-doctor
       - name: Fingerprint Expo 58 CLI parser for safe Zod guard migration
         shell: bash
         run: |
