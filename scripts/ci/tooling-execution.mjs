@@ -35,6 +35,7 @@ export function createToolingTasks({
     'scripts/ci/workflow-noise.test.mjs',
     'scripts/ci/pr-change-intent.test.mjs',
     'scripts/smoke/utils.test.mjs',
+    'scripts/performance/native-picker-scan.test.mjs',
     'scripts/ci/dependabot-security-remediation.test.mjs',
     'scripts/ci/dependabot-runtime-candidates.test.mjs',
     'scripts/ci/dependabot-runtime-candidate-authority.test.mjs',
