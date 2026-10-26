@@ -550,10 +550,10 @@ function WorkspaceScreen() {
               </ScrollView>
             ) : null}
             {visibleProjects.map((project) => (
-              <View key={project.id} style={{ ...cardStyle, gap: 10, padding: 14 }}>
+              <View key={project.id} style={{ ...cardStyle, gap: 10, padding: 14, position: 'relative', zIndex: actionProjectId === project.id ? 2 : 0 }}>
                 <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                  <View accessibilityLabel={`Team: ${project.team}`} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: surface.canvas, borderWidth: 1, borderColor: border }}>
-                    <Text style={{ color: mainText, fontSize: 13, fontWeight: '700' }}>{project.team.slice(0, 2).toUpperCase()}</Text>
+                  <View accessibilityLabel={`Team avatar: ${project.team}`} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: project.team === 'design' ? theme.semantic.surface.subtle : surface.canvas, borderWidth: 1.5, borderColor: border }}>
+                    <Text style={{ color: mainText, fontSize: 15, fontWeight: '700' }}>{project.team === 'design' ? 'DS' : project.team === 'mobile' ? 'MB' : 'PL'}</Text>
                   </View>
                   <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
                     <Text numberOfLines={2} style={{ color: mainText, fontSize: 16, fontWeight: '700' }}>{project.name}</Text>
@@ -565,10 +565,13 @@ function WorkspaceScreen() {
                 </View>
                 {project.description ? <Text numberOfLines={2} style={{ color: subtleText, lineHeight: 19 }}>{project.description}</Text> : null}
                 {actionProjectId === project.id ? (
-                  <View style={{ borderTopWidth: 1, borderColor: border, paddingTop: 8, gap: 8 }}>
-                    <Pressable accessibilityRole='button' onPress={() => { setActionProjectId(null); openEdit(project); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Edit project</Text></Pressable>
-                    <Pressable accessibilityRole='button' onPress={() => { setActionProjectId(null); duplicateProject(project.id); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Duplicate project</Text></Pressable>
-                    <Pressable accessibilityRole='button' onPress={() => { setActionProjectId(null); deleteProject(project.id); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Remove project</Text></Pressable>
+                  <View
+                    accessibilityRole='menu'
+                    style={{ alignSelf: 'flex-end', width: 214, borderWidth: 1, borderColor: border, borderRadius: theme.tokens.radius.lg, backgroundColor: surface.canvas, paddingHorizontal: 8, paddingVertical: 4, gap: 0 }}
+                  >
+                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); openEdit(project); }} style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: mainText }}>Edit</Text></Pressable>
+                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); duplicateProject(project.id); }} style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: mainText }}>Duplicate</Text></Pressable>
+                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); deleteProject(project.id); }} style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: mainText }}>Remove</Text></Pressable>
                   </View>
                 ) : null}
                 <Checkbox label='Mark completed' checked={project.completed} onCheckedChange={(value: boolean) => toggleProject(project.id, value)} />
