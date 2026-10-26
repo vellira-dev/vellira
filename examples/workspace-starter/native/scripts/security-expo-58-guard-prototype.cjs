@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+// DIAGNOSTIC PROTOTYPE ONLY: not the supported postinstall guard. Use security-expo-58-guard.cjs.
 // Read-only Expo 58 migration guard prototype; no postinstall integration yet.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
