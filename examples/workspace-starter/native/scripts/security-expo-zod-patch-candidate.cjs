@@ -33,6 +33,13 @@ updated = updated.replace(zodEntry, (_match, call) => [
   'const result = ' + call.replace('JSON.parse(txt)', 'parsed') + ';',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
+const PATCHED = 'afc4eb1ed0a9b3c119d2a07cc15eb038ef306e7165e0ca77717caa1d7ad84ab9';
+assert.equal(sha(Buffer.from(updated)), PATCHED, 'Unexpected candidate output bytes');
+assert.equal([...updated.matchAll(entry)].length, 1, 'Patched parser must retain one entrypoint');
+assert.equal([...updated.matchAll(zodEntry)].length, 0, 'Original unbounded Zod call must be replaced');
+assert.equal([...updated.matchAll(/Plugin output limit exceeded/g)].length, 1);
+assert.equal([...updated.matchAll(/Too many output items/g)].length, 1);
+assert.equal(sha(fs.readFileSync(target)), ORIGINAL, 'Source must remain untouched');
 const Module = require('node:module');
 const runtime = new Module(target, module);
 runtime.filename = target;
@@ -52,6 +59,6 @@ assert.deepEqual(many.getOutput().map(x => x.text), ['Too many output items']);
 const malformed = new Collector();
 malformed.append('hello');
 assert.equal(malformed.getOutput()[0].text, 'hello');
-const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: sha(Buffer.from(updated)), candidateOnly: true };
+const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true };
 assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
 console.log(JSON.stringify(report, null, 2));
