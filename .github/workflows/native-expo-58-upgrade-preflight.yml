@@ -6,6 +6,7 @@ on:
       - '.github/workflows/native-expo-58-upgrade-preflight.yml'
       - 'examples/workspace-starter/native/scripts/security-expo-58-source-preflight.cjs'
       - 'examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs'
+      - 'examples/workspace-starter/native/scripts/security-expo-58-guard.cjs'
   workflow_dispatch:
 
 permissions:
@@ -112,7 +113,7 @@ jobs:
           EXPO_NO_TELEMETRY: '1'
         run: |
           set -euo pipefail
-          cp examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs "$RUNNER_TEMP/expo58/scripts/security-expo-58-guard.cjs"
+          cp examples/workspace-starter/native/scripts/security-expo-58-guard.cjs "$RUNNER_TEMP/expo58/scripts/security-expo-58-guard.cjs"
           cd "$RUNNER_TEMP/expo58"
           node - <<'NODE'
           const fs = require('node:fs');
