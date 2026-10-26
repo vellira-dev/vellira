@@ -14,7 +14,7 @@ if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
 const output = path.resolve(
   process.env.VELLIRA_METRO_EVIDENCE ?? 'consumer-evidence/native-metro-matrix.json'
 );
-const cases = ['baseline', 'button', 'button-select'];
+const cases = ['baseline', 'theme', 'button', 'button-select'];
 const platforms = ['ios', 'android'];
 
 function run(command, args, cwd, extraEnv = {}) {
@@ -68,13 +68,15 @@ function app(kind) {
     kind === 'baseline'
       ? ''
       : "import { " +
-        (kind === 'button' ? 'Button' : 'Button, Select') +
+        (kind === 'theme' ? 'ThemeProvider' : kind === 'button' ? 'Button' : 'Button, Select') +
         " } from '@vellira-ui/react-native';\n";
   const children =
     kind === 'baseline'
       ? "React.createElement(Text, null, 'Metro baseline')"
-      : kind === 'button'
-        ? "React.createElement(Button, null, 'Metro Button')"
+      : kind === 'theme'
+        ? "React.createElement(ThemeProvider, null, React.createElement(Text, null, 'Metro theme only'))"
+        : kind === 'button'
+          ? "React.createElement(Button, null, 'Metro Button')"
         : "React.createElement(View, null, React.createElement(Button, null, 'Metro Button'), React.createElement(Select, { label: 'Choice', options: [{ value: 'one', label: 'One' }], defaultValue: 'one' }))";
   return (
     "import React from 'react';\n" +
@@ -189,8 +191,13 @@ try {
   }
   for (const platform of platforms) {
     const base = evidence.cases.baseline.platforms[platform].scriptBytes;
+    evidence.cases.theme.platforms[platform].deltaFromBaseline =
+      evidence.cases.theme.platforms[platform].scriptBytes - base;
     evidence.cases.button.platforms[platform].deltaFromBaseline =
       evidence.cases.button.platforms[platform].scriptBytes - base;
+    evidence.cases.button.platforms[platform].deltaFromTheme =
+      evidence.cases.button.platforms[platform].scriptBytes -
+      evidence.cases.theme.platforms[platform].scriptBytes;
     evidence.cases['button-select'].platforms[platform].deltaFromButton =
       evidence.cases['button-select'].platforms[platform].scriptBytes -
       evidence.cases.button.platforms[platform].scriptBytes;
