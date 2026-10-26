@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const DEFAULT_ARTIFACT_DIR = '.release-candidate';
+const { assertNativeSubpathContract } = require('./native-subpath-contract.cjs');
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -378,6 +379,9 @@ function inspectTarball(tarballPath) {
 
     return {
       packedManifest: JSON.parse(fs.readFileSync(manifestPath, 'utf8')),
+      nativeSubpathContract: JSON.parse(fs.readFileSync(manifestPath, 'utf8')).name === '@vellira-ui/react-native'
+        ? assertNativeSubpathContract(packageRoot)
+        : null,
       files,
       packageLocalDeclarationImports:
         findPackageLocalDeclarationImports(packageRoot, files),
@@ -439,6 +443,7 @@ function packPackage(packageInfo, artifactDir) {
     packageLocalDeclarationImports,
     unresolvedPackedDeclarations,
     unpackedSize,
+    nativeSubpathContract,
   } = inspectTarball(tarballPath);
 
   if (packageLocalDeclarationImports.length > 0) {
@@ -490,6 +495,7 @@ function packPackage(packageInfo, artifactDir) {
       npmShasum: packResult.shasum,
       size: packResult.size,
       unpackedSize: packResult.unpackedSize,
+      nativeSubpathContract,
       files: (packResult.files ?? [])
         .map(({ path: filePath }) => filePath)
         .sort(),
