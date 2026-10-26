@@ -163,6 +163,7 @@ try {
       for (const platform of platforms) {
         const bundlePath = path.join(dir, 'dev-' + platform + '.jsbundle');
         const assetsDir = path.join(dir, 'dev-' + platform + '-assets');
+        const sourceMapPath = path.join(dir, 'dev-' + platform + '.map');
         run(process.execPath, [
           expoBin, 'export:embed',
           '--platform', platform,
@@ -170,6 +171,7 @@ try {
           '--entry-file', 'index.js',
           '--bundle-output', bundlePath,
           '--assets-dest', assetsDir,
+          '--sourcemap-output', sourceMapPath,
           '--minify', 'false',
         ], dir);
         if (!fs.existsSync(bundlePath)) {
@@ -179,10 +181,33 @@ try {
         if (content.length < 10_000 || !content.includes('Metro Button')) {
           throw new Error(kind + '/' + platform + ': development bundle lacks Button surface');
         }
+        if (!fs.existsSync(sourceMapPath)) {
+          throw new Error(kind + '/' + platform + ': development source map missing');
+        }
+        const sourceMap = JSON.parse(fs.readFileSync(sourceMapPath, 'utf8'));
+        if (!Array.isArray(sourceMap.sources) || sourceMap.sources.length === 0) {
+          throw new Error(kind + '/' + platform + ': source map missing module inventory');
+        }
+        const groupedSources = {};
+        for (const source of sourceMap.sources) {
+          const normalized = source.replaceAll('\\\\', '/');
+          const group = normalized.includes('@vellira-ui/')
+            ? '@vellira-ui'
+            : normalized.includes('react-native/')
+              ? 'react-native'
+              : normalized.includes('expo/')
+                ? 'expo'
+                : normalized.includes('node_modules/')
+                  ? 'other-node-modules'
+                  : 'application-or-virtual';
+          groupedSources[group] = (groupedSources[group] ?? 0) + 1;
+        }
         developmentBundles[platform] = {
           bundleBytes: Buffer.byteLength(content),
+          sourceMapModules: sourceMap.sources.length,
+          sourceMapModuleGroups: groupedSources,
           buttonMarkerPresent: true,
-          note: 'Development Metro compilation only, not device runtime or Hermes proof',
+          note: 'Source map counts are module inventory, not proportional output-byte attribution or device runtime proof',
         };
       }
     }
