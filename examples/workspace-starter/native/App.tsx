@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   Filter,
   Folder,
-  Home,
+  Grid,
   MoreHorizontal,
   Plus,
   Settings,
@@ -1159,7 +1159,7 @@ function WorkspaceScreen() {
       >
         {(
           [
-            ['overview', 'Dashboard', Home],
+            ['overview', 'Dashboard', Grid],
             ['projects', 'Projects', Folder],
             ['settings', 'Settings', Settings],
           ] as const
@@ -1176,15 +1176,13 @@ function WorkspaceScreen() {
               justifyContent: 'center',
               alignItems: 'center',
               gap: 2,
-              borderRadius: theme.tokens.radius.md,
-              backgroundColor:
-                section === value ? surface.subtle : surface.canvas,
+
             }}
           >
-            <IconComponent size={22} color={mainText} />
+            <IconComponent size={22} color={section === value ? palette.brand : subtleText} />
             <Text
               style={{
-                color: mainText,
+                color: section === value ? palette.brand : subtleText,
                 fontSize: 11,
                 fontWeight: section === value ? '700' : '500',
               }}
