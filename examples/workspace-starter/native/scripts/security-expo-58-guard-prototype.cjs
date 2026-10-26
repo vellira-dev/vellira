@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Source-pinned Native Starter postinstall guard. Exact source and version are pinned.
+// Read-only Expo 58 migration guard prototype; no postinstall integration yet.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -58,6 +58,8 @@ updated = updated.replace(appendEntry, [
   'this._velliraOutputBytes = (this._velliraOutputBytes || 0) + Buffer.byteLength(output, "utf8");',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
+assert.notEqual(sha(Buffer.from(updated + '\\n// tampered')), PATCHED,
+  'Tampered output must not match pinned bytes');
 const nextHash = sha(Buffer.from(updated));
 console.log('Expo transformed candidate SHA-256: ' + nextHash);
 assert.equal(nextHash, PATCHED, 'Expo 58 candidate hash changed; review source before proceeding');
@@ -112,4 +114,5 @@ exact.append('b');
 assert.equal(exact.isTruncated(), true, 'One byte past boundary should truncate');
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardEnforced: true, accumulatedTextBytes };
 assert.ok(!process.argv.includes('--apply'), 'Isolated migration candidate must remain read-only');
+assert.equal(sha(fs.readFileSync(target)), ORIGINAL, 'Installed Expo 58 source modified unexpectedly');
 console.log(JSON.stringify({ ...report, patchedSha256: nextHash, candidateOnly: true }, null, 2));
