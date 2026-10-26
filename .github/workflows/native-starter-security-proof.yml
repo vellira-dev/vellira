@@ -91,6 +91,7 @@ jobs:
           fi
           grep -F 'Pinned RSA patch integrity mismatch' "$RUNNER_TEMP/tampered-patch.log"
           cp "$RUNNER_TEMP/rsa-known-good.patch" scripts/node-forge-1.4.0-candidate.patch
+          node scripts/security-expo-zod-patch-candidate.cjs --apply
           npm run security:verify-patch
           npm ci --no-audit --no-fund
           npm run security:verify-patch

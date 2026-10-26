@@ -10,13 +10,13 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "security:certificate-proof": "node scripts/security-certificate-proof.cjs",
-    "postinstall": "node scripts/apply-node-forge-patch.cjs",
-    "prestart": "node scripts/apply-node-forge-patch.cjs --verify",
-    "preios": "node scripts/apply-node-forge-patch.cjs --verify",
-    "preandroid": "node scripts/apply-node-forge-patch.cjs --verify",
-    "preweb": "node scripts/apply-node-forge-patch.cjs --verify",
-    "pretypecheck": "node scripts/apply-node-forge-patch.cjs --verify",
-    "security:verify-patch": "node scripts/apply-node-forge-patch.cjs --verify"
+    "postinstall": "node scripts/apply-node-forge-patch.cjs && node scripts/security-expo-zod-patch-candidate.cjs --apply",
+    "prestart": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-zod-patch-candidate.cjs --verify",
+    "preios": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-zod-patch-candidate.cjs --verify",
+    "preandroid": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-zod-patch-candidate.cjs --verify",
+    "preweb": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-zod-patch-candidate.cjs --verify",
+    "pretypecheck": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-zod-patch-candidate.cjs --verify",
+    "security:verify-patch": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-zod-patch-candidate.cjs --verify"
   },
   "dependencies": {
     "@vellira-ui/react-native": "2.186.22",
