@@ -88,6 +88,23 @@ jobs:
         run: node examples/workspace-starter/native/scripts/security-expo-58-source-preflight.cjs "$RUNNER_TEMP/expo58"
       - name: Exercise guarded Expo 58 output collector without patching disk
         run: node examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs "$RUNNER_TEMP/expo58"
+      - name: Apply Expo 58 guard twice and verify the installed bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          script=examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs
+          node "$script" "$RUNNER_TEMP/expo58" --apply
+          node "$script" "$RUNNER_TEMP/expo58" --apply
+          node "$script" "$RUNNER_TEMP/expo58" --verify
+          target="$RUNNER_TEMP/expo58/node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js"
+          cp "$target" "$RUNNER_TEMP/expo58-known-good.js"
+          printf '\n// tamper\n' >> "$target"
+          if node "$script" "$RUNNER_TEMP/expo58" --verify; then
+            echo '::error::Tampered Expo 58 parser passed verification'
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/expo58-known-good.js" "$target"
+          node "$script" "$RUNNER_TEMP/expo58" --verify
       - name: Fingerprint Expo 58 CLI parser for safe Zod guard migration
         shell: bash
         run: |
