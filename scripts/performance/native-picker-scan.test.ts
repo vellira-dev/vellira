@@ -44,9 +44,8 @@ describe('published picker negative-dependency scanner', () => {
     });
   });
 
-  it.each(['index.js', 'index.mjs', 'index.cjs'])(
-    'rejects a picker reference in runtime %s',
-    (extension) => {
+  for (const extension of ['index.js', 'index.mjs', 'index.cjs']) {
+    it('rejects picker reference in runtime ' + extension, () => {
       const { root, paths } = fixture({
         [extension]: "import '@react-native-picker/picker';",
         'index.d.ts': 'export type Native = unknown;',
@@ -54,12 +53,11 @@ describe('published picker negative-dependency scanner', () => {
       expect(() => inspectPublishedPickerReferences(root, paths)).toThrow(
         /published native dist references picker/
       );
-    }
-  );
+    });
+  }
 
-  it.each(['index.d.ts', 'index.d.mts', 'index.d.cts'])(
-    'rejects a picker reference in declaration %s',
-    (extension) => {
+  for (const extension of ['index.d.ts', 'index.d.mts', 'index.d.cts']) {
+    it('rejects picker reference in declaration ' + extension, () => {
       const { root, paths } = fixture({
         'index.js': 'export const Button = 1;',
         [extension]: "import type { Picker } from '@react-native-picker/picker';",
@@ -67,8 +65,8 @@ describe('published picker negative-dependency scanner', () => {
       expect(() => inspectPublishedPickerReferences(root, paths)).toThrow(
         /published native dist references picker/
       );
-    }
-  );
+    });
+  }
 
   it('rejects empty packed dist', () => {
     const { root, paths } = fixture({});
