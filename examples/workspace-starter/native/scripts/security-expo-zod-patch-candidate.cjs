@@ -16,7 +16,12 @@ const bytes = fs.readFileSync(target);
 assert.equal(sha(bytes), ORIGINAL, 'Unrecognized Expo CLI bytes: refuse modification');
 const source = bytes.toString('utf8');
 const entry = /(parseOutputText\(txt(?:,\s*[^)]*)?\)\s*\{)/g;
-assert.equal([...source.matchAll(entry)].length, 1);
+const entryMatches = [...source.matchAll(entry)];
+if (entryMatches.length !== 1) {
+  const at = source.indexOf('parseOutputText');
+  const excerpt = at < 0 ? '<missing>' : source.slice(Math.max(0, at - 180), at + 400);
+  throw new Error('Installed Expo parser entry mismatch; matches=' + entryMatches.length + '; excerpt=' + JSON.stringify(excerpt));
+}
 let updated = source.replace(entry, '$1\n        if (Buffer.byteLength(txt, "utf8") > 65536) return [{ type: "text", text: "Plugin output limit exceeded", level: "error" }];');
 const parse = /DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\)/g;
 assert.equal([...updated.matchAll(parse)].length, 1);
