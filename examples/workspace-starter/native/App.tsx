@@ -329,18 +329,66 @@ function WorkspaceScreen() {
 
   const completedCount = data.projects.filter((item) => item.completed).length;
   const totalCount = data.projects.length;
-  const completionRate = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
-  const palette = themeName === 'dark'
-    ? { brand: '#B39AFF', brandBg: '#33284C', brandBorder: '#655095', success: '#79DCAB', successBg: '#203B34', successBorder: '#357356', amber: '#FFD07D', track: '#332D42' }
-    : themeName === 'highContrast'
-      ? { brand: '#6434C7', brandBg: '#FFFFFF', brandBorder: '#6434C7', success: '#006C46', successBg: '#FFFFFF', successBorder: '#006C46', amber: '#996000', track: '#D2CADE' }
-      : { brand: '#7050ED', brandBg: '#F2ECFF', brandBorder: '#DCCFFF', success: '#087B55', successBg: '#EAF9F1', successBorder: '#B8E7D0', amber: '#C7831B', track: '#F0ECF8' };
+  const completionRate = totalCount
+    ? Math.round((completedCount / totalCount) * 100)
+    : 0;
+  const palette =
+    themeName === 'dark'
+      ? {
+          brand: '#B39AFF',
+          brandBg: '#33284C',
+          brandBorder: '#655095',
+          success: '#79DCAB',
+          successBg: '#203B34',
+          successBorder: '#357356',
+          amber: '#FFD07D',
+          track: '#332D42',
+        }
+      : themeName === 'highContrast'
+        ? {
+            brand: '#6434C7',
+            brandBg: '#FFFFFF',
+            brandBorder: '#6434C7',
+            success: '#006C46',
+            successBg: '#FFFFFF',
+            successBorder: '#006C46',
+            amber: '#996000',
+            track: '#D2CADE',
+          }
+        : {
+            brand: '#7050ED',
+            brandBg: '#F2ECFF',
+            brandBorder: '#DCCFFF',
+            success: '#087B55',
+            successBg: '#EAF9F1',
+            successBorder: '#B8E7D0',
+            amber: '#C7831B',
+            track: '#F0ECF8',
+          };
   const statuses = [
-    { key: 'planned', name: 'Planned', count: data.projects.filter((p) => p.status === 'planned').length, color: '#B8A5FA' },
-    { key: 'active', name: 'In progress', count: data.projects.filter((p) => p.status === 'active').length, color: palette.amber },
-    { key: 'shipped', name: 'Shipped', count: data.projects.filter((p) => p.status === 'shipped').length, color: palette.brand },
+    {
+      key: 'planned',
+      name: 'Planned',
+      count: data.projects.filter((p) => p.status === 'planned').length,
+      color: '#B8A5FA',
+    },
+    {
+      key: 'active',
+      name: 'In progress',
+      count: data.projects.filter((p) => p.status === 'active').length,
+      color: palette.amber,
+    },
+    {
+      key: 'shipped',
+      name: 'Shipped',
+      count: data.projects.filter((p) => p.status === 'shipped').length,
+      color: palette.brand,
+    },
   ];
-  const chartMax = Math.max(4, Math.ceil(Math.max(...statuses.map((item) => item.count)) / 4) * 4);
+  const chartMax = Math.max(
+    4,
+    Math.ceil(Math.max(...statuses.map((item) => item.count)) / 4) * 4
+  );
   const chartColor = themeName === 'dark' ? '#85B6FF' : '#5797F6';
 
   return (
@@ -477,63 +525,231 @@ function WorkspaceScreen() {
 
         {section === 'overview' ? (
           <View style={{ gap: 18 }}>
-            <Text style={{ color: subtleText, fontSize: 15 }}>Your projects at a glance</Text>
+            <Text style={{ color: subtleText, fontSize: 15 }}>
+              Your projects at a glance
+            </Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {[
-                { label: 'Total projects', value: totalCount, caption: 'All projects', bg: palette.brandBg, outline: palette.brandBorder, accent: palette.brand },
-                { label: 'Completed', value: completedCount, caption: completionRate + '% completion', bg: palette.successBg, outline: palette.successBorder, accent: palette.success },
+                {
+                  label: 'Total projects',
+                  value: totalCount,
+                  caption: 'All projects',
+                  bg: palette.brandBg,
+                  outline: palette.brandBorder,
+                  accent: palette.brand,
+                },
+                {
+                  label: 'Completed',
+                  value: completedCount,
+                  caption: completionRate + '% completion',
+                  bg: palette.successBg,
+                  outline: palette.successBorder,
+                  accent: palette.success,
+                },
               ].map((metric) => (
-                <View key={metric.label} style={{ flex: 1, minWidth: 0, padding: 16, borderRadius: theme.tokens.radius.lg, backgroundColor: metric.bg, borderWidth: 1, borderColor: metric.outline, gap: 8 }}>
-                  <Text style={{ color: metric.accent, fontSize: 13, fontWeight: '700' }}>{metric.label}</Text>
-                  <Text style={{ color: mainText, fontSize: 35, fontWeight: '700' }}>{metric.value}</Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>{metric.caption}</Text>
+                <View
+                  key={metric.label}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: 16,
+                    borderRadius: theme.tokens.radius.lg,
+                    backgroundColor: metric.bg,
+                    borderWidth: 1,
+                    borderColor: metric.outline,
+                    gap: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: metric.accent,
+                      fontSize: 13,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {metric.label}
+                  </Text>
+                  <Text
+                    style={{ color: mainText, fontSize: 35, fontWeight: '700' }}
+                  >
+                    {metric.value}
+                  </Text>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>
+                    {metric.caption}
+                  </Text>
                 </View>
               ))}
             </View>
             <View style={cardStyle}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: mainText, fontSize: 19, fontWeight: '700' }}>Project progress</Text>
-                <Text style={{ color: palette.brand, fontWeight: '700' }}>{completionRate}%</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text
+                  style={{ color: mainText, fontSize: 19, fontWeight: '700' }}
+                >
+                  Project progress
+                </Text>
+                <Text style={{ color: palette.brand, fontWeight: '700' }}>
+                  {completionRate}%
+                </Text>
               </View>
-              <View accessibilityLabel={completedCount + ' of ' + totalCount + ' projects completed'} style={{ height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: palette.track }}>
-                <View style={{ width: (completionRate + '%') as `${number}%`, height: '100%', backgroundColor: palette.brand, borderRadius: 7 }} />
+              <View
+                accessibilityLabel={
+                  completedCount + ' of ' + totalCount + ' projects completed'
+                }
+                style={{
+                  height: 14,
+                  borderRadius: 7,
+                  overflow: 'hidden',
+                  backgroundColor: palette.track,
+                }}
+              >
+                <View
+                  style={{
+                    width: (completionRate + '%') as `${number}%`,
+                    height: '100%',
+                    backgroundColor: palette.brand,
+                    borderRadius: 7,
+                  }}
+                />
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                <Text style={{ color: subtleText, fontSize: 12 }}>Completed · {completedCount}</Text>
-                <Text style={{ color: subtleText, fontSize: 12 }}>Remaining · {totalCount - completedCount}</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <Text style={{ color: subtleText, fontSize: 12 }}>
+                  Completed · {completedCount}
+                </Text>
+                <Text style={{ color: subtleText, fontSize: 12 }}>
+                  Remaining · {totalCount - completedCount}
+                </Text>
               </View>
             </View>
             <View style={cardStyle}>
-              <Text style={{ color: mainText, fontSize: 19, fontWeight: '700' }}>Projects by status</Text>
-              <View accessibilityLabel={'Projects by status: ' + statuses.map((item) => item.name + ' ' + item.count).join(', ')} style={{ gap: 10 }}>
+              <Text
+                style={{ color: mainText, fontSize: 19, fontWeight: '700' }}
+              >
+                Projects by status
+              </Text>
+              <View
+                accessibilityLabel={
+                  'Projects by status: ' +
+                  statuses
+                    .map((item) => item.name + ' ' + item.count)
+                    .join(', ')
+                }
+                style={{ gap: 10 }}
+              >
                 <View style={{ flexDirection: 'row', height: 214, gap: 8 }}>
-                  <View style={{ width: 25, justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <View
+                    style={{
+                      width: 25,
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-end',
+                    }}
+                  >
                     {[4, 3, 2, 1, 0].map((tick) => (
-                      <Text key={tick} style={{ color: subtleText, fontSize: 11 }}>{chartMax * tick / 4}</Text>
+                      <Text
+                        key={tick}
+                        style={{ color: subtleText, fontSize: 11 }}
+                      >
+                        {(chartMax * tick) / 4}
+                      </Text>
                     ))}
                   </View>
-                  <View style={{ flex: 1, position: 'relative', height: 200, marginTop: 7 }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      position: 'relative',
+                      height: 200,
+                      marginTop: 7,
+                    }}
+                  >
                     {[0, 1, 2, 3, 4].map((tick) => (
-                      <View key={tick} style={{ position: 'absolute', top: tick * 50, left: 0, right: 0, borderTopWidth: 1, borderColor: border, opacity: 0.6 }} />
+                      <View
+                        key={tick}
+                        style={{
+                          position: 'absolute',
+                          top: tick * 50,
+                          left: 0,
+                          right: 0,
+                          borderTopWidth: 1,
+                          borderColor: border,
+                          opacity: 0.6,
+                        }}
+                      />
                     ))}
-                    <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'space-around', alignItems: 'flex-end' }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        flex: 1,
+                        justifyContent: 'space-around',
+                        alignItems: 'flex-end',
+                      }}
+                    >
                       {statuses.map((status) => (
-                        <View key={status.key} style={{ width: '23%', height: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <View
+                          key={status.key}
+                          style={{
+                            width: '23%',
+                            height: '100%',
+                            justifyContent: 'flex-end',
+                            alignItems: 'center',
+                          }}
+                        >
                           {status.count > 0 ? (
-                            <View style={{ width: '100%', height: (status.count / chartMax * 100 + '%') as `${number}%`, backgroundColor: chartColor, borderRadius: 9, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 }} />
+                            <View
+                              style={{
+                                width: '100%',
+                                height: ((status.count / chartMax) * 100 +
+                                  '%') as `${number}%`,
+                                backgroundColor: chartColor,
+                                borderRadius: 9,
+                                borderBottomLeftRadius: 3,
+                                borderBottomRightRadius: 3,
+                              }}
+                            />
                           ) : null}
                         </View>
                       ))}
                     </View>
                   </View>
                 </View>
-                <View style={{ marginLeft: 33, flexDirection: 'row', justifyContent: 'space-around' }}>
+                <View
+                  style={{
+                    marginLeft: 33,
+                    flexDirection: 'row',
+                    justifyContent: 'space-around',
+                  }}
+                >
                   {statuses.map((status) => (
-                    <Text key={status.key} numberOfLines={2} style={{ width: '31%', textAlign: 'center', color: subtleText, fontSize: 12 }}>{status.name}</Text>
+                    <Text
+                      key={status.key}
+                      numberOfLines={2}
+                      style={{
+                        width: '31%',
+                        textAlign: 'center',
+                        color: subtleText,
+                        fontSize: 12,
+                      }}
+                    >
+                      {status.name}
+                    </Text>
                   ))}
                 </View>
               </View>
-              {totalCount === 0 ? <Text style={{ color: subtleText }}>Create your first project to populate the chart.</Text> : null}
+              {totalCount === 0 ? (
+                <Text style={{ color: subtleText }}>
+                  Create your first project to populate the chart.
+                </Text>
+              ) : null}
             </View>
           </View>
         ) : null}
