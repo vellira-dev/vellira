@@ -79,19 +79,30 @@ npm ci
 npm run start
 ```
 
-The Native Starter currently applies a pinned, locally reviewed `node-forge@1.4.0`
-RSA backport during standard `npm ci` via its root `postinstall`. This is a
-temporary mitigation for GHSA-86w9-cpqp-85rv, not a patched upstream npm
-release. Before **direct** `npx expo`, `node`, custom builds or repackaging,
-run `npm run security:verify-patch` in the Native directory. This checks the
-installed `rsa.js` SHA-256 and fails on unpatched or modified bytes.
+The Native Starter applies two source-pinned local mitigations during a standard
+`npm ci` through its `postinstall`: the `node-forge@1.4.0` RSA backport
+and a bounded-output guard for installed `@expo/cli@57.0.32` with Zod 3.
+The guard limits plugin output to 64 KiB of accumulated UTF-8 input, and
+rejects JSON arrays with more than 128 entries before Zod validation.
+Both patched file hashes are verified by `npm run security:verify-patch`.
 
+These are **local mitigations**, not patched upstream dependency releases.
+The Zod guard covers the installed Expo CLI DevTools plugin output
+collector only. It does not patch Zod itself, establish remote exploitability,
+or prove every Zod call site safe. Dependabot #141 and #142 remain open;
+see issue #1890.
+
+Before **direct** `npx expo`, `node`, custom builds, or repackaging, run
+`npm run security:verify-patch` in the Native directory. Direct commands
+can bypass the npm `prestart` / `preandroid` / `preios` / `preweb` hooks.
 Do **not** treat `npm ci --ignore-scripts` as a secure installation: it
-skips `postinstall` and leaves the vulnerable upstream file until you run
+skips both patches. After such an install, explicitly apply both with
 `node scripts/apply-node-forge-patch.cjs` and
-`npm run security:verify-patch` explicitly. Reinstalling, copying or
-archiving `node_modules` requires the same verification before use.
-Dependabot alert #141 remains open; see issue #1890.
+`node scripts/security-expo-zod-patch-candidate.cjs --apply`, then run
+`npm run security:verify-patch`. Reinstalling, copying or archiving
+`node_modules` requires verification again. When the installed Expo CLI
+version or source bytes change, the local guard fails closed and must be
+re-reviewed, not silently re-used.
 
 Follow Expo's device/emulator instructions. To typecheck:
 
