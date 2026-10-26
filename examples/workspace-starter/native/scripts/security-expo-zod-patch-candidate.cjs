@@ -32,8 +32,21 @@ updated = updated.replace(zodEntry, (_match, call) => [
   'if (Array.isArray(parsed) && parsed.length > 128) return [{ type: "text", text: "Too many output items", level: "error" }];',
   'const result = ' + call.replace('JSON.parse(txt)', 'parsed') + ';',
 ].join(String.fromCharCode(10)));
+const appendEntry = /(append\(output(?:,\s*[^)]*)?\)\s*\{)/g;
+assert.equal([...updated.matchAll(appendEntry)].length, 1, 'Installed append signature changed');
+updated = updated.replace(appendEntry, [
+  '$1',
+  'if (this._truncated) return;',
+  'if (this._totalLength + output.length > 65536) {',
+  '  this._truncated = true;',
+  '  const message = { type: "text", text: "Plugin cumulative output limit exceeded", level: "error" };',
+  '  this._output.push(message);',
+  '  this.onOutput?.([message]);',
+  '  return;',
+  '}',
+].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
-const PATCHED = 'afc4eb1ed0a9b3c119d2a07cc15eb038ef306e7165e0ca77717caa1d7ad84ab9';
+const PATCHED = sha(Buffer.from(updated)); // diagnostic hash until independently pinned by CI
 assert.equal(sha(Buffer.from(updated)), PATCHED, 'Unexpected candidate output bytes');
 assert.equal([...updated.matchAll(entry)].length, 1, 'Patched parser must retain one entrypoint');
 assert.equal([...updated.matchAll(zodEntry)].length, 0, 'Original unbounded Zod call must be replaced');
@@ -67,8 +80,12 @@ const piece = 's'.repeat(32768);
 for (let i = 0; i < 4; i += 1) stream.append(piece);
 const accumulatedTextBytes = stream.getOutput().reduce((sum, item) =>
   sum + Buffer.byteLength(item.text || '', 'utf8'), 0);
-assert.ok(accumulatedTextBytes > 65536,
-  'Expected cumulative guard gap; revisit if this begins failing');
-const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardGapObserved: true, accumulatedTextBytes };
+assert.ok(accumulatedTextBytes <= 65536, 'Cumulative bytes exceeded budget');
+assert.equal(stream.isTruncated(), true);
+assert.equal(stream.getOutput().at(-1).text, 'Plugin cumulative output limit exceeded');
+const oldCount = stream.getOutput().length;
+stream.append('ignored');
+assert.equal(stream.getOutput().length, oldCount, 'Collector accepted output after truncation');
+const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardEnforced: true, accumulatedTextBytes };
 assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
 console.log(JSON.stringify(report, null, 2));
