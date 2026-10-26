@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Filter, Folder, Home, MoreHorizontal, Plus, Settings, Search } from '@vellira-ui/icons';
+import {
+  Filter,
+  Folder,
+  Home,
+  MoreHorizontal,
+  Plus,
+  Settings,
+  Search,
+} from '@vellira-ui/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -184,8 +192,12 @@ function WorkspaceScreen() {
       statusFilter === 'all' || project.status === statusFilter;
     return (
       sameStatus &&
-      (project.name.toLowerCase().includes((showSearch ? query : '').trim().toLowerCase()) ||
-        project.description.toLowerCase().includes((showSearch ? query : '').trim().toLowerCase()))
+      (project.name
+        .toLowerCase()
+        .includes((showSearch ? query : '').trim().toLowerCase()) ||
+        project.description
+          .toLowerCase()
+          .includes((showSearch ? query : '').trim().toLowerCase()))
     );
   });
 
@@ -375,7 +387,21 @@ function WorkspaceScreen() {
             </Text>
           </View>
           {section !== 'settings' ? (
-            <Pressable accessibilityRole='button' accessibilityLabel='Create project' onPress={openCreate} style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: surface.subtle }}><Plus size={24} color={mainText} /></Pressable>
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Create project'
+              onPress={openCreate}
+              style={{
+                width: 48,
+                height: 48,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 24,
+                backgroundColor: surface.subtle,
+              }}
+            >
+              <Plus size={24} color={mainText} />
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -513,73 +539,291 @@ function WorkspaceScreen() {
                   No projects yet. Create your first one.
                 </Text>
               ) : null}
-
             </View>
           </View>
         ) : null}
 
         {section === 'projects' ? (
           <View style={{ gap: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: mainText, fontSize: 17, fontWeight: '700' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text
+                style={{ color: mainText, fontSize: 17, fontWeight: '700' }}
+              >
                 All projects · {visibleProjects.length}
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Pressable accessibilityRole='button' accessibilityLabel='Search projects' accessibilityState={{ expanded: showSearch }} onPress={() => { setShowSearch(!showSearch); if (showSearch) setQuery(''); }} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Search projects'
+                  accessibilityState={{ expanded: showSearch }}
+                  onPress={() => {
+                    setShowSearch(!showSearch);
+                    if (showSearch) setQuery('');
+                  }}
+                  style={{
+                    minWidth: 44,
+                    minHeight: 44,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   <Search size={22} color={mainText} />
                 </Pressable>
-                <Pressable accessibilityRole='button' accessibilityLabel='Filter projects' accessibilityState={{ expanded: showFilters }} onPress={() => setShowFilters(!showFilters)} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Filter projects'
+                  accessibilityState={{ expanded: showFilters }}
+                  onPress={() => setShowFilters(!showFilters)}
+                  style={{
+                    minWidth: 44,
+                    minHeight: 44,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   <Filter size={22} color={mainText} />
                 </Pressable>
               </View>
             </View>
-            {showSearch ? <Input label='Search projects' value={query} onValueChange={setQuery} placeholder='Search projects' /> : null}
+            {showSearch ? (
+              <Input
+                label='Search projects'
+                value={query}
+                onValueChange={setQuery}
+                placeholder='Search projects'
+              />
+            ) : null}
             {showFilters ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-                {([
-                  ['all', 'All'],
-                  ['planned', 'Planned'],
-                  ['active', 'In progress'],
-                  ['shipped', 'Shipped'],
-                ] as const).map(([value, label]) => (
-                  <Pressable key={value} accessibilityRole='button' accessibilityState={{ selected: statusFilter === value }} onPress={() => setStatusFilter(value)} style={{ paddingHorizontal: 15, minHeight: 44, justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: statusFilter === value ? mainText : border, backgroundColor: statusFilter === value ? surface.subtle : surface.canvas }}>
-                    <Text style={{ color: mainText, fontWeight: statusFilter === value ? '700' : '500' }}>{label}</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+              >
+                {(
+                  [
+                    ['all', 'All'],
+                    ['planned', 'Planned'],
+                    ['active', 'In progress'],
+                    ['shipped', 'Shipped'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    accessibilityRole='button'
+                    accessibilityState={{ selected: statusFilter === value }}
+                    onPress={() => setStatusFilter(value)}
+                    style={{
+                      paddingHorizontal: 15,
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      borderRadius: 22,
+                      borderWidth: 1,
+                      borderColor: statusFilter === value ? mainText : border,
+                      backgroundColor:
+                        statusFilter === value
+                          ? surface.subtle
+                          : surface.canvas,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: mainText,
+                        fontWeight: statusFilter === value ? '700' : '500',
+                      }}
+                    >
+                      {label}
+                    </Text>
                   </Pressable>
                 ))}
               </ScrollView>
             ) : null}
             {visibleProjects.map((project) => (
-              <View key={project.id} style={{ ...cardStyle, gap: 10, padding: 14, position: 'relative', zIndex: actionProjectId === project.id ? 2 : 0 }}>
-                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                  <View accessibilityLabel={`Team avatar: ${project.team}`} style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: project.team === 'design' ? theme.semantic.surface.subtle : surface.canvas, borderWidth: 1.5, borderColor: border }}>
-                    <Text style={{ color: mainText, fontSize: 15, fontWeight: '700' }}>{project.team === 'design' ? 'DS' : project.team === 'mobile' ? 'MB' : 'PL'}</Text>
+              <View
+                key={project.id}
+                style={{
+                  ...cardStyle,
+                  gap: 10,
+                  padding: 14,
+                  position: 'relative',
+                  zIndex: actionProjectId === project.id ? 2 : 0,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    gap: 12,
+                    alignItems: 'center',
+                  }}
+                >
+                  <View
+                    accessibilityLabel={`Team avatar: ${project.team}`}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor:
+                        project.team === 'design'
+                          ? theme.semantic.surface.subtle
+                          : surface.canvas,
+                      borderWidth: 1.5,
+                      borderColor: border,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: mainText,
+                        fontSize: 15,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {project.team === 'design'
+                        ? 'DS'
+                        : project.team === 'mobile'
+                          ? 'MB'
+                          : 'PL'}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
-                    <Text numberOfLines={2} style={{ color: mainText, fontSize: 16, fontWeight: '700' }}>{project.name}</Text>
-                    <Text style={{ color: subtleText, fontSize: 12 }}>{project.status === 'active' ? 'In progress' : project.status === 'shipped' ? 'Shipped' : 'Planned'}</Text>
+                    <Text
+                      numberOfLines={2}
+                      style={{
+                        color: mainText,
+                        fontSize: 16,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {project.name}
+                    </Text>
+                    <Text style={{ color: subtleText, fontSize: 12 }}>
+                      {project.status === 'active'
+                        ? 'In progress'
+                        : project.status === 'shipped'
+                          ? 'Shipped'
+                          : 'Planned'}
+                    </Text>
                   </View>
-                  <Pressable accessibilityRole='button' accessibilityLabel={`Actions for ${project.name}`} accessibilityState={{ expanded: actionProjectId === project.id }} onPress={() => setActionProjectId(actionProjectId === project.id ? null : project.id)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                  <Pressable
+                    accessibilityRole='button'
+                    accessibilityLabel={`Actions for ${project.name}`}
+                    accessibilityState={{
+                      expanded: actionProjectId === project.id,
+                    }}
+                    onPress={() =>
+                      setActionProjectId(
+                        actionProjectId === project.id ? null : project.id
+                      )
+                    }
+                    style={{
+                      width: 44,
+                      height: 44,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <MoreHorizontal size={24} color={mainText} />
                   </Pressable>
                 </View>
-                {project.description ? <Text numberOfLines={2} style={{ color: subtleText, lineHeight: 19 }}>{project.description}</Text> : null}
+                {project.description ? (
+                  <Text
+                    numberOfLines={2}
+                    style={{ color: subtleText, lineHeight: 19 }}
+                  >
+                    {project.description}
+                  </Text>
+                ) : null}
                 {actionProjectId === project.id ? (
                   <View
                     accessibilityRole='menu'
-                    style={{ alignSelf: 'flex-end', width: 214, borderWidth: 1, borderColor: border, borderRadius: theme.tokens.radius.lg, backgroundColor: surface.canvas, paddingHorizontal: 8, paddingVertical: 4, gap: 0 }}
+                    style={{
+                      alignSelf: 'flex-end',
+                      width: 214,
+                      borderWidth: 1,
+                      borderColor: border,
+                      borderRadius: theme.tokens.radius.lg,
+                      backgroundColor: surface.canvas,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      gap: 0,
+                    }}
                   >
-                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); openEdit(project); }} style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: mainText }}>Edit</Text></Pressable>
-                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); duplicateProject(project.id); }} style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: mainText }}>Duplicate</Text></Pressable>
-                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); deleteProject(project.id); }} style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}><Text style={{ color: mainText }}>Remove</Text></Pressable>
+                    <Pressable
+                      accessibilityRole='menuitem'
+                      onPress={() => {
+                        setActionProjectId(null);
+                        openEdit(project);
+                      }}
+                      style={{
+                        minHeight: 44,
+                        paddingHorizontal: 10,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: mainText }}>Edit</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole='menuitem'
+                      onPress={() => {
+                        setActionProjectId(null);
+                        duplicateProject(project.id);
+                      }}
+                      style={{
+                        minHeight: 44,
+                        paddingHorizontal: 10,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: mainText }}>Duplicate</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole='menuitem'
+                      onPress={() => {
+                        setActionProjectId(null);
+                        deleteProject(project.id);
+                      }}
+                      style={{
+                        minHeight: 44,
+                        paddingHorizontal: 10,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: mainText }}>Remove</Text>
+                    </Pressable>
                   </View>
                 ) : null}
-                <Checkbox label='Mark completed' checked={project.completed} onCheckedChange={(value: boolean) => toggleProject(project.id, value)} />
+                <Checkbox
+                  label='Mark completed'
+                  checked={project.completed}
+                  onCheckedChange={(value: boolean) =>
+                    toggleProject(project.id, value)
+                  }
+                />
               </View>
             ))}
             {visibleProjects.length === 0 ? (
               <View style={{ ...cardStyle, alignItems: 'center', gap: 10 }}>
-                <Text style={{ color: mainText, fontWeight: '700' }}>No matching projects</Text>
-                <Button appearance='outline' color='neutral' onPress={() => { setQuery(''); setStatusFilter('all'); setShowSearch(false); setShowFilters(false); }}>Clear filters</Button>
+                <Text style={{ color: mainText, fontWeight: '700' }}>
+                  No matching projects
+                </Text>
+                <Button
+                  appearance='outline'
+                  color='neutral'
+                  onPress={() => {
+                    setQuery('');
+                    setStatusFilter('all');
+                    setShowSearch(false);
+                    setShowFilters(false);
+                  }}
+                >
+                  Clear filters
+                </Button>
               </View>
             ) : null}
           </View>
@@ -588,41 +832,107 @@ function WorkspaceScreen() {
         {section === 'settings' ? (
           <View style={{ gap: 18 }}>
             <View style={{ gap: 8 }}>
-              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>WORKSPACE</Text>
+              <Text
+                accessibilityRole='header'
+                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
+              >
+                WORKSPACE
+              </Text>
               <View style={cardStyle}>
-                <Input label='Workspace name' value={data.name} onValueChange={(next: string) => setData((current) => ({ ...current, name: next }))} />
+                <Input
+                  label='Workspace name'
+                  value={data.name}
+                  onValueChange={(next: string) =>
+                    setData((current) => ({ ...current, name: next }))
+                  }
+                />
               </View>
             </View>
             <View style={{ gap: 8 }}>
-              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>APPEARANCE</Text>
+              <Text
+                accessibilityRole='header'
+                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
+              >
+                APPEARANCE
+              </Text>
               <View style={cardStyle}>
                 {(['light', 'dark', 'highContrast'] as const).map((option) => (
-                  <Pressable key={option} accessibilityRole='radio' accessibilityState={{ checked: themeName === option }} onPress={() => setTheme(option)} style={{ minHeight: 48, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: option === 'highContrast' ? 0 : 1, borderColor: border }}>
-                    <Text style={{ color: mainText }}>{option === 'highContrast' ? 'High contrast' : option === 'light' ? 'Light' : 'Dark'}</Text>
-                    <Text style={{ color: mainText }}>{themeName === option ? '✓' : ''}</Text>
+                  <Pressable
+                    key={option}
+                    accessibilityRole='radio'
+                    accessibilityState={{ checked: themeName === option }}
+                    onPress={() => setTheme(option)}
+                    style={{
+                      minHeight: 48,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderBottomWidth: option === 'highContrast' ? 0 : 1,
+                      borderColor: border,
+                    }}
+                  >
+                    <Text style={{ color: mainText }}>
+                      {option === 'highContrast'
+                        ? 'High contrast'
+                        : option === 'light'
+                          ? 'Light'
+                          : 'Dark'}
+                    </Text>
+                    <Text style={{ color: mainText }}>
+                      {themeName === option ? '✓' : ''}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
             </View>
             <View style={{ gap: 8 }}>
-              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>PREFERENCES</Text>
+              <Text
+                accessibilityRole='header'
+                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
+              >
+                PREFERENCES
+              </Text>
               <View style={cardStyle}>
-                <Checkbox label='Product notifications' description='Saved locally. No emails are sent.' checked={data.notifications} onCheckedChange={(notifications: boolean) => setData((current) => ({ ...current, notifications }))} />
+                <Checkbox
+                  label='Product notifications'
+                  description='Saved locally. No emails are sent.'
+                  checked={data.notifications}
+                  onCheckedChange={(notifications: boolean) =>
+                    setData((current) => ({ ...current, notifications }))
+                  }
+                />
               </View>
             </View>
             <View style={{ gap: 8 }}>
-              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>DATA</Text>
+              <Text
+                accessibilityRole='header'
+                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
+              >
+                DATA
+              </Text>
               <View style={cardStyle}>
-                <Pressable accessibilityRole='button' onPress={() => setResetOpen(true)} style={{ minHeight: 48, justifyContent: 'center' }}>
-                  <Text style={{ color: mainText, fontWeight: '600' }}>Restore sample data</Text>
+                <Pressable
+                  accessibilityRole='button'
+                  onPress={() => setResetOpen(true)}
+                  style={{ minHeight: 48, justifyContent: 'center' }}
+                >
+                  <Text style={{ color: mainText, fontWeight: '600' }}>
+                    Restore sample data
+                  </Text>
                 </Pressable>
-                <Text style={{ color: subtleText, fontSize: 12 }}>This replaces your locally saved demo projects and settings.</Text>
+                <Text style={{ color: subtleText, fontSize: 12 }}>
+                  This replaces your locally saved demo projects and settings.
+                </Text>
               </View>
             </View>
-            <Text style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}>Vellira Native Starter · Offline demo</Text>
+            <Text
+              style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}
+            >
+              Vellira Native Starter · Offline demo
+            </Text>
           </View>
         ) : null}
-            </ScrollView>
+      </ScrollView>
 
       <View
         accessibilityRole='tablist'
