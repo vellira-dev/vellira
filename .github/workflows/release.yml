@@ -258,6 +258,19 @@ jobs:
             "chromatic"
           )
 
+          # Accept CI skips only when the exact PR changes Markdown docs exclusively.
+          gh api --paginate -H "Accept: application/vnd.github+json" "repos/$REPOSITORY/pulls/$pr_number/files?per_page=100" --jq '.[].filename' > /tmp/release-pr-files.txt
+          docs_only=false
+          if [[ -s /tmp/release-pr-files.txt ]]; then
+            docs_only=true
+            while IFS= read -r changed_path; do
+              if [[ "$changed_path" != apps/docs/src/*.md ]]; then
+                docs_only=false
+                break
+              fi
+            done < /tmp/release-pr-files.txt
+          fi
+          docs_skippable_checks=("Typecheck & API Contracts" "Tooling & IndexNow Tests" "Storybook & Browser Tests" "Unit & Coverage Tests")
           for check_name in "${required_checks[@]}"; do
             check_state="$(
               jq -r \
@@ -275,13 +288,21 @@ jobs:
                 /tmp/release-checks.json
             )"
 
+            if [[ "$check_state" == "completed:skipped" && "$docs_only" == true ]]; then
+              for docs_check in "${docs_skippable_checks[@]}"; do
+                if [[ "$check_name" == "$docs_check" ]]; then
+                  echo "Accepted docs-only CI skip for $check_name on exact PR #$pr_number."
+                  continue 2
+                fi
+              done
+            fi
             if [[ "$check_state" != "completed:success" ]]; then
               echo "::error::Release source PR #$pr_number check '$check_name' is $check_state; refusing to duplicate or bypass PR validation."
               exit 1
             fi
           done
 
-          echo "Verified release source PR #$pr_number ($head_sha): all release-critical PR checks are green."
+          echo "Verified release source PR #$pr_number ($head_sha): all required checks passed or verified docs-only skips accepted."
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 

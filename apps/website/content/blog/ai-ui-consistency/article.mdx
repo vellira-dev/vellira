@@ -186,6 +186,14 @@ That is why Vellira is investing in tooling around the component lifecycle rathe
 
 Humans and AI can both move faster when the project around them carries more of the consistency burden.
 
+## A concrete consistency check: Escape in nested overlays
+
+Consider a settings Modal with a Popover open inside it. A quick check might confirm that Escape closes the Popover, while missing a second problem: the same keypress also asks the parent Modal to close. The code can compile and both controls can appear correct in isolation, yet the combined interaction is wrong.
+
+In Vellira's [nested-overlay Escape case study](/blog/when-nested-modal-escape-handling-reaches-the-wrong-overlay), the React test checks two separate outcomes: the Popover receives a close request and the parent Modal receives none. The case also documents returning focus to the Popover trigger. These are observable interaction requirements, not just visual expectations.
+
+This is not presented as an AI-caused defect. The lesson is that design-system consistency needs explicit, testable boundaries regardless of who writes the change. The [quality-gates walkthrough](/blog/quality-gates-before-component-growth) shows how Vellira separates checking whether required files exist from checking whether those files provide meaningful behavioral evidence.
+
 ## Cross-platform UI raises the stakes
 
 Vellira targets both React and React Native.
