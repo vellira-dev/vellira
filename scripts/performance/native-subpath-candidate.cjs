@@ -91,6 +91,37 @@ try {
     evidence.cases[item.name].exportsResolve = true;
     evidence.cases[item.name].typeTargetExists = true;
   }
+  // Exercise TypeScript's actual Bundler module resolver, not only Node's runtime resolution.
+  // This is an export/declaration resolution proof; it is not a complete typecheck
+  // of the transitive React Native consumer dependency graph.
+  const ts = require(path.join(repo, 'node_modules', 'typescript'));
+  const consumerTs = path.join(temp, 'consumer', 'probe.ts');
+  fs.writeFileSync(consumerTs, [
+    "import type { ButtonProps } from '@vellira-ui/react-native/button';",
+    "import type { ThemeProviderProps } from '@vellira-ui/react-native/theme';",
+    "import type { ButtonProps as RootButtonProps } from '@vellira-ui/react-native';",
+    'export type ConsumerTypes = [ButtonProps, ThemeProviderProps, RootButtonProps];',
+    '',
+  ].join(String.fromCharCode(10)));
+  const compilerOptions = {
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    target: ts.ScriptTarget.ES2022,
+  };
+  const host = ts.createCompilerHost(compilerOptions);
+  for (const item of variants) {
+    const specifier = workspaceManifest.name +
+      (item.exportKey === '.' ? '' : item.exportKey.slice(1));
+    const resolution = ts.resolveModuleName(
+      specifier, consumerTs, compilerOptions, host
+    ).resolvedModule;
+    const expected = path.join(candidate, 'types', item.declaration);
+    if (!resolution || fs.realpathSync(resolution.resolvedFileName) !== fs.realpathSync(expected)) {
+      throw new Error(item.name + ': TypeScript Bundler export mismatch (' +
+        (resolution?.resolvedFileName ?? 'not resolved') + ')');
+    }
+    evidence.cases[item.name].typescriptBundlerResolves = true;
+  }
   const output = path.resolve(process.env.VELLIRA_SUBPATH_EVIDENCE ??
     'consumer-evidence/native-subpath-candidate.json');
   fs.mkdirSync(path.dirname(output), { recursive: true });
