@@ -72,4 +72,32 @@ behavior instead of browser textarea assumptions.
   character-limit mechanism. `Textarea` does not render a character counter;
   applications can compose one with FormField description/error content.
 
+## React Native multiline text input example
+
+Use `Textarea` for a message or comment field in React Native. It wraps
+native `TextInput` behavior with Vellira form-control styling.
+
+```tsx
+import { useState } from 'react';
+import { Textarea } from '@vellira-ui/react-native';
+
+export function MessageField() {
+  const [message, setMessage] = useState('');
+
+  return (
+    <Textarea
+      label='Message'
+      value={message}
+      onValueChange={setMessage}
+      numberOfLines={4}
+      maxLength={500}
+    />
+  );
+}
+```
+
+Set `numberOfLines` for the initial multiline height and `maxLength` for
+the text limit. To display validation feedback, use the `invalid` and
+`error` props. Unlike the HTML `textarea`, React Native renders native
+`TextInput`. See also the [React Textarea documentation](/react/textarea).
 <!-- vellira-component-docs:authored:end -->
