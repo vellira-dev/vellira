@@ -26,9 +26,7 @@ describe('release candidate artifact wiring', () => {
       'scripts/release-candidate/package-artifacts.cjs',
       'utf8'
     );
-    expect(producer).toContain(
-      "require('./native-subpath-contract.cjs')"
-    );
+    expect(producer).toContain("require('./native-subpath-contract.cjs')");
     expect(producer).toContain('assertNativeSubpathContract(packageRoot)');
     expect(producer).toContain('nativeSubpathContract,');
   });
