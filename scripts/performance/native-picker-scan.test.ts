@@ -6,10 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs') as {
-  inspectPublishedPickerReferences: (
-    root: string,
-    files: string[]
-  ) => {
+  inspectPublishedPickerReferences: (root: string, files: string[]) => {
     scannedFiles: { runtime: number; declarations: number };
     references: string[];
   };
