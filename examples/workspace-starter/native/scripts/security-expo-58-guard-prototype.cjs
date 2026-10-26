@@ -15,7 +15,7 @@ const ORIGINAL = '669294947c9a2573b9c637eba5d0d5cd4048fa8da16723a7f761d1cb2eb2d7
 const sha = b => createHash('sha256').update(b).digest('hex');
 const bytes = fs.readFileSync(target);
 const currentHash = sha(bytes);
-const PATCHED = '0000000000000000000000000000000000000000000000000000000000000000';
+const PATCHED = '785a3fd76070b3f59a1ca2369c89bd4195f07eec772c6870241dc175b44b1600';
 assert.ok([ORIGINAL, PATCHED].includes(currentHash),
   'Unrecognized Expo CLI bytes: refuse modification');
 if (currentHash === PATCHED) {
@@ -60,7 +60,7 @@ updated = updated.replace(appendEntry, [
 assert.notEqual(updated, source);
 const nextHash = sha(Buffer.from(updated));
 console.log('Expo transformed candidate SHA-256: ' + nextHash);
-// Record the candidate hash for independent review; never apply in preflight.
+assert.equal(nextHash, PATCHED, 'Expo 58 candidate hash changed; review source before proceeding');
 assert.equal([...updated.matchAll(entry)].length, 1, 'Patched parser must retain one entrypoint');
 assert.equal([...updated.matchAll(zodEntry)].length, 0, 'Original unbounded Zod call must be replaced');
 assert.equal([...updated.matchAll(/Plugin output limit exceeded/g)].length, 1);
