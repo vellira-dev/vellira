@@ -184,8 +184,8 @@ function WorkspaceScreen() {
       statusFilter === 'all' || project.status === statusFilter;
     return (
       sameStatus &&
-      (project.name.toLowerCase().includes(query.trim().toLowerCase()) ||
-        project.description.toLowerCase().includes(query.trim().toLowerCase()))
+      (project.name.toLowerCase().includes((showSearch ? query : '').trim().toLowerCase()) ||
+        project.description.toLowerCase().includes((showSearch ? query : '').trim().toLowerCase()))
     );
   });
 
