@@ -83,7 +83,7 @@ try {
       (item.exportKey === '.' ? '' : item.exportKey.slice(1));
     const resolved = resolver.resolve(specifier);
     const expected = path.join(candidate, 'dist', item.output);
-    if (resolved !== expected) {
+    if (fs.realpathSync(resolved) !== fs.realpathSync(expected)) {
       throw new Error(item.name + ': export target mismatch (' + resolved + ')');
     }
     const typesTarget = path.join(candidate, 'types', item.declaration);
