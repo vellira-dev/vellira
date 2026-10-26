@@ -46,7 +46,7 @@ updated = updated.replace(appendEntry, [
   '}',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
-const PATCHED = sha(Buffer.from(updated)); // diagnostic hash until independently pinned by CI
+const PATCHED = 'e9f9417dac2440cdbea5354b8464769c56428bac9eef99ac00243e8d21e01791';
 assert.equal(sha(Buffer.from(updated)), PATCHED, 'Unexpected candidate output bytes');
 assert.equal([...updated.matchAll(entry)].length, 1, 'Patched parser must retain one entrypoint');
 assert.equal([...updated.matchAll(zodEntry)].length, 0, 'Original unbounded Zod call must be replaced');
