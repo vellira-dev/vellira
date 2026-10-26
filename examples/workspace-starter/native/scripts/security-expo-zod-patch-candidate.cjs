@@ -23,7 +23,11 @@ assert.equal([...updated.matchAll(parse)].length, 1);
 updated = updated.replace(parse, 'DevToolsPluginOutputSchema.safeParse(JSON.parse(txt))');
 const zodEntry = /const result = DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\);/g;
 assert.equal([...updated.matchAll(zodEntry)].length, 1);
-updated = updated.replace(zodEntry, 'const parsed = JSON.parse(txt);\\n            if (Array.isArray(parsed) && parsed.length > 128) return [{ type: "text", text: "Plugin output item limit exceeded", level: "error" }];\\n            const result = DevToolsPluginOutputSchema.safeParse(parsed);');
+updated = updated.replace(zodEntry, [
+  'const parsed = JSON.parse(txt);',
+  'if (Array.isArray(parsed) && parsed.length > 128) return [{ type: "text", text: "Too many output items", level: "error" }];',
+  'const result = DevToolsPluginOutputSchema.safeParse(parsed);',
+].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: sha(Buffer.from(updated)), candidateOnly: true };
 assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
