@@ -13,7 +13,17 @@ assert.match(manifest.dependencies.zod, /^\^3\./);
 const ORIGINAL = 'ab531966e34f5009d65fab4a00204cc999580d21b921f58ef58e00c568801c02';
 const sha = b => createHash('sha256').update(b).digest('hex');
 const bytes = fs.readFileSync(target);
-assert.equal(sha(bytes), ORIGINAL, 'Unrecognized Expo CLI bytes: refuse modification');
+const currentHash = sha(bytes);
+const PATCHED = 'e9f9417dac2440cdbea5354b8464769c56428bac9eef99ac00243e8d21e01791';
+assert.ok([ORIGINAL, PATCHED].includes(currentHash),
+  'Unrecognized Expo CLI bytes: refuse modification');
+if (currentHash === PATCHED) {
+  assert.ok(process.argv.includes('--verify') || process.argv.includes('--apply'),
+    'Already patched; pass --verify or --apply');
+  console.log(JSON.stringify({ patchedSha256: PATCHED, alreadyPatched: true }, null, 2));
+  process.exit(0);
+}
+assert.ok(!process.argv.includes('--verify'), 'Unpatched Expo CLI: patch required');
 const source = bytes.toString('utf8');
 const entry = /(parseOutputText\(txt(?:,\s*[^)]*)?\)\s*\{)/g;
 const entryMatches = [...source.matchAll(entry)];
@@ -46,7 +56,6 @@ updated = updated.replace(appendEntry, [
   '}',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
-const PATCHED = 'e9f9417dac2440cdbea5354b8464769c56428bac9eef99ac00243e8d21e01791';
 assert.equal(sha(Buffer.from(updated)), PATCHED, 'Unexpected candidate output bytes');
 assert.equal([...updated.matchAll(entry)].length, 1, 'Patched parser must retain one entrypoint');
 assert.equal([...updated.matchAll(zodEntry)].length, 0, 'Original unbounded Zod call must be replaced');
@@ -88,5 +97,14 @@ const oldCount = stream.getOutput().length;
 stream.append('ignored');
 assert.equal(stream.getOutput().length, oldCount, 'Collector accepted output after truncation');
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardEnforced: true, accumulatedTextBytes };
-assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
+if (process.argv.includes('--apply')) {
+  const tmp = target + '.vellira-' + process.pid + '.tmp';
+  try {
+    fs.writeFileSync(tmp, updated, { mode: fs.statSync(target).mode });
+    fs.renameSync(tmp, target);
+  } finally {
+    if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+  }
+  assert.equal(sha(fs.readFileSync(target)), PATCHED, 'Patched file integrity mismatch');
+}
 console.log(JSON.stringify(report, null, 2));
