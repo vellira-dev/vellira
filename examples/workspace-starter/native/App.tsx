@@ -855,167 +855,37 @@ function WorkspaceScreen() {
               </ScrollView>
             ) : null}
             {visibleProjects.map((project) => (
-              <View
-                key={project.id}
-                style={{
-                  ...cardStyle,
-                  gap: 10,
-                  padding: 14,
-                  position: 'relative',
-                  zIndex: actionProjectId === project.id ? 2 : 0,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    gap: 12,
-                    alignItems: 'center',
-                  }}
-                >
-                  <View
-                    accessibilityLabel={`Team avatar: ${project.team}`}
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor:
-                        project.team === 'design'
-                          ? theme.semantic.surface.subtle
-                          : surface.canvas,
-                      borderWidth: 1.5,
-                      borderColor: border,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: mainText,
-                        fontSize: 15,
-                        fontWeight: '700',
-                      }}
-                    >
-                      {project.team === 'design'
-                        ? 'DS'
-                        : project.team === 'mobile'
-                          ? 'MB'
-                          : 'PL'}
-                    </Text>
+              <View key={project.id} style={{ borderWidth: 1, borderColor: border, borderRadius: theme.tokens.radius.lg, backgroundColor: surface.subtle, padding: 12, gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View accessibilityLabel={'Team: ' + project.team} style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: surface.canvas, borderWidth: 1, borderColor: border }}>
+                    <Text style={{ color: mainText, fontSize: 13, fontWeight: '700' }}>{project.team === 'design' ? 'DS' : project.team === 'mobile' ? 'MB' : 'PL'}</Text>
                   </View>
-                  <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
-                    <Text
-                      numberOfLines={2}
-                      style={{
-                        color: mainText,
-                        fontSize: 16,
-                        fontWeight: '700',
-                      }}
-                    >
-                      {project.name}
-                    </Text>
-                    <Text style={{ color: subtleText, fontSize: 12 }}>
-                      {project.status === 'active'
-                        ? 'In progress'
-                        : project.status === 'shipped'
-                          ? 'Shipped'
-                          : 'Planned'}
-                    </Text>
-                  </View>
-                  <Pressable
-                    accessibilityRole='button'
-                    accessibilityLabel={`Actions for ${project.name}`}
-                    accessibilityState={{
-                      expanded: actionProjectId === project.id,
-                    }}
-                    onPress={() =>
-                      setActionProjectId(
-                        actionProjectId === project.id ? null : project.id
-                      )
-                    }
-                    style={{
-                      width: 44,
-                      height: 44,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
+                  <Pressable accessibilityRole='button' accessibilityLabel={'Edit ' + project.name} onPress={() => openEdit(project)} style={{ flex: 1, minWidth: 0, gap: 4, justifyContent: 'center', minHeight: 44 }}>
+                    <Text numberOfLines={1} style={{ color: mainText, fontWeight: '700', fontSize: 15 }}>{project.name}</Text>
+                    <Text style={{ color: subtleText, fontSize: 12 }}>{project.team.charAt(0).toUpperCase() + project.team.slice(1)}</Text>
+                  </Pressable>
+                  <Pressable accessibilityRole='button' accessibilityLabel={'Actions for ' + project.name} accessibilityState={{ expanded: actionProjectId === project.id }} onPress={() => setActionProjectId(actionProjectId === project.id ? null : project.id)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
                     <MoreHorizontal size={24} color={mainText} />
                   </Pressable>
                 </View>
-                {project.description ? (
-                  <Text
-                    numberOfLines={2}
-                    style={{ color: subtleText, lineHeight: 19 }}
-                  >
-                    {project.description}
-                  </Text>
-                ) : null}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <Text numberOfLines={1} style={{ flex: 1, color: subtleText, fontSize: 12 }}>{project.description || 'No description'}</Text>
+                  <Pressable accessibilityRole='checkbox' accessibilityLabel={'Complete ' + project.name} accessibilityState={{ checked: project.completed }} onPress={() => toggleProject(project.id, !project.completed)} style={{ minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                    <View style={{ width: 20, height: 20, borderWidth: 2, borderRadius: 5, borderColor: project.completed ? palette.brand : border, backgroundColor: project.completed ? palette.brand : surface.canvas, alignItems: 'center', justifyContent: 'center' }}>
+                      {project.completed ? <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>✓</Text> : null}
+                    </View>
+                  </Pressable>
+                </View>
+                <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: project.status === 'shipped' ? palette.successBg : project.status === 'active' ? palette.brandBg : palette.track }}>
+                  <Text style={{ color: project.status === 'shipped' ? palette.success : project.status === 'active' ? palette.brand : mainText, fontSize: 12, fontWeight: '600' }}>{project.status === 'active' ? 'In progress' : project.status === 'shipped' ? 'Shipped' : 'Planned'}</Text>
+                </View>
                 {actionProjectId === project.id ? (
-                  <View
-                    accessibilityRole='menu'
-                    style={{
-                      alignSelf: 'flex-end',
-                      width: 214,
-                      borderWidth: 1,
-                      borderColor: border,
-                      borderRadius: theme.tokens.radius.lg,
-                      backgroundColor: surface.canvas,
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      gap: 0,
-                    }}
-                  >
-                    <Pressable
-                      accessibilityRole='menuitem'
-                      onPress={() => {
-                        setActionProjectId(null);
-                        openEdit(project);
-                      }}
-                      style={{
-                        minHeight: 44,
-                        paddingHorizontal: 10,
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ color: mainText }}>Edit</Text>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole='menuitem'
-                      onPress={() => {
-                        setActionProjectId(null);
-                        duplicateProject(project.id);
-                      }}
-                      style={{
-                        minHeight: 44,
-                        paddingHorizontal: 10,
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ color: mainText }}>Duplicate</Text>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole='menuitem'
-                      onPress={() => {
-                        setActionProjectId(null);
-                        deleteProject(project.id);
-                      }}
-                      style={{
-                        minHeight: 44,
-                        paddingHorizontal: 10,
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ color: mainText }}>Remove</Text>
-                    </Pressable>
+                  <View accessibilityRole='menu' style={{ alignSelf: 'flex-end', width: 208, borderWidth: 1, borderColor: border, borderRadius: theme.tokens.radius.md, paddingHorizontal: 8, backgroundColor: surface.canvas }}>
+                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); openEdit(project); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Edit</Text></Pressable>
+                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); duplicateProject(project.id); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Duplicate</Text></Pressable>
+                    <Pressable accessibilityRole='menuitem' onPress={() => { setActionProjectId(null); deleteProject(project.id); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: mainText }}>Remove</Text></Pressable>
                   </View>
                 ) : null}
-                <Checkbox
-                  label='Mark completed'
-                  checked={project.completed}
-                  onCheckedChange={(value: boolean) =>
-                    toggleProject(project.id, value)
-                  }
-                />
               </View>
             ))}
             {visibleProjects.length === 0 ? (
