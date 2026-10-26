@@ -21,6 +21,18 @@ describe('release candidate artifact wiring', () => {
     expect(publisher).toContain('npm integrity mismatch');
   });
 
+  it('checks native subpaths in unpacked exact candidate tarballs', () => {
+    const producer = readFileSync(
+      'scripts/release-candidate/package-artifacts.cjs',
+      'utf8'
+    );
+    expect(producer).toContain(
+      "require('./native-subpath-contract.cjs')"
+    );
+    expect(producer).toContain('assertNativeSubpathContract(packageRoot)');
+    expect(producer).toContain('nativeSubpathContract,');
+  });
+
   it('uses the workspace-aware pnpm packer for candidate tarballs', () => {
     const validator = readFileSync(
       'scripts/release-candidate/package-artifacts.cjs',
