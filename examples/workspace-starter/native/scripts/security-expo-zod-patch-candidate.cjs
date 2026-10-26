@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Candidate only. NOT wired to postinstall. Exact source and version are pinned.
+// Source-pinned Native Starter postinstall guard. Exact source and version are pinned.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -47,16 +47,19 @@ assert.equal([...updated.matchAll(appendEntry)].length, 1, 'Installed append sig
 updated = updated.replace(appendEntry, [
   '$1',
   'if (this._truncated) return;',
-  'if (this._totalLength + output.length > 65536) {',
+  'if ((this._velliraOutputBytes || 0) + Buffer.byteLength(output, "utf8") > 65536) {',
   '  this._truncated = true;',
   '  const message = { type: "text", text: "Plugin cumulative output limit exceeded", level: "error" };',
   '  this._output.push(message);',
   '  this.onOutput?.([message]);',
   '  return;',
   '}',
+  'this._velliraOutputBytes = (this._velliraOutputBytes || 0) + Buffer.byteLength(output, "utf8");',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
-assert.equal(sha(Buffer.from(updated)), PATCHED, 'Unexpected candidate output bytes');
+const nextHash = sha(Buffer.from(updated));
+console.log('Expo transformed candidate SHA-256: ' + nextHash);
+assert.equal(nextHash, PATCHED, 'New patch bytes require independently reviewed SHA-256 pin');
 assert.equal([...updated.matchAll(entry)].length, 1, 'Patched parser must retain one entrypoint');
 assert.equal([...updated.matchAll(zodEntry)].length, 0, 'Original unbounded Zod call must be replaced');
 assert.equal([...updated.matchAll(/Plugin output limit exceeded/g)].length, 1);
@@ -82,9 +85,7 @@ assert.deepEqual(many.getOutput().map(x => x.text), ['Too many output items']);
 const malformed = new Collector();
 malformed.append('hello');
 assert.equal(malformed.getOutput()[0].text, 'hello');
-// Negative streaming proof: each chunk is within the per-append limit, yet
-// the collector accepts more than the proposed total budget across chunks.
-// This must be addressed before enabling a runtime patch.
+// Verify cumulative streaming budget over multiple independently valid chunks.
 const stream = new Collector();
 const piece = 's'.repeat(32768);
 for (let i = 0; i < 4; i += 1) stream.append(piece);
@@ -96,6 +97,18 @@ assert.equal(stream.getOutput().at(-1).text, 'Plugin cumulative output limit exc
 const oldCount = stream.getOutput().length;
 stream.append('ignored');
 assert.equal(stream.getOutput().length, oldCount, 'Collector accepted output after truncation');
+const unicode = new Collector();
+unicode.append('é'.repeat(24000));
+unicode.append('é'.repeat(12000));
+assert.equal(unicode.isTruncated(), true, 'UTF-8 byte budget bypassed by multibyte output');
+assert.deepEqual(unicode.getOutput().map(item => item.text), [
+  'é'.repeat(24000), 'Plugin cumulative output limit exceeded',
+]);
+const exact = new Collector();
+exact.append('a'.repeat(65536));
+assert.equal(exact.isTruncated(), false, 'Exact boundary should be allowed');
+exact.append('b');
+assert.equal(exact.isTruncated(), true, 'One byte past boundary should truncate');
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardEnforced: true, accumulatedTextBytes };
 if (process.argv.includes('--apply')) {
   const tmp = target + '.vellira-' + process.pid + '.tmp';
