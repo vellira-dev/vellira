@@ -172,7 +172,7 @@ function WorkspaceScreen() {
   const mainText = theme.semantic.text.primary;
   const subtleText = theme.semantic.text.subtle;
   const cardStyle = {
-    padding: 18,
+    padding: 14,
     borderRadius: theme.tokens.radius.lg,
     borderWidth: 1,
     borderColor: border,
@@ -292,7 +292,7 @@ function WorkspaceScreen() {
           {
             ...project,
             id: nextId(current.projects),
-            name: project.name + ' copy',
+            name: project.name.replace(/(?: copy)+$/i, '') + ' copy',
             completed: false,
             status: 'planned',
             previousStatus: undefined,
@@ -323,7 +323,7 @@ function WorkspaceScreen() {
     >
       <ScrollView
         keyboardShouldPersistTaps='handled'
-        contentContainerStyle={{ gap: 22, padding: 20, paddingBottom: 55 }}
+        contentContainerStyle={{ gap: 16, padding: 16, paddingBottom: 40 }}
       >
         <View style={{ gap: 8 }}>
           <Text
@@ -354,7 +354,14 @@ function WorkspaceScreen() {
         </View>
 
         {notice ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
             <Text accessibilityLiveRegion='polite' style={{ color: mainText }}>
               {notice}
             </Text>
@@ -379,6 +386,16 @@ function WorkspaceScreen() {
                 Undo
               </Button>
             ) : null}
+            <Button
+              appearance='ghost'
+              color='neutral'
+              onPress={() => {
+                setNotice('');
+                setRemovedProject(null);
+              }}
+            >
+              Dismiss
+            </Button>
           </View>
         ) : null}
 
@@ -395,7 +412,7 @@ function WorkspaceScreen() {
           </Tabs.List>
 
           <Tabs.Content value='overview'>
-            <View style={{ gap: 14, paddingTop: 20 }}>
+            <View style={{ gap: 14, paddingTop: 4 }}>
               <View style={cardStyle}>
                 <Text style={{ color: subtleText }}>PROJECTS</Text>
                 <Text
@@ -443,7 +460,7 @@ function WorkspaceScreen() {
           </Tabs.Content>
 
           <Tabs.Content value='projects'>
-            <View style={{ gap: 16, paddingTop: 20 }}>
+            <View style={{ gap: 14, paddingTop: 4 }}>
               <Input
                 label='Search projects'
                 value={query}
@@ -531,7 +548,7 @@ function WorkspaceScreen() {
           </Tabs.Content>
 
           <Tabs.Content value='settings'>
-            <View style={{ paddingTop: 20, gap: 16 }}>
+            <View style={{ paddingTop: 4, gap: 16 }}>
               <View style={cardStyle}>
                 <Text
                   style={{ fontWeight: '700', fontSize: 22, color: mainText }}
