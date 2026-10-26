@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/native-expo-58-upgrade-preflight.yml'
+      - 'examples/workspace-starter/native/scripts/security-expo-58-source-preflight.cjs'
   workflow_dispatch:
 
 permissions:
@@ -82,6 +83,8 @@ jobs:
           npx --yes expo-doctor
           echo '=== Migrated package versions ==='
           npm ls expo react-native react-native-reanimated @expo/metro-runtime zod --all || true
+      - name: Verify pinned Expo 58 CLI parser source structure
+        run: node examples/workspace-starter/native/scripts/security-expo-58-source-preflight.cjs "$RUNNER_TEMP/expo58"
       - name: Fingerprint Expo 58 CLI parser for safe Zod guard migration
         shell: bash
         run: |
