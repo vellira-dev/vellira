@@ -20,7 +20,6 @@ assert.equal([...source.matchAll(entry)].length, 1);
 let updated = source.replace(entry, '$1\n        if (Buffer.byteLength(txt, "utf8") > 65536) return [{ type: "text", text: "Plugin output limit exceeded", level: "error" }];');
 const parse = /DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\)/g;
 assert.equal([...updated.matchAll(parse)].length, 1);
-updated = updated.replace(parse, 'DevToolsPluginOutputSchema.safeParse(JSON.parse(txt))');
 const zodEntry = /const result = DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\);/g;
 assert.equal([...updated.matchAll(zodEntry)].length, 1);
 updated = updated.replace(zodEntry, [
