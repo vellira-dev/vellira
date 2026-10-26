@@ -158,9 +158,8 @@ try {
         scriptCount: js.length,
       };
     }
-    let developmentBundles = null;
+    const developmentBundles = {};
     {
-      developmentBundles = {};
       sourceInventories[kind] = {};
       for (const platform of platforms) {
         const bundlePath = path.join(dir, 'dev-' + platform + '.jsbundle');
@@ -197,7 +196,9 @@ try {
         }
         const groupedSources = {};
         const normalizedSources = sourceMap.sources.map((source) => source.replaceAll('\\\\', '/'));
-        sourceInventories[kind][platform] = new Set(normalizedSources);
+        sourceInventories[kind][platform] = new Set(
+          normalizedSources.map((source) => source.replaceAll(dir.replaceAll('\\\\', '/'), '<fixture>'))
+        );
         for (const normalized of normalizedSources) {
           const group = normalized.includes('@vellira-ui/')
             ? '@vellira-ui'
@@ -214,7 +215,7 @@ try {
           bundleBytes: Buffer.byteLength(content),
           sourceMapModules: sourceMap.sources.length,
           sourceMapModuleGroups: groupedSources,
-          buttonMarkerPresent: true,
+          expectedMarkerPresent: true,
           note: 'Source map counts are module inventory, not proportional output-byte attribution or device runtime proof',
         };
       }
