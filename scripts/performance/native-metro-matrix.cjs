@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs');
 
 const version = process.env.VELLIRA_NATIVE_VERSION;
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
@@ -126,22 +127,14 @@ try {
       );
       const packedFiles = walk(path.join(nativeRoot, 'dist'));
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
-      const references = [];
-      for (const file of packedFiles) {
-        if (!/\.(?:js|d\.ts|d\.mts)$/.test(file)) continue;
-        if (fs.readFileSync(file, 'utf8').includes('@react-native-picker/picker')) {
-          references.push(path.relative(nativeRoot, file).replaceAll(path.sep, '/'));
-        }
-      }
-      if (references.length) {
-        throw new Error(kind + ': published native dist references picker: ' + references.join(', '));
-      }
+      const { references, scannedFiles } = inspectPublishedPickerReferences(nativeRoot, packedFiles);
       nativePackageInventory = {
         requiredPeers: nativeManifest.peerDependencies ?? {},
         optionalPeers: nativeManifest.peerDependenciesMeta ?? {},
         distFileCount: packedFiles.length,
         distTotalBytes: packedFiles.reduce((n, file) => n + fs.statSync(file).size, 0),
         pickerReferencesInPackedDist: references,
+        scannedFiles,
         note: 'Static packed-dist inspection; does not prove on-device native-module absence',
       };
     }
