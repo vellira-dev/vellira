@@ -155,7 +155,36 @@ try {
         scriptCount: js.length,
       };
     }
-    evidence.cases[kind] = { installedVersion, pickerInstalled: false, nativePackageInventory, platforms: measurements };
+    let developmentBundles = null;
+    if (kind === 'button-select') {
+      developmentBundles = {};
+      for (const platform of platforms) {
+        const bundlePath = path.join(dir, 'dev-' + platform + '.jsbundle');
+        const assetsDir = path.join(dir, 'dev-' + platform + '-assets');
+        run(process.execPath, [
+          expoBin, 'export:embed',
+          '--platform', platform,
+          '--dev', 'true',
+          '--entry-file', 'index.js',
+          '--bundle-output', bundlePath,
+          '--assets-dest', assetsDir,
+          '--minify', 'false',
+        ], dir);
+        if (!fs.existsSync(bundlePath)) {
+          throw new Error(kind + '/' + platform + ': development bundle missing');
+        }
+        const content = fs.readFileSync(bundlePath, 'utf8');
+        if (content.length < 10_000 || !content.includes('Metro Button')) {
+          throw new Error(kind + '/' + platform + ': development bundle lacks Button surface');
+        }
+        developmentBundles[platform] = {
+          bundleBytes: Buffer.byteLength(content),
+          buttonMarkerPresent: true,
+          note: 'Development Metro compilation only, not device runtime or Hermes proof',
+        };
+      }
+    }
+    evidence.cases[kind] = { installedVersion, pickerInstalled: false, nativePackageInventory, platforms: measurements, developmentBundles };
     console.log('[native-metro-1906]', kind, JSON.stringify(evidence.cases[kind]));
   }
   for (const platform of platforms) {
