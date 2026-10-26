@@ -465,79 +465,59 @@ function WorkspaceScreen() {
         ) : null}
 
         {section === 'overview' ? (
-          <View style={{ gap: 16 }}>
-            <Text style={{ color: mainText, fontSize: 20, fontWeight: '700' }}>
-              Your workspace at a glance
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ gap: 18 }}>
+            <View style={{ gap: 4 }}>
+              <Text style={{ color: subtleText, fontSize: 12, fontWeight: '600', letterSpacing: 0.7 }}>
+                WORKSPACE OVERVIEW
+              </Text>
+              <Text accessibilityRole='header' style={{ color: mainText, fontSize: 23, fontWeight: '700' }}>
+                Dashboard
+              </Text>
+              <Text style={{ color: subtleText }}>Your projects at a glance</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               {[
-                { label: 'Total', value: data.projects.length },
-                { label: 'In progress', value: activeCount },
-                { label: 'Completed', value: completedCount },
+                { label: 'Total projects', value: data.projects.length, detail: 'All projects' },
+                { label: 'Completed', value: completedCount, detail: `${data.projects.length ? Math.round((completedCount / data.projects.length) * 100) : 0}% completion` },
               ].map((metric) => (
-                <View
-                  key={metric.label}
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    padding: 14,
-                    borderWidth: 1,
-                    borderColor: border,
-                    borderRadius: theme.tokens.radius.lg,
-                    backgroundColor: surface.subtle,
-                    gap: 6,
-                  }}
-                >
-                  <Text
-                    style={{ color: mainText, fontSize: 28, fontWeight: '700' }}
-                  >
-                    {metric.value}
-                  </Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>
-                    {metric.label}
-                  </Text>
+                <View key={metric.label} style={{ flex: 1, minWidth: 0, padding: 16, borderRadius: theme.tokens.radius.lg, backgroundColor: surface.subtle, gap: 7 }}>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>{metric.label}</Text>
+                  <Text style={{ color: mainText, fontSize: 34, fontWeight: '700' }}>{metric.value}</Text>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>{metric.detail}</Text>
                 </View>
               ))}
             </View>
             <View style={cardStyle}>
-              <Text
-                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
-              >
-                Recent activity
-              </Text>
-              {data.projects.slice(0, 4).map((project) => (
-                <Pressable
-                  key={project.id}
-                  accessibilityRole='button'
-                  accessibilityLabel={`View ${project.name} in Projects`}
-                  onPress={() => {
-                    setQuery(project.name);
-                    setStatusFilter('all');
-                    setSection('projects');
-                  }}
-                  style={{
-                    minHeight: 48,
-                    gap: 3,
-                    justifyContent: 'center',
-                    borderTopWidth: 1,
-                    borderColor: border,
-                  }}
-                >
-                  <Text
-                    numberOfLines={1}
-                    style={{ color: mainText, fontWeight: '600' }}
-                  >
-                    {project.name}
-                  </Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>
-                    {project.status} · {project.team}
-                  </Text>
-                </Pressable>
-              ))}
+              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Project progress</Text>
+              <View accessibilityLabel={`${completedCount} of ${data.projects.length} projects completed`} style={{ flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: surface.canvas }}>
+                <View style={{ width: `${data.projects.length ? (completedCount / data.projects.length) * 100 : 0}%`, backgroundColor: theme.semantic.text.primary }} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                <Text style={{ color: subtleText, fontSize: 12 }}>Completed · {completedCount}</Text>
+                <Text style={{ color: subtleText, fontSize: 12 }}>Remaining · {data.projects.length - completedCount}</Text>
+              </View>
+            </View>
+            <View style={cardStyle}>
+              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Projects by status</Text>
+              {(['planned', 'active', 'shipped'] as const).map((projectStatus) => {
+                const count = data.projects.filter((project) => project.status === projectStatus).length;
+                const percentage = data.projects.length ? (count / data.projects.length) * 100 : 0;
+                return (
+                  <View key={projectStatus} style={{ gap: 7 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: mainText, fontSize: 14 }}>
+                        {projectStatus === 'planned' ? 'Planned' : projectStatus === 'active' ? 'In progress' : 'Shipped'}
+                      </Text>
+                      <Text style={{ color: subtleText, fontWeight: '600' }}>{count}</Text>
+                    </View>
+                    <View style={{ height: 10, borderRadius: 5, backgroundColor: surface.canvas, overflow: 'hidden' }}>
+                      <View style={{ height: '100%', width: `${percentage}%`, borderRadius: 5, backgroundColor: theme.semantic.text.primary, opacity: projectStatus === 'planned' ? 0.4 : projectStatus === 'active' ? 0.7 : 1 }} />
+                    </View>
+                  </View>
+                );
+              })}
               {data.projects.length === 0 ? (
-                <Text style={{ color: subtleText }}>
-                  No projects yet. Create your first one.
-                </Text>
+                <Text style={{ color: subtleText }}>No project data yet. Create a project to populate the charts.</Text>
               ) : null}
             </View>
           </View>
