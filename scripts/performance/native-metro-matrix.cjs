@@ -128,7 +128,7 @@ try {
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
       const references = [];
       for (const file of packedFiles) {
-        if (!/\\.(?:js|d\\.ts|d\\.mts)$/.test(file)) continue;
+        if (!/\.(?:js|d\.ts|d\.mts)$/.test(file)) continue;
         if (fs.readFileSync(file, 'utf8').includes('@react-native-picker/picker')) {
           references.push(path.relative(nativeRoot, file).replaceAll(path.sep, '/'));
         }
