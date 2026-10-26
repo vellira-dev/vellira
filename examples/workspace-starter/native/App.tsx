@@ -584,85 +584,43 @@ function WorkspaceScreen() {
         ) : null}
 
         {section === 'settings' ? (
-          <View style={{ gap: 14 }}>
-            <View style={cardStyle}>
-              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Projects by status</Text>
-              {(['planned', 'active', 'shipped'] as const).map((itemStatus) => {
-                const count = data.projects.filter((project) => project.status === itemStatus).length;
-                const percentage = data.projects.length ? (count / data.projects.length) * 100 : 0;
-                return (
-                  <View key={itemStatus} style={{ gap: 6 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ color: mainText }}>{itemStatus === 'active' ? 'In progress' : itemStatus === 'shipped' ? 'Shipped' : 'Planned'}</Text>
-                      <Text style={{ color: subtleText }}>{count}</Text>
-                    </View>
-                    <View style={{ height: 9, borderRadius: 5, backgroundColor: surface.canvas, overflow: 'hidden' }}>
-                      <View style={{ width: `${percentage}%`, height: 9, borderRadius: 5, backgroundColor: mainText }} />
-                    </View>
-                  </View>
-                );
-              })}
+          <View style={{ gap: 18 }}>
+            <View style={{ gap: 8 }}>
+              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>WORKSPACE</Text>
+              <View style={cardStyle}>
+                <Input label='Workspace name' value={data.name} onValueChange={(next: string) => setData((current) => ({ ...current, name: next }))} />
+              </View>
             </View>
-            <View style={cardStyle}>
-              <Text
-                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
-              >
-                Workspace
-              </Text>
-              <Input
-                label='Workspace name'
-                value={data.name}
-                onValueChange={(next: string) =>
-                  setData((current) => ({ ...current, name: next }))
-                }
-              />
-              <Checkbox
-                label='Product notifications'
-                description='Local preference only; no emails are sent.'
-                checked={data.notifications}
-                onCheckedChange={(notifications: boolean) =>
-                  setData((current) => ({ ...current, notifications }))
-                }
-              />
-            </View>
-            <View style={cardStyle}>
-              <Text
-                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
-              >
-                Appearance
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <View style={{ gap: 8 }}>
+              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>APPEARANCE</Text>
+              <View style={cardStyle}>
                 {(['light', 'dark', 'highContrast'] as const).map((option) => (
-                  <Button
-                    key={option}
-                    appearance={themeName === option ? 'solid' : 'outline'}
-                    color={themeName === option ? 'primary' : 'neutral'}
-                    onPress={() => setTheme(option)}
-                  >
-                    {option === 'highContrast'
-                      ? 'High contrast'
-                      : option === 'light'
-                        ? 'Light'
-                        : 'Dark'}
-                  </Button>
+                  <Pressable key={option} accessibilityRole='radio' accessibilityState={{ checked: themeName === option }} onPress={() => setTheme(option)} style={{ minHeight: 48, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: option === 'highContrast' ? 0 : 1, borderColor: border }}>
+                    <Text style={{ color: mainText }}>{option === 'highContrast' ? 'High contrast' : option === 'light' ? 'Light' : 'Dark'}</Text>
+                    <Text style={{ color: mainText }}>{themeName === option ? '✓' : ''}</Text>
+                  </Pressable>
                 ))}
               </View>
             </View>
-            <Button
-              appearance='outline'
-              color='danger'
-              onPress={() => setResetOpen(true)}
-            >
-              Restore sample data
-            </Button>
-            <Text
-              style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}
-            >
-              Vellira Native Starter · Offline demo
-            </Text>
+            <View style={{ gap: 8 }}>
+              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>PREFERENCES</Text>
+              <View style={cardStyle}>
+                <Checkbox label='Product notifications' description='Saved locally. No emails are sent.' checked={data.notifications} onCheckedChange={(notifications: boolean) => setData((current) => ({ ...current, notifications }))} />
+              </View>
+            </View>
+            <View style={{ gap: 8 }}>
+              <Text accessibilityRole='header' style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}>DATA</Text>
+              <View style={cardStyle}>
+                <Pressable accessibilityRole='button' onPress={() => setResetOpen(true)} style={{ minHeight: 48, justifyContent: 'center' }}>
+                  <Text style={{ color: mainText, fontWeight: '600' }}>Restore sample data</Text>
+                </Pressable>
+                <Text style={{ color: subtleText, fontSize: 12 }}>This replaces your locally saved demo projects and settings.</Text>
+              </View>
+            </View>
+            <Text style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}>Vellira Native Starter · Offline demo</Text>
           </View>
         ) : null}
-      </ScrollView>
+            </ScrollView>
 
       <View
         accessibilityRole='tablist'
