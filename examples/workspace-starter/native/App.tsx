@@ -319,7 +319,6 @@ function WorkspaceScreen() {
   const activeCount = data.projects.filter(
     (item) => item.status === 'active'
   ).length;
-  const accent = theme.semantic.text.primary;
 
   return (
     <SafeAreaView
