@@ -82,6 +82,30 @@ jobs:
           npx --yes expo-doctor
           echo '=== Migrated package versions ==='
           npm ls expo react-native react-native-reanimated @expo/metro-runtime zod --all || true
+      - name: Fingerprint Expo 58 CLI parser for safe Zod guard migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/expo58"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+          const cliRoot = path.join(process.cwd(), 'node_modules/expo/node_modules/@expo/cli');
+          const pkg = require(path.join(cliRoot, 'package.json'));
+          const file = path.join(cliRoot, 'build/src/start/server/DevToolsPluginCliExtensionResults.js');
+          const source = fs.readFileSync(file);
+          const result = {
+            cli: pkg.version,
+            zodRequirement: pkg.dependencies.zod,
+            sourceLength: source.length,
+            sha256: crypto.createHash('sha256').update(source).digest('hex'),
+            sourceContainsZodOutputParse: source.includes('DevToolsPluginOutputSchema'),
+          };
+          console.log(JSON.stringify(result, null, 2));
+          fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'expo58-cli-parser-evidence.json'),
+            JSON.stringify(result, null, 2) + '\n');
+          NODE
       - name: Export reviewable candidate manifests
         if: always()
         shell: bash
@@ -90,6 +114,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/expo58-evidence"
           if test -f "$RUNNER_TEMP/expo58/package.json"; then
             cp "$RUNNER_TEMP/expo58/package.json" "$RUNNER_TEMP/expo58-evidence/package.json"
+          fi
+          if test -f "$RUNNER_TEMP/expo58-cli-parser-evidence.json"; then
+            cp "$RUNNER_TEMP/expo58-cli-parser-evidence.json" "$RUNNER_TEMP/expo58-evidence/cli-parser-evidence.json"
           fi
           if test -f "$RUNNER_TEMP/expo58/app.json"; then
             cp "$RUNNER_TEMP/expo58/app.json" "$RUNNER_TEMP/expo58-evidence/app.json"
