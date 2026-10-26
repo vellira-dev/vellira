@@ -160,7 +160,10 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(page).not.toContain('<main');
     expect(native).toContain('themeStorageKey');
     expect(native).toContain('setResetOpen(true)');
-    expect(native).toContain('openEdit(project)');
+    expect(native).toContain('openEdit(actionProject)');
+    expect(native).toContain('setActionProjectId(project.id)');
+    expect(native).toContain('duplicateProject(actionProject.id)');
+    expect(native).toContain('deleteProject(actionProject.id)');
     expect(native).toContain("label='Team'");
     expect(native).toContain("label='Status'");
     expect(native).toContain('Undo');
