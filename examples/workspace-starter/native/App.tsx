@@ -478,7 +478,7 @@ function WorkspaceScreen() {
               <Text
                 style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
               >
-                Recent projects
+                Recent activity
               </Text>
               {data.projects.slice(0, 4).map((project) => (
                 <Pressable
@@ -514,17 +514,7 @@ function WorkspaceScreen() {
                   No projects yet. Create your first one.
                 </Text>
               ) : null}
-              <Button
-                appearance='outline'
-                color='neutral'
-                onPress={() => {
-                  setQuery('');
-                  setStatusFilter('all');
-                  setSection('projects');
-                }}
-              >
-                See all projects
-              </Button>
+
             </View>
           </View>
         ) : null}
@@ -595,6 +585,24 @@ function WorkspaceScreen() {
 
         {section === 'settings' ? (
           <View style={{ gap: 14 }}>
+            <View style={cardStyle}>
+              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Projects by status</Text>
+              {(['planned', 'active', 'shipped'] as const).map((itemStatus) => {
+                const count = data.projects.filter((project) => project.status === itemStatus).length;
+                const percentage = data.projects.length ? (count / data.projects.length) * 100 : 0;
+                return (
+                  <View key={itemStatus} style={{ gap: 6 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: mainText }}>{itemStatus === 'active' ? 'In progress' : itemStatus === 'shipped' ? 'Shipped' : 'Planned'}</Text>
+                      <Text style={{ color: subtleText }}>{count}</Text>
+                    </View>
+                    <View style={{ height: 9, borderRadius: 5, backgroundColor: surface.canvas, overflow: 'hidden' }}>
+                      <View style={{ width: `${percentage}%`, height: 9, borderRadius: 5, backgroundColor: mainText }} />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
             <View style={cardStyle}>
               <Text
                 style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
