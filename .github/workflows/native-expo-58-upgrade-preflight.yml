@@ -65,6 +65,18 @@ jobs:
           npm install expo@^58.0.0 react-native@^0.88.0 --ignore-scripts --no-audit --no-fund
           npx --no-install expo install --fix --npm
           npm ci --ignore-scripts --no-audit --no-fund
+          # SDK 58 removed the legacy newArchEnabled app config field.
+          # Change only the isolated candidate, not the SDK 57 source.
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'app.json';
+          const app = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (Object.prototype.hasOwnProperty.call(app.expo ?? {}, 'newArchEnabled')) {
+            delete app.expo.newArchEnabled;
+            fs.writeFileSync(file, JSON.stringify(app, null, 2) + '\n');
+            console.log('Removed SDK 57 newArchEnabled from isolated Expo 58 candidate');
+          }
+          NODE
           npx --no-install expo install --check
           npm run typecheck
           npx --yes expo-doctor
@@ -78,6 +90,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/expo58-evidence"
           if test -f "$RUNNER_TEMP/expo58/package.json"; then
             cp "$RUNNER_TEMP/expo58/package.json" "$RUNNER_TEMP/expo58-evidence/package.json"
+          fi
+          if test -f "$RUNNER_TEMP/expo58/app.json"; then
+            cp "$RUNNER_TEMP/expo58/app.json" "$RUNNER_TEMP/expo58-evidence/app.json"
           fi
           if test -f "$RUNNER_TEMP/expo58/package-lock.json"; then
             cp "$RUNNER_TEMP/expo58/package-lock.json" "$RUNNER_TEMP/expo58-evidence/package-lock.json"
