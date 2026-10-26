@@ -82,7 +82,7 @@ jobs:
           if test -f "$RUNNER_TEMP/expo58/package-lock.json"; then
             cp "$RUNNER_TEMP/expo58/package-lock.json" "$RUNNER_TEMP/expo58-evidence/package-lock.json"
           fi
-      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae1 # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: expo-58-migration-candidate
