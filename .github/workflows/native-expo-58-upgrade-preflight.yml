@@ -53,3 +53,38 @@ jobs:
           console.log('ZOD_VERSIONS='+JSON.stringify(zod.map(([path,p])=>({path,version:p.version}))));
           NODE
           echo 'Preflight only: do not call this a security remediation until compatible dependency tree and consumer tests are proven.'
+      - name: Build full SDK 58 migration candidate in isolated directory
+        shell: bash
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/expo58"
+          # Preserve security integrity: do not apply the Expo CLI 57 SHA-pinned patch to SDK 58.
+          npm install expo@^58.0.0 react-native@^0.88.0 --ignore-scripts --no-audit --no-fund
+          npx --no-install expo install --fix --npm
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx --no-install expo install --check
+          npm run typecheck
+          npx --yes expo-doctor
+          echo '=== Migrated package versions ==='
+          npm ls expo react-native react-native-reanimated @expo/metro-runtime zod --all || true
+      - name: Export reviewable candidate manifests
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/expo58-evidence"
+          if test -f "$RUNNER_TEMP/expo58/package.json"; then
+            cp "$RUNNER_TEMP/expo58/package.json" "$RUNNER_TEMP/expo58-evidence/package.json"
+          fi
+          if test -f "$RUNNER_TEMP/expo58/package-lock.json"; then
+            cp "$RUNNER_TEMP/expo58/package-lock.json" "$RUNNER_TEMP/expo58-evidence/package-lock.json"
+          fi
+      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae1 # v4
+        if: always()
+        with:
+          name: expo-58-migration-candidate
+          path: ${{ runner.temp }}/expo58-evidence/
+          retention-days: 7
