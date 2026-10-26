@@ -328,6 +328,18 @@ function WorkspaceScreen() {
   }
 
   const completedCount = data.projects.filter((item) => item.completed).length;
+  const totalCount = data.projects.length;
+  const completionRate = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+  const palette = themeName === 'dark'
+    ? { brand: '#B39AFF', brandBg: '#33284C', brandBorder: '#655095', success: '#79DCAB', successBg: '#203B34', successBorder: '#357356', amber: '#FFD07D', track: '#332D42' }
+    : themeName === 'highContrast'
+      ? { brand: '#6434C7', brandBg: '#FFFFFF', brandBorder: '#6434C7', success: '#006C46', successBg: '#FFFFFF', successBorder: '#006C46', amber: '#996000', track: '#D2CADE' }
+      : { brand: '#7050ED', brandBg: '#F2ECFF', brandBorder: '#DCCFFF', success: '#087B55', successBg: '#EAF9F1', successBorder: '#B8E7D0', amber: '#C7831B', track: '#F0ECF8' };
+  const statuses = [
+    { key: 'planned', name: 'Planned', count: data.projects.filter((p) => p.status === 'planned').length, color: '#B8A5FA' },
+    { key: 'active', name: 'In progress', count: data.projects.filter((p) => p.status === 'active').length, color: palette.amber },
+    { key: 'shipped', name: 'Shipped', count: data.projects.filter((p) => p.status === 'shipped').length, color: palette.brand },
+  ];
 
   return (
     <SafeAreaView
@@ -374,7 +386,7 @@ function WorkspaceScreen() {
               }}
             >
               {section === 'overview'
-                ? 'Overview'
+                ? 'Dashboard'
                 : section === 'projects'
                   ? 'Projects'
                   : 'Settings'}
@@ -394,10 +406,10 @@ function WorkspaceScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: 24,
-                backgroundColor: surface.subtle,
+                backgroundColor: palette.brand,
               }}
             >
-              <Plus size={24} color={mainText} />
+              <Plus size={24} color='#FFFFFF' />
             </Pressable>
           ) : null}
         </View>
@@ -463,162 +475,47 @@ function WorkspaceScreen() {
 
         {section === 'overview' ? (
           <View style={{ gap: 18 }}>
-            <View style={{ gap: 4 }}>
-              <Text
-                style={{
-                  color: subtleText,
-                  fontSize: 12,
-                  fontWeight: '600',
-                  letterSpacing: 0.7,
-                }}
-              >
-                WORKSPACE OVERVIEW
-              </Text>
-              <Text style={{ color: subtleText }}>
-                Your projects at a glance
-              </Text>
-            </View>
+            <Text style={{ color: subtleText, fontSize: 15 }}>Your projects at a glance</Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {[
-                {
-                  label: 'Total projects',
-                  value: data.projects.length,
-                  detail: 'All projects',
-                },
-                {
-                  label: 'Completed',
-                  value: completedCount,
-                  detail: `${data.projects.length ? Math.round((completedCount / data.projects.length) * 100) : 0}% completion`,
-                },
+                { label: 'Total projects', value: totalCount, caption: 'All projects', bg: palette.brandBg, outline: palette.brandBorder, accent: palette.brand },
+                { label: 'Completed', value: completedCount, caption: completionRate + '% completion', bg: palette.successBg, outline: palette.successBorder, accent: palette.success },
               ].map((metric) => (
-                <View
-                  key={metric.label}
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    padding: 16,
-                    borderRadius: theme.tokens.radius.lg,
-                    backgroundColor: surface.subtle,
-                    gap: 7,
-                  }}
-                >
-                  <Text style={{ color: subtleText, fontSize: 12 }}>
-                    {metric.label}
-                  </Text>
-                  <Text
-                    style={{ color: mainText, fontSize: 34, fontWeight: '700' }}
-                  >
-                    {metric.value}
-                  </Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>
-                    {metric.detail}
-                  </Text>
+                <View key={metric.label} style={{ flex: 1, minWidth: 0, padding: 16, borderRadius: theme.tokens.radius.lg, backgroundColor: metric.bg, borderWidth: 1, borderColor: metric.outline, gap: 8 }}>
+                  <Text style={{ color: metric.accent, fontSize: 13, fontWeight: '700' }}>{metric.label}</Text>
+                  <Text style={{ color: mainText, fontSize: 35, fontWeight: '700' }}>{metric.value}</Text>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>{metric.caption}</Text>
                 </View>
               ))}
             </View>
             <View style={cardStyle}>
-              <Text
-                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
-              >
-                Project progress
-              </Text>
-              <View
-                accessibilityLabel={`${completedCount} of ${data.projects.length} projects completed`}
-                style={{
-                  flexDirection: 'row',
-                  height: 14,
-                  borderRadius: 7,
-                  overflow: 'hidden',
-                  backgroundColor: surface.canvas,
-                }}
-              >
-                <View
-                  style={{
-                    width: `${data.projects.length ? (completedCount / data.projects.length) * 100 : 0}%`,
-                    backgroundColor: theme.semantic.text.primary,
-                  }}
-                />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ color: mainText, fontSize: 19, fontWeight: '700' }}>Project progress</Text>
+                <Text style={{ color: palette.brand, fontWeight: '700' }}>{completionRate}%</Text>
               </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                }}
-              >
-                <Text style={{ color: subtleText, fontSize: 12 }}>
-                  Completed · {completedCount}
-                </Text>
-                <Text style={{ color: subtleText, fontSize: 12 }}>
-                  Remaining · {data.projects.length - completedCount}
-                </Text>
+              <View accessibilityLabel={completedCount + ' of ' + totalCount + ' projects completed'} style={{ height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: palette.track }}>
+                <View style={{ width: (completionRate + '%') as `${number}%`, height: '100%', backgroundColor: palette.brand, borderRadius: 7 }} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                <Text style={{ color: subtleText, fontSize: 12 }}>Completed · {completedCount}</Text>
+                <Text style={{ color: subtleText, fontSize: 12 }}>Remaining · {totalCount - completedCount}</Text>
               </View>
             </View>
             <View style={cardStyle}>
-              <Text
-                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
-              >
-                Projects by status
-              </Text>
-              {(['planned', 'active', 'shipped'] as const).map(
-                (projectStatus) => {
-                  const count = data.projects.filter(
-                    (project) => project.status === projectStatus
-                  ).length;
-                  const percentage = data.projects.length
-                    ? (count / data.projects.length) * 100
-                    : 0;
-                  return (
-                    <View key={projectStatus} style={{ gap: 7 }}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <Text style={{ color: mainText, fontSize: 14 }}>
-                          {projectStatus === 'planned'
-                            ? 'Planned'
-                            : projectStatus === 'active'
-                              ? 'In progress'
-                              : 'Shipped'}
-                        </Text>
-                        <Text style={{ color: subtleText, fontWeight: '600' }}>
-                          {count}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          height: 10,
-                          borderRadius: 5,
-                          backgroundColor: surface.canvas,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <View
-                          style={{
-                            height: '100%',
-                            width: `${percentage}%`,
-                            borderRadius: 5,
-                            backgroundColor: theme.semantic.text.primary,
-                            opacity:
-                              projectStatus === 'planned'
-                                ? 0.4
-                                : projectStatus === 'active'
-                                  ? 0.7
-                                  : 1,
-                          }}
-                        />
-                      </View>
-                    </View>
-                  );
-                }
-              )}
-              {data.projects.length === 0 ? (
-                <Text style={{ color: subtleText }}>
-                  No project data yet. Create a project to populate the charts.
-                </Text>
-              ) : null}
+              <Text style={{ color: mainText, fontSize: 19, fontWeight: '700' }}>Projects by status</Text>
+              <View accessibilityLabel='Project distribution by status' style={{ flexDirection: 'row', height: 20, borderRadius: 10, overflow: 'hidden', backgroundColor: palette.track }}>
+                {statuses.map((status) => (
+                  <View key={status.key} style={{ width: ((totalCount ? (status.count / totalCount) * 100 : 0) + '%') as `${number}%`, height: '100%', backgroundColor: status.color }} />
+                ))}
+              </View>
+              {statuses.map((status) => (
+                <View key={status.key} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 10 }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: status.color }} />
+                  <Text style={{ flex: 1, color: mainText, fontSize: 14 }}>{status.name}</Text>
+                  <Text style={{ color: subtleText, fontSize: 14, fontWeight: '700' }}>{status.count}</Text>
+                </View>
+              ))}
+              {totalCount === 0 ? <Text style={{ color: subtleText }}>Create your first project to populate the chart.</Text> : null}
             </View>
           </View>
         ) : null}
