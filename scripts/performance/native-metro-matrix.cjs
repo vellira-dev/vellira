@@ -127,11 +127,19 @@ try {
       const packedFiles = walk(path.join(nativeRoot, 'dist'));
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
       const references = [];
+      const scannedFiles = { runtime: 0, declarations: 0 };
       for (const file of packedFiles) {
-        if (!/\.(?:js|d\.ts|d\.mts)$/.test(file)) continue;
+        if (!/\.(?:js|mjs|cjs|d\.ts|d\.mts|d\.cts)$/.test(file)) continue;
+        const declaration = /\.d\.(?:ts|mts|cts)$/.test(file);
+        scannedFiles[declaration ? 'declarations' : 'runtime'] += 1;
         if (fs.readFileSync(file, 'utf8').includes('@react-native-picker/picker')) {
           references.push(path.relative(nativeRoot, file).replaceAll(path.sep, '/'));
         }
+      }
+      if (scannedFiles.runtime === 0 || scannedFiles.declarations === 0) {
+        throw new Error(
+          kind + ': incomplete published picker scan: ' + JSON.stringify(scannedFiles)
+        );
       }
       if (references.length) {
         throw new Error(kind + ': published native dist references picker: ' + references.join(', '));
@@ -142,6 +150,7 @@ try {
         distFileCount: packedFiles.length,
         distTotalBytes: packedFiles.reduce((n, file) => n + fs.statSync(file).size, 0),
         pickerReferencesInPackedDist: references,
+        scannedFiles,
         note: 'Static packed-dist inspection; does not prove on-device native-module absence',
       };
     }
