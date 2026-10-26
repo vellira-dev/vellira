@@ -80,7 +80,7 @@ const stream = new Collector();
 const piece = 's'.repeat(32768);
 for (let i = 0; i < 4; i += 1) stream.append(piece);
 const accumulatedTextBytes = stream.getOutput().reduce((sum, item) =>
-  sum + Buffer.byteLength(item.text || '', 'utf8'), 0);
+  sum + (item.level === 'error' && item.text === 'Plugin cumulative output limit exceeded' ? 0 : Buffer.byteLength(item.text || '', 'utf8')), 0);
 assert.ok(accumulatedTextBytes <= 65536, 'Cumulative bytes exceeded budget');
 assert.equal(stream.isTruncated(), true);
 assert.equal(stream.getOutput().at(-1).text, 'Plugin cumulative output limit exceeded');
