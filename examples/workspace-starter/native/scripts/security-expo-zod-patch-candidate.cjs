@@ -59,6 +59,16 @@ assert.deepEqual(many.getOutput().map(x => x.text), ['Too many output items']);
 const malformed = new Collector();
 malformed.append('hello');
 assert.equal(malformed.getOutput()[0].text, 'hello');
-const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true };
+// Negative streaming proof: each chunk is within the per-append limit, yet
+// the collector accepts more than the proposed total budget across chunks.
+// This must be addressed before enabling a runtime patch.
+const stream = new Collector();
+const piece = 's'.repeat(32768);
+for (let i = 0; i < 4; i += 1) stream.append(piece);
+const accumulatedTextBytes = stream.getOutput().reduce((sum, item) =>
+  sum + Buffer.byteLength(item.text || '', 'utf8'), 0);
+assert.ok(accumulatedTextBytes > 65536,
+  'Expected cumulative guard gap; revisit if this begins failing');
+const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardGapObserved: true, accumulatedTextBytes };
 assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
 console.log(JSON.stringify(report, null, 2));
