@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs');
 
 const version = process.env.VELLIRA_NATIVE_VERSION;
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
@@ -126,24 +127,7 @@ try {
       );
       const packedFiles = walk(path.join(nativeRoot, 'dist'));
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
-      const references = [];
-      const scannedFiles = { runtime: 0, declarations: 0 };
-      for (const file of packedFiles) {
-        if (!/\.(?:js|mjs|cjs|d\.ts|d\.mts|d\.cts)$/.test(file)) continue;
-        const declaration = /\.d\.(?:ts|mts|cts)$/.test(file);
-        scannedFiles[declaration ? 'declarations' : 'runtime'] += 1;
-        if (fs.readFileSync(file, 'utf8').includes('@react-native-picker/picker')) {
-          references.push(path.relative(nativeRoot, file).replaceAll(path.sep, '/'));
-        }
-      }
-      if (scannedFiles.runtime === 0 || scannedFiles.declarations === 0) {
-        throw new Error(
-          kind + ': incomplete published picker scan: ' + JSON.stringify(scannedFiles)
-        );
-      }
-      if (references.length) {
-        throw new Error(kind + ': published native dist references picker: ' + references.join(', '));
-      }
+      const { references, scannedFiles } = inspectPublishedPickerReferences(nativeRoot, packedFiles);
       nativePackageInventory = {
         requiredPeers: nativeManifest.peerDependencies ?? {},
         optionalPeers: nativeManifest.peerDependenciesMeta ?? {},
