@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Filter, Folder, Home, MoreHorizontal, Plus, Settings, Search } from '@vellira-ui/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -128,6 +129,8 @@ function WorkspaceScreen() {
   const [removedProject, setRemovedProject] = useState<Project | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [actionProjectId, setActionProjectId] = useState<number | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [team, setTeam] = useState<Team>('design');
@@ -376,7 +379,7 @@ function WorkspaceScreen() {
             </Text>
           </View>
           {section !== 'settings' ? (
-            <Button onPress={openCreate}>+ New</Button>
+            <Pressable accessibilityRole='button' accessibilityLabel='Create project' onPress={openCreate} style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: surface.subtle }}><Plus size={24} color={mainText} /></Pressable>
           ) : null}
         </View>
       </View>
@@ -746,11 +749,11 @@ function WorkspaceScreen() {
       >
         {(
           [
-            ['overview', 'Overview', '⌂'],
-            ['projects', 'Projects', '▦'],
-            ['settings', 'Settings', '⚙'],
+            ['overview', 'Dashboard', Home],
+            ['projects', 'Projects', Folder],
+            ['settings', 'Settings', Settings],
           ] as const
-        ).map(([value, label, glyph]) => (
+        ).map(([value, label, IconComponent]) => (
           <Pressable
             key={value}
             accessibilityRole='tab'
@@ -768,7 +771,7 @@ function WorkspaceScreen() {
                 section === value ? surface.subtle : surface.canvas,
             }}
           >
-            <Text style={{ color: mainText, fontSize: 21 }}>{glyph}</Text>
+            <IconComponent size={22} color={mainText} />
             <Text
               style={{
                 color: mainText,
