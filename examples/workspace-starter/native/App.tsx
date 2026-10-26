@@ -985,14 +985,21 @@ function WorkspaceScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingLeft: 48,
-                    gap: 12,
+                    gap: 10,
                   }}
                 >
+                  <View style={{ width: 38 }} />
                   <View
                     style={{
-                      borderRadius: 12,
-                      paddingHorizontal: 10,
+                      flex: 1,
+                      minWidth: 0,
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <View
+                      style={{
+                        borderRadius: 12,
+                        paddingHorizontal: 10,
                       paddingVertical: 5,
                       backgroundColor:
                         project.status === 'shipped'
@@ -1021,6 +1028,7 @@ function WorkspaceScreen() {
                           : 'Planned'}
                     </Text>
                   </View>
+                  </View>
                   <Pressable
                     accessibilityRole='checkbox'
                     accessibilityLabel={'Complete ' + project.name}
@@ -1031,7 +1039,7 @@ function WorkspaceScreen() {
                     style={{
                       width: 44,
                       height: 44,
-                      alignItems: 'flex-end',
+                      alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
