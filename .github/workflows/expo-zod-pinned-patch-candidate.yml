@@ -30,5 +30,22 @@ jobs:
         run: node scripts/security-expo-zod-patch-candidate.cjs
       - name: Reject candidate through real installed runtime negative test
         run: node scripts/security-expo-zod-negative-runtime-proof.cjs
+      - name: Apply twice and verify pinned Expo CLI patch in isolated CI
+        run: |
+          node scripts/security-expo-zod-patch-candidate.cjs --apply
+          node scripts/security-expo-zod-patch-candidate.cjs --apply
+          node scripts/security-expo-zod-patch-candidate.cjs --verify
+      - name: Reject modified Expo CLI bytes (fail closed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js
+          cp "$target" "$target.backup"
+          trap 'mv -f "$target.backup" "$target"' EXIT
+          printf '\n// tamper fixture\n' >> "$target"
+          if node scripts/security-expo-zod-patch-candidate.cjs --verify; then
+            echo '::error::Tampered installed Expo CLI was accepted'
+            exit 1
+          fi
       - name: Preserve existing RSA patch
         run: npm run security:verify-patch
