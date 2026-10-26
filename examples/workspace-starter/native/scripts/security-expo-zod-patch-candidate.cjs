@@ -15,22 +15,12 @@ const sha = b => createHash('sha256').update(b).digest('hex');
 const bytes = fs.readFileSync(target);
 assert.equal(sha(bytes), ORIGINAL, 'Unrecognized Expo CLI bytes: refuse modification');
 const source = bytes.toString('utf8');
-const pattern = /(\bDevToolsPluginOutputSchema\.safeParse\()\s*JSON\.parse\(txt\)\s*(\))/g;
-const hits = [...source.matchAll(pattern)];
-assert.equal(hits.length, 1, 'Expected exactly one installed Zod output parse call');
-const replacement = [
-  '$1(() => {',
-  "                if (Buffer.byteLength(txt, 'utf8') > 65536) {",
-  "                    throw new RangeError('Plugin JSON exceeds 64 KiB');",
-  '                }',
-  '                const parsed = JSON.parse(txt);',
-  '                if (!Array.isArray(parsed) || parsed.length > 128) {',
-  "                    throw new RangeError('Plugin JSON array exceeds 128 entries or is not an array');",
-  '                }',
-  '                return parsed;',
-  '            })()$2',
-].join('\n');
-const updated = source.replace(pattern, replacement);
+const entry = /(parseOutputText\(txt,\s*level\s*=\s*['"]info['"]\)\s*\{)/g;
+assert.equal([...source.matchAll(entry)].length, 1);
+let updated = source.replace(entry, '$1\n        if (Buffer.byteLength(txt, "utf8") > 65536) return [{ type: "text", text: "Plugin output limit exceeded", level: "error" }];');
+const parse = /DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\)/g;
+assert.equal([...updated.matchAll(parse)].length, 1);
+updated = updated.replace(parse, 'DevToolsPluginOutputSchema.safeParse((() => { const value = JSON.parse(txt); return Array.isArray(value) && value.length > 128 ? [] : value; })())');
 assert.notEqual(updated, source);
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: sha(Buffer.from(updated)), candidateOnly: true };
 assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
