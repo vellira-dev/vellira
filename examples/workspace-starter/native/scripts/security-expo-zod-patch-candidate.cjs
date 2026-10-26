@@ -25,12 +25,12 @@ if (entryMatches.length !== 1) {
 let updated = source.replace(entry, '$1\n        if (Buffer.byteLength(txt, "utf8") > 65536) return [{ type: "text", text: "Plugin output limit exceeded", level: "error" }];');
 const parse = /DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\)/g;
 assert.equal([...updated.matchAll(parse)].length, 1);
-const zodEntry = /const result = DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\);/g;
-assert.equal([...updated.matchAll(zodEntry)].length, 1);
-updated = updated.replace(zodEntry, [
+const zodEntry = /const\s+result\s*=\s*([^;\n]*DevToolsPluginOutputSchema\.safeParse\(JSON\.parse\(txt\)\));/g;
+assert.equal([...updated.matchAll(zodEntry)].length, 1, 'Expected one Zod result assignment');
+updated = updated.replace(zodEntry, (_match, call) => [
   'const parsed = JSON.parse(txt);',
   'if (Array.isArray(parsed) && parsed.length > 128) return [{ type: "text", text: "Too many output items", level: "error" }];',
-  'const result = DevToolsPluginOutputSchema.safeParse(parsed);',
+  'const result = ' + call.replace('JSON.parse(txt)', 'parsed') + ';',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
 const Module = require('node:module');
