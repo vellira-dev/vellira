@@ -328,9 +328,6 @@ function WorkspaceScreen() {
   }
 
   const completedCount = data.projects.filter((item) => item.completed).length;
-  const activeCount = data.projects.filter(
-    (item) => item.status === 'active'
-  ).length;
 
   return (
     <SafeAreaView
