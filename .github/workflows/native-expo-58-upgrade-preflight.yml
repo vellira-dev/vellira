@@ -1,0 +1,55 @@
+name: Native Expo 58 Upgrade Preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-expo-58-upgrade-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.22.2
+          registry-url: https://registry.npmjs.org
+      - name: Inspect published Expo 58 CLI dependencies before touching Starter
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm view expo@58 version --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/expo58-versions.json"
+          npm view @expo/cli@58.1.15 dependencies --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/cli58-deps.json"
+          echo '=== Expo CLI 58.1.15 Zod requirement ==='
+          node -e "const d=require(process.argv[1]); console.log(JSON.stringify({ zod: d.zod || null, cliVersion: '58.1.15' },null,2))" "$RUNNER_TEMP/cli58-deps.json"
+      - name: Run isolated npm dependency resolution (do not change checked-in locks)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/expo58"
+          cp -a examples/workspace-starter/native/. "$RUNNER_TEMP/expo58/"
+          cd "$RUNNER_TEMP/expo58"
+          npm pkg delete scripts.postinstall
+          npm pkg delete scripts.prestart
+          npm pkg delete scripts.preios
+          npm pkg delete scripts.preandroid
+          npm pkg delete scripts.preweb
+          npm pkg delete scripts.pretypecheck
+          npm pkg delete scripts.security:verify-patch
+          npm install expo@^58.0.0 react-native@^0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
+          echo '=== Resolved Expo CLI / Zod / React Native ==='
+          node - <<'NODE'
+          const l=require('./package-lock.json');
+          const matches=Object.entries(l.packages).filter(([k]) => /(^|\/)node_modules\/(zod|@expo\/cli|expo|react-native)$/.test(k));
+          for(const [name,record] of matches) console.log(name,record.version);
+          const zod=matches.filter(([k])=>k.endsWith('/zod'));
+          console.log('ZOD_VERSIONS='+JSON.stringify(zod.map(([path,p])=>({path,version:p.version}))));
+          NODE
+          echo 'Preflight only: do not call this a security remediation until compatible dependency tree and consumer tests are proven.'
