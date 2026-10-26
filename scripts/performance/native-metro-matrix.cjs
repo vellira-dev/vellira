@@ -16,6 +16,7 @@ const output = path.resolve(
 );
 const cases = ['baseline', 'theme', 'button', 'button-select'];
 const platforms = ['ios', 'android'];
+const sourceInventories = {};
 
 function run(command, args, cwd, extraEnv = {}) {
   const result = spawnSync(command, args, {
@@ -158,8 +159,9 @@ try {
       };
     }
     let developmentBundles = null;
-    if (kind === 'button-select') {
+    {
       developmentBundles = {};
+      sourceInventories[kind] = {};
       for (const platform of platforms) {
         const bundlePath = path.join(dir, 'dev-' + platform + '.jsbundle');
         const assetsDir = path.join(dir, 'dev-' + platform + '-assets');
@@ -178,8 +180,13 @@ try {
           throw new Error(kind + '/' + platform + ': development bundle missing');
         }
         const content = fs.readFileSync(bundlePath, 'utf8');
-        if (content.length < 10_000 || !content.includes('Metro Button')) {
-          throw new Error(kind + '/' + platform + ': development bundle lacks Button surface');
+        const marker = kind === 'baseline'
+          ? 'Metro baseline'
+          : kind === 'theme'
+            ? 'Metro theme only'
+            : 'Metro Button';
+        if (content.length < 10_000 || !content.includes(marker)) {
+          throw new Error(kind + '/' + platform + ': development bundle lacks ' + marker);
         }
         if (!fs.existsSync(sourceMapPath)) {
           throw new Error(kind + '/' + platform + ': development source map missing');
@@ -189,8 +196,9 @@ try {
           throw new Error(kind + '/' + platform + ': source map missing module inventory');
         }
         const groupedSources = {};
-        for (const source of sourceMap.sources) {
-          const normalized = source.replaceAll('\\\\', '/');
+        const normalizedSources = sourceMap.sources.map((source) => source.replaceAll('\\\\', '/'));
+        sourceInventories[kind][platform] = new Set(normalizedSources);
+        for (const normalized of normalizedSources) {
           const group = normalized.includes('@vellira-ui/')
             ? '@vellira-ui'
             : normalized.includes('react-native/')
@@ -226,6 +234,28 @@ try {
     evidence.cases['button-select'].platforms[platform].deltaFromButton =
       evidence.cases['button-select'].platforms[platform].scriptBytes -
       evidence.cases.button.platforms[platform].scriptBytes;
+  }
+  evidence.sourceModuleDeltas = {};
+  for (const platform of platforms) {
+    const casesToCompare = [
+      ['baseline', 'theme'],
+      ['theme', 'button'],
+      ['button', 'button-select'],
+    ];
+    evidence.sourceModuleDeltas[platform] = {};
+    for (const [from, to] of casesToCompare) {
+      const before = sourceInventories[from][platform];
+      const after = sourceInventories[to][platform];
+      if (!before || !after) {
+        throw new Error('missing source inventory for ' + platform + ': ' + from + ' -> ' + to);
+      }
+      evidence.sourceModuleDeltas[platform][from + '-to-' + to] = {
+        added: [...after].filter((source) => !before.has(source)).length,
+        removed: [...before].filter((source) => !after.has(source)).length,
+        unchanged: [...after].filter((source) => before.has(source)).length,
+        note: 'Source-map module identities, not output-byte contributions',
+      };
+    }
   }
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');
