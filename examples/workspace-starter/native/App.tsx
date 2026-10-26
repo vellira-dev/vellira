@@ -312,9 +312,13 @@ function WorkspaceScreen() {
     setNotice('Project removed.');
   }
 
-  const actionProject = data.projects.find((item) => item.id === actionProjectId);
+  const actionProject = data.projects.find(
+    (item) => item.id === actionProjectId
+  );
   const completedCount = data.projects.filter((item) => item.completed).length;
-  const activeCount = data.projects.filter((item) => item.status === 'active').length;
+  const activeCount = data.projects.filter(
+    (item) => item.status === 'active'
+  ).length;
   const accent = theme.semantic.text.primary;
 
   return (
@@ -333,18 +337,39 @@ function WorkspaceScreen() {
         }}
       >
         <Text
-          style={{ color: subtleText, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 }}
+          style={{
+            color: subtleText,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 1.2,
+          }}
         >
           VELLIRA / WORKSPACE
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               accessibilityRole='header'
               numberOfLines={1}
-              style={{ color: mainText, fontSize: 27, lineHeight: 34, fontWeight: '700' }}
+              style={{
+                color: mainText,
+                fontSize: 27,
+                lineHeight: 34,
+                fontWeight: '700',
+              }}
             >
-              {section === 'overview' ? 'Overview' : section === 'projects' ? 'Projects' : 'Settings'}
+              {section === 'overview'
+                ? 'Overview'
+                : section === 'projects'
+                  ? 'Projects'
+                  : 'Settings'}
             </Text>
             <Text numberOfLines={1} style={{ color: subtleText, fontSize: 13 }}>
               {data.name.trim() || 'Untitled workspace'}
@@ -374,7 +399,10 @@ function WorkspaceScreen() {
               borderRadius: theme.tokens.radius.md,
             }}
           >
-            <Text accessibilityLiveRegion='polite' style={{ color: mainText, flexGrow: 1, flexShrink: 1 }}>
+            <Text
+              accessibilityLiveRegion='polite'
+              style={{ color: mainText, flexGrow: 1, flexShrink: 1 }}
+            >
               {notice}
             </Text>
             {removedProject ? (
@@ -382,9 +410,14 @@ function WorkspaceScreen() {
                 appearance='ghost'
                 onPress={() => {
                   setData((current) =>
-                    current.projects.some((item) => item.id === removedProject.id)
+                    current.projects.some(
+                      (item) => item.id === removedProject.id
+                    )
                       ? current
-                      : { ...current, projects: [removedProject, ...current.projects] }
+                      : {
+                          ...current,
+                          projects: [removedProject, ...current.projects],
+                        }
                   );
                   setRemovedProject(null);
                   setNotice('Project restored.');
@@ -430,15 +463,21 @@ function WorkspaceScreen() {
                     gap: 6,
                   }}
                 >
-                  <Text style={{ color: mainText, fontSize: 28, fontWeight: '700' }}>
+                  <Text
+                    style={{ color: mainText, fontSize: 28, fontWeight: '700' }}
+                  >
                     {metric.value}
                   </Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>{metric.label}</Text>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>
+                    {metric.label}
+                  </Text>
                 </View>
               ))}
             </View>
             <View style={cardStyle}>
-              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>
+              <Text
+                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
+              >
                 Recent projects
               </Text>
               {data.projects.slice(0, 4).map((project) => (
@@ -451,20 +490,39 @@ function WorkspaceScreen() {
                     setStatusFilter('all');
                     setSection('projects');
                   }}
-                  style={{ minHeight: 48, gap: 3, justifyContent: 'center', borderTopWidth: 1, borderColor: border }}
+                  style={{
+                    minHeight: 48,
+                    gap: 3,
+                    justifyContent: 'center',
+                    borderTopWidth: 1,
+                    borderColor: border,
+                  }}
                 >
-                  <Text numberOfLines={1} style={{ color: mainText, fontWeight: '600' }}>{project.name}</Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>{project.status} · {project.team}</Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{ color: mainText, fontWeight: '600' }}
+                  >
+                    {project.name}
+                  </Text>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>
+                    {project.status} · {project.team}
+                  </Text>
                 </Pressable>
               ))}
               {data.projects.length === 0 ? (
-                <Text style={{ color: subtleText }}>No projects yet. Create your first one.</Text>
+                <Text style={{ color: subtleText }}>
+                  No projects yet. Create your first one.
+                </Text>
               ) : null}
-              <Button appearance='outline' color='neutral' onPress={() => {
-                setQuery('');
-                setStatusFilter('all');
-                setSection('projects');
-              }}>
+              <Button
+                appearance='outline'
+                color='neutral'
+                onPress={() => {
+                  setQuery('');
+                  setStatusFilter('all');
+                  setSection('projects');
+                }}
+              >
                 See all projects
               </Button>
             </View>
@@ -479,13 +537,19 @@ function WorkspaceScreen() {
               onValueChange={setQuery}
               placeholder='Search by name or description'
             />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-              {([
-                ['all', 'All'],
-                ['planned', 'Planned'],
-                ['active', 'In progress'],
-                ['shipped', 'Shipped'],
-              ] as const).map(([value, label]) => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+            >
+              {(
+                [
+                  ['all', 'All'],
+                  ['planned', 'Planned'],
+                  ['active', 'In progress'],
+                  ['shipped', 'Shipped'],
+                ] as const
+              ).map(([value, label]) => (
                 <Pressable
                   key={value}
                   accessibilityRole='button'
@@ -499,23 +563,51 @@ function WorkspaceScreen() {
                     borderRadius: 22,
                     borderWidth: 1,
                     borderColor: statusFilter === value ? accent : border,
-                    backgroundColor: statusFilter === value ? surface.subtle : surface.canvas,
+                    backgroundColor:
+                      statusFilter === value ? surface.subtle : surface.canvas,
                   }}
                 >
-                  <Text style={{ color: mainText, fontWeight: statusFilter === value ? '700' : '500' }}>{label}</Text>
+                  <Text
+                    style={{
+                      color: mainText,
+                      fontWeight: statusFilter === value ? '700' : '500',
+                    }}
+                  >
+                    {label}
+                  </Text>
                 </Pressable>
               ))}
             </ScrollView>
             <Text style={{ color: subtleText, fontSize: 12 }}>
-              {visibleProjects.length} {visibleProjects.length === 1 ? 'project' : 'projects'}
+              {visibleProjects.length}{' '}
+              {visibleProjects.length === 1 ? 'project' : 'projects'}
             </Text>
             {visibleProjects.map((project) => (
               <View key={project.id} style={{ ...cardStyle, gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                  }}
+                >
                   <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-                    <Text style={{ color: mainText, fontSize: 17, fontWeight: '700' }}>{project.name}</Text>
+                    <Text
+                      style={{
+                        color: mainText,
+                        fontSize: 17,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {project.name}
+                    </Text>
                     <Text style={{ color: subtleText, fontSize: 12 }}>
-                      {project.status === 'active' ? 'In progress' : project.status === 'shipped' ? 'Shipped' : 'Planned'} · {project.team}
+                      {project.status === 'active'
+                        ? 'In progress'
+                        : project.status === 'shipped'
+                          ? 'Shipped'
+                          : 'Planned'}{' '}
+                      · {project.team}
                     </Text>
                   </View>
                   <Pressable
@@ -538,25 +630,40 @@ function WorkspaceScreen() {
                   </Pressable>
                 </View>
                 {project.description ? (
-                  <Text numberOfLines={2} style={{ color: subtleText, lineHeight: 20 }}>
+                  <Text
+                    numberOfLines={2}
+                    style={{ color: subtleText, lineHeight: 20 }}
+                  >
                     {project.description}
                   </Text>
                 ) : null}
                 <Checkbox
                   label='Mark completed'
                   checked={project.completed}
-                  onCheckedChange={(value: boolean) => toggleProject(project.id, value)}
+                  onCheckedChange={(value: boolean) =>
+                    toggleProject(project.id, value)
+                  }
                 />
               </View>
             ))}
             {visibleProjects.length === 0 ? (
               <View style={{ ...cardStyle, alignItems: 'center', gap: 10 }}>
-                <Text style={{ color: mainText, fontWeight: '700' }}>No matching projects</Text>
-                <Text style={{ color: subtleText, textAlign: 'center' }}>Try another search or clear the status filter.</Text>
-                <Button appearance='outline' color='neutral' onPress={() => {
-                  setQuery('');
-                  setStatusFilter('all');
-                }}>Clear filters</Button>
+                <Text style={{ color: mainText, fontWeight: '700' }}>
+                  No matching projects
+                </Text>
+                <Text style={{ color: subtleText, textAlign: 'center' }}>
+                  Try another search or clear the status filter.
+                </Text>
+                <Button
+                  appearance='outline'
+                  color='neutral'
+                  onPress={() => {
+                    setQuery('');
+                    setStatusFilter('all');
+                  }}
+                >
+                  Clear filters
+                </Button>
               </View>
             ) : null}
           </View>
@@ -565,21 +672,33 @@ function WorkspaceScreen() {
         {section === 'settings' ? (
           <View style={{ gap: 14 }}>
             <View style={cardStyle}>
-              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Workspace</Text>
+              <Text
+                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
+              >
+                Workspace
+              </Text>
               <Input
                 label='Workspace name'
                 value={data.name}
-                onValueChange={(next: string) => setData((current) => ({ ...current, name: next }))}
+                onValueChange={(next: string) =>
+                  setData((current) => ({ ...current, name: next }))
+                }
               />
               <Checkbox
                 label='Product notifications'
                 description='Local preference only; no emails are sent.'
                 checked={data.notifications}
-                onCheckedChange={(notifications: boolean) => setData((current) => ({ ...current, notifications }))}
+                onCheckedChange={(notifications: boolean) =>
+                  setData((current) => ({ ...current, notifications }))
+                }
               />
             </View>
             <View style={cardStyle}>
-              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Appearance</Text>
+              <Text
+                style={{ color: mainText, fontSize: 18, fontWeight: '700' }}
+              >
+                Appearance
+              </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {(['light', 'dark', 'highContrast'] as const).map((option) => (
                   <Button
@@ -588,15 +707,25 @@ function WorkspaceScreen() {
                     color={themeName === option ? 'primary' : 'neutral'}
                     onPress={() => setTheme(option)}
                   >
-                    {option === 'highContrast' ? 'High contrast' : option === 'light' ? 'Light' : 'Dark'}
+                    {option === 'highContrast'
+                      ? 'High contrast'
+                      : option === 'light'
+                        ? 'Light'
+                        : 'Dark'}
                   </Button>
                 ))}
               </View>
             </View>
-            <Button appearance='outline' color='danger' onPress={() => setResetOpen(true)}>
+            <Button
+              appearance='outline'
+              color='danger'
+              onPress={() => setResetOpen(true)}
+            >
               Restore sample data
             </Button>
-            <Text style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}>
+            <Text
+              style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}
+            >
               Vellira Native Starter · Offline demo
             </Text>
           </View>
@@ -615,11 +744,13 @@ function WorkspaceScreen() {
           backgroundColor: surface.canvas,
         }}
       >
-        {([
-          ['overview', 'Overview', '⌂'],
-          ['projects', 'Projects', '▦'],
-          ['settings', 'Settings', '⚙'],
-        ] as const).map(([value, label, glyph]) => (
+        {(
+          [
+            ['overview', 'Overview', '⌂'],
+            ['projects', 'Projects', '▦'],
+            ['settings', 'Settings', '⚙'],
+          ] as const
+        ).map(([value, label, glyph]) => (
           <Pressable
             key={value}
             accessibilityRole='tab'
@@ -633,41 +764,78 @@ function WorkspaceScreen() {
               alignItems: 'center',
               gap: 2,
               borderRadius: theme.tokens.radius.md,
-              backgroundColor: section === value ? surface.subtle : surface.canvas,
+              backgroundColor:
+                section === value ? surface.subtle : surface.canvas,
             }}
           >
             <Text style={{ color: mainText, fontSize: 21 }}>{glyph}</Text>
-            <Text style={{ color: mainText, fontSize: 11, fontWeight: section === value ? '700' : '500' }}>
+            <Text
+              style={{
+                color: mainText,
+                fontSize: 11,
+                fontWeight: section === value ? '700' : '500',
+              }}
+            >
               {label}
             </Text>
           </Pressable>
         ))}
       </View>
-      <Modal open={actionProjectId !== null} onOpenChange={(open: boolean) => { if (!open) setActionProjectId(null); }}>
+      <Modal
+        open={actionProjectId !== null}
+        onOpenChange={(open: boolean) => {
+          if (!open) setActionProjectId(null);
+        }}
+      >
         <Modal.Overlay>
           <Modal.Content>
             <Modal.Header>
               <Modal.Title>Project actions</Modal.Title>
-              <Modal.Description>{actionProject?.name ?? 'Select an action'}</Modal.Description>
+              <Modal.Description>
+                {actionProject?.name ?? 'Select an action'}
+              </Modal.Description>
             </Modal.Header>
             <Modal.Body>
               <View style={{ gap: 12 }}>
-                <Button appearance='outline' color='neutral' onPress={() => {
-                  if (actionProject) openEdit(actionProject);
-                  setActionProjectId(null);
-                }}>Edit project</Button>
-                <Button appearance='outline' color='neutral' onPress={() => {
-                  if (actionProject) duplicateProject(actionProject.id);
-                  setActionProjectId(null);
-                }}>Duplicate project</Button>
-                <Button color='danger' onPress={() => {
-                  if (actionProject) deleteProject(actionProject.id);
-                  setActionProjectId(null);
-                }}>Remove project</Button>
+                <Button
+                  appearance='outline'
+                  color='neutral'
+                  onPress={() => {
+                    if (actionProject) openEdit(actionProject);
+                    setActionProjectId(null);
+                  }}
+                >
+                  Edit project
+                </Button>
+                <Button
+                  appearance='outline'
+                  color='neutral'
+                  onPress={() => {
+                    if (actionProject) duplicateProject(actionProject.id);
+                    setActionProjectId(null);
+                  }}
+                >
+                  Duplicate project
+                </Button>
+                <Button
+                  color='danger'
+                  onPress={() => {
+                    if (actionProject) deleteProject(actionProject.id);
+                    setActionProjectId(null);
+                  }}
+                >
+                  Remove project
+                </Button>
               </View>
             </Modal.Body>
             <Modal.Footer>
-              <Button appearance='outline' color='neutral' onPress={() => setActionProjectId(null)}>Cancel</Button>
+              <Button
+                appearance='outline'
+                color='neutral'
+                onPress={() => setActionProjectId(null)}
+              >
+                Cancel
+              </Button>
             </Modal.Footer>
           </Modal.Content>
         </Modal.Overlay>
