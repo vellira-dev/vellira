@@ -29,6 +29,25 @@ updated = updated.replace(zodEntry, [
   'const result = DevToolsPluginOutputSchema.safeParse(parsed);',
 ].join(String.fromCharCode(10)));
 assert.notEqual(updated, source);
+const Module = require('node:module');
+const runtime = new Module(target, module);
+runtime.filename = target;
+runtime.paths = Module._nodeModulePaths(path.dirname(target));
+runtime._compile(updated, target);
+const Collector = runtime.exports.DevToolsPluginCliExtensionResults;
+assert.equal(typeof Collector, 'function');
+const valid = new Collector();
+valid.append(JSON.stringify([{type:'text', text:'ok', level:'info'}]));
+assert.equal(valid.getOutput()[0].text, 'ok');
+const longInput = new Collector();
+longInput.append('x'.repeat(65537));
+assert.deepEqual(longInput.getOutput().map(x => x.text), ['Plugin output limit exceeded']);
+const many = new Collector();
+many.append(JSON.stringify(Array.from({length:129}, () => ({type:'text', text:'x', level:'info'}))));
+assert.deepEqual(many.getOutput().map(x => x.text), ['Too many output items']);
+const malformed = new Collector();
+malformed.append('hello');
+assert.equal(malformed.getOutput()[0].text, 'hello');
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: sha(Buffer.from(updated)), candidateOnly: true };
 assert.ok(!process.argv.includes('--apply'), 'Candidate is diagnostic only; applying would not enforce protection');
 console.log(JSON.stringify(report, null, 2));
