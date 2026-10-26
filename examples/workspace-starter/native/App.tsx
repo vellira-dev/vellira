@@ -470,9 +470,6 @@ function WorkspaceScreen() {
               <Text style={{ color: subtleText, fontSize: 12, fontWeight: '600', letterSpacing: 0.7 }}>
                 WORKSPACE OVERVIEW
               </Text>
-              <Text accessibilityRole='header' style={{ color: mainText, fontSize: 23, fontWeight: '700' }}>
-                Dashboard
-              </Text>
               <Text style={{ color: subtleText }}>Your projects at a glance</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 12 }}>
