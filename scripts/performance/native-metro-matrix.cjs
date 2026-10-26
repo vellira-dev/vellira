@@ -118,6 +118,33 @@ try {
     if (installedVersion && installedVersion !== version) {
       throw new Error(kind + ': installed wrong Vellira version ' + installedVersion);
     }
+    let nativePackageInventory = null;
+    if (kind !== 'baseline') {
+      const nativeRoot = path.join(dir, 'node_modules/@vellira-ui/react-native');
+      const nativeManifest = JSON.parse(
+        fs.readFileSync(path.join(nativeRoot, 'package.json'), 'utf8')
+      );
+      const packedFiles = walk(path.join(nativeRoot, 'dist'));
+      if (!packedFiles.length) throw new Error(kind + ': missing published dist');
+      const references = [];
+      for (const file of packedFiles) {
+        if (!/\.(?:js|d\.ts|d\.mts)$/.test(file)) continue;
+        if (fs.readFileSync(file, 'utf8').includes('@react-native-picker/picker')) {
+          references.push(path.relative(nativeRoot, file).replaceAll(path.sep, '/'));
+        }
+      }
+      if (references.length) {
+        throw new Error(kind + ': published native dist references picker: ' + references.join(', '));
+      }
+      nativePackageInventory = {
+        requiredPeers: nativeManifest.peerDependencies ?? {},
+        optionalPeers: nativeManifest.peerDependenciesMeta ?? {},
+        distFileCount: packedFiles.length,
+        distTotalBytes: packedFiles.reduce((n, file) => n + fs.statSync(file).size, 0),
+        pickerReferencesInPackedDist: references,
+        note: 'Static packed-dist inspection; does not prove on-device native-module absence',
+      };
+    }
     const expoBin = path.join(dir, 'node_modules/expo/bin/cli');
     const measurements = {};
     for (const platform of platforms) {
@@ -135,7 +162,7 @@ try {
         scriptCount: js.length,
       };
     }
-    evidence.cases[kind] = { installedVersion, pickerInstalled: false, platforms: measurements };
+    evidence.cases[kind] = { installedVersion, pickerInstalled: false, nativePackageInventory, platforms: measurements };
     console.log('[native-metro-1906]', kind, JSON.stringify(evidence.cases[kind]));
   }
   for (const platform of platforms) {
