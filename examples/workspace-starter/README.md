@@ -70,7 +70,7 @@ the relative model import changes. The checked-in parity test catches drift.
 
 ## Run React Native
 
-Requires Expo SDK 57 / React Native 0.86 and an iOS or Android emulator, or a
+Requires Expo SDK 58 / React Native 0.88 and an iOS or Android emulator, or a
 compatible development device. From the repository:
 
 ```sh
@@ -81,10 +81,10 @@ npm run start
 
 The Native Starter applies two source-pinned local mitigations during a standard
 `npm ci` through its `postinstall`: the `node-forge@1.4.0` RSA backport
-and a bounded-output guard for installed `@expo/cli@57.0.32` with Zod 3.
+and a bounded-output guard for installed `@expo/cli@58.1.15` with Zod 3.
 The guard limits plugin output to 64 KiB of accumulated UTF-8 input, and
 rejects JSON arrays with more than 128 entries before Zod validation.
-Both patched file hashes are verified by `npm run security:verify-patch`.
+Both patched file hashes are verified by `npm run security:verify-patch`. The supported Expo 58 runtime guard is `security-expo-58-guard.cjs`; the older Expo 57 patcher and the Expo 58 prototype are investigation artifacts, not supported installation commands.
 
 These are **local mitigations**, not patched upstream dependency releases.
 The Zod guard covers the installed Expo CLI DevTools plugin output
@@ -98,7 +98,7 @@ can bypass the npm `prestart` / `preandroid` / `preios` / `preweb` hooks.
 Do **not** treat `npm ci --ignore-scripts` as a secure installation: it
 skips both patches. After such an install, explicitly apply both with
 `node scripts/apply-node-forge-patch.cjs` and
-`node scripts/security-expo-zod-patch-candidate.cjs --apply`, then run
+`node scripts/security-expo-58-guard.cjs --apply`, then run
 `npm run security:verify-patch`. Reinstalling, copying or archiving
 `node_modules` requires verification again. When the installed Expo CLI
 version or source bytes change, the local guard fails closed and must be

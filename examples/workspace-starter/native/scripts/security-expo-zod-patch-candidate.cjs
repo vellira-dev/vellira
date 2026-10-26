@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+// LEGACY EXPO 57 ONLY: not supported for Expo 58. Never run this against CLI 58.
 // Source-pinned Native Starter postinstall guard. Exact source and version are pinned.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
