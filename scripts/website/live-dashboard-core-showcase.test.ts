@@ -161,7 +161,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(native).toContain('themeStorageKey');
     expect(native).toContain('setResetOpen(true)');
     expect(native).toContain('openEdit(project)');
-    expect(native).toContain('setActionProjectId(');
+    expect(native).toContain('ActionSheetIOS.showActionSheetWithOptions(');
     expect(native).toContain('duplicateProject(project.id)');
     expect(native).toContain('deleteProject(project.id)');
     expect(native).toContain("label='Team'");
