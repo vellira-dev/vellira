@@ -14,7 +14,7 @@ const ORIGINAL = 'ab531966e34f5009d65fab4a00204cc999580d21b921f58ef58e00c568801c
 const sha = b => createHash('sha256').update(b).digest('hex');
 const bytes = fs.readFileSync(target);
 const currentHash = sha(bytes);
-const PATCHED = 'e9f9417dac2440cdbea5354b8464769c56428bac9eef99ac00243e8d21e01791';
+const PATCHED = '975395389dbf10ca891f627f29418afbea9709e6010f2c4efcedb63b193721f2';
 assert.ok([ORIGINAL, PATCHED].includes(currentHash),
   'Unrecognized Expo CLI bytes: refuse modification');
 if (currentHash === PATCHED) {
