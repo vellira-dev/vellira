@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -8,7 +8,6 @@ import {
   Input,
   Modal,
   Select,
-  Tabs,
   ThemeProvider,
   useTheme,
 } from '@vellira-ui/react-native';
@@ -64,10 +63,6 @@ const initialWorkspace: Workspace = {
     },
   ],
 };
-
-function isSection(value: string): value is Section {
-  return value === 'overview' || value === 'projects' || value === 'settings';
-}
 
 function isStatus(value: string): value is Status {
   return value === 'planned' || value === 'active' || value === 'shipped';
@@ -132,6 +127,7 @@ function WorkspaceScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [removedProject, setRemovedProject] = useState<Project | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [actionProjectId, setActionProjectId] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [team, setTeam] = useState<Team>('design');
@@ -316,53 +312,69 @@ function WorkspaceScreen() {
     setNotice('Project removed.');
   }
 
+  const actionProject = data.projects.find((item) => item.id === actionProjectId);
+  const completedCount = data.projects.filter((item) => item.completed).length;
+  const activeCount = data.projects.filter((item) => item.status === 'active').length;
+  const accent = theme.semantic.text.primary;
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: surface.canvas }}
       edges={['top', 'bottom']}
     >
-      <ScrollView
-        keyboardShouldPersistTaps='handled'
-        contentContainerStyle={{ gap: 16, padding: 16, paddingBottom: 40 }}
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 14,
+          paddingBottom: 12,
+          gap: 4,
+          borderBottomWidth: 1,
+          borderColor: border,
+        }}
       >
-        <View style={{ gap: 8 }}>
-          <Text
-            accessibilityRole='header'
-            style={{
-              color: mainText,
-              fontSize: 30,
-              lineHeight: 38,
-              fontWeight: '700',
-            }}
-          >
-            {data.name.trim() || 'Untitled workspace'}
-          </Text>
-          <Text style={{ color: subtleText }}>
-            A real React Native interface built with Vellira.
-          </Text>
+        <Text
+          style={{ color: subtleText, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 }}
+        >
+          VELLIRA / WORKSPACE
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              accessibilityRole='header'
+              numberOfLines={1}
+              style={{ color: mainText, fontSize: 27, lineHeight: 34, fontWeight: '700' }}
+            >
+              {section === 'overview' ? 'Overview' : section === 'projects' ? 'Projects' : 'Settings'}
+            </Text>
+            <Text numberOfLines={1} style={{ color: subtleText, fontSize: 13 }}>
+              {data.name.trim() || 'Untitled workspace'}
+            </Text>
+          </View>
+          {section !== 'settings' ? (
+            <Button onPress={openCreate}>+ New</Button>
+          ) : null}
         </View>
+      </View>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-          <Button
-            appearance='outline'
-            color='neutral'
-            onPress={() => setTheme(themeName === 'light' ? 'dark' : 'light')}
-          >
-            {themeName === 'light' ? 'Dark theme' : 'Light theme'}
-          </Button>
-          <Button onPress={openCreate}>New project</Button>
-        </View>
-
+      <ScrollView
+        key={section}
+        keyboardShouldPersistTaps='handled'
+        contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
+      >
         {notice ? (
           <View
             style={{
               flexDirection: 'row',
-              alignItems: 'center',
               flexWrap: 'wrap',
+              alignItems: 'center',
               gap: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: border,
+              borderRadius: theme.tokens.radius.md,
             }}
           >
-            <Text accessibilityLiveRegion='polite' style={{ color: mainText }}>
+            <Text accessibilityLiveRegion='polite' style={{ color: mainText, flexGrow: 1, flexShrink: 1 }}>
               {notice}
             </Text>
             {removedProject ? (
@@ -370,14 +382,9 @@ function WorkspaceScreen() {
                 appearance='ghost'
                 onPress={() => {
                   setData((current) =>
-                    current.projects.some(
-                      (item) => item.id === removedProject.id
-                    )
+                    current.projects.some((item) => item.id === removedProject.id)
                       ? current
-                      : {
-                          ...current,
-                          projects: [removedProject, ...current.projects],
-                        }
+                      : { ...current, projects: [removedProject, ...current.projects] }
                   );
                   setRemovedProject(null);
                   setNotice('Project restored.');
@@ -399,225 +406,272 @@ function WorkspaceScreen() {
           </View>
         ) : null}
 
-        <Tabs
-          value={section}
-          onValueChange={(value: string) => {
-            if (isSection(value)) setSection(value);
-          }}
-        >
-          <Tabs.List scrollable>
-            <Tabs.Trigger value='overview'>Overview</Tabs.Trigger>
-            <Tabs.Trigger value='projects'>Projects</Tabs.Trigger>
-            <Tabs.Trigger value='settings'>Settings</Tabs.Trigger>
-          </Tabs.List>
-
-          <Tabs.Content value='overview'>
-            <View style={{ gap: 14, paddingTop: 4 }}>
-              <View style={cardStyle}>
-                <Text style={{ color: subtleText }}>PROJECTS</Text>
-                <Text
+        {section === 'overview' ? (
+          <View style={{ gap: 16 }}>
+            <Text style={{ color: mainText, fontSize: 20, fontWeight: '700' }}>
+              Your workspace at a glance
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {[
+                { label: 'Total', value: data.projects.length },
+                { label: 'In progress', value: activeCount },
+                { label: 'Completed', value: completedCount },
+              ].map((metric) => (
+                <View
+                  key={metric.label}
                   style={{
-                    color: mainText,
-                    fontSize: 36,
-                    fontWeight: '700',
+                    flex: 1,
+                    minWidth: 0,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: border,
+                    borderRadius: theme.tokens.radius.lg,
+                    backgroundColor: surface.subtle,
+                    gap: 6,
                   }}
                 >
-                  {data.projects.length}
-                </Text>
-                <Text style={{ color: subtleText }}>
-                  {data.projects.filter((item) => item.completed).length}{' '}
-                  completed
-                </Text>
-              </View>
-              <View style={cardStyle}>
-                <Text
-                  style={{ color: mainText, fontSize: 21, fontWeight: '700' }}
-                >
-                  Your delivery pipeline
-                </Text>
-                {data.projects.map((project) => (
-                  <View key={project.id} style={{ gap: 4 }}>
-                    <Text style={{ color: mainText, fontWeight: '600' }}>
-                      {project.name}
-                    </Text>
-                    <Text style={{ color: subtleText }}>{project.status}</Text>
-                  </View>
-                ))}
-                {data.projects.length === 0 && (
-                  <Text style={{ color: subtleText }}>
-                    Create your first project.
+                  <Text style={{ color: mainText, fontSize: 28, fontWeight: '700' }}>
+                    {metric.value}
                   </Text>
-                )}
-                <Button
-                  appearance='outline'
-                  color='neutral'
-                  onPress={() => setSection('projects')}
-                >
-                  Manage projects
-                </Button>
-              </View>
-            </View>
-          </Tabs.Content>
-
-          <Tabs.Content value='projects'>
-            <View style={{ gap: 14, paddingTop: 4 }}>
-              <Input
-                label='Search projects'
-                value={query}
-                onValueChange={setQuery}
-                placeholder='Project name'
-              />
-              <Select
-                label='Status filter'
-                value={statusFilter}
-                onValueChange={(value: string | null) => {
-                  if (
-                    typeof value === 'string' &&
-                    (value === 'all' || isStatus(value))
-                  ) {
-                    setStatusFilter(value);
-                  }
-                }}
-                presentation='modal'
-              >
-                <Select.Item value='all' label='All statuses' />
-                <Select.Item value='planned' label='Planned' />
-                <Select.Item value='active' label='In progress' />
-                <Select.Item value='shipped' label='Shipped' />
-              </Select>
-
-              {visibleProjects.map((project) => (
-                <View key={project.id} style={cardStyle}>
-                  <View style={{ gap: 5 }}>
-                    <Text
-                      style={{
-                        color: mainText,
-                        fontSize: 18,
-                        fontWeight: '700',
-                      }}
-                    >
-                      {project.name}
-                    </Text>
-                    <Text style={{ color: subtleText }}>{project.status}</Text>
-                    <Text style={{ color: subtleText }}>
-                      {project.description}
-                    </Text>
-                  </View>
-                  <Checkbox
-                    label='Mark completed'
-                    checked={project.completed}
-                    onCheckedChange={(value: boolean) =>
-                      toggleProject(project.id, value)
-                    }
-                  />
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                    }}
-                  >
-                    <Button
-                      appearance='outline'
-                      color='neutral'
-                      onPress={() => openEdit(project)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      appearance='outline'
-                      color='neutral'
-                      onPress={() => duplicateProject(project.id)}
-                    >
-                      Duplicate
-                    </Button>
-                    <Button
-                      appearance='ghost'
-                      color='danger'
-                      onPress={() => deleteProject(project.id)}
-                    >
-                      Remove
-                    </Button>
-                  </View>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>{metric.label}</Text>
                 </View>
               ))}
-              {visibleProjects.length === 0 && (
-                <Text style={{ color: subtleText }}>No matching projects.</Text>
-              )}
             </View>
-          </Tabs.Content>
+            <View style={cardStyle}>
+              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>
+                Recent projects
+              </Text>
+              {data.projects.slice(0, 4).map((project) => (
+                <Pressable
+                  key={project.id}
+                  accessibilityRole='button'
+                  accessibilityLabel={`View ${project.name} in Projects`}
+                  onPress={() => {
+                    setQuery(project.name);
+                    setStatusFilter('all');
+                    setSection('projects');
+                  }}
+                  style={{ minHeight: 48, gap: 3, justifyContent: 'center', borderTopWidth: 1, borderColor: border }}
+                >
+                  <Text numberOfLines={1} style={{ color: mainText, fontWeight: '600' }}>{project.name}</Text>
+                  <Text style={{ color: subtleText, fontSize: 12 }}>{project.status} · {project.team}</Text>
+                </Pressable>
+              ))}
+              {data.projects.length === 0 ? (
+                <Text style={{ color: subtleText }}>No projects yet. Create your first one.</Text>
+              ) : null}
+              <Button appearance='outline' color='neutral' onPress={() => {
+                setQuery('');
+                setStatusFilter('all');
+                setSection('projects');
+              }}>
+                See all projects
+              </Button>
+            </View>
+          </View>
+        ) : null}
 
-          <Tabs.Content value='settings'>
-            <View style={{ paddingTop: 4, gap: 16 }}>
-              <View style={cardStyle}>
-                <Text
-                  style={{ fontWeight: '700', fontSize: 22, color: mainText }}
+        {section === 'projects' ? (
+          <View style={{ gap: 12 }}>
+            <Input
+              label='Search projects'
+              value={query}
+              onValueChange={setQuery}
+              placeholder='Search by name or description'
+            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+              {([
+                ['all', 'All'],
+                ['planned', 'Planned'],
+                ['active', 'In progress'],
+                ['shipped', 'Shipped'],
+              ] as const).map(([value, label]) => (
+                <Pressable
+                  key={value}
+                  accessibilityRole='button'
+                  accessibilityState={{ selected: statusFilter === value }}
+                  accessibilityLabel={`Filter: ${label}`}
+                  onPress={() => setStatusFilter(value)}
+                  style={{
+                    paddingHorizontal: 16,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    borderRadius: 22,
+                    borderWidth: 1,
+                    borderColor: statusFilter === value ? accent : border,
+                    backgroundColor: statusFilter === value ? surface.subtle : surface.canvas,
+                  }}
                 >
-                  Workspace settings
-                </Text>
-                <Input
-                  label='Workspace name'
-                  value={data.name}
-                  onValueChange={(next: string) =>
-                    setData((current) => ({ ...current, name: next }))
-                  }
-                />
-                <Checkbox
-                  label='Product notifications'
-                  description='Local preference only; no emails are sent.'
-                  checked={data.notifications}
-                  onCheckedChange={(notifications: boolean) =>
-                    setData((current) => ({ ...current, notifications }))
-                  }
-                />
-                <View style={{ gap: 8 }}>
-                  <Text style={{ color: mainText, fontWeight: '600' }}>
-                    Appearance
-                  </Text>
-                  <View
-                    style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-                  >
-                    {(['light', 'dark', 'highContrast'] as const).map(
-                      (option) => (
-                        <Button
-                          key={option}
-                          appearance={
-                            themeName === option ? 'solid' : 'outline'
-                          }
-                          color={themeName === option ? 'primary' : 'neutral'}
-                          onPress={() => setTheme(option)}
-                        >
-                          {option === 'highContrast'
-                            ? 'High contrast'
-                            : option === 'light'
-                              ? 'Light'
-                              : 'Dark'}
-                        </Button>
-                      )
-                    )}
+                  <Text style={{ color: mainText, fontWeight: statusFilter === value ? '700' : '500' }}>{label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Text style={{ color: subtleText, fontSize: 12 }}>
+              {visibleProjects.length} {visibleProjects.length === 1 ? 'project' : 'projects'}
+            </Text>
+            {visibleProjects.map((project) => (
+              <View key={project.id} style={{ ...cardStyle, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+                    <Text style={{ color: mainText, fontSize: 17, fontWeight: '700' }}>{project.name}</Text>
+                    <Text style={{ color: subtleText, fontSize: 12 }}>
+                      {project.status === 'active' ? 'In progress' : project.status === 'shipped' ? 'Shipped' : 'Planned'} · {project.team}
+                    </Text>
                   </View>
+                  <Pressable
+                    accessibilityRole='button'
+                    accessibilityLabel={`Actions for ${project.name}`}
+                    accessibilityHint='Edit, duplicate, or remove this project'
+                    onPress={() => setActionProjectId(project.id)}
+                    hitSlop={8}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 23, color: mainText }}>⋯</Text>
+                  </Pressable>
                 </View>
-                <Button
-                  appearance='outline'
-                  color='neutral'
-                  onPress={() => setResetOpen(true)}
-                >
-                  Restore sample data
-                </Button>
+                {project.description ? (
+                  <Text numberOfLines={2} style={{ color: subtleText, lineHeight: 20 }}>
+                    {project.description}
+                  </Text>
+                ) : null}
+                <Checkbox
+                  label='Mark completed'
+                  checked={project.completed}
+                  onCheckedChange={(value: boolean) => toggleProject(project.id, value)}
+                />
+              </View>
+            ))}
+            {visibleProjects.length === 0 ? (
+              <View style={{ ...cardStyle, alignItems: 'center', gap: 10 }}>
+                <Text style={{ color: mainText, fontWeight: '700' }}>No matching projects</Text>
+                <Text style={{ color: subtleText, textAlign: 'center' }}>Try another search or clear the status filter.</Text>
+                <Button appearance='outline' color='neutral' onPress={() => {
+                  setQuery('');
+                  setStatusFilter('all');
+                }}>Clear filters</Button>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {section === 'settings' ? (
+          <View style={{ gap: 14 }}>
+            <View style={cardStyle}>
+              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Workspace</Text>
+              <Input
+                label='Workspace name'
+                value={data.name}
+                onValueChange={(next: string) => setData((current) => ({ ...current, name: next }))}
+              />
+              <Checkbox
+                label='Product notifications'
+                description='Local preference only; no emails are sent.'
+                checked={data.notifications}
+                onCheckedChange={(notifications: boolean) => setData((current) => ({ ...current, notifications }))}
+              />
+            </View>
+            <View style={cardStyle}>
+              <Text style={{ color: mainText, fontSize: 18, fontWeight: '700' }}>Appearance</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(['light', 'dark', 'highContrast'] as const).map((option) => (
+                  <Button
+                    key={option}
+                    appearance={themeName === option ? 'solid' : 'outline'}
+                    color={themeName === option ? 'primary' : 'neutral'}
+                    onPress={() => setTheme(option)}
+                  >
+                    {option === 'highContrast' ? 'High contrast' : option === 'light' ? 'Light' : 'Dark'}
+                  </Button>
+                ))}
               </View>
             </View>
-          </Tabs.Content>
-        </Tabs>
-
-        <View style={{ gap: 6, paddingTop: 15 }}>
-          <Text style={{ color: subtleText, fontSize: 12 }}>
-            Vellira Dashboard Starter · React Native
-          </Text>
-          <Text style={{ color: subtleText, fontSize: 12 }}>
-            Offline UI example. No account or backend required.
-          </Text>
-        </View>
+            <Button appearance='outline' color='danger' onPress={() => setResetOpen(true)}>
+              Restore sample data
+            </Button>
+            <Text style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}>
+              Vellira Native Starter · Offline demo
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
+
+      <View
+        accessibilityRole='tablist'
+        style={{
+          flexDirection: 'row',
+          borderTopWidth: 1,
+          borderColor: border,
+          paddingHorizontal: 8,
+          paddingTop: 7,
+          paddingBottom: 4,
+          backgroundColor: surface.canvas,
+        }}
+      >
+        {([
+          ['overview', 'Overview', '⌂'],
+          ['projects', 'Projects', '▦'],
+          ['settings', 'Settings', '⚙'],
+        ] as const).map(([value, label, glyph]) => (
+          <Pressable
+            key={value}
+            accessibilityRole='tab'
+            accessibilityLabel={label}
+            accessibilityState={{ selected: section === value }}
+            onPress={() => setSection(value)}
+            style={{
+              flex: 1,
+              minHeight: 54,
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 2,
+              borderRadius: theme.tokens.radius.md,
+              backgroundColor: section === value ? surface.subtle : surface.canvas,
+            }}
+          >
+            <Text style={{ color: mainText, fontSize: 21 }}>{glyph}</Text>
+            <Text style={{ color: mainText, fontSize: 11, fontWeight: section === value ? '700' : '500' }}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Modal open={actionProjectId !== null} onOpenChange={(open: boolean) => { if (!open) setActionProjectId(null); }}>
+        <Modal.Overlay>
+          <Modal.Content>
+            <Modal.Header>
+              <Modal.Title>Project actions</Modal.Title>
+              <Modal.Description>{actionProject?.name ?? 'Select an action'}</Modal.Description>
+            </Modal.Header>
+            <Modal.Body>
+              <View style={{ gap: 12 }}>
+                <Button appearance='outline' color='neutral' onPress={() => {
+                  if (actionProject) openEdit(actionProject);
+                  setActionProjectId(null);
+                }}>Edit project</Button>
+                <Button appearance='outline' color='neutral' onPress={() => {
+                  if (actionProject) duplicateProject(actionProject.id);
+                  setActionProjectId(null);
+                }}>Duplicate project</Button>
+                <Button color='danger' onPress={() => {
+                  if (actionProject) deleteProject(actionProject.id);
+                  setActionProjectId(null);
+                }}>Remove project</Button>
+              </View>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button appearance='outline' color='neutral' onPress={() => setActionProjectId(null)}>Cancel</Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Overlay>
+      </Modal>
 
       <Modal open={resetOpen} onOpenChange={setResetOpen}>
         <Modal.Overlay>
