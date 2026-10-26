@@ -354,7 +354,14 @@ function WorkspaceScreen() {
         </View>
 
         {notice ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
             <Text accessibilityLiveRegion='polite' style={{ color: mainText }}>
               {notice}
             </Text>
@@ -379,7 +386,16 @@ function WorkspaceScreen() {
                 Undo
               </Button>
             ) : null}
-            <Button appearance='ghost' color='neutral' onPress={() => { setNotice(''); setRemovedProject(null); }}>Dismiss</Button>
+            <Button
+              appearance='ghost'
+              color='neutral'
+              onPress={() => {
+                setNotice('');
+                setRemovedProject(null);
+              }}
+            >
+              Dismiss
+            </Button>
           </View>
         ) : null}
 
