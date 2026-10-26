@@ -340,6 +340,8 @@ function WorkspaceScreen() {
     { key: 'active', name: 'In progress', count: data.projects.filter((p) => p.status === 'active').length, color: palette.amber },
     { key: 'shipped', name: 'Shipped', count: data.projects.filter((p) => p.status === 'shipped').length, color: palette.brand },
   ];
+  const chartMax = Math.max(4, Math.ceil(Math.max(...statuses.map((item) => item.count)) / 4) * 4);
+  const chartColor = themeName === 'dark' ? '#85B6FF' : '#5797F6';
 
   return (
     <SafeAreaView
@@ -503,18 +505,34 @@ function WorkspaceScreen() {
             </View>
             <View style={cardStyle}>
               <Text style={{ color: mainText, fontSize: 19, fontWeight: '700' }}>Projects by status</Text>
-              <View accessibilityLabel='Project distribution by status' style={{ flexDirection: 'row', height: 20, borderRadius: 10, overflow: 'hidden', backgroundColor: palette.track }}>
-                {statuses.map((status) => (
-                  <View key={status.key} style={{ width: ((totalCount ? (status.count / totalCount) * 100 : 0) + '%') as `${number}%`, height: '100%', backgroundColor: status.color }} />
-                ))}
-              </View>
-              {statuses.map((status) => (
-                <View key={status.key} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 10 }}>
-                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: status.color }} />
-                  <Text style={{ flex: 1, color: mainText, fontSize: 14 }}>{status.name}</Text>
-                  <Text style={{ color: subtleText, fontSize: 14, fontWeight: '700' }}>{status.count}</Text>
+              <View accessibilityLabel={'Projects by status: ' + statuses.map((item) => item.name + ' ' + item.count).join(', ')} style={{ gap: 10 }}>
+                <View style={{ flexDirection: 'row', height: 214, gap: 8 }}>
+                  <View style={{ width: 25, justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    {[4, 3, 2, 1, 0].map((tick) => (
+                      <Text key={tick} style={{ color: subtleText, fontSize: 11 }}>{chartMax * tick / 4}</Text>
+                    ))}
+                  </View>
+                  <View style={{ flex: 1, position: 'relative', height: 200, marginTop: 7 }}>
+                    {[0, 1, 2, 3, 4].map((tick) => (
+                      <View key={tick} style={{ position: 'absolute', top: tick * 50, left: 0, right: 0, borderTopWidth: 1, borderColor: border, opacity: 0.6 }} />
+                    ))}
+                    <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'space-around', alignItems: 'flex-end' }}>
+                      {statuses.map((status) => (
+                        <View key={status.key} style={{ width: '23%', height: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {status.count > 0 ? (
+                            <View style={{ width: '100%', height: (status.count / chartMax * 100 + '%') as `${number}%`, backgroundColor: chartColor, borderRadius: 9, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 }} />
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
                 </View>
-              ))}
+                <View style={{ marginLeft: 33, flexDirection: 'row', justifyContent: 'space-around' }}>
+                  {statuses.map((status) => (
+                    <Text key={status.key} numberOfLines={2} style={{ width: '31%', textAlign: 'center', color: subtleText, fontSize: 12 }}>{status.name}</Text>
+                  ))}
+                </View>
+              </View>
               {totalCount === 0 ? <Text style={{ color: subtleText }}>Create your first project to populate the chart.</Text> : null}
             </View>
           </View>
