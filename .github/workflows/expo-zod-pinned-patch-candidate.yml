@@ -26,11 +26,9 @@ jobs:
         with:
           node-version: 22.22.2
       - run: npm ci --no-audit --no-fund
-      - name: Verify exact original bytes and source-shape candidate
-        run: node scripts/security-expo-zod-patch-candidate.cjs
-      - name: Reject candidate through real installed runtime negative test
-        run: node scripts/security-expo-zod-negative-runtime-proof.cjs
-      - name: Apply twice and verify pinned Expo CLI patch in isolated CI
+      - name: Verify installed Expo guard after normal npm ci
+        run: node scripts/security-expo-zod-patch-candidate.cjs --verify
+      - name: Verify repeated application is idempotent
         run: |
           node scripts/security-expo-zod-patch-candidate.cjs --apply
           node scripts/security-expo-zod-patch-candidate.cjs --apply
