@@ -3,6 +3,7 @@
   "description": "AI-generated UI can drift across components and apps. Learn why design-system consistency, reusable React components, and quality checks matter as teams scale.",
   "slug": "ai-ui-consistency",
   "publishedAt": "2026-09-17",
+  "updatedAt": "2026-10-26",
   "author": "Roman Bakurov",
   "tags": ["AI", "Design Systems", "Tooling", "React", "React Native"],
   "draft": false
