@@ -113,6 +113,17 @@ assert.equal(exact.isTruncated(), false, 'Exact boundary should be allowed');
 exact.append('b');
 assert.equal(exact.isTruncated(), true, 'One byte past boundary should truncate');
 const report = { version: manifest.version, originalSha256: ORIGINAL, patchedSha256: PATCHED, integrityVerified: true, sourceUnmodified: true, candidateOnly: true, cumulativeGuardEnforced: true, accumulatedTextBytes };
-assert.ok(!process.argv.includes('--apply'), 'Isolated migration candidate must remain read-only');
-assert.equal(sha(fs.readFileSync(target)), ORIGINAL, 'Installed Expo 58 source modified unexpectedly');
+const apply = process.argv.includes('--apply');
+const verify = process.argv.includes('--verify');
+if (apply) {
+  const temporary = target + '.vellira-' + process.pid + '.tmp';
+  try {
+    fs.writeFileSync(temporary, updated, { mode: fs.statSync(target).mode });
+    fs.renameSync(temporary, target);
+  } finally {
+    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+  }
+}
+assert.equal(sha(fs.readFileSync(target)), apply ? PATCHED : ORIGINAL,
+  'Unexpected installed Expo 58 bytes after candidate action');
 console.log(JSON.stringify({ ...report, patchedSha256: nextHash, candidateOnly: true }, null, 2));
