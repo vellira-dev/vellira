@@ -212,7 +212,9 @@ export function DropdownContent({
                     onChangeText={onSearchChange}
                     placeholder={searchPlaceholder}
                     returnKeyType='search'
-                    placeholderTextColor={theme.components.dropdown.separator.fg}
+                    placeholderTextColor={
+                      theme.components.dropdown.separator.fg
+                    }
                     accessibilityLabel={
                       searchAccessibilityLabel ?? searchPlaceholder
                     }
@@ -242,7 +244,9 @@ export function DropdownContent({
                     onChangeText={onSearchChange}
                     placeholder={searchPlaceholder}
                     returnKeyType='search'
-                    placeholderTextColor={theme.components.dropdown.separator.fg}
+                    placeholderTextColor={
+                      theme.components.dropdown.separator.fg
+                    }
                     accessibilityLabel={
                       searchAccessibilityLabel ?? searchPlaceholder
                     }
