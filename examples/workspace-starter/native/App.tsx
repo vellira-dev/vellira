@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   Copy,
   Edit,
@@ -843,7 +838,8 @@ function WorkspaceScreen() {
                       justifyContent: 'center',
                       borderRadius: 22,
                       borderWidth: 1,
-                      borderColor: statusFilter === value ? palette.brand : border,
+                      borderColor:
+                        statusFilter === value ? palette.brand : border,
                       backgroundColor:
                         statusFilter === value
                           ? palette.brandBg
@@ -852,7 +848,8 @@ function WorkspaceScreen() {
                   >
                     <Text
                       style={{
-                        color: statusFilter === value ? palette.brand : subtleText,
+                        color:
+                          statusFilter === value ? palette.brand : subtleText,
                         fontWeight: statusFilter === value ? '700' : '500',
                       }}
                     >
@@ -944,41 +941,65 @@ function WorkspaceScreen() {
                     placement='bottom-end'
                     closeOnSelect
                     contentStyle={{
-                        width: 216,
-                        maxWidth: 236,
-                        borderRadius: 22,
-                        paddingVertical: 8,
-                        paddingHorizontal: 4,
-                        borderWidth: 1,
-                        borderColor: border,
-                        backgroundColor:
-                          themeName === 'dark'
-                            ? 'rgba(28, 24, 39, 0.94)'
-                            : themeName === 'highContrast'
-                              ? surface.canvas
-                              : 'rgba(255, 255, 255, 0.94)',
-                        shadowColor: '#000000',
-                        shadowOpacity: themeName === 'dark' ? 0.32 : 0.15,
-                        shadowRadius: 18,
-                        shadowOffset: { width: 0, height: 9 },
-                        elevation: 12,
-                      }}
+                      width: 216,
+                      maxWidth: 236,
+                      borderRadius: 22,
+                      paddingVertical: 8,
+                      paddingHorizontal: 4,
+                      borderWidth: 1,
+                      borderColor: border,
+                      backgroundColor:
+                        themeName === 'dark'
+                          ? 'rgba(28, 24, 39, 0.94)'
+                          : themeName === 'highContrast'
+                            ? surface.canvas
+                            : 'rgba(255, 255, 255, 0.94)',
+                      shadowColor: '#000000',
+                      shadowOpacity: themeName === 'dark' ? 0.32 : 0.15,
+                      shadowRadius: 18,
+                      shadowOffset: { width: 0, height: 9 },
+                      elevation: 12,
+                    }}
                   >
                     <Dropdown.Trigger asChild>
                       <Pressable
                         accessibilityRole='button'
                         accessibilityLabel={'Actions for ' + project.name}
-                        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                        style={{
+                          width: 44,
+                          height: 44,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
                       >
                         <MoreHorizontal size={24} color={mainText} />
                       </Pressable>
                     </Dropdown.Trigger>
                     <Dropdown.Content>
                       <Dropdown.Label>Project actions</Dropdown.Label>
-                      <Dropdown.Item value='edit' icon={<Edit size={18} />} onSelect={() => openEdit(project)}>Edit</Dropdown.Item>
-                      <Dropdown.Item value='duplicate' icon={<Copy size={18} />} onSelect={() => duplicateProject(project.id)}>Duplicate</Dropdown.Item>
+                      <Dropdown.Item
+                        value='edit'
+                        icon={<Edit size={18} />}
+                        onSelect={() => openEdit(project)}
+                      >
+                        Edit
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        value='duplicate'
+                        icon={<Copy size={18} />}
+                        onSelect={() => duplicateProject(project.id)}
+                      >
+                        Duplicate
+                      </Dropdown.Item>
                       <Dropdown.Separator />
-                      <Dropdown.Item value='remove' icon={<Trash size={18} />} color='danger' onSelect={() => deleteProject(project.id)}>Remove</Dropdown.Item>
+                      <Dropdown.Item
+                        value='remove'
+                        icon={<Trash size={18} />}
+                        color='danger'
+                        onSelect={() => deleteProject(project.id)}
+                      >
+                        Remove
+                      </Dropdown.Item>
                     </Dropdown.Content>
                   </Dropdown>
                 </View>
@@ -1002,34 +1023,34 @@ function WorkspaceScreen() {
                       style={{
                         borderRadius: 12,
                         paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      backgroundColor:
-                        project.status === 'shipped'
-                          ? palette.successBg
-                          : project.status === 'active'
-                            ? palette.brandBg
-                            : palette.track,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color:
+                        paddingVertical: 5,
+                        backgroundColor:
                           project.status === 'shipped'
-                            ? palette.success
+                            ? palette.successBg
                             : project.status === 'active'
-                              ? palette.brand
-                              : mainText,
+                              ? palette.brandBg
+                              : palette.track,
                       }}
                     >
-                      {project.status === 'shipped'
-                        ? 'Shipped'
-                        : project.status === 'active'
-                          ? 'In progress'
-                          : 'Planned'}
-                    </Text>
-                  </View>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color:
+                            project.status === 'shipped'
+                              ? palette.success
+                              : project.status === 'active'
+                                ? palette.brand
+                                : mainText,
+                        }}
+                      >
+                        {project.status === 'shipped'
+                          ? 'Shipped'
+                          : project.status === 'active'
+                            ? 'In progress'
+                            : 'Planned'}
+                      </Text>
+                    </View>
                   </View>
                   <Pressable
                     accessibilityRole='checkbox'

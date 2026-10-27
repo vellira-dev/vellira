@@ -163,7 +163,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(native).toContain('openEdit(project)');
     expect(native).toContain('<Dropdown.Content');
     expect(native).toContain('contentStyle={{');
-    expect(native).toContain("<Dropdown.Trigger asChild>");
+    expect(native).toContain('<Dropdown.Trigger asChild>');
     expect(native).toContain("<Dropdown.Item value='remove'");
     expect(native).toContain('duplicateProject(project.id)');
     expect(native).toContain('deleteProject(project.id)');
