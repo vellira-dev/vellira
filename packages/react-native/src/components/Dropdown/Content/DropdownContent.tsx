@@ -72,7 +72,8 @@ export function DropdownContent({
   const colorPalette = theme.components.dropdown[color];
   const isSheet = presentation === 'sheet';
   const isPopover = presentation === 'popover';
-  const popoverRadius = resolveBorderRadius(contentStyle) ?? theme.tokens.radius.md;
+  const popoverRadius =
+    resolveBorderRadius(contentStyle) ?? theme.tokens.radius.md;
   const animation = useRef(new Animated.Value(open ? 1 : 0)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
 
