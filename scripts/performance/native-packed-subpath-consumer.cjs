@@ -28,6 +28,7 @@ const specs = [
   { name: 'theme', exportKey: './theme', symbol: 'ThemeProvider',
     source: 'src/theme/index.ts', output: 'theme.js',
     types: 'dist/theme/index.d.ts' },
+  { name: 'mixed', exportKey: '.', symbol: 'mixed' },
 ];
 const evidence = {
   schemaVersion: 1, issue: 1906, kind: 'unpublished-packed-native-subpath-consumer',
@@ -179,12 +180,27 @@ try {
     const markup = spec.symbol === 'ThemeProvider'
       ? "React.createElement(ThemeProvider, null, React.createElement(Text, null, 'Theme'))"
       : "React.createElement(Button, null, 'Button')";
-    write(consumer, 'App.tsx', [
-      "import React from 'react';",
-      "import { Text } from 'react-native';",
-      "import { " + spec.symbol + " } from '" + moduleName + "';",
-      'export default function App() { return ' + markup + '; }', '',
-    ].join('\n'));
+    const appLines = spec.name === 'mixed'
+      ? [
+        "import React from 'react';",
+        "import { Text, View } from 'react-native';",
+        "import { Button as RootButton } from '@vellira-ui/react-native';",
+        "import { Button as SubpathButton } from '@vellira-ui/react-native/button';",
+        "import { ThemeProvider } from '@vellira-ui/react-native/theme';",
+        'export default function App() {',
+        "  return React.createElement(ThemeProvider, null, React.createElement(View, null,",
+        "    React.createElement(Text, null, 'Mixed imports'),",
+        "    React.createElement(RootButton, null, 'Root button'),",
+        "    React.createElement(SubpathButton, null, 'Subpath button')));",
+        '}', '',
+      ]
+      : [
+        "import React from 'react';",
+        "import { Text } from 'react-native';",
+        "import { " + spec.symbol + " } from '" + moduleName + "';",
+        'export default function App() { return ' + markup + '; }', '',
+      ];
+    write(consumer, 'App.tsx', appLines.join('\\n'));
     write(consumer, 'tsconfig.json', JSON.stringify({
       extends: 'expo/tsconfig.base',
       compilerOptions: { strict: true, skipLibCheck: true },
@@ -226,7 +242,9 @@ try {
         scriptCount: bundles.length,
       };
     }
-    evidence.consumers[spec.name] = { import: moduleName, typecheck: true, platforms };
+    evidence.consumers[spec.name] = { import: spec.name === 'mixed'
+      ? ['@vellira-ui/react-native', '@vellira-ui/react-native/button',
+        '@vellira-ui/react-native/theme'] : moduleName, typecheck: true, platforms };
     console.log('[native-subpath-tgz]', spec.name, JSON.stringify(platforms));
   }
   for (const platform of ['ios', 'android']) {
