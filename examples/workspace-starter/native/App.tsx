@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
-  ActionSheetIOS,
-  Alert,
-  Platform,
   Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
 import {
+  Copy,
+  Edit,
   Filter,
   Folder,
   Grid,
@@ -16,12 +15,14 @@ import {
   Plus,
   Settings,
   Search,
+  Trash,
 } from '@vellira-ui/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   Button,
   Checkbox,
+  Dropdown,
   Input,
   Modal,
   Select,
@@ -397,35 +398,6 @@ function WorkspaceScreen() {
     Math.ceil(Math.max(...statuses.map((item) => item.count)) / 4) * 4
   );
   const chartColor = themeName === 'dark' ? '#85B6FF' : '#5797F6';
-  function showProjectActions(project: Project) {
-    const edit = () => openEdit(project);
-    const duplicate = () => duplicateProject(project.id);
-    const remove = () => deleteProject(project.id);
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: project.name,
-          options: ['Cancel', 'Edit', 'Duplicate', 'Remove'],
-          cancelButtonIndex: 0,
-          destructiveButtonIndex: 3,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) edit();
-          if (buttonIndex === 2) duplicate();
-          if (buttonIndex === 3) remove();
-        }
-      );
-      return;
-    }
-    // Android fallback uses platform-native actions pending a verified anchored menu.
-    Alert.alert(project.name, 'Choose an action', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Edit', onPress: edit },
-      { text: 'Duplicate', onPress: duplicate },
-      { text: 'Remove', style: 'destructive', onPress: remove },
-    ]);
-  }
 
   return (
     <SafeAreaView
@@ -866,21 +838,21 @@ function WorkspaceScreen() {
                     accessibilityState={{ selected: statusFilter === value }}
                     onPress={() => setStatusFilter(value)}
                     style={{
-                      paddingHorizontal: 15,
-                      minHeight: 44,
+                      paddingHorizontal: 14,
+                      minHeight: 40,
                       justifyContent: 'center',
                       borderRadius: 22,
                       borderWidth: 1,
-                      borderColor: statusFilter === value ? mainText : border,
+                      borderColor: statusFilter === value ? palette.brand : border,
                       backgroundColor:
                         statusFilter === value
-                          ? surface.subtle
+                          ? palette.brandBg
                           : surface.canvas,
                     }}
                   >
                     <Text
                       style={{
-                        color: mainText,
+                        color: statusFilter === value ? palette.brand : subtleText,
                         fontWeight: statusFilter === value ? '700' : '500',
                       }}
                     >
@@ -965,20 +937,30 @@ function WorkspaceScreen() {
                       {project.description || 'No description'}
                     </Text>
                   </Pressable>
-                  <Pressable
-                    accessibilityRole='button'
+                  <Dropdown
                     accessibilityLabel={'Actions for ' + project.name}
-                    onPress={() => showProjectActions(project)}
-                    hitSlop={8}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
+                    showArrow={false}
+                    presentation='popover'
+                    placement='bottom-end'
+                    closeOnSelect
                   >
-                    <MoreHorizontal size={24} color={mainText} />
-                  </Pressable>
+                    <Dropdown.Trigger asChild>
+                      <Pressable
+                        accessibilityRole='button'
+                        accessibilityLabel={'Actions for ' + project.name}
+                        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <MoreHorizontal size={24} color={mainText} />
+                      </Pressable>
+                    </Dropdown.Trigger>
+                    <Dropdown.Content presentation='popover'>
+                      <Dropdown.Label>Project actions</Dropdown.Label>
+                      <Dropdown.Item value='edit' icon={<Edit size={18} />} onSelect={() => openEdit(project)}>Edit</Dropdown.Item>
+                      <Dropdown.Item value='duplicate' icon={<Copy size={18} />} onSelect={() => duplicateProject(project.id)}>Duplicate</Dropdown.Item>
+                      <Dropdown.Separator />
+                      <Dropdown.Item value='remove' icon={<Trash size={18} />} color='danger' onSelect={() => deleteProject(project.id)}>Remove</Dropdown.Item>
+                    </Dropdown.Content>
+                  </Dropdown>
                 </View>
                 <View
                   style={{
