@@ -53,6 +53,9 @@ export function DropdownContent({
   const colorPalette = theme.components.dropdown[color];
   const isSheet = presentation === 'sheet';
   const isPopover = presentation === 'popover';
+  const popoverRadius =
+    StyleSheet.flatten(contentStyle)?.borderRadius ??
+    theme.tokens.radius.md;
   const animation = useRef(new Animated.Value(open ? 1 : 0)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -185,7 +188,9 @@ export function DropdownContent({
           onLayout={isPopover ? onFloatingLayout : undefined}
         >
           {isPopover && popoverBackground ? (
-            <View style={styles.popoverSurface}>
+            <View
+              style={[styles.popoverSurface, { borderRadius: popoverRadius }]}
+            >
               <View
                 pointerEvents='none'
                 style={StyleSheet.absoluteFill}
