@@ -29,6 +29,7 @@ const webPointerEventsBoxNone =
 export function DropdownContent({
   children,
   contentStyle,
+  popoverBackground,
   accessibilityLabel,
 }: DropdownContentProps) {
   const {
@@ -176,10 +177,45 @@ export function DropdownContent({
               left: position.left,
             },
             contentStyle,
+            isPopover && popoverBackground ? { overflow: 'visible', backgroundColor: 'transparent' } : undefined,
             menuAnimatedStyle,
           ]}
           onLayout={isPopover ? onFloatingLayout : undefined}
         >
+          {isPopover && popoverBackground ? (
+            <View style={styles.popoverSurface}>
+              <View
+                pointerEvents='none'
+                style={StyleSheet.absoluteFill}
+                accessibilityElementsHidden
+                importantForAccessibility='no'
+              >
+                {popoverBackground}
+              </View>
+              {searchable && (
+                <View style={styles.searchWrap}>
+                  <View
+                    style={styles.searchIcon}
+                    accessibilityElementsHidden
+                    importantForAccessibility='no'
+                  >
+                    <Search width={16} height={16} color={theme.components.dropdown.separator.fg} />
+                  </View>
+                  <TextInput
+                    value={searchValue}
+                    onChangeText={onSearchChange}
+                    placeholder={searchPlaceholder}
+                    returnKeyType='search'
+                    placeholderTextColor={theme.components.dropdown.separator.fg}
+                    accessibilityLabel={searchAccessibilityLabel ?? searchPlaceholder}
+                    style={styles.searchInput}
+                  />
+                </View>
+              )}
+              {children}
+            </View>
+          ) : (
+            <>
           {searchable && (
             <View style={styles.searchWrap}>
               <View
@@ -207,6 +243,8 @@ export function DropdownContent({
             </View>
           )}
           {children}
+            </>
+          )}
         </Animated.View>
       </View>
     </Modal>
