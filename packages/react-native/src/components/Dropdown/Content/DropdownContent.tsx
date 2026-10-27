@@ -26,6 +26,21 @@ const nativePointerEventsBoxNone =
 const webPointerEventsBoxNone =
   Platform.OS === 'web' ? { pointerEvents: 'box-none' as const } : undefined;
 
+function resolveBorderRadius(style: DropdownContentProps['contentStyle']): number | undefined {
+  if (Array.isArray(style)) {
+    for (let index = style.length - 1; index >= 0; index -= 1) {
+      const radius = resolveBorderRadius(style[index]);
+      if (radius !== undefined) return radius;
+    }
+    return undefined;
+  }
+  if (style && typeof style === 'object' && 'borderRadius' in style) {
+    const radius = style.borderRadius;
+    return typeof radius === 'number' ? radius : undefined;
+  }
+  return undefined;
+}
+
 export function DropdownContent({
   children,
   contentStyle,
@@ -53,9 +68,7 @@ export function DropdownContent({
   const colorPalette = theme.components.dropdown[color];
   const isSheet = presentation === 'sheet';
   const isPopover = presentation === 'popover';
-  const popoverRadius =
-    StyleSheet.flatten(contentStyle)?.borderRadius ??
-    theme.tokens.radius.md;
+  const popoverRadius = resolveBorderRadius(contentStyle) ?? theme.tokens.radius.md;
   const animation = useRef(new Animated.Value(open ? 1 : 0)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
 
