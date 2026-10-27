@@ -26,7 +26,9 @@ const nativePointerEventsBoxNone =
 const webPointerEventsBoxNone =
   Platform.OS === 'web' ? { pointerEvents: 'box-none' as const } : undefined;
 
-function resolveBorderRadius(style: DropdownContentProps['contentStyle']): number | undefined {
+function resolveBorderRadius(
+  style: DropdownContentProps['contentStyle']
+): number | undefined {
   if (Array.isArray(style)) {
     for (let index = style.length - 1; index >= 0; index -= 1) {
       const radius = resolveBorderRadius(style[index]);
