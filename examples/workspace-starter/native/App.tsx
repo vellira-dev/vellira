@@ -950,15 +950,15 @@ function WorkspaceScreen() {
                       borderColor: border,
                       backgroundColor:
                         themeName === 'dark'
-                          ? 'rgba(28, 24, 39, 0.94)'
+                          ? 'rgba(28, 24, 39, 0.84)'
                           : themeName === 'highContrast'
                             ? surface.canvas
-                            : 'rgba(255, 255, 255, 0.94)',
+                            : 'rgba(255, 255, 255, 0.84)',
                       shadowColor: '#000000',
-                      shadowOpacity: themeName === 'dark' ? 0.32 : 0.15,
-                      shadowRadius: 18,
-                      shadowOffset: { width: 0, height: 9 },
-                      elevation: 12,
+                      shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
+                      shadowRadius: 24,
+                      shadowOffset: { width: 0, height: 12 },
+                      elevation: 16,
                     }}
                   >
                     <Dropdown.Trigger asChild>
