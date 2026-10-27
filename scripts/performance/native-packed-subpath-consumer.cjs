@@ -200,7 +200,7 @@ try {
         "import { " + spec.symbol + " } from '" + moduleName + "';",
         'export default function App() { return ' + markup + '; }', '',
       ];
-    write(consumer, 'App.tsx', appLines.join('\\n'));
+    write(consumer, 'App.tsx', appLines.join('\n'));
     write(consumer, 'tsconfig.json', JSON.stringify({
       extends: 'expo/tsconfig.base',
       compilerOptions: { strict: true, skipLibCheck: true },
