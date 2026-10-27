@@ -921,6 +921,49 @@ describe('Native Dropdown', () => {
     unmount();
   });
 
+  it('integrates an injected blur-like background with the anchored popover without changing item actions', () => {
+    const onEdit = vi.fn();
+    const { container, unmount } = render(
+      <Dropdown
+        defaultOpen
+        presentation='popover'
+        contentStyle={{
+          width: 216,
+          borderRadius: 22,
+          shadowOpacity: 0.24,
+        }}
+        popoverBackground={
+          <Text testID='native-blur-background'>Blur material</Text>
+        }
+      >
+        <Dropdown.Trigger>Actions</Dropdown.Trigger>
+        <Dropdown.Content>
+          <Dropdown.Item value='edit' onSelect={onEdit}>
+            Edit
+          </Dropdown.Item>
+        </Dropdown.Content>
+      </Dropdown>
+    );
+
+    const menu = container.querySelector<HTMLElement>('[role="menu"]');
+    const material = document.querySelector('[data-testid="native-blur-background"]');
+    const edit = document.querySelector<HTMLElement>('[role="menuitem"]');
+
+    expect(menu).not.toBeNull();
+    expect(menu?.style.overflow).toBe('visible');
+    expect(menu?.style.backgroundColor).toBe('transparent');
+    expect(menu?.style.width).toBe('216px');
+    expect(menu?.style.shadowOpacity).toBe('0.24');
+    expect(material).not.toBeNull();
+    expect(menu?.contains(material)).toBe(true);
+    expect(edit?.textContent).toContain('Edit');
+
+    act(() => edit?.click());
+    expect(onEdit).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
+
   it('positions popover content using FloatingManager', () => {
     const updatePosition = vi.fn();
     const onFloatingLayout = vi.fn();
