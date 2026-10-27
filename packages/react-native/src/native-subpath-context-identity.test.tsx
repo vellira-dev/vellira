@@ -1,22 +1,30 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 // Intentionally import the actual independently built JavaScript entries.
 // Run only after the canonical build and build:subpaths:probe.
-import * as root from '../dist/index.js';
-import * as button from '../dist/button.js';
-import * as theme from '../dist/theme.js';
+type NativeEntry = typeof import('./index');
+let root: NativeEntry;
+let button: Pick<NativeEntry, 'Button'>;
+let theme: Pick<NativeEntry, 'ThemeProvider' | 'useTheme'>;
 
 function Probe({ useTheme, label }: {
-  useTheme: typeof theme.useTheme;
+  useTheme: NativeEntry['useTheme'];
   label: string;
 }) {
   const current = useTheme();
   return createElement('span', { 'data-probe': label }, current.themeName);
 }
 
-describe('unpublished native subpath React context identity (#1906)', () => {
+const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
+(optIn ? describe : describe.skip)(
+  'unpublished native subpath React context identity (#1906)', () => {
+  beforeAll(async () => {
+    root = await import('../dist/index.js') as NativeEntry;
+    button = await import('../dist/button.js') as Pick<NativeEntry, 'Button'>;
+    theme = await import('../dist/theme.js') as Pick<NativeEntry, 'ThemeProvider' | 'useTheme'>;
+  });
   it('root hook reads a dark theme supplied by subpath provider', () => {
     const result = renderToStaticMarkup(
       createElement(theme.ThemeProvider, { theme: 'dark' },
