@@ -93,6 +93,27 @@ jobs:
           VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/release-candidate/cli.cjs
 
+      - name: Assert staged subpaths are absent from exact publishable tarball
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(
+            fs.readFileSync('.release-candidate/candidate.json', 'utf8')
+          );
+          const native = manifest.packages.find(
+            entry => entry.name === '@vellira-ui/react-native'
+          );
+          if (!native) throw new Error('Missing native release candidate evidence');
+          if (native.nativeSubpathContract?.enabled !== false) {
+            throw new Error('This non-publishing proof must retain root-only exports');
+          }
+          for (const file of ['dist/button.js', 'dist/theme.js']) {
+            if (native.files.includes(file)) {
+              throw new Error('Unpublished native subpath leaked into tarball: ' + file);
+            }
+          }
+          NODE
+
       - name: Verify candidate provenance identity
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
