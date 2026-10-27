@@ -97,6 +97,7 @@ export const createStyles = (theme: NativeTheme) => {
       overflow: 'hidden',
       borderRadius: theme.tokens.radius.md,
       backgroundColor: 'transparent',
+      padding: theme.tokens.spacing[1],
     },
 
     searchWrap: {
