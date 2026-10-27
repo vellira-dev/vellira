@@ -199,7 +199,11 @@ export function DropdownContent({
             },
             contentStyle,
             isPopover && popoverBackground
-              ? { overflow: 'visible', backgroundColor: 'transparent' }
+              ? {
+                  overflow: 'visible',
+                  backgroundColor: 'transparent',
+                  padding: 0,
+                }
               : undefined,
             menuAnimatedStyle,
           ]}
