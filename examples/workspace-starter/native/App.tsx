@@ -943,18 +943,7 @@ function WorkspaceScreen() {
                     presentation='popover'
                     placement='bottom-end'
                     closeOnSelect
-                  >
-                    <Dropdown.Trigger asChild>
-                      <Pressable
-                        accessibilityRole='button'
-                        accessibilityLabel={'Actions for ' + project.name}
-                        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <MoreHorizontal size={24} color={mainText} />
-                      </Pressable>
-                    </Dropdown.Trigger>
-                    <Dropdown.Content
-                      contentStyle={{
+                    contentStyle={{
                         width: 216,
                         maxWidth: 236,
                         borderRadius: 22,
@@ -974,7 +963,17 @@ function WorkspaceScreen() {
                         shadowOffset: { width: 0, height: 9 },
                         elevation: 12,
                       }}
-                    >
+                  >
+                    <Dropdown.Trigger asChild>
+                      <Pressable
+                        accessibilityRole='button'
+                        accessibilityLabel={'Actions for ' + project.name}
+                        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <MoreHorizontal size={24} color={mainText} />
+                      </Pressable>
+                    </Dropdown.Trigger>
+                    <Dropdown.Content>
                       <Dropdown.Label>Project actions</Dropdown.Label>
                       <Dropdown.Item value='edit' icon={<Edit size={18} />} onSelect={() => openEdit(project)}>Edit</Dropdown.Item>
                       <Dropdown.Item value='duplicate' icon={<Copy size={18} />} onSelect={() => duplicateProject(project.id)}>Duplicate</Dropdown.Item>
