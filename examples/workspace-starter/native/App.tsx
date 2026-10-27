@@ -953,7 +953,28 @@ function WorkspaceScreen() {
                         <MoreHorizontal size={24} color={mainText} />
                       </Pressable>
                     </Dropdown.Trigger>
-                    <Dropdown.Content presentation='popover'>
+                    <Dropdown.Content
+                      contentStyle={{
+                        width: 216,
+                        maxWidth: 236,
+                        borderRadius: 22,
+                        paddingVertical: 8,
+                        paddingHorizontal: 4,
+                        borderWidth: 1,
+                        borderColor: border,
+                        backgroundColor:
+                          themeName === 'dark'
+                            ? 'rgba(28, 24, 39, 0.94)'
+                            : themeName === 'highContrast'
+                              ? surface.canvas
+                              : 'rgba(255, 255, 255, 0.94)',
+                        shadowColor: '#000000',
+                        shadowOpacity: themeName === 'dark' ? 0.32 : 0.15,
+                        shadowRadius: 18,
+                        shadowOffset: { width: 0, height: 9 },
+                        elevation: 12,
+                      }}
+                    >
                       <Dropdown.Label>Project actions</Dropdown.Label>
                       <Dropdown.Item value='edit' icon={<Edit size={18} />} onSelect={() => openEdit(project)}>Edit</Dropdown.Item>
                       <Dropdown.Item value='duplicate' icon={<Copy size={18} />} onSelect={() => duplicateProject(project.id)}>Duplicate</Dropdown.Item>
