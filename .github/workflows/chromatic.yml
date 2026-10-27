@@ -78,7 +78,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         if: steps.impact.outputs.run_chromatic == 'true'
         with:
-          node-version: 22.22.2
+          node-version: 22.23.4
 
       - name: Install dependencies
         if: steps.impact.outputs.run_chromatic == 'true'

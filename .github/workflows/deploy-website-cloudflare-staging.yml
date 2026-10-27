@@ -44,7 +44,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: 22.22.2
+  NODE_VERSION: 22.23.4
   STAGING_URL: https://vellira-website-staging.vellira.workers.dev
   CANDIDATE_SHA: ${{ github.sha }}
   VELLIRA_BUILD_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
