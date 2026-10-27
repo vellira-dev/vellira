@@ -31,7 +31,9 @@ function resolveBorderRadius(
 ): number | undefined {
   if (Array.isArray(style)) {
     for (let index = style.length - 1; index >= 0; index -= 1) {
-      const radius = resolveBorderRadius(style[index]);
+      const radius = resolveBorderRadius(
+        style[index] as DropdownContentProps['contentStyle']
+      );
       if (radius !== undefined) return radius;
     }
     return undefined;
