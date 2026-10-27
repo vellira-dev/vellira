@@ -58,6 +58,28 @@ jobs:
       - name: Smoke workspace packages before packing
         run: pnpm ci:smoke
 
+      - name: Probe isolated React Native subpath builds without publishing
+        run: |
+          pnpm --filter @vellira-ui/react-native build:subpaths:probe
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const dir = 'packages/react-native';
+          const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+          if (JSON.stringify(Object.keys(manifest.exports)) !== JSON.stringify(['.'])) {
+            throw new Error('Subpaths must remain unpublished in this proof workflow');
+          }
+          for (const file of ['dist/index.js', 'dist/button.js', 'dist/theme.js']) {
+            if (!fs.statSync(path.join(dir, file), { throwIfNoEntry: false })?.isFile()) {
+              throw new Error('Missing staged native entry: ' + file);
+            }
+          }
+          if (manifest.files.some(file => file === 'dist/button.js' || file === 'dist/theme.js' ||
+              file === 'dist/*.js' || file === 'dist/**/*.js')) {
+            throw new Error('Staged native subpaths leaked into public files allowlist');
+          }
+          NODE
+
       - name: Match release npm runtime
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
