@@ -177,7 +177,9 @@ export function DropdownContent({
               left: position.left,
             },
             contentStyle,
-            isPopover && popoverBackground ? { overflow: 'visible', backgroundColor: 'transparent' } : undefined,
+            isPopover && popoverBackground
+              ? { overflow: 'visible', backgroundColor: 'transparent' }
+              : undefined,
             menuAnimatedStyle,
           ]}
           onLayout={isPopover ? onFloatingLayout : undefined}
@@ -199,7 +201,11 @@ export function DropdownContent({
                     accessibilityElementsHidden
                     importantForAccessibility='no'
                   >
-                    <Search width={16} height={16} color={theme.components.dropdown.separator.fg} />
+                    <Search
+                      width={16}
+                      height={16}
+                      color={theme.components.dropdown.separator.fg}
+                    />
                   </View>
                   <TextInput
                     value={searchValue}
@@ -207,7 +213,9 @@ export function DropdownContent({
                     placeholder={searchPlaceholder}
                     returnKeyType='search'
                     placeholderTextColor={theme.components.dropdown.separator.fg}
-                    accessibilityLabel={searchAccessibilityLabel ?? searchPlaceholder}
+                    accessibilityLabel={
+                      searchAccessibilityLabel ?? searchPlaceholder
+                    }
                     style={styles.searchInput}
                   />
                 </View>
@@ -216,33 +224,33 @@ export function DropdownContent({
             </View>
           ) : (
             <>
-          {searchable && (
-            <View style={styles.searchWrap}>
-              <View
-                style={styles.searchIcon}
-                accessibilityElementsHidden
-                importantForAccessibility='no'
-              >
-                <Search
-                  width={16}
-                  height={16}
-                  color={theme.components.dropdown.separator.fg}
-                />
-              </View>
-              <TextInput
-                value={searchValue}
-                onChangeText={onSearchChange}
-                placeholder={searchPlaceholder}
-                returnKeyType='search'
-                placeholderTextColor={theme.components.dropdown.separator.fg}
-                accessibilityLabel={
-                  searchAccessibilityLabel ?? searchPlaceholder
-                }
-                style={styles.searchInput}
-              />
-            </View>
-          )}
-          {children}
+              {searchable && (
+                <View style={styles.searchWrap}>
+                  <View
+                    style={styles.searchIcon}
+                    accessibilityElementsHidden
+                    importantForAccessibility='no'
+                  >
+                    <Search
+                      width={16}
+                      height={16}
+                      color={theme.components.dropdown.separator.fg}
+                    />
+                  </View>
+                  <TextInput
+                    value={searchValue}
+                    onChangeText={onSearchChange}
+                    placeholder={searchPlaceholder}
+                    returnKeyType='search'
+                    placeholderTextColor={theme.components.dropdown.separator.fg}
+                    accessibilityLabel={
+                      searchAccessibilityLabel ?? searchPlaceholder
+                    }
+                    style={styles.searchInput}
+                  />
+                </View>
+              )}
+              {children}
             </>
           )}
         </Animated.View>
