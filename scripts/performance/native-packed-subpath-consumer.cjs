@@ -262,7 +262,7 @@ try {
         '}',
         "console.log('[native-subpath-tgz] packed mixed runtime context PASS');",
         '',
-      ].join('\\n'));
+      ].join(String.fromCharCode(10)));
       call(process.execPath, [path.join(consumer, 'context-check.mjs')], consumer);
     }
     call(process.execPath, [
