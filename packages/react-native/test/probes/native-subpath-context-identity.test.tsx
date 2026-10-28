@@ -2,9 +2,11 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import type * as NativeEntryModule from '../../src/index';
+
 // Intentionally import the actual independently built JavaScript entries.
 // Run only after the canonical build and build:subpaths:probe.
-type NativeEntry = typeof import('../../src/index');
+type NativeEntry = typeof NativeEntryModule;
 let root: NativeEntry;
 let button: Pick<NativeEntry, 'Button'>;
 let theme: Pick<NativeEntry, 'ThemeProvider' | 'useTheme'>;
@@ -33,7 +35,7 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
   });
   it('root provider and root hook share one context (control)', () => {
     const result = renderToStaticMarkup(
-      createElement(root.ThemeProvider, { theme: 'dark', children: null },
+      createElement(root.ThemeProvider, { theme: 'dark' },
         createElement(Probe, { label: 'root-control', useTheme: root.useTheme }))
     );
     expect(result).toContain('data-probe="root-control">dark</span>');
@@ -41,7 +43,7 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
 
   it('subpath provider and subpath hook share one context (control)', () => {
     const result = renderToStaticMarkup(
-      createElement(theme.ThemeProvider, { theme: 'dark', children: null },
+      createElement(theme.ThemeProvider, { theme: 'dark' },
         createElement(Probe, { label: 'subpath-control', useTheme: theme.useTheme }))
     );
     expect(result).toContain('data-probe="subpath-control">dark</span>');
@@ -49,7 +51,7 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
 
   it('root hook reads a dark theme supplied by subpath provider', () => {
     const result = renderToStaticMarkup(
-      createElement(theme.ThemeProvider, { theme: 'dark', children: null },
+      createElement(theme.ThemeProvider, { theme: 'dark' },
         createElement(Probe, { label: 'root', useTheme: root.useTheme }))
     );
     expect(result).toContain('data-probe="root">dark</span>');
@@ -57,7 +59,7 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
 
   it('subpath hook reads a dark theme supplied by root provider', () => {
     const result = renderToStaticMarkup(
-      createElement(root.ThemeProvider, { theme: 'dark', children: null },
+      createElement(root.ThemeProvider, { theme: 'dark' },
         createElement(Probe, { label: 'subpath', useTheme: theme.useTheme }))
     );
     expect(result).toContain('data-probe="subpath">dark</span>');
