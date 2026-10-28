@@ -86,9 +86,37 @@ export function verifyDocsRobots(text, { origin = DOCS_ORIGIN } = {}) {
     sitemaps.length === 1 && sitemaps[0] === new URL('/sitemap.xml', origin).href,
     'Documentation robots.txt must declare exactly the canonical sitemap'
   );
+  // Robots groups are scoped to their preceding User-agent directives.
+  // Cloudflare may append bot-specific Disallow rules; those do not revoke
+  // the wildcard group's permission for ordinary search crawlers.
+  let agents = [];
+  let rulesStarted = false;
+  let wildcardFound = false;
+  let wildcardAllowed = false;
+  for (const line of lines) {
+    const agent = line.match(/^user-agent:\s*(.+)$/i);
+    if (agent) {
+      if (rulesStarted) {
+        agents = [];
+        rulesStarted = false;
+      }
+      agents.push(agent[1].trim().toLowerCase());
+      if (agents.includes('*')) wildcardFound = true;
+      continue;
+    }
+    if (/^(?:allow|disallow)\s*:/i.test(line)) {
+      rulesStarted = true;
+      if (agents.includes('*')) {
+        if (/^disallow:\s*\/$/i.test(line)) {
+          wildcardAllowed = false;
+        } else if (/^allow:\s*\/$/i.test(line)) {
+          wildcardAllowed = true;
+        }
+      }
+    }
+  }
   requireCondition(
-    lines.some((line) => /^user-agent:\s*\*$/i.test(line)) &&
-      !lines.some((line) => /^disallow:\s*\/$/i.test(line)),
+    wildcardFound && wildcardAllowed,
     'Documentation robots.txt must allow the site to be crawled'
   );
 }
