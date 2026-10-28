@@ -93,6 +93,13 @@ export const createStyles = (theme: NativeTheme) => {
       borderRadius: theme.tokens.radius.md,
     },
 
+    popoverSurface: {
+      overflow: 'hidden',
+      borderRadius: theme.tokens.radius.md,
+      backgroundColor: 'transparent',
+      padding: theme.tokens.spacing[1],
+    },
+
     searchWrap: {
       minHeight: 40,
       flexDirection: 'row',

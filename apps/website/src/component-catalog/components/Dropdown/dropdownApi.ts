@@ -752,6 +752,12 @@ const nativeDropdownApiSections: readonly ComponentApiSection[] = [
         description: 'Style applied to dropdown content.',
       },
       {
+        name: 'popoverBackground',
+        type: 'ReactNode',
+        description:
+          'Optional native background behind popover items (e.g. an injected BlurView).',
+      },
+      {
         name: 'itemStyle',
         type: 'StyleProp<ViewStyle>',
         description: 'Style applied to each item row.',
