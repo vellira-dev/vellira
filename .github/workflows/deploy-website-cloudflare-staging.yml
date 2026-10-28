@@ -124,6 +124,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Verify pinned Node.js runtime for staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          node -e "const assert = require('node:assert/strict'); assert.equal(process.versions.node, process.env.NODE_VERSION, 'Staging Node runtime differs from pinned version'); console.log('Verified staging Node runtime ' + process.versions.node);"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -190,6 +197,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+
+      - name: Verify pinned Node.js runtime for staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          node -e "const assert = require('node:assert/strict'); assert.equal(process.versions.node, process.env.NODE_VERSION, 'Staging Node runtime differs from pinned version'); console.log('Verified staging Node runtime ' + process.versions.node);"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
