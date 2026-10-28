@@ -6,6 +6,8 @@ export interface DropdownContentProps {
   children: ReactNode;
   /** Style applied to dropdown content. */
   contentStyle?: StyleProp<ViewStyle>;
+  /** Optional background for anchored native popovers. */
+  popoverBackground?: ReactNode;
   /** Accessible name for dropdown content. */
   accessibilityLabel?: string;
 }

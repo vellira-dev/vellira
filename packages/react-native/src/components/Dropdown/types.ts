@@ -51,6 +51,8 @@ export interface DropdownProps extends BaseDropdownProps {
   triggerStyle?: StyleProp<ViewStyle>;
   /** Style applied to dropdown content. */
   contentStyle?: StyleProp<ViewStyle>;
+  /** Optional native background behind popover items (e.g. an injected BlurView). */
+  popoverBackground?: ReactNode;
   /** Style applied to each item row. */
   itemStyle?: StyleProp<ViewStyle>;
   /** Style applied to trigger and item text. */

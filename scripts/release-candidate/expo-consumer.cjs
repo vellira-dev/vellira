@@ -10,6 +10,7 @@ const {
   readJson,
   validateCandidateArtifactDirectory,
 } = require('./consumer-artifacts.cjs');
+const { assertNativeSubpathContract } = require('./native-subpath-contract.cjs');
 
 const candidateDir = path.resolve(
   process.env.VELLIRA_CANDIDATE_DIR ?? '.candidate-artifacts'
@@ -263,6 +264,9 @@ function verifyNativeEntryPoints(fixtureDir) {
     )
   );
 
+  const subpathContract = assertNativeSubpathContract(path.join(
+    fixtureDir, 'node_modules', '@vellira-ui', 'react-native'
+  ));
   const reactNativeEntry = reactNativeManifest.exports?.['.']?.['react-native'];
   if (
     reactNativeManifest['react-native'] !== './dist/index.js' ||
@@ -310,6 +314,7 @@ function verifyNativeEntryPoints(fixtureDir) {
 
   return {
     reactNative: reactNativeEntry,
+    subpathContract,
     icons: iconsNativeEntry,
   };
 }

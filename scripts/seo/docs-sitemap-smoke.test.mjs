@@ -94,6 +94,23 @@ test('robots.txt must point to the docs sitemap, not another site', () => {
   assert.throws(() => verifyDocsRobots(robots + '\nSitemap: https://docs.vellira.dev/sitemap.xml\n'), /exactly/);
 });
 
+test('robots verification accepts bot-specific blocks without blocking wildcard crawl', () => {
+  verifyDocsRobots(
+    robots +
+      '\nUser-agent: GPTBot\nDisallow: /\n' +
+      'User-agent: ClaudeBot\nDisallow: /\n'
+  );
+  assert.throws(
+    () =>
+      verifyDocsRobots(
+        'User-agent: *\nDisallow: /\n' +
+          'User-agent: GPTBot\nAllow: /\n' +
+          'Sitemap: https://docs.vellira.dev/sitemap.xml\n'
+      ),
+    /crawled/
+  );
+});
+
 test('build proof requires real HTML output and one matching canonical per sitemap URL', async (t) => {
   const fixture = await setupDist(t);
   const report = await inspectBuiltDocsDiscovery(fixture);
