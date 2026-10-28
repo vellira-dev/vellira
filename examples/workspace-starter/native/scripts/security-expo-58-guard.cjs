@@ -9,7 +9,11 @@ const root = process.argv[2] && path.isAbsolute(process.argv[2]) ? process.argv[
 assert.ok(path.isAbsolute(root), 'Expo 58 root must be absolute');
 const target = path.join(root, 'node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'node_modules/expo/node_modules/@expo/cli/package.json'), 'utf8'));
-assert.equal(manifest.version, '58.1.15');
+// The authentic npm packages @expo/cli 58.1.15 and 58.1.17 contain the
+// same parser bytes (SHA-256: 669294947c9a2573b9c637eba5d0d5cd4048fa8da16723a7f761d1cb2eb2d7e7).
+// Do not accept other CLI releases without independently reviewing their bytes.
+assert.ok(['58.1.15', '58.1.17'].includes(manifest.version),
+  'Unsupported Expo CLI version: ' + manifest.version);
 assert.match(manifest.dependencies.zod, /^\^3\./);
 const ORIGINAL = '669294947c9a2573b9c637eba5d0d5cd4048fa8da16723a7f761d1cb2eb2d7e7';
 const sha = b => createHash('sha256').update(b).digest('hex');

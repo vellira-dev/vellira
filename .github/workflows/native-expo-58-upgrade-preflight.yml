@@ -29,26 +29,20 @@ jobs:
         run: |
           set -euo pipefail
           npm view expo@58 version --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/expo58-versions.json"
-          npm view @expo/cli@58.1.15 dependencies --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/cli58-deps.json"
-          echo '=== Expo CLI 58.1.15 Zod requirement ==='
-          node -e "const d=require(process.argv[1]); console.log(JSON.stringify({ zod: d.zod || null, cliVersion: '58.1.15' },null,2))" "$RUNNER_TEMP/cli58-deps.json"
-      - name: Capture authentic published Expo CLI 58.1.17 source evidence
+          npm view @expo/cli@58.1.17 dependencies --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/cli58-deps.json"
+          echo '=== Expo CLI 58.1.17 Zod requirement ==='
+          node -e "const d=require(process.argv[1]); console.log(JSON.stringify({ zod: d.zod || null, cliVersion: '58.1.17' },null,2))" "$RUNNER_TEMP/cli58-deps.json"
+      - name: Verify published Expo CLI 58.1.17 source integrity and parser SHA
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/expo-cli-package"
-          npm view @expo/cli@58.1.17 dist.integrity --registry=https://registry.npmjs.org
+          integrity="$(npm view @expo/cli@58.1.17 dist.integrity --registry=https://registry.npmjs.org)"
+          test "$integrity" = 'sha512-2WKvwrq9Sr0jj4vFVt7dPtbHoxFzaSp4s5Bsk1FDmCQjZhQlWZjb7j6igBYCs0nBzZZ4UyBdSMY2hwmDhRmPQA=='
           npm pack @expo/cli@58.1.17 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/expo-cli-package"
-          archive="$RUNNER_TEMP/expo-cli-package/expo-cli-58.1.17.tgz"
-          test -s "$archive"
-          sha256sum "$archive"
-          parser=package/build/src/start/server/DevToolsPluginCliExtensionResults.js
-          tar -xOzf "$archive" "$parser" > "$RUNNER_TEMP/expo-cli-parser.js"
-          sha256sum "$RUNNER_TEMP/expo-cli-parser.js"
-          echo 'EXPO_CLI_PARSER_BASE64_BEGIN'
-          base64 -w0 "$RUNNER_TEMP/expo-cli-parser.js"
-          echo
-          echo 'EXPO_CLI_PARSER_BASE64_END'
+          tar -xOzf "$RUNNER_TEMP/expo-cli-package/expo-cli-58.1.17.tgz" package/build/src/start/server/DevToolsPluginCliExtensionResults.js > "$RUNNER_TEMP/expo-cli-parser.js"
+          test "$(sha256sum "$RUNNER_TEMP/expo-cli-parser.js" | cut -d' ' -f1)" = '669294947c9a2573b9c637eba5d0d5cd4048fa8da16723a7f761d1cb2eb2d7e7'
+          echo 'Verified published CLI 58.1.17 parser matches the SHA-pinned guard source'
       - name: Run isolated npm dependency resolution (do not change checked-in locks)
         shell: bash
         run: |
@@ -63,11 +57,7 @@ jobs:
           npm pkg delete scripts.preweb
           npm pkg delete scripts.pretypecheck
           npm pkg delete scripts.security:verify-patch
-          # The SHA-pinned guard is validated for @expo/cli 58.1.15 only.
-          # Keep the isolated Expo candidate compatible with the verified CLI guard;
-          # current newer Expo releases require CLI >=58.1.17 and need separate SHA review.
-          npm pkg set 'overrides.@expo/cli=58.1.15'
-          npm install expo@58.0.19 react-native@0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm install expo@^58.0.0 react-native@^0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
           echo '=== Resolved Expo CLI / Zod / React Native ==='
           node - <<'NODE'
           const l=require('./package-lock.json');
@@ -86,7 +76,7 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/expo58"
           # Preserve security integrity: do not apply the Expo CLI 57 SHA-pinned patch to SDK 58.
-          npm install expo@58.0.19 react-native@0.88.0 --ignore-scripts --no-audit --no-fund
+          npm install expo@^58.0.0 react-native@^0.88.0 --ignore-scripts --no-audit --no-fund
           npx --no-install expo install --fix --npm
           npm ci --ignore-scripts --no-audit --no-fund
           # SDK 58 removed the legacy newArchEnabled app config field.

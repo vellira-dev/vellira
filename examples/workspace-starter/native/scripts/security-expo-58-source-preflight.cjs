@@ -9,7 +9,8 @@ const dir = process.argv[2];
 assert.ok(dir && path.isAbsolute(dir), 'Supply absolute isolated Expo 58 candidate path');
 const cli = path.join(dir, 'node_modules/expo/node_modules/@expo/cli');
 const meta = JSON.parse(fs.readFileSync(path.join(cli,'package.json'),'utf8'));
-assert.equal(meta.version, '58.1.15');
+assert.ok(['58.1.15', '58.1.17'].includes(meta.version),
+  'Unsupported Expo CLI version: ' + meta.version);
 assert.equal(meta.dependencies.zod, '^3.25.76');
 const file = path.join(cli,'build/src/start/server/DevToolsPluginCliExtensionResults.js');
 const raw = fs.readFileSync(file);
