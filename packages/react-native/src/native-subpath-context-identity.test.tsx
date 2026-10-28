@@ -25,6 +25,22 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
     button = await import('../dist/button.js') as Pick<NativeEntry, 'Button'>;
     theme = await import('../dist/theme.js') as Pick<NativeEntry, 'ThemeProvider' | 'useTheme'>;
   });
+  it('root provider and root hook share one context (control)', () => {
+    const result = renderToStaticMarkup(
+      createElement(root.ThemeProvider, { theme: 'dark' },
+        createElement(Probe, { label: 'root-control', useTheme: root.useTheme }))
+    );
+    expect(result).toContain('data-probe="root-control">dark</span>');
+  });
+
+  it('subpath provider and subpath hook share one context (control)', () => {
+    const result = renderToStaticMarkup(
+      createElement(theme.ThemeProvider, { theme: 'dark' },
+        createElement(Probe, { label: 'subpath-control', useTheme: theme.useTheme }))
+    );
+    expect(result).toContain('data-probe="subpath-control">dark</span>');
+  });
+
   it('root hook reads a dark theme supplied by subpath provider', () => {
     const result = renderToStaticMarkup(
       createElement(theme.ThemeProvider, { theme: 'dark' },
