@@ -1,12 +1,14 @@
 {
   "extends": "./tsconfig.typecheck.json",
   "compilerOptions": {
-    "types": ["node", "vitest"]
+    "types": ["node", "vitest"],
+    "allowImportingTsExtensions": true
   },
   "include": [
     "test/**/*.ts",
     "test/**/*.tsx",
     "tsdown.config.ts",
+    "tsdown.shared-probe.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",
     "vitest.subpath-probe.config.ts"
