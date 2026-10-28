@@ -952,7 +952,18 @@ function WorkspaceScreen() {
                               : 'systemUltraThinMaterialLight'
                           }
                           style={{ flex: 1 }}
-                        />
+                        >
+                          <View
+                            pointerEvents='none'
+                            style={{
+                              flex: 1,
+                              backgroundColor:
+                                themeName === 'dark'
+                                  ? 'rgba(20, 18, 30, 0.24)'
+                                  : 'rgba(255, 255, 255, 0.28)',
+                            }}
+                          />
+                        </BlurView>
                       )
                     }
                     contentStyle={{
