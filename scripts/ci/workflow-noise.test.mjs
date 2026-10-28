@@ -488,29 +488,7 @@ test('IndexNow automatic path is downstream of verified production, not status e
   assert.ok(notify);
   assert.match(approval, /environment:\n {6}name: production/);
   assert.doesNotMatch(deploy, /^ {4}environment:/m);
-  // Compilation caching may fail open, but production authority and
-  // deployment verification must remain fail-closed.
-  const permitted = [
-    ['Restore Next.js incremental build cache (production)', 'restore'],
-    ['Save Next.js incremental build cache (production)', 'save'],
-  ];
-  const cacheSteps = deploy.split(/(?=^ {6}- name: )/m)
-    .filter((step) => step.includes('continue-on-error:'));
-  assert.equal(cacheSteps.length, permitted.length);
-  for (let i = 0; i < permitted.length; i += 1) {
-    const [name, action] = permitted[i];
-    const stepLines = cacheSteps[i].split('\n');
-    assert.equal(stepLines[0], '      - name: ' + name);
-    assert.equal(stepLines.filter((line) => line.includes('continue-on-error:')).length, 1);
-    assert.ok(stepLines.includes('        continue-on-error: true'));
-    assert.ok(stepLines.includes(
-      '        uses: actions/cache/' + action +
-      '@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4'));
-    assert.ok(stepLines.includes('          path: apps/website/.next/cache'));
-    assert.ok(stepLines.some((line) => line.includes(
-      "if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'"
-    )));
-  }
+  assert.doesNotMatch(deploy, /continue-on-error:/);
   assert.match(notify, /needs: \[candidate, deploy\]/);
   assert.match(notify, /if: needs\.deploy\.result == 'success'/);
   assert.match(notify, /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/);

@@ -236,16 +236,6 @@ jobs:
       - name: Sync website brand
         run: pnpm --dir apps/website run sync:brand
 
-      - name: Restore Next.js incremental build cache (staging)
-        continue-on-error: true
-        id: next-build-cache
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: apps/website/.next/cache
-          key: ${{ runner.os }}-${{ runner.arch }}-vellira-next16-staging-v1-${{ env.NODE_VERSION }}-${{ hashFiles('pnpm-lock.yaml', 'apps/website/package.json', 'apps/website/next.config.ts') }}-${{ env.CANDIDATE_SHA }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-vellira-next16-staging-v1-${{ env.NODE_VERSION }}-${{ hashFiles('pnpm-lock.yaml', 'apps/website/package.json', 'apps/website/next.config.ts') }}-
-
       - name: Build website for Cloudflare Workers
         run: pnpm --dir apps/website run build:opennext
 
@@ -268,14 +258,6 @@ jobs:
         run: |
           node apps/website/scripts/cloudflare-populate-local-cache.mjs
           node apps/website/scripts/cloudflare-local-runtime.mjs
-
-      - name: Save Next.js incremental build cache (staging)
-        if: steps.next-build-cache.outputs.cache-hit != 'true'
-        continue-on-error: true
-        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: apps/website/.next/cache
-          key: ${{ steps.next-build-cache.outputs.cache-primary-key }}
 
       - name: Deploy website staging to Cloudflare Workers
         id: worker-deploy
