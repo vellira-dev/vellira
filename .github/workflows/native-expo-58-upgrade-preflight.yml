@@ -47,9 +47,10 @@ jobs:
           npm pkg delete scripts.pretypecheck
           npm pkg delete scripts.security:verify-patch
           # The SHA-pinned guard is validated for @expo/cli 58.1.15 only.
-          # Pin the isolated migration candidate without changing production locks.
+          # Keep the isolated Expo candidate compatible with the verified CLI guard;
+          # current newer Expo releases require CLI >=58.1.17 and need separate SHA review.
           npm pkg set 'overrides.@expo/cli=58.1.15'
-          npm install expo@^58.0.0 react-native@^0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm install expo@58.0.19 react-native@0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
           echo '=== Resolved Expo CLI / Zod / React Native ==='
           node - <<'NODE'
           const l=require('./package-lock.json');
@@ -68,7 +69,7 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/expo58"
           # Preserve security integrity: do not apply the Expo CLI 57 SHA-pinned patch to SDK 58.
-          npm install expo@^58.0.0 react-native@^0.88.0 --ignore-scripts --no-audit --no-fund
+          npm install expo@58.0.19 react-native@0.88.0 --ignore-scripts --no-audit --no-fund
           npx --no-install expo install --fix --npm
           npm ci --ignore-scripts --no-audit --no-fund
           # SDK 58 removed the legacy newArchEnabled app config field.
