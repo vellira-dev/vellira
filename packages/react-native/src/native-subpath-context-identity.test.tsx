@@ -21,16 +21,15 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
 (optIn ? describe : describe.skip)(
   'unpublished native subpath React context identity (#1906)', () => {
   beforeAll(async () => {
-    const useShared = process.env.VELLIRA_SHARED_CHUNK_PROOF === '1';
-    root = await (useShared
-      ? import('../dist/shared-proof/index.js')
-      : import('../dist/index.js')) as NativeEntry;
-    button = await (useShared
-      ? import('../dist/shared-proof/button.js')
-      : import('../dist/button.js')) as Pick<NativeEntry, 'Button'>;
-    theme = await (useShared
-      ? import('../dist/shared-proof/theme.js')
-      : import('../dist/theme.js')) as Pick<NativeEntry, 'ThemeProvider' | 'useTheme'>;
+    const entryDir = process.env.VELLIRA_SHARED_CHUNK_PROOF === '1'
+      ? '../dist/shared-proof'
+      : '../dist';
+    // The selected runtime variant is resolved only at execution time.
+    // Static dynamic-import alternatives cause Vite to demand both sets of files.
+    const load = (name: string) => import(/* @vite-ignore */ `${entryDir}/${name}.js`);
+    root = await load('index') as NativeEntry;
+    button = await load('button') as Pick<NativeEntry, 'Button'>;
+    theme = await load('theme') as Pick<NativeEntry, 'ThemeProvider' | 'useTheme'>;
   });
   it('root provider and root hook share one context (control)', () => {
     const result = renderToStaticMarkup(
