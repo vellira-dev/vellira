@@ -280,7 +280,18 @@ try {
           name: 'exact-react-native-test-alias',
           setup(build) {
             build.onResolve({ filter: /^react-native$/ }, () => ({
-              path: path.join(native, 'test/react-native.mock.tsx'),
+              path: 'react-native', namespace: 'context-native-stub',
+            }));
+            build.onLoad({ filter: /.*/, namespace: 'context-native-stub' }, () => ({
+              contents: [
+                "export * from " + JSON.stringify(path.join(native, 'test/react-native.mock.tsx')) + ";",
+                "export const BackHandler = { addEventListener: () => ({ remove() {} }), exitApp() {} };",
+                "export const Easing = { linear: t => t, ease: t => t, in: f => f, out: f => f, inOut: f => f, bezier: () => t => t };",
+                "export const ScrollView = () => null;",
+                "export const findNodeHandle = () => null;",
+              ].join(String.fromCharCode(10)),
+              loader: 'js',
+              resolveDir: workspace,
             }));
             // The context probe does not render SVG. Keep the real native
             // package installed for Metro, but isolate SVG's Fabric/Flow
