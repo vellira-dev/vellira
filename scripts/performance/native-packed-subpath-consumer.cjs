@@ -263,7 +263,29 @@ try {
         "console.log('[native-subpath-tgz] packed mixed runtime context PASS');",
         '',
       ].join(String.fromCharCode(10)));
-      call(process.execPath, [path.join(consumer, 'context-check.mjs')], consumer);
+      // React Native's npm entry contains Flow syntax and cannot be imported
+      // directly by Node. Bundle the installed candidate with a test-only RN
+      // renderer mock, retaining the real installed React and react-dom runtime.
+      const esbuild = require(require.resolve('esbuild', { paths: [workspace] }));
+      esbuild.buildSync({
+        entryPoints: [path.join(consumer, 'context-check.mjs')],
+        outfile: path.join(consumer, 'context-check-bundled.mjs'),
+        bundle: true,
+        platform: 'node',
+        format: 'esm',
+        conditions: ['react-native', 'import', 'default'],
+        external: ['react', 'react-dom', 'react-dom/server'],
+        plugins: [{
+          name: 'test-only-react-native-mock',
+          setup(build) {
+            build.onResolve({ filter: /^react-native$/ }, () => ({
+              path: path.join(native, 'test/react-native.mock.tsx'),
+            }));
+          },
+        }],
+        logLevel: 'warning',
+      });
+      call(process.execPath, [path.join(consumer, 'context-check-bundled.mjs')], consumer);
     }
     call(process.execPath, [
       path.join(consumer, 'node_modules/typescript/bin/tsc'),
