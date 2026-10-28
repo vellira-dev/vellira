@@ -118,32 +118,32 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>Vellira / real React Native proof</Text>
-      <Text testID="hermes-engine" style={hermesEnabled ? styles.pass : styles.fail}>
-        Hermes engine: {hermesEnabled ? 'PASS' : 'FAIL'}
-      </Text>
-      <RootProvider theme="dark">
-        <View style={styles.group}>
-          <ContextPair label="root provider / both hooks" />
-          <RootButton testID="root-button" onPress={onRootPress}>
-            Root Button
-          </RootButton>
-          <SubpathButton testID="subpath-button" onPress={onSubpathPress}>
-            Subpath Button
-          </SubpathButton>
-        </View>
-      </RootProvider>
-      <SubpathProvider theme="dark">
-        <View style={styles.group}>
-          <ContextPair label="subpath provider / both hooks" />
-        </View>
-      </SubpathProvider>
-      <Text testID="root-press-count" style={styles.counter}>Root Button presses: {rootPressCount}</Text>
-      <Text testID="subpath-press-count" style={styles.counter}>Subpath Button presses: {subpathPressCount}</Text>
-      <Text testID="independent-button-result" style={independentPass ? styles.pass : styles.pending}>
-        Independent buttons: {independentPass ? 'PASS' : 'PENDING'}
-      </Text>
-      <Text>PASS requires Hermes, both green provider checks, and independent button presses.</Text>
+          <Text style={styles.heading}>Vellira / real React Native proof</Text>
+          <Text testID="hermes-engine" style={hermesEnabled ? styles.pass : styles.fail}>
+            Hermes engine: {hermesEnabled ? 'PASS' : 'FAIL'}
+          </Text>
+          <RootProvider theme="dark">
+            <View style={styles.group}>
+              <ContextPair label="root provider / both hooks" />
+              <RootButton testID="root-button" onPress={onRootPress}>
+                Root Button
+              </RootButton>
+              <SubpathButton testID="subpath-button" onPress={onSubpathPress}>
+                Subpath Button
+              </SubpathButton>
+            </View>
+          </RootProvider>
+          <SubpathProvider theme="dark">
+            <View style={styles.group}>
+              <ContextPair label="subpath provider / both hooks" />
+            </View>
+          </SubpathProvider>
+          <Text testID="root-press-count" style={styles.counter}>Root Button presses: {rootPressCount}</Text>
+          <Text testID="subpath-press-count" style={styles.counter}>Subpath Button presses: {subpathPressCount}</Text>
+          <Text testID="independent-button-result" style={independentPass ? styles.pass : styles.pending}>
+            Independent buttons: {independentPass ? 'PASS' : 'PENDING'}
+          </Text>
+          <Text>PASS requires Hermes, both green provider checks, and independent button presses.</Text>
         </ScrollView>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -177,7 +177,7 @@ node -e "if(require('node:fs').existsSync('node_modules/@react-native-picker/pic
 npm run ios -- --device
 \`\`\`
 
-Launch the resulting app on the simulator. Confirm **Hermes engine: PASS** and both provider checks **PASS**. Tap **Root Button** and **Subpath Button** at least once each; verify their **separate** counters increase and \\`Independent buttons: PASS\\` appears. The terminal/Metro log should also include \`[VELLIRA_HERMES_PROOF]\` lines. A Metro export alone or Node mocks do not satisfy this proof. Record iOS simulator name/version, engine status, log text, and screenshot. If the build fails, record the exact error rather than reporting PASS.
+Launch the resulting app on the simulator. Confirm **Hermes engine: PASS** and both provider checks **PASS**. Tap **Root Button** and **Subpath Button** at least once each; verify their **separate** counters increase and \`Independent buttons: PASS\` appears. The terminal/Metro log should also include \`[VELLIRA_HERMES_PROOF]\` lines. A Metro export alone or Node mocks do not satisfy this proof. Record iOS simulator name/version, engine status, log text, and screenshot. If the build fails, record the exact error rather than reporting PASS.
 
 For Android: \`npm run android\` with an emulator/device available.
 
