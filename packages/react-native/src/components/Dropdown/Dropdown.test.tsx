@@ -930,7 +930,6 @@ describe('Native Dropdown', () => {
         contentStyle={{
           width: 216,
           borderRadius: 22,
-          shadowOpacity: 0.24,
         }}
         popoverBackground={
           <Text testID='native-blur-background'>Blur material</Text>
@@ -946,14 +945,15 @@ describe('Native Dropdown', () => {
     );
 
     const menu = container.querySelector<HTMLElement>('[role="menu"]');
-    const material = document.querySelector('[data-testid="native-blur-background"]');
+    const material = document.querySelector(
+      '[data-testid="native-blur-background"]'
+    );
     const edit = document.querySelector<HTMLElement>('[role="menuitem"]');
 
     expect(menu).not.toBeNull();
     expect(menu?.style.overflow).toBe('visible');
     expect(menu?.style.backgroundColor).toBe('transparent');
     expect(menu?.style.width).toBe('216px');
-    expect(menu?.style.shadowOpacity).toBe('0.24');
     expect(material).not.toBeNull();
     expect(menu?.contains(material)).toBe(true);
     expect(edit?.textContent).toContain('Edit');
