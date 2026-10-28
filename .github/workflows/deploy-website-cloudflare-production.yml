@@ -319,6 +319,7 @@ jobs:
 
       - name: Restore Next.js incremental build cache (production)
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        continue-on-error: true
         id: next-build-cache
         uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
@@ -330,13 +331,6 @@ jobs:
       - name: Build production Worker
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
         run: pnpm --dir apps/website exec opennextjs-cloudflare build --config=wrangler.production.jsonc
-
-      - name: Save Next.js incremental build cache (production)
-        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.next-build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: apps/website/.next/cache
-          key: ${{ steps.next-build-cache.outputs.cache-primary-key }}
 
       - name: Verify OpenNext CSS asset closure
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
@@ -371,6 +365,14 @@ jobs:
       - name: Prove same-origin multi-deployment browser migration before activation
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
         run: pnpm test:cloudflare-migration
+
+      - name: Save Next.js incremental build cache (production)
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true' && steps.next-build-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: apps/website/.next/cache
+          key: ${{ steps.next-build-cache.outputs.cache-primary-key }}
 
       - name: Recheck candidate after build, before remote mutation
         id: prepublish
