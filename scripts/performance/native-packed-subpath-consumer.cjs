@@ -65,6 +65,7 @@ function walk(dir) {
 function hash(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
+async function main() {
 try {
   // Ground the candidate in the real published tarball, including declarations
   // and actual public dependency metadata, before adding any new JS.
@@ -267,7 +268,7 @@ try {
       // directly by Node. Bundle the installed candidate with a test-only RN
       // renderer mock, retaining the real installed React and react-dom runtime.
       const esbuild = require(require.resolve('esbuild', { paths: [workspace] }));
-      esbuild.buildSync({
+      await esbuild.build({
         entryPoints: [path.join(consumer, 'context-check.mjs')],
         outfile: path.join(consumer, 'context-check-bundled.mjs'),
         bundle: true,
@@ -326,3 +327,5 @@ try {
 } finally {
   fs.rmSync(scratch, { recursive: true, force: true });
 }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });
