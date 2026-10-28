@@ -160,7 +160,18 @@ export async function inspectLiveDocsDiscovery(expected, {
     fetchPublicText('/sitemap.xml', { origin, fetchImpl }),
     fetchPublicText('/robots.txt', { origin, fetchImpl }),
   ]);
-  verifyDocsRobots(robots, { origin });
+  try {
+    verifyDocsRobots(robots, { origin });
+  } catch (error) {
+    const directives = robots
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^(?:user-agent|allow|disallow|sitemap)\s*:/i.test(line))
+      .slice(0, 30);
+    throw new Error(
+      `Live docs robots.txt verification failed. Origin: ${origin}; directives: ${JSON.stringify(directives)}; reason: ${String(error)}`
+    );
+  }
   const urls = parseDocsSitemap(xml, {
     origin,
     redirectSources: expected.redirectSources,
