@@ -185,6 +185,7 @@ try {
         '@vellira-ui/react-native': 'file:' + candidateTgz,
         expo: '57.0.31', '@expo/metro-runtime': '57.0.17',
         react: '19.2.3', 'react-native': '0.86.3', 'react-native-svg': '15.15.4',
+        ...(sharedGraph && spec.name === 'mixed' ? { 'react-dom': '19.2.3' } : {}),
       },
       devDependencies: { typescript: '6.0.3', '@types/react': '19.2.4' },
     }, null, 2));
@@ -245,6 +246,24 @@ try {
     }
     if (fs.existsSync(path.join(consumer, 'node_modules/@react-native-picker/picker'))) {
       throw new Error('Unexpected auto-installed picker');
+    }
+    if (sharedGraph && spec.name === 'mixed') {
+      write(consumer, 'context-check.mjs', [
+        "import React from 'react';",
+        "import { renderToStaticMarkup } from 'react-dom/server';",
+        "import { ThemeProvider as RootProvider, useTheme as rootHook } from '@vellira-ui/react-native';",
+        "import { ThemeProvider as SubProvider, useTheme as subHook } from '@vellira-ui/react-native/theme';",
+        'function Probe({ hook }) {',
+        "  return React.createElement('span', null, hook().themeName);",
+        '}',
+        'for (const [Provider, hook] of [[RootProvider, subHook], [SubProvider, rootHook]]) {',
+        "  const rendered = renderToStaticMarkup(React.createElement(Provider, { theme: 'dark' }, React.createElement(Probe, { hook })));",
+        "  if (rendered !== '<span>dark</span>') throw new Error('Context identity failure: ' + rendered);",
+        '}',
+        "console.log('[native-subpath-tgz] packed mixed runtime context PASS');",
+        '',
+      ].join('\\n'));
+      call(process.execPath, [path.join(consumer, 'context-check.mjs')], consumer);
     }
     call(process.execPath, [
       path.join(consumer, 'node_modules/typescript/bin/tsc'),
