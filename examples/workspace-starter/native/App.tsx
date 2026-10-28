@@ -945,7 +945,7 @@ function WorkspaceScreen() {
                     popoverBackground={
                       themeName === 'highContrast' ? undefined : (
                         <BlurView
-                          intensity={45}
+                          intensity={25}
                           tint={
                             themeName === 'dark'
                               ? 'systemUltraThinMaterialDark'
