@@ -19,9 +19,15 @@ const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
   'unpublished native subpath React context identity (#1906)',
   () => {
     beforeAll(async () => {
-      root = await import('../../dist/index.js');
-      button = await import('../../dist/button.js');
-      theme = await import('../../dist/theme.js');
+      const entryDir = process.env.VELLIRA_SHARED_CHUNK_PROOF === '1'
+        ? '../../dist/shared-proof'
+        : '../../dist';
+      // This test uses one selected set of physically built entry points.
+      const load = (name) =>
+        import(/* @vite-ignore */ `${entryDir}/${name}.js`);
+      root = await load('index');
+      button = await load('button');
+      theme = await load('theme');
     });
     it('root provider and root hook share one context (control)', () => {
       const result = renderToStaticMarkup(
