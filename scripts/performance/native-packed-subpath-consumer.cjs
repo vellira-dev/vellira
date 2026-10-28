@@ -6,6 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 
+const sharedGraph = process.env.VELLIRA_SHARED_GRAPH_CONSUMER === '1';
 const sourceMode = process.env.VELLIRA_SUBPATH_SOURCE ?? 'published';
 if (!['published', 'workspace'].includes(sourceMode)) {
   throw new Error('VELLIRA_SUBPATH_SOURCE must be published or workspace');
@@ -32,10 +33,15 @@ const specs = [
 ];
 const evidence = {
   schemaVersion: 1, issue: 1906, kind: 'unpublished-packed-native-subpath-consumer',
-  sourceMode, sourceVersion: version, consumers: {}, limitations: [
+  sourceMode, sharedGraph, sourceVersion: version, consumers: {}, limitations: [
     'The artifact is a disposable npm tarball, NOT a published Vellira release.',
     'Metro exports and TypeScript checks do not prove Hermes execution, native device startup or visual equivalence.',
-    'The root export is byte-identical to its selected published or workspace source tarball.',
+    sharedGraph
+      ? 'The root JS entry is replaced by the coherent shared graph; only root export metadata and types are preserved from the source package.'
+      : 'The root JS entry is byte-identical to its selected published or workspace source tarball.',
+    ...(sharedGraph ? [
+      'The installed Node context proof uses test-only React Native and SVG mocks; it is not an on-device React Native/Hermes proof.',
+    ] : []),
   ],
 };
 function call(command, args, cwd) {
@@ -64,6 +70,7 @@ function walk(dir) {
 function hash(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
+async function main() {
 try {
   // Ground the candidate in the real published tarball, including declarations
   // and actual public dependency metadata, before adding any new JS.
@@ -94,15 +101,32 @@ try {
     throw new Error('Unexpected published package identity');
   }
   const originalRootExport = JSON.stringify(originalManifest.exports?.['.']);
+  if (sharedGraph && sourceMode !== 'workspace') {
+    throw new Error('Shared graph consumer requires workspace source mode');
+  }
+  if (sharedGraph) {
+    const graph = path.join(native, 'dist/shared-proof');
+    const graphFiles = fs.readdirSync(graph).filter(name => name.endsWith('.js'));
+    for (const name of ['index.js', 'button.js', 'theme.js']) {
+      if (!graphFiles.includes(name)) throw new Error('Shared graph missing ' + name);
+    }
+    for (const name of graphFiles) {
+      fs.copyFileSync(path.join(graph, name), path.join(staging, 'dist', name));
+    }
+    originalManifest.files = [...new Set([
+      ...(originalManifest.files ?? []), ...graphFiles.map(name => 'dist/' + name),
+    ])];
+  }
   const rootJs = fs.readFileSync(path.join(staging, 'dist/index.js'));
   const rootType = fs.readFileSync(path.join(staging, 'dist/index.d.ts'));
 
   for (const spec of specs.filter((item) => item.source)) {
     let bytes;
     if (sourceMode === 'workspace') {
-      const builtPath = path.join(native, 'dist', spec.output);
+      const builtPath = path.join(native, 'dist',
+        ...(sharedGraph ? ['shared-proof'] : []), spec.output);
       if (!fs.statSync(builtPath, { throwIfNoEntry: false })?.isFile()) {
-        throw new Error('Run build:subpaths:probe first: missing ' + builtPath);
+        throw new Error('Run ' + (sharedGraph ? 'build:subpaths:shared-probe' : 'build:subpaths:probe') + ' first: missing ' + builtPath);
       }
       bytes = fs.readFileSync(builtPath);
     } else {
@@ -140,7 +164,11 @@ try {
     'pack', staging, '--json', '--pack-destination', scratch, '--ignore-scripts',
   ], scratch))[0];
   const packedFiles = new Set(packed.files.map((item) => item.path));
-  for (const required of ['package.json', 'dist/index.js', 'dist/index.d.ts',
+  const packedGraphFiles = sharedGraph
+    ? fs.readdirSync(path.join(native, 'dist/shared-proof'))
+        .filter(name => name.endsWith('.js')).map(name => 'dist/' + name)
+    : [];
+  for (const required of ['package.json', ...packedGraphFiles, 'dist/index.js', 'dist/index.d.ts',
     'dist/button.js', 'dist/theme.js',
     'dist/primitives/Button/index.d.ts', 'dist/theme/index.d.ts']) {
     if (!packedFiles.has(required)) throw new Error('Packed candidate missing ' + required);
@@ -163,6 +191,7 @@ try {
         '@vellira-ui/react-native': 'file:' + candidateTgz,
         expo: '57.0.31', '@expo/metro-runtime': '57.0.17',
         react: '19.2.3', 'react-native': '0.86.3', 'react-native-svg': '15.15.4',
+        ...(sharedGraph && spec.name === 'mixed' ? { 'react-dom': '19.2.3' } : {}),
       },
       devDependencies: { typescript: '6.0.3', '@types/react': '19.2.4' },
     }, null, 2));
@@ -224,6 +253,81 @@ try {
     if (fs.existsSync(path.join(consumer, 'node_modules/@react-native-picker/picker'))) {
       throw new Error('Unexpected auto-installed picker');
     }
+    if (sharedGraph && spec.name === 'mixed') {
+      write(consumer, 'context-check.mjs', [
+        "import React from 'react';",
+        "import { renderToStaticMarkup } from 'react-dom/server';",
+        "import { ThemeProvider as RootProvider, useTheme as rootHook } from '@vellira-ui/react-native';",
+        "import { ThemeProvider as SubProvider, useTheme as subHook } from '@vellira-ui/react-native/theme';",
+        'function Probe({ hook }) {',
+        "  return React.createElement('span', null, hook().themeName);",
+        '}',
+        'for (const [Provider, hook] of [[RootProvider, subHook], [SubProvider, rootHook]]) {',
+        "  const rendered = renderToStaticMarkup(React.createElement(Provider, { theme: 'dark' }, React.createElement(Probe, { hook })));",
+        "  if (rendered !== '<span>dark</span>') throw new Error('Context identity failure: ' + rendered);",
+        '}',
+        "console.log('[native-subpath-tgz] packed mixed runtime context PASS');",
+        '',
+      ].join(String.fromCharCode(10)));
+      // React Native's npm entry contains Flow syntax and cannot be imported
+      // directly by Node. Bundle the installed candidate with a test-only RN
+      // renderer mock, retaining the real installed React and react-dom runtime.
+      const esbuild = require(require.resolve('esbuild', { paths: [workspace] }));
+      await esbuild.build({
+        entryPoints: [path.join(consumer, 'context-check.mjs')],
+        outfile: path.join(consumer, 'context-check-bundled.mjs'),
+        bundle: true,
+        platform: 'node',
+        format: 'esm',
+        conditions: ['react-native', 'import', 'default'],
+        external: ['react', 'react-dom', 'react-dom/server'],
+        plugins: [{
+          name: 'exact-react-native-test-alias',
+          setup(build) {
+            build.onResolve({ filter: /^react-native$/ }, () => ({
+              path: 'react-native', namespace: 'context-native-stub',
+            }));
+            build.onLoad({ filter: /.*/, namespace: 'context-native-stub' }, () => ({
+              contents: [
+                "export * from " + JSON.stringify(path.join(native, 'test/react-native.mock.tsx')) + ";",
+                "export const BackHandler = { addEventListener: () => ({ remove() {} }), exitApp() {} };",
+                "export const Easing = { linear: t => t, ease: t => t, in: f => f, out: f => f, inOut: f => f, bezier: () => t => t };",
+                "export const ScrollView = () => null;",
+                "export const findNodeHandle = () => null;",
+              ].join(String.fromCharCode(10)),
+              loader: 'js',
+              resolveDir: workspace,
+            }));
+            // The context probe does not render SVG. Keep the real native
+            // package installed for Metro, but isolate SVG's Fabric/Flow
+            // imports from this Node-only React rendering assertion.
+            build.onResolve({ filter: /^react-native-svg$/ }, () => ({
+              path: 'react-native-svg', namespace: 'context-svg-stub',
+            }));
+            build.onLoad({ filter: /.*/, namespace: 'context-svg-stub' }, () => ({
+              contents: [
+                "import React from 'react';",
+                "const Stub = () => null;",
+                "export default Stub;",
+                ...['Svg','Path','Circle','Rect','G','Line','Defs','ClipPath',
+                  'Mask','Text','TSpan','LinearGradient','RadialGradient',
+                  'Stop','Polygon','Polyline','Use','Image','Pattern','Symbol',
+                  'Marker','ForeignObject','Ellipse','Filter','FeGaussianBlur']
+                  .map(name => 'export const ' + name + ' = Stub;'),
+              ].join(String.fromCharCode(10)),
+              loader: 'js',
+            }));
+          },
+        }],
+        logLevel: 'warning',
+      });
+      const contextProof = call(process.execPath, [path.join(consumer, 'context-check-bundled.mjs')], consumer).trim();
+      if (contextProof !== '[native-subpath-tgz] packed mixed runtime context PASS') {
+        throw new Error('Unexpected packed runtime proof: ' + contextProof);
+      }
+      evidence.packedMixedRuntimeContext = true;
+      console.log(contextProof);
+    }
     call(process.execPath, [
       path.join(consumer, 'node_modules/typescript/bin/tsc'),
       '--project', 'tsconfig.json', '--noEmit',
@@ -258,8 +362,10 @@ try {
     'consumer-evidence/native-packed-subpath.json');
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');
-  console.log('[native-subpath-tgz] source:', sourceMode, version);
+  console.log('[native-subpath-tgz] source:', sourceMode, version, 'sharedGraph:', sharedGraph);
   console.log('[native-subpath-tgz] evidence:', output);
 } finally {
   fs.rmSync(scratch, { recursive: true, force: true });
 }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });
