@@ -46,6 +46,9 @@ jobs:
           npm pkg delete scripts.preweb
           npm pkg delete scripts.pretypecheck
           npm pkg delete scripts.security:verify-patch
+          # The SHA-pinned guard is validated for @expo/cli 58.1.15 only.
+          # Pin the isolated migration candidate without changing production locks.
+          npm pkg set 'overrides.@expo/cli=58.1.15'
           npm install expo@^58.0.0 react-native@^0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
           echo '=== Resolved Expo CLI / Zod / React Native ==='
           node - <<'NODE'
