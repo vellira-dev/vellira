@@ -1,4 +1,4 @@
-import { mergeConfig, defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig, mergeConfig } from 'vitest/config';
 
 import baseConfig from './vitest.config';
 
@@ -8,6 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       include: ['test/probes/native-subpath-context-identity.test.tsx'],
+      exclude: configDefaults.exclude,
     },
   })
 );
