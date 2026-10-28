@@ -6,6 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 
+const sharedGraph = process.env.VELLIRA_SHARED_GRAPH_CONSUMER === '1';
 const sourceMode = process.env.VELLIRA_SUBPATH_SOURCE ?? 'published';
 if (!['published', 'workspace'].includes(sourceMode)) {
   throw new Error('VELLIRA_SUBPATH_SOURCE must be published or workspace');
@@ -32,7 +33,7 @@ const specs = [
 ];
 const evidence = {
   schemaVersion: 1, issue: 1906, kind: 'unpublished-packed-native-subpath-consumer',
-  sourceMode, sourceVersion: version, consumers: {}, limitations: [
+  sourceMode, sharedGraph, sourceVersion: version, consumers: {}, limitations: [
     'The artifact is a disposable npm tarball, NOT a published Vellira release.',
     'Metro exports and TypeScript checks do not prove Hermes execution, native device startup or visual equivalence.',
     'The root export is byte-identical to its selected published or workspace source tarball.',
@@ -94,13 +95,30 @@ try {
     throw new Error('Unexpected published package identity');
   }
   const originalRootExport = JSON.stringify(originalManifest.exports?.['.']);
+  if (sharedGraph && sourceMode !== 'workspace') {
+    throw new Error('Shared graph consumer requires workspace source mode');
+  }
+  if (sharedGraph) {
+    const graph = path.join(native, 'dist/shared-proof');
+    const graphFiles = fs.readdirSync(graph).filter(name => name.endsWith('.js'));
+    for (const name of ['index.js', 'button.js', 'theme.js']) {
+      if (!graphFiles.includes(name)) throw new Error('Shared graph missing ' + name);
+    }
+    for (const name of graphFiles) {
+      fs.copyFileSync(path.join(graph, name), path.join(staging, 'dist', name));
+    }
+    originalManifest.files = [...new Set([
+      ...(originalManifest.files ?? []), ...graphFiles.map(name => 'dist/' + name),
+    ])];
+  }
   const rootJs = fs.readFileSync(path.join(staging, 'dist/index.js'));
   const rootType = fs.readFileSync(path.join(staging, 'dist/index.d.ts'));
 
   for (const spec of specs.filter((item) => item.source)) {
     let bytes;
     if (sourceMode === 'workspace') {
-      const builtPath = path.join(native, 'dist', spec.output);
+      const builtPath = path.join(native, 'dist',
+        ...(sharedGraph ? ['shared-proof'] : []), spec.output);
       if (!fs.statSync(builtPath, { throwIfNoEntry: false })?.isFile()) {
         throw new Error('Run build:subpaths:probe first: missing ' + builtPath);
       }
@@ -140,7 +158,11 @@ try {
     'pack', staging, '--json', '--pack-destination', scratch, '--ignore-scripts',
   ], scratch))[0];
   const packedFiles = new Set(packed.files.map((item) => item.path));
-  for (const required of ['package.json', 'dist/index.js', 'dist/index.d.ts',
+  const packedGraphFiles = sharedGraph
+    ? fs.readdirSync(path.join(native, 'dist/shared-proof'))
+        .filter(name => name.endsWith('.js')).map(name => 'dist/' + name)
+    : [];
+  for (const required of ['package.json', ...packedGraphFiles, 'dist/index.js', 'dist/index.d.ts',
     'dist/button.js', 'dist/theme.js',
     'dist/primitives/Button/index.d.ts', 'dist/theme/index.d.ts']) {
     if (!packedFiles.has(required)) throw new Error('Packed candidate missing ' + required);
@@ -258,7 +280,7 @@ try {
     'consumer-evidence/native-packed-subpath.json');
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');
-  console.log('[native-subpath-tgz] source:', sourceMode, version);
+  console.log('[native-subpath-tgz] source:', sourceMode, version, 'sharedGraph:', sharedGraph);
   console.log('[native-subpath-tgz] evidence:', output);
 } finally {
   fs.rmSync(scratch, { recursive: true, force: true });
