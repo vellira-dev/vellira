@@ -271,6 +271,13 @@ jobs:
             done < /tmp/release-pr-files.txt
           fi
           docs_skippable_checks=("Typecheck & API Contracts" "Tooling & IndexNow Tests" "Storybook & Browser Tests" "Unit & Coverage Tests")
+          # Independently recompute exact package-local affected CI skip authority
+          # from the merged PR paths, resolved dependency graph, and successful
+          # PR Impact check. No broad acceptance of skipped required jobs.
+          node scripts/ci/release-affected-skips.mjs \
+            /tmp/release-pr-files.txt \
+            /tmp/release-checks.json \
+            /tmp/release-affected-skips.json
           for check_name in "${required_checks[@]}"; do
             check_state="$(
               jq -r \
@@ -296,13 +303,20 @@ jobs:
                 fi
               done
             fi
+            if [[ "$check_state" == "completed:skipped" ]] && \
+              jq -e --arg name "$check_name" \
+                '.allowedSkips | index($name) != null' \
+                /tmp/release-affected-skips.json > /dev/null; then
+              echo "Accepted verified package-local affected CI skip for $check_name on exact PR #$pr_number."
+              continue
+            fi
             if [[ "$check_state" != "completed:success" ]]; then
               echo "::error::Release source PR #$pr_number check '$check_name' is $check_state; refusing to duplicate or bypass PR validation."
               exit 1
             fi
           done
 
-          echo "Verified release source PR #$pr_number ($head_sha): all required checks passed or verified docs-only skips accepted."
+          echo "Verified release source PR #$pr_number ($head_sha): all required checks passed or narrowly verified docs/package-local skips accepted."
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 

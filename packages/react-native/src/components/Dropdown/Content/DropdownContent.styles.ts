@@ -87,10 +87,20 @@ export const createStyles = (theme: NativeTheme) => {
     },
 
     popoverMenu: {
+      // Let the native shadow render beyond the popover bounds. Sheet and modal
+      // presentations retain clipping of their own content.
+      overflow: 'visible',
       width: '100%',
       maxWidth: 360,
       maxHeight: '60%',
       borderRadius: theme.tokens.radius.md,
+    },
+
+    popoverSurface: {
+      overflow: 'hidden',
+      borderRadius: theme.tokens.radius.md,
+      backgroundColor: 'transparent',
+      padding: theme.tokens.spacing[1],
     },
 
     searchWrap: {
