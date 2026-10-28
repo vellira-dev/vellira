@@ -22,16 +22,27 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 22.22.2
+          node-version: 22.23.4
           registry-url: https://registry.npmjs.org
       - name: Inspect published Expo 58 CLI dependencies before touching Starter
         shell: bash
         run: |
           set -euo pipefail
           npm view expo@58 version --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/expo58-versions.json"
-          npm view @expo/cli@58.1.15 dependencies --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/cli58-deps.json"
-          echo '=== Expo CLI 58.1.15 Zod requirement ==='
-          node -e "const d=require(process.argv[1]); console.log(JSON.stringify({ zod: d.zod || null, cliVersion: '58.1.15' },null,2))" "$RUNNER_TEMP/cli58-deps.json"
+          npm view @expo/cli@58.1.17 dependencies --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/cli58-deps.json"
+          echo '=== Expo CLI 58.1.17 Zod requirement ==='
+          node -e "const d=require(process.argv[1]); console.log(JSON.stringify({ zod: d.zod || null, cliVersion: '58.1.17' },null,2))" "$RUNNER_TEMP/cli58-deps.json"
+      - name: Verify published Expo CLI 58.1.17 source integrity and parser SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/expo-cli-package"
+          integrity="$(npm view @expo/cli@58.1.17 dist.integrity --registry=https://registry.npmjs.org)"
+          test "$integrity" = 'sha512-2WKvwrq9Sr0jj4vFVt7dPtbHoxFzaSp4s5Bsk1FDmCQjZhQlWZjb7j6igBYCs0nBzZZ4UyBdSMY2hwmDhRmPQA=='
+          npm pack @expo/cli@58.1.17 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/expo-cli-package"
+          tar -xOzf "$RUNNER_TEMP/expo-cli-package/expo-cli-58.1.17.tgz" package/build/src/start/server/DevToolsPluginCliExtensionResults.js > "$RUNNER_TEMP/expo-cli-parser.js"
+          test "$(sha256sum "$RUNNER_TEMP/expo-cli-parser.js" | cut -d' ' -f1)" = '669294947c9a2573b9c637eba5d0d5cd4048fa8da16723a7f761d1cb2eb2d7e7'
+          echo 'Verified published CLI 58.1.17 parser matches the SHA-pinned guard source'
       - name: Run isolated npm dependency resolution (do not change checked-in locks)
         shell: bash
         run: |
@@ -106,6 +117,18 @@ jobs:
           fi
           cp "$RUNNER_TEMP/expo58-known-good.js" "$target"
           node "$script" "$RUNNER_TEMP/expo58" --verify
+      - name: Verify published node-forge 1.4.2 RSA fix and integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/forge-package"
+          integrity="$(npm view node-forge@1.4.2 dist.integrity --registry=https://registry.npmjs.org)"
+          test "$integrity" = 'sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ=='
+          npm pack node-forge@1.4.2 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/forge-package"
+          tar -xOzf "$RUNNER_TEMP/forge-package/node-forge-1.4.2.tgz" package/lib/rsa.js > "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
+          test "$(sha256sum "$RUNNER_TEMP/node-forge-rsa-1.4.2.js" | cut -d' ' -f1)" = '6632e195295ce76f6bb9131ee770dcd6cc1ee4ffac7906302208b00faf95a87f'
+          grep -F '_encodeDigestInfo(oid, capture.digest, true)' "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
+          grep -F 'd.substring(0, withParameters.length) !== withParameters' "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
       - name: Verify normal npm ci with Expo 58 and both security patches
         shell: bash
         env:
@@ -130,6 +153,15 @@ jobs:
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --no-audit --no-fund
           npm run security:verify-patch
+          rsa=node_modules/node-forge/lib/rsa.js
+          cp "$rsa" "$RUNNER_TEMP/forge-verified-rsa.js"
+          printf '\n// tampered\n' >> "$rsa"
+          if node scripts/apply-node-forge-patch.cjs --verify; then
+            echo '::error::Tampered node-forge 1.4.2 RSA source passed verification'
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/forge-verified-rsa.js" "$rsa"
+          node scripts/apply-node-forge-patch.cjs --verify
           npm run typecheck
           npx --no-install expo install --check
           npx --yes expo-doctor
