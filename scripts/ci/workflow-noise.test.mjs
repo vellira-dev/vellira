@@ -488,7 +488,348 @@ test('IndexNow automatic path is downstream of verified production, not status e
   assert.ok(notify);
   assert.match(approval, /environment:\n {6}name: production/);
   assert.doesNotMatch(deploy, /^ {4}environment:/m);
-  assert.doesNotMatch(deploy, /continue-on-error:/);
+  // Only the two pinned cache actions may be non-blocking. Production
+  // admission, deployment, validation, and IndexNow must remain fail-closed.
+  const cacheStepNames = [
+    'Restore Next.js incremental build cache (production)',
+    'Save Next.js incremental build cache (production)',
+  ];
+  const allowedCacheSteps = [];
+  for (const step of deploy.split(/(?=^ {6}- name: )/m)) {
+    if (!step.includes('continue-on-error:')) continue;
+    const name = step.match(/^ {6}- name: (.+)$/m)?.[1];
+    assert.ok(cacheStepNames.includes(name),
+      'Only the pinned Next.js cache steps may use continue-on-error');
+    const kind = name.startsWith('Restore') ? 'restore' : 'save';
+    assert.match(step, /^ {8}continue-on-error: true$/m);
+    assert.match(step, new RegExp(
+      '^ {8}uses: actions/cache/' + kind +
+      '@0400d5f644dc74513175e3cd8d07132dd4860809 # v4\\.2\\.4
+  assert.match(notify, /needs: \[candidate, deploy\]/);
+  assert.match(notify, /if: needs\.deploy\.result == 'success'/);
+  assert.match(notify, /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/);
+  assert.match(notify, /ref: \$\{\{ env\.CANDIDATE_SHA \}\}/);
+  assert.match(notify, /persist-credentials: false/);
+  assert.match(notify, /test "\$\(git rev-parse HEAD\)" = "\$CANDIDATE_SHA"/);
+  assert.match(notify, /run: node scripts\/submit-indexnow\.mjs/);
+  assert.doesNotMatch(notify, /secrets\.|environment:|: write/);
+});
+
+shellTest('notification failure is reported explicitly without another deployment', (t) => {
+  const cwd = sandbox(t);
+  const summary = path.join(cwd, 'summary.md');
+  const source = script(workflow('deploy-website-cloudflare-production'), 'Record IndexNow outcome');
+  for (const outcome of ['success', 'failure', 'skipped']) {
+    writeFileSync(summary, '');
+    const result = shell(source, cwd, {
+      CANDIDATE_SHA: 'a'.repeat(40),
+      INDEXNOW_OUTCOME: outcome,
+      GITHUB_STEP_SUMMARY: summary,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(readFileSync(summary, 'utf8').includes(`**${outcome}**`));
+    assert.equal(result.stdout.includes('::warning::'), outcome !== 'success');
+  }
+});
+
+test('diagnostics deny Actions cache access to selected candidate code', () => {
+  const source = workflow('component-diagnostics');
+  assert.equal(effectiveJobCacheMode(source, 'diagnose'), 'none');
+
+  const variants = [
+    ['omitted', source.replace('    cache-mode: none\n', ''), null],
+    ['read', source.replace('    cache-mode: none\n', '    cache-mode: read\n'), 'read'],
+    ['write', source.replace('    cache-mode: none\n', '    cache-mode: write\n'), 'write'],
+    [
+      'write-only',
+      source.replace('    cache-mode: none\n', '    cache-mode: write-only\n'),
+      'write-only',
+    ],
+    [
+      'permissive job override',
+      `cache-mode: none\n${source.replace(
+        '    cache-mode: none\n',
+        '    cache-mode: write\n'
+      )}`,
+      'write',
+    ],
+  ];
+
+  for (const [label, variant, expected] of variants) {
+    assert.equal(
+      effectiveJobCacheMode(variant, 'diagnose'),
+      expected,
+      `Unexpected effective cache mode for ${label}`
+    );
+    assert.notEqual(
+      effectiveJobCacheMode(variant, 'diagnose'),
+      'none',
+      `Unsafe cache variant unexpectedly remained isolated: ${label}`
+    );
+  }
+});
+
+test('diagnostics are manual, fixed-profile and read-only with exact revision evidence', () => {
+  const source = workflow('component-diagnostics');
+  const triggers = section(source, 'on');
+  assert.match(triggers, /workflow_dispatch:/);
+  assert.doesNotMatch(triggers, /pull_request:|push:|schedule:|workflow_run:/);
+  assert.equal(section(source, 'permissions').trim(), 'contents: read');
+  assert.match(source, /if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(source, /persist-credentials: false/);
+  assert.match(source, /test "\$\(git rev-parse HEAD\)" = "\$DIAGNOSTIC_REVISION"/);
+  assert.match(source, /always\(\) && steps\.identity\.outcome == 'success'/);
+  assert.match(source, /retention-days: 14/);
+  assert.doesNotMatch(source, /secrets\.|: write|environment:|continue-on-error:|eval /);
+  assert.ok(source.indexOf('Validate immutable diagnostics inputs') < source.indexOf('uses: actions/checkout'));
+});
+
+shellTest('diagnostics reject mutable refs, malformed SHAs and arbitrary commands', (t) => {
+  const cwd = sandbox(t);
+  const source = script(workflow('component-diagnostics'), 'Validate immutable diagnostics inputs');
+  const exact = 'a'.repeat(40);
+  for (const revision of ['', 'main', 'refs/heads/main', 'abc123', 'A'.repeat(40), `${exact}\n`, '$(exit 0)']) {
+    assert.equal(shell(source, cwd, { DIAGNOSTIC_REVISION: revision, DIAGNOSTIC_PROFILE: 'tooling' }).status, 2);
+  }
+  for (const profile of ['', 'arbitrary', 'tooling; exit 0', '$(exit 0)']) {
+    assert.equal(shell(source, cwd, { DIAGNOSTIC_REVISION: exact, DIAGNOSTIC_PROFILE: profile }).status, 2);
+  }
+  for (const profile of ['component-production', 'component-quality', 'token-semantic', 'tooling']) {
+    assert.equal(shell(source, cwd, { DIAGNOSTIC_REVISION: exact, DIAGNOSTIC_PROFILE: profile }).status, 0);
+  }
+});
+
+shellTest('diagnostics execute only the selected canonical command and preserve failure through tee', (t) => {
+  const cwd = sandbox(t);
+  const bin = path.join(cwd, 'bin');
+  mkdirSync(bin);
+  mkdirSync(path.join(cwd, 'vellira-diagnostics'));
+  writeFileSync(path.join(bin, 'pnpm'), '#!/bin/sh\nprintf "%s\\n" "$*"\nexit "${PROBE_EXIT_CODE:-0}"\n', { mode: 0o755 });
+  const source = script(workflow('component-diagnostics'), 'Run selected repository diagnostics');
+  const commands = {
+    'component-production': 'exec vitest run --config vitest.tooling.config.ts scripts/component-production scripts/generators/component',
+    'component-quality': 'check:component-quality --all',
+    'token-semantic': 'check:tokens-semantic:strict',
+    tooling: 'test:tooling',
+  };
+  for (const [profile, command] of Object.entries(commands)) {
+    const env = { PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: cwd, DIAGNOSTIC_PROFILE: profile };
+    const success = shell(source, cwd, { ...env, PROBE_EXIT_CODE: '0' });
+    assert.equal(success.status, 0, success.stderr);
+    assert.equal(success.stdout.trim(), command);
+    const failure = shell(source, cwd, { ...env, PROBE_EXIT_CODE: '17' });
+    assert.equal(failure.status, 17, failure.stderr);
+    assert.equal(readFileSync(path.join(cwd, 'vellira-diagnostics/output.log'), 'utf8').trim(), command);
+  }
+});
+
+test('GitHub Actions tooling keeps component-production e2e fixtures on dedicated shards', () => {
+  const toolingRunner = readFileSync(
+    new URL('./tooling-execution.mjs', import.meta.url),
+    'utf8'
+  );
+  const unitRunner = readFileSync(
+    new URL('./run-unit-tests.mjs', import.meta.url),
+    'utf8'
+  );
+  const pageRunner = readFileSync(
+    new URL('./run-component-page-generator-tests.mjs', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(
+    toolingRunner,
+    /const splitProductionFixtures = environment\.GITHUB_ACTIONS === 'true';/
+  );
+  assert.doesNotMatch(toolingRunner, /GITHUB_JOB === 'tooling'/);
+  assert.match(
+    toolingRunner,
+    /--exclude',\s+'scripts\/component-production\/e2e-fixtures\.test\.ts'/
+  );
+
+  assert.match(unitRunner, /GITHUB_JOB === 'unit-coverage'/);
+  assert.match(unitRunner, /'--testNamePattern',\s+unitProductionFixturePattern/);
+  assert.match(pageRunner, /GITHUB_JOB === 'generator-blog'/);
+  assert.match(
+    pageRunner,
+    /'--testNamePattern',\s+remainingProductionFixturePattern/
+  );
+});
+
+test('production fixture shards are exhaustive and disjoint, including future names', () => {
+  const unit = new RegExp(unitProductionFixturePattern);
+  const remaining = new RegExp(remainingProductionFixturePattern);
+  for (const name of [
+    'base-web', 'overlay-web', 'base-cross-platform',
+    'boolean-form-control', 'compound-divergent',
+    'rejects invalid resources before writing component artifacts',
+    'blocks compound completeness until instance-isolation evidence exists',
+    'reports exactly every real generation mutation for a fresh both-platform base component',
+    'future reusable-program fixture',
+    'component production end-to-end fixtures > compound-divergent',
+    'future multiline suite\nboolean-form-control',
+  ]) {
+    assert.equal(Number(unit.test(name)) + Number(remaining.test(name)), 1, name);
+  }
+});
+
+shellTest('Starter sync auto-merge retries only for the exact bot PR', (t) => {
+  const body = script(
+    workflow('workspace-starter-release-sync'),
+    'Enable guarded auto-merge for verified Starter sync'
+  );
+  assert.match(body, /for attempt in 1 2 3; do/);
+  assert.doesNotMatch(body, /--admin|--force/);
+
+  const directory = sandbox(t);
+  const bin = path.join(directory, 'bin');
+  mkdirSync(bin);
+  const calls = path.join(directory, 'merge-attempts.txt');
+  writeFileSync(calls, '');
+  writeFileSync(
+    path.join(bin, 'gh'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [[ "$1" == "api" ]]; then',
+      '  if [[ "$2" == "--paginate" ]]; then',
+      '    printf "%s\\n" "$GH_TEST_FILES"',
+      '  else',
+      '    printf "%s\\n" "$GH_TEST_PR_JSON"',
+      '  fi',
+      'elif [[ "$1" == "pr" && "$2" == "merge" ]]; then',
+      '  printf "attempt\\n" >> "$GH_TEST_CALLS"',
+      '  if [[ "$GH_TEST_MODE" == "always-fail" ]]; then exit 1; fi',
+      '  test "$(wc -l < "$GH_TEST_CALLS")" -gt 1',
+      'else',
+      '  exit 80',
+      'fi',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
+  // The CI Playwright image intentionally has no jq. Exercise the workflow's
+  // Bash and JSON decision flow with a faithful, narrow jq fixture instead.
+  writeFileSync(
+    path.join(bin, 'jq'),
+    [
+      '#!/usr/bin/env node',
+      "const fs = require('node:fs');",
+      'const args = process.argv.slice(2);',
+      'const vars = {};',
+      'let filter;',
+      'for (let i = 0; i < args.length; i++) {',
+      '  if (args[i] === "-e") continue;',
+      '  if (args[i] === "--arg") {',
+      '    vars[args[i + 1]] = args[i + 2];',
+      '    i += 2;',
+      '    continue;',
+      '  }',
+      '  filter = args[i];',
+      '}',
+      'const pr = JSON.parse(fs.readFileSync(0, "utf8"));',
+      'if (filter === ".auto_merge != null") {',
+      '  process.exit(pr.auto_merge == null ? 1 : 0);',
+      '}',
+      'const required = [',
+      '  ".state", ".draft", ".base.ref", ".head.ref",',
+      '  ".head.sha", ".user.login", ".title"',
+      '];',
+      'if (!filter || !required.every((part) => filter.includes(part))) {',
+      '  process.stderr.write("Unexpected jq filter in workflow fixture");',
+      '  process.exit(2);',
+      '}',
+      'const valid = pr.state === "open" && pr.draft === false &&',
+      '  pr.base?.ref === "main" &&',
+      '  pr.head?.ref === "chore/workspace-starter-release-sync" &&',
+      '  pr.head?.sha === vars.head &&',
+      '  pr.user?.login === "vellira-release-sync[bot]" &&',
+      '  pr.title === vars.title;',
+      'process.exit(valid ? 0 : 1);',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
+  writeFileSync(path.join(bin, 'sleep'), '#!/bin/sh\nexit 0\n', {
+    mode: 0o755,
+  });
+
+  const sha = 'a'.repeat(40);
+  const pr = {
+    state: 'open',
+    draft: false,
+    base: { ref: 'main' },
+    head: { ref: 'chore/workspace-starter-release-sync', sha },
+    user: { login: 'vellira-release-sync[bot]' },
+    title: 'chore(starter): sync Vellira to v2.186.16',
+    auto_merge: null,
+  };
+  const allowedFiles = [
+    'examples/workspace-starter/web/package.json',
+    'examples/workspace-starter/native/package.json',
+    'examples/workspace-starter/web/package-lock.json',
+    'examples/workspace-starter/native/package-lock.json',
+    'examples/workspace-starter/README.md',
+  ].join('\n');
+  const env = {
+    PATH: bin + ':' + process.env.PATH,
+    REPOSITORY: 'vellira-dev/vellira',
+    PR_NUMBER: '1909',
+    EXPECTED_HEAD: sha,
+    EXPECTED_VERSION: '2.186.16',
+    GH_TEST_CALLS: calls,
+    GH_TEST_MODE: 'transient',
+    GH_TEST_FILES: allowedFiles,
+    GH_TEST_PR_JSON: JSON.stringify(pr),
+  };
+
+  const transient = shell(body, directory, env);
+  assert.equal(transient.status, 0, transient.stderr);
+  assert.equal(readFileSync(calls, 'utf8'), 'attempt\nattempt\n');
+
+  writeFileSync(calls, '');
+  const alreadyEnabled = shell(body, directory, {
+    ...env,
+    GH_TEST_PR_JSON: JSON.stringify({
+      ...pr,
+      auto_merge: { merge_method: 'SQUASH' },
+    }),
+  });
+  assert.equal(alreadyEnabled.status, 0, alreadyEnabled.stderr);
+  assert.equal(readFileSync(calls, 'utf8'), '');
+
+  const stale = shell(body, directory, {
+    ...env,
+    GH_TEST_PR_JSON: JSON.stringify({
+      ...pr,
+      head: { ...pr.head, sha: 'b'.repeat(40) },
+    }),
+  });
+  assert.notEqual(stale.status, 0);
+  assert.equal(readFileSync(calls, 'utf8'), '');
+
+  const outsideScope = shell(body, directory, {
+    ...env,
+    GH_TEST_FILES: allowedFiles + '\n.github/workflows/release.yml',
+  });
+  assert.notEqual(outsideScope.status, 0);
+  assert.equal(readFileSync(calls, 'utf8'), '');
+
+  const persistent = shell(body, directory, {
+    ...env,
+    GH_TEST_MODE: 'always-fail',
+  });
+  assert.notEqual(persistent.status, 0);
+  assert.match(persistent.stdout, /Could not enable guarded Starter auto-merge/);
+  assert.equal(readFileSync(calls, 'utf8'), 'attempt\nattempt\nattempt\n');
+});
+, 'm'
+    ));
+    assert.match(step, /^ {10}path: apps\\/website\\/\\.next\\/cache$/m);
+    assert.match(step, /steps\\.preflight\\.outputs\\.superseded != 'true'/);
+    allowedCacheSteps.push(name);
+  }
+  assert.deepEqual(allowedCacheSteps, cacheStepNames);
   assert.match(notify, /needs: \[candidate, deploy\]/);
   assert.match(notify, /if: needs\.deploy\.result == 'success'/);
   assert.match(notify, /CANDIDATE_SHA: \$\{\{ needs\.candidate\.outputs\.candidate_sha \}\}/);
