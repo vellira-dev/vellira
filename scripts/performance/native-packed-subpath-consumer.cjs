@@ -316,7 +316,12 @@ try {
         }],
         logLevel: 'warning',
       });
-      call(process.execPath, [path.join(consumer, 'context-check-bundled.mjs')], consumer);
+      const contextProof = call(process.execPath, [path.join(consumer, 'context-check-bundled.mjs')], consumer).trim();
+      if (contextProof !== '[native-subpath-tgz] packed mixed runtime context PASS') {
+        throw new Error('Unexpected packed runtime proof: ' + contextProof);
+      }
+      evidence.packedMixedRuntimeContext = true;
+      console.log(contextProof);
     }
     call(process.execPath, [
       path.join(consumer, 'node_modules/typescript/bin/tsc'),
