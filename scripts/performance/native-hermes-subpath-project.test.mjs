@@ -51,13 +51,22 @@ test('prepares isolated unpublished Hermes Expo app with both context boundaries
     assert.equal(manifest.dependencies['@vellira-ui/react-native'], 'file:./vellira-hermes-shared-candidate.tgz');
     assert.equal(manifest.dependencies['react-native'], '0.86.3');
     assert.equal(manifest.dependencies.expo, '57.0.31');
+    assert.equal(manifest.dependencies['react-native-safe-area-context'], '5.9.1');
     assert.ok(!Object.hasOwn(manifest.dependencies, '@react-native-picker/picker'));
     assert.equal(config.expo.jsEngine, 'hermes');
     for (const token of ['HermesInternal', 'RootProvider', 'SubpathProvider',
       'rootUseTheme', 'subpathUseTheme', 'RootButton', 'SubpathButton',
-      'VELLIRA_HERMES_PROOF', 'press-count']) {
+      'SafeAreaProvider', 'SafeAreaView', 'onRootPress', 'onSubpathPress',
+      'root-press-count', 'subpath-press-count', 'independent-button-result',
+      'VELLIRA_HERMES_PROOF']) {
       assert.ok(app.includes(token), 'Missing proof marker: ' + token);
     }
+    assert.match(app, /onPress=\{onRootPress\}/);
+    assert.match(app, /onPress=\{onSubpathPress\}/);
+    assert.match(app, /rootPressCount > 0 && subpathPressCount > 0/);
+    assert.match(app, /independentPass \? 'PASS' : 'PENDING'/);
+    assert.ok(readme.includes('Independent buttons: PASS'));
+    assert.doesNotMatch(app, /setPressCount/);
     assert.ok(readme.includes('npm install --legacy-peer-deps'));
     assert.ok(readme.includes('npm run ios -- --device'));
     assert.equal(fs.readFileSync(path.join(f.destination, 'vellira-hermes-shared-candidate.tgz'), 'utf8'), 'FIXTURE_ONLY');
