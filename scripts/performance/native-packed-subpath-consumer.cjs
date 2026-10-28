@@ -275,14 +275,9 @@ try {
         format: 'esm',
         conditions: ['react-native', 'import', 'default'],
         external: ['react', 'react-dom', 'react-dom/server'],
-        plugins: [{
-          name: 'test-only-react-native-mock',
-          setup(build) {
-            build.onResolve({ filter: /^react-native$/ }, () => ({
-              path: path.join(native, 'test/react-native.mock.tsx'),
-            }));
-          },
-        }],
+        alias: {
+          'react-native': path.join(native, 'test/react-native.mock.tsx'),
+        },
         logLevel: 'warning',
       });
       call(process.execPath, [path.join(consumer, 'context-check-bundled.mjs')], consumer);
