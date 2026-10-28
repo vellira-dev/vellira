@@ -282,6 +282,25 @@ try {
             build.onResolve({ filter: /^react-native$/ }, () => ({
               path: path.join(native, 'test/react-native.mock.tsx'),
             }));
+            // The context probe does not render SVG. Keep the real native
+            // package installed for Metro, but isolate SVG's Fabric/Flow
+            // imports from this Node-only React rendering assertion.
+            build.onResolve({ filter: /^react-native-svg$/ }, () => ({
+              path: 'react-native-svg', namespace: 'context-svg-stub',
+            }));
+            build.onLoad({ filter: /.*/, namespace: 'context-svg-stub' }, () => ({
+              contents: [
+                "import React from 'react';",
+                "const Stub = () => null;",
+                "export default Stub;",
+                ...['Svg','Path','Circle','Rect','G','Line','Defs','ClipPath',
+                  'Mask','Text','TSpan','LinearGradient','RadialGradient',
+                  'Stop','Polygon','Polyline','Use','Image','Pattern','Symbol',
+                  'Marker','ForeignObject','Ellipse','Filter','FeGaussianBlur']
+                  .map(name => 'export const ' + name + ' = Stub;'),
+              ].join(String.fromCharCode(10)),
+              loader: 'js',
+            }));
           },
         }],
         logLevel: 'warning',
