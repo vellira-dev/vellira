@@ -42,6 +42,11 @@ try {
   for (const file of files) {
     fs.copyFileSync(path.join(shared, file), path.join(staging, 'dist', file));
   }
+  // Root must originate from the SAME graph as Button and Theme.
+  if (!fs.readFileSync(path.join(staging, 'dist/index.js')).equals(
+    fs.readFileSync(path.join(shared, 'index.js')))) {
+    throw new Error('Shared root entry was not staged');
+  }
   manifest.files = [...new Set([...manifest.files, ...files.map(file => 'dist/' + file)])];
   manifest.exports['./button'] = {
     types: './dist/primitives/Button/index.d.ts',
@@ -66,6 +71,13 @@ try {
       const target = path.posix.normalize(path.posix.join('dist', specifier));
       if (!inventory.has(target)) throw new Error('Unpacked chunk import ' + file + ' -> ' + target);
     }
+  }
+  const tarball = path.join(scratch, output.filename);
+  const installed = path.join(scratch, 'installed');
+  fs.mkdirSync(installed);
+  run('tar', ['-xzf', tarball, '-C', installed, '--strip-components=1'], scratch);
+  if (!assertNativeSubpathContract(installed).enabled) {
+    throw new Error('Installed shared graph contract failed');
   }
   console.log('[shared-tarball] all', files.length, 'JS entries/chunks retained');
   console.log('[shared-tarball] packed bytes:', output.size);
