@@ -7,7 +7,7 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
-      include: ['test/probes/native-subpath-context-identity.test.tsx'],
+      include: ['test/probes/native-subpath-context-identity.test.mjs'],
       exclude: configDefaults.exclude,
     },
   })
