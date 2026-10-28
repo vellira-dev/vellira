@@ -960,7 +960,7 @@ function WorkspaceScreen() {
                               backgroundColor:
                                 themeName === 'dark'
                                   ? 'rgba(20, 18, 30, 0.24)'
-                                  : 'rgba(255, 255, 255, 0.45)',
+                                  : 'rgba(255, 255, 255, 0.75)',
                             }}
                           />
                         </BlurView>
