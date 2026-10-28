@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import {
   Copy,
   Edit,
@@ -940,6 +941,15 @@ function WorkspaceScreen() {
                     presentation='popover'
                     placement='bottom-end'
                     closeOnSelect
+                    popoverBackground={
+                      themeName === 'highContrast' ? undefined : (
+                        <BlurView
+                          intensity={80}
+                          tint={themeName === 'dark' ? 'dark' : 'light'}
+                          style={{ flex: 1 }}
+                        />
+                      )
+                    }
                     contentStyle={{
                       width: 216,
                       maxWidth: 236,
@@ -950,10 +960,10 @@ function WorkspaceScreen() {
                       borderColor: border,
                       backgroundColor:
                         themeName === 'dark'
-                          ? 'rgba(28, 24, 39, 0.84)'
+                          ? 'rgba(28, 24, 39, 0.52)'
                           : themeName === 'highContrast'
                             ? surface.canvas
-                            : 'rgba(255, 255, 255, 0.84)',
+                            : 'rgba(255, 255, 255, 0.55)',
                       shadowColor: '#000000',
                       shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
                       shadowRadius: 24,
