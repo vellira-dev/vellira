@@ -36,7 +36,12 @@ const evidence = {
   sourceMode, sharedGraph, sourceVersion: version, consumers: {}, limitations: [
     'The artifact is a disposable npm tarball, NOT a published Vellira release.',
     'Metro exports and TypeScript checks do not prove Hermes execution, native device startup or visual equivalence.',
-    'The root export is byte-identical to its selected published or workspace source tarball.',
+    sharedGraph
+      ? 'The root JS entry is replaced by the coherent shared graph; only root export metadata and types are preserved from the source package.'
+      : 'The root JS entry is byte-identical to its selected published or workspace source tarball.',
+    ...(sharedGraph ? [
+      'The installed Node context proof uses test-only React Native and SVG mocks; it is not an on-device React Native/Hermes proof.',
+    ] : []),
   ],
 };
 function call(command, args, cwd) {
@@ -121,7 +126,7 @@ try {
       const builtPath = path.join(native, 'dist',
         ...(sharedGraph ? ['shared-proof'] : []), spec.output);
       if (!fs.statSync(builtPath, { throwIfNoEntry: false })?.isFile()) {
-        throw new Error('Run build:subpaths:probe first: missing ' + builtPath);
+        throw new Error('Run ' + (sharedGraph ? 'build:subpaths:shared-probe' : 'build:subpaths:probe') + ' first: missing ' + builtPath);
       }
       bytes = fs.readFileSync(builtPath);
     } else {

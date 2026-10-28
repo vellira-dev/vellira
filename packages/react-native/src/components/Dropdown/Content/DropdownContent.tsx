@@ -26,9 +26,29 @@ const nativePointerEventsBoxNone =
 const webPointerEventsBoxNone =
   Platform.OS === 'web' ? { pointerEvents: 'box-none' as const } : undefined;
 
+function resolveBorderRadius(
+  style: DropdownContentProps['contentStyle']
+): number | undefined {
+  if (Array.isArray(style)) {
+    for (let index = style.length - 1; index >= 0; index -= 1) {
+      const radius = resolveBorderRadius(
+        style[index] as DropdownContentProps['contentStyle']
+      );
+      if (radius !== undefined) return radius;
+    }
+    return undefined;
+  }
+  if (style && typeof style === 'object' && 'borderRadius' in style) {
+    const radius = style.borderRadius;
+    return typeof radius === 'number' ? radius : undefined;
+  }
+  return undefined;
+}
+
 export function DropdownContent({
   children,
   contentStyle,
+  popoverBackground,
   accessibilityLabel,
 }: DropdownContentProps) {
   const {
@@ -52,6 +72,8 @@ export function DropdownContent({
   const colorPalette = theme.components.dropdown[color];
   const isSheet = presentation === 'sheet';
   const isPopover = presentation === 'popover';
+  const popoverRadius =
+    resolveBorderRadius(contentStyle) ?? theme.tokens.radius.md;
   const animation = useRef(new Animated.Value(open ? 1 : 0)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -176,37 +198,92 @@ export function DropdownContent({
               left: position.left,
             },
             contentStyle,
+            isPopover && popoverBackground
+              ? {
+                  overflow: 'visible',
+                  backgroundColor: 'transparent',
+                  padding: 0,
+                }
+              : undefined,
             menuAnimatedStyle,
           ]}
           onLayout={isPopover ? onFloatingLayout : undefined}
         >
-          {searchable && (
-            <View style={styles.searchWrap}>
+          {isPopover && popoverBackground ? (
+            <View
+              style={[styles.popoverSurface, { borderRadius: popoverRadius }]}
+            >
               <View
-                style={styles.searchIcon}
+                pointerEvents='none'
+                style={StyleSheet.absoluteFill}
                 accessibilityElementsHidden
                 importantForAccessibility='no'
               >
-                <Search
-                  width={16}
-                  height={16}
-                  color={theme.components.dropdown.separator.fg}
-                />
+                {popoverBackground}
               </View>
-              <TextInput
-                value={searchValue}
-                onChangeText={onSearchChange}
-                placeholder={searchPlaceholder}
-                returnKeyType='search'
-                placeholderTextColor={theme.components.dropdown.separator.fg}
-                accessibilityLabel={
-                  searchAccessibilityLabel ?? searchPlaceholder
-                }
-                style={styles.searchInput}
-              />
+              {searchable && (
+                <View style={styles.searchWrap}>
+                  <View
+                    style={styles.searchIcon}
+                    accessibilityElementsHidden
+                    importantForAccessibility='no'
+                  >
+                    <Search
+                      width={16}
+                      height={16}
+                      color={theme.components.dropdown.separator.fg}
+                    />
+                  </View>
+                  <TextInput
+                    value={searchValue}
+                    onChangeText={onSearchChange}
+                    placeholder={searchPlaceholder}
+                    returnKeyType='search'
+                    placeholderTextColor={
+                      theme.components.dropdown.separator.fg
+                    }
+                    accessibilityLabel={
+                      searchAccessibilityLabel ?? searchPlaceholder
+                    }
+                    style={styles.searchInput}
+                  />
+                </View>
+              )}
+              {children}
             </View>
+          ) : (
+            <>
+              {searchable && (
+                <View style={styles.searchWrap}>
+                  <View
+                    style={styles.searchIcon}
+                    accessibilityElementsHidden
+                    importantForAccessibility='no'
+                  >
+                    <Search
+                      width={16}
+                      height={16}
+                      color={theme.components.dropdown.separator.fg}
+                    />
+                  </View>
+                  <TextInput
+                    value={searchValue}
+                    onChangeText={onSearchChange}
+                    placeholder={searchPlaceholder}
+                    returnKeyType='search'
+                    placeholderTextColor={
+                      theme.components.dropdown.separator.fg
+                    }
+                    accessibilityLabel={
+                      searchAccessibilityLabel ?? searchPlaceholder
+                    }
+                    style={styles.searchInput}
+                  />
+                </View>
+              )}
+              {children}
+            </>
           )}
-          {children}
         </Animated.View>
       </View>
     </Modal>

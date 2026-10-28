@@ -57,6 +57,7 @@ API details are generated from `packages/react-native/API.md`.
 | `color`              | `DropdownColor`           | No       | Semantic palette for trigger, content, focus, and pressed item states. |
 | `placement`          | `FloatingPlacement`       | No       | Preferred dropdown placement.                                          |
 | `offset`             | `number`                  | No       | —                                                                      |
+| `popoverBackground`  | `ReactNode`               | No       | —                                                                      |
 
 <!-- api-docgen:end native.DropdownProps.DropdownProps -->
 

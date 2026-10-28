@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react-native",
-  "version": "2.186.23",
+  "version": "2.187.2",
   "description": "React Native components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -52,6 +52,7 @@
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.stories.json --noEmit && tsc -p tsconfig.tooling.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
+    "test:subpaths:probe": "vitest run --config vitest.subpath-probe.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage"
   },
   "peerDependencies": {
