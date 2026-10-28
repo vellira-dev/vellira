@@ -39,7 +39,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/expo-cli-package"
           npm view @expo/cli@58.1.17 dist.integrity --registry=https://registry.npmjs.org
           npm pack @expo/cli@58.1.17 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/expo-cli-package"
-          archive="$RUNNER_TEMP/expo-cli-package/cli-58.1.17.tgz"
+          archive="$RUNNER_TEMP/expo-cli-package/expo-cli-58.1.17.tgz"
           test -s "$archive"
           sha256sum "$archive"
           parser=package/build/src/start/server/DevToolsPluginCliExtensionResults.js
