@@ -34,6 +34,7 @@ export function createToolingTasks({
     'scripts/visual/component-demo-social.test.mjs',
     'scripts/ci/workflow-noise.test.mjs',
     'scripts/ci/pr-change-intent.test.mjs',
+    'scripts/ci/release-affected-skips.test.mjs',
     'scripts/smoke/utils.test.mjs',
     'scripts/performance/native-picker-scan.test.mjs',
     'scripts/ci/dependabot-security-remediation.test.mjs',
