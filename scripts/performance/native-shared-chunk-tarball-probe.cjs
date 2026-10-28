@@ -79,6 +79,17 @@ try {
   if (!assertNativeSubpathContract(installed).enabled) {
     throw new Error('Installed shared graph contract failed');
   }
+  // Explicit opt-in: preserve the validated unpublished candidate for the
+  // real native simulator test. Never overwrite any existing user artifact.
+  const outputPath = process.env.VELLIRA_SHARED_TARBALL_OUTPUT;
+  if (outputPath) {
+    if (!path.isAbsolute(outputPath)) {
+      throw new Error('VELLIRA_SHARED_TARBALL_OUTPUT must be an absolute path');
+    }
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.copyFileSync(tarball, outputPath, fs.constants.COPYFILE_EXCL);
+    console.log('[shared-tarball] opt-in candidate copied:', outputPath);
+  }
   console.log('[shared-tarball] all', files.length, 'JS entries/chunks retained');
   console.log('[shared-tarball] packed bytes:', output.size);
   console.log('[shared-tarball] unpublished candidate; no npm release');
