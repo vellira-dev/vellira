@@ -17,7 +17,24 @@ const root = path.resolve(__dirname, '..');
 const target = path.join(root, 'node_modules', 'node-forge', 'lib', 'rsa.js');
 const packagePath = path.join(root, 'node_modules', 'node-forge', 'package.json');
 const patchFile = path.join(__dirname, 'node-forge-1.4.0-candidate.patch');
-assert.equal(JSON.parse(fs.readFileSync(packagePath, 'utf8')).version, '1.4.0',
+const forgeVersion = JSON.parse(fs.readFileSync(packagePath, 'utf8')).version;
+if (forgeVersion === '1.4.2') {
+  // Published upstream fix for GHSA-86w9-cpqp-85rv. Verified against the
+  // npm registry tarball (integrity sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ==).
+  // Do not patch these already-fixed bytes or accept later unreviewed releases.
+  const rsaBytes = fs.readFileSync(target);
+  assert.equal(sha256(rsaBytes),
+    '6632e195295ce76f6bb9131ee770dcd6cc1ee4ffac7906302208b00faf95a87f',
+    'Unexpected node-forge 1.4.2 rsa.js bytes');
+  const rsaSource = rsaBytes.toString('utf8');
+  assert.ok(rsaSource.includes('_encodeDigestInfo(oid, capture.digest, true)') &&
+    rsaSource.includes('d.substring(0, withParameters.length) !== withParameters') &&
+    rsaSource.includes('d.substring(0, withoutParameters.length) !== withoutParameters'),
+    'Canonical DER RSA verification is missing');
+  console.log('Published node-forge 1.4.2 RSA fix SHA-256 verified; no local patch needed');
+  process.exit(0);
+}
+assert.equal(forgeVersion, '1.4.0',
   'Unsupported node-forge version; review the security patch before proceeding');
 
 const patchBytes = fs.readFileSync(patchFile);
