@@ -117,6 +117,17 @@ jobs:
           fi
           cp "$RUNNER_TEMP/expo58-known-good.js" "$target"
           node "$script" "$RUNNER_TEMP/expo58" --verify
+      - name: Fingerprint published node-forge 1.4.2 RSA source for independent review
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/forge-package"
+          npm view node-forge@1.4.2 dist.integrity --registry=https://registry.npmjs.org
+          npm pack node-forge@1.4.2 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/forge-package"
+          tar -xOzf "$RUNNER_TEMP/forge-package/node-forge-1.4.2.tgz" package/lib/rsa.js > "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
+          sha256sum "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
+          grep -F '_encodeDigestInfo(oid, capture.digest, true)' "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
+          grep -F 'd.substring(0, withParameters.length) !== withParameters' "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
       - name: Verify normal npm ci with Expo 58 and both security patches
         shell: bash
         env:
