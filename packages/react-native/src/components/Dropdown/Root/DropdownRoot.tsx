@@ -54,6 +54,7 @@ export function DropdownRoot({
   style,
   triggerStyle,
   contentStyle,
+  popoverBackground,
   itemStyle,
   textStyle,
   accessibilityLabel,
@@ -292,6 +293,7 @@ export function DropdownRoot({
 
         <DropdownContent
           contentStyle={[contentStyle, contentStyleFromSlot]}
+          popoverBackground={popoverBackground}
           accessibilityLabel={menuAccessibilityLabel}
         >
           <FlatList
