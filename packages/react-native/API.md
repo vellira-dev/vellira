@@ -853,6 +853,7 @@ custom non-text triggers, provide `accessibilityLabel` and add
 | `color`              | `DropdownColor`           | No       | Semantic palette for trigger, content, focus, and pressed item states. |
 | `placement`          | `FloatingPlacement`       | No       | Preferred dropdown placement.                                          |
 | `offset`             | `number`                  | No       | —                                                                      |
+| `popoverBackground`  | `ReactNode`               | No       | —                                                                      |
 
 <!-- api-docgen:end native.DropdownProps.DropdownProps -->
 
