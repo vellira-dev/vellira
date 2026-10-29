@@ -150,10 +150,25 @@ export const SelectContentSurface = () => {
           accessibilityRole='button'
           accessibilityLabel='Close selection'
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            maxFontSizeMultiplier={1.4}
+            style={styles.cancelText}
+          >
+            Cancel
+          </Text>
         </Pressable>
 
-        <Text style={styles.title} numberOfLines={1} accessibilityRole='header'>
+        <Text
+          style={styles.title}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          maxFontSizeMultiplier={1.4}
+          accessibilityRole='header'
+        >
           {resolvedLabel}
         </Text>
 
@@ -164,7 +179,15 @@ export const SelectContentSurface = () => {
           accessibilityRole='button'
           accessibilityLabel='Done'
         >
-          <Text style={styles.doneText}>Done</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            maxFontSizeMultiplier={1.4}
+            style={styles.doneText}
+          >
+            Done
+          </Text>
         </Pressable>
       </View>
 
