@@ -124,14 +124,30 @@ describe('Native Starter project status badges', () => {
 
 describe('Native Starter dashboard metric contrast', () => {
   it('uses dark high-contrast metric surfaces with bright borders and readable text', () => {
-    expect(source).toContain("bg: themeName === 'highContrast' ? '#1C2736' : palette.brandBg");
-    expect(source).toContain("bg: themeName === 'highContrast' ? '#1C2736' : palette.successBg");
-    expect(source).toContain("outline: themeName === 'highContrast' ? '#A77BFF' : palette.brandBorder");
-    expect(source).toContain("outline: themeName === 'highContrast' ? '#30D5A0' : palette.successBorder");
-    expect(source).toContain("accent: themeName === 'highContrast' ? '#C5A8FF' : palette.brand");
-    expect(source).toContain("accent: themeName === 'highContrast' ? '#6BF2BF' : palette.success");
-    expect(source).toContain("color: themeName === 'highContrast' ? '#FFFFFF' : mainText");
-    expect(source).toContain("color: themeName === 'highContrast' ? '#D6E0ED' : subtleText");
+    expect(source).toContain(
+      "bg: themeName === 'highContrast' ? '#1C2736' : palette.brandBg"
+    );
+    expect(source).toContain(
+      "bg: themeName === 'highContrast' ? '#1C2736' : palette.successBg"
+    );
+    expect(source).toContain(
+      "outline: themeName === 'highContrast' ? '#A77BFF' : palette.brandBorder"
+    );
+    expect(source).toContain(
+      "outline: themeName === 'highContrast' ? '#30D5A0' : palette.successBorder"
+    );
+    expect(source).toContain(
+      "accent: themeName === 'highContrast' ? '#C5A8FF' : palette.brand"
+    );
+    expect(source).toContain(
+      "accent: themeName === 'highContrast' ? '#6BF2BF' : palette.success"
+    );
+    expect(source).toContain(
+      "color: themeName === 'highContrast' ? '#FFFFFF' : mainText"
+    );
+    expect(source).toContain(
+      "color: themeName === 'highContrast' ? '#D6E0ED' : subtleText"
+    );
     expect(source).toContain('backgroundColor: metric.bg');
   });
 });

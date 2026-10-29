@@ -608,17 +608,29 @@ function WorkspaceScreen() {
                   label: 'Total projects',
                   value: totalCount,
                   caption: 'All projects',
-                  bg: themeName === 'highContrast' ? '#1C2736' : palette.brandBg,
-                  outline: themeName === 'highContrast' ? '#A77BFF' : palette.brandBorder,
-                  accent: themeName === 'highContrast' ? '#C5A8FF' : palette.brand,
+                  bg:
+                    themeName === 'highContrast' ? '#1C2736' : palette.brandBg,
+                  outline:
+                    themeName === 'highContrast'
+                      ? '#A77BFF'
+                      : palette.brandBorder,
+                  accent:
+                    themeName === 'highContrast' ? '#C5A8FF' : palette.brand,
                 },
                 {
                   label: 'Completed',
                   value: completedCount,
                   caption: completionRate + '% completion',
-                  bg: themeName === 'highContrast' ? '#1C2736' : palette.successBg,
-                  outline: themeName === 'highContrast' ? '#30D5A0' : palette.successBorder,
-                  accent: themeName === 'highContrast' ? '#6BF2BF' : palette.success,
+                  bg:
+                    themeName === 'highContrast'
+                      ? '#1C2736'
+                      : palette.successBg,
+                  outline:
+                    themeName === 'highContrast'
+                      ? '#30D5A0'
+                      : palette.successBorder,
+                  accent:
+                    themeName === 'highContrast' ? '#6BF2BF' : palette.success,
                 },
               ].map((metric) => (
                 <View
@@ -645,7 +657,8 @@ function WorkspaceScreen() {
                   </Text>
                   <Text
                     style={{
-                      color: themeName === 'highContrast' ? '#FFFFFF' : mainText,
+                      color:
+                        themeName === 'highContrast' ? '#FFFFFF' : mainText,
                       fontSize: 35,
                       fontWeight: '700',
                     }}
@@ -654,7 +667,8 @@ function WorkspaceScreen() {
                   </Text>
                   <Text
                     style={{
-                      color: themeName === 'highContrast' ? '#D6E0ED' : subtleText,
+                      color:
+                        themeName === 'highContrast' ? '#D6E0ED' : subtleText,
                       fontSize: 12,
                     }}
                   >
@@ -1168,8 +1182,8 @@ function WorkspaceScreen() {
                               : project.status === 'active'
                                 ? palette.brand
                                 : themeName === 'highContrast'
-                                ? '#1A102B'
-                                : mainText,
+                                  ? '#1A102B'
+                                  : mainText,
                         }}
                       >
                         {project.status === 'shipped'
