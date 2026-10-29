@@ -827,6 +827,119 @@ describe('Native Select', () => {
     unmount();
   });
 
+  it('keeps a short native sheet list content-sized instead of filling empty space', () => {
+    const { container, unmount } = render(
+      <Select
+        label='Country'
+        presentation='sheet'
+        defaultValue='fr'
+        options={[
+          { label: 'France', value: 'fr' },
+          { label: 'Spain', value: 'es' },
+        ]}
+      />
+    );
+
+    openSelect(container);
+
+    const list = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+
+    expect(list?.style.flexGrow).toBe('0');
+    expect(list?.style.flexShrink).toBe('1');
+    expect(list?.style.maxHeight).toBe('420px');
+    // DOM mock renders both rows regardless of viewport. This verifies the
+    // requested list height, NOT its computed Yoga size on iPhone.
+    const twoRowHeight = 2 * 46 + nativeThemes.light.tokens.spacing[2] * 2;
+    expect(list?.style.height).toBe(`${twoRowHeight}px`);
+    // Native bounds must use the device window; a percentage of the
+    // intrinsic-height shadow wrapper clips the second row on iOS.
+    const sheet = document.body.querySelector<HTMLElement>(
+      '[data-testid="select-sheet"]'
+    );
+    expect(sheet?.style.maxHeight).toBe(`${768 * 0.74}px`);
+    expect(sheet?.textContent).toContain('Spain');
+    expect(list?.textContent).toContain('France');
+    expect(list?.textContent).toContain('Spain');
+
+    unmount();
+  });
+
+  it('preserves the scrolling cap and selected index for long virtual sheet lists', () => {
+    const { container, unmount } = render(
+      <Select
+        label='Country'
+        presentation='sheet'
+        options={longOptions}
+        defaultValue='country-70'
+        virtual
+      />
+    );
+
+    openSelect(container);
+
+    const list = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+
+    expect(list?.style.flexGrow).toBe('0');
+    expect(list?.style.flexShrink).toBe('1');
+    expect(list?.style.maxHeight).toBe('420px');
+    expect(list?.style.height).toBe('420px');
+    expect(list?.getAttribute('data-initial-scroll-index')).toBe('69');
+
+    unmount();
+  });
+
+  it('allocates two rows in modal and respects virtual item size estimates', () => {
+    const { container, unmount } = render(
+      <Select
+        label='Country'
+        presentation='modal'
+        options={[
+          { label: 'France', value: 'fr' },
+          { label: 'Spain', value: 'es' },
+        ]}
+      />
+    );
+
+    openSelect(container);
+
+    const list = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+    const padding = nativeThemes.light.tokens.spacing[2] * 2;
+    expect(list?.style.height).toBe(`${2 * 46 + padding}px`);
+    expect(
+      document.body.querySelector<HTMLElement>('[data-testid="select-modal"]')
+        ?.style.maxHeight
+    ).toBe(`${768 * 0.74}px`);
+    expect(list?.textContent).toContain('Spain');
+
+    unmount();
+
+    const virtual = render(
+      <Select
+        label='Country'
+        presentation='sheet'
+        virtual={{ estimatedItemSize: 70 }}
+        options={[
+          { label: 'France', value: 'fr' },
+          { label: 'Spain', value: 'es' },
+        ]}
+      />
+    );
+
+    openSelect(virtual.container);
+    const virtualList = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+    expect(virtualList?.style.height).toBe(`${2 * 70 + padding}px`);
+
+    virtual.unmount();
+  });
+
   it('supports loading and presentation props', () => {
     const { container, rerender, unmount } = render(
       <Select label='Country' loading presentation='sheet' options={[]} />

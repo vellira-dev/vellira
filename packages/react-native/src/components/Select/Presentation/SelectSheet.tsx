@@ -6,6 +6,7 @@ import { SelectBackdrop } from './SelectBackdrop';
 import { SelectHandle } from './SelectHandle';
 import { createPresentationStyles } from './SelectPresentation.styles';
 import type { SelectPresentationProps } from './types';
+import { useSelectPresentationViewport } from './useSelectPresentationViewport';
 
 export const SelectSheet = ({
   visible,
@@ -16,6 +17,7 @@ export const SelectSheet = ({
   children,
 }: SelectPresentationProps) => {
   const styles = useThemeStyles(createPresentationStyles);
+  const { maxHeight, onLayout } = useSelectPresentationViewport('sheet');
 
   return (
     <Modal
@@ -35,7 +37,8 @@ export const SelectSheet = ({
         <SelectBackdrop outsidePressProps={outsidePressProps} />
         <View style={[styles.surface, styles.sheetSurface]}>
           <View
-            style={[styles.content, styles.sheet, contentStyle]}
+            style={[styles.content, styles.sheet, { maxHeight }, contentStyle]}
+            onLayout={onLayout}
             testID='select-sheet'
           >
             <SelectHandle />

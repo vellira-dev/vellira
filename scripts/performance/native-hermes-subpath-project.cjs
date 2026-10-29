@@ -10,6 +10,8 @@ const repo = path.resolve(__dirname, '../..');
 const native = path.join(repo, 'packages/react-native');
 const candidateSource = path.join(native, 'dist/shared-proof');
 const required = ['index.js', 'button.js', 'theme.js'];
+// Optional true native layout check. The default context/Button proof is unchanged.
+const sheetProof = process.env.VELLIRA_HERMES_SHEET_PROOF === '1';
 const requestedOut = process.argv[2];
 if (process.argv.length > 3 || (requestedOut && !path.isAbsolute(requestedOut))) {
   throw new Error('Usage: node scripts/performance/native-hermes-subpath-project.cjs [absolute-empty-output-directory]');
@@ -74,14 +76,48 @@ write('app.json', JSON.stringify({ expo: {
 }}, null, 2) + '\n');
 write('tsconfig.json', JSON.stringify({extends:'expo/tsconfig.base',compilerOptions:{strict:true,skipLibCheck:true},include:['App.tsx']},null,2)+'\n');
 write('index.js', "import { registerRootComponent } from 'expo';\nimport App from './App';\nregisterRootComponent(App);\n");
+const sheetState = sheetProof
+  ? [
+      "  const [sheetCountry, setSheetCountry] = React.useState<string | null>(null);",
+      "  const [sheetSeen, setSheetSeen] = React.useState<string[]>([]);",
+    ].join('\n')
+  : '';
+const sheetUI = sheetProof
+  ? [
+      '          <RootProvider theme="light">',
+      '            <View style={styles.group}>',
+      '              <Text style={styles.heading}>Native Select / compact bottom sheet</Text>',
+      '              <Select',
+      '                label="Country"',
+      '                presentation="sheet"',
+      '                options={[{ label: "France", value: "fr" }, { label: "Spain", value: "es" }]}',
+      '                value={sheetCountry}',
+      '                onValueChange={(value) => {',
+      '                  setSheetCountry(value);',
+      '                  if (value) {',
+      '                    setSheetSeen(previous => previous.includes(value) ? previous : [...previous, value]);',
+      "                    console.log('[VELLIRA_HERMES_SHEET] selected: ' + value);",
+      '                  }',
+      '                }}',
+      '              />',
+      '              <Text testID="sheet-selection">Selected: {sheetCountry ?? "none"}</Text>',
+      '              <Text testID="sheet-seen">Observed: {sheetSeen.join(", ") || "none"}</Text>',
+      '              <Text testID="sheet-result">Select choices: {sheetSeen.includes("fr") && sheetSeen.includes("es") ? "PASS" : "PENDING"}</Text>',
+      '              <Text>Open Country; both options should be visible in a compact sheet anchored at the bottom.</Text>',
+      '            </View>',
+      '          </RootProvider>',
+    ].join('\n')
+  : '';
+
 write('App.tsx', `import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ${sheetProof ? 'LogBox, ' : ''}ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Button as RootButton, ThemeProvider as RootProvider, useTheme as rootUseTheme } from '@vellira-ui/react-native';
+import { Button as RootButton, ThemeProvider as RootProvider, useTheme as rootUseTheme${sheetProof ? ', Select' : ''} } from '@vellira-ui/react-native';
 import { Button as SubpathButton } from '@vellira-ui/react-native/button';
 import { ThemeProvider as SubpathProvider, useTheme as subpathUseTheme } from '@vellira-ui/react-native/theme';
 
 const hermesEnabled = !!(globalThis as typeof globalThis & { HermesInternal?: unknown }).HermesInternal;
+${sheetProof ? '(globalThis as typeof globalThis & { __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean }).__VELLIRA_SELECT_LAYOUT_PROOF__ = true;\nLogBox.ignoreLogs(["[VELLIRA_SELECT_LAYOUT]"]);' : ''}
 
 function ContextPair({ label }: { label: string }) {
   const root = rootUseTheme();
@@ -98,6 +134,7 @@ function ContextPair({ label }: { label: string }) {
 
 export default function App() {
   const [rootPressCount, setRootPressCount] = React.useState(0);
+${sheetState}
   const [subpathPressCount, setSubpathPressCount] = React.useState(0);
   const onRootPress = () => {
     setRootPressCount(n => n + 1);
@@ -138,6 +175,7 @@ export default function App() {
               <ContextPair label="subpath provider / both hooks" />
             </View>
           </SubpathProvider>
+${sheetUI}
           <Text testID="root-press-count" style={styles.counter}>Root Button presses: {rootPressCount}</Text>
           <Text testID="subpath-press-count" style={styles.counter}>Subpath Button presses: {subpathPressCount}</Text>
           <Text testID="independent-button-result" style={independentPass ? styles.pass : styles.pending}>
@@ -177,6 +215,7 @@ node -e "if(require('node:fs').existsSync('node_modules/@react-native-picker/pic
 npm run ios -- --device
 \`\`\`
 
+${sheetProof ? 'Optional sheet layout proof: open Country, verify France/Spain are both visible, select both, and inspect the spacing below the last row. Record a screenshot and the [VELLIRA_SELECT_LAYOUT] sheet/list/contentHeight Metro logs to prove the native geometry. The panel should stay bottom-anchored without clipping.\\n\\n' : ''}
 Launch the resulting app on the simulator. Confirm **Hermes engine: PASS** and both provider checks **PASS**. Tap **Root Button** and **Subpath Button** at least once each; verify their **separate** counters increase and \`Independent buttons: PASS\` appears. The terminal/Metro log should also include \`[VELLIRA_HERMES_PROOF]\` lines. A Metro export alone or Node mocks do not satisfy this proof. Record iOS simulator name/version, engine status, log text, and screenshot. If the build fails, record the exact error rather than reporting PASS.
 
 For Android: \`npm run android\` with an emulator/device available.
