@@ -870,7 +870,7 @@ describe('Native Select', () => {
     ).toHaveLength(3);
     expect(nativeSource).toContain('const largeText = fontScale >= 1.5');
     expect(
-      nativeToolbar.match(/largeText && \\{\\s*lineHeight: undefined\\s*\\}/g)
+      nativeToolbar.match(/largeText && \{\s*lineHeight: undefined\s*\}/g)
     ).toHaveLength(3);
 
     const titleStyle = createContentStyles(nativeThemes.light).title;
