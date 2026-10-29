@@ -14,6 +14,7 @@ import { BlurView } from 'expo-blur';
 import {
   Copy,
   Check,
+  ChevronRight,
   Edit,
   Filter,
   Folder,
@@ -150,6 +151,114 @@ function restoreWorkspace(value: unknown): Workspace | null {
 
 function nextId(projects: readonly Project[]): number {
   return projects.reduce((max, project) => Math.max(max, project.id), 0) + 1;
+}
+
+type LargeTextChoiceFieldProps = {
+  label: string;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  onSelect: (value: string) => void;
+};
+
+/** A compact, accessible alternative to the scaled native Select trigger. */
+function LargeTextChoiceField({
+  label,
+  value,
+  options,
+  onSelect,
+}: LargeTextChoiceFieldProps) {
+  const { theme } = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const currentLabel = options.find((option) => option.value === value)?.label ?? 'Select';
+  const primary = theme.semantic.text.primary;
+  const border = theme.semantic.border.muted;
+  const accent = theme.semantic.text.interactive;
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Text
+        maxFontSizeMultiplier={1.5}
+        style={{ color: primary, fontSize: 14, fontWeight: '600' }}
+      >
+        {label}
+        <Text style={{ color: theme.semantic.status.error.fg }}> *</Text>
+      </Text>
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel={label + ': ' + currentLabel}
+        accessibilityHint='Show available options'
+        accessibilityState={{ expanded }}
+        onPress={() => setExpanded((open) => !open)}
+        style={{
+          minHeight: 52,
+          borderWidth: 1,
+          borderRadius: 12,
+          borderColor: border,
+          backgroundColor: theme.semantic.surface.panel,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <Text
+          maxFontSizeMultiplier={1.5}
+          style={{ flex: 1, minWidth: 0, color: primary, fontSize: 15 }}
+        >
+          {currentLabel}
+        </Text>
+        <ChevronRight size={18} color={accent} />
+      </Pressable>
+      {expanded ? (
+        <View style={{ gap: 4 }}>
+          {options.map((option) => {
+            const checked = option.value === value;
+            return (
+              <Pressable
+                key={option.value}
+                accessibilityRole='radio'
+                accessibilityLabel={label + ': ' + option.label}
+                accessibilityState={{ checked }}
+                onPress={() => {
+                  onSelect(option.value);
+                  setExpanded(false);
+                }}
+                style={{
+                  minHeight: 48,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderWidth: 1,
+                  borderColor: checked ? accent : border,
+                  borderRadius: 12,
+                  backgroundColor: checked
+                    ? theme.semantic.surface.muted
+                    : theme.semantic.surface.panel,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <Text
+                  maxFontSizeMultiplier={1.5}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: primary,
+                    fontSize: 15,
+                    fontWeight: checked ? '700' : '500',
+                  }}
+                >
+                  {option.label}
+                </Text>
+                {checked ? <Check size={18} color={accent} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 function WorkspaceScreen() {
@@ -1882,36 +1991,67 @@ function WorkspaceScreen() {
                           borderColor: border,
                         }}
                       >
-                        <Select
-                          label='Team'
-                          required
-                          value={team}
-                          onValueChange={(value: string | null) => {
-                            if (isTeam(value)) setTeam(value);
-                          }}
-                          presentation='sheet'
-                          contentStyle={compactSheetStyle}
-                        >
-                          <Select.Item value='design' label='Design' />
-                          <Select.Item value='platform' label='Platform' />
-                          <Select.Item value='mobile' label='Mobile' />
-                        </Select>
-                        <Select
-                          label='Status'
-                          required
-                          value={status}
-                          onValueChange={(value: string | null) => {
-                            if (typeof value === 'string' && isStatus(value)) {
-                              setStatus(value);
-                            }
-                          }}
-                          presentation='sheet'
-                          contentStyle={compactSheetStyle}
-                        >
-                          <Select.Item value='planned' label='Planned' />
-                          <Select.Item value='active' label='In progress' />
-                          <Select.Item value='shipped' label='Shipped' />
-                        </Select>
+                        {largeText ? (
+                          <>
+                            <LargeTextChoiceField
+                              label='Team'
+                              value={team}
+                              options={[
+                                { value: 'design', label: 'Design' },
+                                { value: 'platform', label: 'Platform' },
+                                { value: 'mobile', label: 'Mobile' },
+                              ]}
+                              onSelect={(value) => {
+                                if (isTeam(value)) setTeam(value);
+                              }}
+                            />
+                            <LargeTextChoiceField
+                              label='Status'
+                              value={status}
+                              options={[
+                                { value: 'planned', label: 'Planned' },
+                                { value: 'active', label: 'In progress' },
+                                { value: 'shipped', label: 'Shipped' },
+                              ]}
+                              onSelect={(value) => {
+                                if (isStatus(value)) setStatus(value);
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Select
+                              label='Team'
+                              required
+                              value={team}
+                              onValueChange={(value: string | null) => {
+                                if (isTeam(value)) setTeam(value);
+                              }}
+                              presentation='sheet'
+                              contentStyle={compactSheetStyle}
+                            >
+                              <Select.Item value='design' label='Design' />
+                              <Select.Item value='platform' label='Platform' />
+                              <Select.Item value='mobile' label='Mobile' />
+                            </Select>
+                            <Select
+                              label='Status'
+                              required
+                              value={status}
+                              onValueChange={(value: string | null) => {
+                                if (typeof value === 'string' && isStatus(value)) {
+                                  setStatus(value);
+                                }
+                              }}
+                              presentation='sheet'
+                              contentStyle={compactSheetStyle}
+                            >
+                              <Select.Item value='planned' label='Planned' />
+                              <Select.Item value='active' label='In progress' />
+                              <Select.Item value='shipped' label='Shipped' />
+                            </Select>
+                          </>
+                        )}
                       </View>
                     </View>
                     <Text maxFontSizeMultiplier={1.6}
