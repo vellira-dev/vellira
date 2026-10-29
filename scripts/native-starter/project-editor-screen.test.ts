@@ -42,13 +42,17 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('borderTopRightRadius: 34');
   });
 
-  it('gives both three-option native Select sheets a definite viewport', () => {
-    expect(source).toContain('const selectSheetHeight = Math.min(');
-    expect(source).toContain('windowHeight - insets.top - insets.bottom - 24');
-    const matches = editor.match(/contentStyle={selectSheetContentStyle}/g);
-    expect(matches).toHaveLength(2);
-    expect(source).toContain('height: selectSheetHeight');
-    expect(source).toContain('maxHeight: selectSheetHeight');
+  it('uses the released native Select fix rather than local sheet sizing', () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        new URL('../../examples/workspace-starter/native/package.json', import.meta.url),
+        'utf8'
+      )
+    );
+    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.2');
+    expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
+    expect(source).not.toContain('selectSheetContentStyle');
+    expect(source).not.toContain('selectSheetHeight');
   });
 
   it('provides top navigation with Close and Create/Save actions', () => {

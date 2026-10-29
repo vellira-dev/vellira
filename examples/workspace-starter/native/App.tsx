@@ -7,7 +7,6 @@ import {
   Text,
   View,
   StyleSheet,
-  useWindowDimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
@@ -153,7 +152,6 @@ function nextId(projects: readonly Project[]): number {
 function WorkspaceScreen() {
   const { theme, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const [data, setData] = useState<Workspace>(initialWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
@@ -436,16 +434,6 @@ function WorkspaceScreen() {
   // navigation context remains visible, while interactions behind it are inert.
   const isEditing = editingId !== null;
   const actionLabel = isEditing ? 'Save' : 'Create';
-  // Published Select uses percentage maxHeight in an intrinsic-height wrapper.
-  // Size this Starter's three-item sheets explicitly until #1992 is released.
-  const selectSheetHeight = Math.min(
-    300,
-    Math.max(220, windowHeight - insets.top - insets.bottom - 24)
-  );
-  const selectSheetContentStyle = {
-    height: selectSheetHeight,
-    maxHeight: selectSheetHeight,
-  };
   // A single-line native TextInput needs font-metric-based vertical centering.
   // Do not force the shared Input lineHeight into this fixed-height editor field.
   const editorInputStyle = {
@@ -1665,7 +1653,6 @@ function WorkspaceScreen() {
                             if (isTeam(value)) setTeam(value);
                           }}
                           presentation='sheet'
-                          contentStyle={selectSheetContentStyle}
                         >
                           <Select.Item value='design' label='Design' />
                           <Select.Item value='platform' label='Platform' />
@@ -1681,7 +1668,6 @@ function WorkspaceScreen() {
                             }
                           }}
                           presentation='sheet'
-                          contentStyle={selectSheetContentStyle}
                         >
                           <Select.Item value='planned' label='Planned' />
                           <Select.Item value='active' label='In progress' />
