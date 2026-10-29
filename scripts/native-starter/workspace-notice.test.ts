@@ -14,7 +14,7 @@ const component = readFileSync(
 );
 
 describe('Native Starter compact semantic notifications', () => {
-  it('replaces the tall wrapping banner with accessible compact actions', () => {
+  it('uses compact layout and accessible controls', () => {
     expect(app).toContain('<WorkspaceNotice');
     expect(component).toContain('minHeight: 52');
     expect(component).toContain("flexDirection: 'row'");
@@ -32,7 +32,9 @@ describe('Native Starter compact semantic notifications', () => {
     expect(component).toContain("notice.tone === 'success'");
     expect(component).toContain("notice.tone === 'error'");
     expect(component).toContain('borderLeftColor: appearance.accent');
-    expect(component).toContain("notice.tone === 'error' ? 'assertive' : 'polite'");
+    expect(component).toContain(
+      "notice.tone === 'error' ? 'assertive' : 'polite'"
+    );
   });
 
   it('classifies project events and storage failures explicitly', () => {
@@ -41,7 +43,9 @@ describe('Native Starter compact semantic notifications', () => {
     expect(app).toContain("tone: 'error'");
     expect(app).toContain("message: 'Project restored.'");
     expect(app).toContain("message: 'Could not save changes on this device.'");
-    expect(app).toContain("message: 'Could not load saved projects on this device.'");
+    expect(app).toContain(
+      "message: 'Could not load saved projects on this device.'"
+    );
   });
 
   it('retains Undo and error messages while expiring success safely', () => {
