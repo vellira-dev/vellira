@@ -38,6 +38,8 @@ export function createToolingTasks({
     'scripts/smoke/utils.test.mjs',
     'scripts/performance/vite-bundle-size-report.test.mjs',
     'scripts/performance/vite-bundle-regression.test.mjs',
+    'scripts/performance/vite-representative-surface.test.mjs',
+    'scripts/performance/native-metro-phase-b.test.mjs',
     'scripts/performance/native-picker-scan.test.mjs',
     'scripts/performance/native-hermes-subpath-project.test.mjs',
     'scripts/performance/native-published-pickerless-project.test.mjs',

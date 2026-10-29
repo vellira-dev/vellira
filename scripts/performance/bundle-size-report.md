@@ -75,3 +75,55 @@ approval.
 **Out of scope for Phase A:** measuring the entire UI catalog, HTTP transfer,
 Lottie assets, and production Metro/Hermes. Native measurement is an opt-in
 Phase B follow-up using the existing native-metro-matrix.cjs harness.
+
+## Phase B — representative Web and opt-in Native Metro measurements
+
+The existing clean Vite Release Candidate job now builds one extra **typed**
+representative composition of 11 published components: Button, Input,
+Checkbox, Switch, Textarea, Select, Tabs, Dropdown, Tooltip, Modal and Portal.
+It measures emitted JS/CSS and compares within the same packed candidate against
+Button+Input. This is **separate** from the versioned `bundleSize.scenarios`
+baseline schema, and must not silently invalidate Phase A.
+
+The Native proof is **opt-in** and has NO periodic or pull-request Actions job.
+On a machine with Node and npm, from the repository root:
+
+```sh
+VELLIRA_NATIVE_VERSION=2.188.3 \
+VELLIRA_METRO_PRODUCTION_ONLY=1 \
+VELLIRA_METRO_EVIDENCE=consumer-evidence/native-metro-2.188.3.json \
+node scripts/performance/native-metro-matrix.cjs
+```
+
+Use a separately verified immutable **published npm version**, not local workspace
+builds. The diagnostic installs four isolated Expo/RN consumers using **normal
+npm peer resolution** (not legacy-peer-deps) and checks that Picker is absent.
+It records Node/npm versions, Git source SHA, pinned fixture dependencies,
+per-case `package-lock.json` SHA-256, published native manifest peers and
+production iOS/Android export measurements:
+
+- baseline React Native without Vellira
+- ThemeProvider only
+- ThemeProvider + Button
+- ThemeProvider + Button + Select
+
+The relevant comparable byte metrics are `cases[*].platforms[ios|android]`
+`scriptBytes`, `outputBytes` and `deltaFromBaseline`/`deltaFromButton`.
+Production-only mode omits the additional development source-map exports,
+reducing the cost of this **manual, one-off diagnostic**. Omitting dev maps
+also means no development module inventory is claimed from this mode.
+The fixture includes a real ThemeProvider, so the Button and Select examples
+use a valid Vellira context.
+
+Do not interpret npm tarball size, development source-map module counts,
+Metro export bytes, Hermes execution, app startup time, HTTP transfer, or native
+binary size as interchangeable metrics. A production Metro export is **not**
+a runtime emulator check. Previous iOS/Android interaction proofs belong to
+#1906 and do not need repetition for this measurement.
+
+**Phase B completion:** capture and review one real JSON result from each
+production platform plus the representative Web result; record source/tooling
+identity and note any nonzero deltas. Keep #470 open until all required data,
+warning calibration policy and owner review are documented. The old Phase A
+baseline can correctly be `BASELINE_STALE` after releases, and must be
+refreshed from independent source-equivalent evidence, not re-labelled.

@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { measureViteBundleVariants, sizeReportMarkdown } = require('../performance/vite-bundle-size-report.cjs');
+const { measureRepresentativeWeb, formatRepresentativeWeb } = require('../performance/vite-representative-surface.cjs');
 const {
   collectGitEvidence,
   evaluateViteRegression,
@@ -561,6 +562,19 @@ async function main() {
     const bundleSize = measureViteBundleVariants(fixtureDir, () =>
       run('npm', ['run', 'build'], { cwd: fixtureDir })
     );
+    const representativeWeb = measureRepresentativeWeb(
+      fixtureDir,
+      () => {
+        run('npm', ['run', 'typecheck'], { cwd: fixtureDir });
+        run('npm', ['run', 'build'], { cwd: fixtureDir });
+      },
+      bundleSize.scenarios.buttonInput
+    );
+    const representativeSummary = formatRepresentativeWeb(representativeWeb);
+    console.log(representativeSummary);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, representativeSummary);
+    }
     const bundleSizeSummary = sizeReportMarkdown(bundleSize);
     console.log(bundleSizeSummary);
     if (process.env.GITHUB_STEP_SUMMARY) {
@@ -596,6 +610,7 @@ async function main() {
         ).version,
       },
       bundleSize,
+      representativeWeb,
       checks: {
         artifactProvenance: true,
         cleanInstall: true,
