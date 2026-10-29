@@ -608,17 +608,17 @@ function WorkspaceScreen() {
                   label: 'Total projects',
                   value: totalCount,
                   caption: 'All projects',
-                  bg: palette.brandBg,
-                  outline: palette.brandBorder,
-                  accent: palette.brand,
+                  bg: themeName === 'highContrast' ? '#1C2736' : palette.brandBg,
+                  outline: themeName === 'highContrast' ? '#A77BFF' : palette.brandBorder,
+                  accent: themeName === 'highContrast' ? '#C5A8FF' : palette.brand,
                 },
                 {
                   label: 'Completed',
                   value: completedCount,
                   caption: completionRate + '% completion',
-                  bg: palette.successBg,
-                  outline: palette.successBorder,
-                  accent: palette.success,
+                  bg: themeName === 'highContrast' ? '#1C2736' : palette.successBg,
+                  outline: themeName === 'highContrast' ? '#30D5A0' : palette.successBorder,
+                  accent: themeName === 'highContrast' ? '#6BF2BF' : palette.success,
                 },
               ].map((metric) => (
                 <View
@@ -645,7 +645,7 @@ function WorkspaceScreen() {
                   </Text>
                   <Text
                     style={{
-                      color: themeName === 'highContrast' ? '#1A102B' : mainText,
+                      color: themeName === 'highContrast' ? '#FFFFFF' : mainText,
                       fontSize: 35,
                       fontWeight: '700',
                     }}
@@ -654,7 +654,7 @@ function WorkspaceScreen() {
                   </Text>
                   <Text
                     style={{
-                      color: themeName === 'highContrast' ? '#34303D' : subtleText,
+                      color: themeName === 'highContrast' ? '#D6E0ED' : subtleText,
                       fontSize: 12,
                     }}
                   >
