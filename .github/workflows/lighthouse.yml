@@ -127,8 +127,26 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Restore Next.js compilation cache (lighthouse)
+        id: next-build-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: apps/website/.next/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-vellira-next16-pr-lighthouse-v1-node22.23.4-${{ hashFiles('pnpm-lock.yaml', 'apps/website/package.json', 'apps/website/next.config.ts', 'turbo.json') }}-${{ github.event.pull_request.head.sha || github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-vellira-next16-pr-lighthouse-v1-node22.23.4-${{ hashFiles('pnpm-lock.yaml', 'apps/website/package.json', 'apps/website/next.config.ts', 'turbo.json') }}-
+
       - name: Build website
         run: pnpm --filter @vellira-ui/website build
+
+      - name: Save Next.js compilation cache (lighthouse)
+        if: steps.next-build-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: apps/website/.next/cache
+          key: ${{ steps.next-build-cache.outputs.cache-primary-key }}
 
       - name: Run Lighthouse for website
         continue-on-error: true
