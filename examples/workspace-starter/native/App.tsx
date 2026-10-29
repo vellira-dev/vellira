@@ -1286,6 +1286,7 @@ function WorkspaceScreen() {
                       </Dropdown.Item>
                     </Dropdown.Content>
                   </Dropdown>
+                </View>
                 <View
                   style={{
                     flexDirection: 'row',
