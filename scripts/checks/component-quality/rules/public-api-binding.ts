@@ -268,7 +268,12 @@ export function inspectPublicApiBinding(
         )
       ) {
         propsType = annotation.typeArguments?.[0];
+      } else if (annotation && ts.isFunctionTypeNode(annotation)) {
+        propsType = annotation.parameters[0]?.type;
       }
+      // An explicit exported type is authoritative: a correctly typed inner
+      // arrow cannot repair an `any`, `unknown` or unrelated public signature.
+      if (annotation && !linked(propsType)) return false;
       return callable(node.initializer, propsType);
     }
     if (ts.isExportAssignment(node))

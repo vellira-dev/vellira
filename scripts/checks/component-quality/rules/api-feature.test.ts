@@ -287,6 +287,30 @@ describe('API/feature quality rules', () => {
     }
   );
 
+  it.each(['any', 'unknown', '(props: { count: number }) => unknown'])(
+    'rejects an export annotation that erases the canonical callable: %s',
+    async (annotation) => {
+      createComponent({
+        implementationSource: `import type {ExampleProps} from './types'; export const Example: ${annotation} = (props:ExampleProps)=>null;`,
+      });
+      expect(
+        (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+          .status
+      ).toBe('fail');
+    }
+  );
+
+  it('accepts an explicit function annotation using the canonical Props', async () => {
+    createComponent({
+      implementationSource:
+        "import type {ExampleProps} from './types'; export const Example: (props: ExampleProps)=>unknown = (props)=>null;",
+    });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('pass');
+  });
+
   it('rejects a locally shadowed React wrapper', async () => {
     createComponent({
       implementationSource:
