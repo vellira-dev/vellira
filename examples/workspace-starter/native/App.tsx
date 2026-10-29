@@ -1050,31 +1050,6 @@ function WorkspaceScreen() {
                     placement='bottom-end'
                     offset={-44}
                     closeOnSelect
-                    popoverBackground={
-                      Platform.OS !== 'ios' ||
-                      themeName === 'highContrast' ? undefined : (
-                        <BlurView
-                          intensity={25}
-                          tint={
-                            themeName === 'dark'
-                              ? 'systemUltraThinMaterialDark'
-                              : 'systemUltraThinMaterialLight'
-                          }
-                          style={{ flex: 1 }}
-                        >
-                          <View
-                            pointerEvents='none'
-                            style={{
-                              flex: 1,
-                              backgroundColor:
-                                themeName === 'dark'
-                                  ? 'rgba(20, 18, 30, 0.24)'
-                                  : 'rgba(255, 255, 255, 0.75)',
-                            }}
-                          />
-                        </BlurView>
-                      )
-                    }
                     contentStyle={{
                       width: 216,
                       maxWidth: 236,
@@ -1083,10 +1058,7 @@ function WorkspaceScreen() {
                       paddingHorizontal: 4,
                       borderWidth: 1,
                       borderColor: border,
-                      backgroundColor:
-                        Platform.OS !== 'ios' || themeName === 'highContrast'
-                          ? surface.panel
-                          : 'transparent',
+                      backgroundColor: surface.panel,
                       shadowColor: '#000000',
                       shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
                       shadowRadius: 24,
