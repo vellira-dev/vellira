@@ -196,11 +196,21 @@ describe('Native Starter large accessibility text', () => {
 });
 
 describe('Native Starter large-text project actions', () => {
-  it('shows direct accessible actions rather than a cramped popover', () => {
-    expect(source).toContain('{!largeText ? (');
-    expect(source).toContain("{largeText ? (");
-    expect(source).toContain("['Duplicate', Copy, () => duplicateProject(project.id)]");
-    expect(source).toContain("accessibilityLabel={label + ' ' + project.name}");
+  it('retains the overflow menu and scales its content for large accessibility text', () => {
+    const start = source.indexOf("presentation='popover'");
+    const end = source.indexOf('<Dropdown.Trigger', start);
+    const menu = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(menu).toContain('textStyle={largeText ?');
+    expect(menu).toContain('1.5 / fontScale');
+    expect(menu).toContain('itemStyle={largeText ? { minHeight: 52 } : undefined}');
+    expect(menu).toContain('width: largeText ? 268 : 216');
+    expect(source).toContain("accessibilityLabel={'Actions for ' + project.name}");
+    expect(source).toContain("onSelect={() => openEdit(project)}");
+    expect(source).toContain("onSelect={() => duplicateProject(project.id)}");
+    expect(source).toContain("onSelect={() => deleteProject(project.id)}");
+    expect(source).not.toContain("['Duplicate', Copy, () => duplicateProject(project.id)]");
   });
 
   it('provides a capped native editor input at large text sizes', () => {
