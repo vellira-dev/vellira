@@ -236,20 +236,29 @@ describe('Native Starter large-text search and restore', () => {
 });
 
 describe('Native Starter large-text organization choices', () => {
-  it('uses compact expandable selection rows with accessible checked state', () => {
-    expect(source).toContain('function LargeTextChoiceField(');
-    expect(source).toContain('accessibilityState={{ expanded }}');
-    expect(source).toContain("accessibilityRole='radio'");
-    expect(source).toContain('accessibilityState={{ checked }}');
-    expect(source).toContain('minHeight: 48');
-    expect(source).toContain('setExpanded(false)');
+  const start = source.indexOf('function LargeTextChoiceField(');
+  const end = source.indexOf('function WorkspaceScreen()', start);
+  const choiceField = source.slice(start, end);
+
+  it('opens the published Select sheet without expanding the form inline', () => {
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(choiceField).toContain('<Select');
+    expect(choiceField).toContain("presentation='sheet'");
+    expect(choiceField).toContain('accessibilityLabel={label}');
+    expect(choiceField).toContain('renderValue={({ option, placeholder }) => (');
+    expect(choiceField).toContain('renderOption={({ option, selected }) => (');
+    expect(choiceField).toContain('maxFontSizeMultiplier={1.5}');
+    expect(choiceField).toContain('optionStyle={{');
+    expect(choiceField).toContain('Math.min(viewportHeight * 0.7, 360)');
+    expect(choiceField).not.toContain('setExpanded(');
     expect(source).toContain("label='Team'");
     expect(source).toContain("label='Status'");
   });
 
   it('preserves published Select for the standard-size editor', () => {
-    expect(source).toContain('label=\'Team\'');
-    expect(source).toContain('label=\'Status\'');
+    expect(source).toContain("label='Team'");
+    expect(source).toContain("label='Status'");
     expect(source).toContain("presentation='sheet'");
     expect(source).toContain('contentStyle={compactSheetStyle}');
   });
