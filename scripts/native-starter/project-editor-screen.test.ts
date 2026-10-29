@@ -139,7 +139,7 @@ describe('Native Starter dashboard metric contrast', () => {
       ['color', '#D6E0ED', 'subtleText'],
     ]) {
       const expected = `${field}: themeName === 'highContrast' ? '${color}' : ${fallback}`;
-      expect(metricSection.replace(/\\s+/g, ' ')).toContain(expected);
+      expect(metricSection.replace(/\s+/g, ' ')).toContain(expected);
     }
     expect(metricSection).toContain('backgroundColor: metric.bg');
   });
