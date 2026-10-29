@@ -738,9 +738,6 @@ importers:
 
   packages/react-native:
     dependencies:
-      '@react-native-picker/picker':
-        specifier: '>=2'
-        version: 2.11.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.1)(supports-color@10.2.2))(react@19.3.1)
       '@vellira-ui/core':
         specifier: workspace:*
         version: link:../core
