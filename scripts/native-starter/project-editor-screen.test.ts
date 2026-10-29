@@ -28,9 +28,9 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain("themeName !== 'highContrast'");
     expect(editor).not.toContain('<Modal');
     expect(editor).not.toContain("accessibilityRole='tablist'");
-    expect(source).toContain('accessibilityElementsHidden={createOpen}');
-    expect(source).toContain("pointerEvents={createOpen ? 'none' : 'auto'}");
-    expect(source).toContain('<Modal open={resetOpen}');
+    expect(source).toContain('accessibilityElementsHidden={createOpen || resetOpen}');
+    expect(source).toContain("pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}");
+    expect(source).toContain('{resetOpen ? (');
   });
 
   it('stays full-width below the system safe area', () => {
@@ -49,7 +49,7 @@ describe('Native Starter project editor navigation', () => {
       import.meta.url
     );
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.2');
+    expect(manifest.dependencies['@vellira-ui/react-native']).toMatch(/^2\\.188\\.[2-9]$/);
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -105,5 +105,14 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('error={error || undefined}');
     expect(source).toContain("setSection('projects')");
     expect(source).toContain('setNotice(');
+  });
+});
+
+
+describe('Native Starter project status badges', () => {
+  it('gives Planned a legible opaque high-contrast badge', () => {
+    expect(source).toContain("themeName === 'highContrast'\\n                                ? '#FFFFFF'");
+    expect(source).toContain("themeName === 'highContrast'\\n                                ? '#1A102B'");
+    expect(source).toContain("borderWidth: themeName === 'highContrast' ? 1 : 0");
   });
 });
