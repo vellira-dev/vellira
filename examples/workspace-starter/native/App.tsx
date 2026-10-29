@@ -7,6 +7,7 @@ import {
   Text,
   View,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
@@ -22,7 +23,11 @@ import {
   Trash,
 } from '@vellira-ui/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import {
   Button,
   Checkbox,
@@ -147,6 +152,8 @@ function nextId(projects: readonly Project[]): number {
 
 function WorkspaceScreen() {
   const { theme, themeName, setTheme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [data, setData] = useState<Workspace>(initialWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
@@ -429,6 +436,16 @@ function WorkspaceScreen() {
   // navigation context remains visible, while interactions behind it are inert.
   const isEditing = editingId !== null;
   const actionLabel = isEditing ? 'Save' : 'Create';
+  // Published Select uses percentage maxHeight in an intrinsic-height wrapper.
+  // Size this Starter's three-item sheets explicitly until #1992 is released.
+  const selectSheetHeight = Math.min(
+    300,
+    Math.max(220, windowHeight - insets.top - insets.bottom - 24)
+  );
+  const selectSheetContentStyle = {
+    height: selectSheetHeight,
+    maxHeight: selectSheetHeight,
+  };
   // A single-line native TextInput needs font-metric-based vertical centering.
   // Do not force the shared Input lineHeight into this fixed-height editor field.
   const editorInputStyle = {
@@ -1398,7 +1415,10 @@ function WorkspaceScreen() {
       {createOpen ? (
         <View
           accessibilityViewIsModal
-          style={[StyleSheet.absoluteFill, { zIndex: 50, elevation: 24 }]}
+          style={[
+            StyleSheet.absoluteFill,
+            { zIndex: 50, elevation: 24, paddingTop: insets.top + 8 },
+          ]}
         >
           <View
             pointerEvents='auto'
@@ -1415,10 +1435,11 @@ function WorkspaceScreen() {
           <View
             style={{
               flex: 1,
-              marginTop: 12,
-              marginHorizontal: 10,
+              marginTop: 0,
+              marginHorizontal: 0,
               marginBottom: 0,
-              borderRadius: 34,
+              borderTopLeftRadius: 34,
+              borderTopRightRadius: 34,
               shadowColor: '#000000',
               shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
               shadowRadius: 24,
@@ -1429,7 +1450,8 @@ function WorkspaceScreen() {
             <View
               style={{
                 flex: 1,
-                borderRadius: 34,
+                borderTopLeftRadius: 34,
+                borderTopRightRadius: 34,
                 overflow: 'hidden',
                 borderWidth: 1,
                 borderColor: border,
@@ -1643,6 +1665,7 @@ function WorkspaceScreen() {
                             if (isTeam(value)) setTeam(value);
                           }}
                           presentation='sheet'
+                          contentStyle={selectSheetContentStyle}
                         >
                           <Select.Item value='design' label='Design' />
                           <Select.Item value='platform' label='Platform' />
@@ -1658,6 +1681,7 @@ function WorkspaceScreen() {
                             }
                           }}
                           presentation='sheet'
+                          contentStyle={selectSheetContentStyle}
                         >
                           <Select.Item value='planned' label='Planned' />
                           <Select.Item value='active' label='In progress' />

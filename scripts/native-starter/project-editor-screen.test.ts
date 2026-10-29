@@ -32,6 +32,26 @@ describe('Native Starter project editor navigation', () => {
     expect(source).toContain('<Modal open={resetOpen}');
   });
 
+  it('stays full-width below the system safe area', () => {
+    expect(source).toContain('useSafeAreaInsets');
+    expect(source).toContain('useWindowDimensions');
+    expect(editor).toContain('paddingTop: insets.top + 8');
+    expect(editor).toContain('marginHorizontal: 0');
+    expect(editor).toContain('marginTop: 0');
+    expect(editor).toContain('borderTopLeftRadius: 34');
+    expect(editor).toContain('borderTopRightRadius: 34');
+  });
+
+  it('gives both three-option native Select sheets a definite viewport', () => {
+    expect(source).toContain('const selectSheetHeight = Math.min(');
+    expect(source).toContain('windowHeight - insets.top - insets.bottom - 24');
+    expect(editor.match(/contentStyle={selectSheetContentStyle}/g)).toHaveLength(
+      2
+    );
+    expect(source).toContain('height: selectSheetHeight');
+    expect(source).toContain('maxHeight: selectSheetHeight');
+  });
+
   it('provides top navigation with Close and Create/Save actions', () => {
     expect(editor).toContain("accessibilityLabel='Close project editor'");
     expect(editor).toContain('onPress={saveProject}');
