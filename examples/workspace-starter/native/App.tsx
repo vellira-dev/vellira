@@ -1133,7 +1133,16 @@ function WorkspaceScreen() {
                             ? palette.successBg
                             : project.status === 'active'
                               ? palette.brandBg
-                              : palette.track,
+                              : themeName === 'highContrast'
+                                ? '#FFFFFF'
+                                : palette.track,
+                        borderWidth: themeName === 'highContrast' ? 1 : 0,
+                        borderColor:
+                          project.status === 'shipped'
+                            ? palette.successBorder
+                            : project.status === 'active'
+                              ? palette.brandBorder
+                              : '#1A102B',
                       }}
                     >
                       <Text
@@ -1145,6 +1154,8 @@ function WorkspaceScreen() {
                               ? palette.success
                               : project.status === 'active'
                                 ? palette.brand
+                                : themeName === 'highContrast'
+                                ? '#1A102B'
                                 : mainText,
                         }}
                       >
