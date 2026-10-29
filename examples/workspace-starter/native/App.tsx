@@ -25,6 +25,7 @@ import {
   ThemeProvider,
   useTheme,
 } from '@vellira-ui/react-native';
+import { hasActiveProjectFilters, nextUniqueDuplicateName } from './projectUx';
 
 type NativeTheme = 'light' | 'dark' | 'highContrast';
 type Section = 'overview' | 'projects' | 'settings';
@@ -191,6 +192,7 @@ function WorkspaceScreen() {
     gap: 14,
   } as const;
 
+  const activeFilters = hasActiveProjectFilters(showSearch, query, statusFilter);
   const visibleProjects = data.projects.filter((project) => {
     const sameStatus =
       statusFilter === 'all' || project.status === statusFilter;
@@ -307,7 +309,10 @@ function WorkspaceScreen() {
           {
             ...project,
             id: nextId(current.projects),
-            name: project.name.replace(/(?: copy)+$/i, '') + ' copy',
+            name: nextUniqueDuplicateName(
+              project.name,
+              current.projects.map((existing) => existing.name)
+            ),
             completed: false,
             status: 'planned',
             previousStatus: undefined,
@@ -770,13 +775,16 @@ function WorkspaceScreen() {
               <Text
                 style={{ color: mainText, fontSize: 17, fontWeight: '700' }}
               >
-                All projects · {visibleProjects.length}
+                {activeFilters ? 'Matching projects' : 'All projects'} · {visibleProjects.length}
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel='Search projects'
-                  accessibilityState={{ expanded: showSearch }}
+                  accessibilityState={{
+                    expanded: showSearch,
+                    selected: showSearch && query.trim().length > 0,
+                  }}
                   onPress={() => {
                     setShowSearch(!showSearch);
                     if (showSearch) setQuery('');
@@ -788,12 +796,18 @@ function WorkspaceScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Search size={22} color={mainText} />
+                  <Search
+                    size={22}
+                    color={showSearch && query.trim() ? palette.brand : mainText}
+                  />
                 </Pressable>
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel='Filter projects'
-                  accessibilityState={{ expanded: showFilters }}
+                  accessibilityState={{
+                    expanded: showFilters,
+                    selected: statusFilter !== 'all',
+                  }}
                   onPress={() => setShowFilters(!showFilters)}
                   style={{
                     minWidth: 44,
@@ -802,7 +816,10 @@ function WorkspaceScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Filter size={22} color={mainText} />
+                  <Filter
+                    size={22}
+                    color={statusFilter !== 'all' ? palette.brand : mainText}
+                  />
                 </Pressable>
               </View>
             </View>
