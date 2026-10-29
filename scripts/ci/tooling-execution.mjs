@@ -36,6 +36,7 @@ export function createToolingTasks({
     'scripts/ci/pr-change-intent.test.mjs',
     'scripts/ci/release-affected-skips.test.mjs',
     'scripts/smoke/utils.test.mjs',
+    'scripts/performance/vite-bundle-size-report.test.mjs',
     'scripts/performance/native-picker-scan.test.mjs',
     'scripts/performance/native-hermes-subpath-project.test.mjs',
     'scripts/performance/native-published-pickerless-project.test.mjs',
