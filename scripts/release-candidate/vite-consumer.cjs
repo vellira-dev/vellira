@@ -4,6 +4,7 @@ const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const { measureViteBundleVariants, sizeReportMarkdown } = require('../performance/vite-bundle-size-report.cjs');
 
 const {
   WEB_PACKAGE_NAMES,
@@ -552,6 +553,14 @@ async function main() {
     const resolvedExports = verifyPackageExports(fixtureDir);
     const development = await verifyDevelopmentMode(fixtureDir);
     const production = verifyProductionBuild(fixtureDir);
+    const bundleSize = measureViteBundleVariants(fixtureDir, () =>
+      run('npm', ['run', 'build'], { cwd: fixtureDir })
+    );
+    const bundleSizeSummary = sizeReportMarkdown(bundleSize);
+    console.log(bundleSizeSummary);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, bundleSizeSummary);
+    }
 
     const evidence = {
       schemaVersion: 1,
@@ -581,6 +590,7 @@ async function main() {
           path.join(fixtureDir, 'node_modules/typescript/package.json')
         ).version,
       },
+      bundleSize,
       checks: {
         artifactProvenance: true,
         cleanInstall: true,
