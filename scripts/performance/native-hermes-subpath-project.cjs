@@ -117,6 +117,7 @@ import { Button as SubpathButton } from '@vellira-ui/react-native/button';
 import { ThemeProvider as SubpathProvider, useTheme as subpathUseTheme } from '@vellira-ui/react-native/theme';
 
 const hermesEnabled = !!(globalThis as typeof globalThis & { HermesInternal?: unknown }).HermesInternal;
+${sheetProof ? '(globalThis as typeof globalThis & { __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean }).__VELLIRA_SELECT_LAYOUT_PROOF__ = true;' : ''}
 
 function ContextPair({ label }: { label: string }) {
   const root = rootUseTheme();
@@ -214,7 +215,7 @@ node -e "if(require('node:fs').existsSync('node_modules/@react-native-picker/pic
 npm run ios -- --device
 \`\`\`
 
-${sheetProof ? 'Optional sheet layout proof: open Country, verify France/Spain are both visible, select both, and inspect the spacing below the last row. Record a screenshot; the panel should stay bottom-anchored without a large empty list viewport.\\n\\n' : ''}
+${sheetProof ? 'Optional sheet layout proof: open Country, verify France/Spain are both visible, select both, and inspect the spacing below the last row. Record a screenshot and the [VELLIRA_SELECT_LAYOUT] sheet/list/contentHeight Metro logs to prove the native geometry. The panel should stay bottom-anchored without clipping.\\n\\n' : ''}
 Launch the resulting app on the simulator. Confirm **Hermes engine: PASS** and both provider checks **PASS**. Tap **Root Button** and **Subpath Button** at least once each; verify their **separate** counters increase and \`Independent buttons: PASS\` appears. The terminal/Metro log should also include \`[VELLIRA_HERMES_PROOF]\` lines. A Metro export alone or Node mocks do not satisfy this proof. Record iOS simulator name/version, engine status, log text, and screenshot. If the build fails, record the exact error rather than reporting PASS.
 
 For Android: \`npm run android\` with an emulator/device available.

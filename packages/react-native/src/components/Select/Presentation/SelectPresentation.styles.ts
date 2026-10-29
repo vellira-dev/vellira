@@ -5,6 +5,10 @@ import {
   resolveComponentTokenPlatformOutputs,
 } from '../../../theme';
 
+// Native Modal/Sheet surfaces are sized against the viewport, not an
+// intrinsic-height shadow wrapper (whose percentage height is indefinite).
+export const SELECT_PRESENTATION_VIEWPORT_RATIO = 0.74;
+
 export const createPresentationStyles = (theme: NativeTheme) => {
   const canonical = theme.components.select.dropdown;
   const output = resolveComponentTokenPlatformOutputs(theme, canonical);
@@ -98,7 +102,6 @@ export const createPresentationStyles = (theme: NativeTheme) => {
     },
 
     sheet: {
-      maxHeight: '74%',
       borderTopLeftRadius: theme.tokens.radius.lg,
       borderTopRightRadius: theme.tokens.radius.lg,
       borderBottomWidth: 0,
@@ -107,7 +110,6 @@ export const createPresentationStyles = (theme: NativeTheme) => {
     modalPresentation: {
       width: '100%',
       maxWidth: 420,
-      maxHeight: '74%',
       borderRadius: theme.tokens.radius.lg,
     },
 

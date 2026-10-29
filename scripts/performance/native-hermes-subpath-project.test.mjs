@@ -90,6 +90,8 @@ test('optional real Hermes sheet proof includes both choices without altering de
     assert.match(app, /label: "Spain", value: "es"/);
     assert.match(app, /sheetSeen\.includes\("fr"\) && sheetSeen\.includes\("es"\)/);
     assert.match(app, /VELLIRA_HERMES_SHEET/);
+    assert.match(app, /__VELLIRA_SELECT_LAYOUT_PROOF__/);
+    assert.match(readme, /VELLIRA_SELECT_LAYOUT/);
     assert.match(readme, /Optional sheet layout proof/);
     assert.match(app, /Independent buttons/);
   });

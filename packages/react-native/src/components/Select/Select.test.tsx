@@ -849,10 +849,17 @@ describe('Native Select', () => {
     expect(list?.style.flexGrow).toBe('0');
     expect(list?.style.flexShrink).toBe('1');
     expect(list?.style.maxHeight).toBe('420px');
-    // DOM mock renders both rows regardless of viewport; this assertion
-    // also verifies that the *actual native* list is allocated two rows.
+    // DOM mock renders both rows regardless of viewport. This verifies the
+    // requested list height, NOT its computed Yoga size on iPhone.
     const twoRowHeight = 2 * 46 + nativeThemes.light.tokens.spacing[2] * 2;
     expect(list?.style.height).toBe(`${twoRowHeight}px`);
+    // Native bounds must use the device window; a percentage of the
+    // intrinsic-height shadow wrapper clips the second row on iOS.
+    const sheet = document.body.querySelector<HTMLElement>(
+      '[data-testid="select-sheet"]'
+    );
+    expect(sheet?.style.maxHeight).toBe(`${768 * 0.74}px`);
+    expect(sheet?.textContent).toContain('Spain');
     expect(list?.textContent).toContain('France');
     expect(list?.textContent).toContain('Spain');
 
@@ -904,6 +911,10 @@ describe('Native Select', () => {
     );
     const padding = nativeThemes.light.tokens.spacing[2] * 2;
     expect(list?.style.height).toBe(`${2 * 46 + padding}px`);
+    expect(
+      document.body.querySelector<HTMLElement>('[data-testid="select-modal"]')
+        ?.style.maxHeight
+    ).toBe(`${768 * 0.74}px`);
     expect(list?.textContent).toContain('Spain');
 
     unmount();

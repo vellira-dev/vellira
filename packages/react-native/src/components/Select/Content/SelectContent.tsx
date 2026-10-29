@@ -182,6 +182,34 @@ export const SelectContentSurface = () => {
           renderItem={renderRow}
           style={[styles.list, { height: listViewportHeight }]}
           contentContainerStyle={styles.listContent}
+          onLayout={(event) => {
+            if (
+              isOpen &&
+              (
+                globalThis as typeof globalThis & {
+                  __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean;
+                }
+              ).__VELLIRA_SELECT_LAYOUT_PROOF__
+            ) {
+              console.info(
+                `[VELLIRA_SELECT_LAYOUT] list rows=${filteredRows.length} requested=${listViewportHeight} actual=${event.nativeEvent.layout.height}`
+              );
+            }
+          }}
+          onContentSizeChange={(_width, height) => {
+            if (
+              isOpen &&
+              (
+                globalThis as typeof globalThis & {
+                  __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean;
+                }
+              ).__VELLIRA_SELECT_LAYOUT_PROOF__
+            ) {
+              console.info(
+                `[VELLIRA_SELECT_LAYOUT] list contentHeight=${height} rows=${filteredRows.length}`
+              );
+            }
+          }}
           keyboardShouldPersistTaps='handled'
           initialScrollIndex={initialScrollIndex}
           initialNumToRender={

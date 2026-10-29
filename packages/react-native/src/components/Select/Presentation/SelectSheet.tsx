@@ -1,10 +1,13 @@
-import { Modal, Platform, View } from 'react-native';
+import { Modal, Platform, useWindowDimensions, View } from 'react-native';
 
 import { useThemeStyles } from '../../../theme';
 
 import { SelectBackdrop } from './SelectBackdrop';
 import { SelectHandle } from './SelectHandle';
-import { createPresentationStyles } from './SelectPresentation.styles';
+import {
+  createPresentationStyles,
+  SELECT_PRESENTATION_VIEWPORT_RATIO,
+} from './SelectPresentation.styles';
 import type { SelectPresentationProps } from './types';
 
 export const SelectSheet = ({
@@ -16,6 +19,8 @@ export const SelectSheet = ({
   children,
 }: SelectPresentationProps) => {
   const styles = useThemeStyles(createPresentationStyles);
+  const { height } = useWindowDimensions();
+  const maxHeight = height * SELECT_PRESENTATION_VIEWPORT_RATIO;
 
   return (
     <Modal
@@ -35,7 +40,20 @@ export const SelectSheet = ({
         <SelectBackdrop outsidePressProps={outsidePressProps} />
         <View style={[styles.surface, styles.sheetSurface]}>
           <View
-            style={[styles.content, styles.sheet, contentStyle]}
+            style={[styles.content, styles.sheet, { maxHeight }, contentStyle]}
+            onLayout={(event) => {
+              if (
+                (
+                  globalThis as typeof globalThis & {
+                    __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean;
+                  }
+                ).__VELLIRA_SELECT_LAYOUT_PROOF__
+              ) {
+                console.info(
+                  `[VELLIRA_SELECT_LAYOUT] sheet height=${event.nativeEvent.layout.height} viewportCap=${maxHeight}`
+                );
+              }
+            }}
             testID='select-sheet'
           >
             <SelectHandle />
