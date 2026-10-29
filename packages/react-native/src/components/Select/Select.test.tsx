@@ -830,7 +830,7 @@ describe('Native Select', () => {
     unmount();
   });
 
-  it('keeps Cancel, title and Done usable at large native font scales', () => {
+  it('keeps Select toolbar readable with large text', () => {
     const { container, unmount } = render(
       <Select
         label='Status'
@@ -844,18 +844,14 @@ describe('Native Select', () => {
 
     openSelect(container);
 
-    const toolbar = document.body.querySelector<HTMLElement>(
-      '[role="toolbar"]'
-    );
-    expect(toolbar?.getAttribute('aria-label')).toBe(
-      'Status selection actions'
-    );
+    const toolbar = document.body.querySelector('[role="toolbar"]');
+    const accessibleName = toolbar?.getAttribute('aria-label');
+    expect(accessibleName).toBe('Status selection actions');
     expect(getButtonByLabel('Close selection')).toBeTruthy();
     expect(getButtonByLabel('Done')).toBeTruthy();
     expect(toolbar?.textContent).toContain('Status');
 
-    // Web DOM tests cannot emulate iOS Dynamic Type layout. Protect the
-    // explicit native text scaling contract alongside accessible controls.
+    // DOM tests do not emulate iOS font scaling. Assert the native contract.
     const nativeSource = readFileSync(
       'src/components/Select/Content/SelectContent.tsx',
       'utf8'
@@ -863,15 +859,14 @@ describe('Native Select', () => {
     const toolbarStart = nativeSource.indexOf('const body = (');
     const toolbarEnd = nativeSource.indexOf('{searchable &&', toolbarStart);
     const nativeToolbar = nativeSource.slice(toolbarStart, toolbarEnd);
-    expect(
-      nativeToolbar.match(/maxFontSizeMultiplier=\{1\.4\}/g)
-    ).toHaveLength(3);
-    expect(nativeToolbar.match(/numberOfLines=\{1\}/g)).toHaveLength(3);
+    const scaling = /maxFontSizeMultiplier=\{1\.4\}/g;
+    const oneLine = /numberOfLines=\{1\}/g;
+    const overrides = /largeText && \{\s*lineHeight: undefined\s*\}/g;
+    expect(nativeToolbar.match(scaling)).toHaveLength(3);
+    expect(nativeToolbar.match(oneLine)).toHaveLength(3);
     expect(nativeToolbar.match(/adjustsFontSizeToFit/g)).toHaveLength(3);
+    expect(nativeToolbar.match(overrides)).toHaveLength(3);
     expect(nativeSource).toContain('const largeText = fontScale >= 1.5');
-    expect(
-      nativeToolbar.match(/largeText && \{\s*lineHeight: undefined\s*\}/g)
-    ).toHaveLength(3);
 
     const titleStyle = createContentStyles(nativeThemes.light).title;
     expect(titleStyle.minWidth).toBe(0);
