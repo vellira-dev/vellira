@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react-native",
-  "version": "2.188.2",
+  "version": "2.188.3",
   "description": "React Native components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -56,7 +56,6 @@
     "test:coverage": "vitest run --config vitest.config.ts --coverage"
   },
   "peerDependencies": {
-    "@react-native-picker/picker": ">=2",
     "react": ">=19",
     "react-native": ">=0.86",
     "react-native-svg": ">=13"

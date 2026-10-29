@@ -256,6 +256,24 @@ function validatePackedPackage({ packageInfo, packResult, packedManifest }) {
     );
   }
 
+  if (packageInfo.name === '@vellira-ui/react-native') {
+    if (
+      Object.hasOwn(
+        packedManifest.peerDependencies ?? {},
+        '@react-native-picker/picker'
+      )
+    ) {
+      throw new Error(
+        '@vellira-ui/react-native packed manifest must not require Picker as a peer.'
+      );
+    }
+    if (!packedManifest.peerDependencies?.['react-native-svg']) {
+      throw new Error(
+        '@vellira-ui/react-native must retain the react-native-svg peer for icons.'
+      );
+    }
+  }
+
   if (
     packageInfo.name === '@vellira-ui/icons' &&
     typeof packedManifest.exports?.['.']?.['react-native'] !== 'object'
