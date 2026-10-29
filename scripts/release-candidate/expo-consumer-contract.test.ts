@@ -81,7 +81,9 @@ describe('clean Expo consumer workflow contract', () => {
       'utf8'
     );
 
-    expect(script).not.toContain("'@react-native-picker/picker': exactVersion(");
+    expect(script).not.toContain(
+      "'@react-native-picker/picker': exactVersion("
+    );
     expect(script).toContain('function verifyNoPickerPeerInstall(fixtureDir)');
     expect(script).toContain('pickerPeerContract,');
     expect(script).toContain(

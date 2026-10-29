@@ -213,7 +213,9 @@ describe('release candidate artifact validation', () => {
       'must not require Picker as a peer'
     );
 
-    delete native.packedManifest.peerDependencies['@react-native-picker/picker'];
+    delete native.packedManifest.peerDependencies[
+      '@react-native-picker/picker'
+    ];
     delete native.packedManifest.peerDependencies['react-native-svg'];
     expect(() => validatePackedPackage(native)).toThrow(
       'must retain the react-native-svg peer'
