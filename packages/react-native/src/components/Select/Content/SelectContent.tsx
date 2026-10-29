@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { useTheme, useThemeStyles } from '../../../theme';
 import { SelectEmptyState } from '../Empty';
@@ -28,6 +28,8 @@ export const SelectContent = createSelectSlot<SelectContentProps>(
 export const SelectContentSurface = () => {
   const styles = useThemeStyles(createContentStyles);
   const { theme } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  const largeText = fontScale >= 1.5;
   const wasOpenRef = useRef(false);
   const [openCycle, setOpenCycle] = useState(0);
   const context = useSelectContext();
@@ -155,14 +157,14 @@ export const SelectContentSurface = () => {
             adjustsFontSizeToFit
             minimumFontScale={0.85}
             maxFontSizeMultiplier={1.4}
-            style={styles.cancelText}
+            style={[styles.cancelText, largeText && { lineHeight: undefined }]}
           >
             Cancel
           </Text>
         </Pressable>
 
         <Text
-          style={styles.title}
+          style={[styles.title, largeText && { lineHeight: undefined }]}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.85}
@@ -184,7 +186,7 @@ export const SelectContentSurface = () => {
             adjustsFontSizeToFit
             minimumFontScale={0.85}
             maxFontSizeMultiplier={1.4}
-            style={styles.doneText}
+            style={[styles.doneText, largeText && { lineHeight: undefined }]}
           >
             Done
           </Text>
