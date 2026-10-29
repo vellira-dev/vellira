@@ -121,3 +121,11 @@ describe('Native Starter project status badges', () => {
     );
   });
 });
+
+describe('Native Starter dashboard metric contrast', () => {
+  it('uses dark foreground colors on white high-contrast metric cards', () => {
+    expect(source).toContain("color: themeName === 'highContrast' ? '#1A102B' : mainText");
+    expect(source).toContain("color: themeName === 'highContrast' ? '#34303D' : subtleText");
+    expect(source).toContain('backgroundColor: metric.bg');
+  });
+});
