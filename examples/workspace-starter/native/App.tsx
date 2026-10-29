@@ -1835,6 +1835,7 @@ function WorkspaceScreen() {
                             />
                           </View>
                         ) : (
+                          <>
                         <Input
                           label='Project name'
                           required
@@ -1854,6 +1855,7 @@ function WorkspaceScreen() {
                           placeholder='Describe the project'
                           inputStyle={editorInputStyle}
                         />
+                          </>
                         )}
                       </View>
                     </View>
