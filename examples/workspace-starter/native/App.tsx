@@ -14,7 +14,6 @@ import { BlurView } from 'expo-blur';
 import {
   Copy,
   Check,
-  ChevronRight,
   Edit,
   Filter,
   Folder,
@@ -160,7 +159,10 @@ type LargeTextChoiceFieldProps = {
   onSelect: (value: string) => void;
 };
 
-/** A compact, accessible alternative to the scaled native Select trigger. */
+/**
+ * Keep the published native Select sheet at every text size.
+ * Only the label, trigger and option typography are capped for large text.
+ */
 function LargeTextChoiceField({
   label,
   value,
@@ -168,11 +170,9 @@ function LargeTextChoiceField({
   onSelect,
 }: LargeTextChoiceFieldProps) {
   const { theme } = useTheme();
-  const [expanded, setExpanded] = useState(false);
-  const currentLabel = options.find((option) => option.value === value)?.label ?? 'Select';
+  const { height: viewportHeight } = useWindowDimensions();
   const primary = theme.semantic.text.primary;
-  const border = theme.semantic.border.muted;
-  const accent = theme.semantic.text.interactive;
+  const selectedColor = theme.components.select.primary.outline.option.selected.fg;
 
   return (
     <View style={{ gap: 8 }}>
@@ -183,80 +183,64 @@ function LargeTextChoiceField({
         {label}
         <Text style={{ color: theme.semantic.status.error.fg }}> *</Text>
       </Text>
-      <Pressable
-        accessibilityRole='button'
-        accessibilityLabel={label + ': ' + currentLabel}
-        accessibilityHint='Show available options'
-        accessibilityState={{ expanded }}
-        onPress={() => setExpanded((open) => !open)}
-        style={{
-          minHeight: 52,
-          borderWidth: 1,
-          borderRadius: 12,
-          borderColor: border,
-          backgroundColor: theme.semantic.surface.panel,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
+      <Select
+        accessibilityLabel={label}
+        accessibilityHint={'Required. Opens ' + label + ' choices'}
+        value={value}
+        onValueChange={(next) => {
+          if (typeof next === 'string') onSelect(next);
         }}
-      >
-        <Text
-          maxFontSizeMultiplier={1.5}
-          style={{ flex: 1, minWidth: 0, color: primary, fontSize: 15 }}
-        >
-          {currentLabel}
-        </Text>
-        <ChevronRight size={18} color={accent} />
-      </Pressable>
-      {expanded ? (
-        <View style={{ gap: 4 }}>
-          {options.map((option) => {
-            const checked = option.value === value;
-            return (
-              <Pressable
-                key={option.value}
-                accessibilityRole='radio'
-                accessibilityLabel={label + ': ' + option.label}
-                accessibilityState={{ checked }}
-                onPress={() => {
-                  onSelect(option.value);
-                  setExpanded(false);
-                }}
-                style={{
-                  minHeight: 48,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderWidth: 1,
-                  borderColor: checked ? accent : border,
-                  borderRadius: 12,
-                  backgroundColor: checked
-                    ? theme.semantic.surface.muted
-                    : theme.semantic.surface.panel,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                <Text
-                  maxFontSizeMultiplier={1.5}
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    color: primary,
-                    fontSize: 15,
-                    fontWeight: checked ? '700' : '500',
-                  }}
-                >
-                  {option.label}
-                </Text>
-                {checked ? <Check size={18} color={accent} /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
+        options={options.map((option) => ({
+          label: option.label,
+          value: option.value,
+        }))}
+        presentation='sheet'
+        contentStyle={{ maxHeight: Math.min(viewportHeight * 0.7, 360) }}
+        triggerStyle={{
+          minHeight: 52,
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+        }}
+        optionStyle={{
+          minHeight: 52,
+          paddingVertical: 8,
+        }}
+        renderValue={({ option, placeholder }) => (
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.5}
+            style={{ color: primary, fontSize: 15 }}
+          >
+            {option?.label ?? placeholder}
+          </Text>
+        )}
+        renderOption={({ option, selected }) => (
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.5}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                color: selected ? selectedColor : primary,
+                fontSize: 15,
+                fontWeight: selected ? '700' : '500',
+              }}
+            >
+              {option.label}
+            </Text>
+            {selected ? <Check size={18} color={selectedColor} /> : null}
+          </View>
+        )}
+      />
     </View>
   );
 }
