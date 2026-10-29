@@ -24,6 +24,19 @@ describe('Native Starter compact semantic notifications', () => {
     expect(component).toContain('minHeight: 44');
   });
 
+  it('reflows message and controls without truncating Undo at large text sizes', () => {
+    expect(component).toContain('const { fontScale } = useWindowDimensions()');
+    expect(component).toContain('const largeText = fontScale >= 1.5');
+    expect(component).toContain("flexDirection: largeText ? 'column' : 'row'");
+    expect(component).toContain("alignItems: largeText ? 'stretch' : 'center'");
+    expect(component).toContain("alignSelf: largeText ? 'flex-end' : undefined");
+    expect(component).toContain('maxFontSizeMultiplier={1.5}');
+    expect(component).toContain('minWidth: 0');
+    expect(component).toContain('accessibilityLiveRegion={');
+    expect(component).toContain("accessibilityLabel='Undo project removal'");
+    expect(component).toContain("accessibilityLabel='Dismiss notification'");
+  });
+
   it('uses semantic status tokens for success, error and neutral', () => {
     expect(component).toContain('theme.semantic.status.success');
     expect(component).toContain('theme.semantic.status.error');
