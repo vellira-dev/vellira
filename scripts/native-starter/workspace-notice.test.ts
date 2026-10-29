@@ -32,6 +32,9 @@ describe('Native Starter compact semantic notifications', () => {
     expect(component).toContain(
       "alignSelf: largeText ? 'flex-end' : undefined"
     );
+    expect(component).toContain("lineHeight: largeText ? undefined : 18");
+    expect(component).toContain('gap: largeText ? 0 : 8');
+    expect(component).toContain('paddingVertical: largeText ? 6 : 4');
     expect(component).toContain('maxFontSizeMultiplier={1.5}');
     expect(component).toContain('minWidth: 0');
     expect(component).toContain('accessibilityLiveRegion={');
