@@ -14,7 +14,7 @@ function withFixture(run) {
   finally { fs.rmSync(root, { recursive: true, force: true }); }
 }
 
-function execute(output, version = '2.188.1') {
+function execute(output, version = '2.188.2') {
   return spawnSync(process.execPath, [generator, output], {
     encoding: 'utf8',
     env: { ...process.env, VELLIRA_NATIVE_VERSION: version },
@@ -37,7 +37,7 @@ function fakePublishedInstall(output) {
   const root = path.join(output, 'node_modules/@vellira-ui/react-native');
   fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
   fs.writeFileSync(path.join(root, 'package.json'),
-    JSON.stringify({ name: '@vellira-ui/react-native', version: '2.188.1' }));
+    JSON.stringify({ name: '@vellira-ui/react-native', version: '2.188.2' }));
   fs.writeFileSync(path.join(root, 'dist/index.js'), 'export const Button = 1;\n');
   fs.writeFileSync(path.join(root, 'dist/index.d.ts'), 'export declare const Button: number;\n');
   return root;
@@ -50,7 +50,7 @@ function verify(executable) {
 test('creates an opt-in published-package Expo/Hermes runtime test with no picker dependency', () => {
   withFixture(({ output }) => {
     const { app, manifest, expo, readme } = prepare(output);
-    assert.equal(manifest.dependencies['@vellira-ui/react-native'], '2.188.1');
+    assert.equal(manifest.dependencies['@vellira-ui/react-native'], '2.188.2');
     assert.equal(manifest.dependencies.expo, '57.0.31');
     assert.equal(manifest.dependencies['react-native'], '0.86.3');
     assert.equal(manifest.dependencies['react-native-safe-area-context'], '5.9.1');
@@ -63,9 +63,8 @@ test('creates an opt-in published-package Expo/Hermes runtime test with no picke
     assert.match(app, /<ThemeProvider theme="light">/);
     assert.doesNotMatch(app, /<ThemeProvider theme="dark">/);
     assert.match(app, /backgroundColor: '#fff'/);
-    // The diagnostic must have enough native FlatList viewport to display
-    // both choices, rather than accidentally clipping the second row.
-    assert.match(app, /contentStyle=\{\{ height: 320 \}\}/);
+    // A fixed-height proof-only workaround would hide a native layout regression.
+    assert.doesNotMatch(app, /contentStyle=/);
     assert.match(app, /\{ label: 'France', value: 'fr' \}/);
     assert.match(app, /\{ label: 'Spain', value: 'es' \}/);
     for (const token of ['HermesInternal', 'Select', "presentation='modal'",
@@ -76,6 +75,7 @@ test('creates an opt-in published-package Expo/Hermes runtime test with no picke
     }
     assert.ok(readme.includes('npm install --legacy-peer-deps'));
     assert.ok(readme.includes('ordinary npm installation'));
+    assert.ok(readme.includes('No contentStyle height workaround'));
     assert.ok(readme.includes('select France, reopen and select Spain'));
   });
 });
@@ -105,10 +105,10 @@ test('rejects an unexpected published version and missing runtime/declarations',
     const { verifier } = prepare(output);
     const packageRoot = fakePublishedInstall(output);
     fs.writeFileSync(path.join(packageRoot, 'package.json'),
-      JSON.stringify({ name: '@vellira-ui/react-native', version: '2.188.2' }));
+      JSON.stringify({ name: '@vellira-ui/react-native', version: '2.188.3' }));
     assert.match(verify(verifier).stderr, /wrong published Vellira/);
     fs.writeFileSync(path.join(packageRoot, 'package.json'),
-      JSON.stringify({ name: '@vellira-ui/react-native', version: '2.188.1' }));
+      JSON.stringify({ name: '@vellira-ui/react-native', version: '2.188.2' }));
     fs.rmSync(path.join(packageRoot, 'dist/index.js'));
     assert.match(verify(verifier).stderr, /Incomplete published dist/);
   });
@@ -123,6 +123,10 @@ test('refuses to overwrite an existing output and rejects unpinned versions', ()
     assert.match(blocked.stderr, /already exists/);
     assert.deepEqual(fs.readdirSync(output), ['marker']);
     fs.rmSync(output, { recursive: true });
+    const old = execute(output, '2.188.1');
+    assert.notEqual(old.status, 0);
+    assert.match(old.stderr, /version newer than 2\.188\.1/);
+    assert.ok(!fs.existsSync(output));
     const unpinned = execute(output, 'latest');
     assert.notEqual(unpinned.status, 0);
     assert.match(unpinned.stderr, /exact published version/);

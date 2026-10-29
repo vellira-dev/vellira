@@ -11,6 +11,11 @@ const destinationArg = process.argv[2];
 if (!/^\d+\.\d+\.\d+$/.test(version ?? '')) {
   throw new Error('Set VELLIRA_NATIVE_VERSION to an exact published version, e.g. 2.188.1');
 }
+// Refuse the known clipped Select: this proof targets the next published fix.
+const [major, minor, patch] = version.split('.').map(Number);
+if (major < 2 || (major === 2 && (minor < 188 || (minor === 188 && patch <= 1)))) {
+  throw new Error('Published Select layout fix requires a version newer than 2.188.1');
+}
 if (process.argv.length > 3 || (destinationArg && !path.isAbsolute(destinationArg))) {
   throw new Error('Usage: VELLIRA_NATIVE_VERSION=x.y.z node scripts/performance/native-published-pickerless-project.cjs [absolute-new-output-path]');
 }
@@ -100,10 +105,6 @@ write('App.tsx', [
   "        testID='pickerless-select'",
   "        label='Country'",
   "        presentation='modal'",
-  // Force an adequately sized list viewport in the isolated diagnostic.
-  // The native Select's default auto-sized sheet may otherwise clip the
-  // second item when a short FlatList first measures its content.
-  '        contentStyle={{ height: 320 }}',
   '        options={choices}',
   '        value={country}',
   '        onOpenChange={(open) => {',
@@ -205,6 +206,8 @@ write('README.md', [
   'The package manifest may still declare the mandatory picker peer.',
   'Install with --legacy-peer-deps to suppress npm peer auto-install **only for this negative-dependency test**.',
   'Do not infer that ordinary npm installation will behave identically.',
+  'This proof requires a version newer than 2.188.1 (the last release before the #1992 layout fix).',
+  'No contentStyle height workaround is used: both native options must be visible with default sizing.',
   '',
   '## Run on macOS iOS Simulator',
   '',
