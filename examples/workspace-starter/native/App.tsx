@@ -208,13 +208,13 @@ function WorkspaceScreen() {
     });
   }, [loaded, data]);
 
-  // Success feedback expires; errors and undoable removals remain visible.
+  // Success feedback expires after four seconds; errors and undoable removals remain visible.
   useEffect(() => {
-    if (!notice || notice.tone === 'error' || removedProject) return;
+    if (!notice || notice.tone !== 'success' || removedProject) return;
 
     const timeout = setTimeout(() => {
       setNotice((current) => (current === notice ? null : current));
-    }, 7000);
+    }, 4000);
     return () => clearTimeout(timeout);
   }, [notice, removedProject]);
 
