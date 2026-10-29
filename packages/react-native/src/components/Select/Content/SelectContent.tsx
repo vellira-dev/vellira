@@ -4,8 +4,8 @@ import {
   FlatList,
   Pressable,
   Text,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 
 import { useTheme, useThemeStyles } from '../../../theme';
