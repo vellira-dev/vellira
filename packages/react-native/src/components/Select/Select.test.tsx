@@ -849,6 +849,10 @@ describe('Native Select', () => {
     expect(list?.style.flexGrow).toBe('0');
     expect(list?.style.flexShrink).toBe('1');
     expect(list?.style.maxHeight).toBe('420px');
+    // DOM mock renders both rows regardless of viewport; this assertion
+    // also verifies that the *actual native* list is allocated two rows.
+    const twoRowHeight = 2 * 46 + nativeThemes.light.tokens.spacing[2] * 2;
+    expect(list?.style.height).toBe(`${twoRowHeight}px`);
     expect(list?.textContent).toContain('France');
     expect(list?.textContent).toContain('Spain');
 
@@ -875,9 +879,54 @@ describe('Native Select', () => {
     expect(list?.style.flexGrow).toBe('0');
     expect(list?.style.flexShrink).toBe('1');
     expect(list?.style.maxHeight).toBe('420px');
+    expect(list?.style.height).toBe('420px');
     expect(list?.getAttribute('data-initial-scroll-index')).toBe('69');
 
     unmount();
+  });
+
+  it('allocates two rows in modal and respects virtual item size estimates', () => {
+    const { container, rerender, unmount } = render(
+      <Select
+        label='Country'
+        presentation='modal'
+        options={[
+          { label: 'France', value: 'fr' },
+          { label: 'Spain', value: 'es' },
+        ]}
+      />
+    );
+
+    openSelect(container);
+
+    const list = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+    const padding = nativeThemes.light.tokens.spacing[2] * 2;
+    expect(list?.style.height).toBe(`${2 * 46 + padding}px`);
+    expect(list?.textContent).toContain('Spain');
+
+    unmount();
+
+    const virtual = render(
+      <Select
+        label='Country'
+        presentation='sheet'
+        virtual={{ estimatedItemSize: 70 }}
+        options={[
+          { label: 'France', value: 'fr' },
+          { label: 'Spain', value: 'es' },
+        ]}
+      />
+    );
+
+    openSelect(virtual.container);
+    const virtualList = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+    expect(virtualList?.style.height).toBe(`${2 * 70 + padding}px`);
+
+    virtual.unmount();
   });
 
   it('supports loading and presentation props', () => {
