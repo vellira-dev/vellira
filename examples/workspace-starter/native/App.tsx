@@ -1051,7 +1051,8 @@ function WorkspaceScreen() {
                     offset={-44}
                     closeOnSelect
                     popoverBackground={
-                      Platform.OS !== 'ios' || themeName === 'highContrast' ? undefined : (
+                      Platform.OS !== 'ios' ||
+                      themeName === 'highContrast' ? undefined : (
                         <BlurView
                           intensity={25}
                           tint={

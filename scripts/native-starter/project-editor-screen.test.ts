@@ -53,7 +53,7 @@ describe('Native Starter project editor navigation', () => {
       import.meta.url
     );
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.3');
+    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.4');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -150,7 +150,9 @@ describe('Native Starter dashboard metric contrast', () => {
 
 describe('Native Starter Android project controls', () => {
   it('uses an opaque Android Dropdown surface without an iOS blur layer', () => {
-    expect(source).toContain("Platform.OS !== 'ios' || themeName === 'highContrast'");
+    expect(source).toContain(
+      "Platform.OS !== 'ios' || themeName === 'highContrast'"
+    );
     expect(source).toContain('? surface.panel');
     expect(source).toContain("presentation='popover'");
   });
@@ -159,6 +161,8 @@ describe('Native Starter Android project controls', () => {
     expect(source).toContain("<Check size={16} color='#FFFFFF' />");
     expect(source).not.toContain('>✓</Text>');
     expect(source).toContain("accessibilityRole='checkbox'");
-    expect(source).toContain('accessibilityState={{ checked: project.completed }}');
+    expect(source).toContain(
+      'accessibilityState={{ checked: project.completed }}'
+    );
   });
 });
