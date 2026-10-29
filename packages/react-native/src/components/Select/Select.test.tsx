@@ -860,10 +860,10 @@ describe('Native Select', () => {
     const toolbarEnd = nativeSource.indexOf('{searchable &&', toolbarStart);
     const nativeToolbar = nativeSource.slice(toolbarStart, toolbarEnd);
     expect(
-      nativeToolbar.match(/maxFontSizeMultiplier=\\{1\\.4\\}/g)
+      nativeToolbar.match(/maxFontSizeMultiplier=\{1\.4\}/g)
     ).toHaveLength(3);
     expect(
-      nativeToolbar.match(/numberOfLines=\\{1\\}/g)
+      nativeToolbar.match(/numberOfLines=\{1\}/g)
     ).toHaveLength(3);
     expect(
       nativeToolbar.match(/adjustsFontSizeToFit/g)
