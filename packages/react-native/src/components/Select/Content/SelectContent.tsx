@@ -16,8 +16,8 @@ import { SelectSeparatorRow } from '../Separator';
 import type { SelectContentProps } from '../types';
 
 import {
-  SELECT_LIST_MAX_HEIGHT,
   createContentStyles,
+  SELECT_LIST_MAX_HEIGHT,
 } from './SelectContent.styles';
 
 export const SelectContent = createSelectSlot<SelectContentProps>(

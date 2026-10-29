@@ -886,7 +886,7 @@ describe('Native Select', () => {
   });
 
   it('allocates two rows in modal and respects virtual item size estimates', () => {
-    const { container, rerender, unmount } = render(
+    const { container, unmount } = render(
       <Select
         label='Country'
         presentation='modal'
