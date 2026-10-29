@@ -253,6 +253,16 @@ jobs:
       - name: Test OpenNext string-export package patch
         run: node --test apps/website/scripts/opennext-string-exports-patch.test.mjs
       - run: pnpm test:cloudflare-cache
+      - name: Restore Next.js compilation cache (runtime-contracts)
+        id: next-build-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: apps/website/.next/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-vellira-next16-pr-runtime-contracts-v1-node22.23.4-${{ hashFiles('pnpm-lock.yaml', 'apps/website/package.json', 'apps/website/next.config.ts', 'turbo.json') }}-${{ github.event.pull_request.head.sha || github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-vellira-next16-pr-runtime-contracts-v1-node22.23.4-${{ hashFiles('pnpm-lock.yaml', 'apps/website/package.json', 'apps/website/next.config.ts', 'turbo.json') }}-
+
       - name: Build actual OpenNext runtime
         env:
           VELLIRA_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -267,6 +277,14 @@ jobs:
           pnpm --dir apps/website run build:opennext
           node apps/website/scripts/cloudflare-populate-local-cache.mjs
           node apps/website/scripts/cloudflare-local-runtime.mjs
+      - name: Save Next.js compilation cache (runtime-contracts)
+        if: steps.next-build-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: apps/website/.next/cache
+          key: ${{ steps.next-build-cache.outputs.cache-primary-key }}
+
       - name: Retain exact-head runtime evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
