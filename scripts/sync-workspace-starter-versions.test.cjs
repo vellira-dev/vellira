@@ -31,6 +31,7 @@ function fixture(t) {
       private: true,
       dependencies: {
         '@vellira-ui/react-native': '2.179.1',
+        '@vellira-ui/icons': '2.179.1',
         expo: '~57.0.24',
       },
     },
@@ -58,6 +59,7 @@ test('updates all and only exact Vellira pins and README in one pass', (t) => {
     assert.equal(web.dependencies[name], '2.185.0');
   }
   assert.equal(native.dependencies['@vellira-ui/react-native'], '2.185.0');
+  assert.equal(native.dependencies['@vellira-ui/icons'], '2.185.0');
   assert.equal(web.dependencies.react, '19.3.0');
   assert.equal(web.devDependencies.vite, '^8.3.0');
   assert.equal(native.dependencies.expo, '~57.0.24');
@@ -86,6 +88,19 @@ test('rejects downgrade, unstable version and inconsistent pins without writes',
   fs.writeFileSync(path.join(root, WEB), JSON.stringify(web));
   assert.throws(() => syncWorkspaceStarterVersions({ root, version: '2.185.0' }), /pin mismatch/);
   assert.match(read(root, NATIVE), /2\.179\.1/);
+});
+
+test('rejects a stale Native Starter icons pin without partial writes', (t) => {
+  const root = fixture(t);
+  const original = JSON.parse(read(root, NATIVE));
+  original.dependencies['@vellira-ui/icons'] = '2.179.0';
+  fs.writeFileSync(path.join(root, NATIVE), `${JSON.stringify(original, null, 2)}\n`);
+  const before = [WEB, NATIVE, README].map((file) => read(root, file));
+  assert.throws(
+    () => syncWorkspaceStarterVersions({ root, version: '2.185.0' }),
+    /pin mismatch/
+  );
+  assert.deepEqual([WEB, NATIVE, README].map((file) => read(root, file)), before);
 });
 
 test('rejects missing or conflicting README proof', (t) => {
