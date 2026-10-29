@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { act } from 'react';
 
 import { copyCompoundSlotMetadata } from '@vellira-ui/core';
@@ -9,6 +11,7 @@ import { FormField } from '../../patterns/FormField';
 import { render } from '../../test-utils/render';
 import { nativeThemes, ThemeProvider } from '../../theme';
 
+import { createContentStyles } from './Content/SelectContent.styles';
 import { Select } from './Select';
 import type { SelectRenderOptionContext } from './types';
 
@@ -823,6 +826,52 @@ describe('Native Select', () => {
     expect(trigger?.getAttribute('aria-label')).toBe('Choose country');
     expect(container.textContent).toContain('Country is required');
     expect(container.querySelectorAll('[role="button"]')).toHaveLength(1);
+
+    unmount();
+  });
+
+  it('keeps Cancel, title and Done usable at large native font scales', () => {
+    const { container, unmount } = render(
+      <Select
+        label='Status'
+        presentation='sheet'
+        options={[
+          { label: 'Planned', value: 'planned' },
+          { label: 'Shipped', value: 'shipped' },
+        ]}
+      />
+    );
+
+    openSelect(container);
+
+    const toolbar = document.body.querySelector<HTMLElement>('[role="toolbar"]');
+    expect(toolbar?.getAttribute('aria-label')).toBe('Status selection actions');
+    expect(getButtonByLabel('Close selection')).toBeTruthy();
+    expect(getButtonByLabel('Done')).toBeTruthy();
+    expect(toolbar?.textContent).toContain('Status');
+
+    // Web DOM tests cannot emulate iOS Dynamic Type layout. Protect the
+    // explicit native text scaling contract alongside accessible controls.
+    const nativeSource = readFileSync(
+      new URL('./Content/SelectContent.tsx', import.meta.url),
+      'utf8'
+    );
+    const toolbarStart = nativeSource.indexOf('const body = (');
+    const toolbarEnd = nativeSource.indexOf('{searchable &&', toolbarStart);
+    const nativeToolbar = nativeSource.slice(toolbarStart, toolbarEnd);
+    expect(
+      nativeToolbar.match(/maxFontSizeMultiplier=\\{1\\.4\\}/g)
+    ).toHaveLength(3);
+    expect(
+      nativeToolbar.match(/numberOfLines=\\{1\\}/g)
+    ).toHaveLength(3);
+    expect(
+      nativeToolbar.match(/adjustsFontSizeToFit/g)
+    ).toHaveLength(3);
+
+    const titleStyle = createContentStyles(nativeThemes.light).title;
+    expect(titleStyle.minWidth).toBe(0);
+    expect(titleStyle.flexShrink).toBe(1);
 
     unmount();
   });
