@@ -45,9 +45,8 @@ describe('Native Starter project editor navigation', () => {
   it('gives both three-option native Select sheets a definite viewport', () => {
     expect(source).toContain('const selectSheetHeight = Math.min(');
     expect(source).toContain('windowHeight - insets.top - insets.bottom - 24');
-    expect(editor.match(/contentStyle={selectSheetContentStyle}/g)).toHaveLength(
-      2
-    );
+    const matches = editor.match(/contentStyle={selectSheetContentStyle}/g);
+    expect(matches).toHaveLength(2);
     expect(source).toContain('height: selectSheetHeight');
     expect(source).toContain('maxHeight: selectSheetHeight');
   });
