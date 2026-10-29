@@ -1050,15 +1050,49 @@ function WorkspaceScreen() {
                     placement='bottom-end'
                     offset={-44}
                     closeOnSelect
+                    popoverBackground={
+                      Platform.OS === 'ios' && themeName !== 'highContrast' ? (
+                        <BlurView
+                          intensity={25}
+                          tint={
+                            themeName === 'dark'
+                              ? 'systemUltraThinMaterialDark'
+                              : 'systemUltraThinMaterialLight'
+                          }
+                          style={{
+                            flex: 1,
+                            borderRadius: 22,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <View
+                            pointerEvents='none'
+                            style={{
+                              flex: 1,
+                              backgroundColor:
+                                themeName === 'dark'
+                                  ? 'rgba(20, 18, 30, 0.24)'
+                                  : 'rgba(255, 255, 255, 0.75)',
+                            }}
+                          />
+                        </BlurView>
+                      ) : undefined
+                    }
                     contentStyle={{
                       width: 216,
                       maxWidth: 236,
                       borderRadius: 22,
                       paddingVertical: 8,
                       paddingHorizontal: 4,
-                      borderWidth: 1,
+                      borderWidth:
+                        Platform.OS === 'ios' && themeName !== 'highContrast'
+                          ? 0
+                          : 1,
                       borderColor: border,
-                      backgroundColor: surface.panel,
+                      backgroundColor:
+                        Platform.OS === 'ios' && themeName !== 'highContrast'
+                          ? 'transparent'
+                          : surface.panel,
                       shadowColor: '#000000',
                       shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
                       shadowRadius: 24,
