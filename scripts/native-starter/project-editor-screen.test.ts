@@ -121,7 +121,7 @@ describe('Native Starter project editor navigation', () => {
 });
 
 describe('Native Starter published release pin contract', () => {
-  it('accepts any stable release when the Web, Native and README pins agree', () => {
+  it('accepts synchronized Starter pins across releases', () => {
     const root = fileURLToPath(new URL('../../', import.meta.url));
     const manifestFile = new URL(
       '../../examples/workspace-starter/native/package.json',
@@ -129,10 +129,13 @@ describe('Native Starter published release pin contract', () => {
     );
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
     const releaseVersion = manifest.dependencies['@vellira-ui/react-native'];
-    expect(releaseVersion).toMatch(/^\\d+\\.\\d+\\.\\d+$/);
-    expect(
-      syncWorkspaceStarterVersions({ root, version: releaseVersion, check: true })
-    ).toEqual([]);
+    expect(releaseVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    const changed = syncWorkspaceStarterVersions({
+      root,
+      version: releaseVersion,
+      check: true,
+    });
+    expect(changed).toEqual([]);
   });
 });
 
