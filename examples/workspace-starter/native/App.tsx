@@ -1399,12 +1399,12 @@ function WorkspaceScreen() {
       {createOpen ? (
         <View
           accessibilityViewIsModal
-          style={[StyleSheet.absoluteFillObject, { zIndex: 50, elevation: 24 }]}
+          style={[StyleSheet.absoluteFill, { zIndex: 50, elevation: 24 }]}
         >
           <View
             pointerEvents='auto'
             style={[
-              StyleSheet.absoluteFillObject,
+              StyleSheet.absoluteFill,
               {
                 backgroundColor:
                   themeName === 'dark'
@@ -1449,7 +1449,7 @@ function WorkspaceScreen() {
                       ? 'systemUltraThinMaterialDark'
                       : 'systemUltraThinMaterialLight'
                   }
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                 >
                   <View
                     style={{

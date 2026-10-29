@@ -16,7 +16,7 @@ describe('Native Starter project editor navigation', () => {
     expect(editorEnd).toBeGreaterThan(editorStart);
     expect(source).not.toContain('open={createOpen}');
     expect(source).not.toContain('  if (createOpen) {');
-    expect(editor).toContain('StyleSheet.absoluteFillObject');
+    expect(editor).toContain('StyleSheet.absoluteFill');
     expect(editor).toContain('<BlurView');
     expect(editor).toContain('intensity={25}');
     expect(editor).toContain('systemUltraThinMaterialLight');
