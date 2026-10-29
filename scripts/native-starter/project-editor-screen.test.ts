@@ -149,14 +149,19 @@ describe('Native Starter dashboard metric contrast', () => {
 });
 
 describe('Native Starter Android project controls', () => {
-  it('uses a single opaque themed Dropdown surface on both platforms', () => {
+  it('keeps iOS glass in one clipped layer and Android opaque', () => {
     const popover = source.slice(
       source.indexOf("presentation='popover'"),
       source.indexOf('<Dropdown.Trigger', source.indexOf("presentation='popover'"))
     );
-    expect(popover).toContain('backgroundColor: surface.panel');
-    expect(popover).not.toContain('popoverBackground=');
-    expect(popover).not.toContain("backgroundColor: 'transparent'");
+    expect(popover).toContain("Platform.OS === 'ios' && themeName !== 'highContrast'");
+    expect(popover).toContain('popoverBackground={');
+    expect(popover).toContain('intensity={25}');
+    expect(popover).toContain('borderRadius: 22');
+    expect(popover).toContain("overflow: 'hidden'");
+    expect(popover).toContain("? 'transparent'");
+    expect(popover).toContain(': surface.panel');
+    expect(popover).toContain('? 0');
   });
 
   it('renders completed state with a vector check instead of a text glyph', () => {
