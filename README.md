@@ -78,7 +78,7 @@ Install the renderer you need:
 ```bash
 pnpm add @vellira-ui/react
 # or
-pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
+pnpm add @vellira-ui/react-native react-native-svg
 ```
 
 The renderer packages already consume Vellira tokens internally. Install
@@ -225,7 +225,7 @@ yarn add @vellira-ui/react
 ### React Native
 
 ```bash
-pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
+pnpm add @vellira-ui/react-native react-native-svg
 ```
 
 ---

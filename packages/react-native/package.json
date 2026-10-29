@@ -56,7 +56,6 @@
     "test:coverage": "vitest run --config vitest.config.ts --coverage"
   },
   "peerDependencies": {
-    "@react-native-picker/picker": ">=2",
     "react": ">=19",
     "react-native": ">=0.86",
     "react-native-svg": ">=13"

@@ -37,7 +37,7 @@ const externalDependencies = linkWorkspaceDependencies(
   root,
   tempDir,
   'packages/react-native',
-  ['@react-native-picker/picker', 'react', 'react-native']
+  ['react', 'react-native']
 );
 const svgDependency = linkWorkspaceDependencies(
   root,
@@ -234,13 +234,6 @@ export default Component;
 );
 
 writeFileSync(
-  path.join(mocksDir, 'react-native-picker.mjs'),
-  `
-export const Picker = () => null;
-`
-);
-
-writeFileSync(
   path.join(tempDir, 'native-loader.mjs'),
   `
 import { existsSync, statSync } from 'node:fs';
@@ -249,7 +242,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const mocks = {
   'react-native': new URL('./mocks/react-native.mjs', import.meta.url).href,
   'react-native-svg': new URL('./mocks/react-native-svg.mjs', import.meta.url).href,
-  '@react-native-picker/picker': new URL('./mocks/react-native-picker.mjs', import.meta.url).href,
 };
 
 export async function resolve(specifier, context, defaultResolve) {

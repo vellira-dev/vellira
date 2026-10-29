@@ -75,6 +75,23 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).toContain("expoBin, 'install', '--check'");
   });
 
+  it('guards standard npm installation against reintroducing Picker', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/expo-consumer.cjs',
+      'utf8'
+    );
+
+    expect(script).not.toContain(
+      "'@react-native-picker/picker': exactVersion("
+    );
+    expect(script).toContain('function verifyNoPickerPeerInstall(fixtureDir)');
+    expect(script).toContain('pickerPeerContract,');
+    expect(script).toContain(
+      'Normal npm clean Expo install unexpectedly pulled Picker.'
+    );
+    expect(script).toContain("'package-lock.json'");
+  });
+
   it('builds real iOS and Android development bundles through Expo Metro', () => {
     const script = readFileSync(
       'scripts/release-candidate/expo-consumer.cjs',
