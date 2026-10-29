@@ -43,6 +43,18 @@ describe('clean Vite consumer workflow contract', () => {
     expect(viteJob).toContain('Retain Vite consumer evidence');
   });
 
+  it('reports size deltas for clean Vite consumers', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    expect(script).toContain('measureViteBundleVariants(fixtureDir');
+    expect(script).toContain('sizeReportMarkdown(bundleSize)');
+    expect(script).toContain('GITHUB_STEP_SUMMARY');
+    expect(script).toContain('      bundleSize,');
+    expect(script).toContain("run('npm', ['run', 'build']");
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
