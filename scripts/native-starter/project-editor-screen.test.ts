@@ -53,7 +53,7 @@ describe('Native Starter project editor navigation', () => {
       import.meta.url
     );
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.3');
+    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.4');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -145,5 +145,36 @@ describe('Native Starter dashboard metric contrast', () => {
       expect(metricSection.replace(/\s+/g, ' ')).toContain(expected);
     }
     expect(metricSection).toContain('backgroundColor: metric.bg');
+  });
+});
+
+describe('Native Starter Android project controls', () => {
+  it('keeps iOS glass in one clipped layer and Android opaque', () => {
+    const popover = source.slice(
+      source.indexOf("presentation='popover'"),
+      source.indexOf(
+        '<Dropdown.Trigger',
+        source.indexOf("presentation='popover'")
+      )
+    );
+    expect(popover).toContain(
+      "Platform.OS === 'ios' && themeName !== 'highContrast'"
+    );
+    expect(popover).toContain('popoverBackground={');
+    expect(popover).toContain('intensity={25}');
+    expect(popover).toContain('borderRadius: 22');
+    expect(popover).toContain("overflow: 'hidden'");
+    expect(popover).toContain("? 'transparent'");
+    expect(popover).toContain(': surface.panel');
+    expect(popover).toContain('? 0');
+  });
+
+  it('renders completed state with a vector check instead of a text glyph', () => {
+    expect(source).toContain("<Check size={16} color='#FFFFFF' />");
+    expect(source).not.toContain('>✓</Text>');
+    expect(source).toContain("accessibilityRole='checkbox'");
+    expect(source).toContain(
+      'accessibilityState={{ checked: project.completed }}'
+    );
   });
 });

@@ -12,6 +12,7 @@ import {
 import { BlurView } from 'expo-blur';
 import {
   Copy,
+  Check,
   Edit,
   Filter,
   Folder,
@@ -1050,7 +1051,7 @@ function WorkspaceScreen() {
                     offset={-44}
                     closeOnSelect
                     popoverBackground={
-                      themeName === 'highContrast' ? undefined : (
+                      Platform.OS === 'ios' && themeName !== 'highContrast' ? (
                         <BlurView
                           intensity={25}
                           tint={
@@ -1058,7 +1059,11 @@ function WorkspaceScreen() {
                               ? 'systemUltraThinMaterialDark'
                               : 'systemUltraThinMaterialLight'
                           }
-                          style={{ flex: 1 }}
+                          style={{
+                            flex: 1,
+                            borderRadius: 22,
+                            overflow: 'hidden',
+                          }}
                         >
                           <View
                             pointerEvents='none'
@@ -1071,7 +1076,7 @@ function WorkspaceScreen() {
                             }}
                           />
                         </BlurView>
-                      )
+                      ) : undefined
                     }
                     contentStyle={{
                       width: 216,
@@ -1079,12 +1084,15 @@ function WorkspaceScreen() {
                       borderRadius: 22,
                       paddingVertical: 8,
                       paddingHorizontal: 4,
-                      borderWidth: 1,
+                      borderWidth:
+                        Platform.OS === 'ios' && themeName !== 'highContrast'
+                          ? 0
+                          : 1,
                       borderColor: border,
                       backgroundColor:
-                        themeName === 'highContrast'
-                          ? surface.canvas
-                          : 'transparent',
+                        Platform.OS === 'ios' && themeName !== 'highContrast'
+                          ? 'transparent'
+                          : surface.panel,
                       shadowColor: '#000000',
                       shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
                       shadowRadius: 24,
@@ -1223,15 +1231,7 @@ function WorkspaceScreen() {
                       }}
                     >
                       {project.completed ? (
-                        <Text
-                          style={{
-                            color: '#FFFFFF',
-                            fontSize: 14,
-                            fontWeight: '700',
-                          }}
-                        >
-                          ✓
-                        </Text>
+                        <Check size={16} color='#FFFFFF' />
                       ) : null}
                     </View>
                   </Pressable>
