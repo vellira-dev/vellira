@@ -147,3 +147,18 @@ describe('Native Starter dashboard metric contrast', () => {
     expect(metricSection).toContain('backgroundColor: metric.bg');
   });
 });
+
+describe('Native Starter Android project controls', () => {
+  it('uses an opaque Android Dropdown surface without an iOS blur layer', () => {
+    expect(source).toContain("Platform.OS !== 'ios' || themeName === 'highContrast'");
+    expect(source).toContain('? surface.panel');
+    expect(source).toContain("presentation='popover'");
+  });
+
+  it('renders completed state with a vector check instead of a text glyph', () => {
+    expect(source).toContain("<Check size={16} color='#FFFFFF' />");
+    expect(source).not.toContain('>✓</Text>');
+    expect(source).toContain("accessibilityRole='checkbox'");
+    expect(source).toContain('accessibilityState={{ checked: project.completed }}');
+  });
+});
