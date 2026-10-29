@@ -644,11 +644,20 @@ function WorkspaceScreen() {
                     {metric.label}
                   </Text>
                   <Text
-                    style={{ color: mainText, fontSize: 35, fontWeight: '700' }}
+                    style={{
+                      color: themeName === 'highContrast' ? '#1A102B' : mainText,
+                      fontSize: 35,
+                      fontWeight: '700',
+                    }}
                   >
                     {metric.value}
                   </Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>
+                  <Text
+                    style={{
+                      color: themeName === 'highContrast' ? '#34303D' : subtleText,
+                      fontSize: 12,
+                    }}
+                  >
                     {metric.caption}
                   </Text>
                 </View>
