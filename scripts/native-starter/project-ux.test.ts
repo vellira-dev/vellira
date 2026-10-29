@@ -115,23 +115,20 @@ describe('Native Starter project editor submission', () => {
   });
 
   it('enables Save for meaningful changes to any field', () => {
-    expect(
-      canSubmitProjectEditor({ ...project, name: 'Updated onboarding' }, project)
-    ).toBe(true);
-    expect(
-      canSubmitProjectEditor({ ...project, description: 'Updated' }, project)
-    ).toBe(true);
-    expect(canSubmitProjectEditor({ ...project, team: 'design' }, project)).toBe(
-      true
-    );
-    expect(canSubmitProjectEditor({ ...project, status: 'active' }, project)).toBe(
-      true
-    );
+    for (const change of [
+      { name: 'Updated onboarding' },
+      { description: 'Updated' },
+      { team: 'design' },
+      { status: 'active' },
+    ]) {
+      expect(canSubmitProjectEditor({ ...project, ...change }, project)).toBe(
+        true
+      );
+    }
   });
 
-  it('keeps Save disabled when the name becomes invalid despite other edits', () => {
-    expect(
-      canSubmitProjectEditor({ ...project, name: ' ', status: 'active' }, project)
-    ).toBe(false);
+  it('keeps Save disabled for invalid names even with other changes', () => {
+    const invalid = { ...project, name: ' ', status: 'active' };
+    expect(canSubmitProjectEditor(invalid, project)).toBe(false);
   });
 });

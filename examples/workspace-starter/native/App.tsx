@@ -209,7 +209,9 @@ function WorkspaceScreen() {
     statusFilter
   );
   const projectListTitle = activeFilters ? 'Matching projects' : 'All projects';
-  const editingProject = data.projects.find((project) => project.id === editingId);
+  const editingProject = data.projects.find(
+    (project) => project.id === editingId
+  );
   const canSubmitProject = canSubmitProjectEditor(
     { name, description, team, status },
     editingId === null ? undefined : (editingProject ?? null)
@@ -505,7 +507,9 @@ function WorkspaceScreen() {
               justifyContent: 'center',
               alignItems: 'center',
               borderRadius: 22,
-              backgroundColor: canSubmitProject ? palette.brand : surface.subtle,
+              backgroundColor: canSubmitProject
+                ? palette.brand
+                : surface.subtle,
               borderWidth: 1,
               borderColor: canSubmitProject ? palette.brand : border,
             }}

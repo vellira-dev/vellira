@@ -49,10 +49,10 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain(
       'accessibilityState={{ disabled: !canSubmitProject }}'
     );
-    expect(editor).toContain('canSubmitProject ? palette.brand : surface.subtle');
+    expect(editor).toContain('backgroundColor: canSubmitProject');
     expect(source).toContain('if (!canSubmitProject) return;');
     for (const label of ['Project name', 'Team', 'Status']) {
-      expect(editor).toContain(`label='${label}'\n                    required`);
+      expect(editor).toMatch(new RegExp(`label='${label}'\\s+required`));
     }
   });
 
