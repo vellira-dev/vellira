@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "profile": "vite-full-styles-v1",
+  "main": {
+    "sha": "6a861bb6d09cfd4e518c80f240b28156e5e32bfd",
+    "treeSha": "199fbf64ecc6094db15122332a253f29b3999adc"
+  },
+  "sourceEvidence": {
+    "measuredCandidateSha": "9312d68f643b595532acd352eaab77c3f1fb85a5",
+    "measuredTreeSha": "199fbf64ecc6094db15122332a253f29b3999adc",
+    "runId": 40925105070,
+    "artifactId": 12919319480,
+    "candidateManifestSha256": "75c4edb9f5dac3d9bba89e83afdcbb7576da65df5729ad4b15001252529afad2",
+    "consumerHarnessSha": "26aace67b10583bad3ed70a9cca153e097161992",
+    "note": "Measured PR SHA and post-squash main have identical Git tree; not a separately executed main job."
+  },
+  "tooling": {
+    "node": "v22.23.4",
+    "npm": "10.9.9",
+    "vite": "8.3.5",
+    "typescript": "6.0.3"
+  },
+  "metric": "sum of emitted production .js and .css assets; gzip level 9 per asset",
+  "scenarios": {
+    "bare": {
+      "jsBytes": 219618,
+      "jsGzipBytes": 67749,
+      "jsFiles": 1,
+      "cssBytes": 0,
+      "cssGzipBytes": 0,
+      "cssFiles": 0
+    },
+    "button": {
+      "jsBytes": 415411,
+      "jsGzipBytes": 126170,
+      "jsFiles": 1,
+      "cssBytes": 547401,
+      "cssGzipBytes": 58174,
+      "cssFiles": 1
+    },
+    "buttonInput": {
+      "jsBytes": 415528,
+      "jsGzipBytes": 126221,
+      "jsFiles": 1,
+      "cssBytes": 547401,
+      "cssGzipBytes": 58174,
+      "cssFiles": 1
+    }
+  }
+}

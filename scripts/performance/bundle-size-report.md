@@ -30,3 +30,48 @@ cross-commit PR deltas, expand representative/full UI fixtures, obtain opt-in
 bare/Button/Button+Select native iOS/Android measurements via the existing
 `scripts/performance/native-metro-matrix.cjs`, and set evidence-based warning
 thresholds. Keep this mode report-only until these measurements are reviewed.
+
+## Phase A: exact main versus PR report
+
+The baseline snapshot is in scripts/performance/baselines/vite-main-2.188.3.json.
+It comes from immutable Vite evidence artifact 12919319480, workflow
+40925105070, measured source 9312d68f643b595532acd352eaab77c3f1fb85a5.
+The source has the **identical Git tree** to its canonical post-squash main
+commit 6a861bb6d09cfd4e518c80f240b28156e5e32bfd, tree 199fbf64.
+This is an exact source-equivalence argument, **not** a claim that the
+main build was separately rerun.
+
+The existing Clean Vite Release Candidate job already builds and packs
+the PR candidate. Its report now reads the immutable main snapshot and
+the exact base SHA from the pull-request event. It accepts comparisons
+only after independently verifying the recorded main Git tree, ancestry,
+unchanged package and toolchain inputs between main snapshots, unchanged
+fixture construction and size methodology, identical Node/npm/Vite/TypeScript
+versions, and the identical scenario/metric schema.
+
+For comparable results the existing GitHub job summary and retained JSON
+report signed PR-minus-main bytes and percentages for JS/CSS, raw and gzip,
+for each fixture. A zero denominator becomes NEW or —, never infinity.
+Missing or stale main, changed fixture, missing Git proof, and changed
+toolchain each produce an explicit **non-comparable** status with **no deltas**.
+No new Actions job, npm installation or second pack is introduced.
+
+**Refresh procedure:** Obtain a verified clean Vite consumer artifact from an
+exact immutable main source, or prove the measured candidate tree is exactly
+identical to that main tree. In a reviewed snapshot commit, update source SHA,
+main/tree SHA, source run/artifact, exact toolchain versions, measured scenario
+numbers and release candidate manifest digest. Verify the new main commit
+and tree in GitHub before editing. Never merely change the SHA on old data;
+stale comparisons should remain visibly stale until the new evidence exists.
+
+**Threshold policy:** one baseline measurement does not reveal normal run
+variance. Observed increases are shown in report-only mode with the explicit
+NOT_CALIBRATED threshold state, with no blocking size limit. Establish
+data-driven warning thresholds after independently repeating identical
+source/toolchain builds; calibrate by scenario and measured metric. Promote
+warnings to a required blocking check only with reviewed evidence and owner
+approval.
+
+**Out of scope for Phase A:** measuring the entire UI catalog, HTTP transfer,
+Lottie assets, and production Metro/Hermes. Native measurement is an opt-in
+Phase B follow-up using the existing native-metro-matrix.cjs harness.

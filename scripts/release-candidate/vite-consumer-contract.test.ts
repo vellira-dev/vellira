@@ -55,6 +55,25 @@ describe('clean Vite consumer workflow contract', () => {
     expect(script).toContain("run('npm', ['run', 'build']");
   });
 
+  it('reports exact main vs PR regressions without duplicate installs', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    expect(script).toContain('collectGitEvidence(');
+    expect(script).toContain('evaluateViteRegression(');
+    expect(script).toContain('formatViteRegression(regression)');
+    expect(script).toContain('evidence.bundleRegression = regression;');
+    expect(workflow).toContain(
+      'VELLIRA_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}'
+    );
+    expect(workflow).not.toContain('vite-baseline-consumer:');
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
