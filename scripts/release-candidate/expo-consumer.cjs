@@ -318,7 +318,13 @@ function verifyNativeEntryPoints(fixtureDir) {
 function verifyNoPickerPeerInstall(fixtureDir) {
   const pickerName = '@react-native-picker/picker';
   const nativeManifest = readJson(
-    path.join(fixtureDir, 'node_modules', '@vellira-ui', 'react-native', 'package.json')
+    path.join(
+      fixtureDir,
+      'node_modules',
+      '@vellira-ui',
+      'react-native',
+      'package.json'
+    )
   );
   const fixtureManifest = readJson(path.join(fixtureDir, 'package.json'));
   const lockfile = readJson(path.join(fixtureDir, 'package-lock.json'));

@@ -84,7 +84,9 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).not.toContain("'@react-native-picker/picker': exactVersion(");
     expect(script).toContain('function verifyNoPickerPeerInstall(fixtureDir)');
     expect(script).toContain('pickerPeerContract,');
-    expect(script).toContain('Normal npm clean Expo install unexpectedly pulled Picker.');
+    expect(script).toContain(
+      'Normal npm clean Expo install unexpectedly pulled Picker.'
+    );
     expect(script).toContain("'package-lock.json'");
   });
 
