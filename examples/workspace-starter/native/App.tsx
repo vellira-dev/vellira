@@ -30,7 +30,6 @@ import {
 } from 'react-native-safe-area-context';
 import {
   Button,
-  Checkbox,
   Dropdown,
   Input,
   Modal,
@@ -44,6 +43,7 @@ import {
   nextUniqueDuplicateName,
 } from './projectUx';
 import { WorkspaceNotice, type WorkspaceNoticeData } from './WorkspaceNotice';
+import { WorkspaceSettings } from './WorkspaceSettings';
 
 type NativeTheme = 'light' | 'dark' | 'highContrast';
 type Section = 'overview' | 'projects' | 'settings';
@@ -1224,107 +1224,17 @@ function WorkspaceScreen() {
         ) : null}
 
         {section === 'settings' ? (
-          <View style={{ gap: 18 }}>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                WORKSPACE
-              </Text>
-              <View style={cardStyle}>
-                <Input
-                  label='Workspace name'
-                  value={data.name}
-                  onValueChange={(next: string) =>
-                    setData((current) => ({ ...current, name: next }))
-                  }
-                />
-              </View>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                APPEARANCE
-              </Text>
-              <View style={cardStyle}>
-                {(['light', 'dark', 'highContrast'] as const).map((option) => (
-                  <Pressable
-                    key={option}
-                    accessibilityRole='radio'
-                    accessibilityState={{ checked: themeName === option }}
-                    onPress={() => setTheme(option)}
-                    style={{
-                      minHeight: 48,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderBottomWidth: option === 'highContrast' ? 0 : 1,
-                      borderColor: border,
-                    }}
-                  >
-                    <Text style={{ color: mainText }}>
-                      {option === 'highContrast'
-                        ? 'High contrast'
-                        : option === 'light'
-                          ? 'Light'
-                          : 'Dark'}
-                    </Text>
-                    <Text style={{ color: mainText }}>
-                      {themeName === option ? '✓' : ''}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                PREFERENCES
-              </Text>
-              <View style={cardStyle}>
-                <Checkbox
-                  label='Product notifications'
-                  description='Saved locally. No emails are sent.'
-                  checked={data.notifications}
-                  onCheckedChange={(notifications: boolean) =>
-                    setData((current) => ({ ...current, notifications }))
-                  }
-                />
-              </View>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                DATA
-              </Text>
-              <View style={cardStyle}>
-                <Pressable
-                  accessibilityRole='button'
-                  onPress={() => setResetOpen(true)}
-                  style={{ minHeight: 48, justifyContent: 'center' }}
-                >
-                  <Text style={{ color: mainText, fontWeight: '600' }}>
-                    Restore sample data
-                  </Text>
-                </Pressable>
-                <Text style={{ color: subtleText, fontSize: 12 }}>
-                  This replaces your locally saved demo projects and settings.
-                </Text>
-              </View>
-            </View>
-            <Text
-              style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}
-            >
-              Vellira Native Starter · Offline demo
-            </Text>
-          </View>
+          <WorkspaceSettings
+            workspaceName={data.name}
+            onWorkspaceNameChange={(next: string) =>
+              setData((current) => ({ ...current, name: next }))
+            }
+            notifications={data.notifications}
+            onNotificationsChange={(notifications: boolean) =>
+              setData((current) => ({ ...current, notifications }))
+            }
+            onRestore={() => setResetOpen(true)}
+          />
         ) : null}
       </ScrollView>
 
