@@ -12,7 +12,7 @@ test('Metro Phase B compares exact published root imports on both platforms', ()
   assert.match(script, /VELLIRA_NATIVE_VERSION/);
   assert.match(script, /React\.createElement\(ThemeProvider/);
   assert.match(script, /'ThemeProvider, Button, Select'/);
-  assert.match(script, /'expo', '--platform', platform/);
+  assert.match(script, /expoBin, 'export', '--platform', platform/);
   assert.match(script, /scriptBytes/);
   assert.match(script, /deltaFromBaseline/);
   assert.match(script, /deltaFromButton/);
