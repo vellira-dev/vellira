@@ -827,6 +827,59 @@ describe('Native Select', () => {
     unmount();
   });
 
+  it('keeps a short native sheet list content-sized instead of filling empty space', () => {
+    const { container, unmount } = render(
+      <Select
+        label='Country'
+        presentation='sheet'
+        defaultValue='fr'
+        options={[
+          { label: 'France', value: 'fr' },
+          { label: 'Spain', value: 'es' },
+        ]}
+      />
+    );
+
+    openSelect(container);
+
+    const list = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+
+    expect(list?.style.flexGrow).toBe('0');
+    expect(list?.style.flexShrink).toBe('1');
+    expect(list?.style.maxHeight).toBe('420px');
+    expect(list?.textContent).toContain('France');
+    expect(list?.textContent).toContain('Spain');
+
+    unmount();
+  });
+
+  it('preserves the scrolling cap and selected index for long virtual sheet lists', () => {
+    const { container, unmount } = render(
+      <Select
+        label='Country'
+        presentation='sheet'
+        options={longOptions}
+        defaultValue='country-70'
+        virtual
+      />
+    );
+
+    openSelect(container);
+
+    const list = document.body.querySelector<HTMLElement>(
+      '[data-testid="native-flat-list"]'
+    );
+
+    expect(list?.style.flexGrow).toBe('0');
+    expect(list?.style.flexShrink).toBe('1');
+    expect(list?.style.maxHeight).toBe('420px');
+    expect(list?.getAttribute('data-initial-scroll-index')).toBe('69');
+
+    unmount();
+  });
+
   it('supports loading and presentation props', () => {
     const { container, rerender, unmount } = render(
       <Select label='Country' loading presentation='sheet' options={[]} />
