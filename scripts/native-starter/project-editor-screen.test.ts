@@ -152,9 +152,14 @@ describe('Native Starter Android project controls', () => {
   it('keeps iOS glass in one clipped layer and Android opaque', () => {
     const popover = source.slice(
       source.indexOf("presentation='popover'"),
-      source.indexOf('<Dropdown.Trigger', source.indexOf("presentation='popover'"))
+      source.indexOf(
+        '<Dropdown.Trigger',
+        source.indexOf("presentation='popover'")
+      )
     );
-    expect(popover).toContain("Platform.OS === 'ios' && themeName !== 'highContrast'");
+    expect(popover).toContain(
+      "Platform.OS === 'ios' && themeName !== 'highContrast'"
+    );
     expect(popover).toContain('popoverBackground={');
     expect(popover).toContain('intensity={25}');
     expect(popover).toContain('borderRadius: 22');
