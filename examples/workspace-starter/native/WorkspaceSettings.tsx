@@ -8,8 +8,8 @@ import {
   Refresh,
   Sun,
 } from '@vellira-ui/icons';
-import { Input, Switch, useTheme } from '@vellira-ui/react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Switch, useTheme } from '@vellira-ui/react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 type WorkspaceSettingsProps = {
   workspaceName: string;
@@ -97,17 +97,34 @@ export function WorkspaceSettings({
               </Text>
             </View>
           </View>
-          <Input
-            label='Workspace name'
-            value={workspaceName}
-            onValueChange={onWorkspaceNameChange}
-            placeholder='Name your workspace'
-            inputStyle={{
-              lineHeight: undefined,
-              paddingVertical: 0,
-              textAlignVertical: 'center',
-            }}
-          />
+          <View style={{ gap: 8 }}>
+            <Text
+              maxFontSizeMultiplier={1.5}
+              style={{ color: primary, fontSize: 14, fontWeight: '600' }}
+            >
+              Workspace name
+            </Text>
+            <TextInput
+              accessibilityLabel='Workspace name'
+              value={workspaceName}
+              onChangeText={onWorkspaceNameChange}
+              placeholder='Name your workspace'
+              placeholderTextColor={muted}
+              maxFontSizeMultiplier={1.5}
+              style={{
+                minHeight: 48,
+                borderWidth: 1,
+                borderColor: border,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                fontSize: 15,
+                color: primary,
+                backgroundColor: theme.semantic.surface.canvas,
+                textAlignVertical: 'center',
+              }}
+            />
+          </View>
         </View>
       </View>
 
