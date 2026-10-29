@@ -5,6 +5,11 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { measureViteBundleVariants, sizeReportMarkdown } = require('../performance/vite-bundle-size-report.cjs');
+const {
+  collectGitEvidence,
+  evaluateViteRegression,
+  formatViteRegression,
+} = require('../performance/vite-bundle-regression.cjs');
 
 const {
   WEB_PACKAGE_NAMES,
@@ -603,6 +608,35 @@ async function main() {
         installedPackages,
       },
     };
+
+    const mainBaselineFile = path.resolve(
+      __dirname, '../performance/baselines/vite-main-2.188.3.json'
+    );
+    const baseline = fs.existsSync(mainBaselineFile)
+      ? readJson(mainBaselineFile)
+      : null;
+    const regression = evaluateViteRegression(
+      baseline,
+      {
+        sha: candidate.manifest.source.sha,
+        baseSha: process.env.VELLIRA_PR_BASE_SHA,
+        tooling: evidence.tooling,
+        bundleSize,
+      },
+      baseline && process.env.VELLIRA_PR_BASE_SHA
+        ? collectGitEvidence(
+            path.resolve(__dirname, '../..'),
+            baseline.main.sha,
+            process.env.VELLIRA_PR_BASE_SHA
+          )
+        : null
+    );
+    evidence.bundleRegression = regression;
+    const regressionSummary = formatViteRegression(regression);
+    console.log(regressionSummary);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, regressionSummary);
+    }
 
     fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
     fs.writeFileSync(
