@@ -32,7 +32,6 @@ import {
   Button,
   Dropdown,
   Input,
-  Modal,
   Select,
   ThemeProvider,
   useTheme,
@@ -484,9 +483,9 @@ function WorkspaceScreen() {
       edges={['top', 'bottom']}
     >
       <View
-        pointerEvents={createOpen ? 'none' : 'auto'}
-        accessibilityElementsHidden={createOpen}
-        importantForAccessibility={createOpen ? 'no-hide-descendants' : 'auto'}
+        pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen || resetOpen}
+        importantForAccessibility={createOpen || resetOpen ? 'no-hide-descendants' : 'auto'}
         style={{
           paddingHorizontal: 20,
           paddingTop: 14,
@@ -557,9 +556,9 @@ function WorkspaceScreen() {
 
       <ScrollView
         key={section}
-        pointerEvents={createOpen ? 'none' : 'auto'}
-        accessibilityElementsHidden={createOpen}
-        importantForAccessibility={createOpen ? 'no-hide-descendants' : 'auto'}
+        pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen || resetOpen}
+        importantForAccessibility={createOpen || resetOpen ? 'no-hide-descendants' : 'auto'}
         keyboardShouldPersistTaps='handled'
         contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
       >
@@ -1239,9 +1238,9 @@ function WorkspaceScreen() {
       </ScrollView>
 
       <View
-        pointerEvents={createOpen ? 'none' : 'auto'}
-        accessibilityElementsHidden={createOpen}
-        importantForAccessibility={createOpen ? 'no-hide-descendants' : 'auto'}
+        pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen || resetOpen}
+        importantForAccessibility={createOpen || resetOpen ? 'no-hide-descendants' : 'auto'}
         accessibilityRole='tablist'
         style={{
           flexDirection: 'row',
@@ -1290,43 +1289,199 @@ function WorkspaceScreen() {
           </Pressable>
         ))}
       </View>
-      <Modal open={resetOpen} onOpenChange={setResetOpen}>
-        <Modal.Overlay>
-          <Modal.Content>
-            <Modal.Header>
-              <Modal.Title>Restore sample data?</Modal.Title>
-              <Modal.Description>
-                This replaces saved projects and settings. It cannot be undone.
-              </Modal.Description>
-            </Modal.Header>
-            <Modal.Footer>
-              <Button
-                appearance='outline'
-                color='neutral'
-                onPress={() => setResetOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                color='danger'
-                onPress={() => {
-                  setData(initialWorkspace);
-                  setRemovedProject(null);
-                  setTheme('light');
-                  setResetOpen(false);
-                  setNotice({
-                    tone: 'success',
-                    message: 'Sample data restored.',
-                  });
+      {resetOpen ? (
+        <View
+          accessibilityViewIsModal
+          style={[
+            StyleSheet.absoluteFill,
+            { zIndex: 50, elevation: 24, paddingTop: insets.top + 8 },
+          ]}
+        >
+          <View
+            pointerEvents='auto'
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor:
+                  themeName === 'dark'
+                    ? 'rgba(10, 8, 22, 0.38)'
+                    : 'rgba(33, 25, 62, 0.16)',
+              },
+            ]}
+          />
+          <View
+            style={{
+              flex: 1,
+              marginHorizontal: 0,
+              marginBottom: 0,
+              borderTopLeftRadius: 34,
+              borderTopRightRadius: 34,
+              shadowColor: '#000000',
+              shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
+              elevation: 16,
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                borderTopLeftRadius: 34,
+                borderTopRightRadius: 34,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: border,
+                backgroundColor:
+                  Platform.OS === 'ios' && themeName !== 'highContrast'
+                    ? 'transparent'
+                    : surface.canvas,
+              }}
+            >
+              {Platform.OS === 'ios' && themeName !== 'highContrast' ? (
+                <BlurView
+                  pointerEvents='none'
+                  intensity={25}
+                  tint={
+                    themeName === 'dark'
+                      ? 'systemUltraThinMaterialDark'
+                      : 'systemUltraThinMaterialLight'
+                  }
+                  style={StyleSheet.absoluteFill}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor:
+                        themeName === 'dark'
+                          ? 'rgba(20, 18, 30, 0.24)'
+                          : 'rgba(255, 255, 255, 0.75)',
+                    }}
+                  />
+                </BlurView>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingTop: 8,
+                  paddingBottom: 16,
+                  gap: 8,
                 }}
               >
-                Restore data
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Overlay>
-      </Modal>
-
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Close restore confirmation'
+                  onPress={() => setResetOpen(false)}
+                  style={{
+                    minWidth: 78,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    paddingHorizontal: 8,
+                  }}
+                >
+                  <Text
+                    style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+                <Text
+                  accessibilityRole='header'
+                  style={{
+                    flex: 1,
+                    color: mainText,
+                    textAlign: 'center',
+                    fontSize: 17,
+                    fontWeight: '700',
+                  }}
+                >
+                  Restore data
+                </Text>
+                <View style={{ minWidth: 78 }} />
+              </View>
+              <ScrollView
+                contentContainerStyle={{
+                  paddingHorizontal: 20,
+                  paddingTop: 22,
+                  paddingBottom: 40,
+                  flexGrow: 1,
+                }}
+              >
+                <View
+                  style={{
+                    width: '100%',
+                    maxWidth: 560,
+                    alignSelf: 'center',
+                    flex: 1,
+                    justifyContent: 'space-between',
+                    gap: 24,
+                  }}
+                >
+                  <View style={{ gap: 10 }}>
+                    <Text
+                      accessibilityRole='header'
+                      style={{
+                        paddingHorizontal: 6,
+                        color: subtleText,
+                        fontSize: 13,
+                        fontWeight: '700',
+                        letterSpacing: 0.8,
+                      }}
+                    >
+                      DATA RESTORE
+                    </Text>
+                    <View
+                      style={{
+                        padding: 20,
+                        gap: 12,
+                        borderRadius: 24,
+                        borderWidth: 1,
+                        borderColor: border,
+                        backgroundColor: surface.subtle,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: mainText,
+                          fontSize: 19,
+                          fontWeight: '700',
+                        }}
+                      >
+                        Restore sample data?
+                      </Text>
+                      <Text
+                        style={{
+                          color: theme.semantic.text.secondary,
+                          fontSize: 15,
+                          lineHeight: 23,
+                        }}
+                      >
+                        This replaces saved projects and settings. It cannot be undone.
+                      </Text>
+                    </View>
+                  </View>
+                  <Button
+                    color='danger'
+                    onPress={() => {
+                      setData(initialWorkspace);
+                      setRemovedProject(null);
+                      setTheme('light');
+                      setResetOpen(false);
+                      setNotice({
+                        tone: 'success',
+                        message: 'Sample data restored.',
+                      });
+                    }}
+                  >
+                    Restore sample data
+                  </Button>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </View>
+      ) : null}
       {createOpen ? (
         <View
           accessibilityViewIsModal
