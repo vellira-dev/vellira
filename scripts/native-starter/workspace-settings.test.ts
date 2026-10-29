@@ -14,7 +14,7 @@ const settings = readFileSync(
 );
 
 describe('Native Starter grouped Settings UX', () => {
-  it('renders the dedicated grouped screen in the existing Settings tab', () => {
+  it('renders grouped settings in the existing tab', () => {
     expect(app).toContain("section === 'settings' ? (");
     expect(app).toContain('<WorkspaceSettings');
     expect(settings).toContain('maxWidth: 560');
