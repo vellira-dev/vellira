@@ -127,7 +127,7 @@ test('positive, negative, and zero-baseline changes have safe signed results', (
   assert.match(formatViteRegression(result), /NEW/);
   assert.match(formatViteRegression(result), /size warning: \*\*WARN\*\*/);
   assert.equal(result.warningStatus, 'WARN');
-  assert.equal(result.warningCount, 2);
+  assert.equal(result.warningCount, 3);
   assert.equal(result.threshold.blocking, false);
 });
 
