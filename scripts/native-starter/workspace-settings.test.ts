@@ -61,7 +61,12 @@ describe('Native Starter grouped Settings UX', () => {
     expect(settings).toContain("accessibilityLabel='Restore sample data'");
     expect(settings).toContain('onPress={onRestore}');
     expect(app).toContain('onRestore={() => setResetOpen(true)}');
-    expect(app).toContain('<Modal open={resetOpen}');
+    expect(app).toContain('{resetOpen ? (');
+    expect(app).toContain("accessibilityLabel='Close restore confirmation'");
+    expect(app).toContain("accessibilityViewIsModal");
+    expect(app).toContain('This replaces saved projects and settings. It cannot be undone.');
+    expect(app).not.toContain('<Modal open={resetOpen}');
+    expect(app).toContain('createOpen || resetOpen');
     expect(app).toContain('setData(initialWorkspace)');
     expect(settings).toContain('theme.semantic.status.error.fg');
   });
