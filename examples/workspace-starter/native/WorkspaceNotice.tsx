@@ -23,8 +23,10 @@ export function WorkspaceNotice({
   onUndo,
 }: WorkspaceNoticeProps) {
   const { theme } = useTheme();
-  const { fontScale } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const largeText = fontScale >= 1.5;
+  // Short feedback keeps its actions on one line; longer feedback can grow.
+  const stacked = largeText && (width < 360 || notice.message.length > 24);
   const success = theme.semantic.status.success;
   const error = theme.semantic.status.error;
   const appearance =
@@ -52,12 +54,12 @@ export function WorkspaceNotice({
     <View
       style={{
         minHeight: 52,
-        flexDirection: largeText ? 'column' : 'row',
-        alignItems: largeText ? 'stretch' : 'center',
-        gap: largeText ? 0 : 8,
+        flexDirection: stacked ? 'column' : 'row',
+        alignItems: stacked ? 'stretch' : 'center',
+        gap: stacked ? 2 : 8,
         paddingLeft: 12,
         paddingRight: 4,
-        paddingVertical: largeText ? 6 : 4,
+        paddingVertical: 4,
         borderWidth: 1,
         borderLeftWidth: 3,
         borderRadius: 14,
@@ -71,7 +73,7 @@ export function WorkspaceNotice({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
-          flex: largeText ? undefined : 1,
+          flex: stacked ? undefined : 1,
           minWidth: 0,
         }}
       >
@@ -80,7 +82,10 @@ export function WorkspaceNotice({
           accessibilityLiveRegion={
             notice.tone === 'error' ? 'assertive' : 'polite'
           }
-          maxFontSizeMultiplier={1.5}
+          maxFontSizeMultiplier={largeText ? 1.4 : 1.5}
+          numberOfLines={largeText && !stacked ? 1 : undefined}
+          adjustsFontSizeToFit={largeText && !stacked}
+          minimumFontScale={0.9}
           style={{
             flex: 1,
             minWidth: 0,
@@ -98,7 +103,7 @@ export function WorkspaceNotice({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          alignSelf: largeText ? 'flex-end' : undefined,
+          alignSelf: stacked ? 'flex-end' : undefined,
           gap: 4,
         }}
       >
