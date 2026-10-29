@@ -183,6 +183,7 @@ jobs:
         env:
           VELLIRA_CONSUMER_HARNESS_SHA: ${{ github.sha }}
           VELLIRA_CANDIDATE_SHA: ${{ needs.candidate.outputs.candidate_sha }}
+          VELLIRA_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           VELLIRA_CANDIDATE_DIR: .candidate-artifacts
           VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/vite-consumer.json
         run: node scripts/release-candidate/vite-consumer.cjs
