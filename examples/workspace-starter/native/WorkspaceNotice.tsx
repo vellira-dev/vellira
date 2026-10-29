@@ -66,7 +66,9 @@ export function WorkspaceNotice({
     >
       <NoticeIcon size={18} color={appearance.foreground} />
       <Text
-        accessibilityLiveRegion={notice.tone === 'error' ? 'assertive' : 'polite'}
+        accessibilityLiveRegion={
+          notice.tone === 'error' ? 'assertive' : 'polite'
+        }
         style={{
           flex: 1,
           minWidth: 0,
