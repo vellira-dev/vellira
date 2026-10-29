@@ -46,6 +46,12 @@ export const createContentStyles = (theme: NativeTheme) =>
     },
 
     list: {
+      // The native FlatList/ScrollView defaults to flexGrow: 1. In a sheet
+      // that stretches a two-item list into empty space below its last row.
+      // Let short lists size to content; keep a bounded, scrollable viewport
+      // for long/virtual lists.
+      flexGrow: 0,
+      flexShrink: 1,
       maxHeight: 420,
     },
 
