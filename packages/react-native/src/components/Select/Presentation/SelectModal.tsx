@@ -53,7 +53,7 @@ export const SelectModal = ({
                   }
                 ).__VELLIRA_SELECT_LAYOUT_PROOF__
               ) {
-                console.info(
+                console.warn(
                   `[VELLIRA_SELECT_LAYOUT] modal height=${event.nativeEvent.layout.height} viewportCap=${maxHeight}`
                 );
               }

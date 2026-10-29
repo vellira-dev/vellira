@@ -49,7 +49,7 @@ export const SelectSheet = ({
                   }
                 ).__VELLIRA_SELECT_LAYOUT_PROOF__
               ) {
-                console.info(
+                console.warn(
                   `[VELLIRA_SELECT_LAYOUT] sheet height=${event.nativeEvent.layout.height} viewportCap=${maxHeight}`
                 );
               }

@@ -110,14 +110,14 @@ const sheetUI = sheetProof
   : '';
 
 write('App.tsx', `import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ${sheetProof ? 'LogBox, ' : ''}ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Button as RootButton, ThemeProvider as RootProvider, useTheme as rootUseTheme${sheetProof ? ', Select' : ''} } from '@vellira-ui/react-native';
 import { Button as SubpathButton } from '@vellira-ui/react-native/button';
 import { ThemeProvider as SubpathProvider, useTheme as subpathUseTheme } from '@vellira-ui/react-native/theme';
 
 const hermesEnabled = !!(globalThis as typeof globalThis & { HermesInternal?: unknown }).HermesInternal;
-${sheetProof ? '(globalThis as typeof globalThis & { __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean }).__VELLIRA_SELECT_LAYOUT_PROOF__ = true;' : ''}
+${sheetProof ? '(globalThis as typeof globalThis & { __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean }).__VELLIRA_SELECT_LAYOUT_PROOF__ = true;\nLogBox.ignoreLogs(["[VELLIRA_SELECT_LAYOUT]"]);' : ''}
 
 function ContextPair({ label }: { label: string }) {
   const root = rootUseTheme();

@@ -191,7 +191,7 @@ export const SelectContentSurface = () => {
                 }
               ).__VELLIRA_SELECT_LAYOUT_PROOF__
             ) {
-              console.info(
+              console.warn(
                 `[VELLIRA_SELECT_LAYOUT] list rows=${filteredRows.length} requested=${listViewportHeight} actual=${event.nativeEvent.layout.height}`
               );
             }
@@ -205,7 +205,7 @@ export const SelectContentSurface = () => {
                 }
               ).__VELLIRA_SELECT_LAYOUT_PROOF__
             ) {
-              console.info(
+              console.warn(
                 `[VELLIRA_SELECT_LAYOUT] list contentHeight=${height} rows=${filteredRows.length}`
               );
             }
