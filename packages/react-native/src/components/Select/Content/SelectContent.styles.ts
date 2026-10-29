@@ -2,6 +2,8 @@ import { StyleSheet } from 'react-native';
 
 import type { NativeTheme } from '../../../theme';
 
+export const SELECT_LIST_MAX_HEIGHT = 420;
+
 export const createContentStyles = (theme: NativeTheme) =>
   StyleSheet.create({
     toolbar: {
@@ -46,13 +48,12 @@ export const createContentStyles = (theme: NativeTheme) =>
     },
 
     list: {
-      // The native FlatList/ScrollView defaults to flexGrow: 1. In a sheet
-      // that stretches a two-item list into empty space below its last row.
-      // Let short lists size to content; keep a bounded, scrollable viewport
-      // for long/virtual lists.
+      // A FlatList without a bounded viewport may display only its first
+      // row inside intrinsic-sized Modal/Sheet surfaces on native platforms.
+      // SelectContent computes an estimated viewport for all visible rows.
       flexGrow: 0,
       flexShrink: 1,
-      maxHeight: 420,
+      maxHeight: SELECT_LIST_MAX_HEIGHT,
     },
 
     listContent: {
