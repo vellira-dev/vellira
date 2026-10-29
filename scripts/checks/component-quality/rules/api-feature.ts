@@ -12,6 +12,7 @@ import { qualityRoot } from '../root';
 import type { ComponentQualityRule } from '../types';
 
 import { createRuleFinding as finding } from './finding';
+import { inspectPublicApiBinding } from './public-api-binding';
 
 type SourceSnapshot = {
   componentDir: string;
@@ -132,33 +133,6 @@ function readSourceSnapshot(
   };
 }
 
-function hasLinkedRootPropsContract(
-  snapshot: SourceSnapshot,
-  componentName: string
-) {
-  const propsName = `${componentName}Props`;
-  const rootPropsName = `${componentName}RootProps`;
-
-  if (!snapshot.runtimeSource.includes(rootPropsName)) {
-    return false;
-  }
-
-  const rootTypesSource = readIfExists(
-    path.join(snapshot.componentDir, 'Root', 'types.ts')
-  );
-  const directAliases = [
-    `export type ${propsName} = ${rootPropsName};`,
-    `export type ${rootPropsName} = ${propsName};`,
-    `export interface ${propsName} extends ${rootPropsName}`,
-    `export interface ${rootPropsName} extends ${propsName}`,
-  ];
-
-  return directAliases.some(
-    (alias) =>
-      snapshot.typesSource.includes(alias) || rootTypesSource.includes(alias)
-  );
-}
-
 export const publicApiSurfaceRule: ComponentQualityRule = {
   definition: {
     id: 'api.public-surface',
@@ -175,13 +149,12 @@ export const publicApiSurfaceRule: ComponentQualityRule = {
       context.platform
     );
     const propsName = `${context.metadata.name}Props`;
-    const hasComponentExport = snapshot.indexSource.includes(
-      context.metadata.name
-    );
-    const hasPropsContract = snapshot.typesSource.includes(propsName);
-    const propsTypeCallableComponent =
-      snapshot.runtimeSource.includes(propsName) ||
-      hasLinkedRootPropsContract(snapshot, context.metadata.name);
+    const { hasComponentExport, hasPropsContract, propsTypeCallableComponent } =
+      inspectPublicApiBinding(
+        qualityRoot(context),
+        snapshot.componentDir,
+        context.metadata.name
+      );
 
     if (hasComponentExport && hasPropsContract && propsTypeCallableComponent) {
       return finding(publicApiSurfaceRule, context, 'pass', undefined, [
