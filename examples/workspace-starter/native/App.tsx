@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
   Copy,
@@ -14,17 +23,26 @@ import {
   Trash,
 } from '@vellira-ui/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import {
   Button,
-  Checkbox,
   Dropdown,
   Input,
-  Modal,
   Select,
   ThemeProvider,
   useTheme,
 } from '@vellira-ui/react-native';
+import {
+  canSubmitProjectEditor,
+  hasActiveProjectFilters,
+  nextUniqueDuplicateName,
+} from './projectUx';
+import { WorkspaceNotice, type WorkspaceNoticeData } from './WorkspaceNotice';
+import { WorkspaceSettings } from './WorkspaceSettings';
 
 type NativeTheme = 'light' | 'dark' | 'highContrast';
 type Section = 'overview' | 'projects' | 'settings';
@@ -134,6 +152,8 @@ function nextId(projects: readonly Project[]): number {
 
 function WorkspaceScreen() {
   const { theme, themeName, setTheme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight, fontScale } = useWindowDimensions();
   const [data, setData] = useState<Workspace>(initialWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
@@ -150,7 +170,7 @@ function WorkspaceScreen() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<WorkspaceNoticeData | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -161,7 +181,13 @@ function WorkspaceScreen() {
         if (restored) setData(restored);
       })
       .catch(() => {
-        // The example continues with in-memory state if storage is unavailable.
+        // Preserve the in-memory demo, but make the storage failure visible.
+        if (mounted) {
+          setNotice({
+            tone: 'error',
+            message: 'Could not load saved projects on this device.',
+          });
+        }
       })
       .finally(() => {
         if (mounted) setLoaded(true);
@@ -174,9 +200,23 @@ function WorkspaceScreen() {
   useEffect(() => {
     if (!loaded) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(data)).catch(() => {
-      // In-memory interactions remain available.
+      // In-memory interactions continue, but persistence is unavailable.
+      setNotice({
+        tone: 'error',
+        message: 'Could not save changes on this device.',
+      });
     });
   }, [loaded, data]);
+
+  // Success feedback expires after four seconds; errors and undoable removals remain visible.
+  useEffect(() => {
+    if (!notice || notice.tone !== 'success' || removedProject) return;
+
+    const timeout = setTimeout(() => {
+      setNotice((current) => (current === notice ? null : current));
+    }, 4000);
+    return () => clearTimeout(timeout);
+  }, [notice, removedProject]);
 
   const surface = theme.semantic.surface;
   const border = theme.semantic.border.muted;
@@ -191,6 +231,19 @@ function WorkspaceScreen() {
     gap: 14,
   } as const;
 
+  const activeFilters = hasActiveProjectFilters(
+    showSearch,
+    query,
+    statusFilter
+  );
+  const projectListTitle = activeFilters ? 'Matching projects' : 'All projects';
+  const editingProject = data.projects.find(
+    (project) => project.id === editingId
+  );
+  const canSubmitProject = canSubmitProjectEditor(
+    { name, description, team, status },
+    editingId === null ? undefined : (editingProject ?? null)
+  );
   const visibleProjects = data.projects.filter((project) => {
     const sameStatus =
       statusFilter === 'all' || project.status === statusFilter;
@@ -231,6 +284,7 @@ function WorkspaceScreen() {
       setError('Enter a project name.');
       return;
     }
+    if (!canSubmitProject) return;
     setData((current) => ({
       ...current,
       projects:
@@ -268,11 +322,13 @@ function WorkspaceScreen() {
     setCreateOpen(false);
     setRemovedProject(null);
     setSection('projects');
-    setNotice(
-      editingId === null
-        ? 'Project created locally.'
-        : 'Project updated locally.'
-    );
+    setNotice({
+      tone: 'success',
+      message:
+        editingId === null
+          ? 'Project created locally.'
+          : 'Project updated locally.',
+    });
   }
 
   function toggleProject(id: number, completed: boolean) {
@@ -307,7 +363,10 @@ function WorkspaceScreen() {
           {
             ...project,
             id: nextId(current.projects),
-            name: project.name.replace(/(?: copy)+$/i, '') + ' copy',
+            name: nextUniqueDuplicateName(
+              project.name,
+              current.projects.map((existing) => existing.name)
+            ),
             completed: false,
             status: 'planned',
             previousStatus: undefined,
@@ -317,7 +376,7 @@ function WorkspaceScreen() {
       };
     });
     setRemovedProject(null);
-    setNotice('Project duplicated.');
+    setNotice({ tone: 'success', message: 'Project duplicated.' });
   }
 
   function deleteProject(id: number) {
@@ -328,7 +387,7 @@ function WorkspaceScreen() {
       ...current,
       projects: current.projects.filter((project) => project.id !== id),
     }));
-    setNotice('Project removed.');
+    setNotice({ tone: 'neutral', message: 'Project removed.' });
   }
 
   const completedCount = data.projects.filter((item) => item.completed).length;
@@ -395,12 +454,40 @@ function WorkspaceScreen() {
   );
   const chartColor = themeName === 'dark' ? '#85B6FF' : '#5797F6';
 
+  // Keep the workspace mounted behind the large material editor sheet so its
+  // navigation context remains visible, while interactions behind it are inert.
+  const isEditing = editingId !== null;
+  const actionLabel = isEditing ? 'Save' : 'Create';
+  // The published Select reserves room for its entire short list. Cap only
+  // the sheet surface to its toolbar, handle and three rows so no oversized
+  // blank footer remains; never force a height or change library internals.
+  // Scale the cap for larger system text and respect the native viewport.
+  const compactSheetMaxHeight = Math.min(
+    windowHeight * 0.74,
+    (52 + 16 + 3 * 46) * Math.max(1, fontScale) +
+      theme.tokens.spacing[2] * 2 +
+      2
+  );
+  const compactSheetStyle = { maxHeight: compactSheetMaxHeight };
+  // A single-line native TextInput needs font-metric-based vertical centering.
+  // Do not force the shared Input lineHeight into this fixed-height editor field.
+  const editorInputStyle = {
+    lineHeight: undefined,
+    paddingVertical: 0,
+    textAlignVertical: 'center' as const,
+  };
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: surface.canvas }}
       edges={['top', 'bottom']}
     >
       <View
+        pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen || resetOpen}
+        importantForAccessibility={
+          createOpen || resetOpen ? 'no-hide-descendants' : 'auto'
+        }
         style={{
           paddingHorizontal: 20,
           paddingTop: 14,
@@ -471,60 +558,43 @@ function WorkspaceScreen() {
 
       <ScrollView
         key={section}
+        pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen || resetOpen}
+        importantForAccessibility={
+          createOpen || resetOpen ? 'no-hide-descendants' : 'auto'
+        }
         keyboardShouldPersistTaps='handled'
         contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
       >
         {notice ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: border,
-              borderRadius: theme.tokens.radius.md,
+          <WorkspaceNotice
+            notice={notice}
+            onUndo={
+              removedProject
+                ? () => {
+                    setData((current) =>
+                      current.projects.some(
+                        (item) => item.id === removedProject.id
+                      )
+                        ? current
+                        : {
+                            ...current,
+                            projects: [removedProject, ...current.projects],
+                          }
+                    );
+                    setRemovedProject(null);
+                    setNotice({
+                      tone: 'success',
+                      message: 'Project restored.',
+                    });
+                  }
+                : undefined
+            }
+            onDismiss={() => {
+              setNotice(null);
+              setRemovedProject(null);
             }}
-          >
-            <Text
-              accessibilityLiveRegion='polite'
-              style={{ color: mainText, flexGrow: 1, flexShrink: 1 }}
-            >
-              {notice}
-            </Text>
-            {removedProject ? (
-              <Button
-                appearance='ghost'
-                onPress={() => {
-                  setData((current) =>
-                    current.projects.some(
-                      (item) => item.id === removedProject.id
-                    )
-                      ? current
-                      : {
-                          ...current,
-                          projects: [removedProject, ...current.projects],
-                        }
-                  );
-                  setRemovedProject(null);
-                  setNotice('Project restored.');
-                }}
-              >
-                Undo
-              </Button>
-            ) : null}
-            <Button
-              appearance='ghost'
-              color='neutral'
-              onPress={() => {
-                setNotice('');
-                setRemovedProject(null);
-              }}
-            >
-              Dismiss
-            </Button>
-          </View>
+          />
         ) : null}
 
         {section === 'overview' ? (
@@ -538,17 +608,29 @@ function WorkspaceScreen() {
                   label: 'Total projects',
                   value: totalCount,
                   caption: 'All projects',
-                  bg: palette.brandBg,
-                  outline: palette.brandBorder,
-                  accent: palette.brand,
+                  bg:
+                    themeName === 'highContrast' ? '#1C2736' : palette.brandBg,
+                  outline:
+                    themeName === 'highContrast'
+                      ? '#A77BFF'
+                      : palette.brandBorder,
+                  accent:
+                    themeName === 'highContrast' ? '#C5A8FF' : palette.brand,
                 },
                 {
                   label: 'Completed',
                   value: completedCount,
                   caption: completionRate + '% completion',
-                  bg: palette.successBg,
-                  outline: palette.successBorder,
-                  accent: palette.success,
+                  bg:
+                    themeName === 'highContrast'
+                      ? '#1C2736'
+                      : palette.successBg,
+                  outline:
+                    themeName === 'highContrast'
+                      ? '#30D5A0'
+                      : palette.successBorder,
+                  accent:
+                    themeName === 'highContrast' ? '#6BF2BF' : palette.success,
                 },
               ].map((metric) => (
                 <View
@@ -574,11 +656,22 @@ function WorkspaceScreen() {
                     {metric.label}
                   </Text>
                   <Text
-                    style={{ color: mainText, fontSize: 35, fontWeight: '700' }}
+                    style={{
+                      color:
+                        themeName === 'highContrast' ? '#FFFFFF' : mainText,
+                      fontSize: 35,
+                      fontWeight: '700',
+                    }}
                   >
                     {metric.value}
                   </Text>
-                  <Text style={{ color: subtleText, fontSize: 12 }}>
+                  <Text
+                    style={{
+                      color:
+                        themeName === 'highContrast' ? '#D6E0ED' : subtleText,
+                      fontSize: 12,
+                    }}
+                  >
                     {metric.caption}
                   </Text>
                 </View>
@@ -770,13 +863,16 @@ function WorkspaceScreen() {
               <Text
                 style={{ color: mainText, fontSize: 17, fontWeight: '700' }}
               >
-                All projects · {visibleProjects.length}
+                {projectListTitle} · {visibleProjects.length}
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel='Search projects'
-                  accessibilityState={{ expanded: showSearch }}
+                  accessibilityState={{
+                    expanded: showSearch,
+                    selected: showSearch && query.trim().length > 0,
+                  }}
                   onPress={() => {
                     setShowSearch(!showSearch);
                     if (showSearch) setQuery('');
@@ -788,12 +884,20 @@ function WorkspaceScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Search size={22} color={mainText} />
+                  <Search
+                    size={22}
+                    color={
+                      showSearch && query.trim() ? palette.brand : mainText
+                    }
+                  />
                 </Pressable>
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel='Filter projects'
-                  accessibilityState={{ expanded: showFilters }}
+                  accessibilityState={{
+                    expanded: showFilters,
+                    selected: statusFilter !== 'all',
+                  }}
                   onPress={() => setShowFilters(!showFilters)}
                   style={{
                     minWidth: 44,
@@ -802,7 +906,10 @@ function WorkspaceScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Filter size={22} color={mainText} />
+                  <Filter
+                    size={22}
+                    color={statusFilter !== 'all' ? palette.brand : mainText}
+                  />
                 </Pressable>
               </View>
             </View>
@@ -1053,7 +1160,16 @@ function WorkspaceScreen() {
                             ? palette.successBg
                             : project.status === 'active'
                               ? palette.brandBg
-                              : palette.track,
+                              : themeName === 'highContrast'
+                                ? '#FFFFFF'
+                                : palette.track,
+                        borderWidth: themeName === 'highContrast' ? 1 : 0,
+                        borderColor:
+                          project.status === 'shipped'
+                            ? palette.successBorder
+                            : project.status === 'active'
+                              ? palette.brandBorder
+                              : '#1A102B',
                       }}
                     >
                       <Text
@@ -1065,7 +1181,9 @@ function WorkspaceScreen() {
                               ? palette.success
                               : project.status === 'active'
                                 ? palette.brand
-                                : mainText,
+                                : themeName === 'highContrast'
+                                  ? '#1A102B'
+                                  : mainText,
                         }}
                       >
                         {project.status === 'shipped'
@@ -1143,111 +1261,26 @@ function WorkspaceScreen() {
         ) : null}
 
         {section === 'settings' ? (
-          <View style={{ gap: 18 }}>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                WORKSPACE
-              </Text>
-              <View style={cardStyle}>
-                <Input
-                  label='Workspace name'
-                  value={data.name}
-                  onValueChange={(next: string) =>
-                    setData((current) => ({ ...current, name: next }))
-                  }
-                />
-              </View>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                APPEARANCE
-              </Text>
-              <View style={cardStyle}>
-                {(['light', 'dark', 'highContrast'] as const).map((option) => (
-                  <Pressable
-                    key={option}
-                    accessibilityRole='radio'
-                    accessibilityState={{ checked: themeName === option }}
-                    onPress={() => setTheme(option)}
-                    style={{
-                      minHeight: 48,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderBottomWidth: option === 'highContrast' ? 0 : 1,
-                      borderColor: border,
-                    }}
-                  >
-                    <Text style={{ color: mainText }}>
-                      {option === 'highContrast'
-                        ? 'High contrast'
-                        : option === 'light'
-                          ? 'Light'
-                          : 'Dark'}
-                    </Text>
-                    <Text style={{ color: mainText }}>
-                      {themeName === option ? '✓' : ''}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                PREFERENCES
-              </Text>
-              <View style={cardStyle}>
-                <Checkbox
-                  label='Product notifications'
-                  description='Saved locally. No emails are sent.'
-                  checked={data.notifications}
-                  onCheckedChange={(notifications: boolean) =>
-                    setData((current) => ({ ...current, notifications }))
-                  }
-                />
-              </View>
-            </View>
-            <View style={{ gap: 8 }}>
-              <Text
-                accessibilityRole='header'
-                style={{ color: subtleText, fontWeight: '700', fontSize: 13 }}
-              >
-                DATA
-              </Text>
-              <View style={cardStyle}>
-                <Pressable
-                  accessibilityRole='button'
-                  onPress={() => setResetOpen(true)}
-                  style={{ minHeight: 48, justifyContent: 'center' }}
-                >
-                  <Text style={{ color: mainText, fontWeight: '600' }}>
-                    Restore sample data
-                  </Text>
-                </Pressable>
-                <Text style={{ color: subtleText, fontSize: 12 }}>
-                  This replaces your locally saved demo projects and settings.
-                </Text>
-              </View>
-            </View>
-            <Text
-              style={{ color: subtleText, textAlign: 'center', fontSize: 12 }}
-            >
-              Vellira Native Starter · Offline demo
-            </Text>
-          </View>
+          <WorkspaceSettings
+            workspaceName={data.name}
+            onWorkspaceNameChange={(next: string) =>
+              setData((current) => ({ ...current, name: next }))
+            }
+            notifications={data.notifications}
+            onNotificationsChange={(notifications: boolean) =>
+              setData((current) => ({ ...current, notifications }))
+            }
+            onRestore={() => setResetOpen(true)}
+          />
         ) : null}
       </ScrollView>
 
       <View
+        pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen || resetOpen}
+        importantForAccessibility={
+          createOpen || resetOpen ? 'no-hide-descendants' : 'auto'
+        }
         accessibilityRole='tablist'
         style={{
           flexDirection: 'row',
@@ -1296,116 +1329,494 @@ function WorkspaceScreen() {
           </Pressable>
         ))}
       </View>
-      <Modal open={resetOpen} onOpenChange={setResetOpen}>
-        <Modal.Overlay>
-          <Modal.Content>
-            <Modal.Header>
-              <Modal.Title>Restore sample data?</Modal.Title>
-              <Modal.Description>
-                This replaces saved projects and settings. It cannot be undone.
-              </Modal.Description>
-            </Modal.Header>
-            <Modal.Footer>
-              <Button
-                appearance='outline'
-                color='neutral'
-                onPress={() => setResetOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                color='danger'
-                onPress={() => {
-                  setData(initialWorkspace);
-                  setRemovedProject(null);
-                  setTheme('light');
-                  setResetOpen(false);
-                  setNotice('Sample data restored.');
-                }}
-              >
-                Restore data
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Overlay>
-      </Modal>
-
-      <Modal
-        open={createOpen}
-        onOpenChange={(open: boolean) => {
-          setCreateOpen(open);
-          if (!open) setError('');
-        }}
-      >
-        <Modal.Overlay>
-          <Modal.Content>
-            <Modal.Header>
-              <Modal.Title>
-                {editingId === null ? 'Create a project' : 'Edit project'}
-              </Modal.Title>
-              <Modal.Description>
-                Changes stay on this device.
-              </Modal.Description>
-            </Modal.Header>
-            <Modal.Body>
-              <Input
-                label='Project name'
-                value={name}
-                error={error || undefined}
-                onValueChange={(value: string) => {
-                  setName(value);
-                  setError('');
-                }}
-                placeholder='New project name'
-              />
-              <Input
-                label='Description'
-                value={description}
-                onValueChange={setDescription}
-                placeholder='Describe the project'
-              />
-              <Select
-                label='Team'
-                value={team}
-                onValueChange={(value: string | null) => {
-                  if (isTeam(value)) setTeam(value);
-                }}
-                presentation='modal'
-              >
-                <Select.Item value='design' label='Design' />
-                <Select.Item value='platform' label='Platform' />
-                <Select.Item value='mobile' label='Mobile' />
-              </Select>
-              <Select
-                label='Status'
-                value={status}
-                onValueChange={(value: string | null) => {
-                  if (typeof value === 'string' && isStatus(value)) {
-                    setStatus(value);
+      {resetOpen ? (
+        <View
+          accessibilityViewIsModal
+          style={[
+            StyleSheet.absoluteFill,
+            { zIndex: 50, elevation: 24, paddingTop: insets.top + 8 },
+          ]}
+        >
+          <View
+            pointerEvents='auto'
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor:
+                  themeName === 'dark'
+                    ? 'rgba(10, 8, 22, 0.38)'
+                    : 'rgba(33, 25, 62, 0.16)',
+              },
+            ]}
+          />
+          <View
+            style={{
+              flex: 1,
+              marginHorizontal: 0,
+              marginBottom: 0,
+              borderTopLeftRadius: 34,
+              borderTopRightRadius: 34,
+              shadowColor: '#000000',
+              shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
+              elevation: 16,
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                borderTopLeftRadius: 34,
+                borderTopRightRadius: 34,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: border,
+                backgroundColor:
+                  Platform.OS === 'ios' && themeName !== 'highContrast'
+                    ? 'transparent'
+                    : surface.canvas,
+              }}
+            >
+              {Platform.OS === 'ios' && themeName !== 'highContrast' ? (
+                <BlurView
+                  pointerEvents='none'
+                  intensity={25}
+                  tint={
+                    themeName === 'dark'
+                      ? 'systemUltraThinMaterialDark'
+                      : 'systemUltraThinMaterialLight'
                   }
+                  style={StyleSheet.absoluteFill}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor:
+                        themeName === 'dark'
+                          ? 'rgba(20, 18, 30, 0.24)'
+                          : 'rgba(255, 255, 255, 0.75)',
+                    }}
+                  />
+                </BlurView>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingTop: 8,
+                  paddingBottom: 16,
+                  gap: 8,
                 }}
-                presentation='modal'
               >
-                <Select.Item value='planned' label='Planned' />
-                <Select.Item value='active' label='In progress' />
-                <Select.Item value='shipped' label='Shipped' />
-              </Select>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                appearance='outline'
-                color='neutral'
-                onPress={() => setCreateOpen(false)}
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Close restore confirmation'
+                  onPress={() => setResetOpen(false)}
+                  style={{
+                    minWidth: 78,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    paddingHorizontal: 8,
+                  }}
+                >
+                  <Text
+                    style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+                <Text
+                  accessibilityRole='header'
+                  style={{
+                    flex: 1,
+                    color: mainText,
+                    textAlign: 'center',
+                    fontSize: 17,
+                    fontWeight: '700',
+                  }}
+                >
+                  Restore data
+                </Text>
+                <View style={{ minWidth: 78 }} />
+              </View>
+              <ScrollView
+                contentContainerStyle={{
+                  paddingHorizontal: 20,
+                  paddingTop: 22,
+                  paddingBottom: 40,
+                  flexGrow: 1,
+                }}
               >
-                Cancel
-              </Button>
-              <Button onPress={saveProject}>
-                {editingId === null ? 'Create project' : 'Save changes'}
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Overlay>
-      </Modal>
+                <View
+                  style={{
+                    width: '100%',
+                    maxWidth: 560,
+                    alignSelf: 'center',
+                    flex: 1,
+                    justifyContent: 'space-between',
+                    gap: 24,
+                  }}
+                >
+                  <View style={{ gap: 10 }}>
+                    <Text
+                      accessibilityRole='header'
+                      style={{
+                        paddingHorizontal: 6,
+                        color: subtleText,
+                        fontSize: 13,
+                        fontWeight: '700',
+                        letterSpacing: 0.8,
+                      }}
+                    >
+                      DATA RESTORE
+                    </Text>
+                    <View
+                      style={{
+                        padding: 20,
+                        gap: 12,
+                        borderRadius: 24,
+                        borderWidth: 1,
+                        borderColor: border,
+                        backgroundColor: surface.subtle,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: mainText,
+                          fontSize: 19,
+                          fontWeight: '700',
+                        }}
+                      >
+                        Restore sample data?
+                      </Text>
+                      <Text
+                        style={{
+                          color: theme.semantic.text.secondary,
+                          fontSize: 15,
+                          lineHeight: 23,
+                        }}
+                      >
+                        This replaces saved projects and settings. It cannot be
+                        undone.
+                      </Text>
+                    </View>
+                  </View>
+                  <Button
+                    color='danger'
+                    onPress={() => {
+                      setData(initialWorkspace);
+                      setRemovedProject(null);
+                      setTheme('light');
+                      setResetOpen(false);
+                      setNotice({
+                        tone: 'success',
+                        message: 'Sample data restored.',
+                      });
+                    }}
+                  >
+                    Restore sample data
+                  </Button>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {createOpen ? (
+        <View
+          accessibilityViewIsModal
+          style={[
+            StyleSheet.absoluteFill,
+            { zIndex: 50, elevation: 24, paddingTop: insets.top + 8 },
+          ]}
+        >
+          <View
+            pointerEvents='auto'
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor:
+                  themeName === 'dark'
+                    ? 'rgba(10, 8, 22, 0.38)'
+                    : 'rgba(33, 25, 62, 0.16)',
+              },
+            ]}
+          />
+          <View
+            style={{
+              flex: 1,
+              marginTop: 0,
+              marginHorizontal: 0,
+              marginBottom: 0,
+              borderTopLeftRadius: 34,
+              borderTopRightRadius: 34,
+              shadowColor: '#000000',
+              shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
+              elevation: 16,
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                borderTopLeftRadius: 34,
+                borderTopRightRadius: 34,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: border,
+                backgroundColor:
+                  Platform.OS === 'ios' && themeName !== 'highContrast'
+                    ? 'transparent'
+                    : surface.canvas,
+              }}
+            >
+              {Platform.OS === 'ios' && themeName !== 'highContrast' ? (
+                <BlurView
+                  pointerEvents='none'
+                  intensity={25}
+                  tint={
+                    themeName === 'dark'
+                      ? 'systemUltraThinMaterialDark'
+                      : 'systemUltraThinMaterialLight'
+                  }
+                  style={StyleSheet.absoluteFill}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor:
+                        themeName === 'dark'
+                          ? 'rgba(20, 18, 30, 0.24)'
+                          : 'rgba(255, 255, 255, 0.75)',
+                    }}
+                  />
+                </BlurView>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingTop: 8,
+                  paddingBottom: 16,
+                  gap: 8,
+                }}
+              >
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Close project editor'
+                  accessibilityHint='Discard changes and return to the workspace'
+                  onPress={() => {
+                    setCreateOpen(false);
+                    setError('');
+                  }}
+                  style={{
+                    minWidth: 78,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    paddingHorizontal: 8,
+                  }}
+                >
+                  <Text
+                    style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+                <Text
+                  accessibilityRole='header'
+                  numberOfLines={1}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: mainText,
+                    textAlign: 'center',
+                    fontSize: 17,
+                    fontWeight: '700',
+                  }}
+                >
+                  {isEditing ? 'Edit project' : 'New project'}
+                </Text>
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel={
+                    isEditing ? 'Save project changes' : 'Create project'
+                  }
+                  onPress={saveProject}
+                  disabled={!canSubmitProject}
+                  accessibilityState={{ disabled: !canSubmitProject }}
+                  accessibilityHint={
+                    canSubmitProject
+                      ? undefined
+                      : isEditing
+                        ? 'Enter a valid name and make a change to save'
+                        : 'Enter a project name to create'
+                  }
+                  style={{
+                    minWidth: 78,
+                    minHeight: 44,
+                    paddingHorizontal: 14,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderRadius: 22,
+                    backgroundColor: canSubmitProject
+                      ? palette.brand
+                      : surface.subtle,
+                    borderWidth: 1,
+                    borderColor: canSubmitProject ? palette.brand : border,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: canSubmitProject ? '#FFFFFF' : subtleText,
+                      fontSize: 15,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {actionLabel}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              >
+                <ScrollView
+                  keyboardShouldPersistTaps='handled'
+                  keyboardDismissMode='on-drag'
+                  contentContainerStyle={{
+                    paddingHorizontal: 20,
+                    paddingTop: 22,
+                    paddingBottom: 40,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: '100%',
+                      maxWidth: 560,
+                      alignSelf: 'center',
+                      gap: 26,
+                    }}
+                  >
+                    <View style={{ gap: 10 }}>
+                      <Text
+                        accessibilityRole='header'
+                        style={{
+                          paddingHorizontal: 6,
+                          color: subtleText,
+                          fontSize: 13,
+                          fontWeight: '700',
+                          letterSpacing: 0.8,
+                        }}
+                      >
+                        PROJECT DETAILS
+                      </Text>
+                      <View
+                        style={{
+                          padding: 18,
+                          gap: 18,
+                          backgroundColor: surface.subtle,
+                          borderRadius: 24,
+                          borderWidth: 1,
+                          borderColor: border,
+                        }}
+                      >
+                        <Input
+                          label='Project name'
+                          required
+                          value={name}
+                          error={error || undefined}
+                          onValueChange={(value: string) => {
+                            setName(value);
+                            setError('');
+                          }}
+                          placeholder='New project name'
+                          inputStyle={editorInputStyle}
+                        />
+                        <Input
+                          label='Description'
+                          value={description}
+                          onValueChange={setDescription}
+                          placeholder='Describe the project'
+                          inputStyle={editorInputStyle}
+                        />
+                      </View>
+                    </View>
+                    <View style={{ gap: 10 }}>
+                      <Text
+                        accessibilityRole='header'
+                        style={{
+                          paddingHorizontal: 6,
+                          color: subtleText,
+                          fontSize: 13,
+                          fontWeight: '700',
+                          letterSpacing: 0.8,
+                        }}
+                      >
+                        ORGANIZATION
+                      </Text>
+                      <View
+                        style={{
+                          padding: 18,
+                          gap: 18,
+                          backgroundColor: surface.subtle,
+                          borderRadius: 24,
+                          borderWidth: 1,
+                          borderColor: border,
+                        }}
+                      >
+                        <Select
+                          label='Team'
+                          required
+                          value={team}
+                          onValueChange={(value: string | null) => {
+                            if (isTeam(value)) setTeam(value);
+                          }}
+                          presentation='sheet'
+                          contentStyle={compactSheetStyle}
+                        >
+                          <Select.Item value='design' label='Design' />
+                          <Select.Item value='platform' label='Platform' />
+                          <Select.Item value='mobile' label='Mobile' />
+                        </Select>
+                        <Select
+                          label='Status'
+                          required
+                          value={status}
+                          onValueChange={(value: string | null) => {
+                            if (typeof value === 'string' && isStatus(value)) {
+                              setStatus(value);
+                            }
+                          }}
+                          presentation='sheet'
+                          contentStyle={compactSheetStyle}
+                        >
+                          <Select.Item value='planned' label='Planned' />
+                          <Select.Item value='active' label='In progress' />
+                          <Select.Item value='shipped' label='Shipped' />
+                        </Select>
+                      </View>
+                    </View>
+                    <Text
+                      style={{
+                        paddingHorizontal: 6,
+                        color: subtleText,
+                        fontSize: 13,
+                        lineHeight: 19,
+                      }}
+                    >
+                      Changes stay on this device.
+                    </Text>
+                  </View>
+                </ScrollView>
+              </KeyboardAvoidingView>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }

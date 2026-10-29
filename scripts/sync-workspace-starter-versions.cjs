@@ -10,7 +10,7 @@ const MANIFESTS = [
   {
     file: 'examples/workspace-starter/native/package.json',
     name: 'vellira-workspace-native-starter',
-    packages: ['@vellira-ui/react-native'],
+    packages: ['@vellira-ui/react-native', '@vellira-ui/icons'],
   },
 ];
 const README = 'examples/workspace-starter/README.md';
