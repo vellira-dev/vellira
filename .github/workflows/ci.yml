@@ -117,6 +117,19 @@ jobs:
         working-directory: quality-tools
         run: pnpm install --frozen-lockfile
 
+      # Temporary formatting-only diagnostics for PR #1991.
+      # The workflow returns to its original content before merge.
+      - name: Capture exact frosted editor Prettier correction
+        run: |
+          pnpm exec prettier --write \
+            examples/workspace-starter/native/App.tsx \
+            scripts/native-starter/project-editor-screen.test.ts
+          echo 'BEGIN_FROSTED_EDITOR_FORMAT'
+          git diff -- \
+            examples/workspace-starter/native/App.tsx \
+            scripts/native-starter/project-editor-screen.test.ts
+          echo 'END_FROSTED_EDITOR_FORMAT'
+
       - name: Quality checks
         env:
           VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
