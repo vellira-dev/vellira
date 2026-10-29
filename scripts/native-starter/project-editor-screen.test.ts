@@ -42,7 +42,7 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('borderTopRightRadius: 34');
   });
 
-  it('uses the released native Select fix rather than local sheet sizing', () => {
+  it('keeps released Select sheets compact without a fixed height', () => {
     const manifestFile = new URL(
       '../../examples/workspace-starter/native/package.json',
       import.meta.url
@@ -50,8 +50,12 @@ describe('Native Starter project editor navigation', () => {
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
     expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.2');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
-    expect(source).not.toContain('selectSheetContentStyle');
-    expect(source).not.toContain('selectSheetHeight');
+    expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
+    expect(source).toContain('const compactSheetMaxHeight = Math.min(');
+    expect(source).toContain('windowHeight * 0.74');
+    expect(source).toContain('Math.max(1, fontScale)');
+    expect(source).toContain('maxHeight: compactSheetMaxHeight');
+    expect(source).not.toContain('height: compactSheetMaxHeight');
   });
 
   it('provides top navigation with Close and Create/Save actions', () => {

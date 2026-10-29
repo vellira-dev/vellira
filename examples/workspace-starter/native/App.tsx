@@ -7,6 +7,7 @@ import {
   Text,
   View,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
@@ -153,6 +154,7 @@ function nextId(projects: readonly Project[]): number {
 function WorkspaceScreen() {
   const { theme, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight, fontScale } = useWindowDimensions();
   const [data, setData] = useState<Workspace>(initialWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
@@ -457,6 +459,17 @@ function WorkspaceScreen() {
   // navigation context remains visible, while interactions behind it are inert.
   const isEditing = editingId !== null;
   const actionLabel = isEditing ? 'Save' : 'Create';
+  // The published Select reserves room for its entire short list. Cap only
+  // the sheet surface to its toolbar, handle and three rows so no oversized
+  // blank footer remains; never force a height or change library internals.
+  // Scale the cap for larger system text and respect the native viewport.
+  const compactSheetMaxHeight = Math.min(
+    windowHeight * 0.74,
+    (52 + 16 + 3 * 46) * Math.max(1, fontScale) +
+      theme.tokens.spacing[2] * 2 +
+      2
+  );
+  const compactSheetStyle = { maxHeight: compactSheetMaxHeight };
   // A single-line native TextInput needs font-metric-based vertical centering.
   // Do not force the shared Input lineHeight into this fixed-height editor field.
   const editorInputStyle = {
@@ -1657,6 +1670,7 @@ function WorkspaceScreen() {
                             if (isTeam(value)) setTeam(value);
                           }}
                           presentation='sheet'
+                          contentStyle={compactSheetStyle}
                         >
                           <Select.Item value='design' label='Design' />
                           <Select.Item value='platform' label='Platform' />
@@ -1672,6 +1686,7 @@ function WorkspaceScreen() {
                             }
                           }}
                           presentation='sheet'
+                          contentStyle={compactSheetStyle}
                         >
                           <Select.Item value='planned' label='Planned' />
                           <Select.Item value='active' label='In progress' />
