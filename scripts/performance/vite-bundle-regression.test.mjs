@@ -7,7 +7,7 @@ const {
   evaluateViteRegression,
   formatViteRegression,
 } = require('./vite-bundle-regression.cjs');
-const baseline = require('./baselines/vite-main-2.188.5.json');
+const baseline = require('./baselines/vite-main-active.json');
 
 function same() {
   return {
@@ -30,6 +30,12 @@ function git() {
     measurementSame: true,
   };
 }
+
+test('active snapshot is an exact copy of its immutable release snapshot', () => {
+  assert.match(baseline.candidateVersion, /^\d+\.\d+\.\d+$/);
+  const versioned = require('./baselines/vite-main-' + baseline.candidateVersion + '.json');
+  assert.deepEqual(baseline, versioned);
+});
 
 test('identical current consumer and immutable main yield zero signed deltas', () => {
   const result = evaluateViteRegression(baseline, same(), git());

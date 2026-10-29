@@ -180,3 +180,43 @@ observed whole-root Native JS overhead and full-Web stylesheet cost can inform
 **separate** backward-compatible architecture optimization projects; they are
 not evidence that PR-size measurement itself has failed, nor requirements to
 change public exports in #470.
+
+
+## Final verified baseline 2.188.7 and stable active snapshot
+
+The active file is now `scripts/performance/baselines/vite-main-active.json`,
+an **exact copy** of immutable versioned snapshot `vite-main-2.188.7.json`.
+The consumer and unit tests use this stable filename, rather than embedding the
+release number in executable code. On the next package release, add a versioned
+snapshot from real evidence and update only the active snapshot content. The
+test ensures these two records remain exactly equal; historical v2.188.3 and
+v2.188.5 snapshots remain untouched.
+
+**Provenance:** [Release Candidate Proof run 40959907798](https://github.com/vellira-dev/vellira/actions/runs/40959907798),
+measured exact PR #2011 SHA `aa40104309f5441476c4cf6f8599bac435963ede`,
+published candidate `2.188.7`, and main package-version commit
+`8f07cca61933fd81c19b0c5f93e69068bd0d6d1b`.
+Both have Git tree `a5b677814591a97056f0cffa13cb61db87fe7b24`
+(exact source equivalence, **not** a separately executed main workflow).
+The next main commit `e7fd22b8373ea9c03d3d3b5a4a709dbd46390e62`
+only synchronizes the Starter manifests/lockfiles/README, which are outside
+the measured Vite source paths. The existing immutable-main ancestry and
+relevant-path diff checks independently enforce this in CI.
+
+**Repeatability:** real clean Vite artifacts from attempts 1 and 2 of the
+same workflow, IDs `12935476739` and `12938397438`. Both JSONs were
+downloaded and compared: candidate manifest SHA-256
+`958d1aae0398d85b454913b2dcee1cd620cd0e69750a60bd98d9e94720632315`,
+Node `v22.23.4`, npm `10.9.9`, Vite `8.3.5`,
+TypeScript `6.0.3`, all twelve canonical raw/gzip JS/CSS emitted sizes,
+and the separate 11-component Web scenario were identical.
+Temporary fixture directories and localhost ports varied as expected and
+are not measurement metrics.
+
+**Thresholds:** observed maximum source-identical variation is zero bytes in
+these two runs, yielding **provisional, informational** warnings for positive
+growth on any comparable raw/gzip JS/CSS metric. This is not a statistically
+calibrated hard budget. Non-comparable or stale baselines never yield invented
+deltas; a release changing relevant package inputs still needs a
+provenance-reviewed snapshot refresh, not an arbitrary SHA replacement.
+No new Actions job or duplicate npm install per PR is introduced.

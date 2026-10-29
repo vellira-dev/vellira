@@ -625,7 +625,7 @@ async function main() {
     };
 
     const mainBaselineFile = path.resolve(
-      __dirname, '../performance/baselines/vite-main-2.188.5.json'
+      __dirname, '../performance/baselines/vite-main-active.json'
     );
     const baseline = fs.existsSync(mainBaselineFile)
       ? readJson(mainBaselineFile)
