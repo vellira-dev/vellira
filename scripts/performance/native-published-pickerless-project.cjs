@@ -100,6 +100,10 @@ write('App.tsx', [
   "        testID='pickerless-select'",
   "        label='Country'",
   "        presentation='modal'",
+  // Force an adequately sized list viewport in the isolated diagnostic.
+  // The native Select's default auto-sized sheet may otherwise clip the
+  // second item when a short FlatList first measures its content.
+  '        contentStyle={{ minHeight: 320 }}',
   '        options={choices}',
   '        value={country}',
   '        onOpenChange={(open) => {',
