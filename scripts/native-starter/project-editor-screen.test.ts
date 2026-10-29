@@ -194,3 +194,19 @@ describe('Native Starter large accessibility text', () => {
     expect(source).toContain("status.key === 'active'");
   });
 });
+
+describe('Native Starter large-text project actions', () => {
+  it('shows direct accessible actions rather than a cramped popover', () => {
+    expect(source).toContain('{!largeText ? (');
+    expect(source).toContain("{largeText ? (");
+    expect(source).toContain("['Duplicate', Copy, () => duplicateProject(project.id)]");
+    expect(source).toContain("accessibilityLabel={label + ' ' + project.name}");
+  });
+
+  it('provides a capped native editor input at large text sizes', () => {
+    expect(source).toContain("accessibilityLabel='Project name'");
+    expect(source).toContain("accessibilityLabel='Description'");
+    expect(source).toContain('maxFontSizeMultiplier={1.5}');
+    expect(source).toContain('onChangeText={setDescription}');
+  });
+});
