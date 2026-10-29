@@ -6,6 +6,7 @@ import {
   ScrollView,
   Text,
   View,
+  StyleSheet,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
@@ -424,242 +425,18 @@ function WorkspaceScreen() {
   );
   const chartColor = themeName === 'dark' ? '#85B6FF' : '#5797F6';
 
-  // The project editor replaces the workspace screen. It is intentionally not
-  // a Modal: the bottom tabs and project cards should never remain underneath.
-  if (createOpen) {
-    const isEditing = editingId !== null;
-    const actionLabel = isEditing ? 'Save' : 'Create';
-    // A single-line native TextInput needs font-metric-based vertical centering.
-    // Do not force the shared Input lineHeight into this fixed-height editor field.
-    const editorInputStyle = {
-      lineHeight: undefined,
-      paddingVertical: 0,
-      textAlignVertical: 'center' as const,
-    };
+  // Keep the workspace mounted behind the large material editor sheet so its
+  // navigation context remains visible, while interactions behind it are inert.
+  const isEditing = editingId !== null;
+  const actionLabel = isEditing ? 'Save' : 'Create';
+  // A single-line native TextInput needs font-metric-based vertical centering.
+  // Do not force the shared Input lineHeight into this fixed-height editor field.
+  const editorInputStyle = {
+    lineHeight: undefined,
+    paddingVertical: 0,
+    textAlignVertical: 'center' as const,
+  };
 
-    return (
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: surface.canvas }}
-        edges={['top', 'bottom']}
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 16,
-            paddingTop: 8,
-            paddingBottom: 16,
-            gap: 8,
-          }}
-        >
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Close project editor'
-            accessibilityHint='Discard changes and return to the workspace'
-            onPress={() => {
-              setCreateOpen(false);
-              setError('');
-            }}
-            style={{
-              minWidth: 78,
-              minHeight: 44,
-              justifyContent: 'center',
-              paddingHorizontal: 8,
-            }}
-          >
-            <Text style={{ color: mainText, fontSize: 16, fontWeight: '600' }}>
-              Close
-            </Text>
-          </Pressable>
-          <Text
-            accessibilityRole='header'
-            numberOfLines={1}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              color: mainText,
-              textAlign: 'center',
-              fontSize: 17,
-              fontWeight: '700',
-            }}
-          >
-            {isEditing ? 'Edit project' : 'New project'}
-          </Text>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel={
-              isEditing ? 'Save project changes' : 'Create project'
-            }
-            onPress={saveProject}
-            disabled={!canSubmitProject}
-            accessibilityState={{ disabled: !canSubmitProject }}
-            accessibilityHint={
-              canSubmitProject
-                ? undefined
-                : isEditing
-                  ? 'Enter a valid name and make a change to save'
-                  : 'Enter a project name to create'
-            }
-            style={{
-              minWidth: 78,
-              minHeight: 44,
-              paddingHorizontal: 14,
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: 22,
-              backgroundColor: canSubmitProject
-                ? palette.brand
-                : surface.subtle,
-              borderWidth: 1,
-              borderColor: canSubmitProject ? palette.brand : border,
-            }}
-          >
-            <Text
-              style={{
-                color: canSubmitProject ? '#FFFFFF' : subtleText,
-                fontSize: 15,
-                fontWeight: '700',
-              }}
-            >
-              {actionLabel}
-            </Text>
-          </Pressable>
-        </View>
-
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps='handled'
-            keyboardDismissMode='on-drag'
-            contentContainerStyle={{
-              paddingHorizontal: 20,
-              paddingTop: 22,
-              paddingBottom: 40,
-            }}
-          >
-            <View
-              style={{
-                width: '100%',
-                maxWidth: 560,
-                alignSelf: 'center',
-                gap: 26,
-              }}
-            >
-              <View style={{ gap: 10 }}>
-                <Text
-                  accessibilityRole='header'
-                  style={{
-                    paddingHorizontal: 6,
-                    color: subtleText,
-                    fontSize: 13,
-                    fontWeight: '700',
-                    letterSpacing: 0.8,
-                  }}
-                >
-                  PROJECT DETAILS
-                </Text>
-                <View
-                  style={{
-                    padding: 18,
-                    gap: 18,
-                    backgroundColor: surface.subtle,
-                    borderRadius: 24,
-                    borderWidth: 1,
-                    borderColor: border,
-                  }}
-                >
-                  <Input
-                    label='Project name'
-                    required
-                    value={name}
-                    error={error || undefined}
-                    onValueChange={(value: string) => {
-                      setName(value);
-                      setError('');
-                    }}
-                    placeholder='New project name'
-                    inputStyle={editorInputStyle}
-                  />
-                  <Input
-                    label='Description'
-                    value={description}
-                    onValueChange={setDescription}
-                    placeholder='Describe the project'
-                    inputStyle={editorInputStyle}
-                  />
-                </View>
-              </View>
-              <View style={{ gap: 10 }}>
-                <Text
-                  accessibilityRole='header'
-                  style={{
-                    paddingHorizontal: 6,
-                    color: subtleText,
-                    fontSize: 13,
-                    fontWeight: '700',
-                    letterSpacing: 0.8,
-                  }}
-                >
-                  ORGANIZATION
-                </Text>
-                <View
-                  style={{
-                    padding: 18,
-                    gap: 18,
-                    backgroundColor: surface.subtle,
-                    borderRadius: 24,
-                    borderWidth: 1,
-                    borderColor: border,
-                  }}
-                >
-                  <Select
-                    label='Team'
-                    required
-                    value={team}
-                    onValueChange={(value: string | null) => {
-                      if (isTeam(value)) setTeam(value);
-                    }}
-                    presentation='sheet'
-                  >
-                    <Select.Item value='design' label='Design' />
-                    <Select.Item value='platform' label='Platform' />
-                    <Select.Item value='mobile' label='Mobile' />
-                  </Select>
-                  <Select
-                    label='Status'
-                    required
-                    value={status}
-                    onValueChange={(value: string | null) => {
-                      if (typeof value === 'string' && isStatus(value)) {
-                        setStatus(value);
-                      }
-                    }}
-                    presentation='sheet'
-                  >
-                    <Select.Item value='planned' label='Planned' />
-                    <Select.Item value='active' label='In progress' />
-                    <Select.Item value='shipped' label='Shipped' />
-                  </Select>
-                </View>
-              </View>
-              <Text
-                style={{
-                  paddingHorizontal: 6,
-                  color: subtleText,
-                  fontSize: 13,
-                  lineHeight: 19,
-                }}
-              >
-                Changes stay on this device.
-              </Text>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView
@@ -667,6 +444,9 @@ function WorkspaceScreen() {
       edges={['top', 'bottom']}
     >
       <View
+        pointerEvents={createOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen}
+        importantForAccessibility={createOpen ? 'no-hide-descendants' : 'auto'}
         style={{
           paddingHorizontal: 20,
           paddingTop: 14,
@@ -737,6 +517,9 @@ function WorkspaceScreen() {
 
       <ScrollView
         key={section}
+        pointerEvents={createOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen}
+        importantForAccessibility={createOpen ? 'no-hide-descendants' : 'auto'}
         keyboardShouldPersistTaps='handled'
         contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
       >
@@ -1528,6 +1311,9 @@ function WorkspaceScreen() {
       </ScrollView>
 
       <View
+        pointerEvents={createOpen ? 'none' : 'auto'}
+        accessibilityElementsHidden={createOpen}
+        importantForAccessibility={createOpen ? 'no-hide-descendants' : 'auto'}
         accessibilityRole='tablist'
         style={{
           flexDirection: 'row',
@@ -1609,6 +1395,292 @@ function WorkspaceScreen() {
           </Modal.Content>
         </Modal.Overlay>
       </Modal>
+
+      {createOpen ? (
+        <View
+          accessibilityViewIsModal
+          style={[StyleSheet.absoluteFillObject, { zIndex: 50, elevation: 24 }]}
+        >
+          <View
+            pointerEvents='auto'
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor:
+                  themeName === 'dark'
+                    ? 'rgba(10, 8, 22, 0.38)'
+                    : 'rgba(33, 25, 62, 0.16)',
+              },
+            ]}
+          />
+          <View
+            style={{
+              flex: 1,
+              marginTop: 12,
+              marginHorizontal: 10,
+              marginBottom: 0,
+              borderRadius: 34,
+              shadowColor: '#000000',
+              shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
+              elevation: 16,
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                borderRadius: 34,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: border,
+                backgroundColor:
+                  Platform.OS === 'ios' && themeName !== 'highContrast'
+                    ? 'transparent'
+                    : surface.canvas,
+              }}
+            >
+              {Platform.OS === 'ios' && themeName !== 'highContrast' ? (
+                <BlurView
+                  pointerEvents='none'
+                  intensity={25}
+                  tint={
+                    themeName === 'dark'
+                      ? 'systemUltraThinMaterialDark'
+                      : 'systemUltraThinMaterialLight'
+                  }
+                  style={StyleSheet.absoluteFillObject}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor:
+                        themeName === 'dark'
+                          ? 'rgba(20, 18, 30, 0.24)'
+                          : 'rgba(255, 255, 255, 0.75)',
+                    }}
+                  />
+                </BlurView>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingTop: 8,
+                  paddingBottom: 16,
+                  gap: 8,
+                }}
+              >
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Close project editor'
+                  accessibilityHint='Discard changes and return to the workspace'
+                  onPress={() => {
+                    setCreateOpen(false);
+                    setError('');
+                  }}
+                  style={{
+                    minWidth: 78,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    paddingHorizontal: 8,
+                  }}
+                >
+                  <Text style={{ color: mainText, fontSize: 16, fontWeight: '600' }}>
+                    Close
+                  </Text>
+                </Pressable>
+                <Text
+                  accessibilityRole='header'
+                  numberOfLines={1}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: mainText,
+                    textAlign: 'center',
+                    fontSize: 17,
+                    fontWeight: '700',
+                  }}
+                >
+                  {isEditing ? 'Edit project' : 'New project'}
+                </Text>
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel={
+                    isEditing ? 'Save project changes' : 'Create project'
+                  }
+                  onPress={saveProject}
+                  disabled={!canSubmitProject}
+                  accessibilityState={{ disabled: !canSubmitProject }}
+                  accessibilityHint={
+                    canSubmitProject
+                      ? undefined
+                      : isEditing
+                        ? 'Enter a valid name and make a change to save'
+                        : 'Enter a project name to create'
+                  }
+                  style={{
+                    minWidth: 78,
+                    minHeight: 44,
+                    paddingHorizontal: 14,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderRadius: 22,
+                    backgroundColor: canSubmitProject
+                      ? palette.brand
+                      : surface.subtle,
+                    borderWidth: 1,
+                    borderColor: canSubmitProject ? palette.brand : border,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: canSubmitProject ? '#FFFFFF' : subtleText,
+                      fontSize: 15,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {actionLabel}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              >
+                <ScrollView
+                  keyboardShouldPersistTaps='handled'
+                  keyboardDismissMode='on-drag'
+                  contentContainerStyle={{
+                    paddingHorizontal: 20,
+                    paddingTop: 22,
+                    paddingBottom: 40,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: '100%',
+                      maxWidth: 560,
+                      alignSelf: 'center',
+                      gap: 26,
+                    }}
+                  >
+                    <View style={{ gap: 10 }}>
+                      <Text
+                        accessibilityRole='header'
+                        style={{
+                          paddingHorizontal: 6,
+                          color: subtleText,
+                          fontSize: 13,
+                          fontWeight: '700',
+                          letterSpacing: 0.8,
+                        }}
+                      >
+                        PROJECT DETAILS
+                      </Text>
+                      <View
+                        style={{
+                          padding: 18,
+                          gap: 18,
+                          backgroundColor: surface.subtle,
+                          borderRadius: 24,
+                          borderWidth: 1,
+                          borderColor: border,
+                        }}
+                      >
+                        <Input
+                          label='Project name'
+                          required
+                          value={name}
+                          error={error || undefined}
+                          onValueChange={(value: string) => {
+                            setName(value);
+                            setError('');
+                          }}
+                          placeholder='New project name'
+                          inputStyle={editorInputStyle}
+                        />
+                        <Input
+                          label='Description'
+                          value={description}
+                          onValueChange={setDescription}
+                          placeholder='Describe the project'
+                          inputStyle={editorInputStyle}
+                        />
+                      </View>
+                    </View>
+                    <View style={{ gap: 10 }}>
+                      <Text
+                        accessibilityRole='header'
+                        style={{
+                          paddingHorizontal: 6,
+                          color: subtleText,
+                          fontSize: 13,
+                          fontWeight: '700',
+                          letterSpacing: 0.8,
+                        }}
+                      >
+                        ORGANIZATION
+                      </Text>
+                      <View
+                        style={{
+                          padding: 18,
+                          gap: 18,
+                          backgroundColor: surface.subtle,
+                          borderRadius: 24,
+                          borderWidth: 1,
+                          borderColor: border,
+                        }}
+                      >
+                        <Select
+                          label='Team'
+                          required
+                          value={team}
+                          onValueChange={(value: string | null) => {
+                            if (isTeam(value)) setTeam(value);
+                          }}
+                          presentation='sheet'
+                        >
+                          <Select.Item value='design' label='Design' />
+                          <Select.Item value='platform' label='Platform' />
+                          <Select.Item value='mobile' label='Mobile' />
+                        </Select>
+                        <Select
+                          label='Status'
+                          required
+                          value={status}
+                          onValueChange={(value: string | null) => {
+                            if (typeof value === 'string' && isStatus(value)) {
+                              setStatus(value);
+                            }
+                          }}
+                          presentation='sheet'
+                        >
+                          <Select.Item value='planned' label='Planned' />
+                          <Select.Item value='active' label='In progress' />
+                          <Select.Item value='shipped' label='Shipped' />
+                        </Select>
+                      </View>
+                    </View>
+                    <Text
+                      style={{
+                        paddingHorizontal: 6,
+                        color: subtleText,
+                        fontSize: 13,
+                        lineHeight: 19,
+                      }}
+                    >
+                      Changes stay on this device.
+                    </Text>
+                  </View>
+                </ScrollView>
+              </KeyboardAvoidingView>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }

@@ -7,27 +7,35 @@ const source = readFileSync(
 );
 
 describe('Native Starter project editor navigation', () => {
-  const editorStart = source.indexOf('  if (createOpen) {');
-  const workspaceStart = source.indexOf(
-    '  return (\n    <SafeAreaView',
-    editorStart + 1
-  );
-  const editor = source.slice(editorStart, workspaceStart);
+  const editorStart = source.indexOf('      {createOpen ? (');
+  const editorEnd = source.indexOf('      ) : null}', editorStart);
+  const editor = source.slice(editorStart, editorEnd);
 
-  it('replaces the workspace instead of opening a project dialog', () => {
+  it('renders a near-fullscreen frosted panel over the existing workspace', () => {
     expect(editorStart).toBeGreaterThan(0);
-    expect(workspaceStart).toBeGreaterThan(editorStart);
+    expect(editorEnd).toBeGreaterThan(editorStart);
     expect(source).not.toContain('open={createOpen}');
-    expect(editor).toContain('<SafeAreaView');
+    expect(source).not.toContain('  if (createOpen) {');
+    expect(editor).toContain('StyleSheet.absoluteFillObject');
+    expect(editor).toContain('<BlurView');
+    expect(editor).toContain('intensity={25}');
+    expect(editor).toContain('systemUltraThinMaterialLight');
+    expect(editor).toContain('systemUltraThinMaterialDark');
+    expect(editor).toContain('rgba(255, 255, 255, 0.75)');
+    expect(editor).toContain('shadowRadius: 24');
+    expect(editor).toContain('borderRadius: 34');
+    expect(editor).toContain("themeName !== 'highContrast'");
     expect(editor).not.toContain('<Modal');
     expect(editor).not.toContain("accessibilityRole='tablist'");
+    expect(source).toContain("accessibilityElementsHidden={createOpen}");
+    expect(source).toContain("pointerEvents={createOpen ? 'none' : 'auto'}");
     expect(source).toContain('<Modal open={resetOpen}');
   });
 
   it('provides top navigation with Close and Create/Save actions', () => {
     expect(editor).toContain("accessibilityLabel='Close project editor'");
     expect(editor).toContain('onPress={saveProject}');
-    expect(editor).toContain("isEditing ? 'Save' : 'Create'");
+    expect(source).toContain("isEditing ? 'Save' : 'Create'");
     expect(editor).toContain("isEditing ? 'Edit project' : 'New project'");
     expect(editor).toContain('setCreateOpen(false)');
   });
@@ -39,9 +47,9 @@ describe('Native Starter project editor navigation', () => {
 
   it('centers both single-line Input fields without overriding the library globally', () => {
     expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
-    expect(editor).toContain("textAlignVertical: 'center' as const");
-    expect(editor).toContain('lineHeight: undefined');
-    expect(editor).toContain('paddingVertical: 0');
+    expect(source).toContain("textAlignVertical: 'center' as const");
+    expect(source).toContain('lineHeight: undefined');
+    expect(source).toContain('paddingVertical: 0');
   });
 
   it('disables Create/Save until the required fields are valid', () => {
