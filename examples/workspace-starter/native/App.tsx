@@ -1183,14 +1183,18 @@ function WorkspaceScreen() {
                       {project.description || 'No description'}
                     </Text>
                   </Pressable>
-                  {!largeText ? (
                   <Dropdown
                     accessibilityLabel={'Actions for ' + project.name}
                     showArrow={false}
-                    presentation={largeText ? 'sheet' : 'popover'}
+                    presentation='popover'
                     placement='bottom-end'
                     offset={-44}
                     closeOnSelect
+                    textStyle={largeText ? {
+                      fontSize: 16 * Math.min(1, 1.5 / fontScale),
+                      lineHeight: 22 * Math.min(1, 1.5 / fontScale),
+                    } : undefined}
+                    itemStyle={largeText ? { minHeight: 52 } : undefined}
                     popoverBackground={
                       Platform.OS === 'ios' && themeName !== 'highContrast' ? (
                         <BlurView
@@ -1220,8 +1224,8 @@ function WorkspaceScreen() {
                       ) : undefined
                     }
                     contentStyle={{
-                      width: 216,
-                      maxWidth: 236,
+                      width: largeText ? 268 : 216,
+                      maxWidth: largeText ? 280 : 236,
                       borderRadius: 22,
                       paddingVertical: 8,
                       paddingHorizontal: 4,
@@ -1256,7 +1260,7 @@ function WorkspaceScreen() {
                       </Pressable>
                     </Dropdown.Trigger>
                     <Dropdown.Content>
-                      <Dropdown.Label>Project actions</Dropdown.Label>
+                      {!largeText ? <Dropdown.Label>Project actions</Dropdown.Label> : null}
                       <Dropdown.Item
                         value='edit'
                         icon={<Edit size={18} />}
@@ -1282,39 +1286,6 @@ function WorkspaceScreen() {
                       </Dropdown.Item>
                     </Dropdown.Content>
                   </Dropdown>
-                  ) : null}
-                </View>
-                {largeText ? (
-                  <View style={{ flexDirection: 'column', gap: 8 }}>
-                    {([
-                      ['Edit', Edit, () => openEdit(project)],
-                      ['Duplicate', Copy, () => duplicateProject(project.id)],
-                      ['Remove', Trash, () => deleteProject(project.id)],
-                    ] as const).map(([label, IconComponent, action]) => (
-                      <Pressable
-                        key={label}
-                        accessibilityRole='button'
-                        accessibilityLabel={label + ' ' + project.name}
-                        onPress={action}
-                        style={{
-                          minHeight: 48,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 12,
-                          paddingHorizontal: 12,
-                          borderWidth: 1,
-                          borderRadius: 12,
-                          borderColor: border,
-                        }}
-                      >
-                        <IconComponent size={18} color={label === 'Remove' ? theme.semantic.status.error.fg : mainText} />
-                        <Text maxFontSizeMultiplier={1.5} style={{ color: label === 'Remove' ? theme.semantic.status.error.fg : mainText, fontSize: 15 }}>
-                          {label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
                 <View
                   style={{
                     flexDirection: 'row',
