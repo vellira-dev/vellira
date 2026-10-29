@@ -1,8 +1,12 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import type { ComponentMetadata } from '@vellira-ui/metadata';
+import {
+  componentMetadata,
+  type ComponentMetadata,
+} from '@vellira-ui/metadata';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -84,6 +88,10 @@ function createComponent(params: {
       path.join(rootDir, 'ExampleRoot.tsx'),
       params.rootImplementationSource ??
         "import type { ExampleRootProps } from './types';\nexport function ExampleRoot(_props: ExampleRootProps) { return null; }\n"
+    );
+    fs.writeFileSync(
+      path.join(rootDir, 'index.ts'),
+      "export { ExampleRoot } from './ExampleRoot';\nexport type { ExampleRootProps } from './types';\n"
     );
   }
 
@@ -171,6 +179,164 @@ describe('API/feature quality rules', () => {
 
     expect(result.status).toBe('fail');
     expect(result.message).toContain('callable/root');
+  });
+
+  it.each([
+    '// ExampleProps\n',
+    'const marker = "ExampleProps";\n',
+    "import type { ExampleProps } from './types';\n",
+    "import type { ExampleProps } from './types';\nfunction unrelated(_props: ExampleProps) {}\n",
+    'interface ExampleProps { count: number }\n',
+  ])(
+    'rejects unrelated canonical names outside the exported callable: %s',
+    async (decoy) => {
+      createComponent({
+        implementationSource:
+          decoy +
+          'type LocalProps = { count: number }; export function Example(props: LocalProps) { return props.count; }',
+      });
+      const result = await publicApiSurfaceRule.evaluate({
+        metadata,
+        platform: 'react',
+      });
+      expect(result.status).toBe('fail');
+    }
+  );
+
+  it('rejects a locally redeclared Props type despite its matching spelling', async () => {
+    createComponent({
+      implementationSource:
+        'interface ExampleProps { count: number }; export function Example(props: ExampleProps) { return props.count; }',
+    });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('fail');
+  });
+
+  it.each([
+    "export type { Example } from './Example';",
+    "export type * from './Example';",
+    "export { type Example } from './Example';",
+    "import type { Example } from './Example'; export { Example };",
+  ])('rejects erased type-only component exports: %s', async (indexSource) => {
+    createComponent({ indexSource });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('fail');
+  });
+
+  it.each(['react', 'react-native'] as const)(
+    'follows runtime barrels without accepting erased exports on %s',
+    async (platform) => {
+      const { componentDir } = createComponent({
+        platform,
+        indexSource: "export * from './barrel';",
+      });
+      const barrel = path.join(componentDir, 'barrel.ts');
+      fs.writeFileSync(barrel, "export { Example } from './Example';");
+      expect(
+        (await publicApiSurfaceRule.evaluate({ metadata, platform })).status
+      ).toBe('pass');
+      fs.writeFileSync(barrel, "export type * from './Example';");
+      expect(
+        (await publicApiSurfaceRule.evaluate({ metadata, platform })).status
+      ).toBe('fail');
+    }
+  );
+
+  it('does not treat a value named Props as a type contract', async () => {
+    createComponent({ typesSource: 'export const ExampleProps = {};' });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('fail');
+  });
+
+  it('requires an actual public export and exported Props declaration', async () => {
+    createComponent({ indexSource: '// export { Example };\n' });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('fail');
+    createComponent({
+      typesSource:
+        '// export interface ExampleProps {}\nexport interface OtherProps { value: string }',
+    });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('fail');
+  });
+
+  it.each([
+    "import type { ExampleProps as Props } from './types'; export const Example = (props: Props) => null;",
+    "import {forwardRef as forward} from 'react'; import type {ExampleProps} from './types'; export const Example=forward<unknown,ExampleProps>((props,ref)=>null);",
+    "import React from 'react'; import type {ExampleProps} from './types'; export const Example=React.memo((props:ExampleProps)=>null);",
+    "import type {FC} from 'react'; import type {ExampleProps} from './types'; export const Example:FC<ExampleProps>=(props)=>null;",
+    "import * as R from 'react'; import type {ExampleProps} from './types'; export const Example:R.FunctionComponent<ExampleProps>=(props)=>null;",
+  ])(
+    'preserves explicit aliases and canonical React callable wrappers: %s',
+    async (implementationSource) => {
+      createComponent({ implementationSource });
+      expect(
+        (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+          .status
+      ).toBe('pass');
+    }
+  );
+
+  it('rejects a locally shadowed React wrapper', async () => {
+    createComponent({
+      implementationSource:
+        "import type {ExampleProps} from './types'; const forwardRef=(_callback:unknown)=>'unrelated'; export const Example=forwardRef<unknown,ExampleProps>((props)=>null);",
+    });
+    expect(
+      (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+        .status
+    ).toBe('fail');
+  });
+
+  it.each([
+    "import type {forwardRef} from 'react'; import type {ExampleProps} from './types'; export const Example=forwardRef<unknown,ExampleProps>((props)=>null);",
+    "import type {ExampleProps} from './types'; const unrelated=(props:ExampleProps)=>null; export const Example='placeholder';",
+    "import type {ExampleProps} from './types'; const Object={assign:()=> 'placeholder'}; export const Example=Object.assign((props:ExampleProps)=>null,{});",
+  ])(
+    'rejects non-callable exports or forged runtime bindings: %s',
+    async (implementationSource) => {
+      createComponent({ implementationSource });
+      expect(
+        (await publicApiSurfaceRule.evaluate({ metadata, platform: 'react' }))
+          .status
+      ).toBe('fail');
+    }
+  );
+
+  it('validates every maintained Web and Native API surface', async () => {
+    const rootDir = fileURLToPath(new URL('../../../../', import.meta.url));
+    let checked = 0;
+    for (const component of componentMetadata) {
+      for (const platform of component.platforms) {
+        const result = await publicApiSurfaceRule.evaluate({
+          metadata: component,
+          platform,
+          rootDir,
+        });
+        expect(
+          result.status,
+          `${component.name}/${platform}: ${result.message ?? ''}`
+        ).toBe('pass');
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(
+      componentMetadata.reduce(
+        (sum, component) => sum + component.platforms.length,
+        0
+      )
+    );
+    expect(checked).toBeGreaterThan(0);
   });
 
   it('passes canonical shared ownership without imposing a Base<Name>Props symbol', async () => {
