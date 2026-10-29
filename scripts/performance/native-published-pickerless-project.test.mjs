@@ -63,6 +63,11 @@ test('creates an opt-in published-package Expo/Hermes runtime test with no picke
     assert.match(app, /<ThemeProvider theme="light">/);
     assert.doesNotMatch(app, /<ThemeProvider theme="dark">/);
     assert.match(app, /backgroundColor: '#fff'/);
+    // The diagnostic must have enough native FlatList viewport to display
+    // both choices, rather than accidentally clipping the second row.
+    assert.match(app, /contentStyle=\{\{ minHeight: 320 \}\}/);
+    assert.match(app, /\{ label: 'France', value: 'fr' \}/);
+    assert.match(app, /\{ label: 'Spain', value: 'es' \}/);
     for (const token of ['HermesInternal', 'Select', "presentation='modal'",
       'SafeAreaProvider', 'SafeAreaView', "seen.includes('fr') && seen.includes('es')",
       'onValueChange', 'selectPassed', 'Native Select without picker',
