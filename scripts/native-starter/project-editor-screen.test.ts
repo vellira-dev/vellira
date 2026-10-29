@@ -8,7 +8,7 @@ const source = readFileSync(
 
 describe('Native Starter project editor navigation', () => {
   const editorStart = source.indexOf('      {createOpen ? (');
-  const editorEnd = source.indexOf('      ) : null}', editorStart);
+  const editorEnd = source.indexOf('\n      ) : null}', editorStart);
   const editor = source.slice(editorStart, editorEnd);
 
   it('renders a near-fullscreen frosted panel over the existing workspace', () => {
