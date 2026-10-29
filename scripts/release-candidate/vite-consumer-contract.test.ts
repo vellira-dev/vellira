@@ -43,7 +43,7 @@ describe('clean Vite consumer workflow contract', () => {
     expect(viteJob).toContain('Retain Vite consumer evidence');
   });
 
-  it('reports bare/Button/Button+Input production sizes in retained exact-candidate Vite evidence', () => {
+  it('reports size deltas for clean Vite consumers', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
       'utf8'
