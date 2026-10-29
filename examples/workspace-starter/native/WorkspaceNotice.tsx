@@ -54,10 +54,10 @@ export function WorkspaceNotice({
         minHeight: 52,
         flexDirection: largeText ? 'column' : 'row',
         alignItems: largeText ? 'stretch' : 'center',
-        gap: largeText ? 4 : 8,
+        gap: largeText ? 0 : 8,
         paddingLeft: 12,
         paddingRight: 4,
-        paddingVertical: largeText ? 8 : 4,
+        paddingVertical: largeText ? 6 : 4,
         borderWidth: 1,
         borderLeftWidth: 3,
         borderRadius: 14,
@@ -86,7 +86,7 @@ export function WorkspaceNotice({
             minWidth: 0,
             color: appearance.foreground,
             fontSize: 13,
-            lineHeight: 18,
+            lineHeight: largeText ? undefined : 18,
             fontWeight: '600',
           }}
         >
