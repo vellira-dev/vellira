@@ -485,7 +485,9 @@ function WorkspaceScreen() {
       <View
         pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
         accessibilityElementsHidden={createOpen || resetOpen}
-        importantForAccessibility={createOpen || resetOpen ? 'no-hide-descendants' : 'auto'}
+        importantForAccessibility={
+          createOpen || resetOpen ? 'no-hide-descendants' : 'auto'
+        }
         style={{
           paddingHorizontal: 20,
           paddingTop: 14,
@@ -558,7 +560,9 @@ function WorkspaceScreen() {
         key={section}
         pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
         accessibilityElementsHidden={createOpen || resetOpen}
-        importantForAccessibility={createOpen || resetOpen ? 'no-hide-descendants' : 'auto'}
+        importantForAccessibility={
+          createOpen || resetOpen ? 'no-hide-descendants' : 'auto'
+        }
         keyboardShouldPersistTaps='handled'
         contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
       >
@@ -1251,7 +1255,9 @@ function WorkspaceScreen() {
       <View
         pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}
         accessibilityElementsHidden={createOpen || resetOpen}
-        importantForAccessibility={createOpen || resetOpen ? 'no-hide-descendants' : 'auto'}
+        importantForAccessibility={
+          createOpen || resetOpen ? 'no-hide-descendants' : 'auto'
+        }
         accessibilityRole='tablist'
         style={{
           flexDirection: 'row',
@@ -1468,7 +1474,8 @@ function WorkspaceScreen() {
                           lineHeight: 23,
                         }}
                       >
-                        This replaces saved projects and settings. It cannot be undone.
+                        This replaces saved projects and settings. It cannot be
+                        undone.
                       </Text>
                     </View>
                   </View>

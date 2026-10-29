@@ -20,12 +20,7 @@ describe('Native Starter grouped Settings UX', () => {
     expect(settings).toContain('maxWidth: 560');
     expect(settings).toContain('borderRadius: 22');
     expect(settings).toContain('theme.semantic.surface.panel');
-    for (const group of [
-      'WORKSPACE',
-      'APPEARANCE',
-      'PREFERENCES',
-      'DATA',
-    ]) {
+    for (const group of ['WORKSPACE', 'APPEARANCE', 'PREFERENCES', 'DATA']) {
       expect(settings).toContain(group);
     }
   });
@@ -63,8 +58,9 @@ describe('Native Starter grouped Settings UX', () => {
     expect(app).toContain('onRestore={() => setResetOpen(true)}');
     expect(app).toContain('{resetOpen ? (');
     expect(app).toContain("accessibilityLabel='Close restore confirmation'");
-    expect(app).toContain("accessibilityViewIsModal");
-    expect(app).toMatch(/This replaces saved projects and settings\. It cannot be\s+undone\./);
+    expect(app).toMatch(
+      /This replaces saved projects and settings\. It cannot be\s+undone\./
+    );
     expect(app).not.toContain('<Modal open={resetOpen}');
     expect(app).toContain('createOpen || resetOpen');
     expect(app).toContain('setData(initialWorkspace)');

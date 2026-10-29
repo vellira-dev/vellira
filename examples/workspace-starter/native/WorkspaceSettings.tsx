@@ -89,9 +89,7 @@ export function WorkspaceSettings({
               <Folder size={19} color={accent} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text
-                style={{ color: primary, fontSize: 15, fontWeight: '600' }}
-              >
+              <Text style={{ color: primary, fontSize: 15, fontWeight: '600' }}>
                 Your workspace
               </Text>
               <Text style={{ color: secondary, fontSize: 12 }}>
@@ -141,10 +139,7 @@ export function WorkspaceSettings({
                   }}
                 >
                   <View style={iconTile} accessible={false}>
-                    <Icon
-                      size={19}
-                      color={active ? selected.fg : secondary}
-                    />
+                    <Icon size={19} color={active ? selected.fg : secondary} />
                   </View>
                   <View style={{ flex: 1, gap: 3 }}>
                     <Text
@@ -160,9 +155,7 @@ export function WorkspaceSettings({
                       {caption}
                     </Text>
                   </View>
-                  {active ? (
-                    <Check size={19} color={selected.fg} />
-                  ) : null}
+                  {active ? <Check size={19} color={selected.fg} /> : null}
                 </Pressable>
                 {index < appearanceTotal - 1 ? (
                   <View
@@ -200,9 +193,7 @@ export function WorkspaceSettings({
             <Bell size={19} color={accent} />
           </View>
           <View style={{ flex: 1, gap: 3 }}>
-            <Text
-              style={{ color: primary, fontSize: 15, fontWeight: '600' }}
-            >
+            <Text style={{ color: primary, fontSize: 15, fontWeight: '600' }}>
               Product notifications
             </Text>
             <Text style={{ color: secondary, fontSize: 12 }}>
