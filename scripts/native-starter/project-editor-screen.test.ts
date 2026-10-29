@@ -178,3 +178,19 @@ describe('Native Starter Android project controls', () => {
     );
   });
 });
+
+describe('Native Starter large accessibility text', () => {
+  it('keeps tab navigation named while hiding oversized visual labels', () => {
+    expect(source).toContain('const largeText = fontScale >= 1.5');
+    expect(source).toContain("accessibilityLabel={label}");
+    expect(source).toContain('{!largeText ? (');
+  });
+
+  it('prevents header and chart labels from overtaking the viewport', () => {
+    expect(source).toContain('adjustsFontSizeToFit');
+    expect(source).toContain('minimumFontScale={0.7}');
+    expect(source).toContain('maxFontSizeMultiplier={1.5}');
+    expect(source).toContain('numberOfLines={largeText ? 1 : 2}');
+    expect(source).toContain("status.key === 'active'");
+  });
+});
