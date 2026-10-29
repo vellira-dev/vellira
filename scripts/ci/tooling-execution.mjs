@@ -38,6 +38,7 @@ export function createToolingTasks({
     'scripts/smoke/utils.test.mjs',
     'scripts/performance/native-picker-scan.test.mjs',
     'scripts/performance/native-hermes-subpath-project.test.mjs',
+    'scripts/performance/native-published-pickerless-project.test.mjs',
     'scripts/ci/dependabot-security-remediation.test.mjs',
     'scripts/ci/dependabot-runtime-candidates.test.mjs',
     'scripts/ci/dependabot-runtime-candidate-authority.test.mjs',
