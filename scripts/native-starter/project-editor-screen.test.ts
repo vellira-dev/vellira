@@ -51,9 +51,9 @@ describe('Native Starter project editor navigation', () => {
     );
     expect(editor).toContain('canSubmitProject ? palette.brand : surface.subtle');
     expect(source).toContain('if (!canSubmitProject) return;');
-    expect(editor).toContain("label='Project name'\\n                    required".replace('\\n', '\n'));
-    expect(editor).toContain("label='Team'\\n                    required".replace('\\n', '\n'));
-    expect(editor).toContain("label='Status'\\n                    required".replace('\\n', '\n'));
+    for (const label of ['Project name', 'Team', 'Status']) {
+      expect(editor).toContain(`label='${label}'\n                    required`);
+    }
   });
 
   it('preserves a scrollable keyboard-safe editor and field validation', () => {
