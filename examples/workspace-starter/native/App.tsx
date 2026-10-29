@@ -195,6 +195,7 @@ function LargeTextChoiceField({
           value: option.value,
         }))}
         presentation='sheet'
+        virtual={{ estimatedItemSize: 52 }}
         contentStyle={{ maxHeight: Math.min(viewportHeight * 0.7, 360) }}
         triggerStyle={{
           minHeight: 52,
