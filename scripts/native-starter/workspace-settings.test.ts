@@ -26,9 +26,11 @@ describe('Native Starter grouped Settings UX', () => {
   });
 
   it('preserves editing of locally persisted workspace details', () => {
-    expect(settings).toContain("label='Workspace name'");
+    expect(settings).toContain("accessibilityLabel='Workspace name'");
+    expect(settings).toContain('<TextInput');
+    expect(settings).toContain('maxFontSizeMultiplier={1.5}');
     expect(settings).toContain('value={workspaceName}');
-    expect(settings).toContain('onValueChange={onWorkspaceNameChange}');
+    expect(settings).toContain('onChangeText={onWorkspaceNameChange}');
     expect(app).toContain('workspaceName={data.name}');
     expect(app).toContain('...current, name: next');
   });
