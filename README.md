@@ -496,6 +496,15 @@ If you'd like to improve Vellira, feel free to open an issue or submit a pull re
 
 ---
 
+### XERJ Corpus Hub
+
+Vellira's public repository is listed as a contributor source in the
+[XERJ Corpus Hub](https://hub.xerj.org/contributors/romanbakurov).
+
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/romanbakurov/badge.svg)](https://hub.xerj.org/contributors/romanbakurov)
+
+---
+
 ## Browser Support
 
 Vellira supports modern evergreen browsers and actively maintained versions of React and React Native.
