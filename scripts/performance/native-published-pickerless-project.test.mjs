@@ -65,9 +65,10 @@ test('creates an opt-in published-package Expo/Hermes runtime test with no picke
     assert.match(app, /backgroundColor: '#fff'/);
     // A fixed-height proof-only workaround would hide a native layout regression.
     assert.doesNotMatch(app, /contentStyle=/);
+    assert.doesNotMatch(app, /presentation='modal'/);
     assert.match(app, /\{ label: 'France', value: 'fr' \}/);
     assert.match(app, /\{ label: 'Spain', value: 'es' \}/);
-    for (const token of ['HermesInternal', 'Select', "presentation='modal'",
+    for (const token of ['HermesInternal', 'Select', "presentation='sheet'",
       'SafeAreaProvider', 'SafeAreaView', "seen.includes('fr') && seen.includes('es')",
       'onValueChange', 'selectPassed', 'Native Select without picker',
       'VELLIRA_PUBLISHED_PICKERLESS']) {
@@ -76,6 +77,7 @@ test('creates an opt-in published-package Expo/Hermes runtime test with no picke
     assert.ok(readme.includes('npm install --legacy-peer-deps'));
     assert.ok(readme.includes('ordinary npm installation'));
     assert.ok(readme.includes('No contentStyle height workaround'));
+    assert.ok(readme.includes('compact bottom sheet'));
     assert.ok(readme.includes('select France, reopen and select Spain'));
   });
 });
