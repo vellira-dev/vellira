@@ -224,3 +224,23 @@ describe('Native Starter large-text search and restore', () => {
     expect(source).toContain("setData(initialWorkspace)");
   });
 });
+
+describe('Native Starter large-text organization choices', () => {
+  it('uses compact expandable selection rows with accessible checked state', () => {
+    expect(source).toContain('function LargeTextChoiceField(');
+    expect(source).toContain('accessibilityState={{ expanded }}');
+    expect(source).toContain("accessibilityRole='radio'");
+    expect(source).toContain('accessibilityState={{ checked }}');
+    expect(source).toContain('minHeight: 48');
+    expect(source).toContain('setExpanded(false)');
+    expect(source).toContain("label='Team'");
+    expect(source).toContain("label='Status'");
+  });
+
+  it('preserves published Select for the standard-size editor', () => {
+    expect(source).toContain('label=\'Team\'');
+    expect(source).toContain('label=\'Status\'');
+    expect(source).toContain("presentation='sheet'");
+    expect(source).toContain('contentStyle={compactSheetStyle}');
+  });
+});
