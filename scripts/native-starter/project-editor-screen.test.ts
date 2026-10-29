@@ -126,7 +126,10 @@ describe('Native Starter dashboard metric contrast', () => {
   it('uses dark high-contrast metric surfaces with bright borders and readable text', () => {
     const metricSection = source.slice(
       source.indexOf("label: 'Total projects'"),
-      source.indexOf('<View style={cardStyle}>', source.indexOf("label: 'Total projects'"))
+      source.indexOf(
+        '<View style={cardStyle}>',
+        source.indexOf("label: 'Total projects'")
+      )
     );
     for (const [field, color, fallback] of [
       ['bg', '#1C2736', 'palette.brandBg'],
