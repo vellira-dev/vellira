@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { FlatList, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import { useTheme, useThemeStyles } from '../../../theme';
 import { SelectEmptyState } from '../Empty';
