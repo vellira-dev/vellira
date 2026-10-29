@@ -23,7 +23,8 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('systemUltraThinMaterialDark');
     expect(editor).toContain('rgba(255, 255, 255, 0.75)');
     expect(editor).toContain('shadowRadius: 24');
-    expect(editor).toContain('borderRadius: 34');
+    expect(editor).toContain('borderTopLeftRadius: 34');
+    expect(editor).toContain('borderTopRightRadius: 34');
     expect(editor).toContain("themeName !== 'highContrast'");
     expect(editor).not.toContain('<Modal');
     expect(editor).not.toContain("accessibilityRole='tablist'");
