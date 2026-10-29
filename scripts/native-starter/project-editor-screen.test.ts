@@ -28,8 +28,12 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain("themeName !== 'highContrast'");
     expect(editor).not.toContain('<Modal');
     expect(editor).not.toContain("accessibilityRole='tablist'");
-    expect(source).toContain('accessibilityElementsHidden={createOpen || resetOpen}');
-    expect(source).toContain("pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}");
+    expect(source).toContain(
+      'accessibilityElementsHidden={createOpen || resetOpen}'
+    );
+    expect(source).toContain(
+      "pointerEvents={createOpen || resetOpen ? 'none' : 'auto'}"
+    );
     expect(source).toContain('{resetOpen ? (');
   });
 
@@ -49,7 +53,7 @@ describe('Native Starter project editor navigation', () => {
       import.meta.url
     );
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toMatch(/^2\\.188\\.[2-9]$/);
+    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.3');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -108,11 +112,12 @@ describe('Native Starter project editor navigation', () => {
   });
 });
 
-
 describe('Native Starter project status badges', () => {
   it('gives Planned a legible opaque high-contrast badge', () => {
-    expect(source).toContain("themeName === 'highContrast'\\n                                ? '#FFFFFF'");
-    expect(source).toContain("themeName === 'highContrast'\\n                                ? '#1A102B'");
-    expect(source).toContain("borderWidth: themeName === 'highContrast' ? 1 : 0");
+    expect(source).toMatch(/themeName === 'highContrast'\s*\?\s*'#FFFFFF'/);
+    expect(source).toMatch(/themeName === 'highContrast'\s*\?\s*'#1A102B'/);
+    expect(source).toContain(
+      "borderWidth: themeName === 'highContrast' ? 1 : 0"
+    );
   });
 });
