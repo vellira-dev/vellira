@@ -251,6 +251,7 @@ describe('Native Starter large-text organization choices', () => {
     expect(choiceField).toContain('maxFontSizeMultiplier={1.5}');
     expect(choiceField).toContain('optionStyle={{');
     expect(choiceField).toContain('Math.min(viewportHeight * 0.7, 360)');
+    expect(choiceField).toContain('virtual={{ estimatedItemSize: 52 }}');
     expect(choiceField).not.toContain('setExpanded(');
     expect(source).toContain("label='Team'");
     expect(source).toContain("label='Status'");
