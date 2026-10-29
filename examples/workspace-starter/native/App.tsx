@@ -437,7 +437,6 @@ function WorkspaceScreen() {
     textAlignVertical: 'center' as const,
   };
 
-
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: surface.canvas }}
@@ -1487,7 +1486,9 @@ function WorkspaceScreen() {
                     paddingHorizontal: 8,
                   }}
                 >
-                  <Text style={{ color: mainText, fontSize: 16, fontWeight: '600' }}>
+                  <Text
+                    style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
+                  >
                     Close
                   </Text>
                 </Pressable>

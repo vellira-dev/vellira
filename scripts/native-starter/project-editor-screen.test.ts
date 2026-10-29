@@ -27,7 +27,7 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain("themeName !== 'highContrast'");
     expect(editor).not.toContain('<Modal');
     expect(editor).not.toContain("accessibilityRole='tablist'");
-    expect(source).toContain("accessibilityElementsHidden={createOpen}");
+    expect(source).toContain('accessibilityElementsHidden={createOpen}');
     expect(source).toContain("pointerEvents={createOpen ? 'none' : 'auto'}");
     expect(source).toContain('<Modal open={resetOpen}');
   });
