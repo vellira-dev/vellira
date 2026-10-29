@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { FlatList, Pressable, Text, View } from 'react-native';
 
-import { useThemeStyles } from '../../../theme';
+import { useTheme, useThemeStyles } from '../../../theme';
 import { SelectEmptyState } from '../Empty';
 import { SelectGroupActionRow, SelectGroupLabelRow } from '../Group';
 import { createSelectSlot } from '../internal/SelectCollection';
@@ -15,7 +15,10 @@ import { SelectSearchField } from '../Search';
 import { SelectSeparatorRow } from '../Separator';
 import type { SelectContentProps } from '../types';
 
-import { createContentStyles } from './SelectContent.styles';
+import {
+  SELECT_LIST_MAX_HEIGHT,
+  createContentStyles,
+} from './SelectContent.styles';
 
 export const SelectContent = createSelectSlot<SelectContentProps>(
   'content',
@@ -24,6 +27,7 @@ export const SelectContent = createSelectSlot<SelectContentProps>(
 
 export const SelectContentSurface = () => {
   const styles = useThemeStyles(createContentStyles);
+  const { theme } = useTheme();
   const wasOpenRef = useRef(false);
   const [openCycle, setOpenCycle] = useState(0);
   const context = useSelectContext();
@@ -57,6 +61,17 @@ export const SelectContentSurface = () => {
   const initialScrollIndex = shouldSeedSelectedPosition
     ? selectedRowIndex
     : undefined;
+
+  // Native FlatList doesn't always measure its full content when placed inside
+  // a compact Modal/Sheet. Reserve a viewport for every visible row (up to the
+  // established scroll cap) so entries after the first cannot be clipped.
+  // The row estimate matches getItemLayout and includes vertical list padding.
+  const estimatedListHeight =
+    filteredRows.length * itemHeight + theme.tokens.spacing[2] * 2;
+  const listViewportHeight = Math.min(
+    SELECT_LIST_MAX_HEIGHT,
+    estimatedListHeight
+  );
 
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
@@ -165,7 +180,7 @@ export const SelectContentSurface = () => {
           data={filteredRows}
           keyExtractor={(item) => item.key}
           renderItem={renderRow}
-          style={styles.list}
+          style={[styles.list, { height: listViewportHeight }]}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps='handled'
           initialScrollIndex={initialScrollIndex}
