@@ -1,5 +1,19 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
+
+const require = createRequire(import.meta.url);
+const { syncWorkspaceStarterVersions } = require(
+  '../sync-workspace-starter-versions.cjs'
+) as {
+  syncWorkspaceStarterVersions: (options: {
+    root: string;
+    version: string;
+    check: boolean;
+  }) => string[];
+};
 
 const source = readFileSync(
   new URL('../../examples/workspace-starter/native/App.tsx', import.meta.url),
@@ -48,12 +62,6 @@ describe('Native Starter project editor navigation', () => {
   });
 
   it('keeps released Select sheets compact without a fixed height', () => {
-    const manifestFile = new URL(
-      '../../examples/workspace-starter/native/package.json',
-      import.meta.url
-    );
-    const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.4');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -109,6 +117,22 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('error={error || undefined}');
     expect(source).toContain("setSection('projects')");
     expect(source).toContain('setNotice(');
+  });
+});
+
+describe('Native Starter published release pin contract', () => {
+  it('accepts any stable release when the Web, Native and README pins agree', () => {
+    const root = fileURLToPath(new URL('../../', import.meta.url));
+    const manifestFile = new URL(
+      '../../examples/workspace-starter/native/package.json',
+      import.meta.url
+    );
+    const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
+    const releaseVersion = manifest.dependencies['@vellira-ui/react-native'];
+    expect(releaseVersion).toMatch(/^\\d+\\.\\d+\\.\\d+$/);
+    expect(
+      syncWorkspaceStarterVersions({ root, version: releaseVersion, check: true })
+    ).toEqual([]);
   });
 });
 
