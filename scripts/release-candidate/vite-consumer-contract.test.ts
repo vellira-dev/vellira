@@ -86,7 +86,7 @@ describe('clean Vite consumer workflow contract', () => {
     expect(script).toContain("run('npm', ['run', 'typecheck']");
   });
 
-  it('uses reviewed 2.188.5 main baseline and provisional size warnings', () => {
+  it('uses verified 2.188.5 baseline and provisional warnings', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
       'utf8'
@@ -97,7 +97,7 @@ describe('clean Vite consumer workflow contract', () => {
     );
     expect(script).toContain('vite-main-2.188.5.json');
     expect(regression).toContain('observedWarningThreshold');
-    expect(regression).toContain("warningStatus: result.threshold.state");
+    expect(regression).toContain('warningStatus: result.threshold.state');
     expect(regression).toContain("report.threshold.state === 'PROVISIONAL'");
   });
 
