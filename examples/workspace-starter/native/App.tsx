@@ -1391,7 +1391,10 @@ function WorkspaceScreen() {
                   setRemovedProject(null);
                   setTheme('light');
                   setResetOpen(false);
-                  setNotice({ tone: 'success', message: 'Sample data restored.' });
+                  setNotice({
+                    tone: 'success',
+                    message: 'Sample data restored.',
+                  });
                 }}
               >
                 Restore data
