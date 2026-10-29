@@ -7,7 +7,7 @@ const {
   evaluateViteRegression,
   formatViteRegression,
 } = require('./vite-bundle-regression.cjs');
-const baseline = require('./baselines/vite-main-2.188.3.json');
+const baseline = require('./baselines/vite-main-2.188.5.json');
 
 function same() {
   return {
@@ -37,7 +37,11 @@ test('identical current consumer and immutable main yield zero signed deltas', (
   assert.equal(result.comparisons.length, 12);
   assert.ok(result.comparisons.every((r) => r.deltaBytes === 0));
   assert.equal(result.observedIncreases, 0);
-  assert.equal(result.threshold.state, 'NOT_CALIBRATED');
+  assert.equal(result.threshold.state, 'PROVISIONAL');
+  assert.equal(result.threshold.identicalSourceSamples, 2);
+  assert.equal(result.warningStatus, 'NO_GROWTH');
+  assert.equal(result.warningCount, 0);
+  assert.equal(result.threshold.warningThresholdBytesByMetric.jsGzipBytes, 0);
   assert.match(formatViteRegression(result), /COMPARABLE/);
 });
 
@@ -121,7 +125,10 @@ test('positive, negative, and zero-baseline changes have safe signed results', (
   );
   assert.equal(newlyAdded.deltaPercent, null);
   assert.match(formatViteRegression(result), /NEW/);
-  assert.match(formatViteRegression(result), /NOT_CALIBRATED/);
+  assert.match(formatViteRegression(result), /size warning: \*\*WARN\*\*/);
+  assert.equal(result.warningStatus, 'WARN');
+  assert.equal(result.warningCount, 2);
+  assert.equal(result.threshold.blocking, false);
 });
 
 test('zero baseline and unchanged zero avoid NaN/Infinity in summary', () => {
@@ -132,4 +139,29 @@ test('zero baseline and unchanged zero avoid NaN/Infinity in summary', () => {
   assert.equal(css.deltaPercent, null);
   assert.equal(css.deltaBytes, 0);
   assert.ok(!/NaN|Infinity/.test(formatViteRegression(r)));
+});
+
+
+test('missing or manipulated repeat-build authority never grants a warning threshold', () => {
+  const tampered = structuredClone(baseline);
+  tampered.warningPolicy.artifacts[1].artifactId =
+    tampered.warningPolicy.artifacts[0].artifactId;
+  const report = evaluateViteRegression(tampered, same(), git());
+  assert.equal(report.status, 'COMPARABLE');
+  assert.equal(report.threshold.state, 'NOT_CALIBRATED');
+  assert.equal(report.warningStatus, 'NOT_CALIBRATED');
+  assert.equal(report.warningCount, 0);
+  assert.match(formatViteRegression(report), /NOT_CALIBRATED/);
+});
+
+test('unproven warning policy does not create warnings from current increases', () => {
+  const tampered = structuredClone(baseline);
+  tampered.warningPolicy.measuredSourceSha = 'b'.repeat(40);
+  const current = same();
+  current.bundleSize.scenarios.button.jsGzipBytes += 100;
+  const report = evaluateViteRegression(tampered, current, git());
+  assert.equal(report.status, 'COMPARABLE');
+  assert.equal(report.observedIncreases, 1);
+  assert.equal(report.warningStatus, 'NOT_CALIBRATED');
+  assert.deepEqual(report.warnings, []);
 });
