@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-
 import { act } from 'react';
+
+import { readFileSync } from 'node:fs';
 
 import { copyCompoundSlotMetadata } from '@vellira-ui/core';
 import type { ComponentProps } from 'react';
