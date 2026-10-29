@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
   Copy,
@@ -400,6 +407,214 @@ function WorkspaceScreen() {
     Math.ceil(Math.max(...statuses.map((item) => item.count)) / 4) * 4
   );
   const chartColor = themeName === 'dark' ? '#85B6FF' : '#5797F6';
+
+  // The project editor replaces the workspace screen. It is intentionally not
+  // a Modal: the bottom tabs and project cards should never remain underneath.
+  if (createOpen) {
+    const isEditing = editingId !== null;
+    const actionLabel = isEditing ? 'Save' : 'Create';
+
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: surface.canvas }}
+        edges={['top', 'bottom']}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            paddingTop: 8,
+            paddingBottom: 16,
+            gap: 8,
+          }}
+        >
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Close project editor'
+            accessibilityHint='Discard changes and return to the workspace'
+            onPress={() => {
+              setCreateOpen(false);
+              setError('');
+            }}
+            style={{
+              minWidth: 78,
+              minHeight: 44,
+              justifyContent: 'center',
+              paddingHorizontal: 8,
+            }}
+          >
+            <Text
+              style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
+            >
+              Close
+            </Text>
+          </Pressable>
+          <Text
+            accessibilityRole='header'
+            numberOfLines={1}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              color: mainText,
+              textAlign: 'center',
+              fontSize: 17,
+              fontWeight: '700',
+            }}
+          >
+            {isEditing ? 'Edit project' : 'New project'}
+          </Text>
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel={isEditing ? 'Save project changes' : 'Create project'}
+            onPress={saveProject}
+            style={{
+              minWidth: 78,
+              minHeight: 44,
+              paddingHorizontal: 14,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 22,
+              backgroundColor: palette.brand,
+            }}
+          >
+            <Text
+              style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}
+            >
+              {actionLabel}
+            </Text>
+          </Pressable>
+        </View>
+
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps='handled'
+            keyboardDismissMode='on-drag'
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 22,
+              paddingBottom: 40,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 560,
+                alignSelf: 'center',
+                gap: 26,
+              }}
+            >
+              <View style={{ gap: 10 }}>
+                <Text
+                  accessibilityRole='header'
+                  style={{
+                    paddingHorizontal: 6,
+                    color: subtleText,
+                    fontSize: 13,
+                    fontWeight: '700',
+                    letterSpacing: 0.8,
+                  }}
+                >
+                  PROJECT DETAILS
+                </Text>
+                <View
+                  style={{
+                    padding: 18,
+                    gap: 18,
+                    backgroundColor: surface.subtle,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: border,
+                  }}
+                >
+                  <Input
+                    label='Project name'
+                    value={name}
+                    error={error || undefined}
+                    onValueChange={(value: string) => {
+                      setName(value);
+                      setError('');
+                    }}
+                    placeholder='New project name'
+                  />
+                  <Input
+                    label='Description'
+                    value={description}
+                    onValueChange={setDescription}
+                    placeholder='Describe the project'
+                  />
+                </View>
+              </View>
+              <View style={{ gap: 10 }}>
+                <Text
+                  accessibilityRole='header'
+                  style={{
+                    paddingHorizontal: 6,
+                    color: subtleText,
+                    fontSize: 13,
+                    fontWeight: '700',
+                    letterSpacing: 0.8,
+                  }}
+                >
+                  ORGANIZATION
+                </Text>
+                <View
+                  style={{
+                    padding: 18,
+                    gap: 18,
+                    backgroundColor: surface.subtle,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: border,
+                  }}
+                >
+                  <Select
+                    label='Team'
+                    value={team}
+                    onValueChange={(value: string | null) => {
+                      if (isTeam(value)) setTeam(value);
+                    }}
+                    presentation='modal'
+                  >
+                    <Select.Item value='design' label='Design' />
+                    <Select.Item value='platform' label='Platform' />
+                    <Select.Item value='mobile' label='Mobile' />
+                  </Select>
+                  <Select
+                    label='Status'
+                    value={status}
+                    onValueChange={(value: string | null) => {
+                      if (typeof value === 'string' && isStatus(value)) {
+                        setStatus(value);
+                      }
+                    }}
+                    presentation='modal'
+                  >
+                    <Select.Item value='planned' label='Planned' />
+                    <Select.Item value='active' label='In progress' />
+                    <Select.Item value='shipped' label='Shipped' />
+                  </Select>
+                </View>
+              </View>
+              <Text
+                style={{
+                  paddingHorizontal: 6,
+                  color: subtleText,
+                  fontSize: 13,
+                  lineHeight: 19,
+                }}
+              >
+                Changes stay on this device.
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -1348,82 +1563,6 @@ function WorkspaceScreen() {
         </Modal.Overlay>
       </Modal>
 
-      <Modal
-        open={createOpen}
-        onOpenChange={(open: boolean) => {
-          setCreateOpen(open);
-          if (!open) setError('');
-        }}
-      >
-        <Modal.Overlay>
-          <Modal.Content>
-            <Modal.Header>
-              <Modal.Title>
-                {editingId === null ? 'Create a project' : 'Edit project'}
-              </Modal.Title>
-              <Modal.Description>
-                Changes stay on this device.
-              </Modal.Description>
-            </Modal.Header>
-            <Modal.Body>
-              <Input
-                label='Project name'
-                value={name}
-                error={error || undefined}
-                onValueChange={(value: string) => {
-                  setName(value);
-                  setError('');
-                }}
-                placeholder='New project name'
-              />
-              <Input
-                label='Description'
-                value={description}
-                onValueChange={setDescription}
-                placeholder='Describe the project'
-              />
-              <Select
-                label='Team'
-                value={team}
-                onValueChange={(value: string | null) => {
-                  if (isTeam(value)) setTeam(value);
-                }}
-                presentation='modal'
-              >
-                <Select.Item value='design' label='Design' />
-                <Select.Item value='platform' label='Platform' />
-                <Select.Item value='mobile' label='Mobile' />
-              </Select>
-              <Select
-                label='Status'
-                value={status}
-                onValueChange={(value: string | null) => {
-                  if (typeof value === 'string' && isStatus(value)) {
-                    setStatus(value);
-                  }
-                }}
-                presentation='modal'
-              >
-                <Select.Item value='planned' label='Planned' />
-                <Select.Item value='active' label='In progress' />
-                <Select.Item value='shipped' label='Shipped' />
-              </Select>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                appearance='outline'
-                color='neutral'
-                onPress={() => setCreateOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onPress={saveProject}>
-                {editingId === null ? 'Create project' : 'Save changes'}
-              </Button>
-            </Modal.Footer>
-          </Modal.Content>
-        </Modal.Overlay>
-      </Modal>
     </SafeAreaView>
   );
 }
