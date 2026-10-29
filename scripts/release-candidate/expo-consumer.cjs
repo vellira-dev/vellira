@@ -91,10 +91,6 @@ function createFixture(candidate) {
     // The playground's ~57.0.16 range accepts later patches, but stripping
     // the range with exactVersion would incorrectly lock this proof to .16.
     '@expo/metro-runtime': '57.0.17',
-    '@react-native-picker/picker': exactVersion(
-      playgroundPackage.dependencies?.['@react-native-picker/picker'],
-      '@react-native-picker/picker'
-    ),
     expo: '57.0.31',
     react: '19.2.3',
     'react-native': exactVersion(
@@ -316,6 +312,41 @@ function verifyNativeEntryPoints(fixtureDir) {
     reactNative: reactNativeEntry,
     subpathContract,
     icons: iconsNativeEntry,
+  };
+}
+
+function verifyNoPickerPeerInstall(fixtureDir) {
+  const pickerName = '@react-native-picker/picker';
+  const nativeManifest = readJson(
+    path.join(fixtureDir, 'node_modules', '@vellira-ui', 'react-native', 'package.json')
+  );
+  const fixtureManifest = readJson(path.join(fixtureDir, 'package.json'));
+  const lockfile = readJson(path.join(fixtureDir, 'package-lock.json'));
+  const pickerPath = path.join(
+    fixtureDir,
+    'node_modules',
+    '@react-native-picker',
+    'picker'
+  );
+
+  if (Object.hasOwn(fixtureManifest.dependencies ?? {}, pickerName)) {
+    throw new Error('Clean Expo consumer must not explicitly request Picker.');
+  }
+  if (Object.hasOwn(nativeManifest.peerDependencies ?? {}, pickerName)) {
+    throw new Error('Packed native package must not require Picker as a peer.');
+  }
+  if (
+    fs.existsSync(pickerPath) ||
+    Object.hasOwn(lockfile.packages ?? {}, 'node_modules/' + pickerName)
+  ) {
+    throw new Error('Normal npm clean Expo install unexpectedly pulled Picker.');
+  }
+
+  return {
+    optionalPickerNotRequested: true,
+    pickerPeerAbsent: true,
+    installedPickerAbsent: true,
+    lockfilePickerAbsent: true,
   };
 }
 
@@ -546,6 +577,7 @@ async function main() {
       NATIVE_PACKAGE_NAMES
     );
     const nativeEntryPoints = verifyNativeEntryPoints(fixtureDir);
+    const pickerPeerContract = verifyNoPickerPeerInstall(fixtureDir);
     const expoBin = path.join(
       fixtureDir,
       'node_modules',
@@ -605,6 +637,7 @@ async function main() {
         cleanInstall: true,
         noWorkspaceResolution: true,
         nativeEntryPoints,
+        pickerPeerContract,
         representativeNativeSurface: true,
         typecheck: true,
         expoDependencyCompatibility: expoCompatibility,

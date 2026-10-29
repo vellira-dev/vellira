@@ -18,17 +18,16 @@ pnpm add @vellira-ui/react
 ```
 
 ```bash [React Native]
-pnpm add @vellira-ui/react-native @react-native-picker/picker react-native-svg
+pnpm add @vellira-ui/react-native react-native-svg
 ```
 
 :::
 
 React web apps must satisfy `react >=18.2 <20` and
 `react-dom >=18.2 <20`. React Native apps must satisfy `react >=19`,
-`react-native >=0.86`, `@react-native-picker/picker >=2`, and
-`react-native-svg >=13`. The install
-command above includes the non-framework native peer so a clean project does not
-start with missing-peer setup.
+`react-native >=0.86`, and `react-native-svg >=13`. The install command
+includes the native SVG peer used for icons. Vellira Select does not require
+`@react-native-picker/picker`.
 
 Add optional packages when you need icons or direct access to design tokens.
 

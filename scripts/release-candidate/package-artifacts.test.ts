@@ -195,6 +195,31 @@ describe('release candidate artifact validation', () => {
     expect(() => validatePackedPackage(tokens)).not.toThrow();
   });
 
+  it('rejects the redundant Picker peer while retaining the required native SVG peer', () => {
+    const native = coreFixture();
+    native.packageInfo.name = '@vellira-ui/react-native';
+    native.packResult.name = '@vellira-ui/react-native';
+    native.packedManifest.name = '@vellira-ui/react-native';
+    native.packedManifest.exports['.']['react-native'] = './dist/index.js';
+    native.packedManifest['react-native'] = './dist/index.js';
+    native.packedManifest.peerDependencies = {
+      'react-native-svg': '>=13',
+    };
+
+    expect(() => validatePackedPackage(native)).not.toThrow();
+    native.packedManifest.peerDependencies['@react-native-picker/picker'] =
+      '>=2';
+    expect(() => validatePackedPackage(native)).toThrow(
+      'must not require Picker as a peer'
+    );
+
+    delete native.packedManifest.peerDependencies['@react-native-picker/picker'];
+    delete native.packedManifest.peerDependencies['react-native-svg'];
+    expect(() => validatePackedPackage(native)).toThrow(
+      'must retain the react-native-svg peer'
+    );
+  });
+
   it('requires native package export conditions to survive packing', () => {
     const native = coreFixture();
     native.packageInfo.name = '@vellira-ui/react-native';
@@ -207,6 +232,7 @@ describe('release candidate artifact validation', () => {
 
     native.packedManifest.exports['.']['react-native'] = './dist/index.js';
     native.packedManifest['react-native'] = './dist/index.js';
+    native.packedManifest.peerDependencies = { 'react-native-svg': '>=13' };
     expect(() => validatePackedPackage(native)).not.toThrow();
   });
 });
