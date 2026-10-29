@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
   StyleSheet,
   useWindowDimensions,
@@ -1056,6 +1057,7 @@ function WorkspaceScreen() {
                       {project.description || 'No description'}
                     </Text>
                   </Pressable>
+                  {!largeText ? (
                   <Dropdown
                     accessibilityLabel={'Actions for ' + project.name}
                     showArrow={false}
@@ -1154,7 +1156,39 @@ function WorkspaceScreen() {
                       </Dropdown.Item>
                     </Dropdown.Content>
                   </Dropdown>
+                  ) : null}
                 </View>
+                {largeText ? (
+                  <View style={{ flexDirection: 'column', gap: 8 }}>
+                    {([
+                      ['Edit', Edit, () => openEdit(project)],
+                      ['Duplicate', Copy, () => duplicateProject(project.id)],
+                      ['Remove', Trash, () => deleteProject(project.id)],
+                    ] as const).map(([label, IconComponent, action]) => (
+                      <Pressable
+                        key={label}
+                        accessibilityRole='button'
+                        accessibilityLabel={label + ' ' + project.name}
+                        onPress={action}
+                        style={{
+                          minHeight: 48,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
+                          paddingHorizontal: 12,
+                          borderWidth: 1,
+                          borderRadius: 12,
+                          borderColor: border,
+                        }}
+                      >
+                        <IconComponent size={18} color={label === 'Remove' ? theme.semantic.status.error.fg : mainText} />
+                        <Text maxFontSizeMultiplier={1.5} style={{ color: label === 'Remove' ? theme.semantic.status.error.fg : mainText, fontSize: 15 }}>
+                          {label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -1740,6 +1774,31 @@ function WorkspaceScreen() {
                           borderColor: border,
                         }}
                       >
+                        {largeText ? (
+                          <View style={{ gap: 8 }}>
+                            <Text maxFontSizeMultiplier={1.5} style={{ color: mainText, fontSize: 14, fontWeight: '600' }}>Project name *</Text>
+                            <TextInput
+                              accessibilityLabel='Project name'
+                              value={name}
+                              onChangeText={(value) => { setName(value); setError(''); }}
+                              placeholder='New project name'
+                              placeholderTextColor={subtleText}
+                              maxFontSizeMultiplier={1.5}
+                              style={{ minHeight: 48, borderWidth: 1, borderColor: border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15, color: mainText }}
+                            />
+                            {error ? <Text maxFontSizeMultiplier={1.5} style={{ color: theme.semantic.status.error.fg }}>{error}</Text> : null}
+                            <Text maxFontSizeMultiplier={1.5} style={{ color: mainText, fontSize: 14, fontWeight: '600' }}>Description</Text>
+                            <TextInput
+                              accessibilityLabel='Description'
+                              value={description}
+                              onChangeText={setDescription}
+                              placeholder='Describe the project'
+                              placeholderTextColor={subtleText}
+                              maxFontSizeMultiplier={1.5}
+                              style={{ minHeight: 48, borderWidth: 1, borderColor: border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15, color: mainText }}
+                            />
+                          </View>
+                        ) : (
                         <Input
                           label='Project name'
                           required
@@ -1759,6 +1818,7 @@ function WorkspaceScreen() {
                           placeholder='Describe the project'
                           inputStyle={editorInputStyle}
                         />
+                        )}
                       </View>
                     </View>
                     <View style={{ gap: 10 }}>
