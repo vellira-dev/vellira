@@ -417,6 +417,13 @@ function WorkspaceScreen() {
   if (createOpen) {
     const isEditing = editingId !== null;
     const actionLabel = isEditing ? 'Save' : 'Create';
+    // A single-line native TextInput needs font-metric-based vertical centering.
+    // Do not force the shared Input lineHeight into this fixed-height editor field.
+    const editorInputStyle = {
+      lineHeight: undefined,
+      paddingVertical: 0,
+      textAlignVertical: 'center' as const,
+    };
 
     return (
       <SafeAreaView
@@ -541,12 +548,14 @@ function WorkspaceScreen() {
                       setError('');
                     }}
                     placeholder='New project name'
+                    inputStyle={editorInputStyle}
                   />
                   <Input
                     label='Description'
                     value={description}
                     onValueChange={setDescription}
                     placeholder='Describe the project'
+                    inputStyle={editorInputStyle}
                   />
                 </View>
               </View>
@@ -579,7 +588,7 @@ function WorkspaceScreen() {
                     onValueChange={(value: string | null) => {
                       if (isTeam(value)) setTeam(value);
                     }}
-                    presentation='modal'
+                    presentation='sheet'
                   >
                     <Select.Item value='design' label='Design' />
                     <Select.Item value='platform' label='Platform' />
@@ -593,7 +602,7 @@ function WorkspaceScreen() {
                         setStatus(value);
                       }
                     }}
-                    presentation='modal'
+                    presentation='sheet'
                   >
                     <Select.Item value='planned' label='Planned' />
                     <Select.Item value='active' label='In progress' />

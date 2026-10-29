@@ -32,6 +32,18 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('setCreateOpen(false)');
   });
 
+  it('opens Team and Status choices in bottom sheets, not centered modals', () => {
+    expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
+    expect(editor).not.toContain("presentation='modal'");
+  });
+
+  it('centers both single-line Input fields without overriding the library globally', () => {
+    expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
+    expect(editor).toContain("textAlignVertical: 'center' as const");
+    expect(editor).toContain('lineHeight: undefined');
+    expect(editor).toContain('paddingVertical: 0');
+  });
+
   it('preserves a scrollable keyboard-safe editor and field validation', () => {
     expect(editor).toContain('<KeyboardAvoidingView');
     expect(editor).toContain("keyboardShouldPersistTaps='handled'");
