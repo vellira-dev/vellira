@@ -128,9 +128,9 @@ warning calibration policy and owner review are documented. The old Phase A
 baseline can correctly be `BASELINE_STALE` after releases, and must be
 refreshed from independent source-equivalent evidence, not re-labelled.
 
-## Phase C — exact 2.188.5 main baseline and provisional warning policy
+## Phase C — historical 2.188.5 main baseline and warning policy
 
-The **active baseline** is
+The **former active baseline** was
 `scripts/performance/baselines/vite-main-2.188.5.json`. The older
 `vite-main-2.188.3.json` is historical only and is not silently relabelled.
 The main source commit is
@@ -181,7 +181,6 @@ observed whole-root Native JS overhead and full-Web stylesheet cost can inform
 not evidence that PR-size measurement itself has failed, nor requirements to
 change public exports in #470.
 
-
 ## Final verified baseline 2.188.7 and stable active snapshot
 
 The active file is now `scripts/performance/baselines/vite-main-active.json`,
@@ -192,7 +191,7 @@ snapshot from real evidence and update only the active snapshot content. The
 test ensures these two records remain exactly equal; historical v2.188.3 and
 v2.188.5 snapshots remain untouched.
 
-**Provenance:** [Release Candidate Proof run 40959907798](https://github.com/vellira-dev/vellira/actions/runs/40959907798),
+**Provenance:** Release Candidate Proof run `40959907798`,
 measured exact PR #2011 SHA `aa40104309f5441476c4cf6f8599bac435963ede`,
 published candidate `2.188.7`, and main package-version commit
 `8f07cca61933fd81c19b0c5f93e69068bd0d6d1b`.
