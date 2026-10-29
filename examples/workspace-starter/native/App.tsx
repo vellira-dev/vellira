@@ -12,6 +12,7 @@ import {
 import { BlurView } from 'expo-blur';
 import {
   Copy,
+  Check,
   Edit,
   Filter,
   Folder,
@@ -1050,7 +1051,7 @@ function WorkspaceScreen() {
                     offset={-44}
                     closeOnSelect
                     popoverBackground={
-                      themeName === 'highContrast' ? undefined : (
+                      Platform.OS !== 'ios' || themeName === 'highContrast' ? undefined : (
                         <BlurView
                           intensity={25}
                           tint={
@@ -1082,8 +1083,8 @@ function WorkspaceScreen() {
                       borderWidth: 1,
                       borderColor: border,
                       backgroundColor:
-                        themeName === 'highContrast'
-                          ? surface.canvas
+                        Platform.OS !== 'ios' || themeName === 'highContrast'
+                          ? surface.panel
                           : 'transparent',
                       shadowColor: '#000000',
                       shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
@@ -1223,15 +1224,7 @@ function WorkspaceScreen() {
                       }}
                     >
                       {project.completed ? (
-                        <Text
-                          style={{
-                            color: '#FFFFFF',
-                            fontSize: 14,
-                            fontWeight: '700',
-                          }}
-                        >
-                          ✓
-                        </Text>
+                        <Check size={16} color='#FFFFFF' />
                       ) : null}
                     </View>
                   </Pressable>
