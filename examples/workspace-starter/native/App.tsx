@@ -929,12 +929,29 @@ function WorkspaceScreen() {
               </View>
             </View>
             {showSearch ? (
-              <Input
-                label='Search projects'
-                value={query}
-                onValueChange={setQuery}
-                placeholder='Search projects'
-              />
+              largeText ? (
+                <View style={{ gap: 8 }}>
+                  <Text maxFontSizeMultiplier={1.5} style={{ color: mainText, fontSize: 14, fontWeight: '600' }}>
+                    Search projects
+                  </Text>
+                  <TextInput
+                    accessibilityLabel='Search projects'
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder='Search projects'
+                    placeholderTextColor={subtleText}
+                    maxFontSizeMultiplier={1.5}
+                    style={{ minHeight: 48, borderWidth: 1, borderColor: border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15, color: mainText }}
+                  />
+                </View>
+              ) : (
+                <Input
+                  label='Search projects'
+                  value={query}
+                  onValueChange={setQuery}
+                  placeholder='Search projects'
+                />
+              )
             ) : null}
             {showFilters ? (
               <ScrollView
@@ -1552,6 +1569,24 @@ function WorkspaceScreen() {
                       </Text>
                     </View>
                   </View>
+                  {largeText ? (
+                    <Pressable
+                      accessibilityRole='button'
+                      accessibilityLabel='Restore sample data'
+                      onPress={() => {
+                        setData(initialWorkspace);
+                        setRemovedProject(null);
+                        setTheme('light');
+                        setResetOpen(false);
+                        setNotice({ tone: 'success', message: 'Sample data restored.' });
+                      }}
+                      style={{ minHeight: 52, borderRadius: 26, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.semantic.status.error.fg }}
+                    >
+                      <Text maxFontSizeMultiplier={1.4} style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', textAlign: 'center' }}>
+                        Restore sample data
+                      </Text>
+                    </Pressable>
+                  ) : (
                   <Button
                     color='danger'
                     onPress={() => {
@@ -1567,6 +1602,7 @@ function WorkspaceScreen() {
                   >
                     Restore sample data
                   </Button>
+                  )}
                 </View>
               </ScrollView>
             </View>
