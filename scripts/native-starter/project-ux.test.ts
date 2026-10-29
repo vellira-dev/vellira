@@ -23,9 +23,9 @@ describe('Native Starter project filter UX', () => {
 
 describe('Native Starter duplicate names', () => {
   it('generates a readable first copy name', () => {
-    expect(nextUniqueDuplicateName('Mobile onboarding', ['Mobile onboarding'])).toBe(
-      'Mobile onboarding copy'
-    );
+    expect(
+      nextUniqueDuplicateName('Mobile onboarding', ['Mobile onboarding'])
+    ).toBe('Mobile onboarding copy');
   });
 
   it('increments copy numbers instead of creating duplicate names', () => {
@@ -64,9 +64,9 @@ describe('Native Starter duplicate names', () => {
       'Mobile onboarding copy',
       'Mobile onboarding copy 2',
     ];
-    expect(nextUniqueDuplicateName('Mobile onboarding copy copy', existing)).toBe(
-      'Mobile onboarding copy 3'
-    );
+    expect(
+      nextUniqueDuplicateName('Mobile onboarding copy copy', existing)
+    ).toBe('Mobile onboarding copy 3');
   });
 
   it('trims saved names and handles empty legacy project titles', () => {

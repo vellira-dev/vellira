@@ -117,23 +117,6 @@ jobs:
         working-directory: quality-tools
         run: pnpm install --frozen-lockfile
 
-      # TEMPORARY: capture exact repository Prettier formatting to apply via review.
-      # This diagnostic step is removed before the PR is considered mergeable.
-      - name: Print Native Starter Prettier correction
-        run: |
-          pnpm exec prettier --write \
-            examples/workspace-starter/native/App.tsx \
-            examples/workspace-starter/native/projectUx.ts \
-            scripts/native-starter/project-editor-screen.test.ts \
-            scripts/native-starter/project-ux.test.ts
-          echo 'BEGIN_NATIVE_STARTER_PRETTIER_PATCH'
-          git diff -- \
-            examples/workspace-starter/native/App.tsx \
-            examples/workspace-starter/native/projectUx.ts \
-            scripts/native-starter/project-editor-screen.test.ts \
-            scripts/native-starter/project-ux.test.ts
-          echo 'END_NATIVE_STARTER_PRETTIER_PATCH'
-
       - name: Quality checks
         env:
           VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}

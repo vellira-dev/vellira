@@ -5,8 +5,7 @@ export function hasActiveProjectFilters(
   statusFilter: string
 ): boolean {
   return (
-    statusFilter !== 'all' ||
-    (searchVisible && searchQuery.trim().length > 0)
+    statusFilter !== 'all' || (searchVisible && searchQuery.trim().length > 0)
   );
 }
 

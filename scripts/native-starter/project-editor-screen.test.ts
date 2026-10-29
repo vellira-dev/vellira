@@ -8,7 +8,10 @@ const source = readFileSync(
 
 describe('Native Starter project editor navigation', () => {
   const editorStart = source.indexOf('  if (createOpen) {');
-  const workspaceStart = source.indexOf("  return (\n    <SafeAreaView", editorStart + 1);
+  const workspaceStart = source.indexOf(
+    '  return (\n    <SafeAreaView',
+    editorStart + 1
+  );
   const editor = source.slice(editorStart, workspaceStart);
 
   it('replaces the workspace instead of opening a project dialog', () => {
@@ -23,10 +26,10 @@ describe('Native Starter project editor navigation', () => {
 
   it('provides top navigation with Close and Create/Save actions', () => {
     expect(editor).toContain("accessibilityLabel='Close project editor'");
-    expect(editor).toContain("onPress={saveProject}");
+    expect(editor).toContain('onPress={saveProject}');
     expect(editor).toContain("isEditing ? 'Save' : 'Create'");
     expect(editor).toContain("isEditing ? 'Edit project' : 'New project'");
-    expect(editor).toContain("setCreateOpen(false)");
+    expect(editor).toContain('setCreateOpen(false)');
   });
 
   it('preserves a scrollable keyboard-safe editor and field validation', () => {
@@ -42,6 +45,6 @@ describe('Native Starter project editor navigation', () => {
     }
     expect(editor).toContain('error={error || undefined}');
     expect(source).toContain("setSection('projects')");
-    expect(source).toContain("setNotice(");
+    expect(source).toContain('setNotice(');
   });
 });

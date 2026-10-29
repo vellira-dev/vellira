@@ -199,7 +199,11 @@ function WorkspaceScreen() {
     gap: 14,
   } as const;
 
-  const activeFilters = hasActiveProjectFilters(showSearch, query, statusFilter);
+  const activeFilters = hasActiveProjectFilters(
+    showSearch,
+    query,
+    statusFilter
+  );
   const projectListTitle = activeFilters ? 'Matching projects' : 'All projects';
   const visibleProjects = data.projects.filter((project) => {
     const sameStatus =
@@ -444,9 +448,7 @@ function WorkspaceScreen() {
               paddingHorizontal: 8,
             }}
           >
-            <Text
-              style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
-            >
+            <Text style={{ color: mainText, fontSize: 16, fontWeight: '600' }}>
               Close
             </Text>
           </Pressable>
@@ -466,7 +468,9 @@ function WorkspaceScreen() {
           </Text>
           <Pressable
             accessibilityRole='button'
-            accessibilityLabel={isEditing ? 'Save project changes' : 'Create project'}
+            accessibilityLabel={
+              isEditing ? 'Save project changes' : 'Create project'
+            }
             onPress={saveProject}
             style={{
               minWidth: 78,
@@ -478,9 +482,7 @@ function WorkspaceScreen() {
               backgroundColor: palette.brand,
             }}
           >
-            <Text
-              style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}
-            >
+            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
               {actionLabel}
             </Text>
           </Pressable>
@@ -1014,7 +1016,9 @@ function WorkspaceScreen() {
                 >
                   <Search
                     size={22}
-                    color={showSearch && query.trim() ? palette.brand : mainText}
+                    color={
+                      showSearch && query.trim() ? palette.brand : mainText
+                    }
                   />
                 </Pressable>
                 <Pressable
@@ -1562,7 +1566,6 @@ function WorkspaceScreen() {
           </Modal.Content>
         </Modal.Overlay>
       </Modal>
-
     </SafeAreaView>
   );
 }
