@@ -24,18 +24,20 @@ describe('Native Starter compact semantic notifications', () => {
     expect(component).toContain('minHeight: 44');
   });
 
-  it('reflows notifications and Undo at large text sizes', () => {
-    expect(component).toContain('const { fontScale } = useWindowDimensions()');
+  it('keeps short Undo feedback compact without truncating long notices', () => {
+    expect(component).toContain('const { width, fontScale } = useWindowDimensions()');
     expect(component).toContain('const largeText = fontScale >= 1.5');
-    expect(component).toContain("flexDirection: largeText ? 'column' : 'row'");
-    expect(component).toContain("alignItems: largeText ? 'stretch' : 'center'");
     expect(component).toContain(
-      "alignSelf: largeText ? 'flex-end' : undefined"
+      'const stacked = largeText && (width < 360 || notice.message.length > 24)'
     );
-    expect(component).toContain("lineHeight: largeText ? undefined : 18");
-    expect(component).toContain('gap: largeText ? 0 : 8');
-    expect(component).toContain('paddingVertical: largeText ? 6 : 4');
-    expect(component).toContain('maxFontSizeMultiplier={1.5}');
+    expect(component).toContain("flexDirection: stacked ? 'column' : 'row'");
+    expect(component).toContain("alignItems: stacked ? 'stretch' : 'center'");
+    expect(component).toContain("alignSelf: stacked ? 'flex-end' : undefined");
+    expect(component).toContain('numberOfLines={largeText && !stacked ? 1 : undefined}');
+    expect(component).toContain('adjustsFontSizeToFit={largeText && !stacked}');
+    expect(component).toContain('minimumFontScale={0.9}');
+    expect(component).toContain('paddingVertical: 4');
+    expect(component).toContain('maxFontSizeMultiplier={largeText ? 1.4 : 1.5}');
     expect(component).toContain('minWidth: 0');
     expect(component).toContain('accessibilityLiveRegion={');
     expect(component).toContain("accessibilityLabel='Undo project removal'");
