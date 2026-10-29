@@ -32,7 +32,11 @@ import {
   ThemeProvider,
   useTheme,
 } from '@vellira-ui/react-native';
-import { hasActiveProjectFilters, nextUniqueDuplicateName } from './projectUx';
+import {
+  canSubmitProjectEditor,
+  hasActiveProjectFilters,
+  nextUniqueDuplicateName,
+} from './projectUx';
 
 type NativeTheme = 'light' | 'dark' | 'highContrast';
 type Section = 'overview' | 'projects' | 'settings';
@@ -205,6 +209,11 @@ function WorkspaceScreen() {
     statusFilter
   );
   const projectListTitle = activeFilters ? 'Matching projects' : 'All projects';
+  const editingProject = data.projects.find((project) => project.id === editingId);
+  const canSubmitProject = canSubmitProjectEditor(
+    { name, description, team, status },
+    editingId === null ? undefined : (editingProject ?? null)
+  );
   const visibleProjects = data.projects.filter((project) => {
     const sameStatus =
       statusFilter === 'all' || project.status === statusFilter;
@@ -245,6 +254,7 @@ function WorkspaceScreen() {
       setError('Enter a project name.');
       return;
     }
+    if (!canSubmitProject) return;
     setData((current) => ({
       ...current,
       projects:
@@ -479,6 +489,15 @@ function WorkspaceScreen() {
               isEditing ? 'Save project changes' : 'Create project'
             }
             onPress={saveProject}
+            disabled={!canSubmitProject}
+            accessibilityState={{ disabled: !canSubmitProject }}
+            accessibilityHint={
+              canSubmitProject
+                ? undefined
+                : isEditing
+                  ? 'Enter a valid name and make a change to save'
+                  : 'Enter a project name to create'
+            }
             style={{
               minWidth: 78,
               minHeight: 44,
@@ -486,10 +505,18 @@ function WorkspaceScreen() {
               justifyContent: 'center',
               alignItems: 'center',
               borderRadius: 22,
-              backgroundColor: palette.brand,
+              backgroundColor: canSubmitProject ? palette.brand : surface.subtle,
+              borderWidth: 1,
+              borderColor: canSubmitProject ? palette.brand : border,
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
+            <Text
+              style={{
+                color: canSubmitProject ? '#FFFFFF' : subtleText,
+                fontSize: 15,
+                fontWeight: '700',
+              }}
+            >
               {actionLabel}
             </Text>
           </Pressable>
@@ -541,6 +568,7 @@ function WorkspaceScreen() {
                 >
                   <Input
                     label='Project name'
+                    required
                     value={name}
                     error={error || undefined}
                     onValueChange={(value: string) => {
@@ -584,6 +612,7 @@ function WorkspaceScreen() {
                 >
                   <Select
                     label='Team'
+                    required
                     value={team}
                     onValueChange={(value: string | null) => {
                       if (isTeam(value)) setTeam(value);
@@ -596,6 +625,7 @@ function WorkspaceScreen() {
                   </Select>
                   <Select
                     label='Status'
+                    required
                     value={status}
                     onValueChange={(value: string | null) => {
                       if (typeof value === 'string' && isStatus(value)) {

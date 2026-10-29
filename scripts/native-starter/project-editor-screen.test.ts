@@ -44,6 +44,18 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('paddingVertical: 0');
   });
 
+  it('disables Create/Save until the required fields are valid', () => {
+    expect(editor).toContain('disabled={!canSubmitProject}');
+    expect(editor).toContain(
+      'accessibilityState={{ disabled: !canSubmitProject }}'
+    );
+    expect(editor).toContain('canSubmitProject ? palette.brand : surface.subtle');
+    expect(source).toContain('if (!canSubmitProject) return;');
+    expect(editor).toContain("label='Project name'\\n                    required".replace('\\n', '\n'));
+    expect(editor).toContain("label='Team'\\n                    required".replace('\\n', '\n'));
+    expect(editor).toContain("label='Status'\\n                    required".replace('\\n', '\n'));
+  });
+
   it('preserves a scrollable keyboard-safe editor and field validation', () => {
     expect(editor).toContain('<KeyboardAvoidingView');
     expect(editor).toContain("keyboardShouldPersistTaps='handled'");

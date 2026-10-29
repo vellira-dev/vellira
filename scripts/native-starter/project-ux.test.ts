@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canSubmitProjectEditor,
   hasActiveProjectFilters,
   nextUniqueDuplicateName,
 } from '../../examples/workspace-starter/native/projectUx';
@@ -76,5 +77,61 @@ describe('Native Starter duplicate names', () => {
     expect(nextUniqueDuplicateName(' ', ['Untitled project'])).toBe(
       'Untitled project copy'
     );
+  });
+});
+
+describe('Native Starter project editor submission', () => {
+  const project = {
+    name: 'Mobile onboarding',
+    description: 'Bring the first-run experience to native.',
+    team: 'mobile',
+    status: 'planned',
+  };
+
+  it('disables Create when the required name is blank or whitespace', () => {
+    expect(canSubmitProjectEditor({ ...project, name: '' })).toBe(false);
+    expect(canSubmitProjectEditor({ ...project, name: '  ' })).toBe(false);
+    expect(canSubmitProjectEditor({ ...project, name: ' New project ' })).toBe(
+      true
+    );
+  });
+
+  it('keeps Description optional and requires valid Team and Status', () => {
+    expect(canSubmitProjectEditor({ ...project, description: '' })).toBe(true);
+    expect(canSubmitProjectEditor({ ...project, team: '' })).toBe(false);
+    expect(canSubmitProjectEditor({ ...project, status: '' })).toBe(false);
+    expect(canSubmitProjectEditor({ ...project, team: 'other' })).toBe(false);
+  });
+
+  it('disables Save for unchanged or whitespace-only edits', () => {
+    expect(canSubmitProjectEditor(project, project)).toBe(false);
+    expect(
+      canSubmitProjectEditor(
+        { ...project, name: ' Mobile onboarding  ' },
+        project
+      )
+    ).toBe(false);
+    expect(canSubmitProjectEditor(project, null)).toBe(false);
+  });
+
+  it('enables Save for meaningful changes to any field', () => {
+    expect(
+      canSubmitProjectEditor({ ...project, name: 'Updated onboarding' }, project)
+    ).toBe(true);
+    expect(
+      canSubmitProjectEditor({ ...project, description: 'Updated' }, project)
+    ).toBe(true);
+    expect(canSubmitProjectEditor({ ...project, team: 'design' }, project)).toBe(
+      true
+    );
+    expect(canSubmitProjectEditor({ ...project, status: 'active' }, project)).toBe(
+      true
+    );
+  });
+
+  it('keeps Save disabled when the name becomes invalid despite other edits', () => {
+    expect(
+      canSubmitProjectEditor({ ...project, name: ' ', status: 'active' }, project)
+    ).toBe(false);
   });
 });

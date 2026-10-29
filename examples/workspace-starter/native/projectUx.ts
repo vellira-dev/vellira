@@ -26,3 +26,38 @@ export function nextUniqueDuplicateName(
   while (taken.has((preferred + ' ' + suffix).toLowerCase())) suffix += 1;
   return preferred + ' ' + suffix;
 }
+
+export type ProjectEditorFields = {
+  name: string;
+  description: string;
+  team: string;
+  status: string;
+};
+
+/**
+ * Creation requires a non-blank name and valid required selectors.
+ * Editing also requires a real persisted change, not whitespace-only edits.
+ * A missing original record must never create a misleading successful save.
+ */
+export function canSubmitProjectEditor(
+  draft: ProjectEditorFields,
+  original?: ProjectEditorFields | null
+): boolean {
+  const name = draft.name.trim();
+  if (
+    !name ||
+    !['design', 'platform', 'mobile'].includes(draft.team) ||
+    !['planned', 'active', 'shipped'].includes(draft.status)
+  ) {
+    return false;
+  }
+  if (original === undefined) return true;
+  if (original === null) return false;
+
+  return (
+    name !== original.name.trim() ||
+    draft.description.trim() !== original.description.trim() ||
+    draft.team !== original.team ||
+    draft.status !== original.status
+  );
+}
