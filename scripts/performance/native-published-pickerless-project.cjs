@@ -139,7 +139,9 @@ write('App.tsx', [
   '          <Text testID="hermes" style={hermes ? styles.pass : styles.fail}>',
   "            Hermes engine: {hermes ? 'PASS' : 'FAIL'}",
   '          </Text>',
-  '          <ThemeProvider theme="dark">',
+  // Keep the generated white proof canvas in sync with Vellira's light palette.
+  // Dark theme produces near-white Select label/value text on this white canvas.
+  '          <ThemeProvider theme="light">',
   '            <PublishedControls />',
   '          </ThemeProvider>',
   '          <Text>Tap Select, choose France, reopen and choose Spain.</Text>',
