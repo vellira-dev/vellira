@@ -155,6 +155,7 @@ function WorkspaceScreen() {
   const { theme, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight, fontScale } = useWindowDimensions();
+  const largeText = fontScale >= 1.5;
   const [data, setData] = useState<Workspace>(initialWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
@@ -499,6 +500,7 @@ function WorkspaceScreen() {
         }}
       >
         <Text
+          maxFontSizeMultiplier={1.4}
           style={{
             color: subtleText,
             fontSize: 12,
@@ -520,6 +522,9 @@ function WorkspaceScreen() {
             <Text
               accessibilityRole='header'
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.5}
               style={{
                 color: mainText,
                 fontSize: 27,
@@ -533,7 +538,7 @@ function WorkspaceScreen() {
                   ? 'Projects'
                   : 'Settings'}
             </Text>
-            <Text numberOfLines={1} style={{ color: subtleText, fontSize: 13 }}>
+            <Text numberOfLines={1} maxFontSizeMultiplier={1.5} style={{ color: subtleText, fontSize: 13 }}>
               {data.name.trim() || 'Untitled workspace'}
             </Text>
           </View>
@@ -830,7 +835,9 @@ function WorkspaceScreen() {
                   {statuses.map((status) => (
                     <Text
                       key={status.key}
-                      numberOfLines={2}
+                      numberOfLines={largeText ? 1 : 2}
+                      maxFontSizeMultiplier={1.4}
+                      accessibilityLabel={status.name}
                       style={{
                         width: '31%',
                         textAlign: 'center',
@@ -838,7 +845,13 @@ function WorkspaceScreen() {
                         fontSize: 12,
                       }}
                     >
-                      {status.name}
+                      {largeText
+                        ? status.key === 'planned'
+                          ? 'Plan'
+                          : status.key === 'active'
+                            ? 'Active'
+                            : 'Shipped'
+                        : status.name}
                     </Text>
                   ))}
                 </View>
@@ -1303,6 +1316,7 @@ function WorkspaceScreen() {
             key={value}
             accessibilityRole='tab'
             accessibilityLabel={label}
+            accessibilityHint={largeText ? 'Navigation tab' : undefined}
             accessibilityState={{ selected: section === value }}
             onPress={() => setSection(value)}
             style={{
@@ -1317,15 +1331,17 @@ function WorkspaceScreen() {
               size={22}
               color={section === value ? palette.brand : subtleText}
             />
-            <Text
-              style={{
-                color: section === value ? palette.brand : subtleText,
-                fontSize: 11,
-                fontWeight: section === value ? '700' : '500',
-              }}
-            >
-              {label}
-            </Text>
+            {!largeText ? (
+              <Text
+                style={{
+                  color: section === value ? palette.brand : subtleText,
+                  fontSize: 11,
+                  fontWeight: section === value ? '700' : '500',
+                }}
+              >
+                {label}
+              </Text>
+            ) : null}
           </Pressable>
         ))}
       </View>
