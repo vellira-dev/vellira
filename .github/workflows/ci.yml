@@ -117,6 +117,24 @@ jobs:
         working-directory: quality-tools
         run: pnpm install --frozen-lockfile
 
+      # Temporary published-package lockfile proof; remove before merge.
+      - name: Generate verified Starter 2.188.2 lockfiles (temporary)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/sync-workspace-starter-versions.cjs 2.188.2
+          node scripts/sync-workspace-starter-lockfiles.cjs
+          node scripts/sync-workspace-starter-versions.cjs 2.188.2 --check
+          node scripts/sync-workspace-starter-lockfiles.cjs --check
+          echo BEGIN_STARTER_LOCK_21882
+          git diff -- \
+            examples/workspace-starter/web/package.json \
+            examples/workspace-starter/web/package-lock.json \
+            examples/workspace-starter/native/package.json \
+            examples/workspace-starter/native/package-lock.json \
+            examples/workspace-starter/README.md
+          echo END_STARTER_LOCK_21882
+
       - name: Quality checks
         env:
           VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
