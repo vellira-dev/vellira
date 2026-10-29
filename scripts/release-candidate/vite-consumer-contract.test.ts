@@ -74,6 +74,18 @@ describe('clean Vite consumer workflow contract', () => {
     expect(workflow).not.toContain('vite-baseline-consumer:');
   });
 
+  it('measures a wider published-root Web surface separately from the baseline', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    expect(script).toContain('measureRepresentativeWeb(');
+    expect(script).toContain('formatRepresentativeWeb(representativeWeb)');
+    expect(script).toContain('representativeWeb,');
+    expect(script).toContain('bundleSize.scenarios.buttonInput');
+    expect(script).toContain("run('npm', ['run', 'typecheck']");
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
