@@ -1,13 +1,11 @@
-import { Modal, Platform, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, View } from 'react-native';
 
 import { useThemeStyles } from '../../../theme';
 
 import { SelectBackdrop } from './SelectBackdrop';
-import {
-  createPresentationStyles,
-  SELECT_PRESENTATION_VIEWPORT_RATIO,
-} from './SelectPresentation.styles';
+import { createPresentationStyles } from './SelectPresentation.styles';
 import type { SelectPresentationProps } from './types';
+import { useSelectPresentationViewport } from './useSelectPresentationViewport';
 
 export const SelectModal = ({
   visible,
@@ -18,8 +16,7 @@ export const SelectModal = ({
   children,
 }: SelectPresentationProps) => {
   const styles = useThemeStyles(createPresentationStyles);
-  const { height } = useWindowDimensions();
-  const maxHeight = height * SELECT_PRESENTATION_VIEWPORT_RATIO;
+  const { maxHeight, onLayout } = useSelectPresentationViewport('modal');
 
   return (
     <Modal
@@ -45,19 +42,7 @@ export const SelectModal = ({
               { maxHeight },
               contentStyle,
             ]}
-            onLayout={(event) => {
-              if (
-                (
-                  globalThis as typeof globalThis & {
-                    __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean;
-                  }
-                ).__VELLIRA_SELECT_LAYOUT_PROOF__
-              ) {
-                console.warn(
-                  `[VELLIRA_SELECT_LAYOUT] modal height=${event.nativeEvent.layout.height} viewportCap=${maxHeight}`
-                );
-              }
-            }}
+            onLayout={onLayout}
             testID='select-modal'
           >
             {children}
