@@ -853,7 +853,7 @@ describe('Native Select', () => {
     // Web DOM tests cannot emulate iOS Dynamic Type layout. Protect the
     // explicit native text scaling contract alongside accessible controls.
     const nativeSource = readFileSync(
-      new URL('./Content/SelectContent.tsx', import.meta.url),
+      'src/components/Select/Content/SelectContent.tsx',
       'utf8'
     );
     const toolbarStart = nativeSource.indexOf('const body = (');
