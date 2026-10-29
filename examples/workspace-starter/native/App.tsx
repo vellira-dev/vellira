@@ -42,6 +42,7 @@ import {
   hasActiveProjectFilters,
   nextUniqueDuplicateName,
 } from './projectUx';
+import { WorkspaceNotice, type WorkspaceNoticeData } from './WorkspaceNotice';
 
 type NativeTheme = 'light' | 'dark' | 'highContrast';
 type Section = 'overview' | 'projects' | 'settings';
@@ -168,7 +169,7 @@ function WorkspaceScreen() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<WorkspaceNoticeData | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -179,7 +180,13 @@ function WorkspaceScreen() {
         if (restored) setData(restored);
       })
       .catch(() => {
-        // The example continues with in-memory state if storage is unavailable.
+        // Preserve the in-memory demo, but make the storage failure visible.
+        if (mounted) {
+          setNotice({
+            tone: 'error',
+            message: 'Could not load saved projects on this device.',
+          });
+        }
       })
       .finally(() => {
         if (mounted) setLoaded(true);
@@ -192,9 +199,23 @@ function WorkspaceScreen() {
   useEffect(() => {
     if (!loaded) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(data)).catch(() => {
-      // In-memory interactions remain available.
+      // In-memory interactions continue, but persistence is unavailable.
+      setNotice({
+        tone: 'error',
+        message: 'Could not save changes on this device.',
+      });
     });
   }, [loaded, data]);
+
+  // Success feedback expires; errors and undoable removals remain visible.
+  useEffect(() => {
+    if (!notice || notice.tone === 'error' || removedProject) return;
+
+    const timeout = setTimeout(() => {
+      setNotice((current) => (current === notice ? null : current));
+    }, 7000);
+    return () => clearTimeout(timeout);
+  }, [notice, removedProject]);
 
   const surface = theme.semantic.surface;
   const border = theme.semantic.border.muted;
@@ -300,11 +321,13 @@ function WorkspaceScreen() {
     setCreateOpen(false);
     setRemovedProject(null);
     setSection('projects');
-    setNotice(
-      editingId === null
-        ? 'Project created locally.'
-        : 'Project updated locally.'
-    );
+    setNotice({
+      tone: 'success',
+      message:
+        editingId === null
+          ? 'Project created locally.'
+          : 'Project updated locally.',
+    });
   }
 
   function toggleProject(id: number, completed: boolean) {
@@ -352,7 +375,7 @@ function WorkspaceScreen() {
       };
     });
     setRemovedProject(null);
-    setNotice('Project duplicated.');
+    setNotice({ tone: 'success', message: 'Project duplicated.' });
   }
 
   function deleteProject(id: number) {
@@ -363,7 +386,7 @@ function WorkspaceScreen() {
       ...current,
       projects: current.projects.filter((project) => project.id !== id),
     }));
-    setNotice('Project removed.');
+    setNotice({ tone: 'neutral', message: 'Project removed.' });
   }
 
   const completedCount = data.projects.filter((item) => item.completed).length;
@@ -528,56 +551,34 @@ function WorkspaceScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
       >
         {notice ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 8,
-              padding: 10,
-              borderWidth: 1,
-              borderColor: border,
-              borderRadius: theme.tokens.radius.md,
+          <WorkspaceNotice
+            notice={notice}
+            onUndo={
+              removedProject
+                ? () => {
+                    setData((current) =>
+                      current.projects.some(
+                        (item) => item.id === removedProject.id
+                      )
+                        ? current
+                        : {
+                            ...current,
+                            projects: [removedProject, ...current.projects],
+                          }
+                    );
+                    setRemovedProject(null);
+                    setNotice({
+                      tone: 'success',
+                      message: 'Project restored.',
+                    });
+                  }
+                : undefined
+            }
+            onDismiss={() => {
+              setNotice(null);
+              setRemovedProject(null);
             }}
-          >
-            <Text
-              accessibilityLiveRegion='polite'
-              style={{ color: mainText, flexGrow: 1, flexShrink: 1 }}
-            >
-              {notice}
-            </Text>
-            {removedProject ? (
-              <Button
-                appearance='ghost'
-                onPress={() => {
-                  setData((current) =>
-                    current.projects.some(
-                      (item) => item.id === removedProject.id
-                    )
-                      ? current
-                      : {
-                          ...current,
-                          projects: [removedProject, ...current.projects],
-                        }
-                  );
-                  setRemovedProject(null);
-                  setNotice('Project restored.');
-                }}
-              >
-                Undo
-              </Button>
-            ) : null}
-            <Button
-              appearance='ghost'
-              color='neutral'
-              onPress={() => {
-                setNotice('');
-                setRemovedProject(null);
-              }}
-            >
-              Dismiss
-            </Button>
-          </View>
+          />
         ) : null}
 
         {section === 'overview' ? (
@@ -1390,7 +1391,7 @@ function WorkspaceScreen() {
                   setRemovedProject(null);
                   setTheme('light');
                   setResetOpen(false);
-                  setNotice('Sample data restored.');
+                  setNotice({ tone: 'success', message: 'Sample data restored.' });
                 }}
               >
                 Restore data
