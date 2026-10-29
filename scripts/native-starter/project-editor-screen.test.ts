@@ -1,19 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
-
-const require = createRequire(import.meta.url);
-const { syncWorkspaceStarterVersions } = require(
-  '../sync-workspace-starter-versions.cjs'
-) as {
-  syncWorkspaceStarterVersions: (options: {
-    root: string;
-    version: string;
-    check: boolean;
-  }) => string[];
-};
 
 const source = readFileSync(
   new URL('../../examples/workspace-starter/native/App.tsx', import.meta.url),
@@ -120,22 +106,36 @@ describe('Native Starter project editor navigation', () => {
   });
 });
 
-describe('Native Starter published release pin contract', () => {
-  it('accepts synchronized Starter pins across releases', () => {
-    const root = fileURLToPath(new URL('../../', import.meta.url));
-    const manifestFile = new URL(
+describe('Native Starter published release pins', () => {
+  it('keeps both Starter packages and README synchronized', () => {
+    const nativeFile = new URL(
       '../../examples/workspace-starter/native/package.json',
       import.meta.url
     );
-    const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    const releaseVersion = manifest.dependencies['@vellira-ui/react-native'];
-    expect(releaseVersion).toMatch(/^\d+\.\d+\.\d+$/);
-    const changed = syncWorkspaceStarterVersions({
-      root,
-      version: releaseVersion,
-      check: true,
-    });
-    expect(changed).toEqual([]);
+    const webFile = new URL(
+      '../../examples/workspace-starter/web/package.json',
+      import.meta.url
+    );
+    const readmeFile = new URL(
+      '../../examples/workspace-starter/README.md',
+      import.meta.url
+    );
+    const native = JSON.parse(readFileSync(nativeFile, 'utf8'));
+    const web = JSON.parse(readFileSync(webFile, 'utf8'));
+    const version = native.dependencies['@vellira-ui/react-native'];
+
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(native.dependencies['@vellira-ui/icons']).toBe(version);
+    for (const name of [
+      '@vellira-ui/react',
+      '@vellira-ui/tokens',
+      '@vellira-ui/icons',
+    ]) {
+      expect(web.dependencies[name]).toBe(version);
+    }
+    expect(readFileSync(readmeFile, 'utf8')).toContain(
+      `**Vellira ${version} packages**`
+    );
   });
 });
 
