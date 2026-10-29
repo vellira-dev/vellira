@@ -58,6 +58,11 @@ test('creates an opt-in published-package Expo/Hermes runtime test with no picke
     assert.equal(manifest.scripts.ios, 'expo run:ios');
     assert.ok(!Object.hasOwn(manifest.dependencies, '@react-native-picker/picker'));
     assert.equal(expo.expo.jsEngine, 'hermes');
+    // The proof uses a white canvas: guard against accidentally putting
+    // dark-theme foreground tokens on that light background.
+    assert.match(app, /<ThemeProvider theme="light">/);
+    assert.doesNotMatch(app, /<ThemeProvider theme="dark">/);
+    assert.match(app, /backgroundColor: '#fff'/);
     for (const token of ['HermesInternal', 'Select', "presentation='modal'",
       'SafeAreaProvider', 'SafeAreaView', "seen.includes('fr') && seen.includes('es')",
       'onValueChange', 'selectPassed', 'Native Select without picker',
