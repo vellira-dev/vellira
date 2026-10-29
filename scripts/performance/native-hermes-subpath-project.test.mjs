@@ -27,10 +27,11 @@ function makeFixture() {
   return { root, repo, native, destination, generator: path.join(scripts, 'native-hermes-subpath-project.cjs') };
 }
 
-function execute(fixture, args = [fixture.destination]) {
+function execute(fixture, args = [fixture.destination], environment = {}) {
   return spawnSync(process.execPath, [fixture.generator, ...args], {
     cwd: fixture.repo,
     encoding: 'utf8',
+    env: { ...process.env, VELLIRA_HERMES_SHEET_PROOF: '0', ...environment },
   });
 }
 
@@ -70,6 +71,27 @@ test('prepares isolated unpublished Hermes Expo app with both context boundaries
     assert.ok(readme.includes('npm install --legacy-peer-deps'));
     assert.ok(readme.includes('npm run ios -- --device'));
     assert.equal(fs.readFileSync(path.join(f.destination, 'vellira-hermes-shared-candidate.tgz'), 'utf8'), 'FIXTURE_ONLY');
+  });
+});
+
+test('optional real Hermes sheet proof includes both choices without altering default probe', () => {
+  withFixture((f) => {
+    const run = execute(f, [f.destination], {
+      VELLIRA_HERMES_SHEET_PROOF: '1',
+    });
+    assert.equal(run.status, 0, run.stderr);
+
+    const app = fs.readFileSync(path.join(f.destination, 'App.tsx'), 'utf8');
+    const readme = fs.readFileSync(path.join(f.destination, 'README.md'), 'utf8');
+
+    assert.match(app, /presentation="sheet"/);
+    assert.match(app, /<RootProvider theme="light">/);
+    assert.match(app, /label: "France", value: "fr"/);
+    assert.match(app, /label: "Spain", value: "es"/);
+    assert.match(app, /sheetSeen\.includes\("fr"\) && sheetSeen\.includes\("es"\)/);
+    assert.match(app, /VELLIRA_HERMES_SHEET/);
+    assert.match(readme, /Optional sheet layout proof/);
+    assert.match(app, /Independent buttons/);
   });
 });
 
