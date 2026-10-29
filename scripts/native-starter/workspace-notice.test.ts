@@ -51,8 +51,8 @@ describe('Native Starter compact semantic notifications', () => {
   it('retains Undo and error messages while expiring success safely', () => {
     expect(app).toContain('onUndo={');
     expect(app).toContain('projects: [removedProject, ...current.projects]');
-    expect(app).toContain("notice.tone === 'error' || removedProject");
-    expect(app).toContain('}, 7000)');
+    expect(app).toContain("notice.tone !== 'success' || removedProject");
+    expect(app).toContain('}, 4000)');
     expect(app).toContain('current === notice ? null : current');
     expect(app).toContain('setRemovedProject(null)');
   });
