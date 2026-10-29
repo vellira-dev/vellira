@@ -58,6 +58,17 @@ describe('Native Starter duplicate names', () => {
     ).toBe('Dashboard rollout copy');
   });
 
+  it('normalizes legacy repeated-copy suffixes', () => {
+    const existing = [
+      'Mobile onboarding',
+      'Mobile onboarding copy',
+      'Mobile onboarding copy 2',
+    ];
+    expect(nextUniqueDuplicateName('Mobile onboarding copy copy', existing)).toBe(
+      'Mobile onboarding copy 3'
+    );
+  });
+
   it('trims saved names and handles empty legacy project titles', () => {
     expect(nextUniqueDuplicateName('  Demo  ', ['Demo', ' Demo COPY '])).toBe(
       'Demo copy 2'

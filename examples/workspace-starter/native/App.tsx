@@ -193,6 +193,7 @@ function WorkspaceScreen() {
   } as const;
 
   const activeFilters = hasActiveProjectFilters(showSearch, query, statusFilter);
+  const projectListTitle = activeFilters ? 'Matching projects' : 'All projects';
   const visibleProjects = data.projects.filter((project) => {
     const sameStatus =
       statusFilter === 'all' || project.status === statusFilter;
@@ -775,7 +776,7 @@ function WorkspaceScreen() {
               <Text
                 style={{ color: mainText, fontSize: 17, fontWeight: '700' }}
               >
-                {activeFilters ? 'Matching projects' : 'All projects'} · {visibleProjects.length}
+                {projectListTitle} · {visibleProjects.length}
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
