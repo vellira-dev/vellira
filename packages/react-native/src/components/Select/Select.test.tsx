@@ -844,8 +844,12 @@ describe('Native Select', () => {
 
     openSelect(container);
 
-    const toolbar = document.body.querySelector<HTMLElement>('[role="toolbar"]');
-    expect(toolbar?.getAttribute('aria-label')).toBe('Status selection actions');
+    const toolbar = document.body.querySelector<HTMLElement>(
+      '[role="toolbar"]'
+    );
+    expect(toolbar?.getAttribute('aria-label')).toBe(
+      'Status selection actions'
+    );
     expect(getButtonByLabel('Close selection')).toBeTruthy();
     expect(getButtonByLabel('Done')).toBeTruthy();
     expect(toolbar?.textContent).toContain('Status');
@@ -862,12 +866,8 @@ describe('Native Select', () => {
     expect(
       nativeToolbar.match(/maxFontSizeMultiplier=\{1\.4\}/g)
     ).toHaveLength(3);
-    expect(
-      nativeToolbar.match(/numberOfLines=\{1\}/g)
-    ).toHaveLength(3);
-    expect(
-      nativeToolbar.match(/adjustsFontSizeToFit/g)
-    ).toHaveLength(3);
+    expect(nativeToolbar.match(/numberOfLines=\{1\}/g)).toHaveLength(3);
+    expect(nativeToolbar.match(/adjustsFontSizeToFit/g)).toHaveLength(3);
     expect(nativeSource).toContain('const largeText = fontScale >= 1.5');
     expect(
       nativeToolbar.match(/largeText && \{\s*lineHeight: undefined\s*\}/g)
