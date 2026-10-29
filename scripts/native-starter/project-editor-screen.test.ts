@@ -210,3 +210,17 @@ describe('Native Starter large-text project actions', () => {
     expect(source).toContain('onChangeText={setDescription}');
   });
 });
+
+describe('Native Starter large-text search and restore', () => {
+  it('uses an accessible compact search input at large font scales', () => {
+    expect(source).toContain("accessibilityLabel='Search projects'");
+    expect(source).toContain('onChangeText={setQuery}');
+    expect(source).toContain("label='Search projects'");
+  });
+
+  it('keeps the destructive restore action readable and operable', () => {
+    expect(source).toContain("accessibilityLabel='Restore sample data'");
+    expect(source).toContain('maxFontSizeMultiplier={1.4}');
+    expect(source).toContain("setData(initialWorkspace)");
+  });
+});
