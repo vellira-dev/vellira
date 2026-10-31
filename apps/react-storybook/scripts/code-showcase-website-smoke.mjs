@@ -751,6 +751,22 @@ try {
             await demoSection
               .getByRole('tab', { name: 'Mobile', exact: true })
               .click();
+            const phoneBackground = await demoSection
+              .locator('#dashboard-live')
+              .evaluate((element) => getComputedStyle(element).backgroundColor);
+            assert.equal(
+              phoneBackground,
+              'rgba(0, 0, 0, 0)',
+              'Mobile phone must not have an additional backing card'
+            );
+            await expect(
+              demoSection.getByText('Browser preview', { exact: false })
+            ).toBeVisible();
+            await expect(
+              demoSection.getByRole('link', {
+                name: 'Explore the Pro roadmap',
+              })
+            ).toHaveCount(0);
             const nativePreview = demoSection.locator(
               '[data-testid="native-starter-preview"]'
             );
@@ -787,6 +803,11 @@ try {
             await demoSection
               .getByRole('tab', { name: 'Desktop', exact: true })
               .click();
+            await expect(
+              demoSection.getByRole('link', {
+                name: 'Explore the Pro roadmap',
+              })
+            ).toBeVisible();
             await expect(
               dashboard.getByRole('button', {
                 name: 'Dashboard',

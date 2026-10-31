@@ -74,10 +74,10 @@ export function ProductInterfaceDemo() {
             </Button>
             <Button asChild appearance='outline' color='neutral'>
               <a
-                  href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
+                href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
                 View Source
               </a>
             </Button>
@@ -178,15 +178,15 @@ export function ProductInterfaceDemo() {
 
         {preview === 'desktop' ? (
           <div className={styles.boundary}>
-          <p>
-            <strong>Core remains free.</strong> This example uses published
-            Vellira controls and stores only local demonstration data. Future
-            Pro tiers focus on managed workflows, advanced automation, and
-            separately licensed production application kits.
-          </p>
-          <DesignSystemLink href='#pro'>
-            Explore the Pro roadmap →
-          </DesignSystemLink>
+            <p>
+              <strong>Core remains free.</strong> This example uses published
+              Vellira controls and stores only local demonstration data. Future
+              Pro tiers focus on managed workflows, advanced automation, and
+              separately licensed production application kits.
+            </p>
+            <DesignSystemLink href='#pro'>
+              Explore the Pro roadmap →
+            </DesignSystemLink>
           </div>
         ) : null}
       </div>

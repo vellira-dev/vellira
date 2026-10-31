@@ -108,7 +108,8 @@
   align-items: center;
   justify-content: center;
   gap: 4px 14px;
-  margin-top: 14px;
+  max-width: 440px;
+  margin: 14px auto 0;
   font-size: 13px;
   line-height: 1.5;
 }
