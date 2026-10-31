@@ -29,6 +29,11 @@ on:
       - '.github/workflows/deploy-website-cloudflare-production.yml'
   workflow_dispatch:
     inputs:
+      production_recovery:
+        description: 'Explicitly request normal production promotion after fully verified manual staging (no preview flags).'
+        required: false
+        default: false
+        type: boolean
       pro_interest_preview:
         description: 'Owner-approved staging-only Pro signup preview; unchecked for normal deploys.'
         required: false
@@ -530,6 +535,10 @@ jobs:
 
       - name: Record staging evidence
         if: success()
+        env:
+          PRODUCTION_RECOVERY: ${{ inputs.production_recovery }}
+          PRO_INTEREST_PREVIEW: ${{ inputs.pro_interest_preview }}
+          NEWSLETTER_ABUSE_PREVIEW: ${{ inputs.newsletter_abuse_preview }}
         shell: bash
         run: |
           set -euo pipefail
@@ -563,6 +572,10 @@ jobs:
             runId: Number(process.env.GITHUB_RUN_ID),
             runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
             repository: process.env.GITHUB_REPOSITORY,
+            productionRecovery: process.env.GITHUB_EVENT_NAME === 'workflow_dispatch' &&
+              process.env.PRODUCTION_RECOVERY === 'true' &&
+              process.env.PRO_INTEREST_PREVIEW !== 'true' &&
+              process.env.NEWSLETTER_ABUSE_PREVIEW !== 'true',
           };
 
           await fs.writeFile(
