@@ -6,6 +6,8 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
 
 permissions:
   contents: read
