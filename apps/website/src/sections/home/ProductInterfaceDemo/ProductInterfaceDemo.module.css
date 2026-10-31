@@ -96,13 +96,12 @@
   font-weight: 600;
 }
 
-.mobileFrame {
-  display: block;
-  width: 100%;
-  height: 740px;
-  border: 0;
-  background: var(--surface-canvas);
+.nativeStageContent {
+  min-width: 0;
+  padding: 14px 8px 18px;
+  background: var(--surface-subtle);
 }
+
 
 .stage {
   margin-top: 14px;
@@ -114,7 +113,7 @@
   scroll-margin-top: 100px;
 }
 .mobileStage {
-  width: min(392px, 100%);
+  width: min(440px, 100%);
   margin-inline: auto;
 }
 
