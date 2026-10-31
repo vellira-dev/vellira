@@ -55,9 +55,9 @@ export function ProductInterfaceDemo() {
             <span>Real components. Working interface.</span>
           </h2>
           <p className={styles.description}>
-            Try the interactive React Web dashboard, then explore the
-            React Native Starter's mobile interface. Both are free Core
-            examples with public source and no account required.
+            Try the interactive React Web dashboard, then explore the React
+            Native Starter's mobile interface. Both are free Core examples with
+            public source and no account required.
           </p>
           <nav className={styles.ctas} aria-label='Try Vellira Dashboard'>
             <Button asChild appearance='solid' color='primary'>
@@ -144,9 +144,7 @@ export function ProductInterfaceDemo() {
             </div>
           )}
         </div>
-        <div
-          className={captionClassName}
-        >
+        <div className={captionClassName}>
           {preview === 'mobile' ? (
             <>
               <span>
@@ -162,8 +160,8 @@ export function ProductInterfaceDemo() {
             </>
           ) : (
             <>
-              Want to see the native UI instead of a narrowed Web layout?
-              Choose <strong>Mobile</strong> above or{' '}
+              Want to see the native UI instead of a narrowed Web layout? Choose{' '}
+              <strong>Mobile</strong> above or{' '}
               <DesignSystemLink
                 href={nativeStarterUrl}
                 target='_blank'
