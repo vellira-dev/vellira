@@ -7,11 +7,7 @@ type BlurViewProps = ViewProps & {
 
 // Browser-only fallback for Expo Blur. Preserve View's accessibility and
 // pointer interaction props, but leave the native visual effect to Expo.
-export function BlurView({
-  children,
-  style,
-  pointerEvents,
-}: BlurViewProps) {
+export function BlurView({ children, style, pointerEvents }: BlurViewProps) {
   return (
     <View style={style} pointerEvents={pointerEvents}>
       {children}

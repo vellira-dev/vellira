@@ -34,7 +34,7 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Setup instructions ↗');
   });
 
-  it('isolates the actual Native Starter and its modal portals inside the phone iframe', () => {
+  it('isolates Native Starter portals within the phone iframe', () => {
     const nativeRoute = read(
       'apps/website/src/app/(marketing)/demo/native-starter/page.tsx'
     );
@@ -79,7 +79,7 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Explore the Pro roadmap');
   });
 
-  it('shows the maintained Expo Starter instead of inventing another UI', () => {
+  it('uses the maintained Expo Starter UI', () => {
     expect(preview).toContain("src='/demo/native-starter'");
     expect(preview).toContain("data-testid='native-starter-preview'");
     expect(preview).not.toContain('seedProjects');
@@ -88,17 +88,19 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('React Native Starter · rendered in the browser');
   });
 
-  it('provides browser shims while leaving the canonical Expo app untouched', () => {
+  it('uses browser shims without changing Expo', () => {
     expect(next).toContain("'react-native': 'react-native-web'");
     expect(next).not.toContain('nativeWebAdapters');
     expect(safeArea).toContain('useSafeAreaInsets');
     expect(blurAdapter).toContain('type BlurViewProps = ViewProps & {');
     expect(blurAdapter).toContain('pointerEvents={pointerEvents}');
-    expect(storage).toContain("window.localStorage.getItem(keyFor(key))");
-    expect(storage).toContain("window.localStorage.setItem(keyFor(key), value)");
+    expect(storage).toContain('window.localStorage.getItem(keyFor(key))');
+    expect(storage).toContain(
+      'window.localStorage.setItem(keyFor(key), value)'
+    );
   });
 
-  it('keeps generated preview sources identical to the canonical Expo screens', () => {
+  it('checks browser source parity with Expo', () => {
     const names = [
       'App.tsx',
       'WorkspaceSettings.tsx',
@@ -108,10 +110,7 @@ describe('Website Native Starter showcase', () => {
     const sourceHeader =
       '/* Generated from examples/workspace-starter/native by sync-native-starter-preview.mjs. Do not edit. */\n';
     const imports = [
-      [
-        "from 'expo-blur'",
-        "from '../native-web-adapters/ExpoBlur'",
-      ],
+      ["from 'expo-blur'", "from '../native-web-adapters/ExpoBlur'"],
       [
         "from 'react-native-safe-area-context'",
         "from '../native-web-adapters/SafeArea'",
@@ -138,7 +137,7 @@ describe('Website Native Starter showcase', () => {
     }
   });
 
-  it('inherits the actual three-project Native Starter and its UX behaviors', () => {
+  it('retains the three-project Native Starter UX', () => {
     for (const title of [
       'Design token refresh',
       'Mobile onboarding',
@@ -151,7 +150,9 @@ describe('Website Native Starter showcase', () => {
     expect(native).toContain('Project progress');
     expect(native).toContain('Projects by status');
     expect(native).toContain('nextUniqueDuplicateName');
-    expect(native).toContain("accessibilityLabel={'Actions for ' + project.name}");
+    expect(native).toContain(
+      "accessibilityLabel={'Actions for ' + project.name}"
+    );
     expect(native).toContain('setResetOpen(true)');
     expect(native).toContain("themeName === 'highContrast'");
   });

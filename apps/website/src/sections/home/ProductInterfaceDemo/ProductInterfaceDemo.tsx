@@ -6,19 +6,20 @@ import dynamic from 'next/dynamic';
 
 import { Button, Tabs } from '@vellira-ui/react';
 
+import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
+import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
+
 import { Dashboard } from './Dashboard';
+
+import styles from './ProductInterfaceDemo.module.css';
 
 const NativeStarterPreview = dynamic(
   () =>
-    import('./NativeStarterPreview').then((module) => module.NativeStarterPreview),
+    import('./NativeStarterPreview').then(
+      (module) => module.NativeStarterPreview
+    ),
   { ssr: false }
 );
-
-import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
-
-import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
-
-import styles from './ProductInterfaceDemo.module.css';
 
 // Public release source is maintained on the canonical main branch.
 const sourceRef = 'main';
@@ -113,7 +114,9 @@ export function ProductInterfaceDemo() {
         </div>
         <div
           id='dashboard-live'
-          className={`${styles.stage} ${preview === 'mobile' ? styles.mobileStage : ''}`}
+          className={`${styles.stage} ${
+            preview === 'mobile' ? styles.mobileStage : ''
+          }`}
           tabIndex={-1}
           aria-label='Interactive Vellira Dashboard Demo'
         >
@@ -145,7 +148,9 @@ export function ProductInterfaceDemo() {
           )}
         </div>
         <div
-          className={`${styles.nativeLink} ${preview === 'mobile' ? styles.nativeCaption : ''}`}
+          className={`${styles.nativeLink} ${
+            preview === 'mobile' ? styles.nativeCaption : ''
+          }`}
         >
           {preview === 'mobile' ? (
             <>
