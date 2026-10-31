@@ -26,7 +26,7 @@ function jobBlock(workflow, jobId, nextJobId) {
 
 test('Pro interest is an explicit manual staging preview and stays OFF on all production paths', async () => {
   const header = stagingWorkflow.split('\njobs:\n')[0];
-  assert.match(header, /workflow_dispatch:\n {4}inputs:\n {6}pro_interest_preview:/);
+  assert.match(header, /workflow_dispatch:\n {4}inputs:[\s\S]*?\n {6}pro_interest_preview:/);
   assert.match(header, /default: false/);
 
   const preview = jobBlock(stagingWorkflow, 'deploy');
@@ -178,10 +178,10 @@ test('production eligibility requires successful push staging or explicit verifi
   assert.match(candidate, /needs\.classify\.result == 'success'/);
   assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
-  assert.match(candidate, /workflow_run\\.event == 'push'/);
-  assert.match(candidate, /workflow_run\\.event == 'workflow_dispatch'/);
-  assert.match(candidate, /workflow_run\\.head_branch == 'main'/);
-  assert.match(candidate, /EXPECTED_EVENT_NAME: \\${\\{ github\\.event\\.workflow_run\\.event \\}\\}/);
+  assert.match(candidate, /workflow_run\.event == 'push'/);
+  assert.match(candidate, /workflow_run\.event == 'workflow_dispatch'/);
+  assert.match(candidate, /workflow_run\.head_branch == 'main'/);
+  assert.ok(candidate.includes('EXPECTED_EVENT_NAME: ${{ github.event.workflow_run.event }}'));
   assert.match(stagingWorkflow, /production_recovery:/);
   assert.match(stagingWorkflow, /productionRecovery:/);
   assert.match(
