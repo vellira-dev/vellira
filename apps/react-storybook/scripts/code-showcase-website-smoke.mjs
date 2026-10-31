@@ -771,10 +771,6 @@ try {
               '[data-testid="native-starter-preview"]'
             );
             await expect(nativePreview).toBeVisible();
-            await expect(
-              nativePreview.getByText('Your projects at a glance')
-            ).toBeVisible();
-
             // The same-origin iframe gives React Native Web its own viewport.
             // Select must slide up from the phone bottom and remain anchored
             // when the surrounding marketing page scrolls.
@@ -784,6 +780,9 @@ try {
             const nativeFrame = nativePreview.frameLocator(
               'iframe[title="Interactive Vellira Native Starter"]'
             );
+            await expect(
+              nativeFrame.getByText('Your projects at a glance')
+            ).toBeVisible();
             await nativeFrame
               .getByRole('button', { name: 'Create project' })
               .click();
