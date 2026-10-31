@@ -29,21 +29,23 @@ function readWorkflow(path: string): Workflow {
 }
 
 describe('Dashboard Starter CI parity contract', () => {
-  it('checks the exact commit on every branch push and PR, without path filters', () => {
-    const workflow = readWorkflow('.github/workflows/dashboard-starter-parity.yml');
+  it('runs on every push and PR without path filters', () => {
+    const workflow = readWorkflow(
+      '.github/workflows/dashboard-starter-parity.yml'
+    );
     expect(workflow.on?.push?.branches).toEqual(['**']);
     expect(workflow.on?.pull_request?.branches).toEqual(['main']);
     expect(workflow.on?.push?.paths).toBeUndefined();
     expect(workflow.on?.pull_request?.paths).toBeUndefined();
 
     const steps = workflow.jobs.parity.steps;
-    expect(steps.some((step) => step.run?.includes(checkCommand))).toBe(true);
-    expect(steps.some((step) => step.run?.includes('git rev-parse HEAD'))).toBe(true);
-    expect(steps.some((step) => step.run?.includes('EXPECTED_SHA'))).toBe(true);
+    const guard = steps.find((step) => step.run?.includes(checkCommand));
+    expect(guard?.run).toContain('git rev-parse HEAD');
+    expect(guard?.run).toContain('EXPECTED_SHA');
     expect(steps.every((step) => !step.run?.includes('npm install'))).toBe(true);
   });
 
-  it('blocks both staging phases and production before installing dependencies', () => {
+  it('blocks staging and production before dependency installation', () => {
     const staging = readWorkflow(
       '.github/workflows/deploy-website-cloudflare-staging.yml'
     );
@@ -84,7 +86,11 @@ describe('Dashboard Starter CI parity contract', () => {
         join(scripts, 'sync-dashboard-starter.mjs')
       );
 
-      const sourceJsx = "import { fixture } from './model';\nexport const Dashboard = fixture;\n";
+      const sourceJsx = [
+        "import { fixture } from './model';",
+        'export const Dashboard = fixture;',
+        '',
+      ].join('\n');
       const mirroredJsx = sourceJsx.replace(
         "from './model';",
         "from '../../../../../../examples/workspace-starter/web/src/model';"
