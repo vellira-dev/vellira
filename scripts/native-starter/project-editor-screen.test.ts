@@ -48,12 +48,6 @@ describe('Native Starter project editor navigation', () => {
   });
 
   it('keeps released Select sheets compact without a fixed height', () => {
-    const manifestFile = new URL(
-      '../../examples/workspace-starter/native/package.json',
-      import.meta.url
-    );
-    const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.4');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -109,6 +103,39 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).toContain('error={error || undefined}');
     expect(source).toContain("setSection('projects')");
     expect(source).toContain('setNotice(');
+  });
+});
+
+describe('Native Starter published release pins', () => {
+  it('keeps both Starter packages and README synchronized', () => {
+    const nativeFile = new URL(
+      '../../examples/workspace-starter/native/package.json',
+      import.meta.url
+    );
+    const webFile = new URL(
+      '../../examples/workspace-starter/web/package.json',
+      import.meta.url
+    );
+    const readmeFile = new URL(
+      '../../examples/workspace-starter/README.md',
+      import.meta.url
+    );
+    const native = JSON.parse(readFileSync(nativeFile, 'utf8'));
+    const web = JSON.parse(readFileSync(webFile, 'utf8'));
+    const version = native.dependencies['@vellira-ui/react-native'];
+
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(native.dependencies['@vellira-ui/icons']).toBe(version);
+    for (const name of [
+      '@vellira-ui/react',
+      '@vellira-ui/tokens',
+      '@vellira-ui/icons',
+    ]) {
+      expect(web.dependencies[name]).toBe(version);
+    }
+    expect(readFileSync(readmeFile, 'utf8')).toContain(
+      `**Vellira ${version} packages**`
+    );
   });
 });
 

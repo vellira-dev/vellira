@@ -127,3 +127,95 @@ identity and note any nonzero deltas. Keep #470 open until all required data,
 warning calibration policy and owner review are documented. The old Phase A
 baseline can correctly be `BASELINE_STALE` after releases, and must be
 refreshed from independent source-equivalent evidence, not re-labelled.
+
+## Phase C — historical 2.188.5 main baseline and warning policy
+
+The **former active baseline** was
+`scripts/performance/baselines/vite-main-2.188.5.json`. The older
+`vite-main-2.188.3.json` is historical only and is not silently relabelled.
+The main source commit is
+`1b99f01ded0ed95e42fd751530e4d54b164a35d0` with Git tree
+`2106ac3ac710171999069b57238593dac925154a`.
+The exact measured PR #2002 source
+`dd59fde614f59e5c0d27aac60ff8df4bfe8fecad` has **the identical tree**.
+The snapshot uses **real** Vite evidence from Release Candidate Proof
+run `40947198917`, attempt 1 artifact `12929632808` and attempt 2
+artifact `12929879164`. Both report the same candidate manifest digest
+`ca39523d2e6837c2b339481e1ddbfe7236438d32ed0f42b858cd4eb04d4caa58`,
+Node `v22.23.4`, npm `10.9.9`, Vite `8.3.5`, TypeScript `6.0.3`.
+All twelve bare/Button/Button+Input emitted asset byte metrics were identical
+in both runs, as was the wider `representativeWeb` composition.
+
+The **initial warning policy** is `PROVISIONAL`, based on exactly **two**
+identical-source, identical-toolchain executions. The **maximum observed
+absolute variation is 0 bytes** for all four raw/gzip JS/CSS metrics.
+When an exact-main comparison is `COMPARABLE`, any positive PR-minus-main
+byte difference exceeding that observed variation is flagged `WARN`
+in the existing GitHub Job Summary and retained JSON. Zero or negative
+changes produce `NO_GROWTH`. There are **no new CI jobs, no extra installs
+per PR and no blocking size threshold**. Two repeats are only an initial
+noise observation, **not** a statistically proven universal zero-variance
+bound; warnings are a reason to review source impact, not evidence of failure.
+
+If the calibration record, source identity, toolchain or event provenance is
+missing/inconsistent, the threshold is `NOT_CALIBRATED` and no invented
+numerical warning is emitted. If the code/fixture/main baseline is stale,
+`BASELINE_STALE` or another non-comparable status takes priority and reports
+**no deltas**. Calibration must be refreshed with reviewed independent
+same-source run artifacts, not made up from diffs between different releases.
+
+**Baseline refresh for future releases:** capture a completed, exact-SHA clean
+Vite consumer proof from a PR whose source tree matches the merged main tree.
+Verify the Git tree equality and all package/tooling and measured scenario
+fields; optionally run one targeted repeat of the clean Vite job to measure
+noise without rerunning full CI. Make a reviewed snapshot change and update
+the active baseline path in the exact consumer/test contract. Keep old snapshots
+as immutable historical evidence. A non-comparable result is preferable to
+using an inaccurate baseline. Automatic promotion to a blocking CI size gate
+requires an explicitly reviewed separate policy with a larger distribution of
+identical-source samples and owner approval.
+
+**Scope closure:** #470 measures and reports cost and regressions. The
+observed whole-root Native JS overhead and full-Web stylesheet cost can inform
+**separate** backward-compatible architecture optimization projects; they are
+not evidence that PR-size measurement itself has failed, nor requirements to
+change public exports in #470.
+
+## Final verified baseline 2.188.7 and stable active snapshot
+
+The active file is now `scripts/performance/baselines/vite-main-active.json`,
+an **exact copy** of immutable versioned snapshot `vite-main-2.188.7.json`.
+The consumer and unit tests use this stable filename, rather than embedding the
+release number in executable code. On the next package release, add a versioned
+snapshot from real evidence and update only the active snapshot content. The
+test ensures these two records remain exactly equal; historical v2.188.3 and
+v2.188.5 snapshots remain untouched.
+
+**Provenance:** Release Candidate Proof run `40959907798`,
+measured exact PR #2011 SHA `aa40104309f5441476c4cf6f8599bac435963ede`,
+published candidate `2.188.7`, and main package-version commit
+`8f07cca61933fd81c19b0c5f93e69068bd0d6d1b`.
+Both have Git tree `a5b677814591a97056f0cffa13cb61db87fe7b24`
+(exact source equivalence, **not** a separately executed main workflow).
+The next main commit `e7fd22b8373ea9c03d3d3b5a4a709dbd46390e62`
+only synchronizes the Starter manifests/lockfiles/README, which are outside
+the measured Vite source paths. The existing immutable-main ancestry and
+relevant-path diff checks independently enforce this in CI.
+
+**Repeatability:** real clean Vite artifacts from attempts 1 and 2 of the
+same workflow, IDs `12935476739` and `12938397438`. Both JSONs were
+downloaded and compared: candidate manifest SHA-256
+`958d1aae0398d85b454913b2dcee1cd620cd0e69750a60bd98d9e94720632315`,
+Node `v22.23.4`, npm `10.9.9`, Vite `8.3.5`,
+TypeScript `6.0.3`, all twelve canonical raw/gzip JS/CSS emitted sizes,
+and the separate 11-component Web scenario were identical.
+Temporary fixture directories and localhost ports varied as expected and
+are not measurement metrics.
+
+**Thresholds:** observed maximum source-identical variation is zero bytes in
+these two runs, yielding **provisional, informational** warnings for positive
+growth on any comparable raw/gzip JS/CSS metric. This is not a statistically
+calibrated hard budget. Non-comparable or stale baselines never yield invented
+deltas; a release changing relevant package inputs still needs a
+provenance-reviewed snapshot refresh, not an arbitrary SHA replacement.
+No new Actions job or duplicate npm install per PR is introduced.
