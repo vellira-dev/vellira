@@ -573,6 +573,13 @@ function WorkspaceScreen() {
     paddingVertical: 0,
     textAlignVertical: 'center' as const,
   };
+  // Match the published md Input's 46pt control height. Select otherwise
+  // grows taller from its own vertical padding, despite shared FormField labels.
+  const editorSelectTriggerStyle = {
+    height: 46,
+    minHeight: 46,
+    paddingVertical: 0,
+  };
 
   return (
     <SafeAreaView
@@ -1985,6 +1992,7 @@ function WorkspaceScreen() {
                                 if (isTeam(value)) setTeam(value);
                               }}
                               presentation='sheet'
+                              triggerStyle={editorSelectTriggerStyle}
                               contentStyle={compactSheetStyle}
                             >
                               <Select.Item value='design' label='Design' />
@@ -2001,6 +2009,7 @@ function WorkspaceScreen() {
                                 }
                               }}
                               presentation='sheet'
+                              triggerStyle={editorSelectTriggerStyle}
                               contentStyle={compactSheetStyle}
                             >
                               <Select.Item value='planned' label='Planned' />

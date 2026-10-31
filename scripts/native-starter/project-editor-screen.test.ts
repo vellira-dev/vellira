@@ -70,6 +70,18 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).not.toContain("presentation='modal'");
   });
 
+  it('matches the normal-size Select and Input control heights', () => {
+    expect(source).toContain('const editorSelectTriggerStyle = {');
+    expect(source).toContain('height: 46,');
+    expect(source).toContain('minHeight: 46,');
+    expect(source).toContain('paddingVertical: 0,');
+    expect(
+      editor.match(/triggerStyle={editorSelectTriggerStyle}/g)
+    ).toHaveLength(2);
+    expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
+    expect(editor.match(/padding: 18,/g)).toHaveLength(2);
+  });
+
   it('centers both single-line Input fields without overriding the library globally', () => {
     expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
     expect(source).toContain("textAlignVertical: 'center' as const");
