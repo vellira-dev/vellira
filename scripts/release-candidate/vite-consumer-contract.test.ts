@@ -101,6 +101,22 @@ describe('clean Vite consumer workflow contract', () => {
     expect(regression).toContain("report.threshold.state === 'PROVISIONAL'");
   });
 
+  it('keeps extra CSS attribution gated to explicitly enabled manual workflow runs', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    expect(script).toContain("VELLIRA_CSS_ATTRIBUTION === '1'");
+    expect(script).toContain('measureCssAttribution(');
+    expect(script).toContain('...(cssAttribution ? { cssAttribution } : {})');
+    expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
+    expect(workflow).toContain("inputs.css_attribution && '1' || '0'");
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
