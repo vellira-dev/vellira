@@ -2,9 +2,17 @@
 
 import { useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { Button, Tabs } from '@vellira-ui/react';
 
 import { Dashboard } from './Dashboard';
+
+const NativeStarterPreview = dynamic(
+  () =>
+    import('./NativeStarterPreview').then((module) => module.NativeStarterPreview),
+  { ssr: false }
+);
 
 import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 
@@ -22,6 +30,12 @@ const sourceUrl =
   '/examples/workspace-starter/web/src/Dashboard.tsx';
 const starterUrl =
   repository + '/tree/' + sourceRef + '/examples/workspace-starter';
+const nativeSourceUrl =
+  repository +
+  '/blob/' +
+  sourceRef +
+  '/examples/workspace-starter/native/App.tsx';
+const nativeStarterUrl = starterUrl + '/native';
 
 export function ProductInterfaceDemo() {
   const { preference, setPreference } = useWebsiteThemeContext();
@@ -41,9 +55,9 @@ export function ProductInterfaceDemo() {
             <span>Real components. Working interface.</span>
           </h2>
           <p className={styles.description}>
-            A real, interactive project dashboard built with our free React
-            components. Try it, inspect the source, then use the same dashboard
-            in your own project. No registration or Pro plan needed.
+            Try the interactive React Web dashboard, then explore the
+            React Native Starter's mobile interface. Both are free Core
+            examples with public source and no account required.
           </p>
           <nav className={styles.ctas} aria-label='Try Vellira Dashboard'>
             <Button asChild appearance='solid' color='primary'>
@@ -59,7 +73,11 @@ export function ProductInterfaceDemo() {
               </a>
             </Button>
             <Button asChild appearance='outline' color='neutral'>
-              <a href={sourceUrl} target='_blank' rel='noopener noreferrer'>
+              <a
+                  href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                >
                 View Source
               </a>
             </Button>
@@ -82,12 +100,16 @@ export function ProductInterfaceDemo() {
               if (next === 'desktop' || next === 'mobile') setPreview(next);
             }}
           >
-            <Tabs.List aria-label='Web preview size'>
+            <Tabs.List aria-label='Dashboard preview platform'>
               <Tabs.Trigger value='desktop'>Desktop</Tabs.Trigger>
               <Tabs.Trigger value='mobile'>Mobile</Tabs.Trigger>
             </Tabs.List>
           </Tabs>
-          <span className={styles.previewHint}>Responsive Web preview</span>
+          <span className={styles.previewHint}>
+            {preview === 'desktop'
+              ? 'Interactive React Web'
+              : 'React Native Starter · rendered in the browser'}
+          </span>
         </div>
         <div
           id='dashboard-live'
@@ -95,47 +117,62 @@ export function ProductInterfaceDemo() {
           tabIndex={-1}
           aria-label='Interactive Vellira Dashboard Demo'
         >
-          <div className={styles.windowBar}>
-            <div className={styles.windowDots} aria-hidden='true'>
-              <span />
-              <span />
-              <span />
-            </div>
-            <span className={styles.windowTitle}>
-              Vellira Dashboard Starter
-            </span>
-            <span className={styles.liveIndicator}>Interactive Core demo</span>
-          </div>
           {preview === 'desktop' ? (
-            <Dashboard
-              variant='embedded'
-              theme={preference}
-              onThemeChange={setPreference}
-            />
+            <>
+              <div className={styles.windowBar}>
+                <div className={styles.windowDots} aria-hidden='true'>
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <span className={styles.windowTitle}>
+                  Vellira Dashboard Starter
+                </span>
+                <span className={styles.liveIndicator}>
+                  Interactive Core demo
+                </span>
+              </div>
+              <Dashboard
+                variant='embedded'
+                theme={preference}
+                onThemeChange={setPreference}
+              />
+            </>
           ) : (
-            <iframe
-              className={styles.mobileFrame}
-              title='Responsive mobile Web Dashboard preview'
-              src='/demo/dashboard'
-              loading='lazy'
-            />
+            <div className={styles.nativeStageContent}>
+              <NativeStarterPreview />
+            </div>
           )}
         </div>
         <div className={styles.nativeLink}>
-          <strong>React Native / Expo</strong> is a separate native starter, not
-          this mobile Web preview.{' '}
-          <DesignSystemLink
-            href={
-              repository +
-              '/tree/' +
-              sourceRef +
-              '/examples/workspace-starter/native'
-            }
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            Setup instructions ↗
-          </DesignSystemLink>
+          {preview === 'mobile' ? (
+            <>
+              <strong>React Native / Expo</strong> — this uses Vellira Native
+              components rendered through React Native Web. It illustrates
+              the Starter's layout and sample interactions; it is not an iOS or
+              Android simulator.{' '}
+              <DesignSystemLink
+                href={nativeStarterUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                Run the actual Native Starter in Expo
+              </DesignSystemLink>
+            </>
+          ) : (
+            <>
+              Want to see the native UI instead of a narrowed Web layout?
+              Choose <strong>Mobile</strong> above or{' '}
+              <DesignSystemLink
+                href={nativeStarterUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                open the React Native / Expo source
+              </DesignSystemLink>
+              .
+            </>
+          )}
         </div>
 
         <div className={styles.boundary}>
