@@ -166,7 +166,14 @@ export function NativeStarterPreview() {
           <span>9:41</span>
           <span className={styles.signal}>●●● ▰</span>
         </div>
-        <View style={{ flex: 1, minHeight: 0, backgroundColor: surface.canvas }}>
+        <View
+          pointerEvents={createOpen ? 'none' : 'auto'}
+          accessibilityElementsHidden={createOpen}
+          importantForAccessibility={
+            createOpen ? 'no-hide-descendants' : 'auto'
+          }
+          style={{ flex: 1, minHeight: 0, backgroundColor: surface.canvas }}
+        >
           <View
             style={{
               paddingHorizontal: 20,
@@ -217,6 +224,7 @@ export function NativeStarterPreview() {
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel='Create project'
+                  nativeID='native-starter-create-project'
                   onPress={() => {
                     setDraftName('');
                     setEditingId(null);
@@ -1018,6 +1026,28 @@ export function NativeStarterPreview() {
               role='dialog'
               aria-modal='true'
               aria-label={editingId === null ? 'New project' : 'Edit project'}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setCreateOpen(false);
+                  document.getElementById('native-starter-create-project')?.focus();
+                }
+                if (event.key !== 'Tab') return;
+                const focusable = Array.from(
+                  event.currentTarget.querySelectorAll<HTMLElement>(
+                    'button:not(:disabled), input:not(:disabled)'
+                  )
+                );
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                  event.preventDefault();
+                  last?.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                  event.preventDefault();
+                  first?.focus();
+                }
+              }}
               style={{
                 backgroundColor: surface.panel,
                 color: text.primary,
@@ -1027,7 +1057,10 @@ export function NativeStarterPreview() {
               <div className={styles.sheetHeader}>
                 <button
                   type='button'
-                  onClick={() => setCreateOpen(false)}
+                  onClick={() => {
+                    setCreateOpen(false);
+                    document.getElementById('native-starter-create-project')?.focus();
+                  }}
                 >
                   Close
                 </button>
