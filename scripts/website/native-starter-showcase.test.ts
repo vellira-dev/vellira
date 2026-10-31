@@ -59,6 +59,10 @@ describe('Website Native Starter showcase', () => {
     expect(preview).toContain("accessibilityRole='menu'");
     expect(preview).toContain("label: 'Edit'");
     expect(preview).toContain('nextUniqueDuplicateName(');
+    expect(preview).toContain("nativeID='native-starter-create-project'");
+    expect(preview).toContain('accessibilityElementsHidden={createOpen}');
+    expect(preview).toContain("event.key === 'Escape'");
+    expect(preview).toContain("event.key !== 'Tab'");
     expect(preview).toContain("setSection('projects')");
     expect(preview).toContain("accessibilityLabel='Undo project removal'");
     expect(preview).toContain("key: 'highContrast'");
