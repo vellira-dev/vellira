@@ -18,6 +18,8 @@ export const createContentStyles = (theme: NativeTheme) =>
 
     title: {
       flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
       marginHorizontal: theme.tokens.spacing[3],
       color: theme.components.select.dropdown.fg,
       fontFamily: theme.tokens.typography.family.medium,
