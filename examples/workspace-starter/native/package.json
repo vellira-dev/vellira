@@ -24,7 +24,7 @@
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-picker/picker": "2.11.4",
-    "@vellira-ui/react-native": "2.188.11",
+    "@vellira-ui/react-native": "2.188.12",
     "expo": "^58.0.19",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -35,7 +35,7 @@
     "react-native-svg": "15.16.0",
     "react-native-web": "^0.21.2",
     "react-native-worklets": "0.13.0",
-    "@vellira-ui/icons": "2.188.11",
+    "@vellira-ui/icons": "2.188.12",
     "expo-blur": "~58.0.5"
   },
   "devDependencies": {
