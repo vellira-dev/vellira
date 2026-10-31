@@ -148,6 +148,9 @@ jobs:
           node --version
           node -e "const assert = require('node:assert/strict'); assert.equal(process.versions.node, process.env.NODE_VERSION, 'Staging Node runtime differs from pinned version'); console.log('Verified staging Node runtime ' + process.versions.node);"
 
+      - name: Require Dashboard Starter parity before staging work
+        run: node scripts/website/sync-dashboard-starter.mjs --check
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -221,6 +224,9 @@ jobs:
           set -euo pipefail
           node --version
           node -e "const assert = require('node:assert/strict'); assert.equal(process.versions.node, process.env.NODE_VERSION, 'Staging Node runtime differs from pinned version'); console.log('Verified staging Node runtime ' + process.versions.node);"
+
+      - name: Require Dashboard Starter parity before staging work
+        run: node scripts/website/sync-dashboard-starter.mjs --check
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
