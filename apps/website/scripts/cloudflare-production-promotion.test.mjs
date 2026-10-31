@@ -164,7 +164,7 @@ test('staging publishes a dedicated machine-readable promotion artifact', () => 
   assert.match(stagingWorkflow, /if-no-files-found: error/);
 });
 
-test('normal production eligibility comes only from a successful push-to-main staging run', () => {
+test('production eligibility requires successful push staging or explicit verified manual recovery', () => {
   assert.match(productionWorkflow, /workflow_run:/);
   assert.match(
     productionWorkflow,
@@ -178,8 +178,12 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /needs\.classify\.result == 'success'/);
   assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
-  assert.match(candidate, /workflow_run\.event == 'push'/);
-  assert.match(candidate, /workflow_run\.head_branch == 'main'/);
+  assert.match(candidate, /workflow_run\\.event == 'push'/);
+  assert.match(candidate, /workflow_run\\.event == 'workflow_dispatch'/);
+  assert.match(candidate, /workflow_run\\.head_branch == 'main'/);
+  assert.match(candidate, /EXPECTED_EVENT_NAME: \\${\\{ github\\.event\\.workflow_run\\.event \\}\\}/);
+  assert.match(stagingWorkflow, /production_recovery:/);
+  assert.match(stagingWorkflow, /productionRecovery:/);
   assert.match(
     candidate,
     /actions\/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333/
