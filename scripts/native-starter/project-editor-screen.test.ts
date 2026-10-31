@@ -221,7 +221,7 @@ describe('Native Starter Android project controls', () => {
 describe('Native Starter large accessibility text', () => {
   it('keeps tab navigation named while hiding oversized visual labels', () => {
     expect(source).toContain('const largeText = fontScale >= 1.5');
-    expect(source).toContain("accessibilityLabel={label}");
+    expect(source).toContain('accessibilityLabel={label}');
     expect(source).toContain('{!largeText ? (');
   });
 
@@ -241,15 +241,21 @@ describe('Native Starter large-text project actions', () => {
     const menu = source.slice(start, end);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
-    expect(menu).toContain('textStyle={largeText ?');
+    expect(menu).toMatch(/textStyle=\{\s*largeText\s*\?/);
     expect(menu).toContain('1.5 / fontScale');
-    expect(menu).toContain('itemStyle={largeText ? { minHeight: 52 } : undefined}');
+    expect(menu).toContain(
+      'itemStyle={largeText ? { minHeight: 52 } : undefined}'
+    );
     expect(menu).toContain('width: largeText ? 268 : 216');
-    expect(source).toContain("accessibilityLabel={'Actions for ' + project.name}");
-    expect(source).toContain("onSelect={() => openEdit(project)}");
-    expect(source).toContain("onSelect={() => duplicateProject(project.id)}");
-    expect(source).toContain("onSelect={() => deleteProject(project.id)}");
-    expect(source).not.toContain("['Duplicate', Copy, () => duplicateProject(project.id)]");
+    expect(source).toContain(
+      "accessibilityLabel={'Actions for ' + project.name}"
+    );
+    expect(source).toContain('onSelect={() => openEdit(project)}');
+    expect(source).toContain('onSelect={() => duplicateProject(project.id)}');
+    expect(source).toContain('onSelect={() => deleteProject(project.id)}');
+    expect(source).not.toContain(
+      "['Duplicate', Copy, () => duplicateProject(project.id)]"
+    );
   });
 
   it('provides a capped native editor input at large text sizes', () => {
@@ -270,7 +276,7 @@ describe('Native Starter large-text search and restore', () => {
   it('keeps the destructive restore action readable and operable', () => {
     expect(source).toContain("accessibilityLabel='Restore sample data'");
     expect(source).toContain('maxFontSizeMultiplier={1.4}');
-    expect(source).toContain("setData(initialWorkspace)");
+    expect(source).toContain('setData(initialWorkspace)');
   });
 });
 
@@ -285,7 +291,9 @@ describe('Native Starter large-text organization choices', () => {
     expect(choiceField).toContain('<Select');
     expect(choiceField).toContain("presentation='sheet'");
     expect(choiceField).toContain('accessibilityLabel={label}');
-    expect(choiceField).toContain('renderValue={({ option, placeholder }) => (');
+    expect(choiceField).toContain(
+      'renderValue={({ option, placeholder }) => ('
+    );
     expect(choiceField).toContain('renderOption={({ option, selected }) => (');
     expect(choiceField).toContain('maxFontSizeMultiplier={1.5}');
     expect(choiceField).toContain('optionStyle={{');

@@ -80,7 +80,11 @@ export function WorkspaceSettings({
       }}
     >
       <View style={{ gap: 10 }}>
-        <Text maxFontSizeMultiplier={1.6} accessibilityRole='header' style={sectionLabel}>
+        <Text
+          maxFontSizeMultiplier={1.6}
+          accessibilityRole='header'
+          style={sectionLabel}
+        >
           WORKSPACE
         </Text>
         <View style={[panel, { padding: 16, gap: 10 }]}>
@@ -89,10 +93,16 @@ export function WorkspaceSettings({
               <Folder size={19} color={accent} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text maxFontSizeMultiplier={1.6} style={{ color: primary, fontSize: 15, fontWeight: '600' }}>
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={{ color: primary, fontSize: 15, fontWeight: '600' }}
+              >
                 Your workspace
               </Text>
-              <Text maxFontSizeMultiplier={1.6} style={{ color: secondary, fontSize: 12 }}>
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={{ color: secondary, fontSize: 12 }}
+              >
                 Name shown across the dashboard
               </Text>
             </View>
@@ -129,7 +139,11 @@ export function WorkspaceSettings({
       </View>
 
       <View style={{ gap: 10 }}>
-        <Text maxFontSizeMultiplier={1.6} accessibilityRole='header' style={sectionLabel}>
+        <Text
+          maxFontSizeMultiplier={1.6}
+          accessibilityRole='header'
+          style={sectionLabel}
+        >
           APPEARANCE
         </Text>
         <View style={panel}>
@@ -159,7 +173,8 @@ export function WorkspaceSettings({
                     <Icon size={19} color={active ? selected.fg : secondary} />
                   </View>
                   <View style={{ flex: 1, gap: 3 }}>
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         fontSize: 15,
                         fontWeight: active ? '700' : '500',
@@ -168,7 +183,10 @@ export function WorkspaceSettings({
                     >
                       {label}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.6} style={{ color: secondary, fontSize: 12 }}>
+                    <Text
+                      maxFontSizeMultiplier={1.6}
+                      style={{ color: secondary, fontSize: 12 }}
+                    >
                       {caption}
                     </Text>
                   </View>
@@ -190,7 +208,11 @@ export function WorkspaceSettings({
       </View>
 
       <View style={{ gap: 10 }}>
-        <Text maxFontSizeMultiplier={1.6} accessibilityRole='header' style={sectionLabel}>
+        <Text
+          maxFontSizeMultiplier={1.6}
+          accessibilityRole='header'
+          style={sectionLabel}
+        >
           PREFERENCES
         </Text>
         <View
@@ -210,10 +232,16 @@ export function WorkspaceSettings({
             <Bell size={19} color={accent} />
           </View>
           <View style={{ flex: 1, gap: 3 }}>
-            <Text maxFontSizeMultiplier={1.6} style={{ color: primary, fontSize: 15, fontWeight: '600' }}>
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={{ color: primary, fontSize: 15, fontWeight: '600' }}
+            >
               Product notifications
             </Text>
-            <Text maxFontSizeMultiplier={1.6} style={{ color: secondary, fontSize: 12 }}>
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={{ color: secondary, fontSize: 12 }}
+            >
               Stored locally. No emails are sent.
             </Text>
           </View>
@@ -226,7 +254,11 @@ export function WorkspaceSettings({
       </View>
 
       <View style={{ gap: 10 }}>
-        <Text maxFontSizeMultiplier={1.6} accessibilityRole='header' style={sectionLabel}>
+        <Text
+          maxFontSizeMultiplier={1.6}
+          accessibilityRole='header'
+          style={sectionLabel}
+        >
           DATA
         </Text>
         <View style={panel}>
@@ -254,7 +286,8 @@ export function WorkspaceSettings({
               <Refresh size={19} color={theme.semantic.status.error.fg} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text maxFontSizeMultiplier={1.6}
+              <Text
+                maxFontSizeMultiplier={1.6}
                 style={{
                   color: theme.semantic.status.error.fg,
                   fontSize: 15,
@@ -263,7 +296,10 @@ export function WorkspaceSettings({
               >
                 Restore sample data
               </Text>
-              <Text maxFontSizeMultiplier={1.6} style={{ color: secondary, fontSize: 12 }}>
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={{ color: secondary, fontSize: 12 }}
+              >
                 Replaces saved demo projects and settings
               </Text>
             </View>
@@ -273,10 +309,16 @@ export function WorkspaceSettings({
       </View>
 
       <View style={{ alignItems: 'center', gap: 4, paddingTop: 2 }}>
-        <Text maxFontSizeMultiplier={1.6} style={{ color: secondary, fontSize: 12 }}>
+        <Text
+          maxFontSizeMultiplier={1.6}
+          style={{ color: secondary, fontSize: 12 }}
+        >
           Vellira Native Starter
         </Text>
-        <Text maxFontSizeMultiplier={1.6} style={{ color: muted, fontSize: 11 }}>
+        <Text
+          maxFontSizeMultiplier={1.6}
+          style={{ color: muted, fontSize: 11 }}
+        >
           Offline demo · Settings saved on this device
         </Text>
       </View>

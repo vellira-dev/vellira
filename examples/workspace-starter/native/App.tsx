@@ -172,7 +172,8 @@ function LargeTextChoiceField({
   const { theme } = useTheme();
   const { height: viewportHeight } = useWindowDimensions();
   const primary = theme.semantic.text.primary;
-  const selectedColor = theme.components.select.primary.outline.option.selected.fg;
+  const selectedColor =
+    theme.components.select.primary.outline.option.selected.fg;
 
   return (
     <View style={{ gap: 8 }}>
@@ -640,7 +641,11 @@ function WorkspaceScreen() {
                   ? 'Projects'
                   : 'Settings'}
             </Text>
-            <Text numberOfLines={1} maxFontSizeMultiplier={1.5} style={{ color: subtleText, fontSize: 13 }}>
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.5}
+              style={{ color: subtleText, fontSize: 13 }}
+            >
               {data.name.trim() || 'Untitled workspace'}
             </Text>
           </View>
@@ -707,10 +712,15 @@ function WorkspaceScreen() {
 
         {section === 'overview' ? (
           <View style={{ gap: 18 }}>
-            <Text maxFontSizeMultiplier={1.6} style={{ color: subtleText, fontSize: 15 }}>
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={{ color: subtleText, fontSize: 15 }}
+            >
               Your projects at a glance
             </Text>
-            <View style={{ flexDirection: largeText ? 'column' : 'row', gap: 12 }}>
+            <View
+              style={{ flexDirection: largeText ? 'column' : 'row', gap: 12 }}
+            >
               {[
                 {
                   label: 'Total projects',
@@ -754,7 +764,8 @@ function WorkspaceScreen() {
                     gap: 8,
                   }}
                 >
-                  <Text maxFontSizeMultiplier={1.6}
+                  <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color: metric.accent,
                       fontSize: 13,
@@ -763,7 +774,8 @@ function WorkspaceScreen() {
                   >
                     {metric.label}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.6}
+                  <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color:
                         themeName === 'highContrast' ? '#FFFFFF' : mainText,
@@ -773,7 +785,8 @@ function WorkspaceScreen() {
                   >
                     {metric.value}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.6}
+                  <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color:
                         themeName === 'highContrast' ? '#D6E0ED' : subtleText,
@@ -793,12 +806,16 @@ function WorkspaceScreen() {
                   justifyContent: 'space-between',
                 }}
               >
-                <Text maxFontSizeMultiplier={1.6}
+                <Text
+                  maxFontSizeMultiplier={1.6}
                   style={{ color: mainText, fontSize: 19, fontWeight: '700' }}
                 >
                   Project progress
                 </Text>
-                <Text maxFontSizeMultiplier={1.6} style={{ color: palette.brand, fontWeight: '700' }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: palette.brand, fontWeight: '700' }}
+                >
                   {completionRate}%
                 </Text>
               </View>
@@ -829,16 +846,23 @@ function WorkspaceScreen() {
                   gap: 8,
                 }}
               >
-                <Text maxFontSizeMultiplier={1.6} style={{ color: subtleText, fontSize: 12 }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: subtleText, fontSize: 12 }}
+                >
                   Completed · {completedCount}
                 </Text>
-                <Text maxFontSizeMultiplier={1.6} style={{ color: subtleText, fontSize: 12 }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: subtleText, fontSize: 12 }}
+                >
                   Remaining · {totalCount - completedCount}
                 </Text>
               </View>
             </View>
             <View style={cardStyle}>
-              <Text maxFontSizeMultiplier={1.6}
+              <Text
+                maxFontSizeMultiplier={1.6}
                 style={{ color: mainText, fontSize: 19, fontWeight: '700' }}
               >
                 Projects by status
@@ -861,7 +885,8 @@ function WorkspaceScreen() {
                     }}
                   >
                     {[4, 3, 2, 1, 0].map((tick) => (
-                      <Text maxFontSizeMultiplier={1.6}
+                      <Text
+                        maxFontSizeMultiplier={1.6}
                         key={tick}
                         style={{ color: subtleText, fontSize: 11 }}
                       >
@@ -976,7 +1001,8 @@ function WorkspaceScreen() {
                 justifyContent: 'space-between',
               }}
             >
-              <Text maxFontSizeMultiplier={1.6}
+              <Text
+                maxFontSizeMultiplier={1.6}
                 style={{ color: mainText, fontSize: 17, fontWeight: '700' }}
               >
                 {projectListTitle} · {visibleProjects.length}
@@ -1032,7 +1058,10 @@ function WorkspaceScreen() {
             {showSearch ? (
               largeText ? (
                 <View style={{ gap: 8 }}>
-                  <Text maxFontSizeMultiplier={1.5} style={{ color: mainText, fontSize: 14, fontWeight: '600' }}>
+                  <Text
+                    maxFontSizeMultiplier={1.5}
+                    style={{ color: mainText, fontSize: 14, fontWeight: '600' }}
+                  >
                     Search projects
                   </Text>
                   <TextInput
@@ -1042,7 +1071,16 @@ function WorkspaceScreen() {
                     placeholder='Search projects'
                     placeholderTextColor={subtleText}
                     maxFontSizeMultiplier={1.5}
-                    style={{ minHeight: 48, borderWidth: 1, borderColor: border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15, color: mainText }}
+                    style={{
+                      minHeight: 48,
+                      borderWidth: 1,
+                      borderColor: border,
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 15,
+                      color: mainText,
+                    }}
                   />
                 </View>
               ) : (
@@ -1087,7 +1125,8 @@ function WorkspaceScreen() {
                           : surface.canvas,
                     }}
                   >
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         color:
                           statusFilter === value ? palette.brand : subtleText,
@@ -1132,7 +1171,8 @@ function WorkspaceScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         color: mainText,
                         fontWeight: '700',
@@ -1158,7 +1198,8 @@ function WorkspaceScreen() {
                       minHeight: 44,
                     }}
                   >
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       numberOfLines={1}
                       style={{
                         color: mainText,
@@ -1168,7 +1209,8 @@ function WorkspaceScreen() {
                     >
                       {project.name}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       numberOfLines={1}
                       style={{ color: subtleText, fontSize: 12 }}
                     >
@@ -1182,10 +1224,14 @@ function WorkspaceScreen() {
                     placement='bottom-end'
                     offset={-44}
                     closeOnSelect
-                    textStyle={largeText ? {
-                      fontSize: 16 * Math.min(1, 1.5 / fontScale),
-                      lineHeight: 22 * Math.min(1, 1.5 / fontScale),
-                    } : undefined}
+                    textStyle={
+                      largeText
+                        ? {
+                            fontSize: 16 * Math.min(1, 1.5 / fontScale),
+                            lineHeight: 22 * Math.min(1, 1.5 / fontScale),
+                          }
+                        : undefined
+                    }
                     itemStyle={largeText ? { minHeight: 52 } : undefined}
                     popoverBackground={
                       Platform.OS === 'ios' && themeName !== 'highContrast' ? (
@@ -1252,7 +1298,9 @@ function WorkspaceScreen() {
                       </Pressable>
                     </Dropdown.Trigger>
                     <Dropdown.Content>
-                      {!largeText ? <Dropdown.Label>Project actions</Dropdown.Label> : null}
+                      {!largeText ? (
+                        <Dropdown.Label>Project actions</Dropdown.Label>
+                      ) : null}
                       <Dropdown.Item
                         value='edit'
                         icon={<Edit size={18} />}
@@ -1317,7 +1365,8 @@ function WorkspaceScreen() {
                               : '#1A102B',
                       }}
                     >
-                      <Text maxFontSizeMultiplier={1.6}
+                      <Text
+                        maxFontSizeMultiplier={1.6}
                         style={{
                           fontSize: 12,
                           fontWeight: '600',
@@ -1377,7 +1426,10 @@ function WorkspaceScreen() {
             ))}
             {visibleProjects.length === 0 ? (
               <View style={{ ...cardStyle, alignItems: 'center', gap: 10 }}>
-                <Text maxFontSizeMultiplier={1.6} style={{ color: mainText, fontWeight: '700' }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: mainText, fontWeight: '700' }}
+                >
                   No matching projects
                 </Text>
                 <Button
@@ -1456,7 +1508,8 @@ function WorkspaceScreen() {
               color={section === value ? palette.brand : subtleText}
             />
             {!largeText ? (
-              <Text maxFontSizeMultiplier={1.6}
+              <Text
+                maxFontSizeMultiplier={1.6}
                 style={{
                   color: section === value ? palette.brand : subtleText,
                   fontSize: 11,
@@ -1560,13 +1613,15 @@ function WorkspaceScreen() {
                     paddingHorizontal: 8,
                   }}
                 >
-                  <Text maxFontSizeMultiplier={1.6}
+                  <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
                   >
                     Close
                   </Text>
                 </Pressable>
-                <Text maxFontSizeMultiplier={1.6}
+                <Text
+                  maxFontSizeMultiplier={1.6}
                   accessibilityRole='header'
                   style={{
                     flex: 1,
@@ -1599,7 +1654,8 @@ function WorkspaceScreen() {
                   }}
                 >
                   <View style={{ gap: 10 }}>
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       accessibilityRole='header'
                       style={{
                         paddingHorizontal: 6,
@@ -1621,7 +1677,8 @@ function WorkspaceScreen() {
                         backgroundColor: surface.subtle,
                       }}
                     >
-                      <Text maxFontSizeMultiplier={1.6}
+                      <Text
+                        maxFontSizeMultiplier={1.6}
                         style={{
                           color: mainText,
                           fontSize: 19,
@@ -1630,7 +1687,8 @@ function WorkspaceScreen() {
                       >
                         Restore sample data?
                       </Text>
-                      <Text maxFontSizeMultiplier={1.6}
+                      <Text
+                        maxFontSizeMultiplier={1.6}
                         style={{
                           color: theme.semantic.text.secondary,
                           fontSize: 15,
@@ -1651,30 +1709,49 @@ function WorkspaceScreen() {
                         setRemovedProject(null);
                         setTheme('light');
                         setResetOpen(false);
-                        setNotice({ tone: 'success', message: 'Sample data restored.' });
+                        setNotice({
+                          tone: 'success',
+                          message: 'Sample data restored.',
+                        });
                       }}
-                      style={{ minHeight: 52, borderRadius: 26, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.semantic.status.error.fg }}
+                      style={{
+                        minHeight: 52,
+                        borderRadius: 26,
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: theme.semantic.status.error.fg,
+                      }}
                     >
-                      <Text maxFontSizeMultiplier={1.4} style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', textAlign: 'center' }}>
+                      <Text
+                        maxFontSizeMultiplier={1.4}
+                        style={{
+                          color: '#FFFFFF',
+                          fontSize: 16,
+                          fontWeight: '700',
+                          textAlign: 'center',
+                        }}
+                      >
                         Restore sample data
                       </Text>
                     </Pressable>
                   ) : (
-                  <Button
-                    color='danger'
-                    onPress={() => {
-                      setData(initialWorkspace);
-                      setRemovedProject(null);
-                      setTheme('light');
-                      setResetOpen(false);
-                      setNotice({
-                        tone: 'success',
-                        message: 'Sample data restored.',
-                      });
-                    }}
-                  >
-                    Restore sample data
-                  </Button>
+                    <Button
+                      color='danger'
+                      onPress={() => {
+                        setData(initialWorkspace);
+                        setRemovedProject(null);
+                        setTheme('light');
+                        setResetOpen(false);
+                        setNotice({
+                          tone: 'success',
+                          message: 'Sample data restored.',
+                        });
+                      }}
+                    >
+                      Restore sample data
+                    </Button>
                   )}
                 </View>
               </ScrollView>
@@ -1778,13 +1855,15 @@ function WorkspaceScreen() {
                     paddingHorizontal: 8,
                   }}
                 >
-                  <Text maxFontSizeMultiplier={1.6}
+                  <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
                   >
                     Close
                   </Text>
                 </Pressable>
-                <Text maxFontSizeMultiplier={1.6}
+                <Text
+                  maxFontSizeMultiplier={1.6}
                   accessibilityRole='header'
                   numberOfLines={1}
                   style={{
@@ -1827,7 +1906,8 @@ function WorkspaceScreen() {
                     borderColor: canSubmitProject ? palette.brand : border,
                   }}
                 >
-                  <Text maxFontSizeMultiplier={1.6}
+                  <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color: canSubmitProject ? '#FFFFFF' : subtleText,
                       fontSize: 15,
@@ -1861,7 +1941,8 @@ function WorkspaceScreen() {
                     }}
                   >
                     <View style={{ gap: 10 }}>
-                      <Text maxFontSizeMultiplier={1.6}
+                      <Text
+                        maxFontSizeMultiplier={1.6}
                         accessibilityRole='header'
                         style={{
                           paddingHorizontal: 6,
@@ -1885,18 +1966,57 @@ function WorkspaceScreen() {
                       >
                         {largeText ? (
                           <View style={{ gap: 8 }}>
-                            <Text maxFontSizeMultiplier={1.5} style={{ color: mainText, fontSize: 14, fontWeight: '600' }}>Project name *</Text>
+                            <Text
+                              maxFontSizeMultiplier={1.5}
+                              style={{
+                                color: mainText,
+                                fontSize: 14,
+                                fontWeight: '600',
+                              }}
+                            >
+                              Project name *
+                            </Text>
                             <TextInput
                               accessibilityLabel='Project name'
                               value={name}
-                              onChangeText={(value) => { setName(value); setError(''); }}
+                              onChangeText={(value) => {
+                                setName(value);
+                                setError('');
+                              }}
                               placeholder='New project name'
                               placeholderTextColor={subtleText}
                               maxFontSizeMultiplier={1.5}
-                              style={{ minHeight: 48, borderWidth: 1, borderColor: border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15, color: mainText }}
+                              style={{
+                                minHeight: 48,
+                                borderWidth: 1,
+                                borderColor: border,
+                                borderRadius: 12,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                fontSize: 15,
+                                color: mainText,
+                              }}
                             />
-                            {error ? <Text maxFontSizeMultiplier={1.5} style={{ color: theme.semantic.status.error.fg }}>{error}</Text> : null}
-                            <Text maxFontSizeMultiplier={1.5} style={{ color: mainText, fontSize: 14, fontWeight: '600' }}>Description</Text>
+                            {error ? (
+                              <Text
+                                maxFontSizeMultiplier={1.5}
+                                style={{
+                                  color: theme.semantic.status.error.fg,
+                                }}
+                              >
+                                {error}
+                              </Text>
+                            ) : null}
+                            <Text
+                              maxFontSizeMultiplier={1.5}
+                              style={{
+                                color: mainText,
+                                fontSize: 14,
+                                fontWeight: '600',
+                              }}
+                            >
+                              Description
+                            </Text>
                             <TextInput
                               accessibilityLabel='Description'
                               value={description}
@@ -1904,36 +2024,46 @@ function WorkspaceScreen() {
                               placeholder='Describe the project'
                               placeholderTextColor={subtleText}
                               maxFontSizeMultiplier={1.5}
-                              style={{ minHeight: 48, borderWidth: 1, borderColor: border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15, color: mainText }}
+                              style={{
+                                minHeight: 48,
+                                borderWidth: 1,
+                                borderColor: border,
+                                borderRadius: 12,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                fontSize: 15,
+                                color: mainText,
+                              }}
                             />
                           </View>
                         ) : (
                           <>
-                        <Input
-                          label='Project name'
-                          required
-                          value={name}
-                          error={error || undefined}
-                          onValueChange={(value: string) => {
-                            setName(value);
-                            setError('');
-                          }}
-                          placeholder='New project name'
-                          inputStyle={editorInputStyle}
-                        />
-                        <Input
-                          label='Description'
-                          value={description}
-                          onValueChange={setDescription}
-                          placeholder='Describe the project'
-                          inputStyle={editorInputStyle}
-                        />
+                            <Input
+                              label='Project name'
+                              required
+                              value={name}
+                              error={error || undefined}
+                              onValueChange={(value: string) => {
+                                setName(value);
+                                setError('');
+                              }}
+                              placeholder='New project name'
+                              inputStyle={editorInputStyle}
+                            />
+                            <Input
+                              label='Description'
+                              value={description}
+                              onValueChange={setDescription}
+                              placeholder='Describe the project'
+                              inputStyle={editorInputStyle}
+                            />
                           </>
                         )}
                       </View>
                     </View>
                     <View style={{ gap: 10 }}>
-                      <Text maxFontSizeMultiplier={1.6}
+                      <Text
+                        maxFontSizeMultiplier={1.6}
                         accessibilityRole='header'
                         style={{
                           paddingHorizontal: 6,
@@ -2004,7 +2134,10 @@ function WorkspaceScreen() {
                               required
                               value={status}
                               onValueChange={(value: string | null) => {
-                                if (typeof value === 'string' && isStatus(value)) {
+                                if (
+                                  typeof value === 'string' &&
+                                  isStatus(value)
+                                ) {
                                   setStatus(value);
                                 }
                               }}
@@ -2020,7 +2153,8 @@ function WorkspaceScreen() {
                         )}
                       </View>
                     </View>
-                    <Text maxFontSizeMultiplier={1.6}
+                    <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         paddingHorizontal: 6,
                         color: subtleText,
