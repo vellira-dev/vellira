@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'node:url';
-
 import createMDX from '@next/mdx';
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 import type { NextConfig } from 'next';
@@ -7,21 +5,6 @@ import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 import { deploymentIdentity } from './cloudflare/build-identity.mjs';
 
 const withMDX = createMDX({});
-
-// These adapters are resolved only by the browser-hosted Native Starter.
-// The Expo native build and library itself remain unchanged.
-const nativeAdapter = (name: string) =>
-  fileURLToPath(
-    new URL(
-      './src/sections/home/ProductInterfaceDemo/native-web-adapters/' + name,
-      import.meta.url
-    )
-  );
-const nativeWebAdapters = {
-  'expo-blur': nativeAdapter('ExpoBlur.tsx'),
-  'react-native-safe-area-context': nativeAdapter('SafeArea.tsx'),
-  '@react-native-async-storage/async-storage': nativeAdapter('AsyncStorage.ts'),
-};
 const deploymentBuildId = deploymentIdentity();
 
 const nextConfig: NextConfig = {
@@ -41,7 +24,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
       'react-native': 'react-native-web',
-      ...nativeWebAdapters,
     },
   },
 
@@ -49,7 +31,6 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       'react-native$': 'react-native-web',
-      ...nativeWebAdapters,
     };
     return config;
   },

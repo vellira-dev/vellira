@@ -8,7 +8,7 @@ import styles from './NativeStarterPreview.module.css';
 // duplicate screens or restyled web dashboard is allowed in this showcase.
 const StarterApp = dynamic(
   () =>
-    import('../../../../../../examples/workspace-starter/native/App').then(
+    import('./native-starter-source/App').then(
       (module) => module.default
     ),
   { ssr: false }

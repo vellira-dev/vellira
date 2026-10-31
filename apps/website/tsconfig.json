@@ -20,16 +20,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "expo-blur": [
-        "./src/sections/home/ProductInterfaceDemo/native-web-adapters/ExpoBlur.tsx"
-      ],
-      "react-native-safe-area-context": [
-        "./src/sections/home/ProductInterfaceDemo/native-web-adapters/SafeArea.tsx"
-      ],
-      "@react-native-async-storage/async-storage": [
-        "./src/sections/home/ProductInterfaceDemo/native-web-adapters/AsyncStorage.ts"
-      ]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
