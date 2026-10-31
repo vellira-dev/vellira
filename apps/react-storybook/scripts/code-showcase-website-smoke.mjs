@@ -745,6 +745,43 @@ try {
             await expect(
               dashboard.getByText('Demo projects restored.')
             ).toBeVisible();
+
+            // Mobile shows the React Native Starter's React Native Web rendering,
+            // not the responsive React Web Dashboard iframe.
+            await demoSection
+              .getByRole('tab', { name: 'Mobile', exact: true })
+              .click();
+            const nativePreview = demoSection.locator(
+              '[data-testid="native-starter-preview"]'
+            );
+            await expect(nativePreview).toBeVisible();
+            await expect(
+              nativePreview.getByText('Your projects at a glance')
+            ).toBeVisible();
+            await nativePreview
+              .getByRole('tab', { name: 'Projects' })
+              .click();
+            await expect(
+              nativePreview.getByText('Design token refresh')
+            ).toBeVisible();
+            await nativePreview
+              .getByRole('tab', { name: 'Settings' })
+              .click();
+            await expect(
+              nativePreview.getByText('Product notifications')
+            ).toBeVisible();
+            await page.screenshot({
+              path: `${artifactDir}/dashboard-native-starter-web-preview.png`,
+            });
+            await demoSection
+              .getByRole('tab', { name: 'Desktop', exact: true })
+              .click();
+            await expect(
+              dashboard.getByRole('button', {
+                name: 'Dashboard',
+                exact: true,
+              })
+            ).toBeVisible();
           }
 
           if (
