@@ -36,7 +36,7 @@ describe('Website Native Starter showcase', () => {
 
   it('renders the maintained Expo Starter App instead of inventing another UI', () => {
     expect(preview).toContain(
-      "import('../../../../../../examples/workspace-starter/native/App')"
+      "import('./native-starter-source/App')"
     );
     expect(preview).toContain('<StarterApp />');
     expect(preview).toContain("data-testid='native-starter-preview'");
@@ -48,18 +48,52 @@ describe('Website Native Starter showcase', () => {
 
   it('provides browser shims while leaving the canonical Expo app untouched', () => {
     expect(next).toContain("'react-native': 'react-native-web'");
-    expect(next).toContain("'expo-blur': nativeAdapter('ExpoBlur.tsx')");
-    expect(next).toContain(
-      "'react-native-safe-area-context': nativeAdapter('SafeArea.tsx')"
-    );
-    expect(next).toContain(
-      "'@react-native-async-storage/async-storage': nativeAdapter('AsyncStorage.ts')"
-    );
+    expect(next).not.toContain('nativeWebAdapters');
     expect(safeArea).toContain('useSafeAreaInsets');
     expect(blurAdapter).toContain('type BlurViewProps = ViewProps & {');
     expect(blurAdapter).toContain('pointerEvents={pointerEvents}');
     expect(storage).toContain("window.localStorage.getItem(keyFor(key))");
     expect(storage).toContain("window.localStorage.setItem(keyFor(key), value)");
+  });
+
+  it('keeps generated preview sources identical to the canonical Expo screens', () => {
+    const names = [
+      'App.tsx',
+      'WorkspaceSettings.tsx',
+      'WorkspaceNotice.tsx',
+      'projectUx.ts',
+    ];
+    const sourceHeader =
+      '/* Generated from examples/workspace-starter/native by sync-native-starter-preview.mjs. Do not edit. */\n';
+    const imports = [
+      [
+        "from 'expo-blur'",
+        "from '../native-web-adapters/ExpoBlur'",
+      ],
+      [
+        "from 'react-native-safe-area-context'",
+        "from '../native-web-adapters/SafeArea'",
+      ],
+      [
+        "from '@react-native-async-storage/async-storage'",
+        "from '../native-web-adapters/AsyncStorage'",
+      ],
+    ] as const;
+    for (const name of names) {
+      let canonical = read('examples/workspace-starter/native/' + name);
+      if (name === 'App.tsx') {
+        for (const [from, to] of imports) {
+          expect(canonical.split(from)).toHaveLength(2);
+          canonical = canonical.replace(from, to);
+        }
+      }
+      expect(
+        read(
+          'apps/website/src/sections/home/ProductInterfaceDemo/native-starter-source/' +
+            name
+        )
+      ).toBe(sourceHeader + canonical);
+    }
   });
 
   it('inherits the actual three-project Native Starter and its UX behaviors', () => {
