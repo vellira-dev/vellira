@@ -774,6 +774,37 @@ try {
             await expect(
               nativePreview.getByText('Your projects at a glance')
             ).toBeVisible();
+
+            // RN Web Modal portals into document.body. The Select sheet must
+            // stay inside the visual phone viewport, not fill the browser.
+            await nativePreview
+              .getByRole('button', { name: 'Create project' })
+              .click();
+            await nativePreview
+              .getByRole('button', { name: 'Team', exact: true })
+              .click();
+            const selectRoot = page.locator('[data-testid="select-content-root"]');
+            await expect(selectRoot).toBeVisible();
+            const phoneBounds = await nativePreview.boundingBox();
+            const selectBounds = await selectRoot.boundingBox();
+            assert.ok(phoneBounds && selectBounds, 'Select sheet needs geometry');
+            assert.ok(
+              selectBounds.x >= phoneBounds.x - 3 &&
+                selectBounds.x + selectBounds.width <=
+                  phoneBounds.x + phoneBounds.width + 3 &&
+                selectBounds.y >= Math.max(0, phoneBounds.y) - 3 &&
+                selectBounds.y + selectBounds.height <=
+                  Math.min(viewport.height, phoneBounds.y + phoneBounds.height) + 3,
+              'Native Select must stay inside the phone preview'
+            );
+            await page
+              .getByRole('button', { name: 'Close selection' })
+              .click();
+            await expect(selectRoot).toBeHidden();
+            await nativePreview
+              .getByRole('button', { name: 'Close project editor' })
+              .click();
+
             await nativePreview
               .getByRole('tab', { name: 'Projects' })
               .click();
