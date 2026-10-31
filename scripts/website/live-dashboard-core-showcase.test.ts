@@ -51,7 +51,11 @@ describe('live Vellira Dashboard Core showcase', () => {
       "<Tabs.Trigger value='desktop'>Desktop</Tabs.Trigger>"
     );
     expect(website).toContain('/examples/workspace-starter/native');
-    expect(website).toContain("src='/demo/dashboard'");
+    expect(website).toContain('<NativeStarterPreview />');
+    expect(website).toContain('React Native Starter · rendered in the browser');
+    expect(website).toContain('Run the actual Native Starter in Expo');
+    expect(website).not.toContain("src='/demo/dashboard'");
+    expect(website).not.toContain('Responsive Web preview');
   });
 
   it('uses real Vellira primitives and maintains local sample behavior', () => {
