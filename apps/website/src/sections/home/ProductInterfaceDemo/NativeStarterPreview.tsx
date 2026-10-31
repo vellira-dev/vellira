@@ -6,6 +6,7 @@ import {
   Check,
   Contrast,
   Copy,
+  Edit,
   Filter,
   Folder,
   Grid,
@@ -20,6 +21,8 @@ import {
 } from '@vellira-ui/icons';
 import { Switch, useTheme } from '@vellira-ui/react-native';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+
+import { nextUniqueDuplicateName } from '../../../../../../examples/workspace-starter/native/projectUx';
 
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 
@@ -79,6 +82,7 @@ export function NativeStarterPreview() {
   const [filter, setFilter] = useState<Status | 'all'>('all');
   const [menuId, setMenuId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [draftName, setDraftName] = useState('');
   const [removed, setRemoved] = useState<Project | null>(null);
 
@@ -211,6 +215,7 @@ export function NativeStarterPreview() {
                   accessibilityLabel='Create project'
                   onPress={() => {
                     setDraftName('');
+                    setEditingId(null);
                     setCreateOpen(true);
                   }}
                   style={{
@@ -505,7 +510,14 @@ export function NativeStarterPreview() {
                   />
                 ) : null}
                 {visible.map((project) => (
-                  <View key={project.id} style={{ ...card, position: 'relative' }}>
+                  <View
+                    key={project.id}
+                    style={{
+                      ...card,
+                      position: 'relative',
+                      zIndex: menuId === project.id ? 2 : 0,
+                    }}
+                  >
                     <View
                       style={{
                         flexDirection: 'row',
@@ -565,30 +577,76 @@ export function NativeStarterPreview() {
                     </View>
                     {menuId === project.id ? (
                       <View
+                        accessibilityRole='menu'
+                        accessibilityLabel={'Project actions for ' + project.name}
                         style={{
+                          position: 'absolute',
+                          top: 55,
+                          right: 14,
+                          width: 196,
+                          zIndex: 3,
                           borderWidth: 1,
                           borderColor: border,
-                          borderRadius: 12,
-                          padding: 5,
+                          borderRadius: 18,
+                          padding: 8,
                           backgroundColor: surface.panel,
+                          shadowColor: '#000000',
+                          shadowOpacity: 0.22,
+                          shadowRadius: 16,
+                          shadowOffset: { width: 0, height: 8 },
+                          elevation: 12,
                           gap: 3,
                         }}
                       >
+                        <Text
+                          style={{
+                            color: text.secondary,
+                            fontSize: 10,
+                            paddingHorizontal: 8,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          PROJECT ACTIONS
+                        </Text>
                         {[
-                          { label: 'Duplicate', action: () => {
-                            setProjects((current) => [{
-                              ...project,
-                              id: Math.max(...current.map((item) => item.id), 0) + 1,
-                              name: project.name + ' copy',
-                            }, ...current]);
-                            setMenuId(null);
-                          }, Icon: Copy },
-                          { label: 'Remove', action: () => removeProject(project), Icon: Trash },
+                          {
+                            label: 'Edit',
+                            Icon: Edit,
+                            action: () => {
+                              setEditingId(project.id);
+                              setDraftName(project.name);
+                              setCreateOpen(true);
+                              setMenuId(null);
+                            },
+                          },
+                          {
+                            label: 'Duplicate',
+                            Icon: Copy,
+                            action: () => {
+                              setProjects((current) => [
+                                {
+                                  ...project,
+                                  id: Math.max(...current.map((item) => item.id), 0) + 1,
+                                  name: nextUniqueDuplicateName(
+                                    project.name,
+                                    current.map((item) => item.name)
+                                  ),
+                                },
+                                ...current,
+                              ]);
+                              setMenuId(null);
+                            },
+                          },
+                          {
+                            label: 'Remove',
+                            Icon: Trash,
+                            action: () => removeProject(project),
+                          },
                         ].map(({ label, action, Icon }) => (
                           <Pressable
                             key={label}
-                            accessibilityRole='button'
-                            accessibilityLabel={label + ' ' + project.name}
+                            accessibilityRole='menuitem'
+                            accessibilityLabel={label}
                             onPress={action}
                             style={{
                               minHeight: 40,
@@ -598,8 +656,15 @@ export function NativeStarterPreview() {
                               paddingHorizontal: 8,
                             }}
                           >
-                            <Icon size={17} color={label === 'Remove' ? '#D40043' : text.primary} />
-                            <Text style={{ color: label === 'Remove' ? '#D40043' : text.primary }}>
+                            <Icon
+                              size={17}
+                              color={label === 'Remove' ? '#D40043' : text.primary}
+                            />
+                            <Text
+                              style={{
+                                color: label === 'Remove' ? '#D40043' : text.primary,
+                              }}
+                            >
                               {label}
                             </Text>
                           </Pressable>
@@ -883,7 +948,7 @@ export function NativeStarterPreview() {
               className={styles.editorSheet}
               role='dialog'
               aria-modal='true'
-              aria-label='New project'
+              aria-label={editingId === null ? 'New project' : 'Edit project'}
               style={{
                 backgroundColor: surface.panel,
                 color: text.primary,
@@ -897,26 +962,35 @@ export function NativeStarterPreview() {
                 >
                   Close
                 </button>
-                <strong>New project</strong>
+                <strong>{editingId === null ? 'New project' : 'Edit project'}</strong>
                 <button
                   type='button'
                   disabled={!draftName.trim()}
                   onClick={() => {
-                    setProjects((current) => [
-                      {
-                        id: Math.max(...current.map((item) => item.id), 0) + 1,
-                        name: draftName.trim(),
-                        description: '',
-                        status: 'planned',
-                        completed: false,
-                      },
-                      ...current,
-                    ]);
+                    setProjects((current) =>
+                      editingId === null
+                        ? [
+                            {
+                              id: Math.max(...current.map((item) => item.id), 0) + 1,
+                              name: draftName.trim(),
+                              description: '',
+                              status: 'planned',
+                              completed: false,
+                            },
+                            ...current,
+                          ]
+                        : current.map((project) =>
+                            project.id === editingId
+                              ? { ...project, name: draftName.trim() }
+                              : project
+                          )
+                    );
                     setSection('projects');
                     setCreateOpen(false);
+                    setEditingId(null);
                   }}
                 >
-                  Create
+                  {editingId === null ? 'Create' : 'Save'}
                 </button>
               </div>
               <label className={styles.sheetField}>
