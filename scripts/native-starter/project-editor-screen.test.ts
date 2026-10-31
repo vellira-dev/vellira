@@ -70,6 +70,18 @@ describe('Native Starter project editor navigation', () => {
     expect(editor).not.toContain("presentation='modal'");
   });
 
+  it('matches the normal-size Select and Input control heights', () => {
+    expect(source).toContain('const editorSelectTriggerStyle = {');
+    expect(source).toContain('height: 46,');
+    expect(source).toContain('minHeight: 46,');
+    expect(source).toContain('paddingVertical: 0,');
+    expect(
+      editor.match(/triggerStyle={editorSelectTriggerStyle}/g)
+    ).toHaveLength(2);
+    expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
+    expect(editor.match(/padding: 18,/g)).toHaveLength(2);
+  });
+
   it('centers both single-line Input fields without overriding the library globally', () => {
     expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
     expect(source).toContain("textAlignVertical: 'center' as const");
@@ -203,5 +215,99 @@ describe('Native Starter Android project controls', () => {
     expect(source).toContain(
       'accessibilityState={{ checked: project.completed }}'
     );
+  });
+});
+
+describe('Native Starter large accessibility text', () => {
+  it('keeps tab navigation named while hiding oversized visual labels', () => {
+    expect(source).toContain('const largeText = fontScale >= 1.5');
+    expect(source).toContain('accessibilityLabel={label}');
+    expect(source).toContain('{!largeText ? (');
+  });
+
+  it('prevents header and chart labels from overtaking the viewport', () => {
+    expect(source).toContain('adjustsFontSizeToFit');
+    expect(source).toContain('minimumFontScale={0.7}');
+    expect(source).toContain('maxFontSizeMultiplier={1.5}');
+    expect(source).toContain('numberOfLines={largeText ? 1 : 2}');
+    expect(source).toContain("status.key === 'active'");
+  });
+});
+
+describe('Native Starter large-text project actions', () => {
+  it('retains the overflow menu and scales its content for large accessibility text', () => {
+    const start = source.indexOf("presentation='popover'");
+    const end = source.indexOf('<Dropdown.Trigger', start);
+    const menu = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(menu).toMatch(/textStyle=\{\s*largeText\s*\?/);
+    expect(menu).toContain('1.5 / fontScale');
+    expect(menu).toContain(
+      'itemStyle={largeText ? { minHeight: 52 } : undefined}'
+    );
+    expect(menu).toContain('width: largeText ? 268 : 216');
+    expect(source).toContain(
+      "accessibilityLabel={'Actions for ' + project.name}"
+    );
+    expect(source).toContain('onSelect={() => openEdit(project)}');
+    expect(source).toContain('onSelect={() => duplicateProject(project.id)}');
+    expect(source).toContain('onSelect={() => deleteProject(project.id)}');
+    expect(source).not.toContain(
+      "['Duplicate', Copy, () => duplicateProject(project.id)]"
+    );
+  });
+
+  it('provides a capped native editor input at large text sizes', () => {
+    expect(source).toContain("accessibilityLabel='Project name'");
+    expect(source).toContain("accessibilityLabel='Description'");
+    expect(source).toContain('maxFontSizeMultiplier={1.5}');
+    expect(source).toContain('onChangeText={setDescription}');
+  });
+});
+
+describe('Native Starter large-text search and restore', () => {
+  it('uses an accessible compact search input at large font scales', () => {
+    expect(source).toContain("accessibilityLabel='Search projects'");
+    expect(source).toContain('onChangeText={setQuery}');
+    expect(source).toContain("label='Search projects'");
+  });
+
+  it('keeps the destructive restore action readable and operable', () => {
+    expect(source).toContain("accessibilityLabel='Restore sample data'");
+    expect(source).toContain('maxFontSizeMultiplier={1.4}');
+    expect(source).toContain('setData(initialWorkspace)');
+  });
+});
+
+describe('Native Starter large-text organization choices', () => {
+  const start = source.indexOf('function LargeTextChoiceField(');
+  const end = source.indexOf('function WorkspaceScreen()', start);
+  const choiceField = source.slice(start, end);
+
+  it('opens the published Select sheet without expanding the form inline', () => {
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(choiceField).toContain('<Select');
+    expect(choiceField).toContain("presentation='sheet'");
+    expect(choiceField).toContain('accessibilityLabel={label}');
+    expect(choiceField).toContain(
+      'renderValue={({ option, placeholder }) => ('
+    );
+    expect(choiceField).toContain('renderOption={({ option, selected }) => (');
+    expect(choiceField).toContain('maxFontSizeMultiplier={1.5}');
+    expect(choiceField).toContain('optionStyle={{');
+    expect(choiceField).toContain('Math.min(viewportHeight * 0.7, 360)');
+    expect(choiceField).toContain('virtual={{ estimatedItemSize: 52 }}');
+    expect(choiceField).not.toContain('setExpanded(');
+    expect(source).toContain("label='Team'");
+    expect(source).toContain("label='Status'");
+  });
+
+  it('preserves published Select for the standard-size editor', () => {
+    expect(source).toContain("label='Team'");
+    expect(source).toContain("label='Status'");
+    expect(source).toContain("presentation='sheet'");
+    expect(source).toContain('contentStyle={compactSheetStyle}');
   });
 });
