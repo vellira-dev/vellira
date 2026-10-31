@@ -101,6 +101,52 @@ function validScenarios(rows) {
   });
 }
 
+function observedWarningThreshold(baseline) {
+  const policy = baseline?.warningPolicy;
+  const values = policy?.maximumObservedAbsoluteDifferenceBytes;
+  const artifacts = policy?.artifacts;
+  const calibratedForThisSource =
+    policy?.schemaVersion === 1 &&
+    policy?.state === 'PROVISIONAL' &&
+    policy?.blocking === false &&
+    Number.isSafeInteger(policy?.observedIdenticalSourceSamples) &&
+    policy.observedIdenticalSourceSamples >= 2 &&
+    policy.measuredSourceSha === baseline?.sourceEvidence?.measuredCandidateSha &&
+    policy.runId === baseline?.sourceEvidence?.workflowRunId &&
+    Array.isArray(artifacts) &&
+    artifacts.length === policy.observedIdenticalSourceSamples &&
+    new Set(artifacts.map((a) => a.artifactId)).size === artifacts.length &&
+    artifacts.every((a, index) =>
+      a.attempt === index + 1 &&
+      Number.isSafeInteger(a.artifactId) && a.artifactId > 0
+    ) &&
+    values && typeof values === 'object' &&
+    Object.keys(values).sort().join(',') === [...FIELDS].sort().join(',') &&
+    FIELDS.every((metric) =>
+      Number.isSafeInteger(values[metric]) && values[metric] >= 0
+    );
+
+  if (!calibratedForThisSource) {
+    return {
+      state: 'NOT_CALIBRATED',
+      identicalSourceSamples: 1,
+      blocking: false,
+      note: 'No verified repeated identical-source measurements. '
+        + 'Do not assert a numeric warning threshold.',
+    };
+  }
+
+  return {
+    state: 'PROVISIONAL',
+    identicalSourceSamples: policy.observedIdenticalSourceSamples,
+    warningThresholdBytesByMetric: { ...values },
+    blocking: false,
+    note: 'Observed clean-build variance only. Growth above that observed '
+      + 'amount receives a nonblocking warning; two matching builds do not '
+      + 'prove universal determinism or justify a blocking gate.',
+  };
+}
+
 function evaluateViteRegression(baseline, candidate, gitEvidence) {
   const result = {
     schemaVersion: 1,
@@ -109,12 +155,7 @@ function evaluateViteRegression(baseline, candidate, gitEvidence) {
     baselineMainSha: baseline?.main?.sha ?? null,
     candidateSha: candidate?.sha ?? null,
     candidateBaseSha: candidate?.baseSha ?? null,
-    threshold: {
-      state: 'NOT_CALIBRATED',
-      identicalSourceSamples: 1,
-      blocking: false,
-      note: 'One baseline sample does not establish normal build variance.',
-    },
+    threshold: observedWarningThreshold(baseline),
     comparisons: [],
   };
   const fail = (status, reason) => ({ ...result, status, reason });
@@ -175,12 +216,26 @@ function evaluateViteRegression(baseline, candidate, gitEvidence) {
       });
     }
   }
+  const warnings = result.threshold.state === 'PROVISIONAL'
+    ? comparisons.filter((row) =>
+        row.deltaBytes >
+        result.threshold.warningThresholdBytesByMetric[row.metric]
+      )
+    : [];
   return {
     ...result,
     status: 'COMPARABLE',
     reason: 'Same versioned fixture, metric, tooling and canonical main.',
     comparisons,
     observedIncreases: comparisons.filter((r) => r.deltaBytes > 0).length,
+    warningStatus: result.threshold.state !== 'PROVISIONAL'
+      ? 'NOT_CALIBRATED' : warnings.length ? 'WARN' : 'NO_GROWTH',
+    warningCount: warnings.length,
+    warnings: warnings.map((row) => ({
+      scenario: row.scenario,
+      metric: row.metric,
+      deltaBytes: row.deltaBytes,
+    })),
   };
 }
 
@@ -207,9 +262,21 @@ function formatViteRegression(report) {
       r.baselineBytes + ' | ' + r.currentBytes + ' | ' +
       (r.deltaBytes > 0 ? '+' : '') + r.deltaBytes + ' | ' + percent + ' |');
   }
-  lines.push('', 'Observed increases: **' + report.observedIncreases +
-    '**; threshold **NOT_CALIBRATED**. No size gate, no inferred network ' +
-    'transfer. Refresh baseline after relevant main/toolchain changes.', '');
+  lines.push(
+    '',
+    'Observed positive deltas: **' + report.observedIncreases +
+      '**; size warning: **' + report.warningStatus +
+      '** (' + report.warningCount + ' metrics).',
+    report.threshold.state === 'PROVISIONAL'
+      ? 'Provisional threshold comes from ' +
+        report.threshold.identicalSourceSamples +
+        ' identical-source clean builds; per-metric observed variance: ' +
+        JSON.stringify(report.threshold.warningThresholdBytesByMetric) + '.'
+      : 'Warning threshold NOT_CALIBRATED; no numeric limit claimed.',
+    'This warning is report-only and never blocks CI. No inferred network ' +
+      'transfer. Refresh main baseline from verified source evidence.',
+    ''
+  );
   return lines.join('\n');
 }
 
