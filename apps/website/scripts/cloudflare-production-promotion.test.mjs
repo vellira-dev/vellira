@@ -153,11 +153,11 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
 
 test('manual recovery rejects feature preview and non-main dispatch before expensive staging', () => {
   const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
-  assert.match(classify, /Reject unsafe production recovery inputs before staging work/);
-  assert.match(classify, /inputs\.production_recovery == true/);
-  assert.match(classify, /test "\\$GITHUB_REF" = "refs\\/heads\\/main"/);
-  assert.match(classify, /test "\\$PRO_INTEREST_PREVIEW" != "true"/);
-  assert.match(classify, /test "\\$NEWSLETTER_ABUSE_PREVIEW" != "true"/);
+  assert.ok(classify.includes('Reject unsafe production recovery inputs before staging work'));
+  assert.ok(classify.includes('inputs.production_recovery == true'));
+  assert.ok(classify.includes('test "$GITHUB_REF" = "refs/heads/main"'));
+  assert.ok(classify.includes('test "$PRO_INTEREST_PREVIEW" != "true"'));
+  assert.ok(classify.includes('test "$NEWSLETTER_ABUSE_PREVIEW" != "true"'));
 });
 
 test('staging publishes a dedicated machine-readable promotion artifact', () => {
