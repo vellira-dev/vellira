@@ -1,0 +1,149 @@
+.device {
+  width: min(376px, 100%);
+  margin-inline: auto;
+  padding: 8px;
+  border: 2px solid #45454d;
+  border-radius: 44px;
+  background: #121218;
+  box-shadow: 0 18px 52px rgb(17 12 42 / 22%);
+}
+
+.screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 708px;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 34px;
+  background: var(--surface-default);
+  isolation: isolate;
+}
+
+.island {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 50%;
+  width: 110px;
+  height: 27px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background: #090909;
+  pointer-events: none;
+}
+
+.statusBar {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 55px;
+  padding: 12px 24px 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.signal {
+  letter-spacing: 2px;
+  font-size: 9px;
+  line-height: 1.8;
+}
+
+.sheetBackdrop {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(30 20 54 / 22%);
+}
+
+.editorSheet {
+  width: 100%;
+  min-height: 330px;
+  padding: 20px;
+  border: 1px solid;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -12px 45px rgb(20 12 38 / 20%);
+}
+
+.sheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 28px;
+  font-size: 15px;
+}
+
+.sheetHeader button {
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 8px 10px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sheetHeader button:last-child {
+  color: var(--text-brand);
+  font-weight: 700;
+}
+
+.sheetHeader button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sheetField {
+  display: grid;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sheetField input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 400;
+}
+
+.editorSheet p {
+  margin-top: 22px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 420px) {
+  .device {
+    width: 100%;
+    padding: 6px;
+    border-radius: 36px;
+  }
+
+  .screen {
+    height: min(708px, 72vh);
+    min-height: 540px;
+    border-radius: 29px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device,
+  .editorSheet {
+    scroll-behavior: auto;
+  }
+}
