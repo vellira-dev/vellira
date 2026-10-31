@@ -53,7 +53,7 @@ describe('live Vellira Dashboard Core showcase', () => {
     expect(website).toContain('/examples/workspace-starter/native');
     expect(website).toContain('<NativeStarterPreview />');
     expect(website).toContain('React Native Starter · rendered in the browser');
-    expect(website).toContain('Run the actual Native Starter in Expo');
+    expect(website).toContain('Setup instructions ↗');
     expect(website).not.toContain("src='/demo/dashboard'");
     expect(website).not.toContain('Responsive Web preview');
   });

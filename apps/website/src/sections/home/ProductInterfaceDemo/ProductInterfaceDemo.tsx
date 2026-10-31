@@ -156,8 +156,9 @@ export function ProductInterfaceDemo() {
                 target='_blank'
                 rel='noopener noreferrer'
               >
-                Run the actual Native Starter in Expo
+                Setup instructions ↗
               </DesignSystemLink>
+              {' '}to run the actual Native Starter in Expo.
             </>
           ) : (
             <>
@@ -168,7 +169,7 @@ export function ProductInterfaceDemo() {
                 target='_blank'
                 rel='noopener noreferrer'
               >
-                open the React Native / Expo source
+                Setup instructions ↗
               </DesignSystemLink>
               .
             </>

@@ -19,7 +19,7 @@ describe('Website Native Starter showcase', () => {
     expect(website).not.toContain("src='/demo/dashboard'");
     expect(website).not.toContain('Responsive Web preview');
     expect(website).toContain("href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}");
-    expect(website).toContain('Run the actual Native Starter in Expo');
+    expect(website).toContain('Setup instructions ↗');
   });
 
   it('uses real React Native Web primitives with an honest runtime boundary', () => {
