@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "profile": "vite-full-styles-v1",
+  "candidateVersion": "2.188.7",
+  "main": {
+    "sha": "8f07cca61933fd81c19b0c5f93e69068bd0d6d1b",
+    "treeSha": "a5b677814591a97056f0cffa13cb61db87fe7b24"
+  },
+  "sourceEvidence": {
+    "measuredCandidateSha": "aa40104309f5441476c4cf6f8599bac435963ede",
+    "measuredTreeSha": "a5b677814591a97056f0cffa13cb61db87fe7b24",
+    "workflowRunId": 40959907798,
+    "originalArtifactId": 12935476739,
+    "candidateManifestSha256": "958d1aae0398d85b454913b2dcee1cd620cd0e69750a60bd98d9e94720632315",
+    "harnessSha": "4047e911944d6ac3a308ba83cd729ec8bc39c419",
+    "note": "Exact measured candidate PR #2011 source and post-squash package-version main commit have identical Git trees. Later main Starter pin sync (commit e7fd22b) changed only Starter README/manifests/locks, not packages, Vite fixture or measurement paths. This is source-equivalent evidence; not a separately rerun main job."
+  },
+  "tooling": {
+    "node": "v22.23.4",
+    "npm": "10.9.9",
+    "vite": "8.3.5",
+    "typescript": "6.0.3"
+  },
+  "metric": "sum of emitted production .js and .css assets; gzip level 9 per asset",
+  "scenarios": {
+    "bare": {
+      "jsBytes": 219618,
+      "jsGzipBytes": 67749,
+      "jsFiles": 1,
+      "cssBytes": 0,
+      "cssGzipBytes": 0,
+      "cssFiles": 0
+    },
+    "button": {
+      "jsBytes": 415411,
+      "jsGzipBytes": 126170,
+      "jsFiles": 1,
+      "cssBytes": 547401,
+      "cssGzipBytes": 58174,
+      "cssFiles": 1
+    },
+    "buttonInput": {
+      "jsBytes": 415528,
+      "jsGzipBytes": 126221,
+      "jsFiles": 1,
+      "cssBytes": 547401,
+      "cssGzipBytes": 58174,
+      "cssFiles": 1
+    }
+  },
+  "warningPolicy": {
+    "schemaVersion": 1,
+    "state": "PROVISIONAL",
+    "observedIdenticalSourceSamples": 2,
+    "measuredSourceSha": "aa40104309f5441476c4cf6f8599bac435963ede",
+    "runId": 40959907798,
+    "artifacts": [
+      {
+        "attempt": 1,
+        "artifactId": 12935476739
+      },
+      {
+        "attempt": 2,
+        "artifactId": 12938397438
+      }
+    ],
+    "maximumObservedAbsoluteDifferenceBytes": {
+      "jsBytes": 0,
+      "jsGzipBytes": 0,
+      "cssBytes": 0,
+      "cssGzipBytes": 0
+    },
+    "blocking": false,
+    "note": "Two actual clean Vite consumer jobs on exact immutable source/package graph and toolchain; raw/gzip JS/CSS and wider Web composition byte-identical. Informational growth warnings only; insufficient observations to infer a universal zero-variance or any hard CI gate."
+  }
+}
