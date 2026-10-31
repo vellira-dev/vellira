@@ -2,6 +2,8 @@
 
 import dynamic from 'next/dynamic';
 
+import styles from './NativeStarterPreview.module.css';
+
 // Render the maintained Native Starter itself. No second project model,
 // duplicate screens or restyled web dashboard is allowed in this showcase.
 const StarterApp = dynamic(
@@ -11,8 +13,6 @@ const StarterApp = dynamic(
     ),
   { ssr: false }
 );
-
-import styles from './NativeStarterPreview.module.css';
 
 export function NativeStarterPreview() {
   return (
