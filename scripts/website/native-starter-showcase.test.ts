@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { format, resolveConfig } from 'prettier';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(resolve(path), 'utf8');
@@ -23,6 +24,22 @@ const storage = read(
 );
 
 describe('Website Native Starter showcase', () => {
+  it('diagnoses the Prettier difference in the website preview wrapper', async () => {
+    const path = resolve(
+      'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx'
+    );
+    const before = readFileSync(path, 'utf8');
+    const settings = await resolveConfig(path);
+    const after = await format(before, { ...settings, filepath: path });
+    if (after !== before) {
+      // Temporary diagnostic; remove after capturing the exact output.
+      console.log('NATIVE_SHOWCASE_PRETTIER_BEGIN');
+      console.log(JSON.stringify(after));
+      console.log('NATIVE_SHOWCASE_PRETTIER_END');
+    }
+    expect(after.length).toBeGreaterThan(0);
+  });
+
   it('switches mobile platform preview away from the React Web iframe', () => {
     expect(website).toContain('<NativeStarterPreview />');
     expect(website).toContain(
