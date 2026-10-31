@@ -775,58 +775,98 @@ try {
               nativePreview.getByText('Your projects at a glance')
             ).toBeVisible();
 
-            // RN Web Modal portals into document.body. The Select sheet must
-            // stay inside the visual phone viewport, not fill the browser.
-            await nativePreview
+            // The same-origin iframe gives React Native Web its own viewport.
+            // Select must slide up from the phone bottom and remain anchored
+            // when the surrounding marketing page scrolls.
+            const nativeIframe = nativePreview.locator(
+              'iframe[title="Interactive Vellira Native Starter"]'
+            );
+            const nativeFrame = nativePreview.frameLocator(
+              'iframe[title="Interactive Vellira Native Starter"]'
+            );
+            await nativeFrame
               .getByRole('button', { name: 'Create project' })
               .click();
-            await nativePreview
+            await nativeFrame
               .getByRole('button', { name: 'Team', exact: true })
               .click();
-            const selectRoot = page.locator('[data-testid="select-content-root"]');
-            await expect(selectRoot).toBeVisible();
-            const phoneBounds = await nativePreview.boundingBox();
-            const selectBounds = await selectRoot.boundingBox();
-            assert.ok(phoneBounds && selectBounds, 'Select sheet needs geometry');
-            assert.ok(
-              selectBounds.x >= phoneBounds.x - 3 &&
-                selectBounds.x + selectBounds.width <=
-                  phoneBounds.x + phoneBounds.width + 3 &&
-                selectBounds.y >= Math.max(0, phoneBounds.y) - 3 &&
-                selectBounds.y + selectBounds.height <=
-                  Math.min(viewport.height, phoneBounds.y + phoneBounds.height) + 3,
-              'Native Select must stay inside the phone preview'
+            const selectRoot = nativeFrame.locator(
+              '[data-testid="select-content-root"]'
             );
-            await page
+            const selectSheet = nativeFrame.locator('[data-testid="select-sheet"]');
+            await expect(selectSheet).toBeVisible();
+
+            const checkSheetGeometry = async () => {
+              const frameBounds = await nativeIframe.boundingBox();
+              const sheetBounds = await selectSheet.boundingBox();
+              assert.ok(frameBounds && sheetBounds, 'Select sheet needs geometry');
+              return {
+                left: sheetBounds.x - frameBounds.x,
+                right:
+                  frameBounds.x +
+                  frameBounds.width -
+                  sheetBounds.x -
+                  sheetBounds.width,
+                bottom:
+                  frameBounds.y +
+                  frameBounds.height -
+                  sheetBounds.y -
+                  sheetBounds.height,
+              };
+            };
+            await expect
+              .poll(async () => {
+                const bounds = await checkSheetGeometry();
+                return Math.max(
+                  Math.abs(bounds.bottom),
+                  Math.max(0, -bounds.left),
+                  Math.max(0, -bounds.right)
+                );
+              })
+              .toBeLessThan(5);
+
+            await page.evaluate(() => window.scrollBy(0, 120));
+            await expect
+              .poll(async () => {
+                const bounds = await checkSheetGeometry();
+                return Math.max(
+                  Math.abs(bounds.bottom),
+                  Math.max(0, -bounds.left),
+                  Math.max(0, -bounds.right)
+                );
+              })
+              .toBeLessThan(5);
+
+            await nativeFrame
               .getByRole('button', { name: 'Close selection' })
               .click();
             await expect(selectRoot).toBeHidden();
-            await nativePreview
+            await nativeFrame
               .getByRole('button', { name: 'Close project editor' })
               .click();
 
-            await nativePreview
+            await nativeFrame
               .getByRole('tab', { name: 'Projects' })
               .click();
             await expect(
-              nativePreview.getByText('Design token refresh')
+              nativeFrame.getByText('Design token refresh')
             ).toBeVisible();
-            await nativePreview
+            await nativeFrame
               .getByRole('button', {
                 name: 'Actions for Design token refresh',
               })
               .click();
-            await nativePreview
+            await nativeFrame
               .getByRole('menuitem', { name: 'Duplicate' })
               .click();
             await expect(
-              nativePreview.getByText('Design token refresh copy')
+              nativeFrame.getByText('Design token refresh copy')
             ).toBeVisible();
-            await nativePreview
+            await nativeFrame
               .getByRole('tab', { name: 'Settings' })
               .click();
             await expect(
-              nativePreview.getByText('Product notifications')
+              nativeFrame.getByText('Product notifications')
             ).toBeVisible();
             await page.screenshot({
               path: `${artifactDir}/dashboard-native-starter-web-preview.png`,

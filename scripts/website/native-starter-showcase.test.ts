@@ -34,16 +34,25 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Setup instructions ↗');
   });
 
-  it('scopes React Native Web Select portals to the phone viewport', () => {
-    expect(preview).toContain('getBoundingClientRect()');
-    expect(preview).toContain("select-content-root");
-    expect(preview).toContain('document.body.children');
-    expect(preview).toContain('new MutationObserver(schedule)');
-    expect(preview).toContain('new ResizeObserver(schedule)');
-    expect(preview).toContain('Math.min(window.innerHeight, rect.bottom)');
-    expect(preview).toContain("layer.style.setProperty(property, value, 'important')");
-    expect(preview).toContain('observer.disconnect()');
-    expect(preview).toContain('resizeObserver.disconnect()');
+  it('isolates the actual Native Starter and its modal portals inside the phone iframe', () => {
+    const nativeRoute = read(
+      'apps/website/src/app/(marketing)/demo/native-starter/page.tsx'
+    );
+    const routeStyles = read(
+      'apps/website/src/app/(marketing)/demo/native-starter/page.module.css'
+    );
+    expect(preview).toContain("src='/demo/native-starter'");
+    expect(preview).toContain("title='Interactive Vellira Native Starter'");
+    expect(preview).toContain("data-testid='native-starter-iframe'");
+    expect(preview).not.toContain('MutationObserver');
+    expect(preview).not.toContain('document.body');
+    expect(nativeRoute).toContain(
+      "import('@/sections/home/ProductInterfaceDemo/native-starter-source/App')"
+    );
+    expect(nativeRoute).toContain('<StarterApp />');
+    expect(routeStyles).toContain('position: fixed;');
+    expect(routeStyles).toContain('inset: 0;');
+    expect(routeStyles).toContain('overflow: hidden;');
   });
 
   it('removes the backing card from the mobile phone preview', () => {
@@ -70,11 +79,8 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Explore the Pro roadmap');
   });
 
-  it('renders the maintained Expo Starter App instead of inventing another UI', () => {
-    expect(preview).toContain(
-      "import('./native-starter-source/App')"
-    );
-    expect(preview).toContain('<StarterApp />');
+  it('shows the maintained Expo Starter instead of inventing another UI', () => {
+    expect(preview).toContain("src='/demo/native-starter'");
     expect(preview).toContain("data-testid='native-starter-preview'");
     expect(preview).not.toContain('seedProjects');
     expect(preview).not.toContain('setProjects(');
