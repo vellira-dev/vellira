@@ -76,10 +76,11 @@ installation. The read-only `--check` validates the exact Git commit being
 tested and fails when the website's Dashboard JSX or CSS differs from the Vite
 starter. It never silently regenerates the website copy.
 
-The staging migration, staging deployment and production promotion repeat this
-parity check **before dependency installation or website compilation** against
-their pinned candidate commit. The deployment workflows independently record
-and verify the source commit in their build identity. This proves source parity
+Staging migration, staging deployment, production promotion, and the
+exceptional one-time legacy adoption path repeat this parity check **before
+dependency installation or website compilation** against their pinned
+candidate commit. The deployment workflows independently record and verify
+the source commit in their build identity. This proves source parity
 for the shipped candidate, not pixel-for-pixel visual identity or runtime
 correctness; the separate browser and runtime checks address those concerns.
 
