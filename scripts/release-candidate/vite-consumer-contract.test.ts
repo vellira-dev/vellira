@@ -134,7 +134,9 @@ describe('clean Vite consumer workflow contract', () => {
       'run: node packages/react/scripts/css-button-parity-probe.mjs'
     );
     expect(probe).toContain('configFile: false');
-    expect(probe).toContain('verifyButtonCssParity({ rootJs, fullCss, isolatedCss })');
+    expect(probe).toContain(
+      'verifyButtonCssParity({ rootJs, fullCss, isolatedCss })'
+    );
     expect(probe).toContain('expectedExports');
     expect(probe).toContain('rmSync(temp, { recursive: true, force: true })');
   });
