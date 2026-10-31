@@ -42,7 +42,7 @@ describe('Website Native Starter showcase', () => {
       expect(preview).toContain(project);
       expect(native).toContain(project);
     }
-    expect(preview).toContain("name: 'Demo Workspace'");
+    expect(preview).toContain("useState('Demo Workspace')");
     expect(native).toContain("name: 'Demo Workspace'");
     expect(preview).toContain('Your projects at a glance');
     expect(preview).toContain('Project progress');
