@@ -14,10 +14,10 @@ import { Dashboard } from './Dashboard';
 import styles from './ProductInterfaceDemo.module.css';
 
 const NativeStarterPreview = dynamic(
-  () =>
-    import('./NativeStarterPreview').then(
-      (module) => module.NativeStarterPreview
-    ),
+  async () => {
+    const module = await import('./NativeStarterPreview');
+    return module.NativeStarterPreview;
+  },
   { ssr: false }
 );
 
@@ -41,6 +41,12 @@ const nativeStarterUrl = starterUrl + '/native';
 export function ProductInterfaceDemo() {
   const { preference, setPreference } = useWebsiteThemeContext();
   const [preview, setPreview] = useState<'desktop' | 'mobile'>('desktop');
+  const stageClassName =
+    preview === 'mobile' ? styles.stage + ' ' + styles.mobileStage : styles.stage;
+  const captionClassName =
+    preview === 'mobile'
+      ? styles.nativeLink + ' ' + styles.nativeCaption
+      : styles.nativeLink;
 
   return (
     <section
@@ -114,9 +120,7 @@ export function ProductInterfaceDemo() {
         </div>
         <div
           id='dashboard-live'
-          className={`${styles.stage} ${
-            preview === 'mobile' ? styles.mobileStage : ''
-          }`}
+          className={stageClassName}
           tabIndex={-1}
           aria-label='Interactive Vellira Dashboard Demo'
         >
@@ -148,9 +152,7 @@ export function ProductInterfaceDemo() {
           )}
         </div>
         <div
-          className={`${styles.nativeLink} ${
-            preview === 'mobile' ? styles.nativeCaption : ''
-          }`}
+          className={captionClassName}
         >
           {preview === 'mobile' ? (
             <>
