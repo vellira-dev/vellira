@@ -2,6 +2,12 @@ name: Release Candidate Proof
 
 on:
   workflow_dispatch:
+    inputs:
+      css_attribution:
+        description: 'Run extra packed Vite CSS attribution variants (manual only)'
+        required: false
+        type: boolean
+        default: false
   pull_request:
     paths:
       - 'packages/**'
@@ -186,6 +192,7 @@ jobs:
           VELLIRA_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           VELLIRA_CANDIDATE_DIR: .candidate-artifacts
           VELLIRA_CONSUMER_EVIDENCE: consumer-evidence/vite-consumer.json
+          VELLIRA_CSS_ATTRIBUTION: ${{ github.event_name == 'workflow_dispatch' && inputs.css_attribution && '1' || '0' }}
         run: node scripts/release-candidate/vite-consumer.cjs
 
       - name: Retain Vite consumer evidence
