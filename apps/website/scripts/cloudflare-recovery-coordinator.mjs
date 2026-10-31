@@ -16,10 +16,10 @@ export function decideRecovery({ mainSha, productionSha, stagingRuns, production
   if (productionRuns.some((run) => run.status !== 'completed' && run.status !== 'waiting')) {
     return { dispatch: false, reason: 'production_active' };
   }
-  // Exactly one recovery attempt per SHA. A failed attempt requires owner investigation,
-  // not a runaway loop. Any existing full stage for the SHA also suppresses duplicates.
+  // Release-sync can yield a green outer run with skipped deployment.
+  // Only an actual deploy job, or an identified recovery attempt, owns this SHA.
   if (stagingRuns.some((run) => run.head_sha === mainSha &&
-      (run.event === 'workflow_dispatch' || run.event === 'push'))) {
+      (run.fullStage === true || run.recoveryAttempt === true))) {
     return { dispatch: false, reason: 'staging_exists_for_main' };
   }
   return { dispatch: true, reason: 'production_behind_unstaged_main' };
@@ -67,8 +67,22 @@ async function main() {
   const stagingResult = await github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assert.ok(stagingResult.total_count < 100, 'Staging history requires pagination before safe dispatch');
+  const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
+    // A recovery attempt must be terminally deduplicated even if its deploy fails.
+    const recoveryAttempt = run.event === 'workflow_dispatch' &&
+      run.display_title === 'Production recovery ' + mainSha;
+    if (recoveryAttempt) return { ...run, recoveryAttempt: true };
+    if (run.event !== 'push') return { ...run, fullStage: false };
+    const jobs = await github('/repos/' + OWNER + '/actions/runs/' + run.id + '/jobs?per_page=100');
+    assert.ok(jobs.total_count < 100, 'Unverifiable staging jobs pagination');
+    const deploy = jobs.jobs.filter((job) => job.name ===
+      'Build, deploy, and verify merged main on website staging');
+    assert.ok(deploy.length <= 1, 'Ambiguous staging deploy jobs');
+    return { ...run, fullStage: deploy.length === 1 &&
+      deploy[0].conclusion !== 'skipped' };
+  }));
   const plan = decideRecovery({
-    mainSha, productionSha, stagingRuns: stagingResult.workflow_runs,
+    mainSha, productionSha, stagingRuns,
     productionRuns: productionResult.workflow_runs,
   });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
