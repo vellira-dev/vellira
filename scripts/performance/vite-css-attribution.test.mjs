@@ -73,8 +73,8 @@ test('opt-in variants use the same fixture, count CSS, and restore original sour
 
     assert.equal(result.status, 'DIAGNOSTIC_ONLY');
     assert.equal(seen.length, 2);
-    assert.ok(seen[0].includes('Tokens-only diagnostic'));
-    assert.ok(seen[1].includes('Unvalidated style diagnostic'));
+    assert.ok(seen[0].includes('React-only baseline'));
+    assert.ok(seen[1].includes('Button-only'));
     assert.ok(seen.every((source) =>
       !source.includes("import '@vellira-ui/react/styles'")
     ));
