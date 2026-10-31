@@ -64,3 +64,50 @@ test('rejects evidence from another run attempt', () => {
     /run attempt mismatch/
   );
 });
+
+test('accepts explicitly authorized manual recovery on exact main staging evidence', () => {
+  const manualExpected = { ...expected, eventName: 'workflow_dispatch' };
+  const result = validateStagingEvidence(
+    evidence({ eventName: 'workflow_dispatch', productionRecovery: true }),
+    manualExpected
+  );
+  assert.equal(result.productionRecovery, true);
+});
+
+test('rejects ordinary manual staging without recovery authority', () => {
+  const manualExpected = { ...expected, eventName: 'workflow_dispatch' };
+  for (const productionRecovery of [undefined, false]) {
+    assert.throws(
+      () => validateStagingEvidence(
+        evidence({ eventName: 'workflow_dispatch', productionRecovery }),
+        manualExpected
+      ),
+      /not authorized for production recovery/
+    );
+  }
+});
+
+test('rejects forged recovery authority on push staging', () => {
+  assert.throws(
+    () => validateStagingEvidence(evidence({ productionRecovery: true }), expected),
+    /Push staging must not use manual recovery authority/
+  );
+});
+
+test('rejects unexpected manual recovery source ref and build identity', () => {
+  const manualExpected = { ...expected, eventName: 'workflow_dispatch' };
+  assert.throws(
+    () => validateStagingEvidence(
+      evidence({ eventName: 'workflow_dispatch', productionRecovery: true, sourceRef: 'refs/heads/feature' }),
+      manualExpected
+    ),
+    /source ref mismatch/
+  );
+  assert.throws(
+    () => validateStagingEvidence(
+      evidence({ eventName: 'workflow_dispatch', productionRecovery: true, buildId: 'other' }),
+      manualExpected
+    ),
+    /build ID mismatch/
+  );
+});
