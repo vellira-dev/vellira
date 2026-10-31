@@ -15,6 +15,9 @@ const next = read('apps/website/next.config.ts');
 const safeArea = read(
   'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/SafeArea.tsx'
 );
+const blurAdapter = read(
+  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/ExpoBlur.tsx'
+);
 const storage = read(
   'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/AsyncStorage.ts'
 );
@@ -53,6 +56,8 @@ describe('Website Native Starter showcase', () => {
       "'@react-native-async-storage/async-storage': nativeAdapter('AsyncStorage.ts')"
     );
     expect(safeArea).toContain('useSafeAreaInsets');
+    expect(blurAdapter).toContain('type BlurViewProps = ViewProps & {');
+    expect(blurAdapter).toContain('pointerEvents={pointerEvents}');
     expect(storage).toContain("window.localStorage.getItem(keyFor(key))");
     expect(storage).toContain("window.localStorage.setItem(keyFor(key), value)");
   });

@@ -1,15 +1,20 @@
-import type { ReactNode } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type ViewProps } from 'react-native';
 
-type BlurViewProps = {
-  children?: ReactNode;
-  style?: StyleProp<ViewStyle>;
+type BlurViewProps = ViewProps & {
   intensity?: number;
   tint?: string;
 };
 
-// React Native's Platform.OS is 'web' here, so native iOS BlurView branches
-// are not taken. Keep a valid fallback for module resolution only.
-export function BlurView({ children, style }: BlurViewProps) {
-  return <View style={style}>{children}</View>;
+// Browser-only fallback for Expo Blur. Preserve View's accessibility and
+// pointer interaction props, but leave the native visual effect to Expo.
+export function BlurView({
+  children,
+  style,
+  pointerEvents,
+}: BlurViewProps) {
+  return (
+    <View style={style} pointerEvents={pointerEvents}>
+      {children}
+    </View>
+  );
 }
