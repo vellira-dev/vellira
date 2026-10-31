@@ -144,13 +144,14 @@ export function ProductInterfaceDemo() {
             </div>
           )}
         </div>
-        <div className={styles.nativeLink}>
+        <div
+          className={`${styles.nativeLink} ${preview === 'mobile' ? styles.nativeCaption : ''}`}
+        >
           {preview === 'mobile' ? (
             <>
-              <strong>React Native / Expo</strong> — this uses Vellira Native
-              components rendered through React Native Web. It illustrates
-              the Starter's layout and sample interactions; it is not an iOS or
-              Android simulator.{' '}
+              <span>
+                <strong>React Native / Expo</strong> · Browser preview
+              </span>
               <DesignSystemLink
                 href={nativeStarterUrl}
                 target='_blank'
@@ -158,7 +159,6 @@ export function ProductInterfaceDemo() {
               >
                 Setup instructions ↗
               </DesignSystemLink>
-              {' '}to run the actual Native Starter in Expo.
             </>
           ) : (
             <>
@@ -176,7 +176,8 @@ export function ProductInterfaceDemo() {
           )}
         </div>
 
-        <div className={styles.boundary}>
+        {preview === 'desktop' ? (
+          <div className={styles.boundary}>
           <p>
             <strong>Core remains free.</strong> This example uses published
             Vellira controls and stores only local demonstration data. Future
@@ -186,7 +187,8 @@ export function ProductInterfaceDemo() {
           <DesignSystemLink href='#pro'>
             Explore the Pro roadmap →
           </DesignSystemLink>
-        </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

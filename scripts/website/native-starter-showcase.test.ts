@@ -34,6 +34,30 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Setup instructions ↗');
   });
 
+  it('removes the backing card from the mobile phone preview', () => {
+    const stage = read(
+      'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css'
+    );
+    const mobileCss = stage.slice(stage.indexOf('.mobileStage {'));
+    expect(mobileCss).toContain('background: transparent;');
+    expect(mobileCss).toContain('border: 0;');
+    expect(mobileCss).toContain('box-shadow: none;');
+    expect(mobileCss).toContain('overflow: visible;');
+    expect(stage).toContain('.nativeStageContent {');
+    expect(stage).toContain('.nativeCaption {');
+  });
+
+  it('keeps only a compact caption and the setup link under Mobile', () => {
+    expect(website).toContain('Browser preview');
+    expect(website).toContain('styles.nativeCaption');
+    expect(website).toContain('Setup instructions ↗');
+    expect(website).not.toContain('It illustrates');
+    expect(website).toMatch(
+      /\{preview === 'desktop' \? \(\s*<div className=\{styles\.boundary\}>/
+    );
+    expect(website).toContain('Explore the Pro roadmap');
+  });
+
   it('renders the maintained Expo Starter App instead of inventing another UI', () => {
     expect(preview).toContain(
       "import('./native-starter-source/App')"
@@ -43,7 +67,7 @@ describe('Website Native Starter showcase', () => {
     expect(preview).not.toContain('seedProjects');
     expect(preview).not.toContain('setProjects(');
     expect(preview).not.toContain('function ProjectCard');
-    expect(website).toContain('React Native Web');
+    expect(website).toContain('React Native Starter · rendered in the browser');
   });
 
   it('provides browser shims while leaving the canonical Expo app untouched', () => {
