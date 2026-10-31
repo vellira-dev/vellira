@@ -2,24 +2,15 @@
 
 import { useState } from 'react';
 
-import dynamic from 'next/dynamic';
-
 import { Button, Tabs } from '@vellira-ui/react';
 
 import { DesignSystemLink } from '@/components/navigation/DesignSystemLink';
 import { useWebsiteThemeContext } from '@/providers/WebsiteThemeContext';
 
 import { Dashboard } from './Dashboard';
+import { NativeStarterPreview } from './NativeStarterPreview';
 
 import styles from './ProductInterfaceDemo.module.css';
-
-const NativeStarterPreview = dynamic(
-  async () => {
-    const module = await import('./NativeStarterPreview');
-    return module.NativeStarterPreview;
-  },
-  { ssr: false }
-);
 
 // Public release source is maintained on the canonical main branch.
 const sourceRef = 'main';

@@ -25,7 +25,9 @@ const storage = read(
 describe('Website Native Starter showcase', () => {
   it('switches mobile platform preview away from the React Web iframe', () => {
     expect(website).toContain('<NativeStarterPreview />');
-    expect(website).toContain("import('./NativeStarterPreview')");
+    expect(website).toContain(
+      "import { NativeStarterPreview } from './NativeStarterPreview'"
+    );
     expect(website).not.toContain("src='/demo/dashboard'");
     expect(website).not.toContain('Responsive Web preview');
     expect(website).toContain(
