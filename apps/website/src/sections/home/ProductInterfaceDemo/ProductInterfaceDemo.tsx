@@ -42,7 +42,9 @@ export function ProductInterfaceDemo() {
   const { preference, setPreference } = useWebsiteThemeContext();
   const [preview, setPreview] = useState<'desktop' | 'mobile'>('desktop');
   const stageClassName =
-    preview === 'mobile' ? styles.stage + ' ' + styles.mobileStage : styles.stage;
+    preview === 'mobile'
+      ? styles.stage + ' ' + styles.mobileStage
+      : styles.stage;
   const captionClassName =
     preview === 'mobile'
       ? styles.nativeLink + ' ' + styles.nativeCaption
