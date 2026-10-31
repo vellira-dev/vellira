@@ -5,6 +5,7 @@ import { test } from 'node:test';
 const require = createRequire(import.meta.url);
 const {
   buttonModuleMap,
+  verifyEmbeddedButtonBlock,
   verifyButtonCssParity,
 } = require('./react-button-css-parity.cjs');
 
@@ -94,3 +95,61 @@ test('fails closed on absent, ambiguous or incomplete packaged class maps', () =
     /Missing emitted/
   );
 });
+
+
+test('requires byte-identical compiled CSS declarations, at-rules and ordering', () => {
+  const isolated = css + '\n/*$vite$:1*/';
+  const fullCss = '.global{color:inherit}' + css + '.next-component{color:red}';
+  const result = verifyButtonCssParity({
+    rootJs: indexJs,
+    fullCss,
+    isolatedCss: isolated,
+  });
+  assert.equal(result.state, 'CLASS_PARITY_ONLY');
+  assert.equal(result.embeddedBlock.state, 'BYTE_IDENTICAL_COMPILED_BLOCK');
+  assert.equal(result.embeddedBlock.byteOffset, Buffer.byteLength('.global{color:inherit}'));
+  assert.equal(result.embeddedBlock.rawBytes, Buffer.byteLength(css));
+  assert.equal(result.embeddedBlock.trailingViteFooterExcluded, true);
+  assert.match(result.embeddedBlock.sha256, /^[a-f0-9]{64}$/);
+
+  // Matching selectors and keyframes are not enough if actual declarations
+  // differ; such a CSS block must fail closed.
+  assert.throws(
+    () => verifyEmbeddedButtonBlock(
+      fullCss.replace('display:block', 'display:grid'),
+      isolated,
+      'abcde'
+    ),
+    /rule bytes are not identical/
+  );
+  assert.throws(
+    () => verifyEmbeddedButtonBlock(
+      '.global{color:inherit}' + css.replace('{display:block}', '{display:grid}') + 
+        '.next-component{color:red}',
+      isolated,
+      'abcde'
+    ),
+    /rule bytes are not identical/
+  );
+});
+
+test('rejects split, duplicated or escaping Button CSS blocks', () => {
+  assert.throws(
+    () => verifyEmbeddedButtonBlock(css + css, css, 'abcde'),
+    /duplicate Button blocks/
+  );
+  assert.throws(
+    () => verifyEmbeddedButtonBlock(
+      css + '._button_abcde_1{color:red}',
+      css,
+      'abcde'
+    ),
+    /escapes its matched block/
+  );
+  const split = css.replace('.' + name('spinner'), '.gap{display:block}.' + name('spinner'));
+  assert.throws(
+    () => verifyEmbeddedButtonBlock(split, css, 'abcde'),
+    /rule bytes are not identical/
+  );
+});
+
