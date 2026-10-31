@@ -42,7 +42,8 @@ describe('Dashboard Starter CI parity contract', () => {
     const guard = steps.find((step) => step.run?.includes(checkCommand));
     expect(guard?.run).toContain('git rev-parse HEAD');
     expect(guard?.run).toContain('EXPECTED_SHA');
-    expect(steps.every((step) => !step.run?.includes('npm install'))).toBe(true);
+    const hasInstall = steps.some((step) => step.run?.includes('npm install'));
+    expect(hasInstall).toBe(false);
   });
 
   it('blocks staging and production before dependency installation', () => {
@@ -52,11 +53,15 @@ describe('Dashboard Starter CI parity contract', () => {
     const production = readWorkflow(
       '.github/workflows/deploy-website-cloudflare-production.yml'
     );
+    const legacyAdoption = readWorkflow(
+      '.github/workflows/adopt-website-cloudflare-legacy.yml'
+    );
 
     for (const job of [
       staging.jobs.migration,
       staging.jobs.deploy,
       production.jobs.deploy,
+      legacyAdoption.jobs.deploy,
     ]) {
       const steps = job.steps;
       const guard = steps.findIndex((step) => step.run === checkCommand);
