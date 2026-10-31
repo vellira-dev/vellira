@@ -78,7 +78,7 @@ jobs:
        needs.classify.result == 'success' &&
        needs.classify.outputs.release_sync != 'true' &&
        github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
+       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') &&
        github.event.workflow_run.head_branch == 'main') ||
       (github.event_name == 'workflow_dispatch' &&
        inputs.confirmation == 'EMERGENCY_DEPLOY_PRODUCTION')
@@ -140,7 +140,7 @@ jobs:
           EXPECTED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           EXPECTED_REPOSITORY: ${{ github.repository }}
           EXPECTED_SOURCE_REF: refs/heads/main
-          EXPECTED_EVENT_NAME: push
+          EXPECTED_EVENT_NAME: ${{ github.event.workflow_run.event }}
           EXPECTED_STAGING_URL: ${{ env.STAGING_URL }}
 
       - name: Publish immutable candidate identity
