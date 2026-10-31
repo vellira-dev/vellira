@@ -74,7 +74,7 @@ jobs:
 
       - name: Retain unpublished Button CSS parity evidence
         if: github.event_name == 'workflow_dispatch' && inputs.css_button_probe
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: react-button-css-parity-${{ github.sha }}
           path: consumer-evidence/react-button-css-parity.json
@@ -171,7 +171,7 @@ jobs:
           NODE
 
       - name: Retain exact candidate tarballs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: npm-release-candidate-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
@@ -216,7 +216,7 @@ jobs:
         run: node scripts/release-candidate/vite-consumer.cjs
 
       - name: Retain Vite consumer evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: vite-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
           path: consumer-evidence/vite-consumer.json
@@ -256,7 +256,7 @@ jobs:
         run: node scripts/release-candidate/next-consumer.cjs
 
       - name: Retain Next.js consumer evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: next-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
           path: consumer-evidence/next-consumer.json
@@ -296,7 +296,7 @@ jobs:
         run: node scripts/release-candidate/expo-consumer.cjs
 
       - name: Retain Expo consumer evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: expo-consumer-evidence-${{ needs.candidate.outputs.candidate_sha }}
           path: consumer-evidence/expo-consumer.json
@@ -335,7 +335,7 @@ jobs:
         run: node scripts/release-candidate/docs-first-use.cjs
 
       - name: Retain docs first-use evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: docs-first-use-evidence-${{ needs.candidate.outputs.candidate_sha }}
           path: consumer-evidence/docs-first-use.json
