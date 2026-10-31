@@ -61,6 +61,18 @@ jobs:
     outputs:
       release_sync: ${{ steps.classify.outputs.release_sync }}
     steps:
+      - name: Reject unsafe production recovery inputs before staging work
+        if: github.event_name == 'workflow_dispatch' && inputs.production_recovery == true
+        shell: bash
+        env:
+          PRO_INTEREST_PREVIEW: ${{ inputs.pro_interest_preview }}
+          NEWSLETTER_ABUSE_PREVIEW: ${{ inputs.newsletter_abuse_preview }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$PRO_INTEREST_PREVIEW" != "true"
+          test "$NEWSLETTER_ABUSE_PREVIEW" != "true"
+
       - name: Checkout exact staging candidate
         if: github.event_name == 'push' && github.actor == 'vellira-release-sync[bot]'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
