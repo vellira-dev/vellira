@@ -57,14 +57,14 @@ async function runtimeSha() {
 
 async function main() {
   assert.equal(process.env.GITHUB_REPOSITORY, OWNER);
-  const [ref, productionSha, stagingResult, productionResult] = await Promise.all([
+  const [ref, productionSha, productionResult] = await Promise.all([
     github('/repos/' + OWNER + '/git/ref/heads/main'),
     runtimeSha(),
-    github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?per_page=100'),
     github('/repos/' + OWNER + '/actions/workflows/' + PRODUCTION + '/runs?per_page=100'),
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
+  const stagingResult = await github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assert.ok(stagingResult.total_count < 100, 'Staging history requires pagination before safe dispatch');
   const plan = decideRecovery({
