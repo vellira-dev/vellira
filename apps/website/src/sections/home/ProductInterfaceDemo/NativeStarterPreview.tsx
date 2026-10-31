@@ -133,6 +133,10 @@ export function NativeStarterPreview() {
       })),
     [projects]
   );
+  const chartMax = Math.max(
+    4,
+    Math.ceil(Math.max(...statuses.map((item) => item.count)) / 4) * 4
+  );
   const visible = projects.filter(
     (item) =>
       (filter === 'all' || item.status === filter) &&
@@ -403,43 +407,108 @@ export function NativeStarterPreview() {
                       'Projects by status: ' +
                       statuses.map((item) => item.label + ' ' + item.count).join(', ')
                     }
-                    style={{ flexDirection: 'row', alignItems: 'flex-end', height: 170 }}
+                    style={{ gap: 9 }}
                   >
-                    {statuses.map((status) => (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        height: 214,
+                        gap: 8,
+                      }}
+                    >
                       <View
-                        key={status.value}
                         style={{
-                          flex: 1,
-                          minWidth: 0,
-                          alignItems: 'center',
-                          gap: 8,
+                          width: 25,
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-end',
                         }}
                       >
-                        <View
-                          style={{
-                            height: 138,
-                            width: '72%',
-                            justifyContent: 'flex-end',
-                            borderBottomWidth: 1,
-                            borderColor: border,
-                          }}
-                        >
+                        {[4, 3, 2, 1, 0].map((tick) => (
+                          <Text
+                            key={tick}
+                            style={{ color: text.secondary, fontSize: 10 }}
+                          >
+                            {(chartMax * tick) / 4}
+                          </Text>
+                        ))}
+                      </View>
+                      <View
+                        style={{
+                          flex: 1,
+                          height: 200,
+                          marginTop: 7,
+                          position: 'relative',
+                        }}
+                      >
+                        {[0, 1, 2, 3, 4].map((tick) => (
                           <View
+                            key={tick}
                             style={{
-                              height: ((status.count / Math.max(4, total)) * 100 + '%') as `${number}%`,
-                              backgroundColor: dark ? '#85B6FF' : '#5797F6',
-                              borderRadius: 7,
+                              position: 'absolute',
+                              top: tick * 50,
+                              left: 0,
+                              right: 0,
+                              borderTopWidth: 1,
+                              borderColor: border,
+                              opacity: 0.6,
                             }}
                           />
+                        ))}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            flex: 1,
+                            justifyContent: 'space-around',
+                            alignItems: 'flex-end',
+                          }}
+                        >
+                          {statuses.map((status) => (
+                            <View
+                              key={status.value}
+                              style={{
+                                width: '23%',
+                                height: '100%',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {status.count > 0 ? (
+                                <View
+                                  style={{
+                                    height: ((status.count / chartMax) * 100 + '%') as `${number}%`,
+                                    width: '100%',
+                                    borderRadius: 8,
+                                    backgroundColor: dark ? '#85B6FF' : '#5797F6',
+                                  }}
+                                />
+                              ) : null}
+                            </View>
+                          ))}
                         </View>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        marginLeft: 33,
+                        flexDirection: 'row',
+                        justifyContent: 'space-around',
+                      }}
+                    >
+                      {statuses.map((status) => (
                         <Text
+                          key={status.value}
                           numberOfLines={1}
-                          style={{ color: text.secondary, fontSize: 10 }}
+                          style={{
+                            width: '31%',
+                            textAlign: 'center',
+                            color: text.secondary,
+                            fontSize: 10,
+                          }}
                         >
                           {status.label}
                         </Text>
-                      </View>
-                    ))}
+                      ))}
+                    </View>
                   </View>
                 </View>
               </View>
