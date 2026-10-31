@@ -6,20 +6,20 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(resolve(path), 'utf8');
 const native = read('examples/workspace-starter/native/App.tsx');
 const preview = read(
-  'apps/website/src/sections/home/ProductInterfaceDemo/NativeStarterPreview.tsx'
+  'apps/website/src/sections/home/ProductInterfaceDemo/NativeStarterPreview.tsx',
 );
 const website = read(
-  'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx'
+  'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx',
 );
 const next = read('apps/website/next.config.ts');
 const safeArea = read(
-  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/SafeArea.tsx'
+  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/SafeArea.tsx',
 );
 const blurAdapter = read(
-  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/ExpoBlur.tsx'
+  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/ExpoBlur.tsx',
 );
 const storage = read(
-  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/AsyncStorage.ts'
+  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/AsyncStorage.ts',
 );
 
 describe('Website Native Starter showcase', () => {
@@ -27,22 +27,22 @@ describe('Website Native Starter showcase', () => {
   it('switches mobile platform preview away from the React Web iframe', () => {
     expect(website).toContain('<NativeStarterPreview />');
     expect(website).toContain(
-      "import { NativeStarterPreview } from './NativeStarterPreview'"
+      "import { NativeStarterPreview } from './NativeStarterPreview'",
     );
     expect(website).not.toContain("src='/demo/dashboard'");
     expect(website).not.toContain('Responsive Web preview');
     expect(website).toContain(
-      "href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}"
+      "href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}",
     );
     expect(website).toContain('Setup instructions ↗');
   });
 
   it('isolates Native Starter portals within the phone iframe', () => {
     const nativeRoute = read(
-      'apps/website/src/app/(marketing)/demo/native-starter/page.tsx'
+      'apps/website/src/app/(marketing)/demo/native-starter/page.tsx',
     );
     const routeStyles = read(
-      'apps/website/src/app/(marketing)/demo/native-starter/page.module.css'
+      'apps/website/src/app/(marketing)/demo/native-starter/page.module.css',
     );
     expect(preview).toContain("src='/demo/native-starter'");
     expect(preview).toContain("title='Interactive Vellira Native Starter'");
@@ -50,7 +50,7 @@ describe('Website Native Starter showcase', () => {
     expect(preview).not.toContain('MutationObserver');
     expect(preview).not.toContain('document.body');
     expect(nativeRoute).toContain(
-      "import('@/sections/home/ProductInterfaceDemo/native-starter-source/App')"
+      "import('@/sections/home/ProductInterfaceDemo/native-starter-source/App')",
     );
     expect(nativeRoute).toContain('<StarterApp />');
     expect(routeStyles).toContain('position: fixed;');
@@ -60,7 +60,7 @@ describe('Website Native Starter showcase', () => {
 
   it('removes the backing card from the mobile phone preview', () => {
     const stage = read(
-      'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css'
+      'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css',
     );
     const mobileCss = stage.slice(stage.indexOf('.mobileStage {'));
     expect(mobileCss).toContain('background: transparent;');
@@ -77,7 +77,7 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Setup instructions ↗');
     expect(website).not.toContain('It illustrates');
     expect(website).toMatch(
-      /\{preview === 'desktop' \? \(\s*<div className=\{styles\.boundary\}>/
+      /\{preview === 'desktop' \? \(\s*<div className=\{styles\.boundary\}>/,
     );
     expect(website).toContain('Explore the Pro roadmap');
   });
@@ -99,7 +99,7 @@ describe('Website Native Starter showcase', () => {
     expect(blurAdapter).toContain('pointerEvents={pointerEvents}');
     expect(storage).toContain('window.localStorage.getItem(keyFor(key))');
     expect(storage).toContain(
-      'window.localStorage.setItem(keyFor(key), value)'
+      'window.localStorage.setItem(keyFor(key), value)',
     );
   });
 
@@ -134,7 +134,7 @@ describe('Website Native Starter showcase', () => {
       expect(
         read(
           'apps/website/src/sections/home/ProductInterfaceDemo/native-starter-source/' +
-            name
+            name,
         )
       ).toBe(sourceHeader + canonical);
     }
@@ -154,7 +154,7 @@ describe('Website Native Starter showcase', () => {
     expect(native).toContain('Projects by status');
     expect(native).toContain('nextUniqueDuplicateName');
     expect(native).toContain(
-      "accessibilityLabel={'Actions for ' + project.name}"
+      "accessibilityLabel={'Actions for ' + project.name}",
     );
     expect(native).toContain('setResetOpen(true)');
     expect(native).toContain("themeName === 'highContrast'");
