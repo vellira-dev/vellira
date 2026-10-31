@@ -8,13 +8,12 @@ import { deploymentIdentity } from './cloudflare/build-identity.mjs';
 
 const withMDX = createMDX({});
 
-// Browser-only dependency bridges for the exact Expo Starter source.
-// They do not change Expo builds or the React Native library.
+// These adapters are resolved only by the browser-hosted Native Starter.
+// The Expo native build and library itself remain unchanged.
 const nativeAdapter = (name: string) =>
   fileURLToPath(
     new URL(
-      './src/sections/home/ProductInterfaceDemo/native-web-adapters/' +
-        name,
+      './src/sections/home/ProductInterfaceDemo/native-web-adapters/' + name,
       import.meta.url
     )
   );
@@ -49,21 +48,7 @@ const nextConfig: NextConfig = {
   webpack(config) {
     config.resolve.alias = {
       ...config.resolve.alias,
-      'react-native
-    };
-    return config;
-  },
-};
-
-export default async function config(phase: string) {
-  // Runtime secrets belong to the Worker, not to static builds or `next start`.
-  // Keep the canonical Wrangler config (and missing-secret warnings) in dev.
-  if (phase === PHASE_DEVELOPMENT_SERVER) {
-    await initOpenNextCloudflareForDev();
-  }
-  return withMDX(nextConfig);
-}
-: 'react-native-web',
+      'react-native$': 'react-native-web',
       ...nativeWebAdapters,
     };
     return config;
