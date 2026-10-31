@@ -21,14 +21,14 @@ const scenarios = {
   tokensOnly: [
     ...prefix,
     "import '@vellira-ui/tokens/css';",
-    "function App() { return <main>Tokens-only diagnostic</main>; }",
+    "function App() { return <main>React-only baseline</main>; }",
     ...suffix,
   ].join('\n'),
   buttonWithoutFullStyles: [
     ...prefix,
     "import '@vellira-ui/tokens/css';",
     "import { Button } from '@vellira-ui/react';",
-    "function App() { return <main><Button>Unvalidated style diagnostic</Button></main>; }",
+    "function App() { return <main><Button appearance='solid' color='primary'>Button-only</Button></main>; }",
     ...suffix,
   ].join('\n'),
 };
