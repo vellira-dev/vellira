@@ -34,6 +34,18 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain('Setup instructions ↗');
   });
 
+  it('scopes React Native Web Select portals to the phone viewport', () => {
+    expect(preview).toContain('getBoundingClientRect()');
+    expect(preview).toContain("select-content-root");
+    expect(preview).toContain('document.body.children');
+    expect(preview).toContain('new MutationObserver(schedule)');
+    expect(preview).toContain('new ResizeObserver(schedule)');
+    expect(preview).toContain('Math.min(window.innerHeight, rect.bottom)');
+    expect(preview).toContain("layer.style.setProperty(property, value, 'important')");
+    expect(preview).toContain('observer.disconnect()');
+    expect(preview).toContain('resizeObserver.disconnect()');
+  });
+
   it('removes the backing card from the mobile phone preview', () => {
     const stage = read(
       'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.module.css'
