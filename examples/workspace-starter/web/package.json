@@ -9,11 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vellira-ui/react": "2.188.7",
-    "@vellira-ui/tokens": "2.188.7",
+    "@vellira-ui/react": "2.188.8",
+    "@vellira-ui/tokens": "2.188.8",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@vellira-ui/icons": "2.188.7"
+    "@vellira-ui/icons": "2.188.8"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

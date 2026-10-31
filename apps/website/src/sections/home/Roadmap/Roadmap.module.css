@@ -384,9 +384,10 @@
 }
 
 .releaseHeader h3 {
-  font-size: 30px;
+  font-size: clamp(20px, 2vw, 30px);
+  line-height: 1.2;
   letter-spacing: 0;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 .releaseHeader code {
