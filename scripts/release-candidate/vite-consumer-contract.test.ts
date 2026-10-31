@@ -117,6 +117,28 @@ describe('clean Vite consumer workflow contract', () => {
     expect(workflow).toContain("inputs.css_attribution && '1' || '0'");
   });
 
+  it('runs isolated Button CSS parity only on explicit workflow dispatch', () => {
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    const probe = readFileSync(
+      'packages/react/scripts/css-button-parity-probe.mjs',
+      'utf8'
+    );
+    expect(workflow).toContain('css_button_probe:');
+    expect(workflow).toContain(
+      "if: github.event_name == 'workflow_dispatch' && inputs.css_button_probe"
+    );
+    expect(workflow).toContain(
+      'run: node packages/react/scripts/css-button-parity-probe.mjs'
+    );
+    expect(probe).toContain('configFile: false');
+    expect(probe).toContain('verifyButtonCssParity({ rootJs, fullCss, isolatedCss })');
+    expect(probe).toContain('expectedExports');
+    expect(probe).toContain('rmSync(temp, { recursive: true, force: true })');
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
