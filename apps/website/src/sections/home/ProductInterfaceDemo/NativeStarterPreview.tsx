@@ -6,7 +6,6 @@ import {
   Check,
   Contrast,
   Copy,
-  Edit,
   Filter,
   Folder,
   Grid,
@@ -362,7 +361,7 @@ export function NativeStarterPreview() {
                   >
                     <View
                       style={{
-                        width: rate + '%',
+                        width: (rate + '%') as `${number}%`,
                         height: '100%',
                         borderRadius: 6,
                         backgroundColor: palette.brand,
@@ -422,7 +421,7 @@ export function NativeStarterPreview() {
                         >
                           <View
                             style={{
-                              height: (status.count / Math.max(4, total)) * 100 + '%',
+                              height: ((status.count / Math.max(4, total)) * 100 + '%') as `${number}%`,
                               backgroundColor: dark ? '#85B6FF' : '#5797F6',
                               borderRadius: 7,
                             }}
@@ -749,7 +748,11 @@ export function NativeStarterPreview() {
                       accessibilityLabel={label}
                       accessibilityState={{ checked: themeName === key }}
                       onPress={() =>
-                        setPreference(key === 'highContrast' ? 'high-contrast' : key as 'light' | 'dark')
+                        setPreference(
+                          key === 'highContrast'
+                            ? 'high-contrast'
+                            : (key as 'light' | 'dark')
+                        )
                       }
                       style={{
                         minHeight: 58,
