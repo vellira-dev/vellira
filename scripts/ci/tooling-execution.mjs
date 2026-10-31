@@ -37,6 +37,7 @@ export function createToolingTasks({
     'scripts/ci/release-affected-skips.test.mjs',
     'scripts/smoke/utils.test.mjs',
     'scripts/performance/vite-bundle-size-report.test.mjs',
+    'scripts/performance/vite-css-attribution.test.mjs',
     'scripts/performance/vite-bundle-regression.test.mjs',
     'scripts/performance/vite-representative-surface.test.mjs',
     'scripts/performance/native-metro-phase-b.test.mjs',
