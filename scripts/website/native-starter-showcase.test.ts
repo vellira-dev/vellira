@@ -11,6 +11,13 @@ const preview = read(
 const website = read(
   'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx'
 );
+const next = read('apps/website/next.config.ts');
+const safeArea = read(
+  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/SafeArea.tsx'
+);
+const storage = read(
+  'apps/website/src/sections/home/ProductInterfaceDemo/native-web-adapters/AsyncStorage.ts'
+);
 
 describe('Website Native Starter showcase', () => {
   it('switches mobile platform preview away from the React Web iframe', () => {
@@ -18,53 +25,53 @@ describe('Website Native Starter showcase', () => {
     expect(website).toContain("import('./NativeStarterPreview')");
     expect(website).not.toContain("src='/demo/dashboard'");
     expect(website).not.toContain('Responsive Web preview');
-    expect(website).toContain("href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}");
+    expect(website).toContain(
+      "href={preview === 'mobile' ? nativeSourceUrl : sourceUrl}"
+    );
     expect(website).toContain('Setup instructions ↗');
   });
 
-  it('uses real React Native Web primitives with an honest runtime boundary', () => {
-    expect(preview).toContain("from 'react-native'");
-    expect(preview).toContain("from '@vellira-ui/react-native'");
-    expect(preview).toContain('<ScrollView');
-    expect(preview).toContain('<Pressable');
-    expect(preview).toContain('<Switch');
+  it('renders the maintained Expo Starter App instead of inventing another UI', () => {
+    expect(preview).toContain(
+      "import('../../../../../../examples/workspace-starter/native/App')"
+    );
+    expect(preview).toContain('<StarterApp />');
     expect(preview).toContain("data-testid='native-starter-preview'");
+    expect(preview).not.toContain('seedProjects');
+    expect(preview).not.toContain('setProjects(');
+    expect(preview).not.toContain('function ProjectCard');
     expect(website).toContain('React Native Web');
-    expect(website).toContain('it is not an iOS or');
   });
 
-  it('matches the three published Native Starter seed projects', () => {
-    for (const project of [
+  it('provides browser shims while leaving the canonical Expo app untouched', () => {
+    expect(next).toContain("'react-native': 'react-native-web'");
+    expect(next).toContain("'expo-blur': nativeAdapter('ExpoBlur.tsx')");
+    expect(next).toContain(
+      "'react-native-safe-area-context': nativeAdapter('SafeArea.tsx')"
+    );
+    expect(next).toContain(
+      "'@react-native-async-storage/async-storage': nativeAdapter('AsyncStorage.ts')"
+    );
+    expect(safeArea).toContain('useSafeAreaInsets');
+    expect(storage).toContain("window.localStorage.getItem(keyFor(key))");
+    expect(storage).toContain("window.localStorage.setItem(keyFor(key), value)");
+  });
+
+  it('inherits the actual three-project Native Starter and its UX behaviors', () => {
+    for (const title of [
       'Design token refresh',
       'Mobile onboarding',
       'Dashboard rollout',
     ]) {
-      expect(preview).toContain(project);
-      expect(native).toContain(project);
+      expect(native).toContain(title);
     }
-    expect(preview).toContain("useState('Demo Workspace')");
     expect(native).toContain("name: 'Demo Workspace'");
-    expect(preview).toContain('Your projects at a glance');
-    expect(preview).toContain('Project progress');
-    expect(preview).toContain('Projects by status');
-  });
-
-  it('keeps project and theme interactions local and discoverable', () => {
-    expect(preview).toContain("accessibilityLabel='Create project'");
-    expect(preview).toContain("accessibilityLabel='Search projects'");
-    expect(preview).toContain("accessibilityLabel='Filter projects'");
-    expect(preview).toContain("accessibilityLabel={'Actions for ' + project.name}");
-    expect(preview).toContain("accessibilityLabel={'Complete ' + project.name}");
-    expect(preview).toContain('setProjects(');
-    expect(preview).toContain("accessibilityRole='menu'");
-    expect(preview).toContain("label: 'Edit'");
-    expect(preview).toContain('nextUniqueDuplicateName(');
-    expect(preview).toContain("nativeID='native-starter-create-project'");
-    expect(preview).toContain('accessibilityElementsHidden={createOpen}');
-    expect(preview).toContain("event.key === 'Escape'");
-    expect(preview).toContain("event.key !== 'Tab'");
-    expect(preview).toContain("setSection('projects')");
-    expect(preview).toContain("accessibilityLabel='Undo project removal'");
-    expect(preview).toContain("key: 'highContrast'");
+    expect(native).toContain('Your projects at a glance');
+    expect(native).toContain('Project progress');
+    expect(native).toContain('Projects by status');
+    expect(native).toContain('nextUniqueDuplicateName');
+    expect(native).toContain("accessibilityLabel={'Actions for ' + project.name}");
+    expect(native).toContain('setResetOpen(true)');
+    expect(native).toContain("themeName === 'highContrast'");
   });
 });
