@@ -23,7 +23,6 @@ const storage = read(
 );
 
 describe('Website Native Starter showcase', () => {
-
   it('switches mobile platform preview away from the React Web iframe', () => {
     expect(website).toContain('<NativeStarterPreview />');
     expect(website).toContain(
