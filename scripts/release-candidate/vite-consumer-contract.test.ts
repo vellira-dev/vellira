@@ -141,7 +141,7 @@ describe('clean Vite consumer workflow contract', () => {
     expect(probe).toContain('rmSync(temp, { recursive: true, force: true })');
   });
 
-  it('runs the packed Vite Next Chromium proof only with explicit manual admission', () => {
+  it('gates packed Button consumer to manual workflow', () => {
     const workflow = readFileSync(
       '.github/workflows/release-candidate-proof.yml',
       'utf8'
@@ -160,7 +160,7 @@ describe('clean Vite consumer workflow contract', () => {
     );
     expect(workflow).toContain('button-packed-consumer.json');
     expect(proof).toContain('buildTemporaryButtonCss({');
-    expect(proof).toContain("node_modules/@vellira-ui/react/dist");
+    expect(proof).toContain('node_modules/@vellira-ui/react/dist');
     expect(proof).toContain('browserSnapshots(chromium, dist)');
     expect(proof).toContain("run('npm', ['run', 'build:next']");
     expect(proof).toContain('PACKED_CONSUMER_AND_CHROMIUM_PARITY');
