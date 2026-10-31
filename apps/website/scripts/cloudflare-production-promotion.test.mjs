@@ -26,7 +26,7 @@ function jobBlock(workflow, jobId, nextJobId) {
 
 test('Pro interest is an explicit manual staging preview and stays OFF on all production paths', async () => {
   const header = stagingWorkflow.split('\njobs:\n')[0];
-  assert.match(header, /workflow_dispatch:\n {4}inputs:\n {6}pro_interest_preview:/);
+  assert.match(header, /workflow_dispatch:\n {4}inputs:[\s\S]*?\n {6}pro_interest_preview:/);
   assert.match(header, /default: false/);
 
   const preview = jobBlock(stagingWorkflow, 'deploy');
@@ -151,6 +151,15 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   );
 });
 
+test('manual recovery rejects feature preview and non-main dispatch before expensive staging', () => {
+  const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
+  assert.ok(classify.includes('Reject unsafe production recovery inputs before staging work'));
+  assert.ok(classify.includes('inputs.production_recovery == true'));
+  assert.ok(classify.includes('test "$GITHUB_REF" = "refs/heads/main"'));
+  assert.ok(classify.includes('test "$PRO_INTEREST_PREVIEW" != "true"'));
+  assert.ok(classify.includes('test "$NEWSLETTER_ABUSE_PREVIEW" != "true"'));
+});
+
 test('staging publishes a dedicated machine-readable promotion artifact', () => {
   assert.match(stagingWorkflow, /name: Publish production promotion evidence/);
   assert.match(
@@ -164,7 +173,7 @@ test('staging publishes a dedicated machine-readable promotion artifact', () => 
   assert.match(stagingWorkflow, /if-no-files-found: error/);
 });
 
-test('normal production eligibility comes only from a successful push-to-main staging run', () => {
+test('production eligibility requires successful push staging or explicit verified manual recovery', () => {
   assert.match(productionWorkflow, /workflow_run:/);
   assert.match(
     productionWorkflow,
@@ -179,7 +188,11 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
+  assert.match(candidate, /workflow_run\.event == 'workflow_dispatch'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
+  assert.ok(candidate.includes('EXPECTED_EVENT_NAME: ${{ github.event.workflow_run.event }}'));
+  assert.match(stagingWorkflow, /production_recovery:/);
+  assert.match(stagingWorkflow, /productionRecovery:/);
   assert.match(
     candidate,
     /actions\/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333/
