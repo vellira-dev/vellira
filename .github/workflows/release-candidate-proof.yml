@@ -74,7 +74,7 @@ jobs:
 
       - name: Retain unpublished Button CSS parity evidence
         if: github.event_name == 'workflow_dispatch' && inputs.css_button_probe
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0 # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: react-button-css-parity-${{ github.sha }}
           path: consumer-evidence/react-button-css-parity.json
