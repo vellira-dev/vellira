@@ -56,6 +56,9 @@ describe('Website Native Starter showcase', () => {
     expect(preview).toContain("accessibilityLabel={'Actions for ' + project.name}");
     expect(preview).toContain("accessibilityLabel={'Complete ' + project.name}");
     expect(preview).toContain('setProjects(');
+    expect(preview).toContain("accessibilityRole='menu'");
+    expect(preview).toContain("label: 'Edit'");
+    expect(preview).toContain('nextUniqueDuplicateName(');
     expect(preview).toContain("setSection('projects')");
     expect(preview).toContain("accessibilityLabel='Undo project removal'");
     expect(preview).toContain("key: 'highContrast'");
