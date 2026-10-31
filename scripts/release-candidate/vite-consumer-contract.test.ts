@@ -141,6 +141,31 @@ describe('clean Vite consumer workflow contract', () => {
     expect(probe).toContain('rmSync(temp, { recursive: true, force: true })');
   });
 
+  it('runs the packed Vite Next Chromium proof only with explicit manual admission', () => {
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    const proof = readFileSync(
+      'scripts/performance/button-packed-consumer-proof.cjs',
+      'utf8'
+    );
+    expect(workflow).toContain('css_button_consumer:');
+    expect(workflow).toContain(
+      "if: github.event_name == 'workflow_dispatch' && inputs.css_button_consumer"
+    );
+    expect(workflow).toContain('mcr.microsoft.com/playwright:v1.61.1-noble');
+    expect(workflow).toContain(
+      'css_button_consumer=true requires css_button_probe=true'
+    );
+    expect(workflow).toContain('button-packed-consumer.json');
+    expect(proof).toContain('buildTemporaryButtonCss({');
+    expect(proof).toContain("node_modules/@vellira-ui/react/dist");
+    expect(proof).toContain('browserSnapshots(chromium, dist)');
+    expect(proof).toContain("run('npm', ['run', 'build:next']");
+    expect(proof).toContain('PACKED_CONSUMER_AND_CHROMIUM_PARITY');
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
