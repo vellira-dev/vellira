@@ -765,6 +765,17 @@ try {
               nativePreview.getByText('Design token refresh')
             ).toBeVisible();
             await nativePreview
+              .getByRole('button', {
+                name: 'Actions for Design token refresh',
+              })
+              .click();
+            await nativePreview
+              .getByRole('menuitem', { name: 'Duplicate' })
+              .click();
+            await expect(
+              nativePreview.getByText('Design token refresh copy')
+            ).toBeVisible();
+            await nativePreview
               .getByRole('tab', { name: 'Settings' })
               .click();
             await expect(
