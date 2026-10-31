@@ -250,6 +250,9 @@ jobs:
         with:
           node-version: 22.23.4
 
+      - name: Trust checked-out repository path in Playwright container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Require exact Button CSS parity in this dispatch
         env:
           CSS_BUTTON_PROBE: ${{ inputs.css_button_probe }}
