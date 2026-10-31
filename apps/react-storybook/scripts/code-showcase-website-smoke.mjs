@@ -780,6 +780,10 @@ try {
             const nativeFrame = nativePreview.frameLocator(
               'iframe[title="Interactive Vellira Native Starter"]'
             );
+            await nativePreview.evaluate((element) =>
+              element.scrollIntoView({ behavior: 'instant', block: 'center' })
+            );
+            await expect(nativeIframe).toBeInViewport();
             await expect(
               nativeFrame.getByText('Your projects at a glance')
             ).toBeVisible();
@@ -836,6 +840,9 @@ try {
               })
               .toBeLessThan(5);
 
+            await nativePreview.evaluate((element) =>
+              element.scrollIntoView({ behavior: 'instant', block: 'center' })
+            );
             await nativeFrame
               .getByRole('button', { name: 'Close selection' })
               .click();
