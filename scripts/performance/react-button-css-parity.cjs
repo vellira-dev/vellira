@@ -1,5 +1,6 @@
 // #2014: prepublication, fail-closed CSS Modules class parity audit.
 // This is not proof of computed-style equivalence or a public CSS export.
+const { createHash } = require('node:crypto');
 const { gzipSync } = require('node:zlib');
 
 function bytes(source) {
@@ -41,6 +42,43 @@ function buttonModuleMap(rootJs) {
     );
   }
   return possibilities[0];
+}
+
+// The isolated library build appends a Vite provenance footer. Only that
+// known footer is ignored; do not normalize CSS, selectors, declaration
+// order, media queries or whitespace into false equivalence.
+function verifyEmbeddedButtonBlock(fullCss, isolatedCss, hash) {
+  const body = isolatedCss.replace(/(?:\r?\n)?\/\*\$vite\$:\d+\*\/\s*$/, '');
+  if (body.length < 100) {
+    throw new Error('Compiled isolated Button CSS is unexpectedly empty.');
+  }
+
+  const index = fullCss.indexOf(body);
+  if (index === -1) {
+    throw new Error(
+      'Isolated Button CSS rule bytes are not identical to a contiguous ' +
+        'block in published aggregate CSS.'
+    );
+  }
+  if (fullCss.indexOf(body, index + body.length) !== -1) {
+    throw new Error('Published aggregate CSS has duplicate Button blocks.');
+  }
+
+  // The published stylesheet must not refer to this scoped Button hash
+  // outside the one proven byte-identical block.
+  const names = new RegExp('_[\\w-]+_' + hash + '_\\d+', 'g');
+  for (const match of fullCss.matchAll(names)) {
+    if (match.index < index || match.index >= index + body.length) {
+      throw new Error('Published Button module CSS escapes its matched block.');
+    }
+  }
+  return {
+    state: 'BYTE_IDENTICAL_COMPILED_BLOCK',
+    byteOffset: Buffer.byteLength(fullCss.slice(0, index)),
+    rawBytes: Buffer.byteLength(body),
+    sha256: createHash('sha256').update(body).digest('hex'),
+    trailingViteFooterExcluded: body !== isolatedCss,
+  };
 }
 
 function verifyButtonCssParity({ rootJs, fullCss, isolatedCss }) {
@@ -90,8 +128,9 @@ function verifyButtonCssParity({ rootJs, fullCss, isolatedCss }) {
     verifiedAnimationNames: keyframes,
     publishedAggregate: bytes(fullCss),
     isolatedButtonModule: bytes(isolatedCss),
+    embeddedBlock: verifyEmbeddedButtonBlock(fullCss, isolatedCss, hash),
     limitations: [
-      'This compares compiled class/animation identity, not declaration semantics.',
+      'The isolated compiled Button block is byte-identical inside the aggregate CSS; this does not prove global reset/cascade or computed-style parity.',
       'No visual, computed-style, Light/Dark/High Contrast, responsive, or a11y proof.',
       'Standalone CSS bytes are not Vite/Next emitted consumer bytes or network transfer.',
       'No new public CSS subpath or supported import has been published.',
@@ -99,4 +138,4 @@ function verifyButtonCssParity({ rootJs, fullCss, isolatedCss }) {
   };
 }
 
-module.exports = { buttonModuleMap, verifyButtonCssParity };
+module.exports = { buttonModuleMap, verifyEmbeddedButtonBlock, verifyButtonCssParity };
