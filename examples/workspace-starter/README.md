@@ -68,6 +68,27 @@ node scripts/website/sync-dashboard-starter.mjs --check
 The website keeps generated JSX/CSS copies for independent deployments; only
 the relative model import changes. The checked-in parity test catches drift.
 
+### CI parity and deployment evidence
+
+[Dashboard Starter Parity](https://github.com/vellira-dev/vellira/actions/workflows/dashboard-starter-parity.yml)
+checks every branch push and PR to `main`, without path filters or npm
+installation. The read-only `--check` validates the exact Git commit being
+tested and fails when the website's Dashboard JSX or CSS differs from the Vite
+starter. It never silently regenerates the website copy.
+
+Staging migration, staging deployment, production promotion, and the
+exceptional one-time legacy adoption path repeat this parity check **before
+dependency installation or website compilation** against their pinned
+candidate commit. The deployment workflows independently record and verify
+the source commit in their build identity. This proves source parity
+for the shipped candidate, not pixel-for-pixel visual identity or runtime
+correctness; the separate browser and runtime checks address those concerns.
+
+Repository maintainers should configure `Dashboard Starter Parity` as a
+**required status check** for `main` in GitHub branch rules. Publishing is
+blocked by the staging/production parity steps even if that branch rule has not
+been enabled.
+
 ## Run React Native
 
 Requires Expo SDK 58 / React Native 0.88 and an iOS or Android emulator, or a
