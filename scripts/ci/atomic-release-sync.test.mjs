@@ -44,6 +44,29 @@ test('version transition accepts only seven converged version-only changes', () 
   }), /not converged/);
 });
 
+test('atomic root package versions must increase, not repeat or downgrade', () => {
+  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(
+    p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json'))
+  );
+  const make = (previous, next) => {
+    const before = {};
+    const after = {};
+    for (const file of manifests) {
+      before[file] = { version: previous, name: file };
+      after[file] = { version: next, name: file };
+    }
+    for (const file of ATOMIC_RELEASE_SYNC_PATHS.filter(p => !manifests.includes(p))) {
+      const unchanged = file.endsWith('.json') ? { unchanged: true } : 'unchanged';
+      before[file] = structuredClone(unchanged);
+      after[file] = structuredClone(unchanged);
+    }
+    return { files: manifests, before, after, version: next };
+  };
+  assert.equal(verifyAtomicManifestTransition(make('2.188.12', '2.189.0')).version, '2.189.0');
+  assert.throws(() => verifyAtomicManifestTransition(make('2.189.0', '2.188.12')), /never repeat or downgrade/);
+  assert.throws(() => verifyAtomicManifestTransition(make('2.189.0', '2.189.0')), /missing release manifest|exact snapshot delta/);
+});
+
 test('release workflow prepares a combined PR only after publishing', () => {
   const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
   const publish = workflow.indexOf('      - name: Release');
