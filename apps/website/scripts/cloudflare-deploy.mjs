@@ -157,7 +157,7 @@ async function deploy() {
           githubRunId: process.env.GITHUB_RUN_ID ?? null,
           githubRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
           observedAt: new Date().toISOString(),
-        }) + '\\n'
+        }) + '\n'
       );
       await record('attempted');
       try {
