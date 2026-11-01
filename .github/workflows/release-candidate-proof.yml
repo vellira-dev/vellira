@@ -89,26 +89,16 @@ jobs:
       - name: Smoke workspace packages before packing
         run: pnpm ci:smoke
 
-      - name: Probe isolated React Native subpath builds without publishing
+      - name: Verify canonical Native shared graph before packaging
         run: |
-          pnpm --filter @vellira-ui/react-native build:subpaths:probe
           node - <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const dir = 'packages/react-native';
-          const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
-          if (JSON.stringify(Object.keys(manifest.exports)) !== JSON.stringify(['.'])) {
-            throw new Error('Subpaths must remain unpublished in this proof workflow');
+          const { assertNativeSubpathContract, SUBPATHS } =
+            require('./scripts/release-candidate/native-subpath-contract.cjs');
+          const result = assertNativeSubpathContract('packages/react-native');
+          if (!result.enabled || result.checkedTargets !== 2 + 2 * Object.keys(SUBPATHS).length) {
+            throw new Error('Incomplete Native public shared graph');
           }
-          for (const file of ['dist/index.js', 'dist/button.js', 'dist/theme.js']) {
-            if (!fs.statSync(path.join(dir, file), { throwIfNoEntry: false })?.isFile()) {
-              throw new Error('Missing staged native entry: ' + file);
-            }
-          }
-          if (manifest.files.some(file => file === 'dist/button.js' || file === 'dist/theme.js' ||
-              file === 'dist/*.js' || file === 'dist/**/*.js')) {
-            throw new Error('Staged native subpaths leaked into public files allowlist');
-          }
+          console.log('[native-shared-graph] source:', JSON.stringify(result));
           NODE
 
       - name: Match release npm runtime
@@ -124,24 +114,30 @@ jobs:
           VELLIRA_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/release-candidate/cli.cjs
 
-      - name: Assert staged subpaths are absent from exact publishable tarball
+      - name: Assert exact packed Native subpaths and shared chunks
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
+          const { SUBPATHS } =
+            require('./scripts/release-candidate/native-subpath-contract.cjs');
           const manifest = JSON.parse(
             fs.readFileSync('.release-candidate/candidate.json', 'utf8')
           );
           const native = manifest.packages.find(
             entry => entry.name === '@vellira-ui/react-native'
           );
-          if (!native) throw new Error('Missing native release candidate evidence');
-          if (native.nativeSubpathContract?.enabled !== false) {
-            throw new Error('This non-publishing proof must retain root-only exports');
+          if (!native || native.nativeSubpathContract?.enabled !== true ||
+              native.nativeSubpathContract.checkedTargets !== 2 + 2 * Object.keys(SUBPATHS).length) {
+            throw new Error('Exact packed candidate has missing Native subpaths');
           }
-          for (const file of ['dist/button.js', 'dist/theme.js']) {
-            if (native.files.includes(file)) {
-              throw new Error('Unpublished native subpath leaked into tarball: ' + file);
+          for (const entry of Object.values(SUBPATHS)) {
+            if (!native.files.includes(entry.default.slice(2)) ||
+                !native.files.includes(entry.types.slice(2))) {
+              throw new Error('Missing Native packed subpath entry: ' + entry.default);
             }
+          }
+          if (native.nativeSubpathContract.checkedJsFiles < Object.keys(SUBPATHS).length + 1) {
+            throw new Error('Native shared graph excluded expected JS entries');
           }
           NODE
 
