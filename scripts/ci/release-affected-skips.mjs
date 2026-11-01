@@ -14,6 +14,41 @@ import {
 const TOOLING_CHECK = 'Tooling & IndexNow Tests';
 const STORYBOOK_CHECK = 'Storybook & Browser Tests';
 
+const DOCUMENTATION_SKIP_CHECKS = [
+  'Typecheck & API Contracts',
+  TOOLING_CHECK,
+  STORYBOOK_CHECK,
+  'Unit & Coverage Tests',
+];
+const SAFE_ROOT_DOCUMENTS = new Set([
+  'AGENTS.md',
+  '.github/PULL_REQUEST_TEMPLATE.md',
+  'README.md',
+  'CONTRIBUTING.md',
+  'CODE_OF_CONDUCT.md',
+  'SECURITY.md',
+]);
+
+// A docs-only CI classification is necessary but not sufficient for release.
+// Release-affecting package/workflow/script changes must never use this path.
+export function isReleaseDocumentationPath(file) {
+  if (
+    typeof file !== 'string' ||
+    !file ||
+    file.startsWith('/') ||
+    /[\r\n\0\\]/.test(file) ||
+    file.split('/').some((segment) => !segment || segment === '.' || segment === '..')
+  ) {
+    return false;
+  }
+  return (
+    SAFE_ROOT_DOCUMENTS.has(file) ||
+    ((file.startsWith('docs/') || file.startsWith('apps/docs/src/')) &&
+      /\.mdx?$/.test(file))
+  );
+}
+
+
 export function latestCheckState(checkRuns, name) {
   const matches = checkRuns
     .filter((check) => check.name === name)
@@ -31,6 +66,30 @@ export function latestCheckState(checkRuns, name) {
 export function authorizedAffectedSkips({ files, plan, checkRuns }) {
   if (!Array.isArray(files) || !Array.isArray(checkRuns) || !plan) {
     return [];
+  }
+
+
+  if (plan.shape === 'docs-only') {
+    if (
+      plan.executionPath !== 'affected' ||
+      plan.graphStatus !== 'not-applicable' ||
+      plan.packageName !== null ||
+      !Array.isArray(plan.changedFiles) ||
+      JSON.stringify(plan.changedFiles) !== JSON.stringify(files) ||
+      !Array.isArray(plan.affectedWorkspaces) ||
+      plan.affectedWorkspaces.length !== 0 ||
+      !Array.isArray(plan.affectedWorkspacePaths) ||
+      plan.affectedWorkspacePaths.length !== 0 ||
+      files.length === 0 ||
+      new Set(files).size !== files.length ||
+      !files.every(isReleaseDocumentationPath) ||
+      latestCheckState(checkRuns, 'PR Impact') !== 'completed:success'
+    ) {
+      return [];
+    }
+    return DOCUMENTATION_SKIP_CHECKS.filter(
+      (check) => latestCheckState(checkRuns, check) === 'completed:skipped'
+    );
   }
 
   // Only one changed workspace package with a successfully resolved impact
