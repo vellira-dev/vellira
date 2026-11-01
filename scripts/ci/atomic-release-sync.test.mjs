@@ -165,5 +165,11 @@ test('Starter may lag root manifests but cannot diverge internally or downgrade'
   const mixed = structuredClone(before);
   mixed['examples/workspace-starter/native/package.json'].dependencies['@vellira-ui/icons'] = '2.188.12';
   assert.throws(() => verifyAtomicStarterTransition({ ...input, before: mixed }), /Prior Starter pins must converge/);
-  assert.throws(() => verifyAtomicStarterTransition({ ...input, version: '2.188.10' }), /downgrade/);
+  const downgraded = structuredClone(after);
+  for (const platform of Object.keys(names)) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    for (const name of names[platform]) downgraded[filename].dependencies[name] = '2.188.10';
+  }
+  downgraded['examples/workspace-starter/README.md'] = 'Using **Vellira 2.188.10 packages**.';
+  assert.throws(() => verifyAtomicStarterTransition({ ...input, after: downgraded, version: '2.188.10' }), /downgrade/);
 });
