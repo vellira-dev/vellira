@@ -14,7 +14,7 @@ const starterPaths = Object.freeze([
   'examples/workspace-starter/web/package.json',
 ]);
 export const ATOMIC_RELEASE_SYNC_PATHS = Object.freeze([...RELEASE_SYNC_MANIFESTS, ...starterPaths].sort());
-const VERSION = /^\\d+\\.\\d+\\.\\d+$/;
+const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export function assertAtomicSyncFileSet(paths) {
   assert.equal(new Set(paths).size, paths.length, 'Duplicate atomic-sync path');
