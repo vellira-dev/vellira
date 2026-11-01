@@ -30,7 +30,7 @@ const nativeSourceUrl =
 const nativeStarterUrl = starterUrl + '/native';
 
 export function ProductInterfaceDemo() {
-  const { preference, setPreference } = useWebsiteThemeContext();
+  const { preference, resolvedTheme, setPreference } = useWebsiteThemeContext();
   const [preview, setPreview] = useState<'desktop' | 'mobile'>('desktop');
   const stageClassName =
     preview === 'mobile'
@@ -140,7 +140,7 @@ export function ProductInterfaceDemo() {
             </>
           ) : (
             <div className={styles.nativeStageContent}>
-              <NativeStarterPreview />
+              <NativeStarterPreview theme={resolvedTheme} />
             </div>
           )}
         </div>
