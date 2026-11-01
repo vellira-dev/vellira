@@ -17,15 +17,14 @@ export function assertCompleteRecoveryHistory(result, label) {
   return result;
 }
 
-// GitHub workflow runs API supports head_sha filtering. Never scan the
-// unbounded organization-wide history to decide authority for one candidate.
-export async function fetchCandidateProductionRuns(fetchPage, mainSha) {
-  assert.match(mainSha, SHA);
-  const response = await fetchPage(mainSha);
-  assertCompleteRecoveryHistory(response, 'Candidate production');
-  assert.ok(response.workflow_runs.every(run => run.head_sha === mainSha),
-    'Production history includes a different SHA');
-  return response.workflow_runs;
+// Scan the bounded lifetime of this candidate, not the cumulative workflow
+// history. Production workflow_run head_sha is NOT candidate identity.
+export async function fetchCandidateProductionRuns(fetchPage, since) {
+  const at = Date.parse(since ?? '');
+  assert.ok(Number.isFinite(at), 'Missing reliable main push observation');
+  const result = await fetchPage(since);
+  assertCompleteRecoveryHistory(result, 'Candidate production');
+  return result.workflow_runs;
 }
 
 export function observedMainPushAt(stagingRuns, mainSha) {
@@ -169,15 +168,17 @@ async function main() {
     console.log(JSON.stringify({ mainSha, productionSha, dispatch: false, reason: 'already_deployed' }));
     return;
   }
-  const [productionResult, stagingResult] = await Promise.all([
-    fetchCandidateProductionRuns(sha => github(
-      '/repos/' + OWNER + '/actions/workflows/' + PRODUCTION +
-      '/runs?head_sha=' + sha + '&per_page=100'), mainSha),
-    github('/repos/' + OWNER + '/actions/workflows/' + STAGING +
-      '/runs?head_sha=' + mainSha + '&per_page=100'),
-  ]);
+  const stagingResult = await github(
+    '/repos/' + OWNER + '/actions/workflows/' + STAGING +
+    '/runs?head_sha=' + mainSha + '&per_page=100');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assertCompleteRecoveryHistory(stagingResult, 'Staging');
+  const observedPush = observedMainPushAt(stagingResult.workflow_runs, mainSha);
+  // Missing push evidence must never authorize an unbounded history query.
+  const productionResult = observedPush === null ? [] :
+    await fetchCandidateProductionRuns(since => github(
+      '/repos/' + OWNER + '/actions/workflows/' + PRODUCTION +
+      '/runs?created=>=' + encodeURIComponent(since) + '&per_page=100'), observedPush);
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
     const recoveryAttempt = run.event === 'workflow_dispatch' &&
       run.display_title === 'Production recovery ' + mainSha;
