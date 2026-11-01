@@ -1,40 +1,19 @@
 ## Maintainer / AI technical passport
 
-Before any Vellira **maintainer/AI-assisted** engineering investigation,
-implementation, review or operational change, first read the current
-[Technical Passport](https://github.com/vellira-dev/vellira-internal/issues/1020)
-and latest dated comments **with authorized private access**. Then verify
-the current commit SHAs of public `vellira`, private `vellira-internal`
-and `vellira-backend`, and read relevant canonical contracts, active
-issues/PRs, source and checks. Never trust chat memory or old green runs.
-If private access is absent, disclose that limitation and **HOLD** work
-requiring private architecture, security, Factory, CI spending or production
-authority. This private prerequisite does **not** restrict external public
-contributors without that access: they follow the public repository rules.
+For Vellira maintainer or AI-assisted engineering work, first read the [private Technical Passport #1020](https://github.com/vellira-dev/vellira-internal/issues/1020) and its latest dated comments. Verify the current `main` SHAs of `vellira`, `vellira-internal`, and `vellira-backend`; inspect current source, architecture decisions, issues, open PRs, and validation evidence. Never infer current state from chat memory or an old green CI result.
 
-Before proposing a maintainer/AI change: identify the root issue and existing
-change-intent PR; document relevant source/base/head revisions, accepted
-scope, impact, rollback, required positive/negative tests, owner approvals,
-and predicted *total* Actions/provider cost (including separate workflows
-and retries). The 20,000-minute private CI target is **not an enforced cap**.
-Do not silently initiate discretionary paid work when reliable remaining
-budget or authorization is unknown.
+External public contributors without private access follow the public repository rules and must not be blocked by this requirement. Maintainers without access must disclose the limitation and hold protected Factory, security, CI spending, or production work rather than guessing. Do not publish private passport content in public code or PRs.
 
-Use the PR template's **Maintainer / AI technical passport** field when
-applicable. Never copy confidential passport content into this public
-repository or a public PR. A passing test/CI check is not proof of a deployed
-site or approved Factory execution. For critical CI/CD, production, security,
-budget, public API and economic changes require explicit owner approval and
-appropriate independent review; do not self-approve merges or deployments.
+Before proposing a maintainer or AI-assisted change:
 
-After an authorized merge and any applicable runtime verification, append a
-dated evidence comment in the private passport: repository, PR and merge
-SHA, exact-head test/run IDs, observed production identity (if relevant),
-cost measured/unknown, unresolved risk and next decision. Until verified
-use `PENDING`, `BLOCKED` or `UNVERIFIED` rather than `COMPLETED`.
-The passport is a continuity/evidence ledger, **not** a substitute for the
-canonical architecture or the repository Definition of Done. This policy
-adds no new workflow or automated CI gate.
+- Identify the root problem and any existing change-intent PR; reuse the active PR for the same problem.
+- Record relevant commit SHAs, accepted scope, risks, a minimal fix, rollback, and required positive and negative tests.
+- Estimate total Actions and provider costs, including other triggered workflows and retries. A private monthly CI budget target is not an enforced hard cap; hold discretionary paid work when authorized remaining capacity is unknown.
+- Obtain owner approval and appropriate independent review for critical CI/CD, security, production, public API, or Factory economic changes. Never self-approve a merge or deployment.
+
+Record the passport checkpoint and verification evidence in the maintainer/AI section of the existing PR template. An exact-head green test is not proof of a production deployment. After an authorized merge, append a dated private passport comment with the repository, PR and merge SHA, exact test/run IDs, deployed runtime identity if relevant, measured costs or unknowns, remaining risks, and next decision. Mark unverified results `PENDING`, `BLOCKED`, or `UNVERIFIED`, not `COMPLETED`.
+
+The passport is a continuity and evidence ledger, not a replacement for canonical architecture, the Definition of Done, or required checks. This protocol introduces no new workflow or automated CI gate.
 
 ## Repository Definition of Done
 
