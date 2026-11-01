@@ -93,7 +93,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
 
   const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
   const migration = jobBlock(stagingWorkflow, 'migration', 'deploy');
-  const deploy = jobBlock(stagingWorkflow, 'deploy');
+  const deploy = jobBlock(stagingWorkflow, 'deploy', 'immediate-promotion');
 
   assert.match(classify, /release-sync-contract\.mjs/);
   assert.match(classify, /--classify-merged/);
@@ -171,6 +171,29 @@ test('staging publishes a dedicated machine-readable promotion artifact', () => 
     /path: apps\/website\/\.open-next\/staging-evidence\.json/
   );
   assert.match(stagingWorkflow, /if-no-files-found: error/);
+});
+
+test('manual recovery staging dispatches production immediately with bounded authority', () => {
+  const handoff = jobBlock(stagingWorkflow, 'immediate-promotion');
+  assert.match(handoff, /needs: \[classify, migration, deploy\]/);
+  assert.match(handoff, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(handoff, /inputs\.production_recovery == true/);
+  assert.match(handoff, /inputs\.pro_interest_preview != true/);
+  assert.match(handoff, /inputs\.newsletter_abuse_preview != true/);
+  assert.match(handoff, /needs\.deploy\.result == 'success'/);
+  assert.match(handoff, /actions: write/);
+  assert.match(handoff, /GITHUB_REF.*refs\/heads\/main/);
+  assert.match(handoff, /REPLAY_VERIFIED_STAGING/);
+  assert.match(handoff, /inputs\[candidate_sha\]/);
+  assert.match(handoff, /inputs\[staging_run_id\]/);
+  assert.match(handoff, /inputs\[staging_run_attempt\]/);
+  assert.doesNotMatch(handoff, /EMERGENCY_DEPLOY_PRODUCTION/);
+  const deploy = jobBlock(stagingWorkflow, 'deploy', 'immediate-promotion');
+  assert.doesNotMatch(deploy, /actions: write/);
+  assert.ok(
+    stagingWorkflow.indexOf('Publish production promotion evidence') <
+      stagingWorkflow.indexOf('\n  immediate-promotion:')
+  );
 });
 
 test('production eligibility requires successful push staging or explicit verified manual recovery', () => {

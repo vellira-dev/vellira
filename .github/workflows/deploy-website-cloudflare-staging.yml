@@ -636,3 +636,57 @@ jobs:
             apps/website/.next/BUILD_ID
             apps/website/.next/server/**/*manifest*
             apps/website/.next/static/chunks/webpack-*.js
+  immediate-promotion:
+    name: Handoff verified recovery staging to production
+    needs: [classify, migration, deploy]
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.production_recovery == true &&
+      inputs.pro_interest_preview != true &&
+      inputs.newsletter_abuse_preview != true &&
+      needs.classify.result == 'success' &&
+      needs.migration.result == 'success' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch verified replay immediately after successful staging
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+          STAGING_RUN_ID: ${{ github.run_id }}
+          STAGING_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          current="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$current" != "$CANDIDATE_SHA" ]]; then
+            echo "::notice::Recovery staging is superseded by $current; skip production handoff."
+            exit 0
+          fi
+
+          # This job executes only after successful deployment, browser tests,
+          # and publishing the immutable staging evidence artifact.
+          # workflow_dispatch is the explicitly permitted GITHUB_TOKEN handoff.
+          for attempt in 1 2 3; do
+            if gh api --method POST \
+              "repos/$REPOSITORY/actions/workflows/deploy-website-cloudflare-production.yml/dispatches" \
+              -f ref=main \
+              -f "inputs[candidate_sha]=$CANDIDATE_SHA" \
+              -f "inputs[staging_run_id]=$STAGING_RUN_ID" \
+              -f "inputs[staging_run_attempt]=$STAGING_RUN_ATTEMPT" \
+              -f "inputs[confirmation]=REPLAY_VERIFIED_STAGING"; then
+              echo "Production promotion dispatched for staging $STAGING_RUN_ID/$STAGING_RUN_ATTEMPT."
+              exit 0
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              sleep "$attempt"
+            fi
+          done
+          echo "::error::Unable to dispatch verified production promotion."
+          exit 1
