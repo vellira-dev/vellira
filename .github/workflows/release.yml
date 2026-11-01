@@ -289,11 +289,9 @@ jobs:
           # exceptions are decided only by the separately maintained fail-closed
           # authority below, never by a shell glob or a generic Markdown suffix.
           gh api --paginate -H "Accept: application/vnd.github+json" "repos/$REPOSITORY/pulls/$pr_number/files?per_page=100" --jq '.[].filename' > /tmp/release-pr-files.txt
-          # Independently recompute narrow docs-only and package-local CI skip
-          # authority from exact changed files and successful PR Impact.
-
-          # from the merged PR paths, resolved dependency graph, and successful
-          # PR Impact check. No broad acceptance of skipped required jobs.
+          # Independently recompute narrow docs-only and package-local skip
+          # authority from exact PR paths, dependency graph and successful PR
+          # Impact; never authorize missing, failed or stale required checks.
           node scripts/ci/release-affected-skips.mjs \
             /tmp/release-pr-files.txt \
             /tmp/release-checks.json \
@@ -319,7 +317,7 @@ jobs:
               jq -e --arg name "$check_name" \
                 '.allowedSkips | index($name) != null' \
                 /tmp/release-affected-skips.json > /dev/null; then
-              echo "Accepted verified package-local affected CI skip for $check_name on exact PR #$pr_number."
+              echo "Accepted exact-head CI-authorized skip for $check_name on PR #$pr_number."
               continue
             fi
             if [[ "$check_state" != "completed:success" ]]; then
