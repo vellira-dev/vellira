@@ -1,3 +1,4 @@
+import { isReleaseSyncFileSet, isAtomicReleaseSyncFileSet } from './release-sync-contract.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -91,4 +92,12 @@ test('atomic Starter transitions reject unrelated manifest and README mutations'
     ...args,
     after: { ...after, 'examples/workspace-starter/README.md': after['examples/workspace-starter/README.md'] + ' Extra content' },
   }), /Unexpected Starter README mutation/);
+});
+
+test('atomic shape detection never relaxes the legacy production admission', () => {
+  assert.equal(isAtomicReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS), true);
+  assert.equal(isReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS), false);
+  assert.equal(isAtomicReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS.slice(0, -1)), false);
+  assert.equal(isAtomicReleaseSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, ATOMIC_RELEASE_SYNC_PATHS[0]]), false);
+  assert.equal(isAtomicReleaseSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, 'apps/website/src/app/page.tsx']), false);
 });
