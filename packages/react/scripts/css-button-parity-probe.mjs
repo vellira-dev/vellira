@@ -20,7 +20,7 @@ const repositoryRoot = path.resolve(packageRoot, '..', '..');
 const expectedExports = ['.', './styles', './styles/button'];
 
 function gitHead() {
-  const output = spawnSync('git', ['rev-parse', 'HEAD'], {
+  const output = spawnSync('git', ['-c', `safe.directory=${repositoryRoot}`, 'rev-parse', 'HEAD'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
   });
