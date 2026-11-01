@@ -11,6 +11,7 @@ export function SafeAreaView({
   edges: _edges,
   ...props
 }: ViewProps & { edges?: readonly Edge[] }) {
+  void _edges;
   return <View {...props} />;
 }
 
