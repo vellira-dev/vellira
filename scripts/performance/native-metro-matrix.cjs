@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// Opt-in Phase B #470. Measures production iOS/Android Metro exports, not
-// installed-package bytes or on-device startup. Pins published npm version.
+// Opt-in #470 / #2082 production iOS/Android Metro byte matrix.
+// Uses an exact published version or one immutable packed candidate; never
+// substitutes local source files into a clean consumer or claims device proof.
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs');
+const { assertNativeSubpathContract } = require('../release-candidate/native-subpath-contract.cjs');
 
 const version = process.env.VELLIRA_NATIVE_VERSION;
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
@@ -15,7 +17,17 @@ if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
 const output = path.resolve(
   process.env.VELLIRA_METRO_EVIDENCE ?? 'consumer-evidence/native-metro-matrix.json'
 );
+const candidateTarball = process.env.VELLIRA_NATIVE_CANDIDATE_TGZ;
+if (candidateTarball &&
+    (!path.isAbsolute(candidateTarball) ||
+     !fs.statSync(candidateTarball, { throwIfNoEntry: false })?.isFile())) {
+  throw new Error('VELLIRA_NATIVE_CANDIDATE_TGZ must be an existing absolute tarball.');
+}
+const optInSubpaths = process.env.VELLIRA_METRO_SUBPATH_MATRIX === '1';
 const cases = ['baseline', 'theme', 'button', 'button-select'];
+if (optInSubpaths) {
+  cases.push('leaf-theme', 'leaf-button', 'leaf-button-select', 'mixed-root-leaf');
+}
 const platforms = ['ios', 'android'];
 const sourceInventories = {};
 const productionOnly = process.env.VELLIRA_METRO_PRODUCTION_ONLY === '1';
@@ -63,7 +75,8 @@ function manifest(kind) {
     'react-native': '0.86.3',
     'react-native-svg': '15.15.4',
   };
-  if (kind !== 'baseline') deps['@vellira-ui/react-native'] = version;
+  if (kind !== 'baseline') deps['@vellira-ui/react-native'] = candidateTarball
+    ? 'file:' + candidateTarball : version;
   return {
     name: 'vellira-native-metro-' + kind,
     private: true,
@@ -73,6 +86,32 @@ function manifest(kind) {
   };
 }
 function app(kind) {
+  if (kind.startsWith('leaf-') || kind === 'mixed-root-leaf') {
+    const themeOnly = kind === 'leaf-theme';
+    const select = kind === 'leaf-button-select' || kind === 'mixed-root-leaf';
+    const mixed = kind === 'mixed-root-leaf';
+    const imports = [
+      "import React from 'react';",
+      "import { View, Text } from 'react-native';",
+      "import { ThemeProvider as LeafThemeProvider, useTheme as leafUseTheme } from '@vellira-ui/react-native/theme';",
+      ...(!themeOnly ? ["import { Button as LeafButton } from '@vellira-ui/react-native/button';"] : []),
+      ...(select ? ["import { Select } from '@vellira-ui/react-native/select';"] : []),
+      ...(mixed ? ["import { Button as RootButton, ThemeProvider as RootThemeProvider, useTheme as rootUseTheme } from '@vellira-ui/react-native';"] : []),
+    ];
+    const contents = themeOnly
+      ? "React.createElement(Text, null, 'Metro theme only')"
+      : select
+        ? "React.createElement(View, null, React.createElement(LeafButton, null, 'Metro Button'), React.createElement(Select, { label: 'Choice', options: [{ value: 'one', label: 'One' }], defaultValue: 'one', presentation: 'sheet' }))"
+        : "React.createElement(LeafButton, null, 'Metro Button')";
+    const inner = mixed
+      ? "React.createElement(View, null, React.createElement(RootButton, null, 'Root Button'), " + contents + ")"
+      : contents;
+    const children = mixed
+      ? "React.createElement(RootThemeProvider, { theme: 'light' }, React.createElement(LeafThemeProvider, { theme: 'dark' }, " + inner + "))"
+      : "React.createElement(LeafThemeProvider, { defaultTheme: 'light' }, " + inner + ")";
+    return imports.join('\n') + '\nexport default function App() { return React.createElement(View, null, ' +
+      children + '); }\n';
+  }
   const imports = kind === 'baseline'
     ? ''
     : "import { " +
@@ -118,6 +157,12 @@ const evidence = {
   pinnedFixtureDependencies: manifest('baseline').dependencies,
   installMode: 'normal npm install; legacy-peer-deps=false',
   productionOnly,
+  optInSubpaths,
+  candidateSource: candidateTarball
+    ? { mode: 'exact-candidate-tarball',
+        sha256: createHash('sha256').update(fs.readFileSync(candidateTarball)).digest('hex'),
+        path: path.basename(candidateTarball) }
+    : { mode: 'exact-published-npm', version },
   purpose: 'Differential iOS/Android production Metro output; not device startup',
   cases: {},
 };
@@ -158,6 +203,12 @@ try {
       const nativeManifest = JSON.parse(
         fs.readFileSync(path.join(nativeRoot, 'package.json'), 'utf8')
       );
+      if (optInSubpaths) {
+        nativePackageInventory = assertNativeSubpathContract(nativeRoot);
+        if (!nativePackageInventory.enabled) {
+          throw new Error(kind + ': Native subpath export graph is missing');
+        }
+      }
       const packedFiles = walk(path.join(nativeRoot, 'dist'));
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
       const { references, scannedFiles } = inspectPublishedPickerReferences(nativeRoot, packedFiles);
@@ -167,6 +218,7 @@ try {
         throw new Error(kind + ': published Vellira still requires Picker peer.');
       }
       nativePackageInventory = {
+        ...(nativePackageInventory ? { sharedSubpaths: nativePackageInventory } : {}),
         requiredPeers: nativeManifest.peerDependencies ?? {},
         optionalPeers: nativeManifest.peerDependenciesMeta ?? {},
         distFileCount: packedFiles.length,
@@ -282,6 +334,22 @@ try {
     evidence.cases['button-select'].platforms[platform].deltaFromButton =
       evidence.cases['button-select'].platforms[platform].scriptBytes -
       evidence.cases.button.platforms[platform].scriptBytes;
+  }
+  if (optInSubpaths) {
+    evidence.nativeSubpathDeltas = {};
+    for (const platform of platforms) {
+      const bytes = (kind) => evidence.cases[kind].platforms[platform].scriptBytes;
+      evidence.nativeSubpathDeltas[platform] = Object.fromEntries([
+        ['theme', ['theme', 'leaf-theme']],
+        ['button', ['button', 'leaf-button']],
+        ['buttonSelect', ['button-select', 'leaf-button-select']],
+        ['mixedRootLeaf', ['button-select', 'mixed-root-leaf']],
+      ].map(([name, [before, after]]) => [
+        name,
+        { rootBytes: bytes(before), candidateBytes: bytes(after),
+          savedBytes: bytes(before) - bytes(after) },
+      ]));
+    }
   }
   evidence.sourceModuleDeltas = {};
   if (!productionOnly) {
