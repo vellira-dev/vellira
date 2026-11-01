@@ -67,3 +67,23 @@ The repository Definition of Done applies to every task, not only launch-critica
 ## Additional context
 
 <!-- Add migration notes, limitations, or implementation details. -->
+
+## Maintainer / AI technical passport
+
+<!-- Maintainer/AI-assisted work only. External contributors without private
+access are NOT required to access the private passport and may mark N/A.
+Do not include private technical, strategy or security details in this public PR.
+This is a human review requirement, not an enforced GitHub status check. -->
+
+- [ ] Maintainer/AI: read [private passport #1020](https://github.com/vellira-dev/vellira-internal/issues/1020) and the latest dated comment; or **N/A** (independent external contribution).
+- [ ] Verified current relevant repository SHAs and existing issues/change-intent PR.
+- [ ] Documented total expected Actions/provider costs and operational risk; missing quota/approval means HOLD discretionary spending.
+- [ ] Required owner/independent review, exact-final-HEAD proof and rollout/rollback checks are planned/completed as applicable.
+
+Passport link (maintainer/AI only): https://github.com/vellira-dev/vellira-internal/issues/1020
+
+Last passport checkpoint read, base/head SHAs, risk/cost and test evidence: **PENDING / N/A**
+
+After an authorized merge, record exact merge SHA, CI runs, runtime identity (if
+applicable), costs and unresolved risk in the private passport. Until then the
+outcome remains **PENDING**; do not claim successful production delivery from CI.
