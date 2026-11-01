@@ -9,6 +9,7 @@ const noop = () => undefined;
 
 import { AnimatedIconPreview } from '../../../../icons/src/storybook/AnimatedIconPreview';
 import { Button } from '../Button';
+import { ThemeProvider } from '../../theme';
 
 const meta = {
   title: 'Primitives/Button',
@@ -786,6 +787,77 @@ export const Disabled: Story = {
       </div>
     </Section>
   ),
+};
+
+function DisabledSemanticsDemo() {
+  const [theme, setTheme] = useState<'light' | 'dark' | 'highContrast'>('light');
+  const [activations, setActivations] = useState(0);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <Section title='DisabledSemantics'>
+        <div role='group' aria-label='Button themes' style={rowStyle}>
+          {(['light', 'dark', 'highContrast'] as const).map((choice) => (
+            <button
+              key={choice}
+              type='button'
+              data-theme-choice={choice}
+              onClick={() => setTheme(choice)}
+            >
+              {choice}
+            </button>
+          ))}
+        </div>
+        <div style={rowStyle}>
+          <Button data-testid='native-disabled' disabled>
+            Native disabled
+          </Button>
+          <Button data-testid='native-loading' loading>
+            Native loading
+          </Button>
+          <Button data-testid='link-disabled' href='/billing' disabled>
+            Link disabled
+          </Button>
+          <Button data-testid='link-loading' href='/save' loading>
+            Link loading
+          </Button>
+          <Button asChild disabled>
+            <a
+              data-testid='aschild-disabled'
+              href='/delete'
+              onClick={() => setActivations((current) => current + 1)}
+            >
+              Composed disabled
+            </a>
+          </Button>
+          <Button data-testid='bare-disabled' appearance='bare' disabled>
+            Bare disabled
+          </Button>
+          <Button data-testid='bare-loading' appearance='bare' loading>
+            Bare loading
+          </Button>
+          <Button
+            data-testid='icon-disabled'
+            aria-label='Add'
+            iconOnly
+            disabled
+            iconStart={<Save />}
+          />
+          <Button
+            data-testid='enabled-reference'
+            onClick={() => setActivations((current) => current + 1)}
+          >
+            Enabled
+          </Button>
+        </div>
+        <output data-testid='button-activations'>{activations}</output>
+      </Section>
+    </ThemeProvider>
+  );
+}
+
+export const DisabledSemantics: Story = {
+  render: () => <DisabledSemanticsDemo />,
 };
 
 export const FullWidth: Story = {
