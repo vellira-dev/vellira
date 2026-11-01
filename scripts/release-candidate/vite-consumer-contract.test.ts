@@ -163,17 +163,14 @@ describe('clean Vite consumer workflow contract', () => {
     expect(proof).toContain('node_modules/@vellira-ui/react/dist');
     expect(proof).toContain('browserSnapshots(chromium, dist)');
     expect(proof).toContain("run('npm', ['run', 'build:next']");
-    expect(proof).toContain(
-      'PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY'
-    );
+    expect(proof).toContain('PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY');
     expect(proof).toContain("path.join(reactDist, 'styles/button.css')");
     expect(proof).toContain('Packed public Button stylesheet differs');
   });
 
   it('keeps full CSS while building the Button-only stylesheet', () => {
-    const pkg = JSON.parse(
-      readFileSync('packages/react/package.json', 'utf8')
-    );
+    const manifest = readFileSync('packages/react/package.json', 'utf8');
+    const pkg = JSON.parse(manifest);
     const producer = readFileSync(
       'packages/react/scripts/css-button-parity-probe.mjs',
       'utf8'
