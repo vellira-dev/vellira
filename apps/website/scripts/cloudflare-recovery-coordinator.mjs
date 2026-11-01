@@ -65,6 +65,18 @@ export function decideRecovery({
     };
   }
 
+  // Never rebuild/redeploy the same SHA automatically after a failed
+  // staging run: deployment may already have succeeded before verification
+  // failed (e.g. a transient Cloudflare/RSC 503). Without immutable
+  // deployment proof, only manual diagnosis can authorize a retry.
+  if (sameSha.some((run) =>
+    (run.event === 'push' || run.recoveryAttempt === true) &&
+    run.status === 'completed' &&
+    run.conclusion === 'failure'
+  )) {
+    return { dispatch: false, reason: 'failed_staging_requires_review' };
+  }
+
   // Do not create a duplicate staging run while an attempt for this SHA
   // exists. A failed explicit recovery is terminal until manually reviewed.
   if (sameSha.some((run) => run.recoveryAttempt === true || run.fullStage === true ||
