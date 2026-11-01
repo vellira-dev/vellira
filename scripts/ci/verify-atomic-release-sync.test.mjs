@@ -34,5 +34,5 @@ test('partial atomic changes reject even if snapshots contain all files', () => 
   assert.throws(() => verifyAtomicCandidate({
     baseSha: a, headSha: b, files: ATOMIC_RELEASE_SYNC_PATHS.slice(1),
     version: '2.189.0', readFile,
-  }), /exactly seven package manifests and five Starter files/);
+  }), /exact snapshot delta/);
 });
