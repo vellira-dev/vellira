@@ -7,7 +7,11 @@ import styles from './NativeStarterPreview.module.css';
 // The canonical Native Starter runs in a same-origin browser viewport.
 // React Native Web portals (Select, Modal, etc.) must stay inside the device,
 // never escape to the containing marketing page.
-export function NativeStarterPreview({ theme }: { theme: ResolvedWebsiteTheme }) {
+export function NativeStarterPreview({
+  theme,
+}: {
+  theme: ResolvedWebsiteTheme;
+}) {
   // A new iframe URL applies the website's resolved theme before mounting the
   // independent Expo Starter. Only theme changes remount the preview.
   const frameSource = '/demo/native-starter?websiteTheme=' + theme;
