@@ -239,6 +239,35 @@ describe('Button', () => {
     act(() => root.unmount());
   });
 
+  it('emits a valid scoped disabled class for native and loading states', () => {
+    expect(styles.disabled).toBeTruthy();
+
+    for (const props of [
+      { disabled: true },
+      { loading: true },
+      { disabled: true, loading: true },
+    ]) {
+      const onClick = vi.fn();
+      const { button, root } = renderButton({
+        ...props,
+        children: 'Save',
+        onClick,
+      });
+
+      expect(button?.disabled).toBe(true);
+      expect(button?.classList.contains(styles.disabled)).toBe(true);
+      expect(button?.classList.contains('undefined')).toBe(false);
+      expect(button?.classList.contains('null')).toBe(false);
+      expect(button?.getAttribute('aria-busy')).toBe(
+        props.loading ? 'true' : null
+      );
+
+      act(() => button?.click());
+      expect(onClick).not.toHaveBeenCalled();
+      act(() => root.unmount());
+    }
+  });
+
   it('reserves label width when loadingText is provided', () => {
     const { button, root } = renderButton({
       children: 'Publish',
@@ -333,6 +362,8 @@ describe('Button', () => {
     expect(anchor?.getAttribute('href')).toBeNull();
     expect(anchor?.getAttribute('aria-disabled')).toBe('true');
     expect(anchor?.getAttribute('tabindex')).toBe('-1');
+    expect(anchor?.classList.contains(styles.disabled)).toBe(true);
+    expect(anchor?.classList.contains('undefined')).toBe(false);
     expect(event.defaultPrevented).toBe(true);
     expect(onClick).not.toHaveBeenCalled();
     act(() => root.unmount());
@@ -362,6 +393,8 @@ describe('Button', () => {
 
     expect(anchor?.getAttribute('href')).toBeNull();
     expect(anchor?.getAttribute('aria-busy')).toBe('true');
+    expect(anchor?.classList.contains(styles.disabled)).toBe(true);
+    expect(anchor?.classList.contains('undefined')).toBe(false);
     expect(event.defaultPrevented).toBe(true);
     expect(onClick).not.toHaveBeenCalled();
     act(() => root.unmount());
@@ -390,6 +423,8 @@ describe('Button', () => {
 
     expect(anchor?.className).toContain('link');
     expect(anchor?.className).toContain('action');
+    expect(anchor?.classList.contains(styles.disabled)).toBe(false);
+    expect(anchor?.classList.contains('undefined')).toBe(false);
     expect(anchor?.getAttribute('href')).toBe('#docs');
     expect(childClick).toHaveBeenCalledOnce();
     expect(buttonClick).toHaveBeenCalledOnce();
@@ -474,6 +509,8 @@ describe('Button', () => {
     expect(anchor?.getAttribute('href')).toBeNull();
     expect(anchor?.getAttribute('aria-disabled')).toBe('true');
     expect(anchor?.getAttribute('tabindex')).toBe('-1');
+    expect(anchor?.classList.contains(styles.disabled)).toBe(true);
+    expect(anchor?.classList.contains('undefined')).toBe(false);
     expect(event.defaultPrevented).toBe(true);
     expect(childClick).not.toHaveBeenCalled();
     expect(buttonClick).not.toHaveBeenCalled();

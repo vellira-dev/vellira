@@ -44,6 +44,110 @@ async function expectFloatingNearReference(
 test.describe('cross-browser interaction launch contracts @cross-browser', () => {
   test.describe.configure({ retries: 0 });
 
+  test('Button disabled links keep native state styles and prevent clicks', async ({
+    page,
+  }) => {
+    await openStory(page, 'primitives-button--disabled-semantics');
+
+    const native = page.getByTestId('native-disabled');
+    const loading = page.getByTestId('native-loading');
+    const href = page.locator('#link-disabled');
+    const linkLoading = page.locator('#link-loading');
+    const composed = page.getByTestId('aschild-disabled');
+    const bare = page.getByTestId('bare-disabled');
+    const bareLoading = page.getByTestId('bare-loading');
+    const icon = page.getByTestId('icon-disabled');
+    const enabled = page.getByTestId('enabled-reference');
+    const clicks = page.getByTestId('button-activations');
+    const elements = [
+      native,
+      loading,
+      href,
+      linkLoading,
+      composed,
+      bare,
+      bareLoading,
+      icon,
+      enabled,
+    ];
+
+    const visual = (node: Locator) =>
+      node.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          color: styles.color,
+          background: styles.backgroundColor,
+          border: styles.borderColor,
+          cursor: styles.cursor,
+        };
+      });
+
+    await expect(native).toBeDisabled();
+    await expect(loading).toBeDisabled();
+    await expect(loading).toHaveAttribute('aria-busy', 'true');
+    await expect(href).toHaveAttribute('aria-disabled', 'true');
+    await expect(linkLoading).toHaveAttribute('aria-busy', 'true');
+    await expect(composed).toHaveAttribute('aria-disabled', 'true');
+    await expect(icon).toHaveAccessibleName('Add');
+    await expect(clicks).toHaveText('0');
+
+    for (const link of [href, linkLoading, composed]) {
+      expect(await link.getAttribute('href')).toBeNull();
+      await expect(link).toHaveAttribute('tabindex', '-1');
+    }
+
+    for (const theme of ['light', 'dark', 'highContrast']) {
+      await page.locator(`[data-theme-choice="${theme}"]`).click();
+      const normalized = theme === 'highContrast' ? 'high-contrast' : theme;
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-vellira-theme',
+        normalized
+      );
+
+      for (const element of elements) {
+        const classes =
+          (await element.getAttribute('class'))?.split(/\s+/) ?? [];
+        expect(classes).not.toContain('undefined');
+        expect(classes).not.toContain('null');
+      }
+
+      const baseline = await visual(native);
+      expect(baseline.cursor).toBe('not-allowed');
+      for (const link of [href, composed]) {
+        const classes = (await link.getAttribute('class'))?.split(/\s+/) ?? [];
+        expect(classes.some((cls) => cls.includes('disabled'))).toBe(true);
+        expect(await visual(link)).toEqual(baseline);
+        await link.hover();
+        expect(await visual(link)).toEqual(baseline);
+      }
+      expect((await visual(loading)).cursor).toBe('progress');
+      expect((await visual(linkLoading)).cursor).toBe('progress');
+      expect((await visual(bare)).cursor).toBe('not-allowed');
+      expect((await visual(bareLoading)).cursor).toBe('not-allowed');
+      const enabledClasses =
+        (await enabled.getAttribute('class'))?.split(/\s+/) ?? [];
+      expect(enabledClasses.some((cls) => cls.includes('disabled'))).toBe(
+        false
+      );
+    }
+
+    for (const link of [href, linkLoading, composed]) {
+      const prevented = await link.evaluate((element) => {
+        const event = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+        });
+        element.dispatchEvent(event);
+        return event.defaultPrevented;
+      });
+      expect(prevented).toBe(true);
+    }
+
+    await expect(clicks).toHaveText('0');
+    await enabled.click();
+    await expect(clicks).toHaveText('1');
+  });
+
   test('Dropdown supports keyboard navigation, focus restore, portal, outside click, and positioning', async ({
     page,
   }) => {
