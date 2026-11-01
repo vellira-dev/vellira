@@ -34,6 +34,9 @@ export function decideRecovery({
   if (explicitRecoveries.length > MAX_RECOVERY_DISPATCHES_PER_SHA) {
     return { dispatch: false, reason: 'recovery_budget_exceeded', requiresReview: true };
   }
+  if (explicitRecoveries.some((run) => run.status === 'completed' && run.conclusion !== 'success')) {
+    return { dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true };
+  }
   const qualified = sameSha
     .filter((run) =>
       run.fullStage === true &&
@@ -77,11 +80,7 @@ export function decideRecovery({
   // exists. A failed explicit recovery is terminal until manually reviewed.
   if (sameSha.some((run) => run.recoveryAttempt === true || run.fullStage === true ||
       (run.event === 'push' && run.status !== 'completed'))) {
-    const failedRecovery = explicitRecoveries.some((run) =>
-      run.status === 'completed' && run.conclusion !== 'success');
-    return failedRecovery
-      ? { dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true }
-      : { dispatch: false, reason: 'staging_exists_for_main' };
+    return { dispatch: false, reason: 'staging_exists_for_main' };
   }
   // A newly merged main SHA is moving-target territory. Defer expensive
   // recovery staging until a short quiet window has elapsed; normal push
@@ -136,6 +135,8 @@ async function main() {
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
+  assert.ok(productionResult.total_count < 100,
+    'Production history requires pagination before safe replay');
   const [stagingResult, mainCommit] = await Promise.all([
     github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100'),
     github('/repos/' + OWNER + '/commits/' + mainSha),
