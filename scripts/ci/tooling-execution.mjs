@@ -34,6 +34,7 @@ export function createToolingTasks({
     'scripts/visual/component-demo-social.test.mjs',
     'scripts/ci/workflow-noise.test.mjs',
     'scripts/ci/atomic-release-sync.test.mjs',
+    'scripts/ci/release-noop-atomic-sync.test.mjs',
     'scripts/ci/prepare-atomic-release-sync.test.mjs',
     'scripts/ci/verify-atomic-release-sync.test.mjs',
     'scripts/ci/pr-change-intent.test.mjs',

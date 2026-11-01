@@ -396,6 +396,18 @@ jobs:
             exit 1
           fi
 
+      - name: Detect whether semantic-release prepared a new package version
+        id: release-change
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet HEAD -- package.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "semantic-release did not prepare a new package version; skipping atomic sync."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Retain exact npm release candidate
         if: always() && hashFiles('.release-candidate/candidate.json') != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -412,6 +424,7 @@ jobs:
       # This workflow change must not merge until the strict release-sync
       # classifiers and production freshness exception support the new shape.
       - name: Prepare verified atomic release and Starter snapshot
+        if: steps.release-change.outputs.changed == 'true'
         run: |
           set -euo pipefail
           version="$(node -p "require('./package.json').version")"
@@ -422,6 +435,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Detect version sync changes
+        if: steps.release-change.outputs.changed == 'true'
         id: version-sync
         shell: bash
         run: |
@@ -457,6 +471,7 @@ jobs:
           echo "Release-managed files changed for version $version."
 
       - name: Require unchanged pnpm lock for atomic release admission
+        if: steps.release-change.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
