@@ -51,3 +51,15 @@ security exceptions in an incomplete PR. Roll out through a separate reviewed
 change; measure actual CI minutes and ensure no second Starter PR appears.
 
 Related: #1897.
+
+## No-release semantic-release outcome
+
+A successful semantic-release run may legitimately publish no new version. The
+release workflow now classifies the exact checkout, seven baseline/prepared
+package manifests, optional prepared npm candidate and newly created tag before
+starting the atomic sync. An unchanged manifest set and absent npm candidate
+skip version sync without requiring the previous tag to point to this commit.
+A real new version still requires a monotonic version increase, all seven
+manifest changes, candidate preparation, immutable exact-SHA tag and subsequent
+six-package registry verification. Partial state fails closed. The existing
+release tag must never be rewritten to silence a no-release result.

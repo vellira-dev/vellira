@@ -408,10 +408,15 @@ jobs:
           include-hidden-files: true
           retention-days: 30
 
+      - name: Classify semantic-release outcome
+        id: release-result
+        run: node scripts/ci/classify-semantic-release-outcome.mjs
+
       # Atomic sync candidate preparation: publication has completed above.
       # This workflow change must not merge until the strict release-sync
       # classifiers and production freshness exception support the new shape.
       - name: Prepare verified atomic release and Starter snapshot
+        if: steps.release-result.outputs.released == 'true'
         run: |
           set -euo pipefail
           version="$(node -p "require('./package.json').version")"
@@ -422,6 +427,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Detect version sync changes
+        if: steps.release-result.outputs.released == 'true'
         id: version-sync
         shell: bash
         run: |
@@ -457,6 +463,7 @@ jobs:
           echo "Release-managed files changed for version $version."
 
       - name: Require unchanged pnpm lock for atomic release admission
+        if: steps.release-result.outputs.released == 'true'
         shell: bash
         run: |
           set -euo pipefail
