@@ -181,3 +181,22 @@ test('release-sync CLI never grants atomic admission from file names alone', () 
   assert.ok(source.includes("VELLIRA_PUSH_ACTOR, 'vellira-release-sync[bot]'"));
   assert.ok(source.includes('Atomic sync parent must match base'));
 });
+
+test('already synchronized Starter does not change its README or package manifests', () => {
+  const before = {
+    'examples/workspace-starter/README.md': 'Using **Vellira 2.189.0 packages**.',
+  };
+  for (const [platform, names] of Object.entries({
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  })) {
+    before['examples/workspace-starter/' + platform + '/package.json'] = {
+      private: true,
+      dependencies: Object.fromEntries(names.map(name => [name, '2.189.0'])),
+    };
+  }
+  const after = structuredClone(before);
+  assert.equal(verifyAtomicStarterTransition({ before, after, version: '2.189.0' }).previousStarterVersion, '2.189.0');
+  after['examples/workspace-starter/README.md'] += ' unexpected';
+  assert.throws(() => verifyAtomicStarterTransition({ before, after, version: '2.189.0' }), /unchanged/);
+});
