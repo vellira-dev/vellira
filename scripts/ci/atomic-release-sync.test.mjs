@@ -243,3 +243,28 @@ test('partial atomic shape demands all seven release manifests and at least one 
   assert.equal(isAtomicReleaseSyncCandidate([...manifests.slice(1), starter]), false);
   assert.equal(isAtomicReleaseSyncCandidate([...manifests, starter, 'apps/website/page.tsx']), false);
 });
+
+test('automatic published-release reconciliation includes Starter in one proposal', () => {
+  const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  const auto = workflow.slice(
+    workflow.indexOf('  auto-reconcile-existing-release:'),
+    workflow.indexOf('  release:', workflow.indexOf('  auto-reconcile-existing-release:')),
+  );
+  const verify = auto.indexOf('      - name: Verify existing external release state without mutation');
+  const prepare = auto.indexOf('      - name: Prepare verified auto-recovered Starter snapshot');
+  const propose = auto.indexOf('      - name: Create or update automatic version sync PR');
+  assert.ok(verify >= 0 && prepare > verify && propose > prepare);
+  const scope = auto.slice(propose, auto.indexOf('      - name: Verify automatic version sync PR creation', propose));
+  for (const file of ATOMIC_RELEASE_SYNC_PATHS) {
+    assert.ok(scope.includes(file) || (file.startsWith('packages/') && scope.includes('packages/*/package.json')),
+      'Automatic recovery must include ' + file);
+  }
+});
+
+test('second Starter sync is manual recovery only, not a release merge cascade', () => {
+  const workflow = fs.readFileSync('.github/workflows/workspace-starter-release-sync.yml', 'utf8');
+  const eventBlock = workflow.slice(workflow.indexOf('on:'), workflow.indexOf('\npermissions:'));
+  assert.ok(eventBlock.includes('workflow_dispatch:'));
+  assert.doesNotMatch(eventBlock, /\n  push:/);
+  assert.ok(workflow.includes("if: github.event_name == 'workflow_dispatch'"));
+});
