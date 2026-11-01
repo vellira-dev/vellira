@@ -133,6 +133,17 @@ test('rejects imports escaping the packed dist graph', () => {
   });
 });
 
+test('rejects an unreferenced or experimental JS chunk in the publishable tree', () => {
+  withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
+    fs.mkdirSync(path.join(dir, 'dist/shared-proof'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'dist/shared-proof/index.js'), 'export {};\\n');
+    assert.throws(
+      () => assertNativeSubpathContract(dir),
+      /Unreferenced native JS files would be published/
+    );
+  });
+});
+
 test('accepts shared chunks consumed by root and leaf entries once', () => {
   withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
     fs.writeFileSync(path.join(dir, 'dist/chunk-shared.js'), 'export const shared = 1;\n');

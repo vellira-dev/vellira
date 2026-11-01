@@ -100,6 +100,22 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
       pending.push(target);
     }
   }
+  if (present.length) {
+    // Reject JS that was accidentally staged by legacy subpath probes or
+    // included by an overbroad npm files glob but is not in the entry graph.
+    const walk = (folder) => fs.readdirSync(folder, { withFileTypes: true })
+      .flatMap((entry) => {
+        const file = path.join(folder, entry.name);
+        return entry.isDirectory() ? walk(file) : entry.isFile() && file.endsWith('.js') ? [file] : [];
+      });
+    const unreferenced = walk(dist).filter((file) => !seen.has(file));
+    if (unreferenced.length) {
+      throw new Error(
+        'Unreferenced native JS files would be published: ' +
+        unreferenced.map((file) => path.relative(dist, file)).join(', ')
+      );
+    }
+  }
   return { enabled: present.length > 0, checkedTargets: targets.length, checkedJsFiles: seen.size };
 }
 
