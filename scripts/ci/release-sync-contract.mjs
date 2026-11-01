@@ -35,6 +35,23 @@ export function isReleaseSyncFileSet(files) {
   );
 }
 
+// Atomic releases are deliberately NOT admitted by the legacy seven-manifest
+// fast path. This pure shape detector is for the separate validated atomic
+// classifier; file names alone never grant production admission.
+export const ATOMIC_STARTER_SYNC_FILES = Object.freeze([
+  'examples/workspace-starter/README.md',
+  'examples/workspace-starter/native/package-lock.json',
+  'examples/workspace-starter/native/package.json',
+  'examples/workspace-starter/web/package-lock.json',
+  'examples/workspace-starter/web/package.json',
+]);
+
+export function isAtomicReleaseSyncFileSet(files) {
+  if (!Array.isArray(files) || new Set(files).size !== files.length) return false;
+  const expected = sorted([...RELEASE_SYNC_MANIFESTS, ...ATOMIC_STARTER_SYNC_FILES]);
+  return JSON.stringify(sorted(files.map(normalizePath))) === JSON.stringify(expected);
+}
+
 export function classifyMergedReleaseSyncShape({
   baseSha,
   parents,
