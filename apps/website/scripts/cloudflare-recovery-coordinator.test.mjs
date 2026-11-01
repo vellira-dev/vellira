@@ -169,3 +169,40 @@ test('invalid commit timestamps are rejected rather than used as admission evide
     ...base, mainUpdatedAt: 'invalid',
   }), /Invalid immutable main commit date/);
 });
+
+test('one failed explicit recovery is terminal and requires investigation', () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [{ head_sha: b, event: 'workflow_dispatch', status: 'completed',
+      conclusion: 'failure', recoveryAttempt: true }],
+  });
+  assert.deepEqual(plan, { dispatch: false, reason: 'failed_recovery_requires_review',
+    requiresReview: true });
+});
+
+test('recovery budget is bounded per SHA and resets for a newer main', () => {
+  const earlier = [{ head_sha: b, event: 'workflow_dispatch', status: 'completed',
+    conclusion: 'failure', recoveryAttempt: true }];
+  const duplicate = decideRecovery({ ...base, stagingRuns: [...earlier, ...earlier] });
+  assert.equal(duplicate.reason, 'recovery_budget_exceeded');
+  assert.equal(duplicate.requiresReview, true);
+  const latest = decideRecovery({
+    ...base, mainSha: 'c'.repeat(40), stagingRuns: earlier,
+    mainUpdatedAt: '2026-11-01T12:55:00Z',
+  });
+  assert.equal(latest.target, 'staging');
+});
+
+test('rapid A B C merges select latest main only after its quiet period', () => {
+  const earlier = [a, b].map(sha => ({ head_sha: sha, event: 'workflow_dispatch',
+    status: 'completed', conclusion: 'failure', recoveryAttempt: true }));
+  const latestSha = 'c'.repeat(40);
+  assert.equal(decideRecovery({
+    ...base, mainSha: latestSha, stagingRuns: earlier,
+    mainUpdatedAt: '2026-11-01T12:59:30Z',
+  }).reason, 'main_quiet_period');
+  assert.equal(decideRecovery({
+    ...base, mainSha: latestSha, stagingRuns: earlier,
+    mainUpdatedAt: '2026-11-01T12:56:00Z',
+  }).target, 'staging');
+});
