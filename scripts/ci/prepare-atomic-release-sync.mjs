@@ -25,6 +25,19 @@ export function verifyPublishedRelease(version, { execute = execFileSync } = {})
   assert.equal(release.tag_name, 'v' + version);
   assert.equal(release.draft, false);
   assert.equal(release.prerelease, false);
+  const expectedSha = process.env.EXPECTED_TAG_SHA || process.env.GITHUB_SHA;
+  assert.match(expectedSha ?? '', /^[0-9a-f]{40}$/, 'Expected immutable release source SHA');
+  const tag = JSON.parse(execute('gh', [
+    'api', 'repos/vellira-dev/vellira/git/ref/tags/v' + version,
+  ], options));
+  let target = tag.object;
+  if (target?.type === 'tag') {
+    target = JSON.parse(execute('gh', [
+      'api', 'repos/vellira-dev/vellira/git/tags/' + target.sha,
+    ], options)).object;
+  }
+  assert.equal(target?.type, 'commit', 'Release tag must resolve to a commit');
+  assert.equal(target?.sha, expectedSha, 'Published release tag points at unexpected source SHA');
   for (const name of PUBLISHED_PACKAGES) {
     const published = execute('npm', [
       'view', name + '@' + version, 'version', '--json',
