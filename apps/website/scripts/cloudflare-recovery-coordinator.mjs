@@ -175,10 +175,14 @@ async function main() {
   assertCompleteRecoveryHistory(stagingResult, 'Staging');
   const observedPush = observedMainPushAt(stagingResult.workflow_runs, mainSha);
   // Missing push evidence must never authorize an unbounded history query.
-  const productionResult = observedPush === null ? [] :
-    await fetchCandidateProductionRuns(since => github(
+  if (observedPush === null) {
+    console.error('::error::No observed push timestamp for current main; cannot prove production replay history.');
+    process.exitCode = 1;
+    return;
+  }
+  const productionResult = await fetchCandidateProductionRuns(since => github(
       '/repos/' + OWNER + '/actions/workflows/' + PRODUCTION +
-      '/runs?created=>=' + encodeURIComponent(since) + '&per_page=100'), observedPush);
+      '/runs?created=' + encodeURIComponent('>=' + since) + '&per_page=100'), observedPush);
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
     const recoveryAttempt = run.event === 'workflow_dispatch' &&
       run.display_title === 'Production recovery ' + mainSha;
