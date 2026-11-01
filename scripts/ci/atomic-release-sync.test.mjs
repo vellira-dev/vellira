@@ -2,7 +2,7 @@ import { isReleaseSyncFileSet, isAtomicReleaseSyncFileSet } from './release-sync
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ATOMIC_RELEASE_SYNC_PATHS, assertAtomicSyncFileSet, assertStableReleaseVersion, verifyAtomicManifestTransition, verifyAtomicStarterTransition } from './atomic-release-sync.mjs';
+import { ATOMIC_RELEASE_SYNC_PATHS, assertAtomicSyncFileSet, assertStableReleaseVersion, verifyAtomicManifestTransition, verifyAtomicStarterTransition, verifyAtomicReleaseContents } from './atomic-release-sync.mjs';
 
 test('atomic file set includes seven package manifests and five Starter assets', () => {
   assert.equal(ATOMIC_RELEASE_SYNC_PATHS.length, 12);
@@ -100,4 +100,46 @@ test('atomic shape detection never relaxes the legacy production admission', () 
   assert.equal(isAtomicReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS.slice(0, -1)), false);
   assert.equal(isAtomicReleaseSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, ATOMIC_RELEASE_SYNC_PATHS[0]]), false);
   assert.equal(isAtomicReleaseSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, 'apps/website/src/app/page.tsx']), false);
+});
+
+test('atomic content authority validates registry lock integrity and blocks tampering', () => {
+  const before = {};
+  const after = {};
+  const old = '2.188.12';
+  const version = '2.189.0';
+  for (const p of ATOMIC_RELEASE_SYNC_PATHS.filter(p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json')))) {
+    before[p] = { name: p, version: old };
+    after[p] = { name: p, version };
+  }
+  before['examples/workspace-starter/README.md'] = 'Pinned **Vellira ' + old + ' packages**.';
+  after['examples/workspace-starter/README.md'] = 'Pinned **Vellira ' + version + ' packages**.';
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const prefix = 'examples/workspace-starter/' + platform + '/';
+    const name = platform === 'web' ? 'vellira-workspace-react-starter' : 'vellira-workspace-native-starter';
+    const oldDependencies = Object.fromEntries(packages.map(p => [p, old]));
+    const dependencies = Object.fromEntries(packages.map(p => [p, version]));
+    before[prefix + 'package.json'] = { name, private: true, dependencies: oldDependencies };
+    after[prefix + 'package.json'] = { name, private: true, dependencies };
+    after[prefix + 'package-lock.json'] = {
+      name, lockfileVersion: 3, packages: {
+        '': { dependencies },
+        ...Object.fromEntries(packages.map(p => ['node_modules/' + p, {
+          version, resolved: 'https://registry.npmjs.org/' + p + '/-/' + version + '.tgz',
+          integrity: 'sha512-YWJjZA==',
+        }])),
+      },
+    };
+  }
+  const input = { files: ATOMIC_RELEASE_SYNC_PATHS, before, after, version };
+  assert.equal(verifyAtomicReleaseContents(input).version, version);
+  const broken = structuredClone(after);
+  broken['examples/workspace-starter/web/package-lock.json'].packages['node_modules/@vellira-ui/react'].integrity = '';
+  assert.throws(() => verifyAtomicReleaseContents({ ...input, after: broken }), /integrity/);
+  const wrongPin = structuredClone(after);
+  wrongPin['examples/workspace-starter/native/package-lock.json'].packages['node_modules/@vellira-ui/icons'].version = old;
+  assert.throws(() => verifyAtomicReleaseContents({ ...input, after: wrongPin }), /pin mismatch/);
 });
