@@ -168,6 +168,26 @@ describe('clean Vite consumer workflow contract', () => {
     expect(proof).toContain('Packed public Button stylesheet differs');
   });
 
+  it('builds an additive Button stylesheet without replacing full Vellira CSS', () => {
+    const pkg = JSON.parse(
+      readFileSync('packages/react/package.json', 'utf8')
+    );
+    const producer = readFileSync(
+      'packages/react/scripts/css-button-parity-probe.mjs',
+      'utf8'
+    );
+    expect(pkg.exports['./styles'].default).toBe('./dist/styles.css');
+    expect(pkg.exports['./styles/button'].default).toBe(
+      './dist/styles/button.css'
+    );
+    expect(pkg.exports['./styles/button'].types).toBe('./styles.d.ts');
+    expect(pkg.scripts.build).toContain('--emit-button-style');
+    expect(pkg.sideEffects).toContain('**/*.css');
+    expect(producer).toContain('verifyButtonCssParity({ rootJs, fullCss, isolatedCss })');
+    expect(producer).toContain('buildTemporaryButtonCss({');
+    expect(producer).toContain("css.includes(Buffer.from(':root{--space-0:'))");
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
