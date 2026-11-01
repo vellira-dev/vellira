@@ -43,4 +43,31 @@ describe('Button bare appearance', () => {
     act(() => root.unmount());
     container.remove();
   });
+  it('uses the scoped disabled state without adding visual chrome', () => {
+    expect(styles.disabled).toBeTruthy();
+
+    for (const state of [{ disabled: true }, { loading: true }]) {
+      const container = document.createElement('div');
+      document.body.append(container);
+      const root = createRoot(container);
+
+      act(() =>
+        root.render(
+          <Button appearance='bare' {...state}>
+            Filters
+          </Button>
+        )
+      );
+
+      const button = container.querySelector('button');
+      expect(button?.disabled).toBe(true);
+      expect(button?.classList.contains(styles.bare)).toBe(true);
+      expect(button?.classList.contains(styles.button)).toBe(false);
+      expect(button?.classList.contains(styles.disabled)).toBe(true);
+      expect(button?.classList.contains('undefined')).toBe(false);
+
+      act(() => root.unmount());
+      container.remove();
+    }
+  });
 });
