@@ -129,6 +129,15 @@ test('atomic content authority validates registry lock integrity and blocks tamp
     const dependencies = Object.fromEntries(packages.map(p => [p, version]));
     before[prefix + 'package.json'] = { name, private: true, dependencies: oldDependencies };
     after[prefix + 'package.json'] = { name, private: true, dependencies };
+    before[prefix + 'package-lock.json'] = {
+      name, lockfileVersion: 3, packages: {
+        '': { dependencies: oldDependencies },
+        ...Object.fromEntries(packages.map(p => ['node_modules/' + p, {
+          version: old, resolved: 'https://registry.npmjs.org/' + p + '/-/' + old + '.tgz',
+          integrity: 'sha512-YWJjZA==',
+        }])),
+      },
+    };
     after[prefix + 'package-lock.json'] = {
       name, lockfileVersion: 3, packages: {
         '': { dependencies },
