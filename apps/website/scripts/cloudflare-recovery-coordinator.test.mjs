@@ -5,7 +5,7 @@ import { decideRecovery, assertCompleteRecoveryHistory, fetchCandidateProduction
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
 const now = Date.parse('2026-11-01T13:00:00Z');
-const base = { mainSha: b, productionSha: a, stagingRuns: [], productionRuns: [], nowMs: now };
+const base = { mainSha: b, productionSha: a, stagingRuns: [], productionRuns: [], nowMs: now, mainUpdatedAt: '2026-11-01T12:55:00Z' };
 const stage = {
   id: 123,
   head_sha: b,
@@ -272,4 +272,12 @@ test('quiet window follows observed push timestamp rather than git committer dat
   assert.equal(latest, '2026-11-01T12:59:30.000Z');
   assert.equal(decideRecovery({ ...base, mainUpdatedAt: latest }).reason, 'main_quiet_period');
   assert.equal(observedMainPushAt([], b), null);
+});
+
+test('missing push evidence blocks recovery staging instead of bypassing the quiet period', () => {
+  assert.deepEqual(decideRecovery({ ...base, mainUpdatedAt: null }), {
+    dispatch: false,
+    reason: 'main_push_observation_missing',
+    requiresReview: true,
+  });
 });
