@@ -9,6 +9,14 @@ const RUNTIME_URL = 'https://vellira.dev/__vellira_runtime';
 const MAIN_QUIET_PERIOD_MS = 2 * 60_000;
 const MAX_RECOVERY_DISPATCHES_PER_SHA = 1;
 
+export function assertCompleteRecoveryHistory(result, label) {
+  assert.ok(Number.isSafeInteger(result?.total_count) && result.total_count >= 0,
+    label + ' history count missing');
+  assert.ok(result.total_count < 100, label + ' history requires pagination before safe dispatch');
+  assert.ok(Array.isArray(result.workflow_runs), label + ' history runs missing');
+  return result;
+}
+
 export function decideRecovery({
   mainSha,
   productionSha,
@@ -135,8 +143,7 @@ async function main() {
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
-  assert.ok(productionResult.total_count < 100,
-    'Production history requires pagination before safe replay');
+  assertCompleteRecoveryHistory(productionResult, 'Production');
   const [stagingResult, mainCommit] = await Promise.all([
     github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100'),
     github('/repos/' + OWNER + '/commits/' + mainSha),
@@ -144,7 +151,7 @@ async function main() {
   const mainUpdatedAt = mainCommit.commit?.committer?.date;
   assert.equal(typeof mainUpdatedAt, 'string', 'Missing immutable main commit timestamp');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
-  assert.ok(stagingResult.total_count < 100, 'Staging history requires pagination before safe dispatch');
+  assertCompleteRecoveryHistory(stagingResult, 'Staging');
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
     const recoveryAttempt = run.event === 'workflow_dispatch' &&
       run.display_title === 'Production recovery ' + mainSha;
