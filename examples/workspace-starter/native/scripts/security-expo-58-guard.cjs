@@ -16,9 +16,9 @@ const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'u
 const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
-// Replaced only after inspecting the first authenticated published-tarball
-// source fingerprint from CI. Until then this candidate MUST NOT pass CI.
-const APPROVED_SOURCE_SHA256 = '0000000000000000000000000000000000000000000000000000000000000000';
+// Attested against the exact clean npm CI install and published CLI tarball
+// verified with the package-lock SRI (GitHub Action run 41349253964).
+const APPROVED_SOURCE_SHA256 = 'b1b370abd2c05a281a7fa8bc8600702002bc69bf4079026bdf12b074a1ee60fa';
 const EXPECTED_INTEGRITY = 'sha512-voZUcir9mEwvLKBNqQM6Jy2Yp67z8ONmcINXb6ZrLMayb7yxzwvEnN0eeH8ADzUABKL288pv1eJ1WRqtYxXQ/Q==';
 const LOCKED_CLI = 'node_modules/expo/node_modules/@expo/cli';
 assert.equal(metadata.version, '58.1.18', 'Unsupported Expo CLI: source review required');
