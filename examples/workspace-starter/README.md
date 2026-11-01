@@ -100,28 +100,23 @@ npm ci
 npm run start
 ```
 
-The Native Starter applies two source-pinned local mitigations during a standard
-`npm ci` through its `postinstall`: the `node-forge@1.4.0` RSA backport
-and a bounded-output guard for installed `@expo/cli@58.1.15` with Zod 3.
-The guard limits plugin output to 64 KiB of accumulated UTF-8 input, and
-rejects JSON arrays with more than 128 entries before Zod validation.
-Both patched file hashes are verified by `npm run security:verify-patch`. The supported Expo 58 runtime guard is `security-expo-58-guard.cjs`; the older Expo 57 patcher and the Expo 58 prototype are investigation artifacts, not supported installation commands.
+The Native Starter uses **published node-forge 1.4.2**, authenticated by an
+exact RSA source SHA-256 check; the 1.4.0 local backport is retired.
+The remaining source-pinned local Expo CLI 58 guard bounds the Zod 3 plugin
+output collector (64 KiB accumulated UTF-8, maximum 128 JSON items).
+`npm run security:verify-patch` verifies both protections.
 
-These are **local mitigations**, not patched upstream dependency releases.
-The Zod guard covers the installed Expo CLI DevTools plugin output
-collector only. It does not patch Zod itself, establish remote exploitability,
-or prove every Zod call site safe. Dependabot #141 and #142 remain open;
-see issue #1890.
-
+The Zod collector mitigation is **not an upstream Zod fix** and does not prove
+every Zod entrypoint safe. Dependabot #142 and issue #1890 remain open.
+The nested-DigestAlgorithm RSA regression rejects malformed signatures on
+the published node-forge 1.4.2 runtime.
 Before **direct** `npx expo`, `node`, custom builds, or repackaging, run
 `npm run security:verify-patch` in the Native directory. Direct commands
 can bypass the npm `prestart` / `preandroid` / `preios` / `preweb` hooks.
-Do **not** treat `npm ci --ignore-scripts` as a secure installation: it
-skips both patches. After such an install, explicitly apply both with
-`node scripts/apply-node-forge-patch.cjs` and
-`node scripts/security-expo-58-guard.cjs --apply`, then run
-`npm run security:verify-patch`. Reinstalling, copying or archiving
-`node_modules` requires verification again. When the installed Expo CLI
+Do **not** treat `npm ci --ignore-scripts` as a secure installation: it skips
+the Expo CLI guard. Run `node scripts/security-expo-58-guard.cjs --apply`
+and then `npm run security:verify-patch`, which also checks the official
+Forge RSA source. Reinstalling or copying `node_modules` requires rechecking. When the installed Expo CLI
 version or source bytes change, the local guard fails closed and must be
 re-reviewed, not silently re-used.
 
