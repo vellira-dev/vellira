@@ -292,3 +292,9 @@ test('Starter fallback retains exact release merge trigger and no-op change gate
   assert.ok(workflow.includes("startsWith(github.event.head_commit.message, 'chore(release): sync package versions')"));
   assert.ok(workflow.includes("steps.changes.outputs.changed == 'true'"));
 });
+
+test('all three atomic release paths reject pnpm lock changes', () => {
+  const source = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  assert.equal((source.match(/Require unchanged pnpm lock for atomic release admission/g) ?? []).length, 3);
+  assert.equal((source.match(/git diff --quiet -- pnpm-lock.yaml/g) ?? []).length, 3);
+});
