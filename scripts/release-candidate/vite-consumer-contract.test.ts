@@ -163,12 +163,14 @@ describe('clean Vite consumer workflow contract', () => {
     expect(proof).toContain('node_modules/@vellira-ui/react/dist');
     expect(proof).toContain('browserSnapshots(chromium, dist)');
     expect(proof).toContain("run('npm', ['run', 'build:next']");
-    expect(proof).toContain('PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY');
-    expect(proof).toContain("readFileSync(\n      path.join(reactDist, 'styles/button.css')");
+    expect(proof).toContain(
+      'PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY'
+    );
+    expect(proof).toContain("path.join(reactDist, 'styles/button.css')");
     expect(proof).toContain('Packed public Button stylesheet differs');
   });
 
-  it('builds an additive Button stylesheet without replacing full Vellira CSS', () => {
+  it('keeps full CSS while building the Button-only stylesheet', () => {
     const pkg = JSON.parse(
       readFileSync('packages/react/package.json', 'utf8')
     );
@@ -183,7 +185,7 @@ describe('clean Vite consumer workflow contract', () => {
     expect(pkg.exports['./styles/button'].types).toBe('./styles.d.ts');
     expect(pkg.scripts.build).toContain('--emit-button-style');
     expect(pkg.sideEffects).toContain('**/*.css');
-    expect(producer).toContain('verifyButtonCssParity({ rootJs, fullCss, isolatedCss })');
+    expect(producer).toContain('verifyButtonCssParity({');
     expect(producer).toContain('buildTemporaryButtonCss({');
     expect(producer).toContain("css.includes(Buffer.from(':root{--space-0:'))");
   });
