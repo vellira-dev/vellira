@@ -1,14 +1,16 @@
-// #2014: manual-only packed Vite + Next.js + Chromium Button CSS proof.
-// Compares the legacy full CSS against the new additive CSS subpath using
-// the SAME exact candidate. No publication occurs from this proof.
+// #2014: manual-only packed Vite/Next CSS proof across Chromium/Firefox/WebKit.
+// Compare same-candidate full and additive Button styles, including keyboard
+// interaction and Next.js production browser rendering. No publication.
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
+const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const { gzipSync } = require('node:zlib');
 const { buildTemporaryButtonCss } = require('./button-minimal-packed-css.cjs');
+const { ENGINES, assertCompleteButtonBrowserParity } = require('./button-browser-acceptance.cjs');
 const {
   WEB_PACKAGE_NAMES,
   captureConsumerHarness,
@@ -151,6 +153,7 @@ function createFixture(root, candidate) {
     'type Theme = "light" | "dark" | "highContrast";',
     'export default function ButtonSurface() {',
     '  const [theme, setTheme] = useState<Theme>("light");',
+    '  const [activations, setActivations] = useState(0);',
     '  return <ThemeProvider theme={theme}>',
     '    <main id="surface" aria-label="Vellira Button CSS consumer proof">',
     '      <nav aria-label="Theme switcher">',
@@ -158,7 +161,7 @@ function createFixture(root, candidate) {
     '        <button data-theme-choice="dark" onClick={() => setTheme("dark")}>Dark theme</button>',
     '        <button data-theme-choice="highContrast" onClick={() => setTheme("highContrast")}>Contrast theme</button>',
     '      </nav>',
-    '      <Button data-case="solid" color="primary" appearance="solid">Solid</Button>',
+    '      <Button data-case="solid" color="primary" appearance="solid" onClick={() => setActivations(n => n + 1)}>Solid</Button>',
     '      <Button data-case="outline" color="neutral" appearance="outline">Outline</Button>',
     '      <Button data-case="ghost" color="success" appearance="ghost">Ghost</Button>',
     '      <Button data-case="soft" color="warning" appearance="soft">Soft</Button>',
@@ -168,6 +171,7 @@ function createFixture(root, candidate) {
     '      <Button data-case="small" color="neutral" size="sm">Small</Button>',
     '      <Button data-case="large" color="primary" size="lg">Large</Button>',
     '      <Button data-case="icon" iconOnly iconStart={<span>+</span>} aria-label="Add">+</Button>',
+    '      <output data-keyboard-clicks>{activations}</output>',
     '    </main>',
     '  </ThemeProvider>;',
     '}',
@@ -229,72 +233,266 @@ async function staticServer(root) {
   };
 }
 
-async function browserSnapshots(chromium, dir) {
-  const server = await staticServer(dir);
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+// An actual Next.js production server is required: Next build output alone
+// cannot establish CSS order, hydration or keyboard behavior in the browser.
+async function availablePort() {
+  const server = net.createServer();
+  return await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      server.close((error) => {
+        if (error || !address || typeof address === 'string') {
+          reject(error || new Error('Cannot allocate a Next.js test port.'));
+        } else {
+          resolve(address.port);
+        }
+      });
+    });
+  });
+}
+
+function probeHttp(url) {
+  return new Promise((resolve, reject) => {
+    const request = http.get(url, (response) => {
+      const data = [];
+      response.on('data', (part) => data.push(part));
+      response.on('end', () => resolve({
+        status: response.statusCode ?? 0,
+        body: Buffer.concat(data).toString('utf8'),
+      }));
+    });
+    request.setTimeout(3000, () =>
+      request.destroy(new Error('Next.js HTTP probe timed out.'))
+    );
+    request.once('error', reject);
+  });
+}
+
+async function stopNext(child) {
+  if (child.exitCode !== null) return;
+  child.kill('SIGTERM');
+  await new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      if (child.exitCode === null) child.kill('SIGKILL');
+      resolve();
+    }, 5000);
+    child.once('close', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+}
+
+async function nextProductionServer(root) {
+  const port = await availablePort();
+  const bin = path.join(root, 'node_modules/next/dist/bin/next');
+  const child = spawn(
+    process.execPath,
+    [bin, 'start', '--hostname', '127.0.0.1', '--port', String(port)],
+    {
+      cwd: root,
+      env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
+  let output = '';
+  child.stdout.on('data', (part) => { output += String(part).slice(-10000); });
+  child.stderr.on('data', (part) => { output += String(part).slice(-10000); });
+  const url = 'http://127.0.0.1:' + port + '/';
+  const deadline = Date.now() + 90000;
+  try {
+    while (Date.now() < deadline) {
+      if (child.exitCode !== null) {
+        throw new Error('Next.js production server exited: ' + output.slice(-2500));
+      }
+      try {
+        const result = await probeHttp(url);
+        if (result.status === 200 &&
+            result.body.includes('Vellira Button CSS consumer proof') &&
+            result.body.includes('Solid')) {
+          return {
+            url,
+            close: () => stopNext(child),
+          };
+        }
+      } catch {
+        // The process has not started listening yet. Retry until the deadline.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    throw new Error('Next.js production server readiness timed out: ' + output.slice(-2500));
+  } catch (error) {
+    await stopNext(child);
+    throw error;
+  }
+}
+
+async function browserSnapshots(browserType, url) {
+  const name = browserType.name();
+  const launchOptions = name === 'chromium'
+    ? { headless: true, args: ['--no-sandbox'] }
+    : { headless: true };
+  // The Playwright CI image executes this job as root, while GitHub mounts
+  // HOME=/github/home owned by pwuser. Firefox refuses that mixed ownership.
+  // Fix only the spawned Firefox process; keep the parent HOME unchanged so
+  // the exact-SHA Git checkout trust and candidate proof remain intact.
+  if (name === 'firefox' && process.getuid?.() === 0) {
+    const rootHome = '/root';
+    if (fs.statSync(rootHome).uid !== process.getuid()) {
+      throw new Error('Firefox requires a HOME owned by its launch user.');
+    }
+    launchOptions.env = { ...process.env, HOME: rootHome };
+  }
+  const browser = await browserType.launch(launchOptions);
   try {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
-    const frames = {};
-    for (const viewport of [{ width: 1180, height: 820 }, { width: 390, height: 844 }]) {
-      await page.setViewportSize(viewport);
-      await page.goto(server.url, { waitUntil: 'networkidle' });
-      await page.locator('[data-case="solid"]').waitFor();
-      for (const choice of ['light', 'dark', 'highContrast']) {
-        await page.locator('[data-theme-choice="' + choice + '"]').click();
-        const expected = choice === 'highContrast' ? 'high-contrast' : choice;
-        await page.waitForFunction((name) =>
-          document.documentElement.dataset.velliraTheme === name, expected);
+    try {
+      const frames = {};
+      for (const viewport of [{ width: 1180, height: 820 }, { width: 390, height: 844 }]) {
+        await page.setViewportSize(viewport);
+        await page.goto(url, { waitUntil: 'networkidle' });
+        await page.locator('[data-case="solid"]').waitFor();
+        for (const choice of ['light', 'dark', 'highContrast']) {
+          await page.locator('[data-theme-choice="' + choice + '"]').click();
+          const expected = choice === 'highContrast' ? 'high-contrast' : choice;
+          await page.waitForFunction((theme) =>
+            document.documentElement.dataset.velliraTheme === theme, expected);
+          await page.mouse.move(1, 1);
+          await page.evaluate(() => document.fonts.ready);
+          const snapshot = await page.evaluate(() => {
+            const props = [
+              'display', 'color', 'background-color', 'background-image',
+              'border-color', 'border-width', 'border-style', 'border-radius',
+              'font-size', 'font-family', 'font-weight', 'line-height',
+              'height', 'padding-left', 'padding-right', 'box-shadow',
+              'outline-color', 'outline-style', 'opacity', 'cursor',
+              'transform', 'animation-name',
+            ];
+            const nodes = [...document.querySelectorAll('[data-case]')];
+            return {
+              theme: document.documentElement.dataset.velliraTheme,
+              buttonCount: nodes.length,
+              cases: Object.fromEntries(nodes.map((element) => {
+                const computed = getComputedStyle(element);
+                return [element.dataset.case, {
+                  className: element.className,
+                  disabled: element.hasAttribute('disabled'),
+                  busy: element.getAttribute('aria-busy'),
+                  style: Object.fromEntries(props.map((p) => [p, computed.getPropertyValue(p)])),
+                }];
+              })),
+            };
+          });
+          if (snapshot.buttonCount !== 10 ||
+              snapshot.cases.solid.style['background-color'] === 'rgba(0, 0, 0, 0)' ||
+              !snapshot.cases.solid.className.includes('_button_') ||
+              !snapshot.cases.disabled.disabled) {
+            throw new Error(name + ' ' + viewport.width +
+              ' does not render all styled Vellira Buttons.');
+          }
+          const image = await page.locator('#surface').screenshot({
+            animations: 'disabled',
+            caret: 'hide',
+          });
+          frames[viewport.width + '-' + choice] = {
+            computed: snapshot,
+            screenshotSha256: sha256(image),
+          };
+        }
+
+        await page.locator('[data-case="solid"]').hover();
+        const hover = await page.locator('[data-case="solid"]').evaluate((el) => {
+          const style = getComputedStyle(el);
+          return [style.color, style.backgroundColor, style.transform];
+        });
+        frames[viewport.width + '-hover'] = { computed: hover };
+
+        // Tab to the real Button; both Enter and Space must activate it.
+        // Disabled and loading Button must remain native-disabled, icon-only
+        // needs its accessible name, and keyboard focus must be visible.
         await page.mouse.move(1, 1);
-        await page.evaluate(() => document.fonts.ready);
-        const snapshot = await page.evaluate(() => {
-          const props = [
-            'display', 'color', 'background-color', 'border-color',
-            'border-width', 'border-radius', 'font-size', 'font-family',
-            'font-weight', 'line-height', 'height', 'padding-left',
-            'padding-right', 'box-shadow', 'outline-color', 'cursor',
-            'transform', 'animation-name',
-          ];
-          const nodes = [...document.querySelectorAll('[data-case]')];
+        await page.locator('[data-theme-choice="highContrast"]').focus();
+        await page.keyboard.press('Tab');
+        const focused = await page.locator('[data-case="solid"]').evaluate((el) =>
+          document.activeElement === el && el.matches(':focus-visible')
+        );
+        if (!focused) {
+          throw new Error(name + ' keyboard Tab focus is not visible on Button.');
+        }
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Space');
+        await page.waitForFunction(() =>
+          document.querySelector('[data-keyboard-clicks]')?.textContent === '2'
+        );
+        const keyboard = await page.evaluate(() => {
+          const solid = document.querySelector('[data-case="solid"]');
+          const disabled = document.querySelector('[data-case="disabled"]');
+          const loading = document.querySelector('[data-case="loading"]');
+          const icon = document.querySelector('[data-case="icon"]');
+          const styles = getComputedStyle(solid);
           return {
-            theme: document.documentElement.dataset.velliraTheme,
-            buttonCount: nodes.length,
-            cases: Object.fromEntries(nodes.map((element) => {
-              const computed = getComputedStyle(element);
-              return [element.dataset.case, {
-                className: element.className,
-                disabled: element.hasAttribute('disabled'),
-                busy: element.getAttribute('aria-busy'),
-                style: Object.fromEntries(props.map((p) => [p, computed.getPropertyValue(p)])),
-              }];
-            })),
+            focused: document.activeElement === solid,
+            focusVisible: solid.matches(':focus-visible'),
+            activations: Number(document.querySelector('[data-keyboard-clicks]').textContent),
+            nativeDisabled: disabled.matches(':disabled'),
+            loadingDisabled: loading.matches(':disabled'),
+            loadingBusy: loading.getAttribute('aria-busy') === 'true',
+            iconLabel: icon.getAttribute('aria-label'),
+            focusedStyles: {
+              outline: styles.outline,
+              boxShadow: styles.boxShadow,
+              borderColor: styles.borderColor,
+            },
           };
         });
-        if (snapshot.buttonCount !== 10 ||
-            snapshot.cases.solid.style['background-color'] === 'rgba(0, 0, 0, 0)' ||
-            !snapshot.cases.solid.className.includes('_button_') ||
-            !snapshot.cases.disabled.disabled) {
-          throw new Error('Browser fixture does not render a styled Vellira Button.');
+        if (!keyboard.focused || !keyboard.focusVisible ||
+            keyboard.activations !== 2 || !keyboard.nativeDisabled ||
+            !keyboard.loadingDisabled || !keyboard.loadingBusy ||
+            keyboard.iconLabel !== 'Add') {
+          throw new Error(name + ' real Button keyboard/ARIA proof failed.');
         }
-        const image = await page.locator('#surface').screenshot({
-          animations: 'disabled',
-          caret: 'hide',
-        });
-        frames[viewport.width + '-' + choice] = {
-          computed: snapshot,
-          screenshotSha256: sha256(image),
+        frames[viewport.width + '-keyboard'] = {
+          computed: keyboard,
+          screenshotSha256: sha256(await page.locator('#surface').screenshot({
+            animations: 'disabled',
+            caret: 'hide',
+          })),
         };
       }
-      await page.locator('[data-case="solid"]').hover();
-      const hover = await page.locator('[data-case="solid"]').evaluate((el) => {
-        const s = getComputedStyle(el);
-        return [s.color, s.backgroundColor, s.transform];
-      });
-      frames[viewport.width + '-hover'] = { computed: hover };
+      return frames;
+    } finally {
+      await page.close();
     }
-    await page.close();
-    return frames;
   } finally {
     await browser.close();
+  }
+}
+
+async function snapshotAllEngines(browserTypes, url) {
+  const result = {};
+  for (const name of ENGINES) {
+    const browserType = browserTypes[name];
+    if (!browserType) throw new Error('Missing ' + name + ' Playwright engine.');
+    result[name] = await browserSnapshots(browserType, url);
+  }
+  return result;
+}
+
+async function captureViteBrowserMatrix(browserTypes, dist) {
+  const server = await staticServer(dist);
+  try {
+    return await snapshotAllEngines(browserTypes, server.url);
+  } finally {
+    await server.close();
+  }
+}
+
+async function captureNextBrowserMatrix(browserTypes, fixture) {
+  const server = await nextProductionServer(fixture);
+  try {
+    return await snapshotAllEngines(browserTypes, server.url);
+  } finally {
     await server.close();
   }
 }
@@ -349,7 +547,7 @@ async function main() {
         buttonExport?.types !== './styles.d.ts') {
       throw new Error('Packed React manifest is missing the public Button CSS export.');
     }
-    const { chromium } = require(path.join(fixture, 'node_modules/@playwright/test'));
+    const browserTypes = require(path.join(fixture, 'node_modules/@playwright/test'));
     const variants = {};
     for (const name of ['full', 'minimal']) {
       setVariant(fixture, name);
@@ -357,7 +555,7 @@ async function main() {
       const dist = path.join(fixture, 'vite-dist');
       variants[name] = {
         vite: assets(path.join(dist, 'assets')),
-        browser: await browserSnapshots(chromium, dist),
+        viteBrowser: await captureViteBrowserMatrix(browserTypes, dist),
       };
       fs.rmSync(path.join(fixture, '.next'), { recursive: true, force: true });
       run('npm', ['run', 'build:next'], {
@@ -365,20 +563,19 @@ async function main() {
         env: { CI: '1', NEXT_TELEMETRY_DISABLED: '1' },
       });
       variants[name].next = assets(path.join(fixture, '.next/static'));
+      variants[name].nextBrowser = await captureNextBrowserMatrix(browserTypes, fixture);
     }
 
     const before = variants.full;
     const after = variants.minimal;
-    if (JSON.stringify(before.browser) !== JSON.stringify(after.browser)) {
-      throw new Error('Packed Vite browser computed styles or screenshots diverge.');
-    }
+    const browserMatrix = assertCompleteButtonBrowserParity(variants);
     if (after.vite.cssGzipBytes >= before.vite.cssGzipBytes ||
         after.next.cssGzipBytes >= before.next.cssGzipBytes) {
       throw new Error('No independently measured Vite and Next CSS gzip reduction.');
     }
     const proof = {
-      schemaVersion: 1,
-      state: 'PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY',
+      schemaVersion: 2,
+      state: 'PACKED_PUBLIC_BUTTON_CSS_CROSS_BROWSER_PARITY',
       candidateSha: candidate.manifest.source.sha,
       candidateVersion: candidate.manifest.version,
       manifestSha256: candidate.manifestSha256,
@@ -391,15 +588,16 @@ async function main() {
       packedButtonCssSha256: sha256(buttonCss),
       packedButtonCssBytes: buttonCss.length,
       packedButtonExport: '@vellira-ui/react/styles/button',
+      browserMatrix,
       variants,
       deltas: {
         vite: delta(before.vite, after.vite),
         next: delta(before.next, after.next),
       },
       limitations: [
-        'Additive Button CSS subpath is tested from an exact packed candidate; not yet published to npm.',
-        'Vite computed-style/screenshots are Chromium-only, not cross-browser.',
-        'Next.js is a clean production-build size proof; browser parity here is Vite Chromium only.',
+        'Additive Button CSS subpath is tested from exact packed npm candidate, not direct registry installation.',
+        'Chromium, Firefox and WebKit are tested in the Playwright Linux container; WebKit is not native macOS Safari.',
+        'This matrix verifies selected computed properties, snapshots, focus, native disabled and keyboard activation; not full WCAG or all apps.',
         'Emitted gzip assets are not actual HTTP transferred bytes or runtime memory.',
       ],
     };
@@ -416,7 +614,9 @@ async function main() {
       reducedViteCssGzip: after.vite.cssGzipBytes,
       fullNextCssGzip: before.next.cssGzipBytes,
       reducedNextCssGzip: after.next.cssGzipBytes,
-      browserComparisons: Object.keys(before.browser).length,
+      browserComparisons: browserMatrix.comparedStatePairs,
+      engines: browserMatrix.engines,
+      targets: browserMatrix.targets,
     }));
   } finally {
     fs.rmSync(fixture, { recursive: true, force: true });
