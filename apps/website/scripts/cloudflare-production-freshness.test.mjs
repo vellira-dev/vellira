@@ -617,3 +617,53 @@ test('atomic sync never inherits seven-manifest production freshness bypass by s
   );
   assert.equal(mock.calls.length, 2, 'Atomic shape must not fetch manifests to grant a bypass');
 });
+
+test('valid atomic release-sync advance is production equivalent after full SHA content proof', async () => {
+  const old = '2.188.12';
+  const version = '2.189.0';
+  const documents = {};
+  const paths = [...RELEASE_SYNC_MANIFESTS, ...ATOMIC_STARTER_SYNC_FILES];
+  for (const file of RELEASE_SYNC_MANIFESTS) {
+    documents[A + ':' + file] = { name: file, version: old };
+    documents[B + ':' + file] = { name: file, version };
+  }
+  documents[A + ':examples/workspace-starter/README.md'] = 'Pinned **Vellira ' + old + ' packages**.';
+  documents[B + ':examples/workspace-starter/README.md'] = 'Pinned **Vellira ' + version + ' packages**.';
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const prefix = 'examples/workspace-starter/' + platform + '/';
+    const name = platform === 'web' ? 'vellira-workspace-react-starter' : 'vellira-workspace-native-starter';
+    const oldDeps = Object.fromEntries(packages.map(pkg => [pkg, old]));
+    const newDeps = Object.fromEntries(packages.map(pkg => [pkg, version]));
+    documents[A + ':' + prefix + 'package.json'] = { name, private: true, version: '1.0.0', dependencies: oldDeps };
+    documents[B + ':' + prefix + 'package.json'] = { name, private: true, version: '1.0.0', dependencies: newDeps };
+    const mkLock = (v, deps) => ({
+      name, version: '1.0.0', lockfileVersion: 3,
+      packages: {
+        '': { dependencies: deps },
+        ...Object.fromEntries(packages.map(pkg => [
+          'node_modules/' + pkg,
+          { version: v, resolved: 'https://registry.npmjs.org/' + pkg + '/-/' + v + '.tgz', integrity: 'sha512-YWJjZA==' },
+        ])),
+      },
+    });
+    documents[A + ':' + prefix + 'package-lock.json'] = mkLock(old, oldDeps);
+    documents[B + ':' + prefix + 'package-lock.json'] = mkLock(version, newDeps);
+  }
+  const { result } = await freshness({
+    documents,
+    comparison: compare(paths, {
+      commits: [{
+        sha: B,
+        author: { login: 'vellira-release-sync[bot]' },
+        commit: { message: 'chore(release): sync package versions (#2045)' },
+        parents: [{ sha: A }],
+      }],
+    }),
+  });
+  assert.equal(result.deploymentEquivalent, true);
+  assert.deepEqual(result.relevantPaths, []);
+});
