@@ -163,7 +163,9 @@ describe('clean Vite consumer workflow contract', () => {
     expect(proof).toContain('node_modules/@vellira-ui/react/dist');
     expect(proof).toContain('browserSnapshots(chromium, dist)');
     expect(proof).toContain("run('npm', ['run', 'build:next']");
-    expect(proof).toContain('PACKED_CONSUMER_AND_CHROMIUM_PARITY');
+    expect(proof).toContain('PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY');
+    expect(proof).toContain("readFileSync(\n      path.join(reactDist, 'styles/button.css')");
+    expect(proof).toContain('Packed public Button stylesheet differs');
   });
 
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
@@ -174,6 +176,7 @@ describe('clean Vite consumer workflow contract', () => {
 
     expect(script).toContain("import '@vellira-ui/tokens/css'");
     expect(script).toContain("import '@vellira-ui/react/styles'");
+    expect(script).toContain("'@vellira-ui/react/styles/button'");
     expect(script).toContain(
       "import { Button, Input } from '@vellira-ui/react'"
     );
