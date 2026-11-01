@@ -49,3 +49,16 @@ test('release workflow prepares a combined PR only after publishing', () => {
     assert.ok(proposal.includes(path) || (path.startsWith('packages/') && proposal.includes('packages/*/package.json')), 'Missing atomic PR path: ' + path);
   }
 });
+
+test('manual release recovery also prepares one combined PR', () => {
+  const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  const recovery = workflow.slice(workflow.indexOf('  recover-existing-release:'));
+  const verify = recovery.indexOf('      - name: Create or verify GitHub Release on existing tag');
+  const prepare = recovery.indexOf('      - name: Prepare verified recovered release and Starter snapshot');
+  const propose = recovery.indexOf('      - name: Create version sync PR');
+  assert.ok(verify >= 0 && prepare > verify && propose > prepare);
+  const proposal = recovery.slice(propose, recovery.indexOf('      - name: Verify version sync PR creation', propose));
+  for (const p of ATOMIC_RELEASE_SYNC_PATHS) {
+    assert.ok(proposal.includes(p) || (p.startsWith('packages/') && proposal.includes('packages/*/package.json')), 'Missing recovery sync path: ' + p);
+  }
+});
