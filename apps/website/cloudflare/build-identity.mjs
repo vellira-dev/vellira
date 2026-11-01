@@ -14,9 +14,14 @@ function buildSource(env) {
     return { sha: env.GITHUB_SHA, label: 'GITHUB_SHA' };
   }
 
+  // Both normal workflow_run promotion and the verified staging replay
+  // workflow_dispatch use a staged candidate. Staging evidence, admission,
+  // and protected approval are validated by the workflow before this guard.
+  // This function only binds the immutable build ID to the actual checkout.
   const staged =
     env.CANDIDATE_SOURCE === 'staging' &&
-    env.GITHUB_EVENT_NAME === 'workflow_run';
+    (env.GITHUB_EVENT_NAME === 'workflow_run' ||
+      env.GITHUB_EVENT_NAME === 'workflow_dispatch');
   const recovery =
     env.CANDIDATE_SOURCE === 'emergency-recovery' &&
     env.GITHUB_EVENT_NAME === 'workflow_dispatch';

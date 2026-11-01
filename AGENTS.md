@@ -1,3 +1,20 @@
+## Maintainer / AI technical passport
+
+For Vellira maintainer or AI-assisted engineering work, first read the [private Technical Passport #1020](https://github.com/vellira-dev/vellira-internal/issues/1020) and its latest dated comments. Verify the current `main` SHAs of `vellira`, `vellira-internal`, and `vellira-backend`; inspect current source, architecture decisions, issues, open PRs, and validation evidence. Never infer current state from chat memory or an old green CI result.
+
+External public contributors without private access follow the public repository rules and must not be blocked by this requirement. Maintainers without access must disclose the limitation and hold protected Factory, security, CI spending, or production work rather than guessing. Do not publish private passport content in public code or PRs.
+
+Before proposing a maintainer or AI-assisted change:
+
+- Identify the root problem and any existing change-intent PR; reuse the active PR for the same problem.
+- Record relevant commit SHAs, accepted scope, risks, a minimal fix, rollback, and required positive and negative tests.
+- Estimate total Actions and provider costs, including other triggered workflows and retries. A private monthly CI budget target is not an enforced hard cap; hold discretionary paid work when authorized remaining capacity is unknown.
+- Obtain owner approval and appropriate independent review for critical CI/CD, security, production, public API, or Factory economic changes. Never self-approve a merge or deployment.
+
+Record the passport checkpoint and verification evidence in the maintainer/AI section of the existing PR template. An exact-head green test is not proof of a production deployment. After an authorized merge, append a dated private passport comment with the repository, PR and merge SHA, exact test/run IDs, deployed runtime identity if relevant, measured costs or unknowns, remaining risks, and next decision. Mark unverified results `PENDING`, `BLOCKED`, or `UNVERIFIED`, not `COMPLETED`.
+
+The passport is a continuity and evidence ledger, not a replacement for canonical architecture, the Definition of Done, or required checks. This protocol introduces no new workflow or automated CI gate.
+
 ## Repository Definition of Done
 
 Before calling any Vellira task Done, merge-ready, or safe to close, read and
