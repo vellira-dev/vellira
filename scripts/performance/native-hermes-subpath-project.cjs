@@ -18,6 +18,39 @@ if (exactTarball) {
     throw new Error('Exact native candidate must be an existing absolute regular .tgz file');
   }
 }
+const packageVersion = JSON.parse(
+  fs.readFileSync(path.join(native, 'package.json'), 'utf8')
+).version;
+let candidateHash;
+if (exactTarball) {
+  const requiredHash = process.env.VELLIRA_NATIVE_CANDIDATE_SHA256;
+  if (!/^[a-f0-9]{64}$/.test(requiredHash ?? '')) {
+    throw new Error('Exact Native candidate requires its SHA256 pinned.');
+  }
+  candidateHash = createHash('sha256').update(fs.readFileSync(exactTarball)).digest('hex');
+  if (candidateHash !== requiredHash) {
+    throw new Error('Exact candidate SHA256 mismatch: ' + candidateHash);
+  }
+  const inspected = spawnSync('tar', ['-xzOf', exactTarball, 'package/package.json'], {
+    encoding: 'utf8', maxBuffer: 1024 * 1024,
+  });
+  if (inspected.error || inspected.status !== 0) {
+    throw new Error('Exact Native candidate is not a valid npm tarball.');
+  }
+  let packedManifest;
+  try {
+    packedManifest = JSON.parse(inspected.stdout);
+  } catch {
+    throw new Error('Exact Native candidate has an invalid packed manifest.');
+  }
+  if (packedManifest.name !== '@vellira-ui/react-native' ||
+      packedManifest.version !== packageVersion ||
+      !['.', './button', './theme', './select'].every(
+        (entry) => typeof packedManifest.exports?.[entry]?.['react-native'] === 'string'
+      )) {
+    throw new Error('Exact Native candidate name/version/subpath authority mismatch.');
+  }
+}
 // Optional true native layout check. The default context/Button proof is unchanged.
 const sheetProof = process.env.VELLIRA_HERMES_SHEET_PROOF === '1';
 const requestedOut = process.argv[2];
@@ -43,18 +76,12 @@ function write(name, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value);
 }
-const packageVersion = JSON.parse(fs.readFileSync(path.join(native, 'package.json'), 'utf8')).version;
 const tarball = path.join(destination, 'vellira-hermes-shared-candidate.tgz');
 if (exactTarball) {
   // Real candidate mode: never modify any installed package or rebuild an
   // isolated entry. The same actual tarball must be used for iOS and Android.
-  const digest = createHash('sha256').update(fs.readFileSync(exactTarball)).digest('hex');
-  const pinned = process.env.VELLIRA_NATIVE_CANDIDATE_SHA256;
-  if (pinned && pinned !== digest) {
-    throw new Error('Exact candidate SHA256 mismatch: ' + digest);
-  }
   fs.copyFileSync(exactTarball, tarball, fs.constants.COPYFILE_EXCL);
-  console.log('[native-hermes] immutable candidate SHA256:', digest);
+  console.log('[native-hermes] immutable candidate SHA256:', candidateHash);
 } else {
   const command = spawnSync(process.execPath, [path.join(repo, 'scripts/performance/native-shared-chunk-tarball-probe.cjs')], {
     cwd: repo,
