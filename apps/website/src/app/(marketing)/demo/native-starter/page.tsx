@@ -21,7 +21,9 @@ export default function NativeStarterFramePage() {
   useEffect(() => {
     // Browser-only showcase bridge. The canonical Expo Starter is unchanged.
     // Prime its isolated demo storage before App reads the saved theme.
-    const requested = new URLSearchParams(window.location.search).get('websiteTheme');
+    const requested = new URLSearchParams(window.location.search).get(
+      'websiteTheme'
+    );
     const nativeTheme =
       requested === 'dark'
         ? 'dark'
