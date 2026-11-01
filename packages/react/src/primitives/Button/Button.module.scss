@@ -3,7 +3,7 @@
 $button-colors: primary, neutral, success, warning, danger;
 $button-appearances: solid, outline, ghost, soft, link;
 // Disabled links and asChild anchors have a CSS Module class, not :disabled.
-$button-interactive: '#{$button-interactive}';
+$button-interactive: ':not(:disabled, .disabled, .loading)';
 
 @mixin button-state($color, $appearance, $state) {
   color: var(--button-#{$color}-#{$appearance}-#{$state}-fg);

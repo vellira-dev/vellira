@@ -105,7 +105,8 @@ test.describe('cross-browser interaction launch contracts @cross-browser', () =>
       );
 
       for (const element of elements) {
-        const classes = (await element.getAttribute('class'))?.split(/\s+/) ?? [];
+        const classes =
+          (await element.getAttribute('class'))?.split(/\s+/) ?? [];
         expect(classes).not.toContain('undefined');
         expect(classes).not.toContain('null');
       }
