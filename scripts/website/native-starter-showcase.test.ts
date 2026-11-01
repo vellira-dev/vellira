@@ -92,12 +92,16 @@ describe('Website Native Starter showcase', () => {
   });
 
   it('bridges the resolved website theme before the embedded native app mounts', () => {
-    const route = read('apps/website/src/app/(marketing)/demo/native-starter/page.tsx');
+    const route = read(
+      'apps/website/src/app/(marketing)/demo/native-starter/page.tsx'
+    );
     expect(website).toContain('resolvedTheme');
     expect(preview).toContain("'/demo/native-starter?websiteTheme=' + theme");
     expect(route).toContain("requested === 'high-contrast'");
     expect(route).toContain("'highContrast'");
-    expect(route).toContain("'vellira-native-showcase:vellira-workspace-native-theme-v1'");
+    expect(route).toContain(
+      "'vellira-native-showcase:vellira-workspace-native-theme-v1'"
+    );
     expect(route).toContain('if (!ready) return null;');
   });
 
