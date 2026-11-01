@@ -5,7 +5,7 @@ component used both by Vellira's homepage and the standalone Vite starter.
 Not a screenshot, paywall or commercial production template. React and React Native developers can run it,
 inspect the Vellira APIs, and adapt the project to their own work.
 
-Both apps pin **Vellira 2.188.4 packages**. They are independently installable
+Both apps pin **Vellira 2.190.4 packages**. They are independently installable
 and work without a Vellira account, backend or Pro subscription. The public
 source remains available under the repository's MIT license.
 
@@ -68,6 +68,27 @@ node scripts/website/sync-dashboard-starter.mjs --check
 The website keeps generated JSX/CSS copies for independent deployments; only
 the relative model import changes. The checked-in parity test catches drift.
 
+### CI parity and deployment evidence
+
+[Dashboard Starter Parity](https://github.com/vellira-dev/vellira/actions/workflows/dashboard-starter-parity.yml)
+checks every branch push and PR to `main`, without path filters or npm
+installation. The read-only `--check` validates the exact Git commit being
+tested and fails when the website's Dashboard JSX or CSS differs from the Vite
+starter. It never silently regenerates the website copy.
+
+Staging migration, staging deployment, production promotion, and the
+exceptional one-time legacy adoption path repeat this parity check **before
+dependency installation or website compilation** against their pinned
+candidate commit. The deployment workflows independently record and verify
+the source commit in their build identity. This proves source parity
+for the shipped candidate, not pixel-for-pixel visual identity or runtime
+correctness; the separate browser and runtime checks address those concerns.
+
+Repository maintainers should configure `Dashboard Starter Parity` as a
+**required status check** for `main` in GitHub branch rules. Publishing is
+blocked by the staging/production parity steps even if that branch rule has not
+been enabled.
+
 ## Run React Native
 
 Requires Expo SDK 58 / React Native 0.88 and an iOS or Android emulator, or a
@@ -79,28 +100,23 @@ npm ci
 npm run start
 ```
 
-The Native Starter applies two source-pinned local mitigations during a standard
-`npm ci` through its `postinstall`: the `node-forge@1.4.0` RSA backport
-and a bounded-output guard for installed `@expo/cli@58.1.15` with Zod 3.
-The guard limits plugin output to 64 KiB of accumulated UTF-8 input, and
-rejects JSON arrays with more than 128 entries before Zod validation.
-Both patched file hashes are verified by `npm run security:verify-patch`. The supported Expo 58 runtime guard is `security-expo-58-guard.cjs`; the older Expo 57 patcher and the Expo 58 prototype are investigation artifacts, not supported installation commands.
+The Native Starter uses **published node-forge 1.4.2**, authenticated by an
+exact RSA source SHA-256 check; the 1.4.0 local backport is retired.
+The remaining source-pinned local Expo CLI 58 guard bounds the Zod 3 plugin
+output collector (64 KiB accumulated UTF-8, maximum 128 JSON items).
+`npm run security:verify-patch` verifies both protections.
 
-These are **local mitigations**, not patched upstream dependency releases.
-The Zod guard covers the installed Expo CLI DevTools plugin output
-collector only. It does not patch Zod itself, establish remote exploitability,
-or prove every Zod call site safe. Dependabot #141 and #142 remain open;
-see issue #1890.
-
+The Zod collector mitigation is **not an upstream Zod fix** and does not prove
+every Zod entrypoint safe. Dependabot #142 and issue #1890 remain open.
+The nested-DigestAlgorithm RSA regression rejects malformed signatures on
+the published node-forge 1.4.2 runtime.
 Before **direct** `npx expo`, `node`, custom builds, or repackaging, run
 `npm run security:verify-patch` in the Native directory. Direct commands
 can bypass the npm `prestart` / `preandroid` / `preios` / `preweb` hooks.
-Do **not** treat `npm ci --ignore-scripts` as a secure installation: it
-skips both patches. After such an install, explicitly apply both with
-`node scripts/apply-node-forge-patch.cjs` and
-`node scripts/security-expo-58-guard.cjs --apply`, then run
-`npm run security:verify-patch`. Reinstalling, copying or archiving
-`node_modules` requires verification again. When the installed Expo CLI
+Do **not** treat `npm ci --ignore-scripts` as a secure installation: it skips
+the Expo CLI guard. Run `node scripts/security-expo-58-guard.cjs --apply`
+and then `npm run security:verify-patch`, which also checks the official
+Forge RSA source. Reinstalling or copying `node_modules` requires rechecking. When the installed Expo CLI
 version or source bytes change, the local guard fails closed and must be
 re-reviewed, not silently re-used.
 

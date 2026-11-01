@@ -39,7 +39,7 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(page).toContain('<Roadmap />');
     expect(workflow).toContain('<PublishedNpmVersion />');
     expect(workflow).toContain("productFacts.publishedPackages ?? '—'");
-    expect(roadmap).toContain('<PublishedNpmVersion />');
+    expect(roadmap).toContain('<PublishedNpmVersion release={release} />');
     expect(workflow + roadmap).not.toMatch(/v2\.18\.4|268 tests|0 errors/);
     expect(roadmap).not.toContain("version: 'Latest stable'");
   });
@@ -70,7 +70,7 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(parity).toContain('Feature parity continues to evolve.');
     expect(parity).toContain('Try the Dashboard Starter');
     expect(parity).toContain(
-      'github.com/vellira-dev/vellira/tree/growth/react-native-form-try-it-20261018/examples/workspace-starter'
+      'github.com/vellira-dev/vellira/tree/main/examples/workspace-starter'
     );
   });
 });

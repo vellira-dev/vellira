@@ -5,6 +5,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { measureViteBundleVariants, sizeReportMarkdown } = require('../performance/vite-bundle-size-report.cjs');
+const { measureCssAttribution, formatCssAttribution } = require('../performance/vite-css-attribution.cjs');
+const { measureRepresentativeWeb, formatRepresentativeWeb } = require('../performance/vite-representative-surface.cjs');
 const {
   collectGitEvidence,
   evaluateViteRegression,
@@ -290,6 +292,7 @@ function verifyPackageExports(fixtureDir) {
   const specifiers = [
     '@vellira-ui/react',
     '@vellira-ui/react/styles',
+    '@vellira-ui/react/styles/button',
     '@vellira-ui/tokens',
     '@vellira-ui/tokens/css',
     '@vellira-ui/core',
@@ -561,10 +564,40 @@ async function main() {
     const bundleSize = measureViteBundleVariants(fixtureDir, () =>
       run('npm', ['run', 'build'], { cwd: fixtureDir })
     );
+    const representativeWeb = measureRepresentativeWeb(
+      fixtureDir,
+      () => {
+        run('npm', ['run', 'typecheck'], { cwd: fixtureDir });
+        run('npm', ['run', 'build'], { cwd: fixtureDir });
+      },
+      bundleSize.scenarios.buttonInput
+    );
+    const representativeSummary = formatRepresentativeWeb(representativeWeb);
+    console.log(representativeSummary);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, representativeSummary);
+    }
     const bundleSizeSummary = sizeReportMarkdown(bundleSize);
     console.log(bundleSizeSummary);
     if (process.env.GITHUB_STEP_SUMMARY) {
       fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, bundleSizeSummary);
+    }
+
+    // One-off manual workflow diagnostic; never part of routine PR CI.
+    const cssAttribution =
+      process.env.VELLIRA_CSS_ATTRIBUTION === '1'
+        ? measureCssAttribution(
+            fixtureDir,
+            () => run('npm', ['run', 'build'], { cwd: fixtureDir }),
+            bundleSize.scenarios
+          )
+        : null;
+    if (cssAttribution) {
+      const cssSummary = formatCssAttribution(cssAttribution);
+      console.log(cssSummary);
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, cssSummary);
+      }
     }
 
     const evidence = {
@@ -596,6 +629,8 @@ async function main() {
         ).version,
       },
       bundleSize,
+      representativeWeb,
+      ...(cssAttribution ? { cssAttribution } : {}),
       checks: {
         artifactProvenance: true,
         cleanInstall: true,
@@ -610,7 +645,7 @@ async function main() {
     };
 
     const mainBaselineFile = path.resolve(
-      __dirname, '../performance/baselines/vite-main-2.188.3.json'
+      __dirname, '../performance/baselines/vite-main-active.json'
     );
     const baseline = fs.existsSync(mainBaselineFile)
       ? readJson(mainBaselineFile)

@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
   StyleSheet,
   useWindowDimensions,
@@ -12,6 +13,7 @@ import {
 import { BlurView } from 'expo-blur';
 import {
   Copy,
+  Check,
   Edit,
   Filter,
   Folder,
@@ -150,10 +152,106 @@ function nextId(projects: readonly Project[]): number {
   return projects.reduce((max, project) => Math.max(max, project.id), 0) + 1;
 }
 
+type LargeTextChoiceFieldProps = {
+  label: string;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  onSelect: (value: string) => void;
+};
+
+/**
+ * Keep the published native Select sheet at every text size.
+ * Only the label, trigger and option typography are capped for large text.
+ */
+function LargeTextChoiceField({
+  label,
+  value,
+  options,
+  onSelect,
+}: LargeTextChoiceFieldProps) {
+  const { theme } = useTheme();
+  const { height: viewportHeight } = useWindowDimensions();
+  const primary = theme.semantic.text.primary;
+  const selectedColor =
+    theme.components.select.primary.outline.option.selected.fg;
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Text
+        maxFontSizeMultiplier={1.5}
+        style={{ color: primary, fontSize: 14, fontWeight: '600' }}
+      >
+        {label}
+        <Text style={{ color: theme.semantic.status.error.fg }}> *</Text>
+      </Text>
+      <Select
+        accessibilityLabel={label}
+        accessibilityHint={'Required. Opens ' + label + ' choices'}
+        value={value}
+        onValueChange={(next) => {
+          if (typeof next === 'string') onSelect(next);
+        }}
+        options={options.map((option) => ({
+          label: option.label,
+          value: option.value,
+        }))}
+        presentation='sheet'
+        virtual={{ estimatedItemSize: 52 }}
+        contentStyle={{ maxHeight: Math.min(viewportHeight * 0.7, 360) }}
+        triggerStyle={{
+          minHeight: 52,
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+        }}
+        optionStyle={{
+          minHeight: 52,
+          paddingVertical: 8,
+        }}
+        renderValue={({ option, placeholder }) => (
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.5}
+            style={{ color: primary, fontSize: 15 }}
+          >
+            {option?.label ?? placeholder}
+          </Text>
+        )}
+        renderOption={({ option, selected }) => (
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.5}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                color: selected ? selectedColor : primary,
+                fontSize: 15,
+                fontWeight: selected ? '700' : '500',
+              }}
+            >
+              {option.label}
+            </Text>
+            {selected ? <Check size={18} color={selectedColor} /> : null}
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+
 function WorkspaceScreen() {
   const { theme, themeName, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight, fontScale } = useWindowDimensions();
+  const largeText = fontScale >= 1.5;
   const [data, setData] = useState<Workspace>(initialWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [section, setSection] = useState<Section>('overview');
@@ -476,6 +574,13 @@ function WorkspaceScreen() {
     paddingVertical: 0,
     textAlignVertical: 'center' as const,
   };
+  // Match the published md Input's 46pt control height. Select otherwise
+  // grows taller from its own vertical padding, despite shared FormField labels.
+  const editorSelectTriggerStyle = {
+    height: 46,
+    minHeight: 46,
+    paddingVertical: 0,
+  };
 
   return (
     <SafeAreaView
@@ -498,6 +603,7 @@ function WorkspaceScreen() {
         }}
       >
         <Text
+          maxFontSizeMultiplier={1.4}
           style={{
             color: subtleText,
             fontSize: 12,
@@ -519,6 +625,9 @@ function WorkspaceScreen() {
             <Text
               accessibilityRole='header'
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.5}
               style={{
                 color: mainText,
                 fontSize: 27,
@@ -532,7 +641,11 @@ function WorkspaceScreen() {
                   ? 'Projects'
                   : 'Settings'}
             </Text>
-            <Text numberOfLines={1} style={{ color: subtleText, fontSize: 13 }}>
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.5}
+              style={{ color: subtleText, fontSize: 13 }}
+            >
               {data.name.trim() || 'Untitled workspace'}
             </Text>
           </View>
@@ -599,10 +712,15 @@ function WorkspaceScreen() {
 
         {section === 'overview' ? (
           <View style={{ gap: 18 }}>
-            <Text style={{ color: subtleText, fontSize: 15 }}>
+            <Text
+              maxFontSizeMultiplier={1.6}
+              style={{ color: subtleText, fontSize: 15 }}
+            >
               Your projects at a glance
             </Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View
+              style={{ flexDirection: largeText ? 'column' : 'row', gap: 12 }}
+            >
               {[
                 {
                   label: 'Total projects',
@@ -636,7 +754,7 @@ function WorkspaceScreen() {
                 <View
                   key={metric.label}
                   style={{
-                    flex: 1,
+                    flex: largeText ? undefined : 1,
                     minWidth: 0,
                     padding: 16,
                     borderRadius: theme.tokens.radius.lg,
@@ -647,6 +765,7 @@ function WorkspaceScreen() {
                   }}
                 >
                   <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color: metric.accent,
                       fontSize: 13,
@@ -656,6 +775,7 @@ function WorkspaceScreen() {
                     {metric.label}
                   </Text>
                   <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color:
                         themeName === 'highContrast' ? '#FFFFFF' : mainText,
@@ -666,6 +786,7 @@ function WorkspaceScreen() {
                     {metric.value}
                   </Text>
                   <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color:
                         themeName === 'highContrast' ? '#D6E0ED' : subtleText,
@@ -686,11 +807,15 @@ function WorkspaceScreen() {
                 }}
               >
                 <Text
+                  maxFontSizeMultiplier={1.6}
                   style={{ color: mainText, fontSize: 19, fontWeight: '700' }}
                 >
                   Project progress
                 </Text>
-                <Text style={{ color: palette.brand, fontWeight: '700' }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: palette.brand, fontWeight: '700' }}
+                >
                   {completionRate}%
                 </Text>
               </View>
@@ -721,16 +846,23 @@ function WorkspaceScreen() {
                   gap: 8,
                 }}
               >
-                <Text style={{ color: subtleText, fontSize: 12 }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: subtleText, fontSize: 12 }}
+                >
                   Completed · {completedCount}
                 </Text>
-                <Text style={{ color: subtleText, fontSize: 12 }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: subtleText, fontSize: 12 }}
+                >
                   Remaining · {totalCount - completedCount}
                 </Text>
               </View>
             </View>
             <View style={cardStyle}>
               <Text
+                maxFontSizeMultiplier={1.6}
                 style={{ color: mainText, fontSize: 19, fontWeight: '700' }}
               >
                 Projects by status
@@ -754,6 +886,7 @@ function WorkspaceScreen() {
                   >
                     {[4, 3, 2, 1, 0].map((tick) => (
                       <Text
+                        maxFontSizeMultiplier={1.6}
                         key={tick}
                         style={{ color: subtleText, fontSize: 11 }}
                       >
@@ -829,7 +962,9 @@ function WorkspaceScreen() {
                   {statuses.map((status) => (
                     <Text
                       key={status.key}
-                      numberOfLines={2}
+                      numberOfLines={largeText ? 1 : 2}
+                      maxFontSizeMultiplier={1.4}
+                      accessibilityLabel={status.name}
                       style={{
                         width: '31%',
                         textAlign: 'center',
@@ -837,13 +972,19 @@ function WorkspaceScreen() {
                         fontSize: 12,
                       }}
                     >
-                      {status.name}
+                      {largeText
+                        ? status.key === 'planned'
+                          ? 'Plan'
+                          : status.key === 'active'
+                            ? 'Active'
+                            : 'Shipped'
+                        : status.name}
                     </Text>
                   ))}
                 </View>
               </View>
               {totalCount === 0 ? (
-                <Text style={{ color: subtleText }}>
+                <Text maxFontSizeMultiplier={1.6} style={{ color: subtleText }}>
                   Create your first project to populate the chart.
                 </Text>
               ) : null}
@@ -861,6 +1002,7 @@ function WorkspaceScreen() {
               }}
             >
               <Text
+                maxFontSizeMultiplier={1.6}
                 style={{ color: mainText, fontSize: 17, fontWeight: '700' }}
               >
                 {projectListTitle} · {visibleProjects.length}
@@ -914,12 +1056,41 @@ function WorkspaceScreen() {
               </View>
             </View>
             {showSearch ? (
-              <Input
-                label='Search projects'
-                value={query}
-                onValueChange={setQuery}
-                placeholder='Search projects'
-              />
+              largeText ? (
+                <View style={{ gap: 8 }}>
+                  <Text
+                    maxFontSizeMultiplier={1.5}
+                    style={{ color: mainText, fontSize: 14, fontWeight: '600' }}
+                  >
+                    Search projects
+                  </Text>
+                  <TextInput
+                    accessibilityLabel='Search projects'
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder='Search projects'
+                    placeholderTextColor={subtleText}
+                    maxFontSizeMultiplier={1.5}
+                    style={{
+                      minHeight: 48,
+                      borderWidth: 1,
+                      borderColor: border,
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 15,
+                      color: mainText,
+                    }}
+                  />
+                </View>
+              ) : (
+                <Input
+                  label='Search projects'
+                  value={query}
+                  onValueChange={setQuery}
+                  placeholder='Search projects'
+                />
+              )
             ) : null}
             {showFilters ? (
               <ScrollView
@@ -955,6 +1126,7 @@ function WorkspaceScreen() {
                     }}
                   >
                     <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         color:
                           statusFilter === value ? palette.brand : subtleText,
@@ -1000,6 +1172,7 @@ function WorkspaceScreen() {
                     }}
                   >
                     <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         color: mainText,
                         fontWeight: '700',
@@ -1026,6 +1199,7 @@ function WorkspaceScreen() {
                     }}
                   >
                     <Text
+                      maxFontSizeMultiplier={1.6}
                       numberOfLines={1}
                       style={{
                         color: mainText,
@@ -1036,6 +1210,7 @@ function WorkspaceScreen() {
                       {project.name}
                     </Text>
                     <Text
+                      maxFontSizeMultiplier={1.6}
                       numberOfLines={1}
                       style={{ color: subtleText, fontSize: 12 }}
                     >
@@ -1049,8 +1224,17 @@ function WorkspaceScreen() {
                     placement='bottom-end'
                     offset={-44}
                     closeOnSelect
+                    textStyle={
+                      largeText
+                        ? {
+                            fontSize: 16 * Math.min(1, 1.5 / fontScale),
+                            lineHeight: 22 * Math.min(1, 1.5 / fontScale),
+                          }
+                        : undefined
+                    }
+                    itemStyle={largeText ? { minHeight: 52 } : undefined}
                     popoverBackground={
-                      themeName === 'highContrast' ? undefined : (
+                      Platform.OS === 'ios' && themeName !== 'highContrast' ? (
                         <BlurView
                           intensity={25}
                           tint={
@@ -1058,7 +1242,11 @@ function WorkspaceScreen() {
                               ? 'systemUltraThinMaterialDark'
                               : 'systemUltraThinMaterialLight'
                           }
-                          style={{ flex: 1 }}
+                          style={{
+                            flex: 1,
+                            borderRadius: 22,
+                            overflow: 'hidden',
+                          }}
                         >
                           <View
                             pointerEvents='none'
@@ -1071,20 +1259,23 @@ function WorkspaceScreen() {
                             }}
                           />
                         </BlurView>
-                      )
+                      ) : undefined
                     }
                     contentStyle={{
-                      width: 216,
-                      maxWidth: 236,
+                      width: largeText ? 268 : 216,
+                      maxWidth: largeText ? 280 : 236,
                       borderRadius: 22,
                       paddingVertical: 8,
                       paddingHorizontal: 4,
-                      borderWidth: 1,
+                      borderWidth:
+                        Platform.OS === 'ios' && themeName !== 'highContrast'
+                          ? 0
+                          : 1,
                       borderColor: border,
                       backgroundColor:
-                        themeName === 'highContrast'
-                          ? surface.canvas
-                          : 'transparent',
+                        Platform.OS === 'ios' && themeName !== 'highContrast'
+                          ? 'transparent'
+                          : surface.panel,
                       shadowColor: '#000000',
                       shadowOpacity: themeName === 'dark' ? 0.42 : 0.24,
                       shadowRadius: 24,
@@ -1107,7 +1298,9 @@ function WorkspaceScreen() {
                       </Pressable>
                     </Dropdown.Trigger>
                     <Dropdown.Content>
-                      <Dropdown.Label>Project actions</Dropdown.Label>
+                      {!largeText ? (
+                        <Dropdown.Label>Project actions</Dropdown.Label>
+                      ) : null}
                       <Dropdown.Item
                         value='edit'
                         icon={<Edit size={18} />}
@@ -1173,6 +1366,7 @@ function WorkspaceScreen() {
                       }}
                     >
                       <Text
+                        maxFontSizeMultiplier={1.6}
                         style={{
                           fontSize: 12,
                           fontWeight: '600',
@@ -1223,15 +1417,7 @@ function WorkspaceScreen() {
                       }}
                     >
                       {project.completed ? (
-                        <Text
-                          style={{
-                            color: '#FFFFFF',
-                            fontSize: 14,
-                            fontWeight: '700',
-                          }}
-                        >
-                          ✓
-                        </Text>
+                        <Check size={16} color='#FFFFFF' />
                       ) : null}
                     </View>
                   </Pressable>
@@ -1240,7 +1426,10 @@ function WorkspaceScreen() {
             ))}
             {visibleProjects.length === 0 ? (
               <View style={{ ...cardStyle, alignItems: 'center', gap: 10 }}>
-                <Text style={{ color: mainText, fontWeight: '700' }}>
+                <Text
+                  maxFontSizeMultiplier={1.6}
+                  style={{ color: mainText, fontWeight: '700' }}
+                >
                   No matching projects
                 </Text>
                 <Button
@@ -1303,6 +1492,7 @@ function WorkspaceScreen() {
             key={value}
             accessibilityRole='tab'
             accessibilityLabel={label}
+            accessibilityHint={largeText ? 'Navigation tab' : undefined}
             accessibilityState={{ selected: section === value }}
             onPress={() => setSection(value)}
             style={{
@@ -1317,15 +1507,18 @@ function WorkspaceScreen() {
               size={22}
               color={section === value ? palette.brand : subtleText}
             />
-            <Text
-              style={{
-                color: section === value ? palette.brand : subtleText,
-                fontSize: 11,
-                fontWeight: section === value ? '700' : '500',
-              }}
-            >
-              {label}
-            </Text>
+            {!largeText ? (
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={{
+                  color: section === value ? palette.brand : subtleText,
+                  fontSize: 11,
+                  fontWeight: section === value ? '700' : '500',
+                }}
+              >
+                {label}
+              </Text>
+            ) : null}
           </Pressable>
         ))}
       </View>
@@ -1421,12 +1614,14 @@ function WorkspaceScreen() {
                   }}
                 >
                   <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
                   >
                     Close
                   </Text>
                 </Pressable>
                 <Text
+                  maxFontSizeMultiplier={1.6}
                   accessibilityRole='header'
                   style={{
                     flex: 1,
@@ -1460,6 +1655,7 @@ function WorkspaceScreen() {
                 >
                   <View style={{ gap: 10 }}>
                     <Text
+                      maxFontSizeMultiplier={1.6}
                       accessibilityRole='header'
                       style={{
                         paddingHorizontal: 6,
@@ -1482,6 +1678,7 @@ function WorkspaceScreen() {
                       }}
                     >
                       <Text
+                        maxFontSizeMultiplier={1.6}
                         style={{
                           color: mainText,
                           fontSize: 19,
@@ -1491,6 +1688,7 @@ function WorkspaceScreen() {
                         Restore sample data?
                       </Text>
                       <Text
+                        maxFontSizeMultiplier={1.6}
                         style={{
                           color: theme.semantic.text.secondary,
                           fontSize: 15,
@@ -1502,21 +1700,59 @@ function WorkspaceScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Button
-                    color='danger'
-                    onPress={() => {
-                      setData(initialWorkspace);
-                      setRemovedProject(null);
-                      setTheme('light');
-                      setResetOpen(false);
-                      setNotice({
-                        tone: 'success',
-                        message: 'Sample data restored.',
-                      });
-                    }}
-                  >
-                    Restore sample data
-                  </Button>
+                  {largeText ? (
+                    <Pressable
+                      accessibilityRole='button'
+                      accessibilityLabel='Restore sample data'
+                      onPress={() => {
+                        setData(initialWorkspace);
+                        setRemovedProject(null);
+                        setTheme('light');
+                        setResetOpen(false);
+                        setNotice({
+                          tone: 'success',
+                          message: 'Sample data restored.',
+                        });
+                      }}
+                      style={{
+                        minHeight: 52,
+                        borderRadius: 26,
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: theme.semantic.status.error.fg,
+                      }}
+                    >
+                      <Text
+                        maxFontSizeMultiplier={1.4}
+                        style={{
+                          color: '#FFFFFF',
+                          fontSize: 16,
+                          fontWeight: '700',
+                          textAlign: 'center',
+                        }}
+                      >
+                        Restore sample data
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Button
+                      color='danger'
+                      onPress={() => {
+                        setData(initialWorkspace);
+                        setRemovedProject(null);
+                        setTheme('light');
+                        setResetOpen(false);
+                        setNotice({
+                          tone: 'success',
+                          message: 'Sample data restored.',
+                        });
+                      }}
+                    >
+                      Restore sample data
+                    </Button>
+                  )}
                 </View>
               </ScrollView>
             </View>
@@ -1620,12 +1856,14 @@ function WorkspaceScreen() {
                   }}
                 >
                   <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{ color: mainText, fontSize: 16, fontWeight: '600' }}
                   >
                     Close
                   </Text>
                 </Pressable>
                 <Text
+                  maxFontSizeMultiplier={1.6}
                   accessibilityRole='header'
                   numberOfLines={1}
                   style={{
@@ -1669,6 +1907,7 @@ function WorkspaceScreen() {
                   }}
                 >
                   <Text
+                    maxFontSizeMultiplier={1.6}
                     style={{
                       color: canSubmitProject ? '#FFFFFF' : subtleText,
                       fontSize: 15,
@@ -1703,6 +1942,7 @@ function WorkspaceScreen() {
                   >
                     <View style={{ gap: 10 }}>
                       <Text
+                        maxFontSizeMultiplier={1.6}
                         accessibilityRole='header'
                         style={{
                           paddingHorizontal: 6,
@@ -1724,29 +1964,106 @@ function WorkspaceScreen() {
                           borderColor: border,
                         }}
                       >
-                        <Input
-                          label='Project name'
-                          required
-                          value={name}
-                          error={error || undefined}
-                          onValueChange={(value: string) => {
-                            setName(value);
-                            setError('');
-                          }}
-                          placeholder='New project name'
-                          inputStyle={editorInputStyle}
-                        />
-                        <Input
-                          label='Description'
-                          value={description}
-                          onValueChange={setDescription}
-                          placeholder='Describe the project'
-                          inputStyle={editorInputStyle}
-                        />
+                        {largeText ? (
+                          <View style={{ gap: 8 }}>
+                            <Text
+                              maxFontSizeMultiplier={1.5}
+                              style={{
+                                color: mainText,
+                                fontSize: 14,
+                                fontWeight: '600',
+                              }}
+                            >
+                              Project name *
+                            </Text>
+                            <TextInput
+                              accessibilityLabel='Project name'
+                              value={name}
+                              onChangeText={(value) => {
+                                setName(value);
+                                setError('');
+                              }}
+                              placeholder='New project name'
+                              placeholderTextColor={subtleText}
+                              maxFontSizeMultiplier={1.5}
+                              style={{
+                                minHeight: 48,
+                                borderWidth: 1,
+                                borderColor: border,
+                                borderRadius: 12,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                fontSize: 15,
+                                color: mainText,
+                              }}
+                            />
+                            {error ? (
+                              <Text
+                                maxFontSizeMultiplier={1.5}
+                                style={{
+                                  color: theme.semantic.status.error.fg,
+                                }}
+                              >
+                                {error}
+                              </Text>
+                            ) : null}
+                            <Text
+                              maxFontSizeMultiplier={1.5}
+                              style={{
+                                color: mainText,
+                                fontSize: 14,
+                                fontWeight: '600',
+                              }}
+                            >
+                              Description
+                            </Text>
+                            <TextInput
+                              accessibilityLabel='Description'
+                              value={description}
+                              onChangeText={setDescription}
+                              placeholder='Describe the project'
+                              placeholderTextColor={subtleText}
+                              maxFontSizeMultiplier={1.5}
+                              style={{
+                                minHeight: 48,
+                                borderWidth: 1,
+                                borderColor: border,
+                                borderRadius: 12,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                fontSize: 15,
+                                color: mainText,
+                              }}
+                            />
+                          </View>
+                        ) : (
+                          <>
+                            <Input
+                              label='Project name'
+                              required
+                              value={name}
+                              error={error || undefined}
+                              onValueChange={(value: string) => {
+                                setName(value);
+                                setError('');
+                              }}
+                              placeholder='New project name'
+                              inputStyle={editorInputStyle}
+                            />
+                            <Input
+                              label='Description'
+                              value={description}
+                              onValueChange={setDescription}
+                              placeholder='Describe the project'
+                              inputStyle={editorInputStyle}
+                            />
+                          </>
+                        )}
                       </View>
                     </View>
                     <View style={{ gap: 10 }}>
                       <Text
+                        maxFontSizeMultiplier={1.6}
                         accessibilityRole='header'
                         style={{
                           paddingHorizontal: 6,
@@ -1768,39 +2085,76 @@ function WorkspaceScreen() {
                           borderColor: border,
                         }}
                       >
-                        <Select
-                          label='Team'
-                          required
-                          value={team}
-                          onValueChange={(value: string | null) => {
-                            if (isTeam(value)) setTeam(value);
-                          }}
-                          presentation='sheet'
-                          contentStyle={compactSheetStyle}
-                        >
-                          <Select.Item value='design' label='Design' />
-                          <Select.Item value='platform' label='Platform' />
-                          <Select.Item value='mobile' label='Mobile' />
-                        </Select>
-                        <Select
-                          label='Status'
-                          required
-                          value={status}
-                          onValueChange={(value: string | null) => {
-                            if (typeof value === 'string' && isStatus(value)) {
-                              setStatus(value);
-                            }
-                          }}
-                          presentation='sheet'
-                          contentStyle={compactSheetStyle}
-                        >
-                          <Select.Item value='planned' label='Planned' />
-                          <Select.Item value='active' label='In progress' />
-                          <Select.Item value='shipped' label='Shipped' />
-                        </Select>
+                        {largeText ? (
+                          <>
+                            <LargeTextChoiceField
+                              label='Team'
+                              value={team}
+                              options={[
+                                { value: 'design', label: 'Design' },
+                                { value: 'platform', label: 'Platform' },
+                                { value: 'mobile', label: 'Mobile' },
+                              ]}
+                              onSelect={(value) => {
+                                if (isTeam(value)) setTeam(value);
+                              }}
+                            />
+                            <LargeTextChoiceField
+                              label='Status'
+                              value={status}
+                              options={[
+                                { value: 'planned', label: 'Planned' },
+                                { value: 'active', label: 'In progress' },
+                                { value: 'shipped', label: 'Shipped' },
+                              ]}
+                              onSelect={(value) => {
+                                if (isStatus(value)) setStatus(value);
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Select
+                              label='Team'
+                              required
+                              value={team}
+                              onValueChange={(value: string | null) => {
+                                if (isTeam(value)) setTeam(value);
+                              }}
+                              presentation='sheet'
+                              triggerStyle={editorSelectTriggerStyle}
+                              contentStyle={compactSheetStyle}
+                            >
+                              <Select.Item value='design' label='Design' />
+                              <Select.Item value='platform' label='Platform' />
+                              <Select.Item value='mobile' label='Mobile' />
+                            </Select>
+                            <Select
+                              label='Status'
+                              required
+                              value={status}
+                              onValueChange={(value: string | null) => {
+                                if (
+                                  typeof value === 'string' &&
+                                  isStatus(value)
+                                ) {
+                                  setStatus(value);
+                                }
+                              }}
+                              presentation='sheet'
+                              triggerStyle={editorSelectTriggerStyle}
+                              contentStyle={compactSheetStyle}
+                            >
+                              <Select.Item value='planned' label='Planned' />
+                              <Select.Item value='active' label='In progress' />
+                              <Select.Item value='shipped' label='Shipped' />
+                            </Select>
+                          </>
+                        )}
                       </View>
                     </View>
                     <Text
+                      maxFontSizeMultiplier={1.6}
                       style={{
                         paddingHorizontal: 6,
                         color: subtleText,

@@ -25,10 +25,16 @@ export function validateStagingEvidence(evidence, expected) {
   requireNonEmptyString(expected.sourceRef, 'expected source ref');
   requireNonEmptyString(expected.eventName, 'expected event name');
   requireNonEmptyString(expected.stagingUrl, 'expected staging URL');
+  assert.ok(['push', 'workflow_dispatch'].includes(expected.eventName), 'Unsupported staging event');
 
   assert.equal(evidence.sourceSha, expected.sourceSha, 'Staging evidence source SHA mismatch');
   assert.equal(evidence.sourceRef, expected.sourceRef, 'Staging evidence source ref mismatch');
   assert.equal(evidence.eventName, expected.eventName, 'Staging evidence event mismatch');
+  if (expected.eventName === 'workflow_dispatch') {
+    assert.equal(evidence.productionRecovery, true, 'Manual staging is not authorized for production recovery');
+  } else {
+    assert.notEqual(evidence.productionRecovery, true, 'Push staging must not use manual recovery authority');
+  }
   assert.equal(evidence.runId, expected.runId, 'Staging evidence run ID mismatch');
   assert.equal(
     evidence.runAttempt,

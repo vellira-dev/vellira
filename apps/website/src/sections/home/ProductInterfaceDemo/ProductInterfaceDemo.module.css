@@ -96,12 +96,26 @@
   font-weight: 600;
 }
 
-.mobileFrame {
-  display: block;
-  width: 100%;
-  height: 740px;
-  border: 0;
-  background: var(--surface-canvas);
+.nativeStageContent {
+  min-width: 0;
+  padding: 10px 0 16px;
+  background: transparent;
+}
+
+.nativeCaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 14px;
+  max-width: 440px;
+  margin: 14px auto 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nativeCaption a {
+  white-space: nowrap;
 }
 
 .stage {
@@ -114,8 +128,13 @@
   scroll-margin-top: 100px;
 }
 .mobileStage {
-  width: min(392px, 100%);
+  width: min(440px, 100%);
   margin-inline: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .stage:focus-visible {

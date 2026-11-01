@@ -116,6 +116,25 @@ test('workflow_run builds the exact staged checkout, not the newer control SHA',
   assert.equal(env.GITHUB_SHA, controlSha);
 });
 
+test('verified staging replay dispatch binds the exact staged candidate to checkout', () => {
+  const env = promoted({ GITHUB_EVENT_NAME: 'workflow_dispatch' });
+  assert.equal(fromCheckout(env), env.VELLIRA_BUILD_ID);
+  const result = child(env, path.join(checkout, 'apps/website'));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), env.VELLIRA_BUILD_ID);
+  // workflow_dispatch may use the control branch SHA; the candidate remains authoritative.
+  assert.equal(env.GITHUB_SHA, controlSha);
+});
+
+test('verified staging replay cannot relabel a different checkout', () => {
+  const env = promoted({
+    GITHUB_EVENT_NAME: 'workflow_dispatch',
+    CANDIDATE_SHA: controlSha,
+    VELLIRA_BUILD_ID: `${controlSha}-123-2`,
+  });
+  assert.throws(() => fromCheckout(env), /checked-out HEAD/);
+});
+
 test('emergency dispatch binds the explicit candidate to checkout without changing the control SHA', () => {
   const env = promoted({
     CANDIDATE_SOURCE: 'emergency-recovery',
@@ -148,7 +167,7 @@ test('missing, partial or mismatched production source/event metadata fails clos
     { GITHUB_EVENT_NAME: undefined },
     { GITHUB_EVENT_NAME: 'push' },
     { GITHUB_EVENT_NAME: 'pull_request' },
-    { GITHUB_EVENT_NAME: 'workflow_dispatch' },
+    { GITHUB_EVENT_NAME: 'schedule' },
     { CANDIDATE_SOURCE: 'emergency-recovery' },
   ]) {
     assert.throws(

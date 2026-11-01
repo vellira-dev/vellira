@@ -20,7 +20,7 @@ const packageExportContracts = {
   'packages/react-native/package.json': ['.'],
   'packages/tokens/package.json': ['.', './css'],
   'packages/types/package.json': ['.'],
-  'packages/react/package.json': ['.', './styles'],
+  'packages/react/package.json': ['.', './styles', './styles/button'],
 };
 
 const publicSymbolContracts = {

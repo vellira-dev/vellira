@@ -1,0 +1,88 @@
+name: Website production promotion watchdog
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  verify-promotion-trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Detect verified main staging without production promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          const repo = process.env.GH_REPOSITORY;
+          const token = process.env.GH_TOKEN;
+          async function github(path) {
+            const response = await fetch('https://api.github.com' + path, {
+              headers: {
+                Authorization: 'Bearer ' + token,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+              },
+            });
+            if (!response.ok) throw new Error('GitHub API ' + response.status + ': ' + path);
+            return response.json();
+          }
+          async function runs(workflow) {
+            const data = await github('/repos/' + repo + '/actions/workflows/' +
+              workflow + '/runs?branch=main&per_page=50');
+            return data.workflow_runs;
+          }
+          const main = (await github('/repos/' + repo + '/git/ref/heads/main')).object.sha;
+          const staging = await runs('deploy-website-cloudflare-staging.yml');
+          const production = await runs('deploy-website-cloudflare-production.yml');
+          // Inspect only the latest main SHA. Release-sync can yield a GREEN
+          // outer workflow while the actual staging deploy job was skipped.
+          const candidates = staging.filter(run =>
+            run.head_sha === main &&
+            run.head_branch === 'main' &&
+            run.status === 'completed' &&
+            run.conclusion === 'success' &&
+            (run.event === 'push' ||
+              (run.event === 'workflow_dispatch' &&
+               run.display_title === 'Production recovery ' + main))
+          );
+          let newest;
+          for (const candidate of candidates) {
+            const jobs = await github('/repos/' + repo + '/actions/runs/' + candidate.id +
+              '/jobs?per_page=100');
+            if (jobs.total_count >= 100) throw new Error('Staging job list incomplete');
+            if (jobs.jobs.some(job =>
+              job.name === 'Build, deploy, and verify merged main on website staging' &&
+              job.conclusion === 'success')) {
+              newest = candidate;
+              break;
+            }
+          }
+          if (!newest) {
+            console.log('No fully verified staging deployment for current main.');
+            process.exit(0);
+          }
+          if (Date.now() - Date.parse(newest.updated_at) < 15 * 60_000) {
+            console.log('Allowing GitHub promotion event propagation.');
+            process.exit(0);
+          }
+          // workflow_run head_sha is the default branch head, not the
+          // candidate SHA. The protected promotion title binds the candidate.
+          const matching = production.find(run =>
+            run.display_title === 'Promote staging ' + newest.head_sha
+          );
+          if (matching) {
+            console.log('Production promotion workflow exists: ' + matching.html_url +
+              ' (' + matching.status + '/' + matching.conclusion + ')');
+            process.exit(0);
+          }
+          console.error('::error::Successful staging ' + newest.html_url +
+            ' for ' + newest.head_sha + ' has no production promotion workflow.');
+          process.exitCode = 1;
+          NODE

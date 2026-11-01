@@ -24,6 +24,32 @@ describe('Native Starter compact semantic notifications', () => {
     expect(component).toContain('minHeight: 44');
   });
 
+  it('keeps short Undo notices compact and long notices readable', () => {
+    expect(component).toContain(
+      'const { width, fontScale } = useWindowDimensions()'
+    );
+    expect(component).toContain('const largeText = fontScale >= 1.5');
+    expect(component).toContain(
+      'const stacked = largeText && (width < 360 || notice.message.length > 24)'
+    );
+    expect(component).toContain("flexDirection: stacked ? 'column' : 'row'");
+    expect(component).toContain("alignItems: stacked ? 'stretch' : 'center'");
+    expect(component).toContain("alignSelf: stacked ? 'flex-end' : undefined");
+    expect(component).toContain(
+      'numberOfLines={largeText && !stacked ? 1 : undefined}'
+    );
+    expect(component).toContain('adjustsFontSizeToFit={largeText && !stacked}');
+    expect(component).toContain('minimumFontScale={0.9}');
+    expect(component).toContain('paddingVertical: 4');
+    expect(component).toContain(
+      'maxFontSizeMultiplier={largeText ? 1.4 : 1.5}'
+    );
+    expect(component).toContain('minWidth: 0');
+    expect(component).toContain('accessibilityLiveRegion={');
+    expect(component).toContain("accessibilityLabel='Undo project removal'");
+    expect(component).toContain("accessibilityLabel='Dismiss notification'");
+  });
+
   it('uses semantic status tokens for success, error and neutral', () => {
     expect(component).toContain('theme.semantic.status.success');
     expect(component).toContain('theme.semantic.status.error');

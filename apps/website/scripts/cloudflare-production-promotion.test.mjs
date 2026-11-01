@@ -26,7 +26,7 @@ function jobBlock(workflow, jobId, nextJobId) {
 
 test('Pro interest is an explicit manual staging preview and stays OFF on all production paths', async () => {
   const header = stagingWorkflow.split('\njobs:\n')[0];
-  assert.match(header, /workflow_dispatch:\n {4}inputs:\n {6}pro_interest_preview:/);
+  assert.match(header, /workflow_dispatch:\n {4}inputs:[\s\S]*?\n {6}pro_interest_preview:/);
   assert.match(header, /default: false/);
 
   const preview = jobBlock(stagingWorkflow, 'deploy');
@@ -93,7 +93,7 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
 
   const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
   const migration = jobBlock(stagingWorkflow, 'migration', 'deploy');
-  const deploy = jobBlock(stagingWorkflow, 'deploy');
+  const deploy = jobBlock(stagingWorkflow, 'deploy', 'immediate-promotion');
 
   assert.match(classify, /release-sync-contract\.mjs/);
   assert.match(classify, /--classify-merged/);
@@ -151,6 +151,15 @@ test('staging skips only semantically verified release-sync pushes and prioritiz
   );
 });
 
+test('manual recovery rejects feature preview and non-main dispatch before expensive staging', () => {
+  const classify = jobBlock(stagingWorkflow, 'classify', 'migration');
+  assert.ok(classify.includes('Reject unsafe production recovery inputs before staging work'));
+  assert.ok(classify.includes('inputs.production_recovery == true'));
+  assert.ok(classify.includes('test "$GITHUB_REF" = "refs/heads/main"'));
+  assert.ok(classify.includes('test "$PRO_INTEREST_PREVIEW" != "true"'));
+  assert.ok(classify.includes('test "$NEWSLETTER_ABUSE_PREVIEW" != "true"'));
+});
+
 test('staging publishes a dedicated machine-readable promotion artifact', () => {
   assert.match(stagingWorkflow, /name: Publish production promotion evidence/);
   assert.match(
@@ -164,7 +173,30 @@ test('staging publishes a dedicated machine-readable promotion artifact', () => 
   assert.match(stagingWorkflow, /if-no-files-found: error/);
 });
 
-test('normal production eligibility comes only from a successful push-to-main staging run', () => {
+test('manual recovery staging dispatches production immediately with bounded authority', () => {
+  const handoff = jobBlock(stagingWorkflow, 'immediate-promotion');
+  assert.match(handoff, /needs: \[classify, migration, deploy\]/);
+  assert.match(handoff, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(handoff, /inputs\.production_recovery == true/);
+  assert.match(handoff, /inputs\.pro_interest_preview != true/);
+  assert.match(handoff, /inputs\.newsletter_abuse_preview != true/);
+  assert.match(handoff, /needs\.deploy\.result == 'success'/);
+  assert.match(handoff, /actions: write/);
+  assert.match(handoff, /GITHUB_REF.*refs\/heads\/main/);
+  assert.match(handoff, /REPLAY_VERIFIED_STAGING/);
+  assert.match(handoff, /inputs\[candidate_sha\]/);
+  assert.match(handoff, /inputs\[staging_run_id\]/);
+  assert.match(handoff, /inputs\[staging_run_attempt\]/);
+  assert.doesNotMatch(handoff, /EMERGENCY_DEPLOY_PRODUCTION/);
+  const deploy = jobBlock(stagingWorkflow, 'deploy', 'immediate-promotion');
+  assert.doesNotMatch(deploy, /actions: write/);
+  assert.ok(
+    stagingWorkflow.indexOf('Publish production promotion evidence') <
+      stagingWorkflow.indexOf('\n  immediate-promotion:')
+  );
+});
+
+test('production eligibility requires successful push staging or explicit verified manual recovery', () => {
   assert.match(productionWorkflow, /workflow_run:/);
   assert.match(
     productionWorkflow,
@@ -179,15 +211,16 @@ test('normal production eligibility comes only from a successful push-to-main st
   assert.match(candidate, /needs\.classify\.outputs\.release_sync != 'true'/);
   assert.match(candidate, /workflow_run\.conclusion == 'success'/);
   assert.match(candidate, /workflow_run\.event == 'push'/);
+  assert.match(candidate, /workflow_run\.event == 'workflow_dispatch'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
+  assert.ok(candidate.includes("github.event.workflow_run.event || steps.verified-replay.outputs.event_name"));
+  assert.match(stagingWorkflow, /production_recovery:/);
+  assert.match(stagingWorkflow, /productionRecovery:/);
   assert.match(
     candidate,
     /actions\/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333/
   );
-  assert.match(
-    candidate,
-    /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/
-  );
+  assert.match(candidate, /run-id:.*inputs\.staging_run_id/);
   assert.match(candidate, /cloudflare-staging-evidence-/);
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
@@ -254,15 +287,34 @@ test('production approval waits outside the serialized deploy mutex', () => {
   );
 });
 
-test('manual recovery bypasses normal admission but still crosses protected approval', () => {
+test('only emergency break-glass may bypass admission; verified replay may not', () => {
   const admission = jobBlock(productionWorkflow, 'admission', 'approval');
   const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
   assert.match(admission, /github\.event_name == 'workflow_run'/);
-  assert.match(approval, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(admission, /REPLAY_VERIFIED_STAGING/);
+  assert.match(approval, /inputs\.confirmation == 'EMERGENCY_DEPLOY_PRODUCTION'/);
   assert.match(approval, /environment:\n {6}name: production/);
-  assert.match(deploy, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(deploy, /inputs\.confirmation == 'EMERGENCY_DEPLOY_PRODUCTION'/);
   assert.match(deploy, /needs\.approval\.result == 'success'/);
+});
+
+test('verified staging replay preserves evidence, admission and protected approval', () => {
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  const admission = jobBlock(productionWorkflow, 'admission', 'approval');
+  const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
+  const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+  assert.match(productionWorkflow, /REPLAY_VERIFIED_STAGING/);
+  assert.match(candidate, /Verify successful staging before accepting replay/);
+  assert.match(candidate, /cloudflare-verified-promotion-replay\.mjs/);
+  assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
+  assert.match(candidate, /EXPECTED_EVENT_NAME:.*verified-replay\.outputs\.event_name/);
+  assert.match(candidate, /source=staging/);
+  assert.match(admission, /REPLAY_VERIFIED_STAGING/);
+  assert.match(approval, /needs\.admission\.outputs\.admitted == 'true'/);
+  assert.match(deploy, /needs\.admission\.outputs\.admitted == 'true'/);
+  assert.doesNotMatch(approval, /github\.event_name == 'workflow_dispatch' \|\|/);
+  assert.doesNotMatch(deploy, /github\.event_name == 'workflow_dispatch' \|\|/);
 });
 
 test('manual dispatch is an explicit break-glass recovery path', () => {

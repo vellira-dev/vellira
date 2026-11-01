@@ -248,3 +248,25 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 2
+
+  # Independent npm lockfiles are not updated through the root pnpm graph.
+  - package-ecosystem: npm
+    directory: /examples/workspace-starter/native
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    # Major compatibility migrations stay owner-reviewed.
+    # Security updates remain eligible independent of routine PR limits.
+    ignore:
+      - dependency-name: expo
+        update-types: [version-update:semver-major]
+      - dependency-name: react-native
+        update-types: [version-update:semver-major]
+      - dependency-name: '@expo/*'
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /examples/workspace-starter/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1

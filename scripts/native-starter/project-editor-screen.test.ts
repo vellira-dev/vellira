@@ -48,12 +48,6 @@ describe('Native Starter project editor navigation', () => {
   });
 
   it('keeps released Select sheets compact without a fixed height', () => {
-    const manifestFile = new URL(
-      '../../examples/workspace-starter/native/package.json',
-      import.meta.url
-    );
-    const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-    expect(manifest.dependencies['@vellira-ui/react-native']).toBe('2.188.4');
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor.match(/contentStyle={compactSheetStyle}/g)).toHaveLength(2);
     expect(source).toContain('const compactSheetMaxHeight = Math.min(');
@@ -74,6 +68,18 @@ describe('Native Starter project editor navigation', () => {
   it('opens Team and Status choices in bottom sheets, not centered modals', () => {
     expect(editor.match(/presentation='sheet'/g)).toHaveLength(2);
     expect(editor).not.toContain("presentation='modal'");
+  });
+
+  it('matches the normal-size Select and Input control heights', () => {
+    expect(source).toContain('const editorSelectTriggerStyle = {');
+    expect(source).toContain('height: 46,');
+    expect(source).toContain('minHeight: 46,');
+    expect(source).toContain('paddingVertical: 0,');
+    expect(
+      editor.match(/triggerStyle={editorSelectTriggerStyle}/g)
+    ).toHaveLength(2);
+    expect(editor.match(/inputStyle={editorInputStyle}/g)).toHaveLength(2);
+    expect(editor.match(/padding: 18,/g)).toHaveLength(2);
   });
 
   it('centers both single-line Input fields without overriding the library globally', () => {
@@ -112,6 +118,39 @@ describe('Native Starter project editor navigation', () => {
   });
 });
 
+describe('Native Starter published release pins', () => {
+  it('keeps both Starter packages and README synchronized', () => {
+    const nativeFile = new URL(
+      '../../examples/workspace-starter/native/package.json',
+      import.meta.url
+    );
+    const webFile = new URL(
+      '../../examples/workspace-starter/web/package.json',
+      import.meta.url
+    );
+    const readmeFile = new URL(
+      '../../examples/workspace-starter/README.md',
+      import.meta.url
+    );
+    const native = JSON.parse(readFileSync(nativeFile, 'utf8'));
+    const web = JSON.parse(readFileSync(webFile, 'utf8'));
+    const version = native.dependencies['@vellira-ui/react-native'];
+
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(native.dependencies['@vellira-ui/icons']).toBe(version);
+    for (const name of [
+      '@vellira-ui/react',
+      '@vellira-ui/tokens',
+      '@vellira-ui/icons',
+    ]) {
+      expect(web.dependencies[name]).toBe(version);
+    }
+    expect(readFileSync(readmeFile, 'utf8')).toContain(
+      `**Vellira ${version} packages**`
+    );
+  });
+});
+
 describe('Native Starter project status badges', () => {
   it('gives Planned a legible opaque high-contrast badge', () => {
     expect(source).toMatch(/themeName === 'highContrast'\s*\?\s*'#FFFFFF'/);
@@ -145,5 +184,130 @@ describe('Native Starter dashboard metric contrast', () => {
       expect(metricSection.replace(/\s+/g, ' ')).toContain(expected);
     }
     expect(metricSection).toContain('backgroundColor: metric.bg');
+  });
+});
+
+describe('Native Starter Android project controls', () => {
+  it('keeps iOS glass in one clipped layer and Android opaque', () => {
+    const popover = source.slice(
+      source.indexOf("presentation='popover'"),
+      source.indexOf(
+        '<Dropdown.Trigger',
+        source.indexOf("presentation='popover'")
+      )
+    );
+    expect(popover).toContain(
+      "Platform.OS === 'ios' && themeName !== 'highContrast'"
+    );
+    expect(popover).toContain('popoverBackground={');
+    expect(popover).toContain('intensity={25}');
+    expect(popover).toContain('borderRadius: 22');
+    expect(popover).toContain("overflow: 'hidden'");
+    expect(popover).toContain("? 'transparent'");
+    expect(popover).toContain(': surface.panel');
+    expect(popover).toContain('? 0');
+  });
+
+  it('renders completed state with a vector check instead of a text glyph', () => {
+    expect(source).toContain("<Check size={16} color='#FFFFFF' />");
+    expect(source).not.toContain('>✓</Text>');
+    expect(source).toContain("accessibilityRole='checkbox'");
+    expect(source).toContain(
+      'accessibilityState={{ checked: project.completed }}'
+    );
+  });
+});
+
+describe('Native Starter large accessibility text', () => {
+  it('keeps tab navigation named while hiding oversized visual labels', () => {
+    expect(source).toContain('const largeText = fontScale >= 1.5');
+    expect(source).toContain('accessibilityLabel={label}');
+    expect(source).toContain('{!largeText ? (');
+  });
+
+  it('prevents header and chart labels from overtaking the viewport', () => {
+    expect(source).toContain('adjustsFontSizeToFit');
+    expect(source).toContain('minimumFontScale={0.7}');
+    expect(source).toContain('maxFontSizeMultiplier={1.5}');
+    expect(source).toContain('numberOfLines={largeText ? 1 : 2}');
+    expect(source).toContain("status.key === 'active'");
+  });
+});
+
+describe('Native Starter large-text project actions', () => {
+  it('retains the overflow menu and scales its content for large accessibility text', () => {
+    const start = source.indexOf("presentation='popover'");
+    const end = source.indexOf('<Dropdown.Trigger', start);
+    const menu = source.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(menu).toMatch(/textStyle=\{\s*largeText\s*\?/);
+    expect(menu).toContain('1.5 / fontScale');
+    expect(menu).toContain(
+      'itemStyle={largeText ? { minHeight: 52 } : undefined}'
+    );
+    expect(menu).toContain('width: largeText ? 268 : 216');
+    expect(source).toContain(
+      "accessibilityLabel={'Actions for ' + project.name}"
+    );
+    expect(source).toContain('onSelect={() => openEdit(project)}');
+    expect(source).toContain('onSelect={() => duplicateProject(project.id)}');
+    expect(source).toContain('onSelect={() => deleteProject(project.id)}');
+    expect(source).not.toContain(
+      "['Duplicate', Copy, () => duplicateProject(project.id)]"
+    );
+  });
+
+  it('provides a capped native editor input at large text sizes', () => {
+    expect(source).toContain("accessibilityLabel='Project name'");
+    expect(source).toContain("accessibilityLabel='Description'");
+    expect(source).toContain('maxFontSizeMultiplier={1.5}');
+    expect(source).toContain('onChangeText={setDescription}');
+  });
+});
+
+describe('Native Starter large-text search and restore', () => {
+  it('uses an accessible compact search input at large font scales', () => {
+    expect(source).toContain("accessibilityLabel='Search projects'");
+    expect(source).toContain('onChangeText={setQuery}');
+    expect(source).toContain("label='Search projects'");
+  });
+
+  it('keeps the destructive restore action readable and operable', () => {
+    expect(source).toContain("accessibilityLabel='Restore sample data'");
+    expect(source).toContain('maxFontSizeMultiplier={1.4}');
+    expect(source).toContain('setData(initialWorkspace)');
+  });
+});
+
+describe('Native Starter large-text organization choices', () => {
+  const start = source.indexOf('function LargeTextChoiceField(');
+  const end = source.indexOf('function WorkspaceScreen()', start);
+  const choiceField = source.slice(start, end);
+
+  it('opens the published Select sheet without expanding the form inline', () => {
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    expect(choiceField).toContain('<Select');
+    expect(choiceField).toContain("presentation='sheet'");
+    expect(choiceField).toContain('accessibilityLabel={label}');
+    expect(choiceField).toContain(
+      'renderValue={({ option, placeholder }) => ('
+    );
+    expect(choiceField).toContain('renderOption={({ option, selected }) => (');
+    expect(choiceField).toContain('maxFontSizeMultiplier={1.5}');
+    expect(choiceField).toContain('optionStyle={{');
+    expect(choiceField).toContain('Math.min(viewportHeight * 0.7, 360)');
+    expect(choiceField).toContain('virtual={{ estimatedItemSize: 52 }}');
+    expect(choiceField).not.toContain('setExpanded(');
+    expect(source).toContain("label='Team'");
+    expect(source).toContain("label='Status'");
+  });
+
+  it('preserves published Select for the standard-size editor', () => {
+    expect(source).toContain("label='Team'");
+    expect(source).toContain("label='Status'");
+    expect(source).toContain("presentation='sheet'");
+    expect(source).toContain('contentStyle={compactSheetStyle}');
   });
 });

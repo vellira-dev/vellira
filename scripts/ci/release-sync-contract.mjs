@@ -35,6 +35,33 @@ export function isReleaseSyncFileSet(files) {
   );
 }
 
+// Atomic releases are deliberately NOT admitted by the legacy seven-manifest
+// fast path. This pure shape detector is for the separate validated atomic
+// classifier; file names alone never grant production admission.
+export const ATOMIC_STARTER_SYNC_FILES = Object.freeze([
+  'examples/workspace-starter/README.md',
+  'examples/workspace-starter/native/package-lock.json',
+  'examples/workspace-starter/native/package.json',
+  'examples/workspace-starter/web/package-lock.json',
+  'examples/workspace-starter/web/package.json',
+]);
+
+export function isAtomicReleaseSyncFileSet(files) {
+  if (!Array.isArray(files) || new Set(files).size !== files.length) return false;
+  const expected = sorted([...RELEASE_SYNC_MANIFESTS, ...ATOMIC_STARTER_SYNC_FILES]);
+  return JSON.stringify(sorted(files.map(normalizePath))) === JSON.stringify(expected);
+}
+
+export function isAtomicReleaseSyncCandidate(files) {
+  if (!Array.isArray(files) || new Set(files).size !== files.length) return false;
+  const normalized = files.map(normalizePath);
+  const set = new Set(normalized);
+  return RELEASE_SYNC_MANIFESTS.every(file => set.has(file)) &&
+    ATOMIC_STARTER_SYNC_FILES.some(file => set.has(file)) &&
+    normalized.every(file => RELEASE_SYNC_MANIFESTS.includes(file) ||
+      ATOMIC_STARTER_SYNC_FILES.includes(file));
+}
+
 export function classifyMergedReleaseSyncShape({
   baseSha,
   parents,
@@ -408,13 +435,51 @@ async function main() {
     .map((file) => file.trim())
     .filter(Boolean);
 
-  const candidate = isReleaseSyncFileSet(files);
+  // Atomic shape is recognized separately, but is never admitted by names
+  // alone. Its verifier is SHA-bound and validates all twelve file contents.
+  const atomicCandidate = isAtomicReleaseSyncCandidate(files);
+  const candidate = isReleaseSyncFileSet(files) || atomicCandidate;
 
   if (detectMode) {
-    await writeOutput('release_sync', candidate ? 'true' : 'false');
+    // Detection cannot independently prove actor, parent lineage, and
+    // content. Atomic changes remain fail-closed until verified admission.
+    const detected = isReleaseSyncFileSet(files);
+    await writeOutput('release_sync', detected ? 'true' : 'false');
     process.stdout.write(
-      `${JSON.stringify({ releaseSync: candidate, files: sorted(files) }, null, 2)}\n`
+      JSON.stringify({ releaseSync: detected, atomicCandidate, files: sorted(files) }) + '\n'
     );
+    return;
+  }
+
+  if (atomicCandidate) {
+    // Preserve legacy release-sync behavior while the atomic format is
+    // being rolled out. On every admission path verify the exact immutable
+    // parent and candidate and the actual file contents before authorization.
+    if (classifyMergedMode || mergedMode) {
+      assert.equal(parents.length, 1, 'Atomic sync requires one parent');
+      assert.equal(parents[0], base, 'Atomic sync parent must match base');
+    }
+    const { verifyAtomicCandidate } = await import('./verify-atomic-release-sync.mjs');
+    const manifest = readJsonAt(head, 'package.json');
+    const result = verifyAtomicCandidate({
+      baseSha: base, headSha: head, files, version: manifest.version,
+    });
+    // Verification of the file content is necessary but not sufficient:
+    // actor, canonical title and exact branch/linear-parent policy remain.
+    if (classifyMergedMode || mergedMode) {
+      assert.equal(process.env.VELLIRA_PUSH_ACTOR, 'vellira-release-sync[bot]',
+        'Atomic merge requires release-sync App actor');
+      assert.match(git(['show', '-s', '--format=%s', head]),
+        RELEASE_SYNC_SQUASH_SUBJECT_PATTERN, 'Atomic merge requires canonical squash subject');
+    } else if (!detectMode) {
+      assert.equal(process.env.VELLIRA_PR_AUTHOR, 'vellira-release-sync[bot]');
+      assert.equal(process.env.VELLIRA_PR_TITLE, 'chore(release): sync package versions');
+      assert.equal(process.env.VELLIRA_PR_HEAD_REF,
+        'chore/sync-release-' + result.version);
+    }
+    await writeOutput('release_sync', 'true');
+    process.stdout.write('Verified immutable atomic release sync ' +
+      result.previousVersion + ' -> ' + result.version + '\n');
     return;
   }
 

@@ -39,3 +39,6 @@ storybook-static
 **/next-env.d.ts
 # Official provider web artwork: preserve downloaded bytes and embedded markup.
 apps/website/brand/**/*.svg
+
+# Mechanically generated from the canonical Expo Starter (checked byte-for-byte).
+apps/website/src/sections/home/ProductInterfaceDemo/native-starter-source/**

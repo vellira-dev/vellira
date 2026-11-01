@@ -1,5 +1,5 @@
 import { Check, Close, Error, Info } from '@vellira-ui/icons';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { useTheme } from '@vellira-ui/react-native';
 
@@ -23,6 +23,10 @@ export function WorkspaceNotice({
   onUndo,
 }: WorkspaceNoticeProps) {
   const { theme } = useTheme();
+  const { width, fontScale } = useWindowDimensions();
+  const largeText = fontScale >= 1.5;
+  // Short feedback keeps its actions on one line; longer feedback can grow.
+  const stacked = largeText && (width < 360 || notice.message.length > 24);
   const success = theme.semantic.status.success;
   const error = theme.semantic.status.error;
   const appearance =
@@ -50,9 +54,9 @@ export function WorkspaceNotice({
     <View
       style={{
         minHeight: 52,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+        flexDirection: stacked ? 'column' : 'row',
+        alignItems: stacked ? 'stretch' : 'center',
+        gap: stacked ? 2 : 8,
         paddingLeft: 12,
         paddingRight: 4,
         paddingVertical: 4,
@@ -64,61 +68,86 @@ export function WorkspaceNotice({
         backgroundColor: appearance.background,
       }}
     >
-      <NoticeIcon size={18} color={appearance.foreground} />
-      <Text
-        accessibilityLiveRegion={
-          notice.tone === 'error' ? 'assertive' : 'polite'
-        }
+      <View
         style={{
-          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          flex: stacked ? undefined : 1,
           minWidth: 0,
-          color: appearance.foreground,
-          fontSize: 13,
-          lineHeight: 18,
-          fontWeight: '600',
         }}
       >
-        {notice.message}
-      </Text>
-      {onUndo ? (
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Undo project removal'
-          onPress={onUndo}
-          hitSlop={6}
+        <NoticeIcon size={18} color={appearance.foreground} />
+        <Text
+          accessibilityLiveRegion={
+            notice.tone === 'error' ? 'assertive' : 'polite'
+          }
+          maxFontSizeMultiplier={largeText ? 1.4 : 1.5}
+          numberOfLines={largeText && !stacked ? 1 : undefined}
+          adjustsFontSizeToFit={largeText && !stacked}
+          minimumFontScale={0.9}
           style={{
-            minHeight: 44,
-            minWidth: 48,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 6,
+            flex: 1,
+            minWidth: 0,
+            color: appearance.foreground,
+            fontSize: 13,
+            lineHeight: largeText ? undefined : 18,
+            fontWeight: '600',
           }}
         >
-          <Text
-            style={{
-              color: appearance.foreground,
-              fontSize: 13,
-              fontWeight: '700',
-            }}
-          >
-            Undo
-          </Text>
-        </Pressable>
-      ) : null}
-      <Pressable
-        accessibilityRole='button'
-        accessibilityLabel='Dismiss notification'
-        hitSlop={6}
-        onPress={onDismiss}
+          {notice.message}
+        </Text>
+      </View>
+      <View
         style={{
-          width: 44,
-          minHeight: 44,
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-end',
+          alignSelf: stacked ? 'flex-end' : undefined,
+          gap: 4,
         }}
       >
-        <Close size={16} color={appearance.foreground} />
-      </Pressable>
+        {onUndo ? (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Undo project removal'
+            onPress={onUndo}
+            hitSlop={6}
+            style={{
+              minHeight: 44,
+              minWidth: 48,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 6,
+            }}
+          >
+            <Text
+              maxFontSizeMultiplier={1.5}
+              style={{
+                color: appearance.foreground,
+                fontSize: 13,
+                fontWeight: '700',
+              }}
+            >
+              Undo
+            </Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel='Dismiss notification'
+          hitSlop={6}
+          onPress={onDismiss}
+          style={{
+            width: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Close size={16} color={appearance.foreground} />
+        </Pressable>
+      </View>
     </View>
   );
 }

@@ -27,6 +27,7 @@ export default [
       '**/*.d.ts',
       '**/storybook-static/**',
       '**/src/generated/**',
+      'apps/website/src/sections/home/ProductInterfaceDemo/native-starter-source/**',
       '**/.storybook/**',
       '**/.rnstorybook/**',
       '**/android/**',

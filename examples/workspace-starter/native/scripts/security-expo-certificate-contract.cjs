@@ -61,5 +61,5 @@ console.log(JSON.stringify({
   result: 'PASS', scope: 'synthetic-root-intermediate-leaf-chain',
   positive: ['valid-self-signed-certificate', 'signed-manifest-buffer'],
   negative: ['tampered-certificate-signature', 'mismatched-key-pair'],
-  notProven: ['Expo-EAS-network-certificate-chain', 'attacker-reachability', 'Zod-advisory', 'node-forge-upstream-release'],
+  notProven: ['Expo-EAS-network-certificate-chain', 'attacker-reachability', 'Zod-advisory', 'Expo-EAS-real-service-certificate-chain'],
 }, null, 2));

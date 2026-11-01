@@ -1,11 +1,16 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import { ArrowRight, Check, Clock, Package, Success } from '@vellira-ui/icons';
 import { Button } from '@vellira-ui/react';
 
 import { PublishedNpmVersion } from '@/components/release/PublishedNpmVersion';
+import {
+  observePublicRelease,
+  type PublishedRelease,
+} from '../../../../../../scripts/public-release/client';
 
 import styles from './Roadmap.module.css';
 
@@ -199,6 +204,12 @@ const panelItemVariants = {
 
 export function Roadmap() {
   const shouldReduceMotion = useReducedMotion();
+  const [release, setRelease] = useState<PublishedRelease | null>(null);
+
+  useEffect(
+    () => observePublicRelease(setRelease, { url: '/api/public-release' }),
+    []
+  );
 
   return (
     <section
@@ -325,7 +336,7 @@ export function Roadmap() {
                   <h3>Latest published version</h3>
                   <span className={styles.releaseVersion}>
                     <code>
-                      <PublishedNpmVersion />
+                      <PublishedNpmVersion release={release} />
                     </code>
                     <span className={styles.releaseBadge}>npm</span>
                   </span>
@@ -357,7 +368,11 @@ export function Roadmap() {
                 iconEnd={<ArrowRight size={14} aria-hidden='true' />}
               >
                 <a
-                  href='https://github.com/vellira-dev/Vellira/releases'
+                  href={
+                    release
+                      ? `https://github.com/vellira-dev/vellira/releases/tag/v${release.version}`
+                      : 'https://github.com/vellira-dev/vellira/releases'
+                  }
                   target='_blank'
                   rel='noreferrer'
                 >

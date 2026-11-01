@@ -74,6 +74,119 @@ describe('clean Vite consumer workflow contract', () => {
     expect(workflow).not.toContain('vite-baseline-consumer:');
   });
 
+  it('measures a wider published-root Web surface separately from the baseline', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    expect(script).toContain('measureRepresentativeWeb(');
+    expect(script).toContain('formatRepresentativeWeb(representativeWeb)');
+    expect(script).toContain('representativeWeb,');
+    expect(script).toContain('bundleSize.scenarios.buttonInput');
+    expect(script).toContain("run('npm', ['run', 'typecheck']");
+  });
+
+  it('uses a stable active baseline pointer and provisional warnings', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    const regression = readFileSync(
+      'scripts/performance/vite-bundle-regression.cjs',
+      'utf8'
+    );
+    expect(script).toContain('vite-main-active.json');
+    expect(regression).toContain('observedWarningThreshold');
+    expect(regression).toContain('warningStatus: result.threshold.state');
+    expect(regression).toContain("report.threshold.state === 'PROVISIONAL'");
+  });
+
+  it('keeps extra CSS attribution gated to explicitly enabled manual workflow runs', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/vite-consumer.cjs',
+      'utf8'
+    );
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    expect(script).toContain("VELLIRA_CSS_ATTRIBUTION === '1'");
+    expect(script).toContain('measureCssAttribution(');
+    expect(script).toContain('...(cssAttribution ? { cssAttribution } : {})');
+    expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
+    expect(workflow).toContain("inputs.css_attribution && '1' || '0'");
+  });
+
+  it('runs isolated Button CSS parity only on explicit workflow dispatch', () => {
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    const probe = readFileSync(
+      'packages/react/scripts/css-button-parity-probe.mjs',
+      'utf8'
+    );
+    expect(workflow).toContain('css_button_probe:');
+    expect(workflow).toContain(
+      "if: github.event_name == 'workflow_dispatch' && inputs.css_button_probe"
+    );
+    expect(workflow).toContain(
+      'run: node packages/react/scripts/css-button-parity-probe.mjs'
+    );
+    expect(probe).toContain('configFile: false');
+    expect(probe).toContain(
+      'verifyButtonCssParity({ rootJs, fullCss, isolatedCss })'
+    );
+    expect(probe).toContain('expectedExports');
+    expect(probe).toContain('rmSync(temp, { recursive: true, force: true })');
+  });
+
+  it('gates packed Button consumer to manual workflow', () => {
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    const proof = readFileSync(
+      'scripts/performance/button-packed-consumer-proof.cjs',
+      'utf8'
+    );
+    expect(workflow).toContain('css_button_consumer:');
+    expect(workflow).toContain(
+      "if: github.event_name == 'workflow_dispatch' && inputs.css_button_consumer"
+    );
+    expect(workflow).toContain('mcr.microsoft.com/playwright:v1.61.1-noble');
+    expect(workflow).toContain(
+      'css_button_consumer=true requires css_button_probe=true'
+    );
+    expect(workflow).toContain('button-packed-consumer.json');
+    expect(proof).toContain('buildTemporaryButtonCss({');
+    expect(proof).toContain('node_modules/@vellira-ui/react/dist');
+    expect(proof).toContain('browserSnapshots(chromium, dist)');
+    expect(proof).toContain("run('npm', ['run', 'build:next']");
+    expect(proof).toContain('PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY');
+    expect(proof).toContain("path.join(reactDist, 'styles/button.css')");
+    expect(proof).toContain('Packed public Button stylesheet differs');
+  });
+
+  it('keeps full CSS while building the Button-only stylesheet', () => {
+    const manifest = readFileSync('packages/react/package.json', 'utf8');
+    const pkg = JSON.parse(manifest);
+    const producer = readFileSync(
+      'packages/react/scripts/css-button-parity-probe.mjs',
+      'utf8'
+    );
+    expect(pkg.exports['./styles'].default).toBe('./dist/styles.css');
+    expect(pkg.exports['./styles/button'].default).toBe(
+      './dist/styles/button.css'
+    );
+    expect(pkg.exports['./styles/button'].types).toBe('./styles.d.ts');
+    expect(pkg.scripts.build).toContain('--emit-button-style');
+    expect(pkg.sideEffects).toContain('**/*.css');
+    expect(producer).toContain('verifyButtonCssParity({');
+    expect(producer).toContain('buildTemporaryButtonCss({');
+    expect(producer).toContain("css.includes(Buffer.from(':root{--space-0:'))");
+  });
+
   it('verifies the public styles, render, dev, typecheck, build, and export paths', () => {
     const script = readFileSync(
       'scripts/release-candidate/vite-consumer.cjs',
@@ -82,6 +195,7 @@ describe('clean Vite consumer workflow contract', () => {
 
     expect(script).toContain("import '@vellira-ui/tokens/css'");
     expect(script).toContain("import '@vellira-ui/react/styles'");
+    expect(script).toContain("'@vellira-ui/react/styles/button'");
     expect(script).toContain(
       "import { Button, Input } from '@vellira-ui/react'"
     );

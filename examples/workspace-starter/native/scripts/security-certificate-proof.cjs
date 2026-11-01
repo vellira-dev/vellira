@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
-// Diagnostic only. A valid/tampered RSA signature smoke test does NOT prove
-// GHSA-86w9-cpqp-85rv (nested DigestAlgorithm structure) is fixed.
+// Published RSA smoke test; nested DigestAlgorithm rejection is verified
+// independently in security-asn1-adversarial.cjs. Zod remains open.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -17,7 +17,7 @@ const locked = (name) => {
   return record.version;
 };
 
-assert.equal(locked('node-forge'), '1.4.0');
+assert.equal(locked('node-forge'), '1.4.2');
 assert.equal(locked('zod'), '3.25.76');
 assert.equal(locked('@expo/code-signing-certificates'), '0.0.7');
 
@@ -47,13 +47,13 @@ try {
 assert.equal(rejected, true, 'A modified message must fail RSA verification');
 
 const summary = {
-  status: 'diagnostic-pass-not-remediated',
+  status: 'published-forge-rsa-smoke-pass-zod-open',
   lock: {
     forge: locked('node-forge'),
     zod: locked('zod'),
     certificates: locked('@expo/code-signing-certificates'),
   },
   checks: ['exact-locked-packages', 'code-signing-entrypoints', 'rsa-valid-signature', 'rsa-modified-message-rejected'],
-  unproven: ['nested-DigestAlgorithm-RSA-adversarial-case', 'attacker-controlled-input-reachability', 'zod-oversized-collection-case'],
+  unproven: ['attacker-controlled-input-reachability', 'zod-oversized-collection-case'],
 };
 console.log(JSON.stringify(summary, null, 2));

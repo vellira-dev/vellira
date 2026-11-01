@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Opt-in diagnostic for #1906. Measures *exports*, not installed-package bytes
-// or on-device startup. Uses a published npm version, never workspace source.
+// Opt-in Phase B #470. Measures production iOS/Android Metro exports, not
+// installed-package bytes or on-device startup. Pins published npm version.
+const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -17,12 +18,19 @@ const output = path.resolve(
 const cases = ['baseline', 'theme', 'button', 'button-select'];
 const platforms = ['ios', 'android'];
 const sourceInventories = {};
+const productionOnly = process.env.VELLIRA_METRO_PRODUCTION_ONLY === '1';
 
 function run(command, args, cwd, extraEnv = {}) {
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, CI: '1', EXPO_NO_TELEMETRY: '1', ...extraEnv },
+    env: {
+      ...process.env,
+      CI: '1',
+      EXPO_NO_TELEMETRY: '1',
+      npm_config_legacy_peer_deps: 'false',
+      ...extraEnv,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
     maxBuffer: 16 * 1024 * 1024,
   });
@@ -65,38 +73,52 @@ function manifest(kind) {
   };
 }
 function app(kind) {
-  const imports =
-    kind === 'baseline'
-      ? ''
-      : "import { " +
-        (kind === 'theme' ? 'ThemeProvider' : kind === 'button' ? 'Button' : 'Button, Select') +
-        " } from '@vellira-ui/react-native';\n";
-  const children =
-    kind === 'baseline'
-      ? "React.createElement(Text, null, 'Metro baseline')"
-      : kind === 'theme'
-        ? "React.createElement(ThemeProvider, null, React.createElement(Text, null, 'Metro theme only'))"
+  const imports = kind === 'baseline'
+    ? ''
+    : "import { " +
+      (kind === 'theme'
+        ? 'ThemeProvider'
         : kind === 'button'
-          ? "React.createElement(Button, null, 'Metro Button')"
-        : "React.createElement(View, null, React.createElement(Button, null, 'Metro Button'), React.createElement(Select, { label: 'Choice', options: [{ value: 'one', label: 'One' }], defaultValue: 'one' }))";
+          ? 'ThemeProvider, Button'
+          : 'ThemeProvider, Button, Select') +
+      " } from '@vellira-ui/react-native';\n";
+  const content = kind === 'baseline'
+    ? "React.createElement(Text, null, 'Metro baseline')"
+    : kind === 'theme'
+      ? "React.createElement(Text, null, 'Metro theme only')"
+      : kind === 'button'
+        ? "React.createElement(Button, null, 'Metro Button')"
+        : "React.createElement(View, null, " +
+          "React.createElement(Button, null, 'Metro Button'), " +
+          "React.createElement(Select, { label: 'Choice', " +
+          "options: [{ value: 'one', label: 'One' }], " +
+          "defaultValue: 'one', presentation: 'sheet' }))";
+  const child = kind === 'baseline' ? content :
+    "React.createElement(ThemeProvider, { defaultTheme: 'light' }, " +
+      content + ")";
   return (
     "import React from 'react';\n" +
     "import { View, Text } from 'react-native';\n" +
     imports +
     'export default function App() {\n' +
     '  return React.createElement(View, null, ' +
-    children +
-    ');\n}\n'
+    child + ');\n}\n'
   );
 }
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-metro-1906-'));
 const evidence = {
-  schemaVersion: 1,
-  issue: 1906,
+  schemaVersion: 2,
+  issue: 470,
   version,
   node: process.version,
-  installMode: 'npm --legacy-peer-deps (disables npm peer auto-install)',
-  purpose: 'Metro production export comparison; not device/Hermes runtime proof',
+  npm: run('npm', ['--version'], process.cwd()),
+  sourceRevision: run(
+    'git', ['rev-parse', 'HEAD'], path.resolve(__dirname, '../..')
+  ),
+  pinnedFixtureDependencies: manifest('baseline').dependencies,
+  installMode: 'normal npm install; legacy-peer-deps=false',
+  productionOnly,
+  purpose: 'Differential iOS/Android production Metro output; not device startup',
   cases: {},
 };
 try {
@@ -109,7 +131,15 @@ try {
     }, null, 2) + '\n');
     write(dir, 'index.js', "import { registerRootComponent } from 'expo';\nimport App from './App';\nregisterRootComponent(App);\n");
     write(dir, 'App.js', app(kind));
-    run('npm', ['install', '--legacy-peer-deps', '--no-audit', '--no-fund'], dir);
+    if (run('npm', ['config', 'get', 'legacy-peer-deps'], dir) !== 'false') {
+      throw new Error('Normal npm peer resolution must be enabled.');
+    }
+    run('npm', ['install', '--no-audit', '--no-fund'], dir);
+    const lockBytes = fs.readFileSync(path.join(dir, 'package-lock.json'));
+    const lock = JSON.parse(lockBytes.toString('utf8'));
+    if (lock.packages?.['node_modules/@react-native-picker/picker']) {
+      throw new Error(kind + ': npm lockfile unexpectedly installed Picker.');
+    }
     const pickerPath = path.join(dir, 'node_modules/@react-native-picker/picker');
     if (fs.existsSync(pickerPath)) {
       throw new Error(kind + ': picker present; cannot claim negative-dependency proof.');
@@ -131,6 +161,11 @@ try {
       const packedFiles = walk(path.join(nativeRoot, 'dist'));
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
       const { references, scannedFiles } = inspectPublishedPickerReferences(nativeRoot, packedFiles);
+      if (Object.hasOwn(
+        nativeManifest.peerDependencies ?? {}, '@react-native-picker/picker'
+      )) {
+        throw new Error(kind + ': published Vellira still requires Picker peer.');
+      }
       nativePackageInventory = {
         requiredPeers: nativeManifest.peerDependencies ?? {},
         optionalPeers: nativeManifest.peerDependenciesMeta ?? {},
@@ -159,7 +194,7 @@ try {
       };
     }
     const developmentBundles = {};
-    {
+    if (!productionOnly) {
       sourceInventories[kind] = {};
       for (const platform of platforms) {
         const bundlePath = path.join(dir, 'dev-' + platform + '.jsbundle');
@@ -220,7 +255,19 @@ try {
         };
       }
     }
-    evidence.cases[kind] = { installedVersion, pickerInstalled: false, nativePackageInventory, platforms: measurements, developmentBundles };
+    evidence.cases[kind] = {
+      installedVersion,
+      pickerInstalled: false,
+      install: {
+        npm: evidence.npm,
+        packageLockSha256: createHash('sha256').update(lockBytes).digest('hex'),
+        pickerInLockfile: false,
+        nativeExplicitlyRequested: kind !== 'baseline',
+      },
+      nativePackageInventory,
+      platforms: measurements,
+      developmentBundles,
+    };
     console.log('[native-metro-1906]', kind, JSON.stringify(evidence.cases[kind]));
   }
   for (const platform of platforms) {
@@ -237,7 +284,8 @@ try {
       evidence.cases.button.platforms[platform].scriptBytes;
   }
   evidence.sourceModuleDeltas = {};
-  for (const platform of platforms) {
+  if (!productionOnly) {
+    for (const platform of platforms) {
     const casesToCompare = [
       ['baseline', 'theme'],
       ['theme', 'button'],
@@ -257,6 +305,7 @@ try {
         note: 'Source-map module identities, not output-byte contributions',
       };
     }
+  }
   }
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');

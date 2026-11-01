@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "profile": "vite-full-styles-v1",
+  "main": {
+    "sha": "1b99f01ded0ed95e42fd751530e4d54b164a35d0",
+    "treeSha": "2106ac3ac710171999069b57238593dac925154a"
+  },
+  "sourceEvidence": {
+    "measuredCandidateSha": "dd59fde614f59e5c0d27aac60ff8df4bfe8fecad",
+    "measuredTreeSha": "2106ac3ac710171999069b57238593dac925154a",
+    "workflowRunId": 40947198917,
+    "originalArtifactId": 12929632808,
+    "candidateManifestSha256": "ca39523d2e6837c2b339481e1ddbfe7236438d32ed0f42b858cd4eb04d4caa58",
+    "harnessSha": "a9f01a7212822c4a9f05272e50df5c5a255040e2",
+    "note": "Measured PR #2002 exact source has the identical Git tree as its post-squash main; this does not assert a separately rerun main build."
+  },
+  "tooling": {
+    "node": "v22.23.4",
+    "npm": "10.9.9",
+    "vite": "8.3.5",
+    "typescript": "6.0.3"
+  },
+  "metric": "sum of emitted production .js and .css assets; gzip level 9 per asset",
+  "scenarios": {
+    "bare": {
+      "jsBytes": 219618,
+      "jsGzipBytes": 67749,
+      "jsFiles": 1,
+      "cssBytes": 0,
+      "cssGzipBytes": 0,
+      "cssFiles": 0
+    },
+    "button": {
+      "jsBytes": 415411,
+      "jsGzipBytes": 126170,
+      "jsFiles": 1,
+      "cssBytes": 547401,
+      "cssGzipBytes": 58174,
+      "cssFiles": 1
+    },
+    "buttonInput": {
+      "jsBytes": 415528,
+      "jsGzipBytes": 126221,
+      "jsFiles": 1,
+      "cssBytes": 547401,
+      "cssGzipBytes": 58174,
+      "cssFiles": 1
+    }
+  },
+  "warningPolicy": {
+    "schemaVersion": 1,
+    "state": "PROVISIONAL",
+    "observedIdenticalSourceSamples": 2,
+    "measuredSourceSha": "dd59fde614f59e5c0d27aac60ff8df4bfe8fecad",
+    "runId": 40947198917,
+    "artifacts": [
+      {
+        "attempt": 1,
+        "artifactId": 12929632808
+      },
+      {
+        "attempt": 2,
+        "artifactId": 12929879164
+      }
+    ],
+    "maximumObservedAbsoluteDifferenceBytes": {
+      "jsBytes": 0,
+      "jsGzipBytes": 0,
+      "cssBytes": 0,
+      "cssGzipBytes": 0
+    },
+    "blocking": false,
+    "note": "Two separately executed clean Vite consumers at the exact same candidate SHA, toolchain and pinned package graph were byte-identical. Provisional informational warnings on any positive regression; not a statistically established noise bound or blocking threshold."
+  }
+}
