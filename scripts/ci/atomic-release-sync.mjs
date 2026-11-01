@@ -28,8 +28,16 @@ export function validateAtomicReleaseSnapshot(root, version) {
     const doc = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
     assert.equal(doc.version, version, file + ' version diverges');
   }
+  const expectedDirectPackages = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
   for (const file of ['web', 'native']) {
     const doc = JSON.parse(fs.readFileSync(path.join(root, 'examples/workspace-starter', file, 'package.json'), 'utf8'));
+    assert.equal(doc.private, true, file + ' must remain private');
+    for (const name of expectedDirectPackages[file]) {
+      assert.equal(doc.dependencies?.[name], version, file + ' ' + name + ' missing or drifting');
+    }
     for (const [name, value] of Object.entries(doc.dependencies ?? {})) {
       if (name.startsWith('@vellira-ui/')) assert.equal(value, version, file + ' ' + name + ' drift');
     }
