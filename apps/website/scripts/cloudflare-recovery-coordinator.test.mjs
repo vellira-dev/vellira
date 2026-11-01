@@ -139,3 +139,33 @@ test('invalid identifiers and input lists fail closed', () => {
     ...base, stagingRuns: [{ ...stage, id: 0 }],
   }));
 });
+
+test('defers only expensive recovery staging while main is still changing', () => {
+  const plan = decideRecovery({ ...base, mainUpdatedAt: '2026-11-01T12:59:30Z' });
+  assert.deepEqual(plan, { dispatch: false, reason: 'main_quiet_period' });
+  assert.equal(decideRecovery({
+    ...base, mainUpdatedAt: '2026-11-01T12:57:00Z',
+  }).target, 'staging');
+});
+
+test('verified staging remains eligible during quiet period', () => {
+  const plan = decideRecovery({
+    ...base, mainUpdatedAt: '2026-11-01T12:59:30Z', stagingRuns: [stage],
+  });
+  assert.equal(plan.target, 'production');
+  assert.equal(plan.reason, 'verified_staging_without_production');
+});
+
+test('active production and current production remain dominant during quiet period', () => {
+  const input = { ...base, mainUpdatedAt: '2026-11-01T12:59:30Z' };
+  assert.equal(decideRecovery({ ...input, productionSha: b }).reason, 'already_deployed');
+  assert.equal(decideRecovery({
+    ...input, productionRuns: [{ status: 'in_progress' }],
+  }).reason, 'production_active');
+});
+
+test('invalid commit timestamps are rejected rather than used as admission evidence', () => {
+  assert.throws(() => decideRecovery({
+    ...base, mainUpdatedAt: 'invalid',
+  }), /Invalid immutable main commit date/);
+});
