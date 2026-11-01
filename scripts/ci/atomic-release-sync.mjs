@@ -20,15 +20,31 @@ export function assertStableReleaseVersion(version) {
   assert.match(version, VERSION, 'Expected stable release version');
 }
 
-export function assertAtomicSyncFileSet(paths) {
+export function assertAtomicSyncFileSet(paths, snapshots = null) {
   assert.equal(new Set(paths).size, paths.length, 'Duplicate atomic-sync path');
-  assert.deepEqual([...paths].sort(), ATOMIC_RELEASE_SYNC_PATHS,
-    'Atomic release sync requires exactly seven package manifests and five Starter files');
+  const ordered = [...paths].sort();
+  if (!snapshots) {
+    assert.deepEqual(ordered, ATOMIC_RELEASE_SYNC_PATHS,
+      'Atomic release sync requires exactly seven package manifests and five Starter files');
+    return;
+  }
+  const { before, after } = snapshots;
+  assert.ok(before && after, 'Atomic sync requires both immutable snapshots');
+  for (const file of RELEASE_SYNC_MANIFESTS) {
+    assert.ok(ordered.includes(file), 'Atomic sync missing release manifest: ' + file);
+  }
+  const actual = ATOMIC_RELEASE_SYNC_PATHS.filter(file => {
+    assert.ok(Object.hasOwn(before, file) && Object.hasOwn(after, file),
+      'Missing atomic snapshot: ' + file);
+    return JSON.stringify(before[file]) !== JSON.stringify(after[file]);
+  });
+  assert.deepEqual(ordered, actual,
+    'Atomic changed paths must equal the exact snapshot delta; no missing, extra, or unchanged paths');
 }
 
 
 export function verifyAtomicManifestTransition({ files, before, after, version }) {
-  assertAtomicSyncFileSet(files);
+  assertAtomicSyncFileSet(files, { before, after });
   assertStableReleaseVersion(version);
   assert.ok(before && after, 'Missing atomic manifest snapshots');
   const oldVersions = new Set();
