@@ -1,0 +1,65 @@
+name: Website production promotion watchdog
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  verify-promotion-trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Detect staging success without a production workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          const repo = process.env.GH_REPOSITORY;
+          const token = process.env.GH_TOKEN;
+          async function runs(workflow) {
+            const path = `/repos/${repo}/actions/workflows/${workflow}/runs?branch=main&per_page=50`;
+            const response = await fetch('https://api.github.com' + path, {
+              headers: {
+                Authorization: 'Bearer ' + token,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+              },
+            });
+            if (!response.ok) throw new Error(`GitHub API ${response.status}: ${workflow}`);
+            return (await response.json()).workflow_runs;
+          }
+          const staging = await runs('deploy-website-cloudflare-staging.yml');
+          const production = await runs('deploy-website-cloudflare-production.yml');
+          const newest = staging.find(run =>
+            run.event === 'push' &&
+            run.head_branch === 'main' &&
+            run.status === 'completed' &&
+            run.conclusion === 'success'
+          );
+          if (!newest) {
+            console.log('No successful main push staging candidate in the recent window.');
+            process.exit(0);
+          }
+          const ageMs = Date.now() - Date.parse(newest.updated_at);
+          if (ageMs < 15 * 60_000) {
+            console.log('Staging finished less than 15 minutes ago; allowing trigger propagation.');
+            process.exit(0);
+          }
+          const matching = production.find(run =>
+            run.event === 'workflow_run' &&
+            run.head_sha === newest.head_sha
+          );
+          if (matching) {
+            console.log(`Production workflow found for ${newest.head_sha}: ${matching.html_url} (${matching.status}/${matching.conclusion})`);
+            process.exit(0);
+          }
+          const message = `Successful staging ${newest.html_url} at ${newest.head_sha} has no matching production workflow_run. Investigate missing GitHub event; do NOT bypass promotion evidence or approval.`;
+          console.error('::error::' + message);
+          process.exitCode = 1;
+          NODE
