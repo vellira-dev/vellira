@@ -40,7 +40,7 @@ test('version transition accepts only seven converged version-only changes', () 
 
 test('release workflow prepares a combined PR only after publishing', () => {
   const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
-  const publish = workflow.indexOf('      - name: Release\\n');
+  const publish = workflow.indexOf('      - name: Release');
   const prepare = workflow.indexOf('      - name: Prepare verified atomic release and Starter snapshot');
   const propose = workflow.indexOf('      - name: Create version sync PR');
   assert.ok(publish > -1 && prepare > publish && propose > prepare);
