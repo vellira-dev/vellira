@@ -72,7 +72,8 @@ export function decideRecovery({
   if (sameSha.some((run) =>
     (run.event === 'push' || run.recoveryAttempt === true) &&
     run.status === 'completed' &&
-    run.conclusion === 'failure'
+    run.conclusion !== 'success' &&
+    run.conclusion !== 'skipped'
   )) {
     return { dispatch: false, reason: 'failed_staging_requires_review' };
   }
