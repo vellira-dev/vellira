@@ -108,7 +108,7 @@ async function atomicSyncDocuments({
       );
       assert.equal(response?.type, 'file', 'Expected immutable atomic file: ' + file);
       assert.equal(response?.encoding, 'base64', 'Expected base64 atomic file: ' + file);
-      const raw = Buffer.from(response.content.replaceAll('\\n', ''), 'base64').toString('utf8');
+      const raw = Buffer.from(response.content.replaceAll('\n', ''), 'base64').toString('utf8');
       return file.endsWith('.json') ? JSON.parse(raw) : raw;
     };
     [before[file], after[file]] = await Promise.all([read(candidateSha), read(mainSha)]);
@@ -301,8 +301,8 @@ export async function assessFreshProductionCandidate({
     assert.equal(commit.parents?.length, 1);
     assert.equal(commit.parents[0]?.sha, candidateSha);
     assert.equal(commit.author?.login, 'vellira-release-sync[bot]');
-    assert.match(commit.commit?.message?.split(/\\r?\\n/, 1)[0] ?? '',
-      /^chore\\(release\\): sync package versions \\(#\\d+\\)$/);
+    assert.match(commit.commit?.message?.split(/\r?\n/, 1)[0] ?? '',
+      /^chore\(release\): sync package versions \(#\d+\)$/);
     assert.ok(comparison.files.every(file =>
       file.status === 'modified' && file.previous_filename === undefined
     ), 'Atomic freshness requires modified files without renames');
