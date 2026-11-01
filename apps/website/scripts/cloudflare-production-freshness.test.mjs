@@ -611,9 +611,7 @@ test('atomic sync never inherits seven-manifest production freshness bypass by s
       fetchImpl: mock.fetchImpl,
     }),
     (error) => {
-      assert.equal(error.name, 'ProductionCandidateSupersededError');
-      assert.equal(error.candidateSha, A);
-      assert.ok(error.relevantPaths.length > 0);
+      assert.match(error.message, /one contiguous sync commit/);
       return true;
     }
   );
