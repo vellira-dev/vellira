@@ -143,3 +143,27 @@ test('atomic content authority validates registry lock integrity and blocks tamp
   wrongPin['examples/workspace-starter/native/package-lock.json'].packages['node_modules/@vellira-ui/icons'].version = old;
   assert.throws(() => verifyAtomicReleaseContents({ ...input, after: wrongPin }), /pin mismatch/);
 });
+
+test('Starter may lag root manifests but cannot diverge internally or downgrade', () => {
+  const before = {
+    'examples/workspace-starter/README.md': 'Using **Vellira 2.188.11 packages**.',
+  };
+  const after = {
+    'examples/workspace-starter/README.md': 'Using **Vellira 2.189.0 packages**.',
+  };
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    before[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.188.11'])) };
+    after[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.189.0'])) };
+  }
+  const input = { before, after, version: '2.189.0' };
+  assert.equal(verifyAtomicStarterTransition(input).previousStarterVersion, '2.188.11');
+  const mixed = structuredClone(before);
+  mixed['examples/workspace-starter/native/package.json'].dependencies['@vellira-ui/icons'] = '2.188.12';
+  assert.throws(() => verifyAtomicStarterTransition({ ...input, before: mixed }), /Prior Starter pins must converge/);
+  assert.throws(() => verifyAtomicStarterTransition({ ...input, version: '2.188.10' }), /downgrade/);
+});
