@@ -84,6 +84,19 @@ export function decideRecovery({
       (run.event === 'push' && run.status !== 'completed'))) {
     return { dispatch: false, reason: 'staging_exists_for_main' };
   }
+  // A release-sync-only push intentionally skipped staging deployment.
+  // It is not evidence that Cloudflare requires a fresh deployment. Until
+  // immutable deployed-build proof is available, fail closed instead of
+  // silently spending another Cloudflare deployment on this SHA.
+  if (sameSha.some((run) =>
+    run.event === 'push' &&
+    run.status === 'completed' &&
+    run.conclusion === 'success' &&
+    run.fullStage === false
+  )) {
+    return { dispatch: false, reason: 'skipped_staging_requires_review' };
+  }
+
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
