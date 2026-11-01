@@ -61,7 +61,14 @@ export function verifyAtomicManifestTransition({ files, before, after, version }
     assert.deepEqual(nextRest, previousRest, 'Unexpected manifest mutation: ' + file);
   }
   assert.equal(oldVersions.size, 1, 'Root and package versions were not converged before update');
-  return { previousVersion: [...oldVersions][0], version };
+  const [previousVersion] = oldVersions;
+  assertStableReleaseVersion(previousVersion);
+  const oldParts = previousVersion.split('.').map(Number);
+  const nextParts = version.split('.').map(Number);
+  const firstChange = nextParts.findIndex((part, index) => part !== oldParts[index]);
+  assert.ok(firstChange !== -1 && nextParts[firstChange] > oldParts[firstChange],
+    'Atomic release sync must advance the package version, never repeat or downgrade');
+  return { previousVersion, version };
 }
 
 export function verifyAtomicStarterTransition({ before, after, version }) {
