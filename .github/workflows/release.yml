@@ -109,6 +109,15 @@ jobs:
           fi
           node -e "if (require('./package.json').version !== process.env.RELEASE_VERSION) process.exit(1)"
 
+      - name: Require unchanged pnpm lock for atomic release admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            echo "::error::Atomic release sync cannot admit pnpm-lock.yaml mutations."
+            exit 1
+          fi
+
       - name: Create auto-reconcile release sync GitHub App token
         id: auto-reconcile-release-sync-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
@@ -447,6 +456,15 @@ jobs:
           echo "branch=chore/sync-release-$version" >> "$GITHUB_OUTPUT"
           echo "Release-managed files changed for version $version."
 
+      - name: Require unchanged pnpm lock for atomic release admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            echo "::error::Atomic release sync cannot admit pnpm-lock.yaml mutations."
+            exit 1
+          fi
+
       - name: Create release sync GitHub App token
         if: steps.version-sync.outputs.changed == 'true'
         id: release-sync-token
@@ -686,6 +704,15 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require unchanged pnpm lock for atomic release admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            echo "::error::Atomic release sync cannot admit pnpm-lock.yaml mutations."
+            exit 1
           fi
 
       - name: Create recovery release sync GitHub App token
