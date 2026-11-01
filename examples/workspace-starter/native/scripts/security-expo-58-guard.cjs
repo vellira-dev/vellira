@@ -34,8 +34,8 @@ assert.ok(metadata.dependencies['@expo/schema-utils'], 'Expected published JSON 
 const zodPaths = Object.keys(lock.packages).filter((p) => /(^|\/)node_modules\/zod$/.test(p));
 assert.deepEqual(zodPaths, [], 'An installed vulnerable Zod path remains in the lockfile');
 
-const MARKER = '\n/* VELLIRA_EXPO58_SCHEMA_OUTPUT_GUARD_V2 */';
-const PATCH = "\n/* VELLIRA_EXPO58_SCHEMA_OUTPUT_GUARD_V2 */\n;(() => {\n  const Collector = exports.DevToolsPluginCliExtensionResults;\n  if (typeof Collector !== 'function' ||\n      typeof Collector.prototype.append !== 'function' ||\n      typeof Collector.prototype.parseOutputText !== 'function') {\n    throw new Error('Vellira Expo 58 collector contract changed');\n  }\n  const originalAppend = Collector.prototype.append;\n  const originalParse = Collector.prototype.parseOutputText;\n  Collector.prototype.append = function(output, level) {\n    if (this._truncated) return;\n    if (typeof output !== 'string') throw new TypeError('Plugin output must be a string');\n    const bytes = Buffer.byteLength(output, 'utf8');\n    if ((this._velliraReceivedBytes || 0) + bytes > 65536) {\n      this._truncated = true;\n      const message = {type: 'text', text: 'Plugin cumulative output limit exceeded', level: 'error'};\n      this._output.push(message);\n      if (typeof this.onOutput === 'function') this.onOutput([message]);\n      return;\n    }\n    this._velliraReceivedBytes = (this._velliraReceivedBytes || 0) + bytes;\n    return originalAppend.call(this, output, level);\n  };\n  Collector.prototype.parseOutputText = function(txt, level) {\n    let parsed;\n    try { parsed = JSON.parse(txt); } catch {\n      return originalParse.call(this, txt, level);\n    }\n    if (Array.isArray(parsed) && parsed.length > 128) {\n      return [{type: 'text', text: 'Too many output items', level: 'error'}];\n    }\n    return originalParse.call(this, txt, level);\n  };\n})();\n";
+const MARKER = '\n/* VELLIRA_EXPO58_SCHEMA_OUTPUT_GUARD_V3 */';
+const PATCH = "\n/* VELLIRA_EXPO58_SCHEMA_OUTPUT_GUARD_V3 */\n;(() => {\n  const Collector = exports.DevToolsPluginCliExtensionResults;\n  if (typeof Collector !== 'function' ||\n      typeof Collector.prototype.append !== 'function' ||\n      typeof Collector.prototype.parseOutputText !== 'function') {\n    throw new Error('Vellira Expo 58 collector contract changed');\n  }\n  const originalParse = Collector.prototype.parseOutputText;\n  const MAX_BYTES = 65536;\n  const MAX_ITEMS = 128;\n  function truncate(reason) {\n    this._truncated = true;\n    // The diagnostic is part of the total 128-item budget. If the prior\n    // output already filled the budget, do not append or emit a 129th item.\n    if (this._output.length < MAX_ITEMS) {\n      const message = {type: 'text', text: reason, level: 'error'};\n      this._output.push(message);\n      this.onOutput?.([message]);\n    }\n  }\n  Collector.prototype.append = function(output, level = 'info') {\n    if (this._truncated) return;\n    if (typeof output !== 'string') throw new TypeError('Plugin output must be a string');\n    const bytes = Buffer.byteLength(output, 'utf8');\n    const total = this._velliraReceivedBytes || 0;\n    if (total + bytes > MAX_BYTES) {\n      truncate.call(this, 'Plugin cumulative output limit exceeded');\n      return;\n    }\n    this._velliraReceivedBytes = total + bytes;\n    const remaining = MAX_ITEMS - this._output.length;\n    // Reject large batches before the upstream JSON Schema validator allocates\n    // output objects. It is conservative for malformed schema arrays.\n    let parsed;\n    let isJson = false;\n    try {\n      parsed = JSON.parse(output);\n      isJson = true;\n    } catch {}\n    if (isJson && Array.isArray(parsed) && parsed.length > remaining) {\n      truncate.call(this, 'Too many output items');\n      return;\n    }\n    // Expo turns plain-text lines into one object per nonempty line. Count\n    // these BEFORE allocating objects, including across stdout/stderr calls.\n    if (!isJson) {\n      let count = 0;\n      let start = 0;\n      for (let i = 0; i <= output.length; i++) {\n        if (i === output.length || output[i] === '\\n') {\n          if (i > start && ++count > remaining) {\n            truncate.call(this, 'Too many output items');\n            return;\n          }\n          start = i + 1;\n        }\n      }\n    }\n    const results = originalParse.call(this, output, level);\n    if (!Array.isArray(results)) throw new Error('Expo parser output contract changed');\n    if (results.length > remaining) {\n      truncate.call(this, 'Too many output items');\n      return;\n    }\n    this._totalLength += output.length;\n    this._output.push(...results);\n    this.onOutput?.(results);\n  };\n})();\n";
 const bytes = fs.readFileSync(sourcePath, 'utf8');
 const markerAt = bytes.indexOf(MARKER);
 const original = markerAt < 0 ? bytes : bytes.slice(0, markerAt);
@@ -93,22 +93,70 @@ assert.equal(typeof Collector, 'function');
 const valid = new Collector();
 valid.append(JSON.stringify([{type: 'text', text: 'ok', level: 'info'}]));
 assert.equal(valid.getOutput()[0]?.text, 'ok');
+const malformed = new Collector();
+malformed.append('hello');
+assert.equal(malformed.getOutput()[0]?.text, 'hello');
 const oversized = new Collector();
 oversized.append('x'.repeat(65537));
 assert.equal(oversized.isTruncated(), true, 'Missing 64 KiB input bound');
 assert.deepEqual(oversized.getOutput().map((o) => o.text), ['Plugin cumulative output limit exceeded']);
 const many = new Collector();
 many.append(JSON.stringify(Array.from({length: 129}, () => ({type: 'text', text: 'x', level: 'info'}))));
+assert.equal(many.isTruncated(), true);
 assert.deepEqual(many.getOutput().map((o) => o.text), ['Too many output items']);
+
+// Regression: item budget is TOTAL across chunks, not per JSON array.
+const item = {type: 'text', text: 'x', level: 'info'};
+const chunk128 = JSON.stringify(Array.from({length: 128}, () => item));
+assert.ok(Buffer.byteLength(chunk128, 'utf8') * 2 < 65536);
+const callbacks = [];
+const chunked = new Collector((items) => callbacks.push(items));
+chunked.append(chunk128);
+assert.equal(chunked.getOutput().length, 128);
+chunked.append(chunk128, 'error');
+assert.equal(chunked.isTruncated(), true, '128+128 messages must truncate');
+assert.equal(chunked.getOutput().length, 128, 'No 129th diagnostic is allowed');
+assert.equal(callbacks.flat().length, 128, 'Callbacks must also respect the item ceiling');
+chunked.append('ignored');
+assert.equal(chunked.getOutput().length, 128);
+assert.equal(callbacks.length, 1, 'No callback after truncation at a full budget');
+
+// Before the limit fills, emit one bounded diagnostic and stop.
+const chunksWithRoom = new Collector();
+chunksWithRoom.append(JSON.stringify(Array.from({length: 100}, () => item)), 'info');
+chunksWithRoom.append(JSON.stringify(Array.from({length: 29}, () => item)), 'error');
+assert.equal(chunksWithRoom.isTruncated(), true);
+assert.equal(chunksWithRoom.getOutput().length, 101);
+assert.equal(chunksWithRoom.getOutput().at(-1).text, 'Too many output items');
+
+// Regression: text fallback can fan out into thousands of objects under 64KiB.
+const textCallbacks = [];
+const manyLines = new Collector((items) => textCallbacks.push(...items));
+manyLines.append('x\n'.repeat(30000), 'error');
+assert.equal(manyLines.isTruncated(), true, 'Short plain-text lines must be capped');
+assert.deepEqual(manyLines.getOutput().map((o) => o.text), ['Too many output items']);
+assert.equal(textCallbacks.length, 1, 'No unbounded line callback allocation');
+
+// stdout and stderr share the same global item limit.
+const mixed = new Collector();
+mixed.append('hello\n'.repeat(100), 'info');
+mixed.append('error\n'.repeat(29), 'error');
+assert.equal(mixed.isTruncated(), true);
+assert.equal(mixed.getOutput().length, 101);
+assert.equal(mixed.getOutput().at(-1).text, 'Too many output items');
+
+// Both limits preserve a true exact-boundary success.
 const boundary = new Collector();
 boundary.append('a'.repeat(65536));
 assert.equal(boundary.isTruncated(), false);
 boundary.append('b');
 assert.equal(boundary.isTruncated(), true);
+assert.ok(boundary.getOutput().length <= 128);
 const unicode = new Collector();
 unicode.append('é'.repeat(24000));
 unicode.append('é'.repeat(12000));
-assert.equal(unicode.isTruncated(), true, 'UTF-8 multibyte bound bypass');
+assert.equal(unicode.isTruncated(), true, 'UTF-8 multibyte byte-budget bypass');
+assert.ok(unicode.getOutput().length <= 128);
 console.log(JSON.stringify({
   status: 'verified-published-expo-cli-schema-validator-and-bounded-output',
   cli: metadata.version, originalSha256, installedSha256: sha256(fs.readFileSync(sourcePath)),

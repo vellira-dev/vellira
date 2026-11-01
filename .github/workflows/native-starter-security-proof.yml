@@ -76,5 +76,7 @@ jobs:
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
           echo "Clean npm ci checks published Forge RSA and pinned Expo schema-output guard." >> "$GITHUB_STEP_SUMMARY"
+      - name: Prove bounded output stops actual Expo plugin execution
+        run: node scripts/security-expo-58-executor-proof.cjs
       - name: Typecheck Starter
         run: npm run typecheck

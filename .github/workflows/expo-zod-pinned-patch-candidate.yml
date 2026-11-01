@@ -33,6 +33,7 @@ jobs:
           node scripts/security-expo-58-guard.cjs --apply
           node scripts/security-expo-58-guard.cjs --apply
           npm run security:verify-patch
+          node scripts/security-expo-58-executor-proof.cjs
       - name: Reject modified installed Expo CLI source
         shell: bash
         run: |

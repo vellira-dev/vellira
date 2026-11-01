@@ -66,9 +66,11 @@ jobs:
           node scripts/security-expo-certificate-contract.cjs
           node scripts/security-expo-58-guard.cjs --apply
           node scripts/security-expo-58-guard.cjs --verify
+          node scripts/security-expo-58-executor-proof.cjs
           npx --no-install expo install --check
           npm run typecheck
-          npx --yes expo-doctor
+          echo "Using audited pinned Expo Doctor version: 1.21.5"
+          npx --yes expo-doctor@1.21.5
           echo 'Exact Expo 58 / CLI 58.1.18 / RN 0.88.1 / published Forge 1.4.2 validated; Zod absent.' >> "$GITHUB_STEP_SUMMARY"
       - name: Reject tampering of the installed bounded collector
         shell: bash
