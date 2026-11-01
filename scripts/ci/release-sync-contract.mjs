@@ -430,13 +430,13 @@ async function main() {
   const atomicCandidate = isAtomicReleaseSyncFileSet(files);
   const candidate = isReleaseSyncFileSet(files) || atomicCandidate;
 
-  if (detectMode && atomicCandidate) {
-    // Do not grant the fast-path flag on a twelve-file shape alone.
-    // Atomic detection must use the same verified-content path as admission.
-  } else if (detectMode) {
-    await writeOutput('release_sync', candidate ? 'true' : 'false');
+  if (detectMode) {
+    // Detection cannot independently prove actor, parent lineage, and
+    // content. Atomic changes remain fail-closed until verified admission.
+    const detected = isReleaseSyncFileSet(files);
+    await writeOutput('release_sync', detected ? 'true' : 'false');
     process.stdout.write(
-      `${JSON.stringify({ releaseSync: candidate, files: sorted(files) }, null, 2)}\n`
+      JSON.stringify({ releaseSync: detected, atomicCandidate, files: sorted(files) }) + '\n'
     );
     return;
   }
