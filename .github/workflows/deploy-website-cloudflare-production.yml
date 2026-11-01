@@ -284,6 +284,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      - name: Require Dashboard Starter parity for immutable production candidate
+        if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
+        run: node scripts/website/sync-dashboard-starter.mjs --check
+
       - name: Install dependencies
         if: steps.preflight.outputs.superseded != 'true' && steps.prepublish.outputs.superseded != 'true'
         run: pnpm install --frozen-lockfile
