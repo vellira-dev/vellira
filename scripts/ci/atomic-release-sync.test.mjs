@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ATOMIC_RELEASE_SYNC_PATHS, assertAtomicSyncFileSet, assertStableReleaseVersion, verifyAtomicManifestTransition } from './atomic-release-sync.mjs';
+import { ATOMIC_RELEASE_SYNC_PATHS, assertAtomicSyncFileSet, assertStableReleaseVersion, verifyAtomicManifestTransition, verifyAtomicStarterTransition } from './atomic-release-sync.mjs';
 
 test('atomic file set includes seven package manifests and five Starter assets', () => {
   assert.equal(ATOMIC_RELEASE_SYNC_PATHS.length, 12);
@@ -61,4 +61,34 @@ test('manual release recovery also prepares one combined PR', () => {
   for (const p of ATOMIC_RELEASE_SYNC_PATHS) {
     assert.ok(proposal.includes(p) || (p.startsWith('packages/') && proposal.includes('packages/*/package.json')), 'Missing recovery sync path: ' + p);
   }
+});
+
+test('atomic Starter transitions reject unrelated manifest and README mutations', () => {
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  const before = {
+    'examples/workspace-starter/README.md': 'Use **Vellira 2.188.12 packages** today.',
+  };
+  const after = {
+    'examples/workspace-starter/README.md': 'Use **Vellira 2.189.0 packages** today.',
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    before[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.188.12'])) };
+    after[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.189.0'])) };
+  }
+  const args = { before, after, previousVersion: '2.188.12', version: '2.189.0' };
+  assert.equal(verifyAtomicStarterTransition(args), true);
+  assert.throws(() => verifyAtomicStarterTransition({
+    ...args,
+    after: { ...after, 'examples/workspace-starter/web/package.json': {
+      ...after['examples/workspace-starter/web/package.json'], scripts: { postinstall: 'unexpected' },
+    } },
+  }), /Unexpected Starter manifest mutation/);
+  assert.throws(() => verifyAtomicStarterTransition({
+    ...args,
+    after: { ...after, 'examples/workspace-starter/README.md': after['examples/workspace-starter/README.md'] + ' Extra content' },
+  }), /Unexpected Starter README mutation/);
 });
