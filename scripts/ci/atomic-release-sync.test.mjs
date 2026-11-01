@@ -81,7 +81,7 @@ test('atomic Starter transitions reject unrelated manifest and README mutations'
     after[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.189.0'])) };
   }
   const args = { before, after, previousVersion: '2.188.12', version: '2.189.0' };
-  assert.equal(verifyAtomicStarterTransition(args), true);
+  assert.equal(verifyAtomicStarterTransition(args).previousStarterVersion, '2.188.12');
   assert.throws(() => verifyAtomicStarterTransition({
     ...args,
     after: { ...after, 'examples/workspace-starter/web/package.json': {
