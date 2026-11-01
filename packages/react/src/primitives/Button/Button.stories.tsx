@@ -790,7 +790,9 @@ export const Disabled: Story = {
 };
 
 function DisabledSemanticsDemo() {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'highContrast'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'highContrast'>(
+    'light'
+  );
   const [activations, setActivations] = useState(0);
 
   return (
@@ -815,10 +817,10 @@ function DisabledSemanticsDemo() {
           <Button data-testid='native-loading' loading>
             Native loading
           </Button>
-          <Button data-testid='link-disabled' href='/billing' disabled>
+          <Button id='link-disabled' href='/billing' disabled>
             Link disabled
           </Button>
-          <Button data-testid='link-loading' href='/save' loading>
+          <Button id='link-loading' href='/save' loading>
             Link loading
           </Button>
           <Button asChild disabled>
