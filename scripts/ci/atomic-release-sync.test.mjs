@@ -24,7 +24,7 @@ test('requires canonical stable semantic versions before atomic assembly', () =>
 });
 
 test('version transition accepts only seven converged version-only changes', () => {
-  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(p => p === 'package.json' || /^packages\\/[^/]+\\/package\\.json$/.test(p));
+  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json')));
   const before = Object.fromEntries(manifests.map(p => [p, { name: p, version: '2.188.12', private: true }]));
   const after = Object.fromEntries(manifests.map(p => [p, { name: p, version: '2.189.0', private: true }]));
   const payload = { files: ATOMIC_RELEASE_SYNC_PATHS, before, after, version: '2.189.0' };
