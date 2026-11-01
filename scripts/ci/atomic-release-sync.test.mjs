@@ -200,3 +200,23 @@ test('already synchronized Starter does not change its README or package manifes
   after['examples/workspace-starter/README.md'] += ' unexpected';
   assert.throws(() => verifyAtomicStarterTransition({ before, after, version: '2.189.0' }), /unchanged/);
 });
+
+test('atomic admission requires exact changed paths when Starter assets are unchanged', () => {
+  const before = {};
+  const after = {};
+  for (const file of ATOMIC_RELEASE_SYNC_PATHS) {
+    if (file === 'examples/workspace-starter/README.md') {
+      before[file] = 'Already current';
+      after[file] = 'Already current';
+    } else {
+      before[file] = { value: 'old' };
+      after[file] = { value: file.startsWith('examples/') ? 'old' : 'new' };
+    }
+  }
+  const delta = ATOMIC_RELEASE_SYNC_PATHS.filter(p => !p.startsWith('examples/'));
+  assert.doesNotThrow(() => assertAtomicSyncFileSet(delta, { before, after }));
+  assert.throws(() => assertAtomicSyncFileSet([...delta, 'examples/workspace-starter/README.md'], { before, after }), /exact snapshot delta/);
+  const changed = structuredClone(after);
+  changed['examples/workspace-starter/native/package-lock.json'] = { value: 'tampered' };
+  assert.throws(() => assertAtomicSyncFileSet(delta, { before, after: changed }), /exact snapshot delta/);
+});
