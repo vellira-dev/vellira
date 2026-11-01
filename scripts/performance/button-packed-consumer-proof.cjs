@@ -333,6 +333,17 @@ async function browserSnapshots(browserType, url) {
   const launchOptions = name === 'chromium'
     ? { headless: true, args: ['--no-sandbox'] }
     : { headless: true };
+  // The Playwright CI image executes this job as root, while GitHub mounts
+  // HOME=/github/home owned by pwuser. Firefox refuses that mixed ownership.
+  // Fix only the spawned Firefox process; keep the parent HOME unchanged so
+  // the exact-SHA Git checkout trust and candidate proof remain intact.
+  if (name === 'firefox' && process.getuid?.() === 0) {
+    const rootHome = '/root';
+    if (fs.statSync(rootHome).uid !== process.getuid()) {
+      throw new Error('Firefox requires a HOME owned by its launch user.');
+    }
+    launchOptions.env = { ...process.env, HOME: rootHome };
+  }
   const browser = await browserType.launch(launchOptions);
   try {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
