@@ -52,6 +52,16 @@ export function isAtomicReleaseSyncFileSet(files) {
   return JSON.stringify(sorted(files.map(normalizePath))) === JSON.stringify(expected);
 }
 
+export function isAtomicReleaseSyncCandidate(files) {
+  if (!Array.isArray(files) || new Set(files).size !== files.length) return false;
+  const normalized = files.map(normalizePath);
+  const set = new Set(normalized);
+  return RELEASE_SYNC_MANIFESTS.every(file => set.has(file)) &&
+    ATOMIC_STARTER_SYNC_FILES.some(file => set.has(file)) &&
+    normalized.every(file => RELEASE_SYNC_MANIFESTS.includes(file) ||
+      ATOMIC_STARTER_SYNC_FILES.includes(file));
+}
+
 export function classifyMergedReleaseSyncShape({
   baseSha,
   parents,
@@ -427,7 +437,7 @@ async function main() {
 
   // Atomic shape is recognized separately, but is never admitted by names
   // alone. Its verifier is SHA-bound and validates all twelve file contents.
-  const atomicCandidate = isAtomicReleaseSyncFileSet(files);
+  const atomicCandidate = isAtomicReleaseSyncCandidate(files);
   const candidate = isReleaseSyncFileSet(files) || atomicCandidate;
 
   if (detectMode) {
