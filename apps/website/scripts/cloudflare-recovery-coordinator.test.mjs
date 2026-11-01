@@ -125,11 +125,21 @@ test('does not restart a pending staging run', () => {
   }).dispatch, false);
 });
 
-test('ignores release sync staging with a skipped deploy', () => {
-  assert.equal(decideRecovery({
+test('release-sync push with skipped deploy never triggers an automatic second staging deploy', () => {
+  assert.deepEqual(decideRecovery({
     ...base,
     stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false }],
-  }).target, 'staging');
+  }), { dispatch: false, reason: 'skipped_staging_requires_review' });
+});
+
+test('skipped release-sync cannot hide a successful fully verified staging run', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
+      stage,
+    ],
+  }).target, 'production');
 });
 
 test('invalid identifiers and input lists fail closed', () => {
