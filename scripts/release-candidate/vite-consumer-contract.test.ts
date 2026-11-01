@@ -161,11 +161,22 @@ describe('clean Vite consumer workflow contract', () => {
     expect(workflow).toContain('button-packed-consumer.json');
     expect(proof).toContain('buildTemporaryButtonCss({');
     expect(proof).toContain('node_modules/@vellira-ui/react/dist');
-    expect(proof).toContain('browserSnapshots(chromium, dist)');
+    expect(proof).toContain('captureViteBrowserMatrix(browserTypes, dist)');
+    expect(proof).toContain('captureNextBrowserMatrix(browserTypes, fixture)');
+    expect(proof).toContain('assertCompleteButtonBrowserParity(variants)');
     expect(proof).toContain("run('npm', ['run', 'build:next']");
-    expect(proof).toContain('PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY');
+    expect(proof).toContain('PACKED_PUBLIC_BUTTON_CSS_CROSS_BROWSER_PARITY');
     expect(proof).toContain("path.join(reactDist, 'styles/button.css')");
     expect(proof).toContain('Packed public Button stylesheet differs');
+    expect(proof).toContain("page.keyboard.press('Tab')");
+    expect(proof).toContain("page.keyboard.press('Enter')");
+    expect(proof).toContain("page.keyboard.press('Space')");
+    const matrix = readFileSync(
+      'scripts/performance/button-browser-acceptance.cjs',
+      'utf8'
+    );
+    expect(matrix).toContain("['chromium', 'firefox', 'webkit']");
+    expect(matrix).toContain("['viteBrowser', 'nextBrowser']");
   });
 
   it('keeps full CSS while building the Button-only stylesheet', () => {
