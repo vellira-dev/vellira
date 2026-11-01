@@ -179,3 +179,12 @@ test('failed staging cannot be hidden by a skipped release-sync staging run', ()
     ],
   }).dispatch, false);
 });
+
+test('cancelled or timed-out staging cannot trigger an automatic redeploy', () => {
+  for (const conclusion of ['cancelled', 'timed_out', 'action_required']) {
+    assert.equal(decideRecovery({
+      ...base,
+      stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion }],
+    }).reason, 'failed_staging_requires_review');
+  }
+});
