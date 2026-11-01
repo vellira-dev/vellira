@@ -101,6 +101,11 @@ jobs:
           console.log('[native-shared-graph] source:', JSON.stringify(result));
           NODE
 
+      - name: Verify one runtime ThemeContext across root and native leaf entries
+        env:
+          VELLIRA_SUBPATH_RUNTIME_PROOF: '1'
+        run: pnpm --filter @vellira-ui/react-native test:subpaths:probe
+
       - name: Match release npm runtime
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
