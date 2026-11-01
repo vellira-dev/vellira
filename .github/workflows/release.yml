@@ -79,18 +79,31 @@ jobs:
           node scripts/sync-package-versions.cjs "$RELEASE_VERSION"
           pnpm install --lockfile-only
 
+      - name: Set up exact Starter lockfile toolchain
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+
+      - name: Prepare verified auto-recovered Starter snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/prepare-atomic-release-sync.mjs "$RELEASE_VERSION"
+
       - name: Verify reconciliation changes
         shell: bash
         run: |
           set -euo pipefail
-          unexpected="$(git diff --name-only -- . ':!package.json' ':!pnpm-lock.yaml' ':!packages/*/package.json')"
+          unexpected="$(git diff --name-only -- . ':!package.json' ':!pnpm-lock.yaml' ':!packages/*/package.json' ':!examples/workspace-starter/README.md' ':!examples/workspace-starter/web/package.json' ':!examples/workspace-starter/web/package-lock.json' ':!examples/workspace-starter/native/package.json' ':!examples/workspace-starter/native/package-lock.json')"
           if [ -n "$unexpected" ]; then
             echo "Unexpected automatic reconciliation changes:"
             echo "$unexpected"
             exit 1
           fi
-          git diff --check -- package.json pnpm-lock.yaml packages/*/package.json
-          if git diff --quiet -- package.json pnpm-lock.yaml packages/*/package.json; then
+          git diff --check -- package.json pnpm-lock.yaml packages/*/package.json examples/workspace-starter/
+          if git diff --quiet -- package.json pnpm-lock.yaml packages/*/package.json examples/workspace-starter/; then
             echo "::error::Recoverable release state produced no version-sync changes."
             exit 1
           fi
@@ -154,6 +167,11 @@ jobs:
             package.json
             pnpm-lock.yaml
             packages/*/package.json
+            examples/workspace-starter/README.md
+            examples/workspace-starter/web/package.json
+            examples/workspace-starter/web/package-lock.json
+            examples/workspace-starter/native/package.json
+            examples/workspace-starter/native/package-lock.json
           branch: chore/sync-release-${{ needs.release-state.outputs.release_version }}
           commit-message: 'chore(release): sync package versions'
           delete-branch: true
