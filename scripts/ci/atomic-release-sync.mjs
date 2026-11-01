@@ -5,7 +5,7 @@ import { RELEASE_SYNC_MANIFESTS } from './release-sync-contract.mjs';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { syncStarterLockfiles } = require('../sync-workspace-starter-lockfiles.cjs');
+const { syncStarterLockfiles, validateStarterLock } = require('../sync-workspace-starter-lockfiles.cjs');
 const starterPaths = Object.freeze([
   'examples/workspace-starter/README.md',
   'examples/workspace-starter/native/package-lock.json',
@@ -81,6 +81,24 @@ export function verifyAtomicStarterTransition({ before, after, previousVersion, 
   // npm lockfiles contain transitive registry changes. Their integrity and
   // pinned versions require validateAtomicReleaseSnapshot, not text equality.
   return true;
+}
+
+export function verifyAtomicReleaseContents({ files, before, after, version }) {
+  const manifests = verifyAtomicManifestTransition({ files, before, after, version });
+  verifyAtomicStarterTransition({
+    before, after, previousVersion: manifests.previousVersion, version,
+  });
+  for (const platform of ['web', 'native']) {
+    const prefix = 'examples/workspace-starter/' + platform + '/';
+    const manifest = after[prefix + 'package.json'];
+    const lock = after[prefix + 'package-lock.json'];
+    assert.ok(lock && typeof lock === 'object', 'Missing atomic lockfile: ' + platform);
+    const result = validateStarterLock({ manifest, lock, project: platform });
+    assert.ok(result.versions.length > 0);
+    assert.ok(result.versions.every((pin) => pin === version),
+      'Atomic Starter lock versions must match published release');
+  }
+  return manifests;
 }
 
 export function validateAtomicReleaseSnapshot(root, version) {
