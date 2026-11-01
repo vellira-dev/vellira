@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readDeploymentConfig } from './cloudflare-target-config.mjs';
 import { withRemoteArchive } from './cloudflare-archive-client.mjs';
 import { prepareDeployment } from './cloudflare-prepare-deployment.mjs';
+import { activateWithEvidence, recordActivationEvidence } from './cloudflare-activation-evidence.mjs';
 import { populateLocalCache } from './cloudflare-populate-local-cache.mjs';
 import { assertFreshProductionCandidate } from './cloudflare-production-freshness.mjs';
 import {
@@ -143,33 +144,21 @@ async function deploy() {
     checkBeforeActivation: () =>
       assertFreshProductionCandidate(freshnessContext),
     activate: async () => {
-      // Record actual Wrangler activation attempts, not workflow status.
-      // A failure after Wrangler starts is UNKNOWN until remote evidence is read.
-      const evidencePath = path.join(root, '.open-next/cloudflare-activation-evidence.jsonl');
-      const record = (status) => fs.appendFile(
-        evidencePath,
-        JSON.stringify({
-          kind: 'cloudflare-worker-activation',
+      await activateWithEvidence({
+        record: (status) => recordActivationEvidence({
+          filePath: path.join(root, '.open-next/cloudflare-activation-evidence.jsonl'),
           status,
           candidateSha: process.env.CANDIDATE_SHA ?? null,
           buildId: identity.buildId,
           worker: config.name,
           githubRunId: process.env.GITHUB_RUN_ID ?? null,
           githubRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
-          observedAt: new Date().toISOString(),
-        }) + '\n'
-      );
-      await record('attempted');
-      try {
-        run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
+        }),
+        activate: () => run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
           ...childProcessEnv,
           OPEN_NEXT_DEPLOY: 'true',
-        });
-      } catch (error) {
-        await record('unknown-after-error');
-        throw error;
-      }
-      await record('wrangler-exited-zero');
+        }),
+      });
     },
     stabilize: async () => {
       // Cloudflare activation can propagate briefly across edges. Do not start strict
