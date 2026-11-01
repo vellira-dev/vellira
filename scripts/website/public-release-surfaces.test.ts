@@ -76,6 +76,14 @@ describe('shared npm-verified version on public sites', () => {
     }
   });
 
+  it('binds roadmap changelog to the canonical confirmed npm version', () => {
+    const roadmap = read('apps/website/src/sections/home/Roadmap/Roadmap.tsx');
+    expect(roadmap).toContain("observePublicRelease(setRelease, { url: '/api/public-release' })");
+    expect(roadmap).toContain('releases/tag/v${release.version}');
+    expect(roadmap).toContain('release\n                      ?');
+    expect(roadmap).not.toContain("href='https://github.com/vellira-dev/Vellira/releases'");
+  });
+
   it('does not show npm placeholders as nav buttons', () => {
     const docs = read('apps/docs/src/.vitepress/theme/PublicReleaseBadge.vue');
     const sb = read('apps/react-storybook/.storybook/manager.ts');
