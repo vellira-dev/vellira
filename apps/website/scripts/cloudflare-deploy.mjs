@@ -142,11 +142,34 @@ async function deploy() {
     },
     checkBeforeActivation: () =>
       assertFreshProductionCandidate(freshnessContext),
-    activate: () => {
-      run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
-        ...childProcessEnv,
-        OPEN_NEXT_DEPLOY: 'true',
-      });
+    activate: async () => {
+      // Record actual Wrangler activation attempts, not workflow status.
+      // A failure after Wrangler starts is UNKNOWN until remote evidence is read.
+      const evidencePath = path.join(root, '.open-next/cloudflare-activation-evidence.jsonl');
+      const record = (status) => fs.appendFile(
+        evidencePath,
+        JSON.stringify({
+          kind: 'cloudflare-worker-activation',
+          status,
+          candidateSha: process.env.CANDIDATE_SHA ?? null,
+          buildId: identity.buildId,
+          worker: config.name,
+          githubRunId: process.env.GITHUB_RUN_ID ?? null,
+          githubRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
+          observedAt: new Date().toISOString(),
+        }) + '\\n'
+      );
+      await record('attempted');
+      try {
+        run('pnpm', ['exec', 'wrangler', 'deploy', `--config=${configPath}`], {
+          ...childProcessEnv,
+          OPEN_NEXT_DEPLOY: 'true',
+        });
+      } catch (error) {
+        await record('unknown-after-error');
+        throw error;
+      }
+      await record('wrangler-exited-zero');
     },
     stabilize: async () => {
       // Cloudflare activation can propagate briefly across edges. Do not start strict
