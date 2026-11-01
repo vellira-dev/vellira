@@ -77,6 +77,14 @@ work, but does not prevent a workflow card from being created for each push.
   serialization begins only after approval succeeds. No workflow auto-cancels a
   pending production environment review or an active production deployment.
 
+- After fully verified manual recovery staging, a dedicated handoff job sends a
+  same-repository `workflow_dispatch` to the production promotion workflow
+  immediately. Only that job has `actions: write`; staging builds remain
+  read-only. Production waits briefly for the staging run to complete and
+  verifies the immutable evidence, SHA, admission, freshness, protected approval
+  and remote deployment. The scheduled recovery coordinator remains a fallback
+  for lost handoffs, not the normal release timer.
+
 Do not remove privileged trusted-workflow boundaries or required checks merely
 to reduce the number of cards in Actions.
 
