@@ -24,7 +24,7 @@ const storage = read(
 
 describe('Website Native Starter showcase', () => {
   it('switches mobile platform preview away from the React Web iframe', () => {
-    expect(website).toContain('<NativeStarterPreview />');
+    expect(website).toContain('<NativeStarterPreview theme={resolvedTheme} />');
     expect(website).toContain(
       "import { NativeStarterPreview } from './NativeStarterPreview'"
     );
@@ -43,8 +43,9 @@ describe('Website Native Starter showcase', () => {
     const routeStyles = read(
       'apps/website/src/app/(marketing)/demo/native-starter/page.module.css'
     );
-    expect(preview).toContain("src='/demo/native-starter'");
+    expect(preview).toContain('src={frameSource}');
     expect(preview).toContain("title='Interactive Vellira Native Starter'");
+    expect(preview).toContain("'/demo/native-starter?websiteTheme=' + theme");
     expect(preview).toContain("data-testid='native-starter-iframe'");
     expect(preview).not.toContain('MutationObserver');
     expect(preview).not.toContain('document.body');
@@ -82,12 +83,26 @@ describe('Website Native Starter showcase', () => {
   });
 
   it('uses the maintained Expo Starter UI', () => {
-    expect(preview).toContain("src='/demo/native-starter'");
+    expect(preview).toContain('src={frameSource}');
     expect(preview).toContain("data-testid='native-starter-preview'");
     expect(preview).not.toContain('seedProjects');
     expect(preview).not.toContain('setProjects(');
     expect(preview).not.toContain('function ProjectCard');
     expect(website).toContain('React Native Starter · rendered in the browser');
+  });
+
+  it('bridges the resolved website theme before the embedded native app mounts', () => {
+    const route = read(
+      'apps/website/src/app/(marketing)/demo/native-starter/page.tsx'
+    );
+    expect(website).toContain('resolvedTheme');
+    expect(preview).toContain("'/demo/native-starter?websiteTheme=' + theme");
+    expect(route).toContain("requested === 'high-contrast'");
+    expect(route).toContain("'highContrast'");
+    expect(route).toContain(
+      "'vellira-native-showcase:vellira-workspace-native-theme-v1'"
+    );
+    expect(route).toContain('if (!ready) return null;');
   });
 
   it('uses browser shims without changing Expo', () => {
