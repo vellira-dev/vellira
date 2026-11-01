@@ -1,0 +1,74 @@
+.device {
+  width: min(376px, 100%);
+  margin-inline: auto;
+  padding: 8px;
+  border: 2px solid #45454d;
+  border-radius: 44px;
+  background: #121218;
+  box-shadow: 0 18px 52px rgb(17 12 42 / 22%);
+}
+
+.screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 760px;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 34px;
+  background: var(--surface-default);
+  isolation: isolate;
+}
+
+.island {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 50%;
+  width: 110px;
+  height: 27px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background: #090909;
+  pointer-events: none;
+}
+
+.statusBar {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 55px;
+  padding: 12px 24px 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.appViewport {
+  display: block;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  overflow: hidden;
+  background: var(--surface-default);
+}
+
+@media (max-width: 420px) {
+  .device {
+    width: 100%;
+    padding: 6px;
+    border-radius: 36px;
+  }
+
+  .screen {
+    height: min(760px, 78vh);
+    min-height: 520px;
+    border-radius: 29px;
+  }
+}

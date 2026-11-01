@@ -745,6 +745,152 @@ try {
             await expect(
               dashboard.getByText('Demo projects restored.')
             ).toBeVisible();
+
+            // Mobile shows the React Native Starter's React Native Web rendering,
+            // not the responsive React Web Dashboard iframe.
+            await demoSection
+              .getByRole('tab', { name: 'Mobile', exact: true })
+              .click();
+            const phoneBackground = await demoSection
+              .locator('#dashboard-live')
+              .evaluate((element) => getComputedStyle(element).backgroundColor);
+            assert.equal(
+              phoneBackground,
+              'rgba(0, 0, 0, 0)',
+              'Mobile phone must not have an additional backing card'
+            );
+            await expect(
+              demoSection.getByText('Browser preview', { exact: false })
+            ).toBeVisible();
+            await expect(
+              demoSection.getByRole('link', {
+                name: 'Explore the Pro roadmap',
+              })
+            ).toHaveCount(0);
+            const nativePreview = demoSection.locator(
+              '[data-testid="native-starter-preview"]'
+            );
+            await expect(nativePreview).toBeVisible();
+            // The same-origin iframe gives React Native Web its own viewport.
+            // Select must slide up from the phone bottom and remain anchored
+            // when the surrounding marketing page scrolls.
+            const nativeIframe = nativePreview.locator(
+              'iframe[title="Interactive Vellira Native Starter"]'
+            );
+            const nativeFrame = nativePreview.frameLocator(
+              'iframe[title="Interactive Vellira Native Starter"]'
+            );
+            await nativePreview.evaluate((element) =>
+              element.scrollIntoView({ behavior: 'instant', block: 'center' })
+            );
+            await expect(nativeIframe).toBeInViewport();
+            await expect(
+              nativeFrame.getByText('Your projects at a glance')
+            ).toBeVisible();
+            await nativeFrame
+              .getByRole('button', { name: 'Create project' })
+              .click();
+            await nativeFrame
+              .getByRole('button', { name: 'Team', exact: true })
+              .click();
+            const selectRoot = nativeFrame.locator(
+              '[data-testid="select-content-root"]'
+            );
+            const selectSheet = nativeFrame.locator('[data-testid="select-sheet"]');
+            await expect(selectSheet).toBeVisible();
+
+            const checkSheetGeometry = async () => {
+              const frameBounds = await nativeIframe.boundingBox();
+              const sheetBounds = await selectSheet.boundingBox();
+              assert.ok(frameBounds && sheetBounds, 'Select sheet needs geometry');
+              return {
+                left: sheetBounds.x - frameBounds.x,
+                right:
+                  frameBounds.x +
+                  frameBounds.width -
+                  sheetBounds.x -
+                  sheetBounds.width,
+                bottom:
+                  frameBounds.y +
+                  frameBounds.height -
+                  sheetBounds.y -
+                  sheetBounds.height,
+              };
+            };
+            await expect
+              .poll(async () => {
+                const bounds = await checkSheetGeometry();
+                return Math.max(
+                  Math.abs(bounds.bottom),
+                  Math.max(0, -bounds.left),
+                  Math.max(0, -bounds.right)
+                );
+              })
+              .toBeLessThan(5);
+
+            await page.evaluate(() => window.scrollBy(0, 120));
+            await expect
+              .poll(async () => {
+                const bounds = await checkSheetGeometry();
+                return Math.max(
+                  Math.abs(bounds.bottom),
+                  Math.max(0, -bounds.left),
+                  Math.max(0, -bounds.right)
+                );
+              })
+              .toBeLessThan(5);
+
+            await nativePreview.evaluate((element) =>
+              element.scrollIntoView({ behavior: 'instant', block: 'center' })
+            );
+            await nativeFrame
+              .getByRole('button', { name: 'Close selection' })
+              .click();
+            await expect(selectRoot).toBeHidden();
+            await nativeFrame
+              .getByRole('button', { name: 'Close project editor' })
+              .click();
+
+            await nativeFrame
+              .getByRole('tab', { name: 'Projects' })
+              .click();
+            await expect(
+              nativeFrame.getByText('Design token refresh')
+            ).toBeVisible();
+            await nativeFrame
+              .getByRole('button', {
+                name: 'Actions for Design token refresh',
+              })
+              .click();
+            await nativeFrame
+              .getByRole('menuitem', { name: 'Duplicate' })
+              .click();
+            await expect(
+              nativeFrame.getByText('Design token refresh copy')
+            ).toBeVisible();
+            await nativeFrame
+              .getByRole('tab', { name: 'Settings' })
+              .click();
+            await expect(
+              nativeFrame.getByText('Product notifications')
+            ).toBeVisible();
+            await page.screenshot({
+              path: `${artifactDir}/dashboard-native-starter-web-preview.png`,
+            });
+            await demoSection
+              .getByRole('tab', { name: 'Desktop', exact: true })
+              .click();
+            await expect(
+              demoSection.getByRole('link', {
+                name: 'Explore the Pro roadmap',
+              })
+            ).toBeVisible();
+            await expect(
+              dashboard.getByRole('button', {
+                name: 'Dashboard',
+                exact: true,
+              })
+            ).toBeVisible();
           }
 
           if (
