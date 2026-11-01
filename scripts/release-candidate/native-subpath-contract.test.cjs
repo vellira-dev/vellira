@@ -50,6 +50,7 @@ test('catalog covers all 17 currently published native runtime components', () =
   );
   assert.equal(SUBPATHS['./button'].types, './dist/primitives/Button/index.d.ts');
   assert.equal(SUBPATHS['./select'].default, './dist/select.js');
+  assert.equal(SUBPATHS['./select']['vellira-source'], './src/components/Select/index.ts');
   assert.equal(SUBPATHS['./theme'].types, './dist/theme/index.d.ts');
 });
 

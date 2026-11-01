@@ -37,102 +37,119 @@
       "default": "./dist/index.js"
     },
     "./accordion": {
+      "vellira-source": "./src/components/Accordion/index.ts",
       "types": "./dist/components/Accordion/index.d.ts",
       "react-native": "./dist/accordion.js",
       "import": "./dist/accordion.js",
       "default": "./dist/accordion.js"
     },
     "./button": {
+      "vellira-source": "./src/primitives/Button/index.ts",
       "types": "./dist/primitives/Button/index.d.ts",
       "react-native": "./dist/button.js",
       "import": "./dist/button.js",
       "default": "./dist/button.js"
     },
     "./checkbox": {
+      "vellira-source": "./src/primitives/Checkbox/index.ts",
       "types": "./dist/primitives/Checkbox/index.d.ts",
       "react-native": "./dist/checkbox.js",
       "import": "./dist/checkbox.js",
       "default": "./dist/checkbox.js"
     },
     "./dropdown": {
+      "vellira-source": "./src/components/Dropdown/index.ts",
       "types": "./dist/components/Dropdown/index.d.ts",
       "react-native": "./dist/dropdown.js",
       "import": "./dist/dropdown.js",
       "default": "./dist/dropdown.js"
     },
     "./form-field": {
+      "vellira-source": "./src/patterns/FormField/index.ts",
       "types": "./dist/patterns/FormField/index.d.ts",
       "react-native": "./dist/form-field.js",
       "import": "./dist/form-field.js",
       "default": "./dist/form-field.js"
     },
     "./input": {
+      "vellira-source": "./src/primitives/Input/index.ts",
       "types": "./dist/primitives/Input/index.d.ts",
       "react-native": "./dist/input.js",
       "import": "./dist/input.js",
       "default": "./dist/input.js"
     },
     "./modal": {
+      "vellira-source": "./src/components/Modal/index.ts",
       "types": "./dist/components/Modal/index.d.ts",
       "react-native": "./dist/modal.js",
       "import": "./dist/modal.js",
       "default": "./dist/modal.js"
     },
     "./popover": {
+      "vellira-source": "./src/components/Popover/index.ts",
       "types": "./dist/components/Popover/index.d.ts",
       "react-native": "./dist/popover.js",
       "import": "./dist/popover.js",
       "default": "./dist/popover.js"
     },
     "./portal": {
+      "vellira-source": "./src/primitives/Portal/index.ts",
       "types": "./dist/primitives/Portal/index.d.ts",
       "react-native": "./dist/portal.js",
       "import": "./dist/portal.js",
       "default": "./dist/portal.js"
     },
     "./radio": {
+      "vellira-source": "./src/primitives/Radio/index.ts",
       "types": "./dist/primitives/Radio/index.d.ts",
       "react-native": "./dist/radio.js",
       "import": "./dist/radio.js",
       "default": "./dist/radio.js"
     },
     "./radio-group": {
+      "vellira-source": "./src/components/RadioGroup/index.ts",
       "types": "./dist/components/RadioGroup/index.d.ts",
       "react-native": "./dist/radio-group.js",
       "import": "./dist/radio-group.js",
       "default": "./dist/radio-group.js"
     },
     "./select": {
+      "vellira-source": "./src/components/Select/index.ts",
       "types": "./dist/components/Select/index.d.ts",
       "react-native": "./dist/select.js",
       "import": "./dist/select.js",
       "default": "./dist/select.js"
     },
     "./switch": {
+      "vellira-source": "./src/primitives/Switch/index.ts",
       "types": "./dist/primitives/Switch/index.d.ts",
       "react-native": "./dist/switch.js",
       "import": "./dist/switch.js",
       "default": "./dist/switch.js"
     },
     "./tabs": {
+      "vellira-source": "./src/components/Tabs/index.ts",
       "types": "./dist/components/Tabs/index.d.ts",
       "react-native": "./dist/tabs.js",
       "import": "./dist/tabs.js",
       "default": "./dist/tabs.js"
     },
     "./textarea": {
+      "vellira-source": "./src/primitives/Textarea/index.ts",
       "types": "./dist/primitives/Textarea/index.d.ts",
       "react-native": "./dist/textarea.js",
       "import": "./dist/textarea.js",
       "default": "./dist/textarea.js"
     },
     "./theme": {
+      "vellira-source": "./src/theme/index.ts",
       "types": "./dist/theme/index.d.ts",
       "react-native": "./dist/theme.js",
       "import": "./dist/theme.js",
       "default": "./dist/theme.js"
     },
     "./tooltip": {
+      "vellira-source": "./src/components/Tooltip/index.ts",
       "types": "./dist/components/Tooltip/index.d.ts",
       "react-native": "./dist/tooltip.js",
       "import": "./dist/tooltip.js",

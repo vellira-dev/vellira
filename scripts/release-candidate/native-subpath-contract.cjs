@@ -23,6 +23,7 @@ const SUBPATHS = Object.freeze(Object.fromEntries(
   Object.entries(catalog).map(([name, source]) => {
     const js = './dist/' + name + '.js';
     return ['./' + name, Object.freeze({
+      'vellira-source': './' + source,
       types: './dist/' + source.slice(4).replace(/\.ts$/, '.d.ts'),
       'react-native': js,
       import: js,
