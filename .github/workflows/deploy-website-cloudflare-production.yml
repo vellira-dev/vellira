@@ -142,10 +142,18 @@ jobs:
           test "$actual" = "$CANDIDATE_SHA"
           echo "Validated exact production candidate checkout: $actual"
 
+      - name: Checkout trusted current-main replay validator
+        if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'REPLAY_VERIFIED_STAGING'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          path: .promotion-authority
+          persist-credentials: false
+
       - name: Verify successful staging before accepting replay
         id: verified-replay
         if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'REPLAY_VERIFIED_STAGING'
-        run: node apps/website/scripts/cloudflare-verified-promotion-replay.mjs
+        run: node .promotion-authority/apps/website/scripts/cloudflare-verified-promotion-replay.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPLAY_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
