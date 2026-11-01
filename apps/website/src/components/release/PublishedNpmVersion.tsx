@@ -7,7 +7,9 @@ import {
   type PublishedRelease,
 } from '../../../../../scripts/public-release/client';
 
-export function PublishedNpmVersion({ release: providedRelease }: { release?: PublishedRelease | null } = {}) {
+export function PublishedNpmVersion({
+  release: providedRelease,
+}: { release?: PublishedRelease | null } = {}) {
   const [observedRelease, setRelease] = useState<PublishedRelease | null>(null);
 
   useEffect(() => {
@@ -15,7 +17,8 @@ export function PublishedNpmVersion({ release: providedRelease }: { release?: Pu
     return observePublicRelease(setRelease, { url: '/api/public-release' });
   }, [providedRelease]);
 
-  const release = providedRelease === undefined ? observedRelease : providedRelease;
+  const release =
+    providedRelease === undefined ? observedRelease : providedRelease;
   if (!release) return null;
 
   const label = `Latest confirmed npm version v${release.version}${
