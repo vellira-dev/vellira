@@ -124,9 +124,9 @@ $button-interactive: ':not(:disabled, .disabled, .loading)';
   cursor: pointer;
 }
 
-:where(.bare:disabled),
-:where(.bare.disabled),
-:where(.bare.loading) {
+.bare:disabled,
+.bare.disabled,
+.bare.loading {
   cursor: not-allowed;
 }
 

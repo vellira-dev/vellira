@@ -8,8 +8,8 @@ import type { CSSProperties, ReactNode } from 'react';
 const noop = () => undefined;
 
 import { AnimatedIconPreview } from '../../../../icons/src/storybook/AnimatedIconPreview';
-import { Button } from '../Button';
 import { ThemeProvider } from '../../theme';
+import { Button } from '../Button';
 
 const meta = {
   title: 'Primitives/Button',
