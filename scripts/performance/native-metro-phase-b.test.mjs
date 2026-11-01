@@ -36,3 +36,15 @@ test('normal npm resolution must not install Picker or hide peer contracts', () 
   assert.match(script, /published Vellira still requires Picker peer/);
   assert.match(script, /pickerInLockfile: false/);
 });
+
+test('opt-in shared Native matrix measures exact packed candidate root vs leaf', () => {
+  assert.match(script, /VELLIRA_METRO_SUBPATH_MATRIX/);
+  assert.match(script, /VELLIRA_NATIVE_CANDIDATE_TGZ/);
+  assert.match(script, /path\.isAbsolute\(candidateTarball\)/);
+  assert.match(script, /assertNativeSubpathContract\(nativeRoot\)/);
+  assert.match(script, /'leaf-theme', 'leaf-button', 'leaf-button-select', 'mixed-root-leaf'/);
+  assert.match(script, /nativeSubpathDeltas/);
+  assert.match(script, /savedBytes/);
+  assert.match(script, /candidateSource/);
+  assert.match(script, /createHash\('sha256'\)/);
+});
