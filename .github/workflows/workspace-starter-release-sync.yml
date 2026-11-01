@@ -1,8 +1,13 @@
 name: Workspace Starter Release Sync
 
 # Atomic release reconciliation updates Starter in the same release-sync PR.
-# Retain this workflow solely for explicitly authorized manual recovery.
+# Retain a fallback on release-sync merges when Starter genuinely lags.
+# A fully synchronized Starter has no diff and must never create a second PR.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
   workflow_dispatch:
 
 permissions: read-all
@@ -13,7 +18,9 @@ concurrency:
 
 jobs:
   propose:
-    if: github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.head_commit.message, 'chore(release): sync package versions')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
