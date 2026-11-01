@@ -425,13 +425,48 @@ async function main() {
     .map((file) => file.trim())
     .filter(Boolean);
 
-  const candidate = isReleaseSyncFileSet(files);
+  // Atomic shape is recognized separately, but is never admitted by names
+  // alone. Its verifier is SHA-bound and validates all twelve file contents.
+  const atomicCandidate = isAtomicReleaseSyncFileSet(files);
+  const candidate = isReleaseSyncFileSet(files) || atomicCandidate;
 
   if (detectMode) {
     await writeOutput('release_sync', candidate ? 'true' : 'false');
     process.stdout.write(
       `${JSON.stringify({ releaseSync: candidate, files: sorted(files) }, null, 2)}\n`
     );
+    return;
+  }
+
+  if (atomicCandidate) {
+    // Preserve legacy release-sync behavior while the atomic format is
+    // being rolled out. On every admission path verify the exact immutable
+    // parent and candidate and the actual file contents before authorization.
+    if (classifyMergedMode || mergedMode) {
+      assert.equal(parents.length, 1, 'Atomic sync requires one parent');
+      assert.equal(parents[0], base, 'Atomic sync parent must match base');
+    }
+    const { verifyAtomicCandidate } = await import('./verify-atomic-release-sync.mjs');
+    const manifest = readJsonAt(head, 'package.json');
+    const result = verifyAtomicCandidate({
+      baseSha: base, headSha: head, files, version: manifest.version,
+    });
+    // Verification of the file content is necessary but not sufficient:
+    // actor, canonical title and exact branch/linear-parent policy remain.
+    if (classifyMergedMode || mergedMode) {
+      assert.equal(process.env.VELLIRA_PUSH_ACTOR, 'vellira-release-sync[bot]',
+        'Atomic merge requires release-sync App actor');
+      assert.match(git(['show', '-s', '--format=%s', head]),
+        RELEASE_SYNC_SQUASH_SUBJECT_PATTERN, 'Atomic merge requires canonical squash subject');
+    } else {
+      assert.equal(process.env.VELLIRA_PR_AUTHOR, 'vellira-release-sync[bot]');
+      assert.equal(process.env.VELLIRA_PR_TITLE, 'chore(release): sync package versions');
+      assert.equal(process.env.VELLIRA_PR_HEAD_REF,
+        'chore/sync-release-' + result.version);
+    }
+    await writeOutput('release_sync', 'true');
+    process.stdout.write('Verified immutable atomic release sync ' +
+      result.previousVersion + ' -> ' + result.version + '\\n');
     return;
   }
 
