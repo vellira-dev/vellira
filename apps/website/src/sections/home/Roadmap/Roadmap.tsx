@@ -333,7 +333,7 @@ export function Roadmap() {
                   <h3>Latest published version</h3>
                   <span className={styles.releaseVersion}>
                     <code>
-                      <PublishedNpmVersion />
+                      <PublishedNpmVersion release={release} />
                     </code>
                     <span className={styles.releaseBadge}>npm</span>
                   </span>
