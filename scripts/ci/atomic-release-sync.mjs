@@ -48,25 +48,37 @@ export function verifyAtomicManifestTransition({ files, before, after, version }
   return { previousVersion: [...oldVersions][0], version };
 }
 
-export function verifyAtomicStarterTransition({ before, after, previousVersion, version }) {
-  assertStableReleaseVersion(previousVersion);
+export function verifyAtomicStarterTransition({ before, after, version }) {
   assertStableReleaseVersion(version);
   assert.ok(before && after, 'Missing Starter snapshots');
+  const oldPins = new Set();
+  const requiredByPlatform = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
 
   for (const platform of ['web', 'native']) {
     const filename = 'examples/workspace-starter/' + platform + '/package.json';
     const oldManifest = before[filename];
     const newManifest = after[filename];
     assert.ok(oldManifest && newManifest, 'Missing Starter manifest ' + filename);
-    const required = platform === 'web'
-      ? ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons']
-      : ['@vellira-ui/react-native', '@vellira-ui/icons'];
     const expected = structuredClone(oldManifest);
-    for (const name of required) {
-      assert.equal(expected.dependencies?.[name], previousVersion, 'Unconverged prior Starter pin ' + name);
+    for (const name of requiredByPlatform[platform]) {
+      const pin = expected.dependencies?.[name];
+      assertStableReleaseVersion(pin);
+      oldPins.add(pin);
       expected.dependencies[name] = version;
     }
     assert.deepEqual(newManifest, expected, 'Unexpected Starter manifest mutation: ' + filename);
+  }
+
+  assert.equal(oldPins.size, 1, 'Prior Starter pins must converge before sync');
+  const [previousVersion] = oldPins;
+  const oldParts = previousVersion.split('.').map(Number);
+  const newParts = version.split('.').map(Number);
+  const downgrade = newParts.findIndex((part, index) => part !== oldParts[index]);
+  if (downgrade !== -1) {
+    assert.ok(newParts[downgrade] > oldParts[downgrade], 'Refusing Starter version downgrade');
   }
 
   const readmePath = 'examples/workspace-starter/README.md';
@@ -78,16 +90,12 @@ export function verifyAtomicStarterTransition({ before, after, previousVersion, 
   const nextPin = '**Vellira ' + version + ' packages**';
   assert.equal(oldReadme.split(oldPin).length, 2, 'Prior Starter README pin must occur once');
   assert.equal(newReadme, oldReadme.replace(oldPin, nextPin), 'Unexpected Starter README mutation');
-  // npm lockfiles contain transitive registry changes. Their integrity and
-  // pinned versions require validateAtomicReleaseSnapshot, not text equality.
-  return true;
+  return { previousStarterVersion: previousVersion };
 }
 
 export function verifyAtomicReleaseContents({ files, before, after, version }) {
   const manifests = verifyAtomicManifestTransition({ files, before, after, version });
-  verifyAtomicStarterTransition({
-    before, after, previousVersion: manifests.previousVersion, version,
-  });
+  verifyAtomicStarterTransition({ before, after, version });
   for (const platform of ['web', 'native']) {
     const prefix = 'examples/workspace-starter/' + platform + '/';
     const manifest = after[prefix + 'package.json'];
