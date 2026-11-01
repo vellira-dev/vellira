@@ -44,6 +44,137 @@ async function expectFloatingNearReference(
 test.describe('cross-browser interaction launch contracts @cross-browser', () => {
   test.describe.configure({ retries: 0 });
 
+  test('Button disabled, loading and composed links retain scoped styling and semantics', async ({
+    page,
+  }) => {
+    await openStory(page, 'primitives-button--disabled-semantics');
+
+    const native = page.getByTestId('native-disabled');
+    const loading = page.getByTestId('native-loading');
+    const href = page.getByTestId('link-disabled');
+    const linkLoading = page.getByTestId('link-loading');
+    const composed = page.getByTestId('aschild-disabled');
+    const bare = page.getByTestId('bare-disabled');
+    const bareLoading = page.getByTestId('bare-loading');
+    const icon = page.getByTestId('icon-disabled');
+    const clicks = page.getByTestId('button-activations');
+
+    await expect(native).toBeDisabled();
+    await expect(loading).toBeDisabled();
+    await expect(loading).toHaveAttribute('aria-busy', 'true');
+    await expect(href).toHaveAttribute('aria-disabled', 'true');
+    await expect(linkLoading).toHaveAttribute('aria-busy', 'true');
+    await expect(composed).toHaveAttribute('aria-disabled', 'true');
+    await expect(icon).toHaveAccessibleName('Add');
+    await expect(clicks).toHaveText('0');
+
+    for (const choice of ['light', 'dark', 'highContrast']) {
+      await page.locator(`[data-theme-choice="${choice}"]`).click();
+      const normalized = choice === 'highContrast' ? 'high-contrast' : choice;
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-vellira-theme',
+        normalized
+      );
+
+      const state = await page.evaluate(() => {
+        const ids = [
+          'native-disabled',
+          'native-loading',
+          'link-disabled',
+          'link-loading',
+          'aschild-disabled',
+          'bare-disabled',
+          'bare-loading',
+          'icon-disabled',
+          'enabled-reference',
+        ] as const;
+        return Object.fromEntries(
+          ids.map((id) => {
+            const node = document.querySelector<HTMLElement>(
+              `[data-testid="${id}"]`
+            );
+            if (!node) throw new Error(`Missing Button state ${id}`);
+            const css = getComputedStyle(node);
+            return [id, {
+              classes: [...node.classList],
+              color: css.color,
+              background: css.backgroundColor,
+              border: css.borderColor,
+              cursor: css.cursor,
+              disabled: node.matches(':disabled'),
+              ariaDisabled: node.getAttribute('aria-disabled'),
+              href: node.getAttribute('href'),
+              tabIndex: node.getAttribute('tabindex'),
+            }];
+          })
+        );
+      }) as Record<string, {
+        classes: string[];
+        color: string;
+        background: string;
+        border: string;
+        cursor: string;
+        disabled: boolean;
+        ariaDisabled: string | null;
+        href: string | null;
+        tabIndex: string | null;
+      }>;
+
+      for (const [id, value] of Object.entries(state)) {
+        expect(value.classes, id).not.toContain('undefined');
+        expect(value.classes, id).not.toContain('null');
+      }
+
+      const baseline = state['native-disabled'];
+      expect(baseline.disabled).toBe(true);
+      expect(baseline.cursor).toBe('not-allowed');
+      for (const id of ['link-disabled', 'aschild-disabled']) {
+        const value = state[id];
+        expect(value.classes.some((cls) => cls.includes('disabled'))).toBe(
+          true
+        );
+        expect(value.ariaDisabled).toBe('true');
+        expect(value.href).toBeNull();
+        expect(value.tabIndex).toBe('-1');
+        expect(value.cursor).toBe(baseline.cursor);
+        expect([value.color, value.background, value.border]).toEqual([
+          baseline.color,
+          baseline.background,
+          baseline.border,
+        ]);
+      }
+      expect(state['link-loading'].cursor).toBe('progress');
+      expect(state['link-loading'].href).toBeNull();
+      expect(state['bare-disabled'].cursor).toBe('not-allowed');
+      expect(state['bare-loading'].cursor).toBe('not-allowed');
+      expect(state['native-loading'].cursor).toBe('progress');
+      expect(state['enabled-reference'].classes.some((cls) =>
+        cls.includes('disabled')
+      )).toBe(false);
+
+      await href.hover();
+      await expect(href).toHaveCSS('background-color', baseline.background);
+      await composed.hover();
+      await expect(composed).toHaveCSS('background-color', baseline.background);
+    }
+
+    for (const link of [href, linkLoading, composed]) {
+      const prevented = await link.evaluate((element) => {
+        const event = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+        });
+        element.dispatchEvent(event);
+        return event.defaultPrevented;
+      });
+      expect(prevented).toBe(true);
+    }
+    await expect(clicks).toHaveText('0');
+    await page.getByTestId('enabled-reference').click();
+    await expect(clicks).toHaveText('1');
+  });
+
+
   test('Dropdown supports keyboard navigation, focus restore, portal, outside click, and positioning', async ({
     page,
   }) => {
