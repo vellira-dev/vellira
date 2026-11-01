@@ -10,7 +10,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const sourcePath = path.join(root, 'node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js');
+const sourcePath = path.join(root, 'node_modules/expo/node_modules/@expo/cli/build/src/start/server/devtools/DevToolsPluginCliExtensionResults.js');
 const metadataPath = path.join(root, 'node_modules/expo/node_modules/@expo/cli/package.json');
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));

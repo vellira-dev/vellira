@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          target=node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js
+          target=node_modules/expo/node_modules/@expo/cli/build/src/start/server/devtools/DevToolsPluginCliExtensionResults.js
           cp "$target" "$RUNNER_TEMP/expo58-good.js"
           printf '\n// tampered parser\n' >> "$target"
           if node scripts/security-expo-58-guard.cjs --verify; then
