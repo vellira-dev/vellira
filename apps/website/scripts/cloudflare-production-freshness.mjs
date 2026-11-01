@@ -6,6 +6,7 @@ import {
   RELEASE_SYNC_MANIFESTS,
   isReleaseSyncFileSet,
   verifyMergedReleaseSyncAdvance,
+  isAtomicReleaseSyncCandidate,
 } from '../../../scripts/ci/release-sync-contract.mjs';
 import { productionDeploymentRelevantPaths } from './cloudflare-production-surface.mjs';
 
@@ -89,6 +90,30 @@ async function readJsonAtGitHubRef(
   return JSON.parse(
     Buffer.from(data.content.replaceAll('\n', ''), 'base64').toString('utf8')
   );
+}
+
+async function atomicSyncDocuments({
+  repository, candidateSha, mainSha, fetchImpl, apiUrl, githubToken,
+}) {
+  const { ATOMIC_RELEASE_SYNC_PATHS } = await import('../../../scripts/ci/atomic-release-sync.mjs');
+  const options = { token: githubToken, fetchImpl, apiUrl };
+  const before = {};
+  const after = {};
+  await Promise.all(ATOMIC_RELEASE_SYNC_PATHS.map(async (file) => {
+    const encoded = encodeRepositoryPath(file);
+    const read = async (sha) => {
+      const response = await githubJson(
+        '/repos/' + repository + '/contents/' + encoded + '?ref=' + encodeURIComponent(sha),
+        options
+      );
+      assert.equal(response?.type, 'file', 'Expected immutable atomic file: ' + file);
+      assert.equal(response?.encoding, 'base64', 'Expected base64 atomic file: ' + file);
+      const raw = Buffer.from(response.content.replaceAll('\\n', ''), 'base64').toString('utf8');
+      return file.endsWith('.json') ? JSON.parse(raw) : raw;
+    };
+    [before[file], after[file]] = await Promise.all([read(candidateSha), read(mainSha)]);
+  }));
+  return { before, after };
 }
 
 async function releaseSyncDocuments({
@@ -259,6 +284,34 @@ export async function assessFreshProductionCandidate({
       comparison,
       baseDocuments,
       headDocuments,
+    });
+    relevantPaths = [];
+  }
+
+  if (relevantPaths.length > 0 && isAtomicReleaseSyncCandidate(changedPaths)) {
+    // A shape match is never sufficient: authenticate exact commit lineage,
+    // release-sync App identity, and the full immutable 12-file content delta.
+    assert.equal(comparison.status, 'ahead');
+    assert.equal(comparison.behind_by, 0);
+    assert.equal(comparison.total_commits, 1, 'Atomic freshness only admits one contiguous sync commit');
+    assert.equal(comparison.ahead_by, 1);
+    assert.equal(comparison.commits?.length, 1);
+    const commit = comparison.commits[0];
+    assert.equal(commit.sha, mainSha);
+    assert.equal(commit.parents?.length, 1);
+    assert.equal(commit.parents[0]?.sha, candidateSha);
+    assert.equal(commit.author?.login, 'vellira-release-sync[bot]');
+    assert.match(commit.commit?.message?.split(/\\r?\\n/, 1)[0] ?? '',
+      /^chore\\(release\\): sync package versions \\(#\\d+\\)$/);
+    assert.ok(comparison.files.every(file =>
+      file.status === 'modified' && file.previous_filename === undefined
+    ), 'Atomic freshness requires modified files without renames');
+    const { before, after } = await atomicSyncDocuments({
+      repository, candidateSha, mainSha, fetchImpl, apiUrl, githubToken,
+    });
+    const { verifyAtomicReleaseContents } = await import('../../../scripts/ci/atomic-release-sync.mjs');
+    verifyAtomicReleaseContents({
+      files: changedPaths, before, after, version: after['package.json'].version,
     });
     relevantPaths = [];
   }
