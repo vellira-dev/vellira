@@ -26,6 +26,28 @@ export function assertAtomicSyncFileSet(paths) {
     'Atomic release sync requires exactly seven package manifests and five Starter files');
 }
 
+
+export function verifyAtomicManifestTransition({ files, before, after, version }) {
+  assertAtomicSyncFileSet(files);
+  assertStableReleaseVersion(version);
+  assert.ok(before && after, 'Missing atomic manifest snapshots');
+  const oldVersions = new Set();
+  for (const file of RELEASE_SYNC_MANIFESTS) {
+    const previous = before[file];
+    const next = after[file];
+    assert.ok(previous && next, 'Missing version-only manifest: ' + file);
+    oldVersions.add(previous.version);
+    assert.equal(next.version, version, 'Wrong release manifest version: ' + file);
+    const previousRest = { ...previous };
+    const nextRest = { ...next };
+    delete previousRest.version;
+    delete nextRest.version;
+    assert.deepEqual(nextRest, previousRest, 'Unexpected manifest mutation: ' + file);
+  }
+  assert.equal(oldVersions.size, 1, 'Root and package versions were not converged before update');
+  return { previousVersion: [...oldVersions][0], version };
+}
+
 export function validateAtomicReleaseSnapshot(root, version) {
   assertStableReleaseVersion(version);
   for (const file of RELEASE_SYNC_MANIFESTS) {
