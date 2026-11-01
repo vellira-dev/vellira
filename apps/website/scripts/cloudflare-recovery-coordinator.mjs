@@ -17,21 +17,15 @@ export function assertCompleteRecoveryHistory(result, label) {
   return result;
 }
 
-export async function fetchCompleteProductionRuns(fetchPage, { maxPages = 50 } = {}) {
-  const first = await fetchPage(1);
-  assert.ok(Number.isSafeInteger(first?.total_count) && first.total_count >= 0);
-  const pageCount = Math.ceil(first.total_count / 100);
-  assert.ok(pageCount <= maxPages, 'Production history exceeds bounded pagination; manual review required');
-  const runs = [...(first.workflow_runs ?? [])];
-  for (let page = 2; page <= pageCount; page++) {
-    const response = await fetchPage(page);
-    assert.equal(response.total_count, first.total_count, 'Production history changed during pagination');
-    assert.ok(Array.isArray(response.workflow_runs));
-    runs.push(...response.workflow_runs);
-  }
-  assert.equal(runs.length, first.total_count, 'Incomplete production run history');
-  assert.equal(new Set(runs.map(run => run.id)).size, runs.length, 'Duplicated production history');
-  return runs;
+// GitHub workflow runs API supports head_sha filtering. Never scan the
+// unbounded organization-wide history to decide authority for one candidate.
+export async function fetchCandidateProductionRuns(fetchPage, mainSha) {
+  assert.match(mainSha, SHA);
+  const response = await fetchPage(mainSha);
+  assertCompleteRecoveryHistory(response, 'Candidate production');
+  assert.ok(response.workflow_runs.every(run => run.head_sha === mainSha),
+    'Production history includes a different SHA');
+  return response.workflow_runs;
 }
 
 export function observedMainPushAt(stagingRuns, mainSha) {
@@ -119,6 +113,9 @@ export function decideRecovery({
   // A newly merged main SHA is moving-target territory. Defer expensive
   // recovery staging until a short quiet window has elapsed; normal push
   // staging and already-verified candidates retain priority.
+  if (mainUpdatedAt === null) {
+    return { dispatch: false, reason: 'main_push_observation_missing', requiresReview: true };
+  }
   if (mainUpdatedAt !== null) {
     const updated = Date.parse(mainUpdatedAt);
     assert.ok(Number.isFinite(updated), 'Invalid immutable main commit date');
@@ -162,16 +159,23 @@ async function runtimeSha() {
 
 async function main() {
   assert.equal(process.env.GITHUB_REPOSITORY, OWNER);
-  const [ref, productionSha, productionResult] = await Promise.all([
+  const [ref, productionSha] = await Promise.all([
     github('/repos/' + OWNER + '/git/ref/heads/main'),
     runtimeSha(),
-    fetchCompleteProductionRuns(page => github('/repos/' + OWNER + '/actions/workflows/' + PRODUCTION + '/runs?per_page=100&page=' + page)),
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
-
-  const stagingResult = await github(
-    '/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100');
+  if (productionSha === mainSha) {
+    console.log(JSON.stringify({ mainSha, productionSha, dispatch: false, reason: 'already_deployed' }));
+    return;
+  }
+  const [productionResult, stagingResult] = await Promise.all([
+    fetchCandidateProductionRuns(sha => github(
+      '/repos/' + OWNER + '/actions/workflows/' + PRODUCTION +
+      '/runs?head_sha=' + sha + '&per_page=100'), mainSha),
+    github('/repos/' + OWNER + '/actions/workflows/' + STAGING +
+      '/runs?head_sha=' + mainSha + '&per_page=100'),
+  ]);
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assertCompleteRecoveryHistory(stagingResult, 'Staging');
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
