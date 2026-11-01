@@ -88,6 +88,9 @@ export function verifyAtomicStarterTransition({ before, after, version }) {
   assert.equal(typeof newReadme, 'string');
   const oldPin = '**Vellira ' + previousVersion + ' packages**';
   const nextPin = '**Vellira ' + version + ' packages**';
+  if (previousVersion === version) {
+    assert.equal(newReadme, oldReadme, 'Already synchronized Starter README must remain unchanged');
+  }
   assert.equal(oldReadme.split(oldPin).length, 2, 'Prior Starter README pin must occur once');
   assert.equal(newReadme, oldReadme.replace(oldPin, nextPin), 'Unexpected Starter README mutation');
   return { previousStarterVersion: previousVersion };
