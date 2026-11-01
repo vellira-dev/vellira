@@ -147,7 +147,7 @@ async function main() {
       if (!minimal.css.startsWith(css.toString('utf8')) ||
           css.includes(Buffer.from(':root{--space-0:')) ||
           css.length < 1000 ||
-          createHash('sha256').update(fullBytes).digest('hex') !== fullSha256) {
+          createHash('sha256').update(readFileSync(cssFile)).digest('hex') !== fullSha256) {
         throw new Error('Cannot emit validated, token-free Button CSS.');
       }
       const output = path.join(packageRoot, 'dist/styles/button.css');
