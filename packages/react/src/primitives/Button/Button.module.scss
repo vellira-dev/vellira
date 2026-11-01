@@ -2,6 +2,8 @@
 
 $button-colors: primary, neutral, success, warning, danger;
 $button-appearances: solid, outline, ghost, soft, link;
+// Disabled links and asChild anchors have a CSS Module class, not :disabled.
+$button-interactive: '#{$button-interactive}';
 
 @mixin button-state($color, $appearance, $state) {
   color: var(--button-#{$color}-#{$appearance}-#{$state}-fg);
@@ -48,23 +50,23 @@ $button-appearances: solid, outline, ghost, soft, link;
 
 @each $appearance in $button-appearances {
   @each $color in $button-colors {
-    .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading) {
+    .button.#{$appearance}.#{$color}#{$button-interactive} {
       @include button-state($color, $appearance, default);
     }
 
-    .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading):hover {
+    .button.#{$appearance}.#{$color}#{$button-interactive}:hover {
       @include button-state($color, $appearance, hover);
 
       transform: translateY(-1px);
     }
 
-    .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading):active {
+    .button.#{$appearance}.#{$color}#{$button-interactive}:active {
       @include button-state($color, $appearance, pressed);
 
       transform: scale(0.98);
     }
 
-    .button.#{$appearance}.#{$color}:focus-visible:not(:disabled, .disabled, .loading) {
+    .button.#{$appearance}.#{$color}:focus-visible#{$button-interactive} {
       @include button-focus-border($color, $appearance);
       @include focus-ring(var(--button-#{$color}-ring));
     }
@@ -88,24 +90,24 @@ $button-appearances: solid, outline, ghost, soft, link;
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.button.link:not(:disabled, .disabled, .loading):hover .iconStart,
-.button.link:not(:disabled, .disabled, .loading):active .iconStart {
+.button.link#{$button-interactive}:hover .iconStart,
+.button.link#{$button-interactive}:active .iconStart {
   transform: translateX(-4px);
 }
 
-.button.link:not(:disabled, .disabled, .loading):hover .iconEnd,
-.button.link:not(:disabled, .disabled, .loading):active .iconEnd {
+.button.link#{$button-interactive}:hover .iconEnd,
+.button.link#{$button-interactive}:active .iconEnd {
   transform: translateX(4px);
 }
 
 @each $color in $button-colors {
-  .button.link.#{$color}:not(:disabled, .disabled, .loading) {
+  .button.link.#{$color}#{$button-interactive} {
     text-decoration-thickness: 1px;
     text-underline-offset: 0.18em;
   }
 
-  .button.link.#{$color}:not(:disabled, .disabled, .loading):hover,
-  .button.link.#{$color}:not(:disabled, .disabled, .loading):active {
+  .button.link.#{$color}#{$button-interactive}:hover,
+  .button.link.#{$color}#{$button-interactive}:active {
     text-decoration-line: underline;
     transform: none;
   }
@@ -267,13 +269,13 @@ $button-appearances: solid, outline, ghost, soft, link;
 
   @each $appearance in $button-appearances {
     @each $color in $button-colors {
-      .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading):hover,
-      .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading):active {
+      .button.#{$appearance}.#{$color}#{$button-interactive}:hover,
+      .button.#{$appearance}.#{$color}#{$button-interactive}:active {
         transform: none;
       }
 
-      .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading):hover .icon,
-      .button.#{$appearance}.#{$color}:not(:disabled, .disabled, .loading):active .icon {
+      .button.#{$appearance}.#{$color}#{$button-interactive}:hover .icon,
+      .button.#{$appearance}.#{$color}#{$button-interactive}:active .icon {
         transform: none;
       }
     }
