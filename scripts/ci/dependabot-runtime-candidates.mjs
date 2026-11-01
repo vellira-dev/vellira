@@ -132,7 +132,10 @@ export function verifyRuntimeResolution(lock, plan) {
       `Vulnerable ${entry.name} resolution remains`);
   }
   assert.match(lock, /next@16\.4\.2\(patch_hash=/, 'Next custom patch missing');
-  assert.match(lock, /node-forge@1\.4\.0\(patch_hash=/, 'Forge verified backport missing');
+  const forgeVersions = resolvedVersions(lock, 'node-forge');
+  assert.ok(forgeVersions.length > 0 && forgeVersions.every((v) => compareVersions(v, '1.4.2') >= 0),
+    'Forge published security floor (>=1.4.2) missing');
+  assert.doesNotMatch(lock, /node-forge@1\.4\.0\(patch_hash=/, 'Retired Forge patch still present');
   assert.match(lock, /sharp: 0\.35\.5/, 'Pinned sharp security fix missing');
 }
 

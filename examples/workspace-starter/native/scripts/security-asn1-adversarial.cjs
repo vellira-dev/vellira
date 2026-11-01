@@ -70,8 +70,8 @@ const outcome = {
 console.log(JSON.stringify(outcome, null, 2));
 assert.equal(typeof accepted, 'boolean');
 assert.equal(typeof malformedNullAccepted, 'boolean');
-// Future patched behavior must reject the malformed structure. This switch
-// deliberately fails on unpatched node-forge 1.4.0.
+// Published Forge >=1.4.2 must reject malformed nested structures.
+// Keep the negative regression mandatory on the exact installed package.
 if (process.argv.includes('--require-rejection')) {
   assert.equal(accepted, false, 'CVE-2026-85393: malformed DigestAlgorithm must be rejected');
   assert.equal(malformedNullAccepted, false, 'CVE-2026-85393: non-empty NULL parameters must be rejected');

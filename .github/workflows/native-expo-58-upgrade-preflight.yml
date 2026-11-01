@@ -57,6 +57,8 @@ jobs:
           npm pkg delete scripts.preweb
           npm pkg delete scripts.pretypecheck
           npm pkg delete scripts.security:verify-patch
+          # Preserve reviewed Expo CLI parser rather than float to 58.1.18.
+          npm pkg set 'overrides.@expo/cli=58.1.17'
           npm install expo@^58.0.0 react-native@^0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
           echo '=== Resolved Expo CLI / Zod / React Native ==='
           node - <<'NODE'
