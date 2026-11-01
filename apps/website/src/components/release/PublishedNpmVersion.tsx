@@ -7,14 +7,15 @@ import {
   type PublishedRelease,
 } from '../../../../../scripts/public-release/client';
 
-export function PublishedNpmVersion() {
-  const [release, setRelease] = useState<PublishedRelease | null>(null);
+export function PublishedNpmVersion({ release: providedRelease }: { release?: PublishedRelease | null } = {}) {
+  const [observedRelease, setRelease] = useState<PublishedRelease | null>(null);
 
-  useEffect(
-    () => observePublicRelease(setRelease, { url: '/api/public-release' }),
-    []
-  );
+  useEffect(() => {
+    if (providedRelease !== undefined) return;
+    return observePublicRelease(setRelease, { url: '/api/public-release' });
+  }, [providedRelease]);
 
+  const release = providedRelease === undefined ? observedRelease : providedRelease;
   if (!release) return null;
 
   const label = `Latest confirmed npm version v${release.version}${
