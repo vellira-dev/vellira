@@ -29,7 +29,12 @@ test('version transition accepts only seven converged version-only changes', () 
   const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json')));
   const before = Object.fromEntries(manifests.map(p => [p, { name: p, version: '2.188.12', private: true }]));
   const after = Object.fromEntries(manifests.map(p => [p, { name: p, version: '2.189.0', private: true }]));
-  const payload = { files: ATOMIC_RELEASE_SYNC_PATHS, before, after, version: '2.189.0' };
+  for (const file of ATOMIC_RELEASE_SYNC_PATHS.filter(p => !manifests.includes(p))) {
+    const stable = file.endsWith('.json') ? { stable: true } : 'Starter already current';
+    before[file] = structuredClone(stable);
+    after[file] = structuredClone(stable);
+  }
+  const payload = { files: manifests, before, after, version: '2.189.0' };
   assert.equal(verifyAtomicManifestTransition(payload).previousVersion, '2.188.12');
   assert.throws(() => verifyAtomicManifestTransition({
     ...payload, after: { ...after, 'package.json': { ...after['package.json'], scripts: { malicious: 'true' } } },
