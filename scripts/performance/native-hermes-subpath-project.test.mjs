@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -171,7 +171,7 @@ test('exact Native candidate mode copies immutable tarball without synthetic sta
     );
     const app = fs.readFileSync(path.join(fixture.destination, 'App.tsx'), 'utf8');
     const readme = fs.readFileSync(path.join(fixture.destination, 'README.md'), 'utf8');
-    assert.match(app, /from '@vellira-ui\\/react-native\\/select'/);
+    assert.match(app, /from '@vellira-ui\/react-native\/select'/);
     assert.match(readme, /npm install --no-audit --no-fund/);
     assert.doesNotMatch(readme, /npm install --legacy-peer-deps/);
   });
@@ -207,7 +207,7 @@ test('exact Native candidate rejects bad archive and source-version drift', () =
       VELLIRA_NATIVE_CANDIDATE_SHA256: sha,
     });
     assert.notEqual(mismatch.status, 0);
-    assert.match(mismatch.stderr, /name\\/version\\/subpath authority mismatch/);
+    assert.match(mismatch.stderr, /name\/version\/subpath authority mismatch/);
     assert.equal(fs.existsSync(fixture.destination), false);
 
     const invalid = path.join(fixture.root, 'invalid.tgz');
