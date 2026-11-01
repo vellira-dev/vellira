@@ -17,7 +17,8 @@ export const ATOMIC_RELEASE_SYNC_PATHS = Object.freeze([...RELEASE_SYNC_MANIFEST
 const VERSION = /^\\d+\\.\\d+\\.\\d+$/;
 
 export function assertAtomicSyncFileSet(paths) {
-  assert.deepEqual([...new Set(paths)].sort(), ATOMIC_RELEASE_SYNC_PATHS,
+  assert.equal(new Set(paths).size, paths.length, 'Duplicate atomic-sync path');
+  assert.deepEqual([...paths].sort(), ATOMIC_RELEASE_SYNC_PATHS,
     'Atomic release sync requires exactly seven package manifests and five Starter files');
 }
 
