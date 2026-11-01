@@ -17,6 +17,32 @@ export function assertCompleteRecoveryHistory(result, label) {
   return result;
 }
 
+export async function fetchCompleteProductionRuns(fetchPage, { maxPages = 50 } = {}) {
+  const first = await fetchPage(1);
+  assert.ok(Number.isSafeInteger(first?.total_count) && first.total_count >= 0);
+  const pageCount = Math.ceil(first.total_count / 100);
+  assert.ok(pageCount <= maxPages, 'Production history exceeds bounded pagination; manual review required');
+  const runs = [...(first.workflow_runs ?? [])];
+  for (let page = 2; page <= pageCount; page++) {
+    const response = await fetchPage(page);
+    assert.equal(response.total_count, first.total_count, 'Production history changed during pagination');
+    assert.ok(Array.isArray(response.workflow_runs));
+    runs.push(...response.workflow_runs);
+  }
+  assert.equal(runs.length, first.total_count, 'Incomplete production run history');
+  assert.equal(new Set(runs.map(run => run.id)).size, runs.length, 'Duplicated production history');
+  return runs;
+}
+
+export function observedMainPushAt(stagingRuns, mainSha) {
+  const timestamps = stagingRuns.filter(run =>
+    run.head_sha === mainSha && run.event === 'push'
+  ).map(run => Date.parse(run.created_at ?? ''));
+  return timestamps.length && timestamps.every(Number.isFinite)
+    ? new Date(Math.max(...timestamps)).toISOString()
+    : null;
+}
+
 export function decideRecovery({
   mainSha,
   productionSha,
@@ -139,17 +165,13 @@ async function main() {
   const [ref, productionSha, productionResult] = await Promise.all([
     github('/repos/' + OWNER + '/git/ref/heads/main'),
     runtimeSha(),
-    github('/repos/' + OWNER + '/actions/workflows/' + PRODUCTION + '/runs?per_page=100'),
+    fetchCompleteProductionRuns(page => github('/repos/' + OWNER + '/actions/workflows/' + PRODUCTION + '/runs?per_page=100&page=' + page)),
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
-  assertCompleteRecoveryHistory(productionResult, 'Production');
-  const [stagingResult, mainCommit] = await Promise.all([
-    github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100'),
-    github('/repos/' + OWNER + '/commits/' + mainSha),
-  ]);
-  const mainUpdatedAt = mainCommit.commit?.committer?.date;
-  assert.equal(typeof mainUpdatedAt, 'string', 'Missing immutable main commit timestamp');
+
+  const stagingResult = await github(
+    '/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assertCompleteRecoveryHistory(stagingResult, 'Staging');
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
@@ -171,7 +193,7 @@ async function main() {
   }));
   // Inspect matching production jobs. A green outer run may skip deployment;
   // the workflow_run GITHUB_SHA is main, not the staging candidate.
-  const productionRuns = await Promise.all(productionResult.workflow_runs.map(async (run) => {
+  const productionRuns = await Promise.all(productionResult.map(async (run) => {
     if (run.display_title !== 'Promote staging ' + mainSha ||
         run.status !== 'completed' || run.conclusion !== 'success') {
       return { ...run, actualDeploy: false };
@@ -186,6 +208,7 @@ async function main() {
       ),
     };
   }));
+  const mainUpdatedAt = observedMainPushAt(stagingRuns, mainSha);
   const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns, mainUpdatedAt });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
   if (!plan.dispatch) {
