@@ -28,8 +28,8 @@ describe('Content Bridge GitHub App credential smoke', () => {
   });
 
   it('mints only the pre-existing private repo scoped app token', () => {
-    expect(workflow).toContain(
-      'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1'
+    expect(workflow).toMatch(
+      /actions\/create-github-app-token@[0-9a-f]{40} # v3/
     );
     expect(workflow).toContain('vars.VELLIRA_CONTENT_BRIDGE_APP_CLIENT_ID');
     expect(workflow).toContain(

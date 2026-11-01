@@ -61,7 +61,6 @@ patchedDependencies:
   '@opennextjs/cloudflare@1.20.12': a732dbf9d2f20dd280dbfbb69010bdafce732c6c55691553e744f09c4875aed4
   braces@3.0.3: cecdb90ea3f216ffb13f31d757e9e26239b040179ba9235326e1a6041cb3b055
   next@16.4.2: dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6
-  node-forge@1.4.0: 4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0
   sprintf-js@1.0.3: 5ab824202ac5896cae9cee1075a8ca1311ee7c4830bc0b16a2d06553c3707b36
   tr46@0.0.3: 79bdc14cbadfa8868f5ee3574fa637e8f7b9f1fb8fec3d79730d548d680f0131
   whatwg-url@5.0.0: d3aceb628354c7eea07ec15e1f7ceb681ac68b608af00bf2850b9060ef52e058
@@ -8997,8 +8996,8 @@ packages:
       encoding:
         optional: true
 
-  node-forge@1.4.0:
-    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+  node-forge@1.4.2:
+    resolution: {integrity: sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ==}
     engines: {node: '>= 6.13.0'}
 
   node-int64@0.4.0:
@@ -13566,7 +13565,7 @@ snapshots:
       glob: 13.0.6
       lan-network: 0.2.1
       multitars: 1.0.2
-      node-forge: 1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0)
+      node-forge: 1.4.2
       npm-package-arg: 11.0.3
       ora: 3.4.0
       picomatch: 4.0.7
@@ -13643,7 +13642,7 @@ snapshots:
       glob: 13.0.6
       lan-network: 0.2.1
       multitars: 1.0.2
-      node-forge: 1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0)
+      node-forge: 1.4.2
       npm-package-arg: 11.0.3
       ora: 3.4.0
       picomatch: 4.0.7
@@ -13679,7 +13678,7 @@ snapshots:
 
   '@expo/code-signing-certificates@0.0.6':
     dependencies:
-      node-forge: 1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0)
+      node-forge: 1.4.2
 
   '@expo/config-plugins@57.0.10(supports-color@10.2.2)(typescript@6.0.3)':
     dependencies:
@@ -21193,7 +21192,7 @@ snapshots:
     dependencies:
       whatwg-url: 5.0.0(patch_hash=d3aceb628354c7eea07ec15e1f7ceb681ac68b608af00bf2850b9060ef52e058)
 
-  node-forge@1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0): {}
+  node-forge@1.4.2: {}
 
   node-int64@0.4.0: {}
 

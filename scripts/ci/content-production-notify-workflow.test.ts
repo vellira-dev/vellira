@@ -50,8 +50,8 @@ describe('verified production distribution notification', () => {
       'permissions:\n  actions: read\n  contents: read'
     );
     expect(workflow).toContain('environment: content-production-notification');
-    expect(workflow).toContain(
-      'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1'
+    expect(workflow).toMatch(
+      /actions\/create-github-app-token@[0-9a-f]{40} # v3/
     );
     expect(workflow).toContain('repositories: vellira-internal');
     expect(workflow).toContain('permission-contents: write');

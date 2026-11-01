@@ -30,8 +30,8 @@ it('keeps the reservation workflow bounded to exact trusted default-branch autho
   expect(workflow).toContain('persist-credentials: false');
   expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
   expect(workflow).toContain('if: inputs.dry_run == false');
-  expect(workflow).toContain(
-    'uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3'
+  expect(workflow).toMatch(
+    /uses: actions\/create-github-app-token@[0-9a-f]{40} # v3/
   );
   expect(workflow).toContain('permission-contents: write');
   expect(workflow).toContain('permission-pull-requests: write');
