@@ -190,17 +190,14 @@ test('production eligibility requires successful push staging or explicit verifi
   assert.match(candidate, /workflow_run\.event == 'push'/);
   assert.match(candidate, /workflow_run\.event == 'workflow_dispatch'/);
   assert.match(candidate, /workflow_run\.head_branch == 'main'/);
-  assert.ok(candidate.includes('EXPECTED_EVENT_NAME: ${{ github.event.workflow_run.event }}'));
+  assert.ok(candidate.includes("github.event.workflow_run.event || steps.verified-replay.outputs.event_name"));
   assert.match(stagingWorkflow, /production_recovery:/);
   assert.match(stagingWorkflow, /productionRecovery:/);
   assert.match(
     candidate,
     /actions\/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333/
   );
-  assert.match(
-    candidate,
-    /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/
-  );
+  assert.match(candidate, /run-id:.*inputs\.staging_run_id/);
   assert.match(candidate, /cloudflare-staging-evidence-/);
   assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
 });
@@ -267,15 +264,34 @@ test('production approval waits outside the serialized deploy mutex', () => {
   );
 });
 
-test('manual recovery bypasses normal admission but still crosses protected approval', () => {
+test('only emergency break-glass may bypass admission; verified replay may not', () => {
   const admission = jobBlock(productionWorkflow, 'admission', 'approval');
   const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
   const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
   assert.match(admission, /github\.event_name == 'workflow_run'/);
-  assert.match(approval, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(admission, /REPLAY_VERIFIED_STAGING/);
+  assert.match(approval, /inputs\.confirmation == 'EMERGENCY_DEPLOY_PRODUCTION'/);
   assert.match(approval, /environment:\n {6}name: production/);
-  assert.match(deploy, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(deploy, /inputs\.confirmation == 'EMERGENCY_DEPLOY_PRODUCTION'/);
   assert.match(deploy, /needs\.approval\.result == 'success'/);
+});
+
+test('verified staging replay preserves evidence, admission and protected approval', () => {
+  const candidate = jobBlock(productionWorkflow, 'candidate', 'admission');
+  const admission = jobBlock(productionWorkflow, 'admission', 'approval');
+  const approval = jobBlock(productionWorkflow, 'approval', 'deploy');
+  const deploy = jobBlock(productionWorkflow, 'deploy', 'indexnow');
+  assert.match(productionWorkflow, /REPLAY_VERIFIED_STAGING/);
+  assert.match(candidate, /Verify successful staging before accepting replay/);
+  assert.match(candidate, /cloudflare-verified-promotion-replay\.mjs/);
+  assert.match(candidate, /cloudflare-staging-evidence\.mjs/);
+  assert.match(candidate, /EXPECTED_EVENT_NAME:.*verified-replay\.outputs\.event_name/);
+  assert.match(candidate, /source=staging/);
+  assert.match(admission, /REPLAY_VERIFIED_STAGING/);
+  assert.match(approval, /needs\.admission\.outputs\.admitted == 'true'/);
+  assert.match(deploy, /needs\.admission\.outputs\.admitted == 'true'/);
+  assert.doesNotMatch(approval, /github\.event_name == 'workflow_dispatch' \|\|/);
+  assert.doesNotMatch(deploy, /github\.event_name == 'workflow_dispatch' \|\|/);
 });
 
 test('manual dispatch is an explicit break-glass recovery path', () => {
