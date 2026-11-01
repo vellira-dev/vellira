@@ -173,3 +173,11 @@ test('Starter may lag root manifests but cannot diverge internally or downgrade'
   downgraded['examples/workspace-starter/README.md'] = 'Using **Vellira 2.188.10 packages**.';
   assert.throws(() => verifyAtomicStarterTransition({ ...input, after: downgraded, version: '2.188.10' }), /downgrade/);
 });
+
+test('release-sync CLI never grants atomic admission from file names alone', () => {
+  const source = fs.readFileSync('scripts/ci/release-sync-contract.mjs', 'utf8');
+  assert.ok(source.includes('const detected = isReleaseSyncFileSet(files);'));
+  assert.ok(source.includes('verifyAtomicCandidate({'));
+  assert.ok(source.includes("VELLIRA_PUSH_ACTOR, 'vellira-release-sync[bot]'"));
+  assert.ok(source.includes('Atomic sync parent must match base'));
+});
