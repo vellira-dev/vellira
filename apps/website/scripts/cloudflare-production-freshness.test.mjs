@@ -8,7 +8,10 @@ import {
   changedPathsFromCompare,
   productionFreshnessMode,
 } from './cloudflare-production-freshness.mjs';
-import { RELEASE_SYNC_MANIFESTS } from '../../../scripts/ci/release-sync-contract.mjs';
+import {
+  RELEASE_SYNC_MANIFESTS,
+  ATOMIC_STARTER_SYNC_FILES,
+} from '../../../scripts/ci/release-sync-contract.mjs';
 import {
   PRODUCTION_DEPLOYMENT_PATH_PATTERNS,
   isProductionDeploymentRelevantPath,
@@ -593,4 +596,26 @@ test('superseded candidate carries exact revision and changed-path evidence', as
       return true;
     }
   );
+});
+
+test('atomic sync never inherits seven-manifest production freshness bypass by shape', async () => {
+  const atomicPaths = [...RELEASE_SYNC_MANIFESTS, ...ATOMIC_STARTER_SYNC_FILES];
+  const mock = githubFetch({ comparison: compare(atomicPaths) });
+  await assert.rejects(
+    assertFreshProductionCandidate({
+      configPath: '/repo/apps/website/wrangler.production.jsonc',
+      candidateSource: 'staging',
+      candidateSha: A,
+      repository: 'vellira-dev/vellira',
+      githubToken: 'test-token',
+      fetchImpl: mock.fetchImpl,
+    }),
+    (error) => {
+      assert.equal(error.name, 'ProductionCandidateSupersededError');
+      assert.equal(error.candidateSha, A);
+      assert.ok(error.relevantPaths.length > 0);
+      return true;
+    }
+  );
+  assert.equal(mock.calls.length, 2, 'Atomic shape must not fetch manifests to grant a bypass');
 });
