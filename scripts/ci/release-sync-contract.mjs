@@ -430,7 +430,10 @@ async function main() {
   const atomicCandidate = isAtomicReleaseSyncFileSet(files);
   const candidate = isReleaseSyncFileSet(files) || atomicCandidate;
 
-  if (detectMode) {
+  if (detectMode && atomicCandidate) {
+    // Do not grant the fast-path flag on a twelve-file shape alone.
+    // Atomic detection must use the same verified-content path as admission.
+  } else if (detectMode) {
     await writeOutput('release_sync', candidate ? 'true' : 'false');
     process.stdout.write(
       `${JSON.stringify({ releaseSync: candidate, files: sorted(files) }, null, 2)}\n`
@@ -458,7 +461,7 @@ async function main() {
         'Atomic merge requires release-sync App actor');
       assert.match(git(['show', '-s', '--format=%s', head]),
         RELEASE_SYNC_SQUASH_SUBJECT_PATTERN, 'Atomic merge requires canonical squash subject');
-    } else {
+    } else if (!detectMode) {
       assert.equal(process.env.VELLIRA_PR_AUTHOR, 'vellira-release-sync[bot]');
       assert.equal(process.env.VELLIRA_PR_TITLE, 'chore(release): sync package versions');
       assert.equal(process.env.VELLIRA_PR_HEAD_REF,
@@ -466,7 +469,7 @@ async function main() {
     }
     await writeOutput('release_sync', 'true');
     process.stdout.write('Verified immutable atomic release sync ' +
-      result.previousVersion + ' -> ' + result.version + '\\n');
+      result.previousVersion + ' -> ' + result.version + '\n');
     return;
   }
 
