@@ -206,7 +206,10 @@ export function Roadmap() {
   const shouldReduceMotion = useReducedMotion();
   const [release, setRelease] = useState<PublishedRelease | null>(null);
 
-  useEffect(() => observePublicRelease(setRelease, { url: '/api/public-release' }), []);
+  useEffect(
+    () => observePublicRelease(setRelease, { url: '/api/public-release' }),
+    []
+  );
 
   return (
     <section
