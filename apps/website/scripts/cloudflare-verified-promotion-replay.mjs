@@ -12,13 +12,37 @@ export async function validateVerifiedStagingReplay({
   stagingRunAttempt,
   repository,
   githubGet,
+  waitForCompletion = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  maxCompletionPolls = 24,
+  completionPollMs = 3000,
 }) {
   assert.match(candidateSha ?? '', SHA, 'Replay candidate must be an exact SHA');
   assert.match(repository ?? '', /^[\w.-]+\/[\w.-]+$/, 'Invalid repository');
   assert.ok(Number.isSafeInteger(stagingRunId) && stagingRunId > 0, 'Invalid staging run ID');
   assert.ok(Number.isSafeInteger(stagingRunAttempt) && stagingRunAttempt > 0, 'Invalid staging attempt');
 
-  const run = await githubGet(`/repos/${repository}/actions/runs/${stagingRunId}`);
+  const runPath = `/repos/${repository}/actions/runs/${stagingRunId}`;
+  let run = await githubGet(runPath);
+  // A direct handoff may start replay before GitHub marks staging complete.
+  // The immutable run identity must match before and after bounded polling.
+  assert.equal(run.id, stagingRunId, 'Staging run ID mismatch');
+  assert.equal(run.repository?.full_name, repository, 'Staging repository mismatch');
+  assert.equal(run.head_sha, candidateSha, 'Staging SHA differs from replay candidate');
+  for (
+    let attempt = 0;
+    run.status !== 'completed' && attempt < maxCompletionPolls;
+    attempt++
+  ) {
+    assert.ok(
+      ['requested', 'queued', 'pending', 'waiting', 'in_progress'].includes(
+        run.status
+      ),
+      'Unknown staging workflow status'
+    );
+    await waitForCompletion(completionPollMs);
+    run = await githubGet(runPath);
+  }
   assert.equal(run.id, stagingRunId, 'Staging run ID mismatch');
   assert.equal(run.run_attempt, stagingRunAttempt, 'Staging run attempt mismatch');
   assert.equal(run.repository?.full_name, repository, 'Staging repository mismatch');
