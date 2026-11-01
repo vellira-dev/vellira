@@ -295,7 +295,7 @@ export async function assessFreshProductionCandidate({
     assert.equal(comparison.behind_by, 0);
     assert.equal(comparison.total_commits, 1, 'Atomic freshness only admits one contiguous sync commit');
     assert.equal(comparison.ahead_by, 1);
-    assert.equal(comparison.commits?.length, 1);
+    assert.equal(comparison.commits?.length, 1, 'Atomic freshness requires one contiguous sync commit with complete GitHub evidence');
     const commit = comparison.commits[0];
     assert.equal(commit.sha, mainSha);
     assert.equal(commit.parents?.length, 1);
