@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ATOMIC_RELEASE_SYNC_PATHS, assertAtomicSyncFileSet, assertStableReleaseVersion, verifyAtomicManifestTransition } from './atomic-release-sync.mjs';
@@ -35,4 +36,16 @@ test('version transition accepts only seven converged version-only changes', () 
   assert.throws(() => verifyAtomicManifestTransition({
     ...payload, before: { ...before, 'package.json': { ...before['package.json'], version: '2.188.11' } },
   }), /not converged/);
+});
+
+test('release workflow prepares a combined PR only after publishing', () => {
+  const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  const publish = workflow.indexOf('      - name: Release\\n');
+  const prepare = workflow.indexOf('      - name: Prepare verified atomic release and Starter snapshot');
+  const propose = workflow.indexOf('      - name: Create version sync PR');
+  assert.ok(publish > -1 && prepare > publish && propose > prepare);
+  const proposal = workflow.slice(propose, workflow.indexOf('      - name: Verify version sync PR creation', propose));
+  for (const path of ATOMIC_RELEASE_SYNC_PATHS) {
+    assert.ok(proposal.includes(path) || (path.startsWith('packages/') && proposal.includes('packages/*/package.json')), 'Missing atomic PR path: ' + path);
+  }
 });
