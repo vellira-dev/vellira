@@ -381,6 +381,19 @@ jobs:
           include-hidden-files: true
           retention-days: 30
 
+      # Atomic sync candidate preparation: publication has completed above.
+      # This workflow change must not merge until the strict release-sync
+      # classifiers and production freshness exception support the new shape.
+      - name: Prepare verified atomic release and Starter snapshot
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          node scripts/ci/prepare-atomic-release-sync.mjs "$version"
+          node scripts/sync-workspace-starter-versions.cjs "$version" --check
+          node scripts/sync-workspace-starter-lockfiles.cjs --check
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Detect version sync changes
         id: version-sync
         shell: bash
@@ -389,6 +402,11 @@ jobs:
             package.json
             pnpm-lock.yaml
             packages/*/package.json
+            examples/workspace-starter/README.md
+            examples/workspace-starter/web/package.json
+            examples/workspace-starter/web/package-lock.json
+            examples/workspace-starter/native/package.json
+            examples/workspace-starter/native/package-lock.json
           )
 
           if git diff --quiet -- "${release_paths[@]}"; then
@@ -507,6 +525,11 @@ jobs:
             package.json
             pnpm-lock.yaml
             packages/*/package.json
+            examples/workspace-starter/README.md
+            examples/workspace-starter/web/package.json
+            examples/workspace-starter/web/package-lock.json
+            examples/workspace-starter/native/package.json
+            examples/workspace-starter/native/package-lock.json
           branch: ${{ steps.version-sync.outputs.branch }}
           commit-message: 'chore(release): sync package versions'
           delete-branch: true
