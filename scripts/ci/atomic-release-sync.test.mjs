@@ -1,4 +1,4 @@
-import { isReleaseSyncFileSet, isAtomicReleaseSyncFileSet } from './release-sync-contract.mjs';
+import { isReleaseSyncFileSet, isAtomicReleaseSyncFileSet, isAtomicReleaseSyncCandidate } from './release-sync-contract.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -219,4 +219,13 @@ test('atomic admission requires exact changed paths when Starter assets are unch
   const changed = structuredClone(after);
   changed['examples/workspace-starter/native/package-lock.json'] = { value: 'tampered' };
   assert.throws(() => assertAtomicSyncFileSet(delta, { before, after: changed }), /exact snapshot delta/);
+});
+
+test('partial atomic shape demands all seven release manifests and at least one Starter file', () => {
+  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(file => file === 'package.json' || file.startsWith('packages/'));
+  const starter = 'examples/workspace-starter/README.md';
+  assert.equal(isAtomicReleaseSyncCandidate([...manifests, starter]), true);
+  assert.equal(isAtomicReleaseSyncCandidate(manifests), false);
+  assert.equal(isAtomicReleaseSyncCandidate([...manifests.slice(1), starter]), false);
+  assert.equal(isAtomicReleaseSyncCandidate([...manifests, starter, 'apps/website/page.tsx']), false);
 });
