@@ -284,10 +284,11 @@ test('automatic published-release reconciliation includes Starter in one proposa
   }
 });
 
-test('second Starter sync is manual recovery only, not a release merge cascade', () => {
+test('Starter fallback retains exact release merge trigger and no-op change gate', () => {
   const workflow = fs.readFileSync('.github/workflows/workspace-starter-release-sync.yml', 'utf8');
   const eventBlock = workflow.slice(workflow.indexOf('on:'), workflow.indexOf('\npermissions:'));
   assert.ok(eventBlock.includes('workflow_dispatch:'));
-  assert.doesNotMatch(eventBlock, /\n  push:/);
-  assert.ok(workflow.includes("if: github.event_name == 'workflow_dispatch'"));
+  assert.ok(eventBlock.includes("      - 'package.json'"));
+  assert.ok(workflow.includes("startsWith(github.event.head_commit.message, 'chore(release): sync package versions')"));
+  assert.ok(workflow.includes("steps.changes.outputs.changed == 'true'"));
 });
