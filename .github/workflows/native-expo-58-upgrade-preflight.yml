@@ -4,9 +4,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/native-expo-58-upgrade-preflight.yml'
-      - 'examples/workspace-starter/native/scripts/security-expo-58-source-preflight.cjs'
-      - 'examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs'
+      - 'examples/workspace-starter/native/package.json'
+      - 'examples/workspace-starter/native/package-lock.json'
       - 'examples/workspace-starter/native/scripts/security-expo-58-guard.cjs'
+      - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
   workflow_dispatch:
 
 permissions:
@@ -16,6 +17,9 @@ jobs:
   migration-preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: examples/workspace-starter/native
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -24,188 +28,72 @@ jobs:
         with:
           node-version: 22.23.4
           registry-url: https://registry.npmjs.org
-      - name: Inspect published Expo 58 CLI dependencies before touching Starter
+      - name: Install exact published npm graph without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Confirm published CLI integrity, absence of Zod, and source fingerprint
         shell: bash
         run: |
           set -euo pipefail
-          npm view expo@58 version --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/expo58-versions.json"
-          npm view @expo/cli@58.1.17 dependencies --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/cli58-deps.json"
-          echo '=== Expo CLI 58.1.17 Zod requirement ==='
-          node -e "const d=require(process.argv[1]); console.log(JSON.stringify({ zod: d.zod || null, cliVersion: '58.1.17' },null,2))" "$RUNNER_TEMP/cli58-deps.json"
-      - name: Verify published Expo CLI 58.1.17 source integrity and parser SHA
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/expo-cli-package"
-          integrity="$(npm view @expo/cli@58.1.17 dist.integrity --registry=https://registry.npmjs.org)"
-          test "$integrity" = 'sha512-2WKvwrq9Sr0jj4vFVt7dPtbHoxFzaSp4s5Bsk1FDmCQjZhQlWZjb7j6igBYCs0nBzZZ4UyBdSMY2hwmDhRmPQA=='
-          npm pack @expo/cli@58.1.17 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/expo-cli-package"
-          tar -xOzf "$RUNNER_TEMP/expo-cli-package/expo-cli-58.1.17.tgz" package/build/src/start/server/DevToolsPluginCliExtensionResults.js > "$RUNNER_TEMP/expo-cli-parser.js"
-          test "$(sha256sum "$RUNNER_TEMP/expo-cli-parser.js" | cut -d' ' -f1)" = '669294947c9a2573b9c637eba5d0d5cd4048fa8da16723a7f761d1cb2eb2d7e7'
-          echo 'Verified published CLI 58.1.17 parser matches the SHA-pinned guard source'
-      - name: Run isolated npm dependency resolution (do not change checked-in locks)
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/expo58"
-          cp -a examples/workspace-starter/native/. "$RUNNER_TEMP/expo58/"
-          cd "$RUNNER_TEMP/expo58"
-          npm pkg delete scripts.postinstall
-          npm pkg delete scripts.prestart
-          npm pkg delete scripts.preios
-          npm pkg delete scripts.preandroid
-          npm pkg delete scripts.preweb
-          npm pkg delete scripts.pretypecheck
-          npm pkg delete scripts.security:verify-patch
-          npm install expo@^58.0.0 react-native@^0.88.0 --package-lock-only --ignore-scripts --no-audit --no-fund
-          echo '=== Resolved Expo CLI / Zod / React Native ==='
           node - <<'NODE'
-          const l=require('./package-lock.json');
-          const matches=Object.entries(l.packages).filter(([k]) => /(^|\/)node_modules\/(zod|@expo\/cli|expo|react-native)$/.test(k));
-          for(const [name,record] of matches) console.log(name,record.version);
-          const zod=matches.filter(([k])=>k.endsWith('/zod'));
-          console.log('ZOD_VERSIONS='+JSON.stringify(zod.map(([path,p])=>({path,version:p.version}))));
+          const assert = require('node:assert/strict');
+          const lock = require('./package-lock.json');
+          const p = lock.packages;
+          assert.equal(p['node_modules/expo']?.version, '58.0.22');
+          assert.equal(p['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.18');
+          assert.equal(p['node_modules/@expo/metro-config']?.version, '58.0.20');
+          assert.equal(p['node_modules/react-native']?.version, '0.88.1');
+          assert.equal(p['node_modules/node-forge']?.version, '1.4.2');
+          assert.equal(p['node_modules/@expo/schema-utils']?.version, '58.0.3');
+          assert.ok(!Object.keys(p).some((k) => /(^|\/)node_modules\/zod$/.test(k)),
+            'Vulnerable Zod survives in the exact installed dependency graph');
+          assert.equal(p['node_modules/expo/node_modules/@expo/cli'].integrity,
+            'sha512-voZUcir9mEwvLKBNqQM6Jy2Yp67z8ONmcINXb6ZrLMayb7yxzwvEnN0eeH8ADzUABKL288pv1eJ1WRqtYxXQ/Q==');
+          const cli = require('./node_modules/expo/node_modules/@expo/cli/package.json');
+          assert.equal(cli.dependencies.zod, undefined);
+          assert.ok(cli.dependencies['@expo/schema-utils']);
           NODE
-          echo 'Preflight only: do not call this a security remediation until compatible dependency tree and consumer tests are proven.'
-      - name: Build full SDK 58 migration candidate in isolated directory
-        shell: bash
-        env:
-          CI: '1'
-          EXPO_NO_TELEMETRY: '1'
-        run: |
-          set -euo pipefail
-          cd "$RUNNER_TEMP/expo58"
-          # Preserve security integrity: do not apply the Expo CLI 57 SHA-pinned patch to SDK 58.
-          npm install expo@^58.0.0 react-native@^0.88.0 --ignore-scripts --no-audit --no-fund
-          npx --no-install expo install --fix --npm
-          npm ci --ignore-scripts --no-audit --no-fund
-          # SDK 58 removed the legacy newArchEnabled app config field.
-          # Change only the isolated candidate, not the SDK 57 source.
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const file = 'app.json';
-          const app = JSON.parse(fs.readFileSync(file, 'utf8'));
-          if (Object.prototype.hasOwnProperty.call(app.expo ?? {}, 'newArchEnabled')) {
-            delete app.expo.newArchEnabled;
-            fs.writeFileSync(file, JSON.stringify(app, null, 2) + '\n');
-            console.log('Removed SDK 57 newArchEnabled from isolated Expo 58 candidate');
-          }
-          NODE
-          npx --no-install expo install --check
-          npm run typecheck
-          npx --yes expo-doctor
-          echo '=== Migrated package versions ==='
-          npm ls expo react-native react-native-reanimated @expo/metro-runtime zod --all || true
-      - name: Verify pinned Expo 58 CLI parser source structure
-        run: node examples/workspace-starter/native/scripts/security-expo-58-source-preflight.cjs "$RUNNER_TEMP/expo58"
-      - name: Exercise guarded Expo 58 output collector without patching disk
-        run: node examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs "$RUNNER_TEMP/expo58"
-      - name: Apply Expo 58 guard twice and verify the installed bytes
+          published="$(npm view @expo/cli@58.1.18 dist.integrity --registry=https://registry.npmjs.org)"
+          test "$published" = 'sha512-voZUcir9mEwvLKBNqQM6Jy2Yp67z8ONmcINXb6ZrLMayb7yxzwvEnN0eeH8ADzUABKL288pv1eJ1WRqtYxXQ/Q=='
+          node scripts/security-expo-58-guard.cjs --report-source-hash | tee "$RUNNER_TEMP/expo58-cli-source.json"
+      - name: Verify clean standard npm install and bounded schema-output guard
         shell: bash
         run: |
           set -euo pipefail
-          script=examples/workspace-starter/native/scripts/security-expo-58-guard-prototype.cjs
-          node "$script" "$RUNNER_TEMP/expo58" --apply
-          node "$script" "$RUNNER_TEMP/expo58" --apply
-          node "$script" "$RUNNER_TEMP/expo58" --verify
-          target="$RUNNER_TEMP/expo58/node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js"
-          cp "$target" "$RUNNER_TEMP/expo58-known-good.js"
-          printf '\n// tamper\n' >> "$target"
-          if node "$script" "$RUNNER_TEMP/expo58" --verify; then
-            echo '::error::Tampered Expo 58 parser passed verification'
-            exit 1
-          fi
-          cp "$RUNNER_TEMP/expo58-known-good.js" "$target"
-          node "$script" "$RUNNER_TEMP/expo58" --verify
-      - name: Verify published node-forge 1.4.2 RSA fix and integrity
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/forge-package"
-          integrity="$(npm view node-forge@1.4.2 dist.integrity --registry=https://registry.npmjs.org)"
-          test "$integrity" = 'sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ=='
-          npm pack node-forge@1.4.2 --ignore-scripts --silent --registry=https://registry.npmjs.org --pack-destination "$RUNNER_TEMP/forge-package"
-          tar -xOzf "$RUNNER_TEMP/forge-package/node-forge-1.4.2.tgz" package/lib/rsa.js > "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
-          test "$(sha256sum "$RUNNER_TEMP/node-forge-rsa-1.4.2.js" | cut -d' ' -f1)" = '6632e195295ce76f6bb9131ee770dcd6cc1ee4ffac7906302208b00faf95a87f'
-          grep -F '_encodeDigestInfo(oid, capture.digest, true)' "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
-          grep -F 'd.substring(0, withParameters.length) !== withParameters' "$RUNNER_TEMP/node-forge-rsa-1.4.2.js"
-      - name: Verify normal npm ci with Expo 58 and both security patches
-        shell: bash
-        env:
-          CI: '1'
-          EXPO_NO_TELEMETRY: '1'
-        run: |
-          set -euo pipefail
-          cp examples/workspace-starter/native/scripts/security-expo-58-guard.cjs "$RUNNER_TEMP/expo58/scripts/security-expo-58-guard.cjs"
-          cd "$RUNNER_TEMP/expo58"
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const file = 'package.json';
-          const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
-          const rsa = 'node scripts/apply-node-forge-patch.cjs';
-          const zod = 'node scripts/security-expo-58-guard.cjs';
-          pkg.scripts.postinstall = rsa + ' && ' + zod + ' --apply';
-          const verify = rsa + ' --verify && ' + zod + ' --verify';
-          for (const name of ['prestart', 'preios', 'preandroid', 'preweb', 'pretypecheck', 'security:verify-patch'])
-            pkg.scripts[name] = verify;
-          fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
-          NODE
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --no-audit --no-fund
           npm run security:verify-patch
-          rsa=node_modules/node-forge/lib/rsa.js
-          cp "$rsa" "$RUNNER_TEMP/forge-verified-rsa.js"
-          printf '\n// tampered\n' >> "$rsa"
-          if node scripts/apply-node-forge-patch.cjs --verify; then
-            echo '::error::Tampered node-forge 1.4.2 RSA source passed verification'
-            exit 1
-          fi
-          cp "$RUNNER_TEMP/forge-verified-rsa.js" "$rsa"
-          node scripts/apply-node-forge-patch.cjs --verify
-          npm run typecheck
+          node scripts/security-asn1-adversarial.cjs --require-rejection
+          npm run security:certificate-proof
+          node scripts/security-expo-certificate-contract.cjs
+          node scripts/security-expo-58-guard.cjs --apply
+          node scripts/security-expo-58-guard.cjs --verify
+          node scripts/security-expo-58-executor-proof.cjs
           npx --no-install expo install --check
-          npx --yes expo-doctor
-      - name: Fingerprint Expo 58 CLI parser for safe Zod guard migration
+          npm run typecheck
+          echo "Using audited pinned Expo Doctor version: 1.21.5"
+          npx --yes expo-doctor@1.21.5
+          echo 'Exact Expo 58 / CLI 58.1.18 / RN 0.88.1 / published Forge 1.4.2 validated; Zod absent.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Reject tampering of the installed bounded collector
         shell: bash
         run: |
           set -euo pipefail
-          cd "$RUNNER_TEMP/expo58"
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const crypto = require('node:crypto');
-          const cliRoot = path.join(process.cwd(), 'node_modules/expo/node_modules/@expo/cli');
-          const pkg = require(path.join(cliRoot, 'package.json'));
-          const file = path.join(cliRoot, 'build/src/start/server/DevToolsPluginCliExtensionResults.js');
-          const source = fs.readFileSync(file);
-          const result = {
-            cli: pkg.version,
-            zodRequirement: pkg.dependencies.zod,
-            sourceLength: source.length,
-            sha256: crypto.createHash('sha256').update(source).digest('hex'),
-            sourceContainsZodOutputParse: source.includes('DevToolsPluginOutputSchema'),
-          };
-          console.log(JSON.stringify(result, null, 2));
-          fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'expo58-cli-parser-evidence.json'),
-            JSON.stringify(result, null, 2) + '\n');
-          NODE
-      - name: Export reviewable candidate manifests
+          target=node_modules/expo/node_modules/@expo/cli/build/src/start/server/devtools/DevToolsPluginCliExtensionResults.js
+          cp "$target" "$RUNNER_TEMP/expo58-good.js"
+          printf '\n// tampered parser\n' >> "$target"
+          if node scripts/security-expo-58-guard.cjs --verify; then
+            echo '::error::Tampered Expo CLI passed guard verification'
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/expo58-good.js" "$target"
+          npm run security:verify-patch
+      - name: Retain exact package/source evidence
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/expo58-evidence"
-          if test -f "$RUNNER_TEMP/expo58/package.json"; then
-            cp "$RUNNER_TEMP/expo58/package.json" "$RUNNER_TEMP/expo58-evidence/package.json"
-          fi
-          if test -f "$RUNNER_TEMP/expo58-cli-parser-evidence.json"; then
-            cp "$RUNNER_TEMP/expo58-cli-parser-evidence.json" "$RUNNER_TEMP/expo58-evidence/cli-parser-evidence.json"
-          fi
-          if test -f "$RUNNER_TEMP/expo58/app.json"; then
-            cp "$RUNNER_TEMP/expo58/app.json" "$RUNNER_TEMP/expo58-evidence/app.json"
-          fi
-          if test -f "$RUNNER_TEMP/expo58/package-lock.json"; then
-            cp "$RUNNER_TEMP/expo58/package-lock.json" "$RUNNER_TEMP/expo58-evidence/package-lock.json"
+          cp package.json package-lock.json "$RUNNER_TEMP/expo58-evidence/"
+          if test -f "$RUNNER_TEMP/expo58-cli-source.json"; then
+            cp "$RUNNER_TEMP/expo58-cli-source.json" "$RUNNER_TEMP/expo58-evidence/cli-source-sha.json"
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()

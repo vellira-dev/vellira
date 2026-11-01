@@ -1,4 +1,4 @@
-name: Expo Zod Pinned Runtime Guard
+name: Expo CLI 58 Schema Output Security Guard
 
 on:
   pull_request:
@@ -6,6 +6,7 @@ on:
       - '.github/workflows/expo-zod-pinned-patch-candidate.yml'
       - 'examples/workspace-starter/native/scripts/security-expo-58-guard.cjs'
       - 'examples/workspace-starter/native/package.json'
+      - 'examples/workspace-starter/native/package-lock.json'
   workflow_dispatch:
 
 permissions:
@@ -25,25 +26,24 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22.23.4
-      - run: npm ci --no-audit --no-fund
-      - name: Verify installed Expo guard after normal npm ci
-        run: node scripts/security-expo-58-guard.cjs --verify
-      - name: Verify repeated application is idempotent
+      - name: Install exact published Expo package and source guard
+        run: npm ci --no-audit --no-fund
+      - name: Source-pinned guard must be idempotent and work with Expo's JSON Schema validator
         run: |
           node scripts/security-expo-58-guard.cjs --apply
           node scripts/security-expo-58-guard.cjs --apply
-          node scripts/security-expo-58-guard.cjs --verify
-      - name: Reject modified Expo CLI bytes (fail closed)
+          npm run security:verify-patch
+          node scripts/security-expo-58-executor-proof.cjs
+      - name: Reject modified installed Expo CLI source
         shell: bash
         run: |
           set -euo pipefail
-          target=node_modules/expo/node_modules/@expo/cli/build/src/start/server/DevToolsPluginCliExtensionResults.js
-          cp "$target" "$target.backup"
-          trap 'mv -f "$target.backup" "$target"' EXIT
-          printf '\n// tamper fixture\n' >> "$target"
+          target=node_modules/expo/node_modules/@expo/cli/build/src/start/server/devtools/DevToolsPluginCliExtensionResults.js
+          cp "$target" "$RUNNER_TEMP/good-parser.js"
+          printf '\n// changed from verified source\n' >> "$target"
           if node scripts/security-expo-58-guard.cjs --verify; then
-            echo '::error::Tampered installed Expo CLI was accepted'
+            echo '::error::Tampered Expo CLI parser unexpectedly passed'
             exit 1
           fi
-      - name: Preserve existing RSA patch
-        run: npm run security:verify-patch
+          cp "$RUNNER_TEMP/good-parser.js" "$target"
+          npm run security:verify-patch
