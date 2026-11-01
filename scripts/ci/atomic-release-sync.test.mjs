@@ -1,0 +1,300 @@
+import { isReleaseSyncFileSet, isAtomicReleaseSyncFileSet, isAtomicReleaseSyncCandidate } from './release-sync-contract.mjs';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { ATOMIC_RELEASE_SYNC_PATHS, assertAtomicSyncFileSet, assertStableReleaseVersion, verifyAtomicManifestTransition, verifyAtomicStarterTransition, verifyAtomicReleaseContents } from './atomic-release-sync.mjs';
+
+test('atomic file set includes seven package manifests and five Starter assets', () => {
+  assert.equal(ATOMIC_RELEASE_SYNC_PATHS.length, 12);
+  assertAtomicSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS);
+});
+test('rejects partial root-only release sync', () => {
+  assert.throws(() => assertAtomicSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS.filter(x => !x.includes('workspace-starter'))));
+});
+test('rejects unexpected file or duplicate', () => {
+  assert.throws(() => assertAtomicSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, 'apps/website/src/app/page.tsx']));
+  assert.throws(() => assertAtomicSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, ATOMIC_RELEASE_SYNC_PATHS[0]]));
+});
+
+test('requires canonical stable semantic versions before atomic assembly', () => {
+  for (const version of ['2.189.0', '0.0.1', '10.0.123']) {
+    assert.doesNotThrow(() => assertStableReleaseVersion(version));
+  }
+  for (const version of ['v2.189.0', '2.189.0-beta.1', '02.1.0', '2.189', '2.189.0 ']) {
+    assert.throws(() => assertStableReleaseVersion(version));
+  }
+});
+
+test('version transition accepts only seven converged version-only changes', () => {
+  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json')));
+  const before = Object.fromEntries(manifests.map(p => [p, { name: p, version: '2.188.12', private: true }]));
+  const after = Object.fromEntries(manifests.map(p => [p, { name: p, version: '2.189.0', private: true }]));
+  for (const file of ATOMIC_RELEASE_SYNC_PATHS.filter(p => !manifests.includes(p))) {
+    const stable = file.endsWith('.json') ? { stable: true } : 'Starter already current';
+    before[file] = structuredClone(stable);
+    after[file] = structuredClone(stable);
+  }
+  const payload = { files: manifests, before, after, version: '2.189.0' };
+  assert.equal(verifyAtomicManifestTransition(payload).previousVersion, '2.188.12');
+  assert.throws(() => verifyAtomicManifestTransition({
+    ...payload, after: { ...after, 'package.json': { ...after['package.json'], scripts: { malicious: 'true' } } },
+  }), /Unexpected manifest mutation/);
+  assert.throws(() => verifyAtomicManifestTransition({
+    ...payload, before: { ...before, 'package.json': { ...before['package.json'], version: '2.188.11' } },
+  }), /not converged/);
+});
+
+test('atomic root package versions must increase, not repeat or downgrade', () => {
+  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(
+    p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json'))
+  );
+  const make = (previous, next) => {
+    const before = {};
+    const after = {};
+    for (const file of manifests) {
+      before[file] = { version: previous, name: file };
+      after[file] = { version: next, name: file };
+    }
+    for (const file of ATOMIC_RELEASE_SYNC_PATHS.filter(p => !manifests.includes(p))) {
+      const unchanged = file.endsWith('.json') ? { unchanged: true } : 'unchanged';
+      before[file] = structuredClone(unchanged);
+      after[file] = structuredClone(unchanged);
+    }
+    return { files: manifests, before, after, version: next };
+  };
+  assert.equal(verifyAtomicManifestTransition(make('2.188.12', '2.189.0')).version, '2.189.0');
+  assert.throws(() => verifyAtomicManifestTransition(make('2.189.0', '2.188.12')), /never repeat or downgrade/);
+  assert.throws(() => verifyAtomicManifestTransition(make('2.189.0', '2.189.0')), /missing release manifest|exact snapshot delta/);
+});
+
+test('release workflow prepares a combined PR only after publishing', () => {
+  const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  const publish = workflow.indexOf('      - name: Release');
+  const prepare = workflow.indexOf('      - name: Prepare verified atomic release and Starter snapshot');
+  const propose = workflow.indexOf('      - name: Create version sync PR');
+  assert.ok(publish > -1 && prepare > publish && propose > prepare);
+  const proposal = workflow.slice(propose, workflow.indexOf('      - name: Verify version sync PR creation', propose));
+  for (const path of ATOMIC_RELEASE_SYNC_PATHS) {
+    assert.ok(proposal.includes(path) || (path.startsWith('packages/') && proposal.includes('packages/*/package.json')), 'Missing atomic PR path: ' + path);
+  }
+});
+
+test('manual release recovery also prepares one combined PR', () => {
+  const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  const recovery = workflow.slice(workflow.indexOf('  recover-existing-release:'));
+  const verify = recovery.indexOf('      - name: Create or verify GitHub Release on existing tag');
+  const prepare = recovery.indexOf('      - name: Prepare verified recovered release and Starter snapshot');
+  const propose = recovery.indexOf('      - name: Create version sync PR');
+  assert.ok(verify >= 0 && prepare > verify && propose > prepare);
+  const proposal = recovery.slice(propose, recovery.indexOf('      - name: Verify version sync PR creation', propose));
+  for (const p of ATOMIC_RELEASE_SYNC_PATHS) {
+    assert.ok(proposal.includes(p) || (p.startsWith('packages/') && proposal.includes('packages/*/package.json')), 'Missing recovery sync path: ' + p);
+  }
+});
+
+test('atomic Starter transitions reject unrelated manifest and README mutations', () => {
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  const before = {
+    'examples/workspace-starter/README.md': 'Use **Vellira 2.188.12 packages** today.',
+  };
+  const after = {
+    'examples/workspace-starter/README.md': 'Use **Vellira 2.189.0 packages** today.',
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    before[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.188.12'])) };
+    after[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.189.0'])) };
+  }
+  const args = { before, after, previousVersion: '2.188.12', version: '2.189.0' };
+  assert.equal(verifyAtomicStarterTransition(args).previousStarterVersion, '2.188.12');
+  assert.throws(() => verifyAtomicStarterTransition({
+    ...args,
+    after: { ...after, 'examples/workspace-starter/web/package.json': {
+      ...after['examples/workspace-starter/web/package.json'], scripts: { postinstall: 'unexpected' },
+    } },
+  }), /Unexpected Starter manifest mutation/);
+  assert.throws(() => verifyAtomicStarterTransition({
+    ...args,
+    after: { ...after, 'examples/workspace-starter/README.md': after['examples/workspace-starter/README.md'] + ' Extra content' },
+  }), /Unexpected Starter README mutation/);
+});
+
+test('atomic shape detection never relaxes the legacy production admission', () => {
+  assert.equal(isAtomicReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS), true);
+  assert.equal(isReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS), false);
+  assert.equal(isAtomicReleaseSyncFileSet(ATOMIC_RELEASE_SYNC_PATHS.slice(0, -1)), false);
+  assert.equal(isAtomicReleaseSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, ATOMIC_RELEASE_SYNC_PATHS[0]]), false);
+  assert.equal(isAtomicReleaseSyncFileSet([...ATOMIC_RELEASE_SYNC_PATHS, 'apps/website/src/app/page.tsx']), false);
+});
+
+test('atomic content authority validates registry lock integrity and blocks tampering', () => {
+  const before = {};
+  const after = {};
+  const old = '2.188.12';
+  const version = '2.189.0';
+  for (const p of ATOMIC_RELEASE_SYNC_PATHS.filter(p => p === 'package.json' || (p.startsWith('packages/') && p.endsWith('/package.json')))) {
+    before[p] = { name: p, version: old };
+    after[p] = { name: p, version };
+  }
+  before['examples/workspace-starter/README.md'] = 'Pinned **Vellira ' + old + ' packages**.';
+  after['examples/workspace-starter/README.md'] = 'Pinned **Vellira ' + version + ' packages**.';
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const prefix = 'examples/workspace-starter/' + platform + '/';
+    const name = platform === 'web' ? 'vellira-workspace-react-starter' : 'vellira-workspace-native-starter';
+    const oldDependencies = Object.fromEntries(packages.map(p => [p, old]));
+    const dependencies = Object.fromEntries(packages.map(p => [p, version]));
+    before[prefix + 'package.json'] = { name, private: true, dependencies: oldDependencies };
+    after[prefix + 'package.json'] = { name, private: true, dependencies };
+    before[prefix + 'package-lock.json'] = {
+      name, lockfileVersion: 3, packages: {
+        '': { dependencies: oldDependencies },
+        ...Object.fromEntries(packages.map(p => ['node_modules/' + p, {
+          version: old, resolved: 'https://registry.npmjs.org/' + p + '/-/' + old + '.tgz',
+          integrity: 'sha512-YWJjZA==',
+        }])),
+      },
+    };
+    after[prefix + 'package-lock.json'] = {
+      name, lockfileVersion: 3, packages: {
+        '': { dependencies },
+        ...Object.fromEntries(packages.map(p => ['node_modules/' + p, {
+          version, resolved: 'https://registry.npmjs.org/' + p + '/-/' + version + '.tgz',
+          integrity: 'sha512-YWJjZA==',
+        }])),
+      },
+    };
+  }
+  const input = { files: ATOMIC_RELEASE_SYNC_PATHS, before, after, version };
+  assert.equal(verifyAtomicReleaseContents(input).version, version);
+  const broken = structuredClone(after);
+  broken['examples/workspace-starter/web/package-lock.json'].packages['node_modules/@vellira-ui/react'].integrity = '';
+  assert.throws(() => verifyAtomicReleaseContents({ ...input, after: broken }), /integrity/);
+  const wrongPin = structuredClone(after);
+  wrongPin['examples/workspace-starter/native/package-lock.json'].packages['node_modules/@vellira-ui/icons'].version = old;
+  assert.throws(() => verifyAtomicReleaseContents({ ...input, after: wrongPin }), /pin mismatch/);
+});
+
+test('Starter may lag root manifests but cannot diverge internally or downgrade', () => {
+  const before = {
+    'examples/workspace-starter/README.md': 'Using **Vellira 2.188.11 packages**.',
+  };
+  const after = {
+    'examples/workspace-starter/README.md': 'Using **Vellira 2.189.0 packages**.',
+  };
+  const names = {
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  };
+  for (const [platform, packages] of Object.entries(names)) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    before[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.188.11'])) };
+    after[filename] = { private: true, dependencies: Object.fromEntries(packages.map(name => [name, '2.189.0'])) };
+  }
+  const input = { before, after, version: '2.189.0' };
+  assert.equal(verifyAtomicStarterTransition(input).previousStarterVersion, '2.188.11');
+  const mixed = structuredClone(before);
+  mixed['examples/workspace-starter/native/package.json'].dependencies['@vellira-ui/icons'] = '2.188.12';
+  assert.throws(() => verifyAtomicStarterTransition({ ...input, before: mixed }), /Prior Starter pins must converge/);
+  const downgraded = structuredClone(after);
+  for (const platform of Object.keys(names)) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    for (const name of names[platform]) downgraded[filename].dependencies[name] = '2.188.10';
+  }
+  downgraded['examples/workspace-starter/README.md'] = 'Using **Vellira 2.188.10 packages**.';
+  assert.throws(() => verifyAtomicStarterTransition({ ...input, after: downgraded, version: '2.188.10' }), /downgrade/);
+});
+
+test('release-sync CLI never grants atomic admission from file names alone', () => {
+  const source = fs.readFileSync('scripts/ci/release-sync-contract.mjs', 'utf8');
+  assert.ok(source.includes('const detected = isReleaseSyncFileSet(files);'));
+  assert.ok(source.includes('verifyAtomicCandidate({'));
+  assert.ok(source.includes("VELLIRA_PUSH_ACTOR, 'vellira-release-sync[bot]'"));
+  assert.ok(source.includes('Atomic sync parent must match base'));
+});
+
+test('already synchronized Starter does not change its README or package manifests', () => {
+  const before = {
+    'examples/workspace-starter/README.md': 'Using **Vellira 2.189.0 packages**.',
+  };
+  for (const [platform, names] of Object.entries({
+    web: ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons'],
+    native: ['@vellira-ui/react-native', '@vellira-ui/icons'],
+  })) {
+    before['examples/workspace-starter/' + platform + '/package.json'] = {
+      private: true,
+      dependencies: Object.fromEntries(names.map(name => [name, '2.189.0'])),
+    };
+  }
+  const after = structuredClone(before);
+  assert.equal(verifyAtomicStarterTransition({ before, after, version: '2.189.0' }).previousStarterVersion, '2.189.0');
+  after['examples/workspace-starter/README.md'] += ' unexpected';
+  assert.throws(() => verifyAtomicStarterTransition({ before, after, version: '2.189.0' }), /unchanged/);
+});
+
+test('atomic admission requires exact changed paths when Starter assets are unchanged', () => {
+  const before = {};
+  const after = {};
+  for (const file of ATOMIC_RELEASE_SYNC_PATHS) {
+    if (file === 'examples/workspace-starter/README.md') {
+      before[file] = 'Already current';
+      after[file] = 'Already current';
+    } else {
+      before[file] = { value: 'old' };
+      after[file] = { value: file.startsWith('examples/') ? 'old' : 'new' };
+    }
+  }
+  const delta = ATOMIC_RELEASE_SYNC_PATHS.filter(p => !p.startsWith('examples/'));
+  assert.doesNotThrow(() => assertAtomicSyncFileSet(delta, { before, after }));
+  assert.throws(() => assertAtomicSyncFileSet([...delta, 'examples/workspace-starter/README.md'], { before, after }), /exact snapshot delta/);
+  const changed = structuredClone(after);
+  changed['examples/workspace-starter/native/package-lock.json'] = { value: 'tampered' };
+  assert.throws(() => assertAtomicSyncFileSet(delta, { before, after: changed }), /exact snapshot delta/);
+});
+
+test('partial atomic shape demands all seven release manifests and at least one Starter file', () => {
+  const manifests = ATOMIC_RELEASE_SYNC_PATHS.filter(file => file === 'package.json' || file.startsWith('packages/'));
+  const starter = 'examples/workspace-starter/README.md';
+  assert.equal(isAtomicReleaseSyncCandidate([...manifests, starter]), true);
+  assert.equal(isAtomicReleaseSyncCandidate(manifests), false);
+  assert.equal(isAtomicReleaseSyncCandidate([...manifests.slice(1), starter]), false);
+  assert.equal(isAtomicReleaseSyncCandidate([...manifests, starter, 'apps/website/page.tsx']), false);
+});
+
+test('automatic published-release reconciliation includes Starter in one proposal', () => {
+  const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  const auto = workflow.slice(
+    workflow.indexOf('  auto-reconcile-existing-release:'),
+    workflow.indexOf('  release:', workflow.indexOf('  auto-reconcile-existing-release:')),
+  );
+  const verify = auto.indexOf('      - name: Verify existing external release state without mutation');
+  const prepare = auto.indexOf('      - name: Prepare verified auto-recovered Starter snapshot');
+  const propose = auto.indexOf('      - name: Create or update automatic version sync PR');
+  assert.ok(verify >= 0 && prepare > verify && propose > prepare);
+  const scope = auto.slice(propose, auto.indexOf('      - name: Verify automatic version sync PR creation', propose));
+  for (const file of ATOMIC_RELEASE_SYNC_PATHS) {
+    assert.ok(scope.includes(file) || (file.startsWith('packages/') && scope.includes('packages/*/package.json')),
+      'Automatic recovery must include ' + file);
+  }
+});
+
+test('Starter fallback retains exact release merge trigger and no-op change gate', () => {
+  const workflow = fs.readFileSync('.github/workflows/workspace-starter-release-sync.yml', 'utf8');
+  const eventBlock = workflow.slice(workflow.indexOf('on:'), workflow.indexOf('\npermissions:'));
+  assert.ok(eventBlock.includes('workflow_dispatch:'));
+  assert.ok(eventBlock.includes("      - 'package.json'"));
+  assert.ok(workflow.includes("startsWith(github.event.head_commit.message, 'chore(release): sync package versions')"));
+  assert.ok(workflow.includes("steps.changes.outputs.changed == 'true'"));
+});
+
+test('all three atomic release paths reject pnpm lock changes', () => {
+  const source = fs.readFileSync('.github/workflows/release.yml', 'utf8');
+  assert.equal((source.match(/Require unchanged pnpm lock for atomic release admission/g) ?? []).length, 3);
+  assert.equal((source.match(/git diff --quiet -- pnpm-lock.yaml/g) ?? []).length, 3);
+});

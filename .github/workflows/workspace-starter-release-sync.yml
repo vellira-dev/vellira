@@ -1,5 +1,8 @@
 name: Workspace Starter Release Sync
 
+# Atomic release reconciliation updates Starter in the same release-sync PR.
+# Retain a fallback on release-sync merges when Starter genuinely lags.
+# A fully synchronized Starter has no diff and must never create a second PR.
 on:
   push:
     branches: [main]

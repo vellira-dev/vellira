@@ -27,13 +27,15 @@ const jobs = {
   ],
 };
 
-function check(run = stage, jobResult = jobs) {
+function check(run = stage, jobResult = jobs, options = {}) {
   return validateVerifiedStagingReplay({
     candidateSha: SHA,
     stagingRunId: RUN_ID,
     stagingRunAttempt: RUN_ATTEMPT,
     repository: REPO,
     githubGet: async (path) => (path.endsWith('/jobs?per_page=100') ? jobResult : run),
+    maxCompletionPolls: 0,
+    ...options,
   });
 }
 
@@ -48,6 +50,50 @@ test('verified replay accepts an exact successful staging run', async () => {
 test('verified recovery staging is eligible only with exact validated run', async () => {
   const result = await check({ ...stage, event: 'workflow_dispatch' });
   assert.equal(result.eventName, 'workflow_dispatch');
+});
+
+test('direct handoff waits for successful staging completion before promotion', async () => {
+  let runReads = 0;
+  const result = await validateVerifiedStagingReplay({
+    candidateSha: SHA,
+    stagingRunId: RUN_ID,
+    stagingRunAttempt: RUN_ATTEMPT,
+    repository: REPO,
+    githubGet: async (path) => {
+      if (path.endsWith('/jobs?per_page=100')) return jobs;
+      runReads += 1;
+      return runReads === 1
+        ? { ...stage, status: 'in_progress', conclusion: null }
+        : stage;
+    },
+    waitForCompletion: async () => {},
+    maxCompletionPolls: 2,
+    completionPollMs: 0,
+  });
+  assert.equal(runReads, 2);
+  assert.equal(result.stagingRunId, RUN_ID);
+});
+
+test('incomplete staging cannot authorize production after bounded polling', async () => {
+  let runReads = 0;
+  await assert.rejects(
+    validateVerifiedStagingReplay({
+      candidateSha: SHA,
+      stagingRunId: RUN_ID,
+      stagingRunAttempt: RUN_ATTEMPT,
+      repository: REPO,
+      githubGet: async (path) => {
+        if (path.endsWith('/jobs?per_page=100')) return jobs;
+        runReads += 1;
+        return { ...stage, status: 'in_progress', conclusion: null };
+      },
+      waitForCompletion: async () => {},
+      maxCompletionPolls: 2,
+      completionPollMs: 0,
+    }),
+    /Staging is not completed/
+  );
+  assert.equal(runReads, 3);
 });
 
 test('wrong SHA, attempt, event and branch are rejected before promotion', async () => {
