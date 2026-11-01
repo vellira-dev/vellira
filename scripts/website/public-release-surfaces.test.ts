@@ -24,7 +24,11 @@ describe('shared npm-verified version on public sites', () => {
     ];
     for (const path of sections) {
       const source = read(`apps/website/src/sections/home/${path}`);
-      expect(source).toContain(path.startsWith('Roadmap/') ? '<PublishedNpmVersion release={release} />' : '<PublishedNpmVersion />');
+      expect(source).toContain(
+        path.startsWith('Roadmap/')
+          ? '<PublishedNpmVersion release={release} />'
+          : '<PublishedNpmVersion />'
+      );
       expect(source).not.toContain("productFacts.stableRelease ?? '—'");
     }
 
