@@ -51,6 +51,7 @@ describe('clean Next.js consumer workflow contract', () => {
 
     expect(script).toContain("import '@vellira-ui/tokens/css'");
     expect(script).toContain("import '@vellira-ui/react/styles'");
+    expect(script).toContain("'@vellira-ui/react/styles/button'");
     expect(script).toContain("'use client';");
     expect(script).toContain(
       "import { Button, Input } from '@vellira-ui/react'"

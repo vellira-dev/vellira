@@ -55,6 +55,28 @@ export function Example() {
 }
 ```
 
+## Smaller CSS for a Button-only app (opt-in)
+
+For applications that use only the Vellira `Button` component, you can replace
+the full `@vellira-ui/react/styles` import with the smaller, scoped stylesheet.
+The token CSS remains an explicit dependency:
+
+```tsx
+import '@vellira-ui/tokens/css';
+import '@vellira-ui/react/styles/button';
+import { Button } from '@vellira-ui/react';
+```
+
+**Choose one React stylesheet:** do not import both
+`@vellira-ui/react/styles` and `@vellira-ui/react/styles/button`.
+The Button-only stylesheet includes Vellira's existing global reset/base and
+compiled Button styles, but **not** the other component styles or token CSS.
+Other Vellira components require the full stylesheet; this path does not enable
+per-component styling for Input, Select, Modal or other components.
+
+The normal `@vellira-ui/react/styles` import remains the recommended default
+for multi-component applications and is unchanged.
+
 ## Components
 
 ### Inputs

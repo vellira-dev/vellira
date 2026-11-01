@@ -292,6 +292,7 @@ function verifyPackageExports(fixtureDir) {
   const specifiers = [
     '@vellira-ui/react',
     '@vellira-ui/react/styles',
+    '@vellira-ui/react/styles/button',
     '@vellira-ui/tokens',
     '@vellira-ui/tokens/css',
     '@vellira-ui/core',

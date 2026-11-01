@@ -1,6 +1,6 @@
-// #2014: manual-only real packed Vite + Next.js + Chromium Button CSS proof.
-// Uses the SAME immutable candidate tarballs for full and temporary reduced CSS.
-// Does not mutate npm package exports, source files, or publish a new stylesheet.
+// #2014: manual-only packed Vite + Next.js + Chromium Button CSS proof.
+// Compares the legacy full CSS against the new additive CSS subpath using
+// the SAME exact candidate. No publication occurs from this proof.
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -182,7 +182,7 @@ function createFixture(root, candidate) {
 function setVariant(root, variant) {
   const cssImport = variant === 'full'
     ? "import '@vellira-ui/react/styles';"
-    : "import './button-minimal.css';";
+    : "import '@vellira-ui/tokens/css';\nimport '@vellira-ui/react/styles/button';";
   write(root, 'src/main.tsx', [
     "import { createRoot } from 'react-dom/client';",
     "import ButtonSurface from './ButtonSurface';",
@@ -193,7 +193,7 @@ function setVariant(root, variant) {
   ].join('\n') + '\n');
   const nextImport = variant === 'full'
     ? "import '@vellira-ui/react/styles';"
-    : "import '../src/button-minimal.css';";
+    : "import '@vellira-ui/tokens/css';\nimport '@vellira-ui/react/styles/button';";
   write(root, 'app/layout.tsx', [
     nextImport,
     "import type { ReactNode } from 'react';",
@@ -323,7 +323,32 @@ async function main() {
       candidateSha: candidate.manifest.source.sha,
       candidateVersion: candidate.manifest.version,
     });
-    write(fixture, 'src/button-minimal.css', minimal.css);
+    const buttonCss = fs.readFileSync(
+      path.join(reactDist, 'styles/button.css')
+    );
+    const fullCss = fs.readFileSync(path.join(reactDist, 'styles.css'));
+    const start = parity.embeddedBlock.byteOffset;
+    const expectedButtonCss = Buffer.concat([
+      fullCss.subarray(start, start + parity.embeddedBlock.rawBytes),
+      fullCss.subarray(
+        minimal.evidence.globalResetOffset,
+        minimal.evidence.tokenRootOffset
+      ),
+    ]);
+    if (!buttonCss.equals(expectedButtonCss) ||
+        buttonCss.includes(Buffer.from(':root{--space-0:'))) {
+      throw new Error(
+        'Packed public Button stylesheet differs from verified Button + reset/base rules.'
+      );
+    }
+    const installedReact = readJson(
+      path.join(fixture, 'node_modules/@vellira-ui/react/package.json')
+    );
+    const buttonExport = installedReact.exports?.['./styles/button'];
+    if (buttonExport?.default !== './dist/styles/button.css' ||
+        buttonExport?.types !== './styles.d.ts') {
+      throw new Error('Packed React manifest is missing the public Button CSS export.');
+    }
     const { chromium } = require(path.join(fixture, 'node_modules/@playwright/test'));
     const variants = {};
     for (const name of ['full', 'minimal']) {
@@ -353,7 +378,7 @@ async function main() {
     }
     const proof = {
       schemaVersion: 1,
-      state: 'PACKED_CONSUMER_AND_CHROMIUM_PARITY',
+      state: 'PACKED_PUBLIC_BUTTON_CSS_AND_CHROMIUM_PARITY',
       candidateSha: candidate.manifest.source.sha,
       candidateVersion: candidate.manifest.version,
       manifestSha256: candidate.manifestSha256,
@@ -363,15 +388,18 @@ async function main() {
       packageLockSha256: sha256(fs.readFileSync(path.join(fixture, 'package-lock.json'))),
       installedPackages: installed,
       minimalFixture: minimal.evidence,
+      packedButtonCssSha256: sha256(buttonCss),
+      packedButtonCssBytes: buttonCss.length,
+      packedButtonExport: '@vellira-ui/react/styles/button',
       variants,
       deltas: {
         vite: delta(before.vite, after.vite),
         next: delta(before.next, after.next),
       },
       limitations: [
-        'Temporary CSS fixture from immutable packed artifact; no public CSS export.',
+        'Additive Button CSS subpath is tested from an exact packed candidate; not yet published to npm.',
         'Vite computed-style/screenshots are Chromium-only, not cross-browser.',
-        'Next.js is a clean production-build size proof, not a browser parity proof.',
+        'Next.js is a clean production-build size proof; browser parity here is Vite Chromium only.',
         'Emitted gzip assets are not actual HTTP transferred bytes or runtime memory.',
       ],
     };
