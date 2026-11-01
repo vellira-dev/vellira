@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideRecovery, assertCompleteRecoveryHistory } from './cloudflare-recovery-coordinator.mjs';
+import { decideRecovery, assertCompleteRecoveryHistory, fetchCompleteProductionRuns, observedMainPushAt } from './cloudflare-recovery-coordinator.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
@@ -241,4 +241,40 @@ test('incomplete production and staging histories fail closed before replay', ()
   assert.deepEqual(assertCompleteRecoveryHistory({
     total_count: 1, workflow_runs: [{ id: 123 }],
   }, 'Production').workflow_runs, [{ id: 123 }]);
+});
+
+test('paginates over 100 production runs and retains older replay evidence', async () => {
+  const all = Array.from({ length: 125 }, (_, index) => ({
+    id: index + 1,
+    display_title: index === 0 ? 'Promote staging ' + b : 'other',
+    event: index === 0 ? 'workflow_dispatch' : 'workflow_run',
+    status: 'completed',
+  }));
+  const result = await fetchCompleteProductionRuns(async page => ({
+    total_count: all.length,
+    workflow_runs: all.slice((page - 1) * 100, page * 100),
+  }));
+  assert.equal(result.length, 125);
+  assert.equal(decideRecovery({ ...base, stagingRuns: [stage], productionRuns: result }).reason,
+    'verified_replay_already_attempted');
+});
+
+test('rejects truncated or inconsistent pagination', async () => {
+  await assert.rejects(fetchCompleteProductionRuns(async page => ({
+    total_count: 101,
+    workflow_runs: page === 1 ? [{ id: 1 }] : [],
+  })), /Incomplete production run history/);
+  await assert.rejects(fetchCompleteProductionRuns(async () => ({
+    total_count: 5100, workflow_runs: [],
+  })), /bounded pagination/);
+});
+
+test('quiet window follows observed push timestamp rather than git committer date', () => {
+  const latest = observedMainPushAt([
+    { head_sha: b, event: 'push', created_at: '2026-11-01T12:59:30Z' },
+    { head_sha: b, event: 'workflow_dispatch', created_at: '2026-11-01T12:59:59Z' },
+  ], b);
+  assert.equal(latest, '2026-11-01T12:59:30.000Z');
+  assert.equal(decideRecovery({ ...base, mainUpdatedAt: latest }).reason, 'main_quiet_period');
+  assert.equal(observedMainPushAt([], b), null);
 });
