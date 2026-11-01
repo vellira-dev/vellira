@@ -206,3 +206,24 @@ test('rapid A B C merges select latest main only after its quiet period', () => 
     mainUpdatedAt: '2026-11-01T12:56:00Z',
   }).target, 'staging');
 });
+
+test('failed recovery takes precedence over an older qualified staging candidate', () => {
+  const result = decideRecovery({
+    ...base, stagingRuns: [
+      stage,
+      { head_sha: b, event: 'workflow_dispatch', status: 'completed',
+        conclusion: 'failure', recoveryAttempt: true },
+    ],
+  });
+  assert.deepEqual(result, {
+    dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true,
+  });
+});
+
+test('a failed recovery does not override already-deployed production', () => {
+  assert.equal(decideRecovery({
+    ...base, productionSha: b,
+    stagingRuns: [{ head_sha: b, recoveryAttempt: true,
+      status: 'completed', conclusion: 'failure' }],
+  }).reason, 'already_deployed');
+});
