@@ -39,7 +39,7 @@ describe('homepage consistency story and source-backed facts', () => {
     expect(page).toContain('<Roadmap />');
     expect(workflow).toContain('<PublishedNpmVersion />');
     expect(workflow).toContain("productFacts.publishedPackages ?? '—'");
-    expect(roadmap).toContain('<PublishedNpmVersion />');
+    expect(roadmap).toContain('<PublishedNpmVersion release={release} />');
     expect(workflow + roadmap).not.toMatch(/v2\.18\.4|268 tests|0 errors/);
     expect(roadmap).not.toContain("version: 'Latest stable'");
   });
