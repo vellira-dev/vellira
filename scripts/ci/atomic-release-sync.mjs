@@ -16,6 +16,10 @@ const starterPaths = Object.freeze([
 export const ATOMIC_RELEASE_SYNC_PATHS = Object.freeze([...RELEASE_SYNC_MANIFESTS, ...starterPaths].sort());
 const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
+export function assertStableReleaseVersion(version) {
+  assert.match(version, VERSION, 'Expected stable release version');
+}
+
 export function assertAtomicSyncFileSet(paths) {
   assert.equal(new Set(paths).size, paths.length, 'Duplicate atomic-sync path');
   assert.deepEqual([...paths].sort(), ATOMIC_RELEASE_SYNC_PATHS,
@@ -23,7 +27,7 @@ export function assertAtomicSyncFileSet(paths) {
 }
 
 export function validateAtomicReleaseSnapshot(root, version) {
-  assert.match(version, VERSION, 'Expected stable release version');
+  assertStableReleaseVersion(version);
   for (const file of RELEASE_SYNC_MANIFESTS) {
     const doc = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
     assert.equal(doc.version, version, file + ' version diverges');
