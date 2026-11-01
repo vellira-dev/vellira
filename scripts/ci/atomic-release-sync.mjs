@@ -48,6 +48,41 @@ export function verifyAtomicManifestTransition({ files, before, after, version }
   return { previousVersion: [...oldVersions][0], version };
 }
 
+export function verifyAtomicStarterTransition({ before, after, previousVersion, version }) {
+  assertStableReleaseVersion(previousVersion);
+  assertStableReleaseVersion(version);
+  assert.ok(before && after, 'Missing Starter snapshots');
+
+  for (const platform of ['web', 'native']) {
+    const filename = 'examples/workspace-starter/' + platform + '/package.json';
+    const oldManifest = before[filename];
+    const newManifest = after[filename];
+    assert.ok(oldManifest && newManifest, 'Missing Starter manifest ' + filename);
+    const required = platform === 'web'
+      ? ['@vellira-ui/react', '@vellira-ui/tokens', '@vellira-ui/icons']
+      : ['@vellira-ui/react-native', '@vellira-ui/icons'];
+    const expected = structuredClone(oldManifest);
+    for (const name of required) {
+      assert.equal(expected.dependencies?.[name], previousVersion, 'Unconverged prior Starter pin ' + name);
+      expected.dependencies[name] = version;
+    }
+    assert.deepEqual(newManifest, expected, 'Unexpected Starter manifest mutation: ' + filename);
+  }
+
+  const readmePath = 'examples/workspace-starter/README.md';
+  const oldReadme = before[readmePath];
+  const newReadme = after[readmePath];
+  assert.equal(typeof oldReadme, 'string');
+  assert.equal(typeof newReadme, 'string');
+  const oldPin = '**Vellira ' + previousVersion + ' packages**';
+  const nextPin = '**Vellira ' + version + ' packages**';
+  assert.equal(oldReadme.split(oldPin).length, 2, 'Prior Starter README pin must occur once');
+  assert.equal(newReadme, oldReadme.replace(oldPin, nextPin), 'Unexpected Starter README mutation');
+  // npm lockfiles contain transitive registry changes. Their integrity and
+  // pinned versions require validateAtomicReleaseSnapshot, not text equality.
+  return true;
+}
+
 export function validateAtomicReleaseSnapshot(root, version) {
   assertStableReleaseVersion(version);
   for (const file of RELEASE_SYNC_MANIFESTS) {
