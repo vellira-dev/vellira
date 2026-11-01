@@ -166,6 +166,10 @@ describe('release candidate artifact validation', () => {
       types: './styles.d.ts',
       default: './dist/styles.css',
     };
+    react.packedManifest.exports['./styles/button'] = {
+      types: './styles.d.ts',
+      default: './dist/styles/button.css',
+    };
 
     expect(() => validatePackedPackage(react)).toThrow(
       'export target dist/styles.css is missing'
@@ -177,6 +181,11 @@ describe('release candidate artifact validation', () => {
     );
 
     react.packResult.files.push({ path: 'styles.d.ts' });
+    expect(() => validatePackedPackage(react)).toThrow(
+      'export target dist/styles/button.css is missing'
+    );
+
+    react.packResult.files.push({ path: 'dist/styles/button.css' });
     expect(() => validatePackedPackage(react)).not.toThrow();
 
     const tokens = coreFixture();
