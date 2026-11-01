@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideRecovery } from './cloudflare-recovery-coordinator.mjs';
+import { decideRecovery, assertCompleteRecoveryHistory } from './cloudflare-recovery-coordinator.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
@@ -226,4 +226,19 @@ test('a failed recovery does not override already-deployed production', () => {
     stagingRuns: [{ head_sha: b, recoveryAttempt: true,
       status: 'completed', conclusion: 'failure' }],
   }).reason, 'already_deployed');
+});
+
+test('incomplete production and staging histories fail closed before replay', () => {
+  assert.throws(() => assertCompleteRecoveryHistory({
+    total_count: 100, workflow_runs: [],
+  }, 'Production'), /requires pagination/);
+  assert.throws(() => assertCompleteRecoveryHistory({
+    total_count: 100, workflow_runs: [],
+  }, 'Staging'), /requires pagination/);
+  assert.throws(() => assertCompleteRecoveryHistory({
+    workflow_runs: [],
+  }, 'Production'), /history count missing/);
+  assert.deepEqual(assertCompleteRecoveryHistory({
+    total_count: 1, workflow_runs: [{ id: 123 }],
+  }, 'Production').workflow_runs, [{ id: 123 }]);
 });
