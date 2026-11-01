@@ -6,6 +6,7 @@ const STAGING = 'deploy-website-cloudflare-staging.yml';
 const PRODUCTION = 'deploy-website-cloudflare-production.yml';
 const OWNER = 'vellira-dev/vellira';
 const RUNTIME_URL = 'https://vellira.dev/__vellira_runtime';
+const MAIN_QUIET_PERIOD_MS = 2 * 60_000;
 
 export function decideRecovery({
   mainSha,
@@ -13,6 +14,7 @@ export function decideRecovery({
   stagingRuns,
   productionRuns,
   nowMs = Date.now(),
+  mainUpdatedAt = null,
 }) {
   assert.match(mainSha, SHA);
   assert.match(productionSha, SHA);
@@ -71,6 +73,17 @@ export function decideRecovery({
       (run.event === 'push' && run.status !== 'completed'))) {
     return { dispatch: false, reason: 'staging_exists_for_main' };
   }
+  // A newly merged main SHA is moving-target territory. Defer expensive
+  // recovery staging until a short quiet window has elapsed; normal push
+  // staging and already-verified candidates retain priority.
+  if (mainUpdatedAt !== null) {
+    const updated = Date.parse(mainUpdatedAt);
+    assert.ok(Number.isFinite(updated), 'Invalid immutable main commit date');
+    const elapsed = nowMs - updated;
+    if (elapsed < MAIN_QUIET_PERIOD_MS) {
+      return { dispatch: false, reason: 'main_quiet_period' };
+    }
+  }
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
@@ -113,7 +126,12 @@ async function main() {
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
-  const stagingResult = await github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100');
+  const [stagingResult, mainCommit] = await Promise.all([
+    github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100'),
+    github('/repos/' + OWNER + '/commits/' + mainSha),
+  ]);
+  const mainUpdatedAt = mainCommit.commit?.committer?.date;
+  assert.equal(typeof mainUpdatedAt, 'string', 'Missing immutable main commit timestamp');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assert.ok(stagingResult.total_count < 100, 'Staging history requires pagination before safe dispatch');
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
@@ -150,7 +168,7 @@ async function main() {
       ),
     };
   }));
-  const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns });
+  const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns, mainUpdatedAt });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
   if (!plan.dispatch) return;
   // Recheck main immediately before dispatch to narrow the TOCTOU window.
