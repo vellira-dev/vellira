@@ -7,6 +7,7 @@ const PRODUCTION = 'deploy-website-cloudflare-production.yml';
 const OWNER = 'vellira-dev/vellira';
 const RUNTIME_URL = 'https://vellira.dev/__vellira_runtime';
 const MAIN_QUIET_PERIOD_MS = 2 * 60_000;
+const MAX_RECOVERY_DISPATCHES_PER_SHA = 1;
 
 export function decideRecovery({
   mainSha,
@@ -28,6 +29,11 @@ export function decideRecovery({
   }
 
   const sameSha = stagingRuns.filter((run) => run.head_sha === mainSha);
+  const explicitRecoveries = sameSha.filter((run) => run.recoveryAttempt === true);
+  // One explicit recovery per immutable SHA. Newer SHAs get a fresh budget.
+  if (explicitRecoveries.length > MAX_RECOVERY_DISPATCHES_PER_SHA) {
+    return { dispatch: false, reason: 'recovery_budget_exceeded', requiresReview: true };
+  }
   const qualified = sameSha
     .filter((run) =>
       run.fullStage === true &&
@@ -71,7 +77,11 @@ export function decideRecovery({
   // exists. A failed explicit recovery is terminal until manually reviewed.
   if (sameSha.some((run) => run.recoveryAttempt === true || run.fullStage === true ||
       (run.event === 'push' && run.status !== 'completed'))) {
-    return { dispatch: false, reason: 'staging_exists_for_main' };
+    const failedRecovery = explicitRecoveries.some((run) =>
+      run.status === 'completed' && run.conclusion !== 'success');
+    return failedRecovery
+      ? { dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true }
+      : { dispatch: false, reason: 'staging_exists_for_main' };
   }
   // A newly merged main SHA is moving-target territory. Defer expensive
   // recovery staging until a short quiet window has elapsed; normal push
@@ -170,7 +180,14 @@ async function main() {
   }));
   const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns, mainUpdatedAt });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
-  if (!plan.dispatch) return;
+  if (!plan.dispatch) {
+    if (plan.requiresReview) {
+      console.error('::error::Production convergence is blocked: ' + plan.reason +
+        ' for ' + mainSha + '. Manual review required; no automatic retry.');
+      process.exitCode = 1;
+    }
+    return;
+  }
   // Recheck main immediately before dispatch to narrow the TOCTOU window.
   const latest = await github('/repos/' + OWNER + '/git/ref/heads/main');
   assert.equal(latest.object?.sha, mainSha, 'main changed; defer recovery');
