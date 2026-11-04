@@ -64,6 +64,19 @@ export function decideRecovery({
   if (explicitRecoveries.some((run) => run.status === 'completed' && run.conclusion !== 'success')) {
     return { dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true };
   }
+  // Never rebuild/redeploy the same SHA automatically after a failed
+  // staging run: deployment may already have succeeded before verification
+  // failed (e.g. a transient Cloudflare/RSC 503). Without immutable
+  // deployment proof, only manual diagnosis can authorize a retry.
+  if (sameSha.some((run) =>
+    (run.event === 'push' || run.recoveryAttempt === true) &&
+    run.status === 'completed' &&
+    run.conclusion !== 'success' &&
+    run.conclusion !== 'skipped'
+  )) {
+    return { dispatch: false, reason: 'failed_staging_requires_review' };
+  }
+
   const qualified = sameSha
     .filter((run) =>
       run.fullStage === true &&
@@ -101,19 +114,6 @@ export function decideRecovery({
       stagingRunId: staging.id,
       stagingRunAttempt: staging.run_attempt,
     };
-  }
-
-  // Never rebuild/redeploy the same SHA automatically after a failed
-  // staging run: deployment may already have succeeded before verification
-  // failed (e.g. a transient Cloudflare/RSC 503). Without immutable
-  // deployment proof, only manual diagnosis can authorize a retry.
-  if (sameSha.some((run) =>
-    (run.event === 'push' || run.recoveryAttempt === true) &&
-    run.status === 'completed' &&
-    run.conclusion !== 'success' &&
-    run.conclusion !== 'skipped'
-  )) {
-    return { dispatch: false, reason: 'failed_staging_requires_review' };
   }
 
   // Do not create a duplicate staging run while an attempt for this SHA
