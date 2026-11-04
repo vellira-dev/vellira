@@ -87,8 +87,9 @@ overrides:
   'uuid@<11.1.1': 11.1.1
   'valibot@<=1.4.1': 1.4.2
   # GHSA-587h-7wmj-h5pm and related Vite 6.x security fixes.
-  # Dependabot #158: upgrade vulnerable Vite 6.x to patched 6.4.5, leave 7/8 untouched.
-  'vite@>=6.0.0 <6.4.5': 6.4.5
+  # Dependabot #158: preserve the established <=6.x override scope while
+  # moving its pinned resolution to the patched 6.4.5; leave Vite 7/8 untouched.
+  'vite@<=6.4.4': 6.4.5
   # GHSA-5j98-mcp5-4vw2: vulnerable glob 10.x CLI command injection.
   '@node-minify/core>glob': 10.5.0
   tmp: 0.2.7
