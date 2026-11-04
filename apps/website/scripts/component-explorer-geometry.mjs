@@ -192,14 +192,16 @@ try {
 
 const mobile = await openPage({ width: 390, height: 844 });
 try {
-  // DOMContentLoaded makes the server-rendered trigger visible before
-  // the Next.js client navigation bundle is hydrated. A premature click is
-  // otherwise silently lost, falsely failing the staging deployment gate.
-  await mobile.waitForLoadState('networkidle', { timeout: 20_000 });
-
+  // A background network request must not block a working hydrated UI.
+  // Wait for the real React effect attached to this navigation trigger,
+  // not for Playwright's global networkidle heuristic. This remains fail-closed
+  // if client hydration or event-handler attachment never completes.
   const trigger = mobile.getByRole('button', {
     name: 'Open component navigation',
   });
+  await mobile.locator(
+    'button[aria-controls="component-navigation"][data-component-navigation-hydrated="true"]'
+  ).waitFor({ state: 'visible', timeout: 20_000 });
   assert.equal(
     await trigger.getAttribute('aria-expanded'),
     'false',
