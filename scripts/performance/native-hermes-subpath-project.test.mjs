@@ -103,7 +103,7 @@ function makePackedCandidate(fixture, { version = '2.188.1' } = {}) {
   }));
   fs.copyFileSync(path.join(candidateDir, 'core.tgz'), path.join(candidateDir, 'react.tgz'));
   return {
-    candidate,
+    candidate: path.join(candidateDir, 'candidate.tgz'),
     sha,
     candidateDir,
     sourceSha,
