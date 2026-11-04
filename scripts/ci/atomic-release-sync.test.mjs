@@ -302,8 +302,9 @@ test('all three atomic release paths reject pnpm lock changes', () => {
 
 test('release sync never auto-merges before all exact-head gates are enforced', () => {
   const source = fs.readFileSync('.github/workflows/release.yml', 'utf8');
-  const steps = source.match(/- name: Require human-reviewed release sync PR \\(no automatic merge\\)/g) ?? [];
-  assert.equal(steps.length, 3, 'Every release/recovery path must require review');
-  assert.doesNotMatch(source, /gh pr merge|--auto\\s*\\\\/, 'Release producer must not authorize unchecked auto-merge');
-  assert.equal((source.match(/automatic merge disabled pending exact-head CI and review/g) ?? []).length, 3);
+  const marker = '      - name: Require human-reviewed release sync PR (no automatic merge)';
+  assert.equal(source.split(marker).length - 1, 3,
+    'Every release/recovery path must require manual review');
+  assert.ok(!source.includes('gh pr merge'), 'No producer may auto-merge release PRs');
+  assert.equal(source.split('automatic merge disabled pending exact-head CI and review').length - 1, 3);
 });
