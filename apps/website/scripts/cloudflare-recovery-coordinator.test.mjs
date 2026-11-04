@@ -331,3 +331,17 @@ test('skipped release-sync cannot hide a successful fully verified staging run',
     ],
   }).target, 'production');
 });
+
+test('failed push remains terminal even with an older qualified staging run', () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [
+      stage,
+      { head_sha: b, event: 'push', status: 'completed',
+        conclusion: 'failure', fullStage: false },
+    ],
+  });
+  assert.deepEqual(plan, {
+    dispatch: false, reason: 'failed_staging_requires_review',
+  });
+});
