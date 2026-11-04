@@ -38,22 +38,22 @@ jobs:
           const assert = require('node:assert/strict');
           const lock = require('./package-lock.json');
           const p = lock.packages;
-          assert.equal(p['node_modules/expo']?.version, '58.0.22');
-          assert.equal(p['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.18');
-          assert.equal(p['node_modules/@expo/metro-config']?.version, '58.0.20');
+          assert.equal(p['node_modules/expo']?.version, '58.0.23');
+          assert.equal(p['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.19');
+          assert.equal(p['node_modules/@expo/metro-config']?.version, '58.0.21');
           assert.equal(p['node_modules/react-native']?.version, '0.88.1');
           assert.equal(p['node_modules/node-forge']?.version, '1.4.2');
           assert.equal(p['node_modules/@expo/schema-utils']?.version, '58.0.3');
           assert.ok(!Object.keys(p).some((k) => /(^|\/)node_modules\/zod$/.test(k)),
             'Vulnerable Zod survives in the exact installed dependency graph');
           assert.equal(p['node_modules/expo/node_modules/@expo/cli'].integrity,
-            'sha512-voZUcir9mEwvLKBNqQM6Jy2Yp67z8ONmcINXb6ZrLMayb7yxzwvEnN0eeH8ADzUABKL288pv1eJ1WRqtYxXQ/Q==');
+            'sha512-zoLhSlFnln0xn1fiW0+kb1J0lNv06HAy+FQ27HHwEEWoAClCE13FnTQBOW5bOVYc3c7hsGM8ypKcZGS7RGqjQA==');
           const cli = require('./node_modules/expo/node_modules/@expo/cli/package.json');
           assert.equal(cli.dependencies.zod, undefined);
           assert.ok(cli.dependencies['@expo/schema-utils']);
           NODE
-          published="$(npm view @expo/cli@58.1.18 dist.integrity --registry=https://registry.npmjs.org)"
-          test "$published" = 'sha512-voZUcir9mEwvLKBNqQM6Jy2Yp67z8ONmcINXb6ZrLMayb7yxzwvEnN0eeH8ADzUABKL288pv1eJ1WRqtYxXQ/Q=='
+          published="$(npm view @expo/cli@58.1.19 dist.integrity --registry=https://registry.npmjs.org)"
+          test "$published" = 'sha512-zoLhSlFnln0xn1fiW0+kb1J0lNv06HAy+FQ27HHwEEWoAClCE13FnTQBOW5bOVYc3c7hsGM8ypKcZGS7RGqjQA=='
           node scripts/security-expo-58-guard.cjs --report-source-hash | tee "$RUNNER_TEMP/expo58-cli-source.json"
       - name: Verify clean standard npm install and bounded schema-output guard
         shell: bash
@@ -71,7 +71,7 @@ jobs:
           npm run typecheck
           echo "Using audited pinned Expo Doctor version: 1.21.5"
           npx --yes expo-doctor@1.21.5
-          echo 'Exact Expo 58 / CLI 58.1.18 / RN 0.88.1 / published Forge 1.4.2 validated; Zod absent.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Exact Expo 58 / CLI 58.1.19 / RN 0.88.1 / published Forge 1.4.2 validated; Zod absent.' >> "$GITHUB_STEP_SUMMARY"
       - name: Reject tampering of the installed bounded collector
         shell: bash
         run: |
