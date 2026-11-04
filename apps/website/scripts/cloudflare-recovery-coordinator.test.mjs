@@ -125,11 +125,21 @@ test('does not restart a pending staging run', () => {
   }).dispatch, false);
 });
 
-test('ignores release sync staging with a skipped deploy', () => {
-  assert.equal(decideRecovery({
+test('release-sync push with skipped deploy never triggers an automatic second staging deploy', () => {
+  assert.deepEqual(decideRecovery({
     ...base,
     stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false }],
-  }).target, 'staging');
+  }), { dispatch: false, reason: 'skipped_staging_requires_review' });
+});
+
+test('skipped release-sync cannot hide a successful fully verified staging run', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
+      stage,
+    ],
+  }).target, 'production');
 });
 
 test('invalid identifiers and input lists fail closed', () => {
@@ -138,4 +148,53 @@ test('invalid identifiers and input lists fail closed', () => {
   assert.throws(() => decideRecovery({
     ...base, stagingRuns: [{ ...stage, id: 0 }],
   }));
+});
+
+test('failed staging after Cloudflare deploy must not trigger another deploy', () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [{
+      head_sha: b,
+      event: 'push',
+      status: 'completed',
+      conclusion: 'failure',
+      fullStage: false,
+    }],
+  });
+  assert.deepEqual(plan, {
+    dispatch: false,
+    reason: 'failed_staging_requires_review',
+  });
+});
+
+test('failed recovery is terminal for the exact commit, even if push was absent', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [{
+      head_sha: b,
+      event: 'workflow_dispatch',
+      recoveryAttempt: true,
+      status: 'completed',
+      conclusion: 'failure',
+    }],
+  }).reason, 'failed_staging_requires_review');
+});
+
+test('failed staging cannot be hidden by a skipped release-sync staging run', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'failure' },
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
+    ],
+  }).dispatch, false);
+});
+
+test('cancelled or timed-out staging cannot trigger an automatic redeploy', () => {
+  for (const conclusion of ['cancelled', 'timed_out', 'action_required']) {
+    assert.equal(decideRecovery({
+      ...base,
+      stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion }],
+    }).reason, 'failed_staging_requires_review');
+  }
 });

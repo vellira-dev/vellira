@@ -65,12 +65,38 @@ export function decideRecovery({
     };
   }
 
+  // Never rebuild/redeploy the same SHA automatically after a failed
+  // staging run: deployment may already have succeeded before verification
+  // failed (e.g. a transient Cloudflare/RSC 503). Without immutable
+  // deployment proof, only manual diagnosis can authorize a retry.
+  if (sameSha.some((run) =>
+    (run.event === 'push' || run.recoveryAttempt === true) &&
+    run.status === 'completed' &&
+    run.conclusion !== 'success' &&
+    run.conclusion !== 'skipped'
+  )) {
+    return { dispatch: false, reason: 'failed_staging_requires_review' };
+  }
+
   // Do not create a duplicate staging run while an attempt for this SHA
   // exists. A failed explicit recovery is terminal until manually reviewed.
   if (sameSha.some((run) => run.recoveryAttempt === true || run.fullStage === true ||
       (run.event === 'push' && run.status !== 'completed'))) {
     return { dispatch: false, reason: 'staging_exists_for_main' };
   }
+  // A release-sync-only push intentionally skipped staging deployment.
+  // It is not evidence that Cloudflare requires a fresh deployment. Until
+  // immutable deployed-build proof is available, fail closed instead of
+  // silently spending another Cloudflare deployment on this SHA.
+  if (sameSha.some((run) =>
+    run.event === 'push' &&
+    run.status === 'completed' &&
+    run.conclusion === 'success' &&
+    run.fullStage === false
+  )) {
+    return { dispatch: false, reason: 'skipped_staging_requires_review' };
+  }
+
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 

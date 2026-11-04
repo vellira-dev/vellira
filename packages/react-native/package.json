@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react-native",
-  "version": "2.190.6",
+  "version": "2.190.9",
   "description": "React Native components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -194,7 +194,7 @@
     "jsdom": "^30.0.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "storybook": "^10.6.2",
+    "storybook": "^10.6.5",
     "tsdown": "^0.23.0",
     "typescript": "6.0.3",
     "vitest": "^5.0.5"
