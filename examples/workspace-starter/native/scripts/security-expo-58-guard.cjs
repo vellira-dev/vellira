@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Expo CLI 58.1.18: published @expo/schema-utils validator (no Zod).
+// Expo CLI 58.1.19: published @expo/schema-utils validator (no Zod).
 // Preserve Vellira's stricter 64 KiB cumulative UTF-8 and 128-item limits.
 // npm ci validates package tarball SRI; this guard pins the reviewed parser
 // source SHA-256 and fails closed when installed bytes or package identities drift.
@@ -19,13 +19,13 @@ const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 // Attested against the exact clean npm CI install and published CLI tarball
 // verified with the package-lock SRI (GitHub Action run 41349253964).
 const APPROVED_SOURCE_SHA256 = 'b1b370abd2c05a281a7fa8bc8600702002bc69bf4079026bdf12b074a1ee60fa';
-const EXPECTED_INTEGRITY = 'sha512-voZUcir9mEwvLKBNqQM6Jy2Yp67z8ONmcINXb6ZrLMayb7yxzwvEnN0eeH8ADzUABKL288pv1eJ1WRqtYxXQ/Q==';
+const EXPECTED_INTEGRITY = 'sha512-zoLhSlFnln0xn1fiW0+kb1J0lNv06HAy+FQ27HHwEEWoAClCE13FnTQBOW5bOVYc3c7hsGM8ypKcZGS7RGqjQA==';
 const LOCKED_CLI = 'node_modules/expo/node_modules/@expo/cli';
-assert.equal(metadata.version, '58.1.18', 'Unsupported Expo CLI: source review required');
-assert.equal(lock.packages[LOCKED_CLI]?.version, '58.1.18');
+assert.equal(metadata.version, '58.1.19', 'Unsupported Expo CLI: source review required');
+assert.equal(lock.packages[LOCKED_CLI]?.version, '58.1.19');
 assert.equal(lock.packages[LOCKED_CLI]?.integrity, EXPECTED_INTEGRITY);
-assert.equal(lock.packages['node_modules/expo']?.version, '58.0.22');
-assert.equal(lock.packages['node_modules/@expo/metro-config']?.version, '58.0.20');
+assert.equal(lock.packages['node_modules/expo']?.version, '58.0.23');
+assert.equal(lock.packages['node_modules/@expo/metro-config']?.version, '58.0.21');
 assert.equal(lock.packages['node_modules/react-native']?.version, '0.88.1');
 assert.equal(lock.packages['node_modules/@expo/schema-utils']?.version, '58.0.3');
 assert.equal(lock.packages['node_modules/node-forge']?.version, '1.4.2');

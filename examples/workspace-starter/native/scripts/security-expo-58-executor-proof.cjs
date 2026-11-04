@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, '..');
 const cli = path.join(root, 'node_modules/expo/node_modules/@expo/cli');
 const {DevToolsPluginCliExtensionExecutor: Executor} = require(
   path.join(cli, 'build/src/start/server/devtools/DevToolsPluginCliExtensionExecutor.js'));
-assert.equal(typeof Executor, 'function', 'Expected published Expo CLI 58.1.18 executor');
+assert.equal(typeof Executor, 'function', 'Expected published Expo CLI 58.1.19 executor');
 
 const plugin = {
   packageName: 'vellira-executor-security-proof',
