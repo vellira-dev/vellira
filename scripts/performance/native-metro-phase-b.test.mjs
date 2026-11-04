@@ -48,7 +48,6 @@ test('opt-in Expo 58 fixture and leaf-theme development marker', () => {
 });
 
 test('exact Native candidate requires a predeclared matching SHA256', () => {
-  const { spawnSync } = requireNode;
   const scratch = mkdtempSync(path.join(tmpdir(), 'vellira-native-sha-'));
   try {
     const file = path.join(scratch, 'native-candidate.tgz');
