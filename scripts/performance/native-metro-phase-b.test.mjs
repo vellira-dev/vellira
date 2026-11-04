@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs, { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -104,7 +105,6 @@ test('candidate manifest authority must exist before starting Metro installs', (
   try {
     const file = path.join(scratch, 'native-candidate.tgz');
     writeFileSync(file, 'synthetic-not-a-real-package');
-    const { createHash } = require('node:crypto');
     const hash = createHash('sha256').update(fs.readFileSync(file)).digest('hex');
     const execute = (extra) => spawnSync(
       process.execPath,
