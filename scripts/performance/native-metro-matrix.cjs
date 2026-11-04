@@ -20,10 +20,24 @@ const output = path.resolve(
   process.env.VELLIRA_METRO_EVIDENCE ?? 'consumer-evidence/native-metro-matrix.json'
 );
 const candidateTarball = process.env.VELLIRA_NATIVE_CANDIDATE_TGZ;
-if (candidateTarball &&
-    (!path.isAbsolute(candidateTarball) ||
-     !fs.statSync(candidateTarball, { throwIfNoEntry: false })?.isFile())) {
-  throw new Error('VELLIRA_NATIVE_CANDIDATE_TGZ must be an existing absolute tarball.');
+const requestedCandidateHash = process.env.VELLIRA_NATIVE_CANDIDATE_SHA256;
+let candidateSha256 = null;
+if (candidateTarball) {
+  if (!path.isAbsolute(candidateTarball) ||
+      !candidateTarball.endsWith('.tgz') ||
+      !fs.statSync(candidateTarball, { throwIfNoEntry: false })?.isFile()) {
+    throw new Error('Native candidate must be an existing absolute .tgz file.');
+  }
+  if (!/^[a-f0-9]{64}$/.test(requestedCandidateHash ?? '')) {
+    throw new Error('Native Metro candidate requires its SHA256 pinned.');
+  }
+  candidateSha256 = createHash('sha256')
+    .update(fs.readFileSync(candidateTarball)).digest('hex');
+  if (candidateSha256 !== requestedCandidateHash) {
+    throw new Error('Native Metro candidate SHA256 mismatch.');
+  }
+} else if (requestedCandidateHash) {
+  throw new Error('Native Metro candidate SHA256 supplied without a tarball.');
 }
 const optInSubpaths = process.env.VELLIRA_METRO_SUBPATH_MATRIX === '1';
 const cases = ['baseline', 'theme', 'button', 'button-select'];
@@ -165,7 +179,7 @@ const evidence = {
   optInSubpaths,
   candidateSource: candidateTarball
     ? { mode: 'exact-candidate-tarball',
-        sha256: createHash('sha256').update(fs.readFileSync(candidateTarball)).digest('hex'),
+        sha256: candidateSha256,
         path: path.basename(candidateTarball) }
     : { mode: 'exact-published-npm', version },
   purpose: 'Differential iOS/Android production Metro output; not device startup',

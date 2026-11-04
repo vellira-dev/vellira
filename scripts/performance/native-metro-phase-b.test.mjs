@@ -1,4 +1,10 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import fs from 'node:fs';
 import { test } from 'node:test';
 
@@ -41,6 +47,38 @@ test('opt-in Expo 58 fixture and leaf-theme development marker', () => {
   assert.match(script, /getNativeExpoFixture\(process.env.VELLIRA_NATIVE_EXPO_PROFILE\)/);
   assert.match(script, /starterLockSha256: expoFixture.lockSha256/);
   assert.match(script, /kind === 'theme' \|\| kind === 'leaf-theme'/);
+});
+
+test('exact Native candidate requires a predeclared matching SHA256', () => {
+  const { spawnSync } = requireNode;
+  const scratch = mkdtempSync(path.join(tmpdir(), 'vellira-native-sha-'));
+  try {
+    const file = path.join(scratch, 'native-candidate.tgz');
+    writeFileSync(file, 'synthetic-not-a-real-package');
+    const execute = (extra) => spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL('./native-metro-matrix.cjs', import.meta.url))],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          VELLIRA_NATIVE_VERSION: '2.190.9',
+          VELLIRA_NATIVE_CANDIDATE_TGZ: file,
+          ...extra,
+        },
+      }
+    );
+    const missing = execute({ VELLIRA_NATIVE_CANDIDATE_SHA256: '' });
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /requires its SHA256 pinned/);
+    const incorrect = execute({
+      VELLIRA_NATIVE_CANDIDATE_SHA256: '0'.repeat(64),
+    });
+    assert.notEqual(incorrect.status, 0);
+    assert.match(incorrect.stderr, /candidate SHA256 mismatch/);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('opt-in shared Native matrix measures exact packed candidate root vs leaf', () => {
