@@ -48,6 +48,7 @@ export function createToolingTasks({
     'scripts/performance/vite-bundle-regression.test.mjs',
     'scripts/performance/vite-representative-surface.test.mjs',
     'scripts/performance/native-metro-phase-b.test.mjs',
+    'scripts/performance/native-expo-fixture.test.mjs',
     'scripts/release-candidate/native-subpath-contract.test.cjs',
     'scripts/performance/native-picker-scan.test.mjs',
     'scripts/performance/native-hermes-subpath-project.test.mjs',

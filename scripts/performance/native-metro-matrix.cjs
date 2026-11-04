@@ -8,8 +8,10 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs');
+const { getNativeExpoFixture } = require('./native-expo-fixture.cjs');
 const { assertNativeSubpathContract } = require('../release-candidate/native-subpath-contract.cjs');
 
+const expoFixture = getNativeExpoFixture(process.env.VELLIRA_NATIVE_EXPO_PROFILE);
 const version = process.env.VELLIRA_NATIVE_VERSION;
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
   throw new Error('Set VELLIRA_NATIVE_VERSION to an exact published semver.');
@@ -68,13 +70,14 @@ function walk(dir) {
   });
 }
 function manifest(kind) {
-  const deps = {
-    '@expo/metro-runtime': '57.0.17',
-    expo: '57.0.31',
-    react: '19.2.3',
-    'react-native': '0.86.3',
-    'react-native-svg': '15.15.4',
-  };
+  const deps = Object.fromEntries(
+    ['@expo/metro-runtime', 'expo', 'react', 'react-native', 'react-native-svg']
+      .map((name) => [name, expoFixture.dependencies[name]])
+  );
+  if (expoFixture.profile === 'starter58') {
+    deps['react-native-safe-area-context'] =
+      expoFixture.dependencies['react-native-safe-area-context'];
+  }
   if (kind !== 'baseline') deps['@vellira-ui/react-native'] = candidateTarball
     ? 'file:' + candidateTarball : version;
   return {
@@ -147,8 +150,10 @@ function app(kind) {
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-metro-1906-'));
 const evidence = {
   schemaVersion: 2,
-  issue: 470,
+  issue: optInSubpaths ? 2082 : 470,
   version,
+  expoFixtureProfile: expoFixture.profile,
+  starterLockSha256: expoFixture.lockSha256,
   node: process.version,
   npm: run('npm', ['--version'], process.cwd()),
   sourceRevision: run(
@@ -268,7 +273,7 @@ try {
         const content = fs.readFileSync(bundlePath, 'utf8');
         const marker = kind === 'baseline'
           ? 'Metro baseline'
-          : kind === 'theme'
+          : kind === 'theme' || kind === 'leaf-theme'
             ? 'Metro theme only'
             : 'Metro Button';
         if (content.length < 10_000 || !content.includes(marker)) {

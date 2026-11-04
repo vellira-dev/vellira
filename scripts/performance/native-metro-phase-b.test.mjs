@@ -22,7 +22,7 @@ test('opt-in production mode preserves output without dev bundle work', () => {
   assert.match(script, /VELLIRA_METRO_PRODUCTION_ONLY/);
   assert.match(script, /if \(!productionOnly\)/);
   assert.match(script, /schemaVersion: 2/);
-  assert.match(script, /issue: 470/);
+  assert.match(script, /issue: optInSubpaths \? 2082 : 470/);
   assert.match(script, /sourceRevision/);
   assert.match(script, /packageLockSha256/);
   assert.match(script, /VELLIRA_METRO_EVIDENCE/);
@@ -35,6 +35,12 @@ test('normal npm resolution must not install Picker or hide peer contracts', () 
   assert.match(script, /'node_modules\/@react-native-picker\/picker'/);
   assert.match(script, /published Vellira still requires Picker peer/);
   assert.match(script, /pickerInLockfile: false/);
+});
+
+test('opt-in Expo 58 fixture and leaf-theme development marker', () => {
+  assert.match(script, /getNativeExpoFixture\(process.env.VELLIRA_NATIVE_EXPO_PROFILE\)/);
+  assert.match(script, /starterLockSha256: expoFixture.lockSha256/);
+  assert.match(script, /kind === 'theme' \|\| kind === 'leaf-theme'/);
 });
 
 test('opt-in shared Native matrix measures exact packed candidate root vs leaf', () => {

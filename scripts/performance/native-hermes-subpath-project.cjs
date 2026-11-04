@@ -6,8 +6,10 @@ const { createHash } = require('node:crypto');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { getNativeExpoFixture } = require('./native-expo-fixture.cjs');
 
 const repo = path.resolve(__dirname, '../..');
+const expoFixture = getNativeExpoFixture(process.env.VELLIRA_NATIVE_EXPO_PROFILE, repo);
 const native = path.join(repo, 'packages/react-native');
 const candidateSource = path.join(native, 'dist/shared-proof');
 const required = ['index.js', 'button.js', 'theme.js'];
@@ -104,14 +106,9 @@ const pkg = {
   },
   dependencies: {
     '@vellira-ui/react-native': 'file:./vellira-hermes-shared-candidate.tgz',
-    expo: '57.0.31',
-    '@expo/metro-runtime': '57.0.17',
-    react: '19.2.3',
-    'react-native': '0.86.3',
-    'react-native-svg': '15.15.4',
-    'react-native-safe-area-context': '5.9.1',
+    ...expoFixture.dependencies,
   },
-  devDependencies: { typescript: '6.0.3', '@types/react': '19.2.4' },
+  devDependencies: expoFixture.devDependencies,
 };
 write('package.json', JSON.stringify(pkg, null, 2) + '\n');
 write('app.json', JSON.stringify({ expo: {
@@ -275,5 +272,6 @@ No production exports, npm version, repository dependencies, or application file
 `);
 console.log('[native-hermes] project:', destination);
 console.log('[native-hermes] source package:', packageVersion);
+console.log('[native-hermes] toolchain:', expoFixture.profile, expoFixture.lockSha256 ?? 'legacy-pinned');
 console.log('[native-hermes] candidate tarball:', tarball);
 console.log('[native-hermes] next: cd ' + JSON.stringify(destination) + ' && ' + (exactTarball ? 'npm install --no-audit --no-fund' : 'npm install --legacy-peer-deps --no-audit --no-fund') + ' && npm run typecheck && npm run ios -- --device');

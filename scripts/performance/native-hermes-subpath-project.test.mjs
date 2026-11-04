@@ -17,6 +17,9 @@ function makeFixture() {
   fs.mkdirSync(scripts, { recursive: true });
   fs.mkdirSync(path.join(native, 'dist/shared-proof'), { recursive: true });
   fs.copyFileSync(generator, path.join(scripts, 'native-hermes-subpath-project.cjs'));
+  fs.copyFileSync(path.join(path.dirname(generator), 'native-expo-fixture.cjs'),
+    path.join(scripts, 'native-expo-fixture.cjs'));
+
   fs.writeFileSync(path.join(native, 'package.json'), '{"version":"2.188.1"}\n');
   for (const file of ['index.js', 'button.js', 'theme.js']) {
     fs.writeFileSync(path.join(native, 'dist/shared-proof', file), 'export {}\n');
