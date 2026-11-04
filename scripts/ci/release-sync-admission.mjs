@@ -9,7 +9,13 @@ export const BASELINE_CHECKS = Object.freeze([
 
 export const STARTER_CHECKS = Object.freeze([
   'pin-contract', 'web-clean-room', 'expo-clean-room',
-  'package-exact-proof', 'migration-preflight', 'pinned-patch'
+  'package-exact-proof', 'migration-preflight', 'pinned-patch',
+  'Pack exact npm candidate', 'Quality & Component Quality',
+  'Unit & Coverage Tests', 'Storybook & Browser Tests',
+  'Component Page & Blog Tests', 'Cloudflare runtime contracts',
+  'Cloudflare multi-deployment browser migration',
+  'Lighthouse / Website', 'Lighthouse / Docs',
+  'Analyze (actions)', 'Analyze (javascript-typescript)'
 ]);
 
 const STARTER_FILES = new Set([
