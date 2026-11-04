@@ -204,6 +204,35 @@ jobs:
           # required-check coverage has been configured and verified.
           echo "::notice::Release sync PR created; automatic merge disabled pending exact-head CI and review."
           echo "Manual release sync merge only after all Native, Web, security and consumer checks pass." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enable verified release sync auto-merge only under strict required admission
+        if: steps.recovery-version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.recovery-release-sync-token.outputs.token }}
+          PR_NUMBER: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.version-sync-pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ inputs.release_version }}
+          SYNC_MODE: release
+        run: node scripts/ci/release-sync-automerge.mjs
+
+      - name: Enable verified release sync auto-merge only under strict required admission
+        if: steps.version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.release-sync-token.outputs.token }}
+          PR_NUMBER: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.version-sync-pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ steps.version-sync.outputs.version }}
+          SYNC_MODE: release
+        run: node scripts/ci/release-sync-automerge.mjs
+
+      - name: Enable verified release sync auto-merge only under strict required admission
+        env:
+          GH_TOKEN: ${{ steps.auto-reconcile-release-sync-token.outputs.token }}
+          PR_NUMBER: ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ needs.release-state.outputs.release_version }}
+          SYNC_MODE: release
+        run: node scripts/ci/release-sync-automerge.mjs
   release:
     needs: release-state
     if: needs.release-state.outputs.state == 'synchronized'
