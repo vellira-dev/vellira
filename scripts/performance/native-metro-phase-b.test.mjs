@@ -89,3 +89,49 @@ test('opt-in shared Native matrix measures exact packed candidate root vs leaf',
   assert.match(script, /candidateSource/);
   assert.match(script, /createHash\('sha256'\)/);
 });
+
+test('exact Native Metro matrix pins the entire release-candidate dependency set', () => {
+  assert.match(script, /validateCandidateArtifactDirectory\(candidateDir, expectedSourceSha, NATIVE_PACKAGE_NAMES\)/);
+  assert.match(script, /assertInstalledCandidatePackages\(dir, candidate, NATIVE_PACKAGE_NAMES\)/);
+  assert.match(script, /deps\[artifact.name\] = 'file:' \+ artifact.tarballPath/);
+  assert.match(script, /nativeArtifact.sha256 !== candidateSha256/);
+  assert.match(script, /manifestSha256: candidate.manifestSha256/);
+  assert.match(script, /verifiedLocalCandidatePackages/);
+});
+
+test('candidate manifest authority must exist before starting Metro installs', () => {
+  const scratch = mkdtempSync(path.join(tmpdir(), 'vellira-native-manifest-'));
+  try {
+    const file = path.join(scratch, 'native-candidate.tgz');
+    writeFileSync(file, 'synthetic-not-a-real-package');
+    const { createHash } = require('node:crypto');
+    const hash = createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    const execute = (extra) => spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL('./native-metro-matrix.cjs', import.meta.url))],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          VELLIRA_NATIVE_VERSION: '2.190.9',
+          VELLIRA_NATIVE_CANDIDATE_TGZ: file,
+          VELLIRA_NATIVE_CANDIDATE_SHA256: hash,
+          VELLIRA_CANDIDATE_DIR: '',
+          VELLIRA_CANDIDATE_SHA: '',
+          ...extra,
+        },
+      }
+    );
+    const missing = execute({});
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /requires VELLIRA_CANDIDATE_DIR and exact VELLIRA_CANDIDATE_SHA/);
+    const invalid = execute({
+      VELLIRA_CANDIDATE_DIR: scratch,
+      VELLIRA_CANDIDATE_SHA: '0'.repeat(40),
+    });
+    assert.notEqual(invalid.status, 0);
+    assert.match(invalid.stderr, /release candidate manifest is missing/);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
