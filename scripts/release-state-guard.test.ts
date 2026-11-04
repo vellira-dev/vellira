@@ -206,7 +206,8 @@ describe('release state guard', () => {
     const recoveryStart = workflow.indexOf('\n  recover-existing-release:');
     const releaseJob = workflow.slice(releaseStart, recoveryStart);
     const recoveryJob = workflow.slice(recoveryStart);
-    const manualReview = 'Require human-reviewed release sync PR (no automatic merge)';
+    const manualReview =
+      'Require human-reviewed release sync PR (no automatic merge)';
 
     expect(releaseJob.indexOf(manualReview)).toBeGreaterThan(
       releaseJob.indexOf('Verify version sync PR creation')
