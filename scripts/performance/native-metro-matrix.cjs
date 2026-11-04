@@ -10,6 +10,11 @@ const { spawnSync } = require('node:child_process');
 const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs');
 const { getNativeExpoFixture } = require('./native-expo-fixture.cjs');
 const { assertNativeSubpathContract } = require('../release-candidate/native-subpath-contract.cjs');
+const {
+  NATIVE_PACKAGE_NAMES,
+  assertInstalledCandidatePackages,
+  validateCandidateArtifactDirectory,
+} = require('../release-candidate/consumer-artifacts.cjs');
 
 const expoFixture = getNativeExpoFixture(process.env.VELLIRA_NATIVE_EXPO_PROFILE);
 const version = process.env.VELLIRA_NATIVE_VERSION;
@@ -38,6 +43,26 @@ if (candidateTarball) {
   }
 } else if (requestedCandidateHash) {
   throw new Error('Native Metro candidate SHA256 supplied without a tarball.');
+}
+// In candidate mode, all Vellira dependencies must come from the same exact
+// locally packed release candidate. A standalone Native tgz could silently
+// resolve core/icons/tokens/types from npm registry and invalidate the proof.
+let candidate = null;
+if (candidateTarball) {
+  const expectedSourceSha = process.env.VELLIRA_CANDIDATE_SHA;
+  const candidateDir = process.env.VELLIRA_CANDIDATE_DIR;
+  if (!candidateDir || !/^[a-f0-9]{40}$/.test(expectedSourceSha ?? '')) {
+    throw new Error('Native Metro candidate requires VELLIRA_CANDIDATE_DIR and exact VELLIRA_CANDIDATE_SHA.');
+  }
+  candidate = validateCandidateArtifactDirectory(candidateDir, expectedSourceSha, NATIVE_PACKAGE_NAMES);
+  if (candidate.manifest.version !== version) {
+    throw new Error('Native Metro candidate version differs from candidate manifest.');
+  }
+  const nativeArtifact = candidate.packages.find(p => p.name === '@vellira-ui/react-native');
+  if (!nativeArtifact || path.resolve(nativeArtifact.tarballPath) !== path.resolve(candidateTarball) ||
+      nativeArtifact.sha256 !== candidateSha256) {
+    throw new Error('Native Metro tarball differs from exact release candidate.');
+  }
 }
 const optInSubpaths = process.env.VELLIRA_METRO_SUBPATH_MATRIX === '1';
 const cases = ['baseline', 'theme', 'button', 'button-select'];
@@ -92,8 +117,15 @@ function manifest(kind) {
     deps['react-native-safe-area-context'] =
       expoFixture.dependencies['react-native-safe-area-context'];
   }
-  if (kind !== 'baseline') deps['@vellira-ui/react-native'] = candidateTarball
-    ? 'file:' + candidateTarball : version;
+  if (kind !== 'baseline') {
+    if (candidate) {
+      for (const artifact of candidate.packages) {
+        deps[artifact.name] = 'file:' + artifact.tarballPath;
+      }
+    } else {
+      deps['@vellira-ui/react-native'] = version;
+    }
+  }
   return {
     name: 'vellira-native-metro-' + kind,
     private: true,
@@ -174,13 +206,18 @@ const evidence = {
     'git', ['rev-parse', 'HEAD'], path.resolve(__dirname, '../..')
   ),
   pinnedFixtureDependencies: manifest('baseline').dependencies,
-  installMode: 'normal npm install; legacy-peer-deps=false',
+  installMode: candidate
+    ? 'exact matched Native release candidate tarballs; normal npm install; legacy-peer-deps=false'
+    : 'normal npm install; legacy-peer-deps=false',
   productionOnly,
   optInSubpaths,
   candidateSource: candidateTarball
-    ? { mode: 'exact-candidate-tarball',
+    ? { mode: 'exact-candidate-tarballs',
         sha256: candidateSha256,
-        path: path.basename(candidateTarball) }
+        path: path.basename(candidateTarball),
+        manifestSha256: candidate.manifestSha256,
+        sourceSha: candidate.manifest.source.sha,
+        packages: candidate.packages.map(p => ({ name: p.name, version: p.version, sha256: p.sha256 })) }
     : { mode: 'exact-published-npm', version },
   purpose: 'Differential iOS/Android production Metro output; not device startup',
   cases: {},
@@ -201,6 +238,9 @@ try {
     run('npm', ['install', '--no-audit', '--no-fund'], dir);
     const lockBytes = fs.readFileSync(path.join(dir, 'package-lock.json'));
     const lock = JSON.parse(lockBytes.toString('utf8'));
+    const installedCandidate = candidate && kind !== 'baseline'
+      ? assertInstalledCandidatePackages(dir, candidate, NATIVE_PACKAGE_NAMES)
+      : null;
     if (lock.packages?.['node_modules/@react-native-picker/picker']) {
       throw new Error(kind + ': npm lockfile unexpectedly installed Picker.');
     }
@@ -334,6 +374,7 @@ try {
         packageLockSha256: createHash('sha256').update(lockBytes).digest('hex'),
         pickerInLockfile: false,
         nativeExplicitlyRequested: kind !== 'baseline',
+        ...(installedCandidate ? { verifiedLocalCandidatePackages: installedCandidate.map(p => p.name) } : {}),
       },
       nativePackageInventory,
       platforms: measurements,
