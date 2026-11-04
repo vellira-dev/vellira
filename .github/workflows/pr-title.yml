@@ -91,6 +91,7 @@ jobs:
         working-directory: tools/pr-title-validator-deploy
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          VELLIRA_TRUSTED_DEPENDABOT_PR: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
         shell: bash
         run: |
           set -euo pipefail
