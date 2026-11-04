@@ -127,7 +127,7 @@ describe('release state guard', () => {
     );
     expect(workflow).toContain('Create or update automatic version sync PR');
     expect(workflow).toContain(
-      'Enable auto-merge for automatic version sync PR'
+      'Require human-reviewed release sync PR (no automatic merge)'
     );
     expect(workflow).not.toContain('gh workflow run release.yml --ref main');
     expect(workflow).not.toContain('actions: write');
@@ -200,33 +200,24 @@ describe('release state guard', () => {
     expect(config).toContain('releasedLabels: false');
   });
 
-  it('enables auto-merge for normal and recovered version-sync PRs', () => {
+  it('requires reviewed release sync PRs across normal and recovery paths', () => {
     const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
     const releaseStart = workflow.indexOf('\n  release:');
     const recoveryStart = workflow.indexOf('\n  recover-existing-release:');
     const releaseJob = workflow.slice(releaseStart, recoveryStart);
     const recoveryJob = workflow.slice(recoveryStart);
-    const expectAfter = (source: string, before: string, after: string) => {
-      expect(source.indexOf(after)).toBeGreaterThan(source.indexOf(before));
-    };
+    const manualReview =
+      'Require human-reviewed release sync PR (no automatic merge)';
 
-    expectAfter(
-      releaseJob,
-      'Verify version sync PR creation',
-      'Enable auto-merge for version sync PR'
+    expect(releaseJob.indexOf(manualReview)).toBeGreaterThan(
+      releaseJob.indexOf('Verify version sync PR creation')
     );
-    expectAfter(
-      recoveryJob,
-      'Verify version sync PR creation',
-      'Enable auto-merge for recovered version sync PR'
+    expect(recoveryJob.indexOf(manualReview)).toBeGreaterThan(
+      recoveryJob.indexOf('Verify version sync PR creation')
     );
-    expect(workflow.match(/gh pr merge/g)).toHaveLength(3);
-    expect(workflow.match(/--auto/g)).toHaveLength(3);
-    expect(workflow.match(/--squash/g)).toHaveLength(3);
-    expect(workflow.match(/--delete-branch/g)).toHaveLength(3);
-    expect(recoveryJob).toContain(
-      'GH_TOKEN: ${{ steps.recovery-release-sync-token.outputs.token }}'
-    );
+    expect(workflow.split(manualReview)).toHaveLength(4);
+    expect(workflow).not.toContain('gh pr merge');
+    expect(workflow).not.toContain('--admin');
   });
 
   it('seeds release-sync refs at exact main without workflow permission', () => {
