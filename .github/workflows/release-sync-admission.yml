@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 22.23.4
       - name: Test fail-closed release sync admission policy
-        run: node --test scripts/ci/release-sync-admission.test.mjs
+        run: node --test scripts/ci/release-sync-admission.test.mjs scripts/ci/release-sync-automerge.test.mjs
       - name: Check exact-head release and Starter sync admission
         env:
           GH_TOKEN: ${{ github.token }}
