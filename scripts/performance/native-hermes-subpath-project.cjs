@@ -7,10 +7,6 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { getNativeExpoFixture } = require('./native-expo-fixture.cjs');
-const {
-  NATIVE_PACKAGE_NAMES,
-  validateCandidateArtifactDirectory,
-} = require('../release-candidate/consumer-artifacts.cjs');
 
 const repo = path.resolve(__dirname, '../..');
 const expoFixture = getNativeExpoFixture(process.env.VELLIRA_NATIVE_EXPO_PROFILE, repo);
@@ -28,7 +24,6 @@ const packageVersion = JSON.parse(
   fs.readFileSync(path.join(native, 'package.json'), 'utf8')
 ).version;
 let candidateHash;
-let exactCandidate;
 if (exactTarball) {
   const requiredHash = process.env.VELLIRA_NATIVE_CANDIDATE_SHA256;
   if (!/^[a-f0-9]{64}$/.test(requiredHash ?? '')) {
@@ -37,17 +32,6 @@ if (exactTarball) {
   candidateHash = createHash('sha256').update(fs.readFileSync(exactTarball)).digest('hex');
   if (candidateHash !== requiredHash) {
     throw new Error('Exact candidate SHA256 mismatch: ' + candidateHash);
-  }
-  const candidateDir = process.env.VELLIRA_CANDIDATE_DIR;
-  const expectedSha = process.env.VELLIRA_CANDIDATE_SHA;
-  if (!candidateDir || !/^[a-f0-9]{40}$/.test(expectedSha ?? '')) {
-    throw new Error('Exact Hermes candidate requires VELLIRA_CANDIDATE_DIR and VELLIRA_CANDIDATE_SHA.');
-  }
-  exactCandidate = validateCandidateArtifactDirectory(candidateDir, expectedSha, NATIVE_PACKAGE_NAMES);
-  const nativeCandidate = exactCandidate.packages.find(p => p.name === '@vellira-ui/react-native');
-  if (!nativeCandidate || path.resolve(nativeCandidate.tarballPath) !== path.resolve(exactTarball) ||
-      nativeCandidate.sha256 !== candidateHash) {
-    throw new Error('Hermes Native tarball differs from exact release candidate.');
   }
   const inspected = spawnSync('tar', ['-xzOf', exactTarball, 'package/package.json'], {
     encoding: 'utf8', maxBuffer: 1024 * 1024,
@@ -96,16 +80,10 @@ function write(name, value) {
 }
 const tarball = path.join(destination, 'vellira-hermes-shared-candidate.tgz');
 if (exactTarball) {
-  // All native-related Vellira packages are installed from one immutable
-  // candidate. Never fall back to registry Vellira packages.
-  for (const artifact of exactCandidate.packages) {
-    const target = artifact.name === '@vellira-ui/react-native'
-      ? tarball
-      : path.join(destination, artifact.filename);
-    fs.copyFileSync(artifact.tarballPath, target, fs.constants.COPYFILE_EXCL);
-  }
+  // Real candidate mode: never modify any installed package or rebuild an
+  // isolated entry. The same actual tarball must be used for iOS and Android.
+  fs.copyFileSync(exactTarball, tarball, fs.constants.COPYFILE_EXCL);
   console.log('[native-hermes] immutable candidate SHA256:', candidateHash);
-  console.log('[native-hermes] candidate manifest SHA256:', exactCandidate.manifestSha256);
 } else {
   const command = spawnSync(process.execPath, [path.join(repo, 'scripts/performance/native-shared-chunk-tarball-probe.cjs')], {
     cwd: repo,
@@ -127,16 +105,8 @@ const pkg = {
     typecheck: 'tsc --noEmit',
   },
   dependencies: {
+    '@vellira-ui/react-native': 'file:./vellira-hermes-shared-candidate.tgz',
     ...expoFixture.dependencies,
-    ...Object.fromEntries((exactCandidate?.packages ?? []).map(p => [
-      p.name,
-      'file:./' + (p.name === '@vellira-ui/react-native'
-        ? 'vellira-hermes-shared-candidate.tgz'
-        : p.filename),
-    ])),
-    ...(!exactCandidate
-      ? { '@vellira-ui/react-native': 'file:./vellira-hermes-shared-candidate.tgz' }
-      : {}),
   },
   devDependencies: expoFixture.devDependencies,
 };
