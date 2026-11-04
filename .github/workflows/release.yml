@@ -197,15 +197,22 @@ jobs:
             exit 1
           fi
 
-      - name: Enable auto-merge for automatic version sync PR
+      - name: Require human-reviewed release sync PR (no automatic merge)
+        run: |
+          # PR #2092 merged with failing Native Expo migration-preflight.
+          # This producer cannot grant merge authority unless strict exact-head
+          # required-check coverage has been configured and verified.
+          echo "::notice::Release sync PR created; automatic merge disabled pending exact-head CI and review."
+          echo "Manual release sync merge only after all Native, Web, security and consumer checks pass." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enable verified release sync auto-merge only under strict required admission
         env:
           GH_TOKEN: ${{ steps.auto-reconcile-release-sync-token.outputs.token }}
-        run: |
-          gh pr merge ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-number }} \
-            --auto \
-            --squash \
-            --delete-branch
-
+          PR_NUMBER: ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.auto-reconcile-version-sync-pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ needs.release-state.outputs.release_version }}
+          SYNC_MODE: release
+        run: node scripts/ci/release-sync-automerge.mjs
   release:
     needs: release-state
     if: needs.release-state.outputs.state == 'synchronized'
@@ -581,16 +588,24 @@ jobs:
             exit 1
           fi
 
-      - name: Enable auto-merge for version sync PR
+      - name: Require human-reviewed release sync PR (no automatic merge)
+        if: steps.version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        run: |
+          # PR #2092 merged with failing Native Expo migration-preflight.
+          # This producer cannot grant merge authority unless strict exact-head
+          # required-check coverage has been configured and verified.
+          echo "::notice::Release sync PR created; automatic merge disabled pending exact-head CI and review."
+          echo "Manual release sync merge only after all Native, Web, security and consumer checks pass." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enable verified release sync auto-merge only under strict required admission
         if: steps.version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ steps.release-sync-token.outputs.token }}
-        run: |
-          gh pr merge ${{ steps.version-sync-pr.outputs.pull-request-number }} \
-            --auto \
-            --squash \
-            --delete-branch
-
+          PR_NUMBER: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.version-sync-pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ steps.version-sync.outputs.version }}
+          SYNC_MODE: release
+        run: node scripts/ci/release-sync-automerge.mjs
   recover-existing-release:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -796,12 +811,21 @@ jobs:
             exit 1
           fi
 
-      - name: Enable auto-merge for recovered version sync PR
+      - name: Require human-reviewed release sync PR (no automatic merge)
+        if: steps.recovery-version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
+        run: |
+          # PR #2092 merged with failing Native Expo migration-preflight.
+          # This producer cannot grant merge authority unless strict exact-head
+          # required-check coverage has been configured and verified.
+          echo "::notice::Release sync PR created; automatic merge disabled pending exact-head CI and review."
+          echo "Manual release sync merge only after all Native, Web, security and consumer checks pass." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enable verified release sync auto-merge only under strict required admission
         if: steps.recovery-version-sync.outputs.changed == 'true' && steps.version-sync-pr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ steps.recovery-release-sync-token.outputs.token }}
-        run: |
-          gh pr merge ${{ steps.version-sync-pr.outputs.pull-request-number }} \
-            --auto \
-            --squash \
-            --delete-branch
+          PR_NUMBER: ${{ steps.version-sync-pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.version-sync-pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ inputs.release_version }}
+          SYNC_MODE: release
+        run: node scripts/ci/release-sync-automerge.mjs

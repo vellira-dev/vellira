@@ -19,8 +19,8 @@ const locked = (name) => {
 };
 
 assert.equal(locked('node-forge'), '1.4.2');
-assert.equal(locked('expo'), '58.0.22');
-assert.equal(lock.packages['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.18');
+assert.equal(locked('expo'), '58.0.23');
+assert.equal(lock.packages['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.19');
 assert.equal(Object.keys(lock.packages).filter((p) => /(^|\/)node_modules\/zod$/.test(p)).length, 0,
   'A vulnerable Zod runtime remains in the Native Starter lockfile');
 assert.equal(locked('@expo/code-signing-certificates'), '0.0.7');

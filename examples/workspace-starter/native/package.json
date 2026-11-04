@@ -19,27 +19,31 @@
     "security:verify-patch": "node scripts/apply-node-forge-patch.cjs --verify && node scripts/security-expo-58-guard.cjs --verify"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~58.0.15",
+    "@expo/metro-runtime": "58.0.17",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-picker/picker": "2.11.4",
-    "@vellira-ui/react-native": "2.190.9",
-    "expo": "^58.0.22",
+    "@vellira-ui/icons": "2.190.12",
+    "@vellira-ui/react-native": "2.190.12",
+    "expo": "58.0.23",
+    "expo-blur": "~58.0.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "^0.88.1",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-reanimated": "4.7.1",
-    "react-native-safe-area-context": "^5.9.1",
+    "react-native-safe-area-context": "5.11.1",
     "react-native-svg": "15.16.0",
     "react-native-web": "^0.21.2",
-    "react-native-worklets": "0.13.0",
-    "@vellira-ui/icons": "2.190.9",
-    "expo-blur": "~58.0.5"
+    "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
+    "node-forge": "1.4.2",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "node-forge": "1.4.2"
   }
 }
