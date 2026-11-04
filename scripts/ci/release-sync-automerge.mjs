@@ -11,8 +11,10 @@ export function rulesetGrantsSafeAdmission(rule) {
   const pr = rule.rules.find(x => x.type === 'pull_request');
   const statuses = rule.rules.find(x => x.type === 'required_status_checks')?.parameters;
   if (!pr || !statuses?.strict_required_status_checks_policy) return false;
-  const required = new Set(statuses.required_status_checks?.map(x => x.context) ?? []);
-  return [...BASELINE_CHECKS, 'Release Sync Admission'].every(x => required.has(x));
+  const required = new Map(
+    (statuses.required_status_checks ?? []).map(x => [x.context, x.integration_id]));
+  return [...BASELINE_CHECKS, 'Release Sync Admission'].every(x =>
+    required.get(x) === (x === 'CodeQL' ? 57789 : 15368));
 }
 
 async function api(path, token) {
