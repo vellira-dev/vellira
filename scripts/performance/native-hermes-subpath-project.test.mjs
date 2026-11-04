@@ -19,6 +19,10 @@ function makeFixture() {
   fs.copyFileSync(generator, path.join(scripts, 'native-hermes-subpath-project.cjs'));
   fs.copyFileSync(path.join(path.dirname(generator), 'native-expo-fixture.cjs'),
     path.join(scripts, 'native-expo-fixture.cjs'));
+  const releaseScripts = path.join(repo, 'scripts/release-candidate');
+  fs.mkdirSync(releaseScripts, { recursive: true });
+  fs.copyFileSync(path.join(path.dirname(generator), '../release-candidate/consumer-artifacts.cjs'),
+    path.join(releaseScripts, 'consumer-artifacts.cjs'));
 
   fs.writeFileSync(path.join(native, 'package.json'), '{"version":"2.188.1"}\n');
   for (const file of ['index.js', 'button.js', 'theme.js']) {
@@ -68,7 +72,48 @@ function makePackedCandidate(fixture, { version = '2.188.1' } = {}) {
   ], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   const sha = createHash('sha256').update(fs.readFileSync(candidate)).digest('hex');
-  return { candidate, sha };
+  const names = ['core', 'tokens', 'types', 'icons', 'react-native'];
+  const candidateDir = path.join(fixture.root, 'release-candidate');
+  fs.mkdirSync(candidateDir);
+  const artifacts = names.map(name => {
+    const filename = name === 'react-native' ? 'candidate.tgz' : name + '.tgz';
+    const file = path.join(candidateDir, filename);
+    fs.copyFileSync(candidate, file);
+    const bytes = fs.readFileSync(file);
+    return {
+      name: '@vellira-ui/' + name,
+      version: '2.188.1',
+      filename,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      npmIntegrity: 'sha512-' + createHash('sha512').update(bytes).digest('base64'),
+      npmShasum: createHash('sha1').update(bytes).digest('hex'),
+    };
+  });
+  const sourceSha = 'a'.repeat(40);
+  fs.writeFileSync(path.join(candidateDir, 'candidate.json'), JSON.stringify({
+    schemaVersion: 1,
+    source: { sha: sourceSha },
+    version: '2.188.1',
+    checks: { cleanInstall: true },
+    packages: [
+      ...artifacts.slice(0, 4),
+      { ...artifacts[4] },
+      { ...artifacts[0], name: '@vellira-ui/react', filename: 'react.tgz' },
+    ],
+  }));
+  fs.copyFileSync(path.join(candidateDir, 'core.tgz'), path.join(candidateDir, 'react.tgz'));
+  return {
+    candidate,
+    sha,
+    candidateDir,
+    sourceSha,
+    exactEnv: {
+      VELLIRA_NATIVE_CANDIDATE_TGZ: candidate,
+      VELLIRA_NATIVE_CANDIDATE_SHA256: sha,
+      VELLIRA_CANDIDATE_DIR: candidateDir,
+      VELLIRA_CANDIDATE_SHA: sourceSha,
+    },
+  };
 }
 
 test('prepares isolated unpublished Hermes Expo app with both context boundaries', () => {
@@ -152,19 +197,24 @@ test('fails closed before staging when shared graph build is incomplete', () => 
 
 test('exact Native candidate mode copies immutable tarball without synthetic staging', () => {
   withFixture((fixture) => {
-    const { candidate, sha } = makePackedCandidate(fixture);
+    const { candidate, sha, exactEnv } = makePackedCandidate(fixture);
     fs.rmSync(path.join(fixture.native, 'dist/shared-proof'), {
       recursive: true,
       force: true,
     });
     const run = execute(fixture, [fixture.destination], {
-      VELLIRA_NATIVE_CANDIDATE_TGZ: candidate,
-      VELLIRA_NATIVE_CANDIDATE_SHA256: sha,
+      ...exactEnv,
       VELLIRA_HERMES_SHEET_PROOF: '1',
     });
     assert.equal(run.status, 0, run.stderr);
     assert.match(run.stdout, /immutable candidate SHA256/);
     assert.match(run.stdout, new RegExp(sha));
+    const generated = JSON.parse(fs.readFileSync(path.join(fixture.destination, 'package.json'), 'utf8'));
+    for (const name of ['core', 'icons', 'tokens', 'types']) {
+      assert.match(generated.dependencies['@vellira-ui/' + name], /^file:\.\//);
+      assert.ok(fs.existsSync(path.join(fixture.destination,
+        generated.dependencies['@vellira-ui/' + name].slice(7))));
+    }
     assert.deepEqual(
       fs.readFileSync(candidate),
       fs.readFileSync(path.join(
@@ -203,12 +253,8 @@ test('exact Native candidate rejects missing or mismatched SHA before creating f
 
 test('exact Native candidate rejects bad archive and source-version drift', () => {
   withFixture((fixture) => {
-    const { candidate } = makePackedCandidate(fixture, { version: '2.188.2' });
-    const sha = createHash('sha256').update(fs.readFileSync(candidate)).digest('hex');
-    const mismatch = execute(fixture, [fixture.destination], {
-      VELLIRA_NATIVE_CANDIDATE_TGZ: candidate,
-      VELLIRA_NATIVE_CANDIDATE_SHA256: sha,
-    });
+    const { candidate, sha, exactEnv } = makePackedCandidate(fixture, { version: '2.188.2' });
+    const mismatch = execute(fixture, [fixture.destination], exactEnv);
     assert.notEqual(mismatch.status, 0);
     assert.match(mismatch.stderr, /name\/version\/subpath authority mismatch/);
     assert.equal(fs.existsSync(fixture.destination), false);
@@ -217,11 +263,32 @@ test('exact Native candidate rejects bad archive and source-version drift', () =
     fs.writeFileSync(invalid, 'not-a-tarball');
     const hash = createHash('sha256').update(fs.readFileSync(invalid)).digest('hex');
     const reject = execute(fixture, [fixture.destination], {
+      ...exactEnv,
       VELLIRA_NATIVE_CANDIDATE_TGZ: invalid,
       VELLIRA_NATIVE_CANDIDATE_SHA256: hash,
     });
     assert.notEqual(reject.status, 0);
-    assert.match(reject.stderr, /not a valid npm tarball/);
+    assert.match(reject.stderr, /Hermes Native tarball differs from exact release candidate/);
+    assert.equal(fs.existsSync(fixture.destination), false);
+  });
+});
+
+test('exact Hermes candidate requires full manifest authority before output creation', () => {
+  withFixture((fixture) => {
+    const { candidate, sha, exactEnv } = makePackedCandidate(fixture);
+    const missing = execute(fixture, [fixture.destination], {
+      VELLIRA_NATIVE_CANDIDATE_TGZ: candidate,
+      VELLIRA_NATIVE_CANDIDATE_SHA256: sha,
+      VELLIRA_CANDIDATE_DIR: '',
+      VELLIRA_CANDIDATE_SHA: '',
+    });
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /requires VELLIRA_CANDIDATE_DIR and VELLIRA_CANDIDATE_SHA/);
+    assert.equal(fs.existsSync(fixture.destination), false);
+    fs.rmSync(path.join(exactEnv.VELLIRA_CANDIDATE_DIR, 'icons.tgz'));
+    const missingInternal = execute(fixture, [fixture.destination], exactEnv);
+    assert.notEqual(missingInternal.status, 0);
+    assert.match(missingInternal.stderr, /Candidate tarball is missing/);
     assert.equal(fs.existsSync(fixture.destination), false);
   });
 });
