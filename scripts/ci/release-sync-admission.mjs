@@ -60,6 +60,8 @@ export function assessCheckRuns(runs, checks) {
   const byName = new Map();
   for (const run of runs) {
     if (!checks.includes(run.name)) continue;
+    const expectedApp = run.name === 'CodeQL' ? 'github-advanced-security' : 'github-actions';
+    if (run.app?.slug !== expectedApp) continue;
     const old = byName.get(run.name);
     if (!old || new Date(run.started_at ?? run.created_at ?? 0).getTime() >
        new Date(old.started_at ?? old.created_at ?? 0).getTime() ||
