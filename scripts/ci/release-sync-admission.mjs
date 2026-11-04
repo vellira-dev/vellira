@@ -80,6 +80,11 @@ export function assessCheckRuns(runs, checks) {
     const run = byName.get(name);
     if (!run || run.status !== 'completed') {
       pending.push(name);
+    } else if (name === 'CodeQL' && run.conclusion === 'neutral') {
+      // GitHub Advanced Security may initially complete CodeQL as neutral,
+      // then update that SAME check-run to success after scanning finishes.
+      // Never treat neutral as success; only allow a short bounded retry.
+      pending.push(name);
     } else if (run.conclusion !== 'success') {
       failed.push(name + ': ' + String(run.conclusion));
     }
@@ -145,6 +150,7 @@ async function main() {
       '--check'], { stdio: 'inherit' });
   }
   const stopAt = Date.now() + 25 * 60_000;
+  let codeqlNeutralSince = null;
   while (Date.now() < stopAt) {
     const latest = await api(base + '/pulls/' + prNo, token);
     assert.equal(latest.head.sha, head, 'Candidate HEAD changed during checks');
@@ -153,6 +159,18 @@ async function main() {
     const report = await api(base + '/commits/' + head + '/check-runs?per_page=100', token);
     assert.ok(report.total_count <= 100, 'Truncated check-run evidence');
     const result = assessCheckRuns(report.check_runs, policy.checks);
+    const neutralCodeql = report.check_runs.some(run =>
+      run.name === 'CodeQL' &&
+      run.app?.slug === 'github-advanced-security' &&
+      run.status === 'completed' && run.conclusion === 'neutral');
+    if (neutralCodeql && result.pending.includes('CodeQL')) {
+      codeqlNeutralSince ??= Date.now();
+      if (Date.now() - codeqlNeutralSince > 120_000) {
+        throw new Error('Release sync denied: CodeQL remained neutral beyond bounded 2-minute grace');
+      }
+    } else {
+      codeqlNeutralSince = null;
+    }
     if (result.failed.length) {
       throw new Error('Release sync denied: ' + result.failed.join('; '));
     }
