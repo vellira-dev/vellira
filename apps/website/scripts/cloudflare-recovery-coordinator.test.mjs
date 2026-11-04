@@ -281,3 +281,53 @@ test('missing push evidence blocks recovery staging instead of bypassing the qui
     requiresReview: true,
   });
 });
+
+
+test('failed staging after Cloudflare deploy must not trigger another deploy', () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [{
+      head_sha: b,
+      event: 'push',
+      status: 'completed',
+      conclusion: 'failure',
+      fullStage: false,
+    }],
+  });
+  assert.deepEqual(plan, {
+    dispatch: false,
+    reason: 'failed_staging_requires_review',
+  });
+});
+
+
+test('failed staging cannot be hidden by a skipped release-sync staging run', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'failure' },
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
+    ],
+  }).dispatch, false);
+});
+
+
+test('cancelled or timed-out staging cannot trigger an automatic redeploy', () => {
+  for (const conclusion of ['cancelled', 'timed_out', 'action_required']) {
+    assert.equal(decideRecovery({
+      ...base,
+      stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion }],
+    }).reason, 'failed_staging_requires_review');
+  }
+});
+
+
+test('skipped release-sync cannot hide a successful fully verified staging run', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
+      stage,
+    ],
+  }).target, 'production');
+});
