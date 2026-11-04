@@ -22,6 +22,20 @@ production input, never separately authored. Work-item, component name, filesyst
 location and exact repository revision remain production identity, not semantic
 architecture selectors.
 
+Profile capabilities are part of that source authority. Program projection and
+generated metadata use the same `resolveComponentCapabilities` function; omitting
+a profile capability from the explicit input cannot remove its obligations. For
+example, an `overlay` program must include the keyboard, focus, compound and
+presentation decisions required by that profile. Missing decisions block planning
+and generator preflight rather than appearing only in final quality checks. The
+compiler does not select those decisions or add modules automatically. A temporal
+component without those overlay requirements must declare an appropriate profile
+in its reviewed source input.
+
+This alignment applies at the selected source revision. Frozen programs, source
+pins and historical evidence remain unchanged; an incompatible source needs a new
+reviewed plan instead of reusing its prior fingerprint or execution approval.
+
 `packages/metadata/src/componentProgram.ts` defines the public schema.
 `scripts/component-program/grammar.ts` owns reusable semantic modules, typed state
 slots, sparse composition laws, platform adapters and proof obligations.
