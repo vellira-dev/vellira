@@ -193,3 +193,13 @@ jobs:
           # exact-head required-check coverage and merge authority are audited.
           echo "::notice::Starter sync PR created; automatic merge disabled pending exact-head CI and review."
           echo "Manual Starter sync merge only after all Native, Web, security and consumer checks pass." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enable verified Starter auto-merge only under strict required admission
+        if: steps.changes.outputs.changed == 'true' && steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.pull-request-number }}
+          EXPECTED_HEAD: ${{ steps.pr.outputs.pull-request-head-sha }}
+          EXPECTED_VERSION: ${{ steps.source.outputs.version }}
+          SYNC_MODE: starter
+        run: node scripts/ci/release-sync-automerge.mjs
