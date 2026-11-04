@@ -44,6 +44,13 @@
     "typescript": "^6.0.3"
   },
   "overrides": {
-    "node-forge": "1.4.2"
+    "node-forge": "1.4.2",
+    "@expo/fingerprint": {
+      "glob": "14.0.2",
+      "minimatch": "11.0.1"
+    },
+    "@expo/cli": {
+      "glob": "14.0.2"
+    }
   }
 }
