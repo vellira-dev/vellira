@@ -67,7 +67,8 @@ overrides:
   postcss: 8.5.23
   # CVE-2026-104861: probe-image-size SVG parser DoS, fixed in 7.4.0.
   probe-image-size: 7.4.0
-  qs: 6.16.0
+  # Dependabot #156: security fix, preserve the maintained qs 6.x API.
+  qs: 6.16.1
   # GHSA-g2v6-rqmx-r4w6: Vue SSR attribute-name CR XSS, fixed in 3.5.42.
   'vue@>=3.5.0 <3.5.42': 3.5.42
   # CVE-2026-102422 / GHSA-pqg4-j6r4-53mv: shell-quote command injection, fixed in 1.11.0.
@@ -86,7 +87,8 @@ overrides:
   'uuid@<11.1.1': 11.1.1
   'valibot@<=1.4.1': 1.4.2
   # GHSA-587h-7wmj-h5pm and related Vite 6.x security fixes.
-  'vite@<=6.4.3': 6.4.4
+  # Dependabot #158: upgrade vulnerable Vite 6.x to patched 6.4.5, leave 7/8 untouched.
+  'vite@>=6.0.0 <6.4.5': 6.4.5
   # GHSA-5j98-mcp5-4vw2: vulnerable glob 10.x CLI command injection.
   '@node-minify/core>glob': 10.5.0
   tmp: 0.2.7
