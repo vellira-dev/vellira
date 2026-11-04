@@ -50,7 +50,7 @@ test('starter candidate scope requires both starter manifests and integrity lock
 test('missing, skipped, neutral, failure and pending never admit', () => {
   const names=['migration-preflight','package-exact-proof'];
   const complete=names.map((name,id)=>({name,id:id+1,status:'completed',conclusion:'success',
-    started_at:'2026-11-04T10:00:00Z'}));
+    started_at:'2026-11-04T10:00:00Z',app:{slug:'github-actions'}}));
   assert.equal(assessCheckRuns(complete,names).success,true);
   assert.deepEqual(assessCheckRuns(complete.slice(0,1),names).pending,['package-exact-proof']);
   for (const conclusion of ['failure','cancelled','skipped','neutral']) {
@@ -59,10 +59,15 @@ test('missing, skipped, neutral, failure and pending never admit', () => {
   assert.deepEqual(assessCheckRuns([{...complete[0],status:'in_progress'},complete[1]],names)
     .pending,['migration-preflight']);
 });
+test('source app spoofing never grants success', () => {
+  const run={name:'migration-preflight',id:1,status:'completed',conclusion:'success',
+    app:{slug:'untrusted-app'},started_at:'2026-11-04T10:00:00Z'};
+  assert.equal(assessCheckRuns([run],['migration-preflight']).success,false);
+});
 test('latest failed attempt defeats older green same exact SHA', () => {
   const name='migration-preflight';
   const old={name,id:1,status:'completed',conclusion:'success',
-    started_at:'2026-11-04T10:00:00Z'};
+    started_at:'2026-11-04T10:00:00Z',app:{slug:'github-actions'}};
   const latest={...old,id:2,conclusion:'failure',started_at:'2026-11-04T10:01:00Z'};
   assert.equal(assessCheckRuns([old,latest],[name]).success,false);
 });
