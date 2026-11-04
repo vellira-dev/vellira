@@ -62,3 +62,16 @@ export function getComponentProfile(
 ): ComponentProfileDefinition {
   return componentProfiles[profile];
 }
+
+/** Effective behavior authority shared by metadata and Component Program. */
+export function resolveComponentCapabilities(input: {
+  profile: ComponentProfileArg;
+  capabilities: readonly ComponentCapability[];
+}): ComponentCapability[] {
+  return [
+    ...new Set([
+      ...getComponentProfile(input.profile).capabilities,
+      ...input.capabilities,
+    ]),
+  ];
+}

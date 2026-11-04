@@ -1,6 +1,7 @@
 import type { ComponentProductionInputV1 } from '../component-production/contracts';
 import type { ComponentProgramSourceV1 } from '../../packages/metadata/src/componentProgram';
 import type { ComponentIntentCapability } from '../../packages/metadata/src/componentIntent';
+import { resolveComponentCapabilities } from '../generators/component/profiles';
 
 /** A projection, not another writable platform/capability/resource authority. */
 export function componentProgramSource(
@@ -16,7 +17,7 @@ export function componentProgramSource(
   >();
   for (const platform of platforms)
     for (const capability of [
-      ...input.capabilities,
+      ...resolveComponentCapabilities(input),
       ...(input.semanticCapabilities ?? []),
       ...(input.platformSemanticCapabilities?.[platform] ?? []),
     ]) {
