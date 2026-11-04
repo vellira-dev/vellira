@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import fs, { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import fs from 'node:fs';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const script = fs.readFileSync(
   new URL('./native-metro-matrix.cjs', import.meta.url), 'utf8'
