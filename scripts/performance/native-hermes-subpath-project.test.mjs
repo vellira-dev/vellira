@@ -108,7 +108,7 @@ function makePackedCandidate(fixture, { version = '2.188.1' } = {}) {
     candidateDir,
     sourceSha,
     exactEnv: {
-      VELLIRA_NATIVE_CANDIDATE_TGZ: candidate,
+      VELLIRA_NATIVE_CANDIDATE_TGZ: path.join(candidateDir, 'candidate.tgz'),
       VELLIRA_NATIVE_CANDIDATE_SHA256: sha,
       VELLIRA_CANDIDATE_DIR: candidateDir,
       VELLIRA_CANDIDATE_SHA: sourceSha,
