@@ -13,7 +13,7 @@ const rule = {
     {type:'required_status_checks',parameters:{
       strict_required_status_checks_policy:true,
       required_status_checks:[...BASELINE_CHECKS,'Release Sync Admission']
-        .map(context=>({context,integration_id:15368}))
+        .map(context=>({context,integration_id:context==='CodeQL'?57789:15368}))
     }}
   ]
 };
@@ -31,6 +31,10 @@ test('missing admission, existing security gap, or relaxed ruleset fails closed'
         p.required_status_checks.filter(x=>x.context!==name)}}]}),false);
   }
   assert.equal(rulesetGrantsSafeAdmission({...rule,bypass_actors:[{actor_id:1}]}),false);
+  assert.equal(rulesetGrantsSafeAdmission({...rule,rules:[rule.rules[0],
+    {...rule.rules[1],parameters:{...rule.rules[1].parameters,required_status_checks:
+      rule.rules[1].parameters.required_status_checks.map(x=>x.context==='Release Sync Admission'
+        ? {...x,integration_id:999} : x)}}]}),false);
   assert.equal(rulesetGrantsSafeAdmission({...rule,enforcement:'evaluate'}),false);
   assert.equal(rulesetGrantsSafeAdmission({...rule,current_user_can_bypass:'always'}),false);
   assert.equal(rulesetGrantsSafeAdmission({...rule,rules:[rule.rules[0],
