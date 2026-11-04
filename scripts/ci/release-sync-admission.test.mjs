@@ -71,3 +71,26 @@ test('latest failed attempt defeats older green same exact SHA', () => {
   const latest={...old,id:2,conclusion:'failure',started_at:'2026-11-04T10:01:00Z'};
   assert.equal(assessCheckRuns([old,latest],[name]).success,false);
 });
+
+test('CodeQL neutral is temporary pending, never an accepted pass', () => {
+  const neutral={name:'CodeQL',id:9,status:'completed',conclusion:'neutral',
+    app:{slug:'github-advanced-security'},started_at:'2026-11-04T20:53:34Z'};
+  const first=assessCheckRuns([neutral],['CodeQL']);
+  assert.equal(first.success,false);
+  assert.deepEqual(first.pending,['CodeQL']);
+  assert.deepEqual(first.failed,[]);
+  const success={...neutral,conclusion:'success'};
+  assert.equal(assessCheckRuns([success],['CodeQL']).success,true);
+  const failure={...neutral,conclusion:'failure'};
+  assert.deepEqual(assessCheckRuns([failure],['CodeQL']).failed,['CodeQL: failure']);
+});
+
+test('neutral for other security gates remains immediately denied', () => {
+  for(const name of ['migration-preflight','package-exact-proof','pinned-patch']) {
+    const run={name,id:10,status:'completed',conclusion:'neutral',
+      app:{slug:'github-actions'},started_at:'2026-11-04T20:53:34Z'};
+    const result=assessCheckRuns([run],[name]);
+    assert.equal(result.success,false);
+    assert.deepEqual(result.failed,[name+': neutral']);
+  }
+});
