@@ -227,7 +227,8 @@ export function temporalSpec(): ComponentProductionInputV1 {
     platform: 'both',
     layer: 'components',
     category: 'feedback',
-    profile: 'overlay',
+    // Temporal behavior alone does not declare overlay focus, keyboard or portal.
+    profile: 'base',
     capabilities: ['controlled', 'uncontrolled'],
     semanticCapabilities: [
       'auto-dismiss',

@@ -1,13 +1,11 @@
 import type { ComponentMetadata } from '@vellira-ui/metadata';
 
 import type { ComponentGenerationPlan } from './plan';
-import { getComponentProfile } from './profiles';
+import { resolveComponentCapabilities } from './profiles';
 import type { MetadataTemplateParams } from './templates';
 
 export function resolvePlanCapabilities(plan: ComponentGenerationPlan) {
-  const profile = getComponentProfile(plan.profile);
-
-  return [...new Set([...profile.capabilities, ...plan.capabilities])];
+  return resolveComponentCapabilities(plan);
 }
 
 /**
