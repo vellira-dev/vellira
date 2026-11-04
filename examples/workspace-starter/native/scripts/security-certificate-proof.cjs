@@ -2,7 +2,8 @@
 'use strict';
 
 // Published RSA smoke test; nested DigestAlgorithm rejection is verified
-// independently in security-asn1-adversarial.cjs. Zod remains open.
+// independently in security-asn1-adversarial.cjs. CLI/Zod absence is
+// asserted against the exact independently generated npm dependency graph.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,7 +19,10 @@ const locked = (name) => {
 };
 
 assert.equal(locked('node-forge'), '1.4.2');
-assert.equal(locked('zod'), '3.25.76');
+assert.equal(locked('expo'), '58.0.22');
+assert.equal(lock.packages['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.18');
+assert.equal(Object.keys(lock.packages).filter((p) => /(^|\/)node_modules\/zod$/.test(p)).length, 0,
+  'A vulnerable Zod runtime remains in the Native Starter lockfile');
 assert.equal(locked('@expo/code-signing-certificates'), '0.0.7');
 
 const forge = requireFromStarter('node-forge');
@@ -47,13 +51,13 @@ try {
 assert.equal(rejected, true, 'A modified message must fail RSA verification');
 
 const summary = {
-  status: 'published-forge-rsa-smoke-pass-zod-open',
+  status: 'published-forge-rsa-smoke-pass-no-zod-in-lock',
   lock: {
     forge: locked('node-forge'),
-    zod: locked('zod'),
+    expoCli: lock.packages['node_modules/expo/node_modules/@expo/cli'].version,
     certificates: locked('@expo/code-signing-certificates'),
   },
   checks: ['exact-locked-packages', 'code-signing-entrypoints', 'rsa-valid-signature', 'rsa-modified-message-rejected'],
-  unproven: ['attacker-controlled-input-reachability', 'zod-oversized-collection-case'],
+  unproven: ['attacker-controlled-input-reachability', 'JSON-schema-validator-adversarial-reachability'],
 };
 console.log(JSON.stringify(summary, null, 2));

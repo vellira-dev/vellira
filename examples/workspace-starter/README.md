@@ -5,7 +5,7 @@ component used both by Vellira's homepage and the standalone Vite starter.
 Not a screenshot, paywall or commercial production template. React and React Native developers can run it,
 inspect the Vellira APIs, and adapt the project to their own work.
 
-Both apps pin **Vellira 2.190.8 packages**. They are independently installable
+Both apps pin **Vellira 2.190.9 packages**. They are independently installable
 and work without a Vellira account, backend or Pro subscription. The public
 source remains available under the repository's MIT license.
 
@@ -100,25 +100,26 @@ npm ci
 npm run start
 ```
 
-The Native Starter uses **published node-forge 1.4.2**, authenticated by an
-exact RSA source SHA-256 check; the 1.4.0 local backport is retired.
-The remaining source-pinned local Expo CLI 58 guard bounds the Zod 3 plugin
-output collector (64 KiB accumulated UTF-8, maximum 128 JSON items).
-`npm run security:verify-patch` verifies both protections.
+The Native Starter uses **published node-forge 1.4.2**, verified against the
+upstream RSA source hash. Its current reproducible npm graph pins Expo 58.0.22,
+React Native 0.88.1 and Expo CLI 58.1.18. The CLI replaces the vulnerable
+Zod 3 parser with `@expo/schema-utils`, and the exact npm lock contains **no Zod**.
 
-The Zod collector mitigation is **not an upstream Zod fix** and does not prove
-every Zod entrypoint safe. Dependabot #142 and issue #1890 remain open.
-The nested-DigestAlgorithm RSA regression rejects malformed signatures on
-the published node-forge 1.4.2 runtime.
-Before **direct** `npx expo`, `node`, custom builds, or repackaging, run
+The source-pinned local Expo CLI 58.1.18 guard preserves stricter product
+bounds: 64 KiB of cumulative UTF-8 output and at most 128 emitted output entries across all chunks, including plain text.
+It runs in `npm ci` postinstall and verifies the published CLI parser source
+against an explicitly reviewed SHA-256 before applying the patch. The guard
+must be re-reviewed whenever the package/source changes; **do not** force
+a major Zod override or bypass the guard.
+
+Before direct `npx expo`, `node`, custom builds or repackaging, run
 `npm run security:verify-patch` in the Native directory. Direct commands
-can bypass the npm `prestart` / `preandroid` / `preios` / `preweb` hooks.
-Do **not** treat `npm ci --ignore-scripts` as a secure installation: it skips
-the Expo CLI guard. Run `node scripts/security-expo-58-guard.cjs --apply`
-and then `npm run security:verify-patch`, which also checks the official
-Forge RSA source. Reinstalling or copying `node_modules` requires rechecking. When the installed Expo CLI
-version or source bytes change, the local guard fails closed and must be
-re-reviewed, not silently re-used.
+can bypass npm `prestart` / `preandroid` / `preios` / `preweb` hooks.
+`npm ci --ignore-scripts` skips the guard and is **not** a valid runtime
+installation until `node scripts/security-expo-58-guard.cjs --apply` and
+`npm run security:verify-patch` both pass. npm's lockfile integrity and
+this installed-source guard are separate evidence; neither proves that
+all untrusted-input paths or real iOS/Android runtime interactions are safe.
 
 Follow Expo's device/emulator instructions. To typecheck:
 
