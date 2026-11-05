@@ -3,7 +3,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import test from 'node:test';
+
+const require = createRequire(import.meta.url);
 
 const website = path.resolve(import.meta.dirname, '..');
 const ownerConfig = path.join(
@@ -63,9 +66,15 @@ test('pinned Wrangler compiles owner candidate without deployment or credentials
 
   // Fixed arguments only: never use --temporary or invoke a deployment.
   // Do not inherit Cloudflare credentials, Buttondown keys or GH tokens.
+  // Resolve the pinned local CLI without invoking the Corepack pnpm shim.
+  // Corepack would try to download pnpm after HOME is isolated and the
+  // deliberately blocked proxy would turn this into a false negative.
+  const wranglerPackagePath = require.resolve('wrangler/package.json', { paths: [website] });
+  const wranglerPackage = JSON.parse(fs.readFileSync(wranglerPackagePath, 'utf8'));
+  const wranglerCli = path.resolve(path.dirname(wranglerPackagePath), wranglerPackage.bin.wrangler);
+  assert.ok(fs.existsSync(wranglerCli), 'Pinned local Wrangler CLI is missing');
   const args = [
-    'exec',
-    'wrangler',
+    wranglerCli,
     'deploy',
     '--config',
     ownerConfig,
@@ -75,7 +84,7 @@ test('pinned Wrangler compiles owner candidate without deployment or credentials
   ];
   assert.ok(args.includes('--dry-run'));
   assert.ok(!args.includes('--temporary'));
-  const result = spawnSync('pnpm', args, {
+  const result = spawnSync(process.execPath, args, {
     cwd: website,
     encoding: 'utf8',
     timeout: 90_000,
