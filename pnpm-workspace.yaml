@@ -26,6 +26,9 @@ minimumReleaseAgeExclude:
 nodeLinker: hoisted
 
 overrides:
+  # GHSA-mrhx-c7xc-m3w5: only upgrade Zod 4 for eslint-plugin-react-hooks.
+  # Expo CLI and Chromium BiDi Zod 3 require independent compatibility proof.
+  'eslint-plugin-react-hooks>zod': 4.6.7
   # CVE-2026-111181 / GHSA-27r3-jxmh-p828: compressed-body stream DoS.
   # Preserve Express 4 and Express 5 parser major-line compatibility.
   'body-parser@>=1.0.0 <1.20.9': 1.20.9
