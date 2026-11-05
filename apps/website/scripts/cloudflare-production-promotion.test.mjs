@@ -53,8 +53,6 @@ test('read-only recovery planning gates a separately privileged revalidated disp
   assert.match(source, /Plan\/dispatch target changed; defer recovery/);
   assert.match(source, /assert\.equal\(latest\.object\?\.sha, mainSha/);
   assert.match(source, /'should_dispatch=' \+ \(plan\.dispatch/);
-  assert.match(source, /Plan\/main SHA changed/);
-  assert.match(source, /Plan\/dispatch target changed/);
   assert.ok(
     source.indexOf("if (mode === 'plan')") <
       source.indexOf("method: 'POST'")
