@@ -100,7 +100,12 @@ export function decideRecovery({
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
+let executionMode = null;
+
 async function github(path, { method = 'GET', body } = {}) {
+  if (method !== 'GET') {
+    assert.equal(executionMode, 'dispatch', 'Read-only recovery may never write to GitHub');
+  }
   const token = process.env.GITHUB_TOKEN;
   assert.ok(token, 'GITHUB_TOKEN required');
   const response = await fetch('https://api.github.com' + path, {
@@ -132,6 +137,7 @@ async function runtimeSha() {
 
 async function main(mode) {
   assert.ok(mode === 'plan' || mode === 'dispatch', 'Explicit plan or dispatch mode required');
+  executionMode = mode;
   assert.equal(process.env.GITHUB_REPOSITORY, OWNER);
   const [ref, productionSha, productionResult] = await Promise.all([
     github('/repos/' + OWNER + '/git/ref/heads/main'),
@@ -184,9 +190,9 @@ async function main(mode) {
     assert.ok(output, 'GITHUB_OUTPUT required for read-only plan');
     const { appendFileSync } = await import('node:fs');
     appendFileSync(output,
-      'should_dispatch=' + (plan.dispatch ? 'true' : 'false') + '\\n' +
-      'main_sha=' + mainSha + '\\n' +
-      'target=' + (plan.dispatch ? plan.target : 'none') + '\\n'
+      'should_dispatch=' + (plan.dispatch ? 'true' : 'false') + '\n' +
+      'main_sha=' + mainSha + '\n' +
+      'target=' + (plan.dispatch ? plan.target : 'none') + '\n'
     );
     return;
   }
