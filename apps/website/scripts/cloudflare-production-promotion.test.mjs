@@ -14,6 +14,51 @@ const productionWorkflow = await fs.readFile(
   'utf8'
 );
 
+test('read-only recovery planning gates a separately privileged revalidated dispatch', async () => {
+  const workflow = await fs.readFile(
+    '.github/workflows/coordinate-website-production-recovery.yml',
+    'utf8'
+  );
+  const header = workflow.split('\njobs:\n')[0];
+  assert.match(header, /permissions:\n {2}contents: read\n {2}actions: read/);
+  assert.doesNotMatch(header, /actions: write/);
+
+  const plan = jobBlock(workflow, 'plan', 'coordinate');
+  assert.match(plan, /permissions:\n {6}contents: read\n {6}actions: read/);
+  assert.doesNotMatch(plan, /actions: write|secrets\./);
+  assert.match(plan, /cloudflare-recovery-coordinator\.mjs plan/);
+  assert.match(plan, /persist-credentials: false/);
+  assert.match(plan, /ref: main/);
+  assert.match(plan, /should_dispatch:/);
+
+  const dispatcher = jobBlock(workflow, 'coordinate');
+  assert.match(dispatcher, /needs: plan/);
+  assert.match(dispatcher, /if: needs\.plan\.outputs\.should_dispatch == 'true'/);
+  assert.match(dispatcher, /permissions:\n {6}contents: read\n {6}actions: write/);
+  assert.match(dispatcher, /EXPECTED_MAIN_SHA:/);
+  assert.match(dispatcher, /EXPECTED_TARGET:/);
+  assert.match(dispatcher, /cloudflare-recovery-coordinator\.mjs dispatch/);
+  assert.match(dispatcher, /ref: main/);
+  assert.match(dispatcher, /persist-credentials: false/);
+
+  const source = await fs.readFile(
+    'apps/website/scripts/cloudflare-recovery-coordinator.mjs',
+    'utf8'
+  );
+  assert.match(source, /mode === 'plan'/);
+  assert.match(source, /mode === 'dispatch'/);
+  assert.match(source, /Read-only recovery may never write to GitHub/);
+  assert.match(source, /assert\.equal\(executionMode, 'dispatch'/);
+  assert.match(source, /Plan\/main SHA changed; defer recovery/);
+  assert.match(source, /Plan\/dispatch target changed; defer recovery/);
+  assert.match(source, /assert\.equal\(latest\.object\?\.sha, mainSha/);
+  assert.match(source, /'should_dispatch=' \+ \(plan\.dispatch/);
+  assert.ok(
+    source.indexOf("if (mode === 'plan')") <
+      source.indexOf("method: 'POST'")
+  );
+});
+
 function jobBlock(workflow, jobId, nextJobId) {
   const start = workflow.indexOf(`\n  ${jobId}:\n`);
   assert.notEqual(start, -1, `Missing workflow job: ${jobId}`);
