@@ -11,18 +11,24 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: vellira-production-recovery-coordinator
   cancel-in-progress: false
 
 jobs:
-  coordinate:
+  plan:
+    name: Read-only production recovery decision
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
-      actions: write
-    timeout-minutes: 5
+      actions: read
+    outputs:
+      should_dispatch: ${{ steps.recovery.outputs.should_dispatch }}
+      main_sha: ${{ steps.recovery.outputs.main_sha }}
+      target: ${{ steps.recovery.outputs.target }}
     steps:
       - name: Checkout trusted main coordinator
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -34,7 +40,35 @@ jobs:
         with:
           node-version: 22.23.4
           package-manager-cache: false
-      - name: Check production gap and dispatch one verified recovery
+      - name: Evaluate recovery without write permission
+        id: recovery
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node apps/website/scripts/cloudflare-recovery-coordinator.mjs
+        run: node apps/website/scripts/cloudflare-recovery-coordinator.mjs plan
+
+  coordinate:
+    name: Revalidate and dispatch eligible recovery
+    needs: plan
+    if: needs.plan.outputs.should_dispatch == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout trusted main coordinator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.4
+          package-manager-cache: false
+      - name: Independently revalidate and dispatch one verified recovery
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EXPECTED_MAIN_SHA: ${{ needs.plan.outputs.main_sha }}
+          EXPECTED_TARGET: ${{ needs.plan.outputs.target }}
+        run: node apps/website/scripts/cloudflare-recovery-coordinator.mjs dispatch
