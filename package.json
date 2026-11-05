@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.190.15",
+  "version": "2.190.18",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -165,7 +165,7 @@
     "stylelint-order": "^8.1.1",
     "stylelint-scss": "^7.3.0",
     "tsx": "^4.23.15",
-    "turbo": "^2.11.2",
+    "turbo": "^2.11.10",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.70.1",
     "wrangler": "4.136.3"
