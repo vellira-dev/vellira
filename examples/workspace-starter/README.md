@@ -5,7 +5,7 @@ component used both by Vellira's homepage and the standalone Vite starter.
 Not a screenshot, paywall or commercial production template. React and React Native developers can run it,
 inspect the Vellira APIs, and adapt the project to their own work.
 
-Both apps pin **Vellira 2.190.10 packages**. They are independently installable
+Both apps pin **Vellira 2.190.18 packages**. They are independently installable
 and work without a Vellira account, backend or Pro subscription. The public
 source remains available under the repository's MIT license.
 
@@ -101,11 +101,11 @@ npm run start
 ```
 
 The Native Starter uses **published node-forge 1.4.2**, verified against the
-upstream RSA source hash. Its current reproducible npm graph pins Expo 58.0.22,
-React Native 0.88.1 and Expo CLI 58.1.18. The CLI replaces the vulnerable
+upstream RSA source hash. Its current reproducible npm graph pins Expo 58.0.23,
+React Native 0.88.1 and Expo CLI 58.1.19. The CLI replaces the vulnerable
 Zod 3 parser with `@expo/schema-utils`, and the exact npm lock contains **no Zod**.
 
-The source-pinned local Expo CLI 58.1.18 guard preserves stricter product
+The source-pinned local Expo CLI 58.1.19 guard preserves stricter product
 bounds: 64 KiB of cumulative UTF-8 output and at most 128 emitted output entries across all chunks, including plain text.
 It runs in `npm ci` postinstall and verifies the published CLI parser source
 against an explicitly reviewed SHA-256 before applying the patch. The guard

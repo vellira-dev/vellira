@@ -517,7 +517,7 @@ test('deployment orchestrator gates archive mutation and Worker activation with 
     'archive: async',
     'dryRun: ()',
     'checkBeforeActivation:',
-    'activate: ()',
+    'activate: async ()',
     'stabilize: async',
   ].map((phase) => source.indexOf(phase));
   assert.ok(phases.every((value) => value >= 0));
