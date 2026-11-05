@@ -36,6 +36,12 @@ overrides:
   'brace-expansion@>=2 <3': 2.1.7
   colord: 2.9.4
   'minimatch@10>brace-expansion': 5.0.12
+  # Candidate for Dependabot #186: limit transition to vulnerable minimatch 10.2.6.
+  # Major 11 requires full tooling/Expo compatibility validation before merge.
+  'minimatch@10.2.6': 11.0.1
+  # Candidate for Dependabot #183: limit transition to vulnerable glob 13.0.6.
+  # Major 14/path-scurry 3 needs independent CLI, OpenNext and Storybook proofs.
+  'glob@13.0.6': 14.0.2
   # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
   'get-uri@6.0.5>basic-ftp': 6.2.1
 
@@ -67,7 +73,8 @@ overrides:
   postcss: 8.5.23
   # CVE-2026-104861: probe-image-size SVG parser DoS, fixed in 7.4.0.
   probe-image-size: 7.4.0
-  qs: 6.16.0
+  # Dependabot #156: security fix, preserve the maintained qs 6.x API.
+  qs: 6.16.1
   # GHSA-g2v6-rqmx-r4w6: Vue SSR attribute-name CR XSS, fixed in 3.5.42.
   'vue@>=3.5.0 <3.5.42': 3.5.42
   # CVE-2026-102422 / GHSA-pqg4-j6r4-53mv: shell-quote command injection, fixed in 1.11.0.
@@ -86,9 +93,14 @@ overrides:
   'uuid@<11.1.1': 11.1.1
   'valibot@<=1.4.1': 1.4.2
   # GHSA-587h-7wmj-h5pm and related Vite 6.x security fixes.
-  'vite@<=6.4.3': 6.4.4
-  # GHSA-5j98-mcp5-4vw2: vulnerable glob 10.x CLI command injection.
-  '@node-minify/core>glob': 10.5.0
+  # Dependabot #158: preserve the established <=6.x override scope while
+  # moving its pinned resolution to the patched 6.4.5; leave Vite 7/8 untouched.
+  'vite@<=6.4.4': 6.4.5
+  # Dependabot #183/#186: OpenNext -> @node-minify/core still resolves
+  # glob 10.5.0 -> minimatch 9.0.9, both within active advisories.
+  # Candidate major upgrade only for this parent; verify @node-minify/core
+  # glob API/behavior and Cloudflare build before merge.
+  '@node-minify/core>glob': 14.0.2
   tmp: 0.2.7
   compression@<1.8.2: ^1.8.2
   handlebars@>=4.0.0 <=4.7.9: ^4.7.10
