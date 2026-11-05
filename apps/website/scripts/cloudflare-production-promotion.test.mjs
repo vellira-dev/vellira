@@ -19,15 +19,15 @@ test('production recovery dispatcher limits actions write to its trusted job', a
     '.github/workflows/coordinate-website-production-recovery.yml',
     'utf8'
   );
-  const header = workflow.split('\\njobs:\\n')[0];
-  assert.match(header, /permissions:\\n {2}contents: read\\n/);
+  const header = workflow.split('\njobs:\n')[0];
+  assert.match(header, /permissions:\n {2}contents: read\n/);
   assert.doesNotMatch(header, /actions: write/);
 
   const coordinator = jobBlock(workflow, 'coordinate');
-  assert.match(coordinator, /permissions:\\n {6}contents: read\\n {6}actions: write/);
+  assert.match(coordinator, /permissions:\n {6}contents: read\n {6}actions: write/);
   assert.match(coordinator, /ref: main/);
   assert.match(coordinator, /persist-credentials: false/);
-  assert.match(coordinator, /node apps\\/website\\/scripts\\/cloudflare-recovery-coordinator\\.mjs/);
+  assert.match(coordinator, /node apps\/website\/scripts\/cloudflare-recovery-coordinator\.mjs/);
 });
 
 function jobBlock(workflow, jobId, nextJobId) {
