@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
-    "eslint-plugin-storybook": "10.6.0",
+    "eslint-plugin-storybook": "10.6.5",
     "typescript": "6.0.3"
   }
 }
