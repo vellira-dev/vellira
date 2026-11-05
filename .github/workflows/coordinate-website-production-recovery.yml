@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: vellira-production-recovery-coordinator
@@ -20,6 +19,9 @@ concurrency:
 jobs:
   coordinate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     timeout-minutes: 5
     steps:
       - name: Checkout trusted main coordinator
