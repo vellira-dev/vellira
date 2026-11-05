@@ -17,4 +17,5 @@ type NativeRootTag = Parameters<typeof AppRegistry.runApplication>[1]['rootTag']
 
 AppRegistry.runApplication('main', {
   rootTag: rootTag as unknown as NativeRootTag,
+  initialProps: {},
 });
