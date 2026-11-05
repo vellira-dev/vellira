@@ -199,6 +199,13 @@ async function main(mode) {
   assert.match(mainSha, SHA);
   if (productionSha === mainSha) {
     console.log(JSON.stringify({ mainSha, productionSha, dispatch: false, reason: 'already_deployed' }));
+    if (mode === 'plan') {
+      const output = process.env.GITHUB_OUTPUT;
+      assert.ok(output, 'GITHUB_OUTPUT required for read-only plan');
+      const { appendFileSync } = await import('node:fs');
+      appendFileSync(output,
+        'should_dispatch=false\nmain_sha=' + mainSha + '\ntarget=none\n');
+    }
     return;
   }
   const stagingResult = await github(
