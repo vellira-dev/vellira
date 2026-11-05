@@ -90,8 +90,8 @@ function createFixture(candidate) {
     // Pin the exact compatible SDK 57 patch pair for the clean consumer.
     // The playground's ~57.0.16 range accepts later patches, but stripping
     // the range with exactVersion would incorrectly lock this proof to .16.
-    '@expo/metro-runtime': '57.0.17',
-    expo: '57.0.31',
+    '@expo/metro-runtime': '57.0.18',
+    expo: '57.0.32',
     react: '19.2.3',
     'react-native': exactVersion(
       playgroundPackage.dependencies?.['react-native'],
