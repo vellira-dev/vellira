@@ -126,3 +126,20 @@ test('invalid inputs fail closed without remote calls', async () => {
   assert.equal(f.runtimeCalls, 0);
   assert.equal(f.calls.length, 0);
 });
+
+test('main advance during runtime probe invalidates prior evidence', async () => {
+  let reads = 0;
+  const f = fixture();
+  const original = f.options.githubGet;
+  await assert.rejects(verifyStagingActivationReadOnly({
+    ...f.options,
+    githubGet: async (path) => {
+      if (path.endsWith('/git/ref/heads/main')) {
+        reads++;
+        if (reads === 2) return { object: { sha: 'b'.repeat(40) } };
+      }
+      return original(path);
+    },
+  }), /Main advanced during verification/);
+  assert.equal(f.runtimeCalls, 1);
+});
