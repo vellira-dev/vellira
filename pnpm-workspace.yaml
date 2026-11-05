@@ -36,6 +36,12 @@ overrides:
   'brace-expansion@>=2 <3': 2.1.7
   colord: 2.9.4
   'minimatch@10>brace-expansion': 5.0.12
+  # Candidate for Dependabot #186: limit transition to vulnerable minimatch 10.2.6.
+  # Major 11 requires full tooling/Expo compatibility validation before merge.
+  'minimatch@10.2.6': 11.0.1
+  # Candidate for Dependabot #183: limit transition to vulnerable glob 13.0.6.
+  # Major 14/path-scurry 3 needs independent CLI, OpenNext and Storybook proofs.
+  'glob@13.0.6': 14.0.2
   # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
   'get-uri@6.0.5>basic-ftp': 6.2.1
 
@@ -90,8 +96,11 @@ overrides:
   # Dependabot #158: preserve the established <=6.x override scope while
   # moving its pinned resolution to the patched 6.4.5; leave Vite 7/8 untouched.
   'vite@<=6.4.4': 6.4.5
-  # GHSA-5j98-mcp5-4vw2: vulnerable glob 10.x CLI command injection.
-  '@node-minify/core>glob': 10.5.0
+  # Dependabot #183/#186: OpenNext -> @node-minify/core still resolves
+  # glob 10.5.0 -> minimatch 9.0.9, both within active advisories.
+  # Candidate major upgrade only for this parent; verify @node-minify/core
+  # glob API/behavior and Cloudflare build before merge.
+  '@node-minify/core>glob': 14.0.2
   tmp: 0.2.7
   compression@<1.8.2: ^1.8.2
   handlebars@>=4.0.0 <=4.7.9: ^4.7.10
