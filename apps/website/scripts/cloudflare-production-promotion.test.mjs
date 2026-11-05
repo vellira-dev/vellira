@@ -47,6 +47,12 @@ test('read-only recovery planning gates a separately privileged revalidated disp
   );
   assert.match(source, /mode === 'plan'/);
   assert.match(source, /mode === 'dispatch'/);
+  assert.match(source, /Read-only recovery may never write to GitHub/);
+  assert.match(source, /assert\.equal\(executionMode, 'dispatch'/);
+  assert.match(source, /Plan\/main SHA changed; defer recovery/);
+  assert.match(source, /Plan\/dispatch target changed; defer recovery/);
+  assert.match(source, /assert\.equal\(latest\.object\?\.sha, mainSha/);
+  assert.match(source, /'should_dispatch=' \+ \(plan\.dispatch/);
   assert.match(source, /Plan\/main SHA changed/);
   assert.match(source, /Plan\/dispatch target changed/);
   assert.ok(
