@@ -100,7 +100,12 @@ export function decideRecovery({
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
+let executionMode = null;
+
 async function github(path, { method = 'GET', body } = {}) {
+  if (method !== 'GET') {
+    assert.equal(executionMode, 'dispatch', 'Read-only recovery may never write to GitHub');
+  }
   const token = process.env.GITHUB_TOKEN;
   assert.ok(token, 'GITHUB_TOKEN required');
   const response = await fetch('https://api.github.com' + path, {
@@ -130,7 +135,9 @@ async function runtimeSha() {
   return match[1];
 }
 
-async function main() {
+async function main(mode) {
+  assert.ok(mode === 'plan' || mode === 'dispatch', 'Explicit plan or dispatch mode required');
+  executionMode = mode;
   assert.equal(process.env.GITHUB_REPOSITORY, OWNER);
   const [ref, productionSha, productionResult] = await Promise.all([
     github('/repos/' + OWNER + '/git/ref/heads/main'),
@@ -178,6 +185,22 @@ async function main() {
   }));
   const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
+  if (mode === 'plan') {
+    const output = process.env.GITHUB_OUTPUT;
+    assert.ok(output, 'GITHUB_OUTPUT required for read-only plan');
+    const { appendFileSync } = await import('node:fs');
+    appendFileSync(output,
+      'should_dispatch=' + (plan.dispatch ? 'true' : 'false') + '\n' +
+      'main_sha=' + mainSha + '\n' +
+      'target=' + (plan.dispatch ? plan.target : 'none') + '\n'
+    );
+    return;
+  }
+
+  // A privileged dispatch must independently rebuild the complete decision.
+  // Treat the read-only job output as a constraint, never as authorization.
+  assert.equal(process.env.EXPECTED_MAIN_SHA, mainSha, 'Plan/main SHA changed; defer recovery');
+  assert.equal(process.env.EXPECTED_TARGET, plan.target, 'Plan/dispatch target changed; defer recovery');
   if (!plan.dispatch) return;
   // Recheck main immediately before dispatch to narrow the TOCTOU window.
   const latest = await github('/repos/' + OWNER + '/git/ref/heads/main');
@@ -208,5 +231,5 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  await main();
+  await main(process.argv[2]);
 }
