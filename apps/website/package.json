@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@mdx-js/loader": "^3.1.1",
-    "@next/mdx": "16.3.6",
+    "@next/mdx": "16.4.3",
     "@opennextjs/cloudflare": "1.20.12",
     "@playwright/test": "1.61.1",
     "@types/mdx": "^2.0.13",
@@ -59,7 +59,7 @@
     "@types/react-dom": "^19",
     "esbuild": "0.28.2",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.3",
     "miniflare": "5.20260903.0-alpha",
     "typescript": "^5",
     "wrangler": "4.136.3"
