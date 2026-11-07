@@ -12,6 +12,7 @@ export function componentProductionVisualCommand(
         'exec',
         'node',
         fileURLToPath(new URL('../visual/run.mjs', import.meta.url)),
+        '--built-storybook',
       ]
     : [
         'docker',
@@ -23,7 +24,7 @@ export function componentProductionVisualCommand(
         '--volume',
         `${fileURLToPath(new URL('../../', import.meta.url))}:/vellira-validation-tools:ro`,
         '-e',
-        'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs',
+        'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs --built-storybook',
         'playwright',
       ];
 }

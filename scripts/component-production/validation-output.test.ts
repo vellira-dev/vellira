@@ -30,7 +30,7 @@ describe('visual execution transport', () => {
     const command = componentProductionVisualCommand({});
     expect(command.slice(0, 2)).toEqual(['docker', 'compose']);
     expect(command).toContain(
-      'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs'
+      'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs --built-storybook'
     );
     expect(command.join(' ')).toContain(':/vellira-validation-tools:ro');
   });
@@ -45,7 +45,8 @@ describe('visual execution transport', () => {
       'exec',
       'node',
     ]);
-    expect(command.at(-1)).toMatch(/scripts\/visual\/run.mjs$/);
+    expect(command.at(-2)).toMatch(/scripts\/visual\/run.mjs$/);
+    expect(command.at(-1)).toBe('--built-storybook');
     // The existing script rejects invalid declarations; selecting transport is
     // not evidence of a successful visual run.
   });

@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { canonicalScreenshotFonts } from './canonical-fonts.mjs';
+import { boundedVisualEnvironment } from './built-storybook.mjs';
 
 const storybookRoot = process.cwd();
 const guard = spawnSync(
@@ -16,6 +17,9 @@ const guard = spawnSync(
   }
 );
 if (guard.status !== 0) process.exit(guard.status ?? 1);
+const args = process.argv.slice(2);
+const builtStorybook = args[0] === '--built-storybook';
+if (builtStorybook) args.shift();
 const temporary = fs.mkdtempSync(
   path.join(os.tmpdir(), 'vellira-visual-fonts-')
 );
@@ -39,12 +43,17 @@ try {
       fileURLToPath(new URL('./playwright.config.mjs', import.meta.url)),
       '--grep',
       '@visual',
-      ...process.argv.slice(2),
+      ...args,
     ],
     {
       cwd: storybookRoot,
       stdio: 'inherit',
-      env: { ...process.env, VELLIRA_SCREENSHOT_FONT_STYLE: style },
+      env: {
+        ...(builtStorybook
+          ? boundedVisualEnvironment(process.env)
+          : process.env),
+        VELLIRA_SCREENSHOT_FONT_STYLE: style,
+      },
     }
   );
   process.exitCode = result.status ?? 1;
