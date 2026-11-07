@@ -21,28 +21,127 @@ API details are generated from `packages/react-native/API.md`.
 
 <!-- api-docgen:start native.ButtonProps.Button -->
 
-| Prop                 | Type                                     | Required | Description                                                         |
-| -------------------- | ---------------------------------------- | -------- | ------------------------------------------------------------------- |
-| `children`           | `ReactNode`                              | No       | Button content.                                                     |
-| `iconStart`          | `ButtonIconElement`                      | No       | Icon rendered before content.                                       |
-| `iconEnd`            | `ButtonIconElement`                      | No       | Icon rendered after content.                                        |
-| `fullWidth`          | `boolean`                                | No       | Makes the component fill its container width.                       |
-| `onPress`            | `(event: GestureResponderEvent) => void` | No       | React Native press handler.                                         |
-| `style`              | `StyleProp<ViewStyle>`                   | No       | Extra root style.                                                   |
-| `accessibilityLabel` | `string`                                 | No       | Accessible label for screen readers.                                |
-| `iconSize`           | `number`                                 | No       | Overrides the size-derived icon size in pixels.                     |
-| `size`               | `ButtonSize`                             | No       | Button size.                                                        |
-| `disabled`           | `boolean`                                | No       | Disables interaction.                                               |
-| `textStyle`          | `StyleProp<TextStyle>`                   | No       | Extra text style.                                                   |
-| `testID`             | `string`                                 | No       | Test identifier.                                                    |
-| `color`              | `ButtonColor`                            | No       | Visual tone: primary, neutral, success, warning, or danger.         |
-| `loading`            | `boolean`                                | No       | Shows an activity indicator and disables interaction.               |
-| `loadingText`        | `string`                                 | No       | Replaces visible content while loading.                             |
-| `iconOnly`           | `boolean`                                | No       | Hides visible text for icon-only actions.                           |
-| `badge`              | `ReactNode`                              | No       | Compact badge rendered after the label when not icon-only.          |
-| `shortcut`           | `ReactNode`                              | No       | Keyboard shortcut hint rendered after the label when not icon-only. |
-| `appearance`         | `ButtonAppearance`                       | No       | Visual style: solid, outline, ghost, soft, or link.                 |
-| `shape`              | `ButtonShape`                            | No       | Corner shape: square, rounded, or pill.                             |
+| Prop                                     | Type                                                                                   | Required | Description                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| `children`                               | `ReactNode`                                                                            | No       | Button content.                                                     |
+| `iconStart`                              | `ButtonIconElement`                                                                    | No       | Icon rendered before content.                                       |
+| `iconEnd`                                | `ButtonIconElement`                                                                    | No       | Icon rendered after content.                                        |
+| `fullWidth`                              | `boolean`                                                                              | No       | Makes the component fill its container width.                       |
+| `onPress`                                | `(event: GestureResponderEvent) => void`                                               | No       | React Native press handler.                                         |
+| `style`                                  | `StyleProp<ViewStyle>`                                                                 | No       | Extra root style.                                                   |
+| `accessibilityLabel`                     | `string`                                                                               | No       | Accessible label for screen readers.                                |
+| `iconSize`                               | `number`                                                                               | No       | Overrides the size-derived icon size in pixels.                     |
+| `size`                                   | `ButtonSize`                                                                           | No       | Button size.                                                        |
+| `disabled`                               | `boolean`                                                                              | No       | Disables interaction.                                               |
+| `textStyle`                              | `StyleProp<TextStyle>`                                                                 | No       | Extra text style.                                                   |
+| `testID`                                 | `string`                                                                               | No       | Test identifier.                                                    |
+| `color`                                  | `ButtonColor`                                                                          | No       | Visual tone: primary, neutral, success, warning, or danger.         |
+| `loading`                                | `boolean`                                                                              | No       | Shows an activity indicator and disables interaction.               |
+| `loadingText`                            | `string`                                                                               | No       | Replaces visible content while loading.                             |
+| `iconOnly`                               | `boolean`                                                                              | No       | Hides visible text for icon-only actions.                           |
+| `badge`                                  | `ReactNode`                                                                            | No       | Compact badge rendered after the label when not icon-only.          |
+| `shortcut`                               | `ReactNode`                                                                            | No       | Keyboard shortcut hint rendered after the label when not icon-only. |
+| `appearance`                             | `ButtonAppearance`                                                                     | No       | Visual style: solid, outline, ghost, soft, or link.                 |
+| `shape`                                  | `ButtonShape`                                                                          | No       | Corner shape: square, rounded, or pill.                             |
+| `hitSlop`                                | `number \| Insets \| null`                                                             | No       | —                                                                   |
+| `id`                                     | `string`                                                                               | No       | —                                                                   |
+| `needsOffscreenAlphaCompositing`         | `boolean`                                                                              | No       | —                                                                   |
+| `onLayout`                               | `(event: LayoutChangeEvent) => void`                                                   | No       | —                                                                   |
+| `pointerEvents`                          | `'box-none' \| 'none' \| 'box-only' \| 'auto'`                                         | No       | —                                                                   |
+| `removeClippedSubviews`                  | `boolean`                                                                              | No       | —                                                                   |
+| `nativeID`                               | `string`                                                                               | No       | —                                                                   |
+| `collapsable`                            | `boolean`                                                                              | No       | —                                                                   |
+| `collapsableChildren`                    | `boolean`                                                                              | No       | —                                                                   |
+| `onBlur`                                 | `(event: NativeSyntheticEvent<TargetedEvent>) => void \| null`                         | No       | Called when the trigger loses focus.                                |
+| `onFocus`                                | `(event: NativeSyntheticEvent<TargetedEvent>) => void \| null`                         | No       | Called when the trigger receives focus.                             |
+| `renderToHardwareTextureAndroid`         | `boolean`                                                                              | No       | —                                                                   |
+| `focusable`                              | `boolean`                                                                              | No       | —                                                                   |
+| `tabIndex`                               | `0 \| -1`                                                                              | No       | —                                                                   |
+| `shouldRasterizeIOS`                     | `boolean`                                                                              | No       | —                                                                   |
+| `isTVSelectable`                         | `boolean`                                                                              | No       | —                                                                   |
+| `hasTVPreferredFocus`                    | `boolean`                                                                              | No       | —                                                                   |
+| `tvParallaxShiftDistanceX`               | `number`                                                                               | No       | —                                                                   |
+| `tvParallaxShiftDistanceY`               | `number`                                                                               | No       | —                                                                   |
+| `tvParallaxTiltAngle`                    | `number`                                                                               | No       | —                                                                   |
+| `tvParallaxMagnification`                | `number`                                                                               | No       | —                                                                   |
+| `onStartShouldSetResponder`              | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                                   |
+| `onMoveShouldSetResponder`               | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                                   |
+| `onResponderEnd`                         | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onResponderGrant`                       | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onResponderReject`                      | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onResponderMove`                        | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onResponderRelease`                     | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onResponderStart`                       | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onResponderTerminationRequest`          | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                                   |
+| `onResponderTerminate`                   | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onStartShouldSetResponderCapture`       | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                                   |
+| `onMoveShouldSetResponderCapture`        | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                                   |
+| `onTouchStart`                           | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onTouchMove`                            | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onTouchEnd`                             | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onTouchCancel`                          | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onTouchEndCapture`                      | `(event: GestureResponderEvent) => void`                                               | No       | —                                                                   |
+| `onPointerEnter`                         | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerEnterCapture`                  | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerLeave`                         | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerLeaveCapture`                  | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerMove`                          | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerMoveCapture`                   | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerCancel`                        | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerCancelCapture`                 | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerDown`                          | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerDownCapture`                   | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerUp`                            | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `onPointerUpCapture`                     | `(event: PointerEvent) => void`                                                        | No       | —                                                                   |
+| `accessible`                             | `boolean`                                                                              | No       | —                                                                   |
+| `accessibilityActions`                   | `readonly { name: AccessibilityActionName \| string; label?: string \| undefined; }[]` | No       | —                                                                   |
+| `aria-label`                             | `string`                                                                               | No       | Accessible trigger label.                                           |
+| `aria-busy`                              | `boolean`                                                                              | No       | —                                                                   |
+| `aria-checked`                           | `boolean \| 'mixed'`                                                                   | No       | —                                                                   |
+| `aria-disabled`                          | `boolean`                                                                              | No       | —                                                                   |
+| `aria-expanded`                          | `boolean`                                                                              | No       | —                                                                   |
+| `aria-selected`                          | `boolean`                                                                              | No       | —                                                                   |
+| `accessibilityHint`                      | `string`                                                                               | No       | Additional accessibility hint for screen readers.                   |
+| `accessibilityValue`                     | `AccessibilityValue`                                                                   | No       | —                                                                   |
+| `aria-valuemax`                          | `number`                                                                               | No       | —                                                                   |
+| `aria-valuemin`                          | `number`                                                                               | No       | —                                                                   |
+| `aria-valuenow`                          | `number`                                                                               | No       | —                                                                   |
+| `aria-valuetext`                         | `string`                                                                               | No       | —                                                                   |
+| `onAccessibilityAction`                  | `(event: AccessibilityActionEvent) => void`                                            | No       | —                                                                   |
+| `importantForAccessibility`              | `'auto' \| 'yes' \| 'no' \| 'no-hide-descendants'`                                     | No       | —                                                                   |
+| `aria-hidden`                            | `boolean`                                                                              | No       | —                                                                   |
+| `aria-modal`                             | `boolean`                                                                              | No       | —                                                                   |
+| `role`                                   | `Role`                                                                                 | No       | —                                                                   |
+| `accessibilityLabelledBy`                | `string \| string[]`                                                                   | No       | —                                                                   |
+| `aria-labelledby`                        | `string`                                                                               | No       | —                                                                   |
+| `accessibilityLiveRegion`                | `'none' \| 'polite' \| 'assertive'`                                                    | No       | —                                                                   |
+| `aria-live`                              | `'polite' \| 'assertive' \| 'off'`                                                     | No       | —                                                                   |
+| `screenReaderFocusable`                  | `boolean`                                                                              | No       | —                                                                   |
+| `accessibilityElementsHidden`            | `boolean`                                                                              | No       | —                                                                   |
+| `accessibilityViewIsModal`               | `boolean`                                                                              | No       | —                                                                   |
+| `onAccessibilityEscape`                  | `() => void`                                                                           | No       | —                                                                   |
+| `onAccessibilityTap`                     | `() => void`                                                                           | No       | —                                                                   |
+| `onMagicTap`                             | `() => void`                                                                           | No       | —                                                                   |
+| `accessibilityIgnoresInvertColors`       | `boolean`                                                                              | No       | —                                                                   |
+| `accessibilityLanguage`                  | `string`                                                                               | No       | —                                                                   |
+| `accessibilityShowsLargeContentViewer`   | `boolean`                                                                              | No       | —                                                                   |
+| `accessibilityLargeContentTitle`         | `string`                                                                               | No       | —                                                                   |
+| `accessibilityRespondsToUserInteraction` | `boolean`                                                                              | No       | —                                                                   |
+| `onHoverIn`                              | `(event: MouseEvent) => void \| null`                                                  | No       | —                                                                   |
+| `onHoverOut`                             | `(event: MouseEvent) => void \| null`                                                  | No       | —                                                                   |
+| `onPressIn`                              | `(event: GestureResponderEvent) => void \| null`                                       | No       | —                                                                   |
+| `onPressMove`                            | `(event: GestureResponderEvent) => void \| null`                                       | No       | —                                                                   |
+| `onPressOut`                             | `(event: GestureResponderEvent) => void \| null`                                       | No       | —                                                                   |
+| `onLongPress`                            | `(event: GestureResponderEvent) => void \| null`                                       | No       | —                                                                   |
+| `cancelable`                             | `boolean \| null`                                                                      | No       | —                                                                   |
+| `delayHoverIn`                           | `number \| null`                                                                       | No       | —                                                                   |
+| `delayHoverOut`                          | `number \| null`                                                                       | No       | —                                                                   |
+| `delayLongPress`                         | `number \| null`                                                                       | No       | —                                                                   |
+| `pressRetentionOffset`                   | `number \| Insets \| null`                                                             | No       | —                                                                   |
+| `android_disableSound`                   | `boolean \| null`                                                                      | No       | —                                                                   |
+| `android_ripple`                         | `PressableAndroidRippleConfig \| null`                                                 | No       | —                                                                   |
+| `testOnly_pressed`                       | `boolean \| null`                                                                      | No       | —                                                                   |
+| `unstable_pressDelay`                    | `number`                                                                               | No       | —                                                                   |
 
 <!-- api-docgen:end native.ButtonProps.Button -->
 

@@ -64,15 +64,24 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).toContain('noWorkspaceResolution: true');
   });
 
-  it('pins a compatible SDK 57 Expo/Metro pair for clean installs', () => {
+  it('derives clean consumer Expo and Metro versions from the Playground', () => {
     const script = readFileSync(
       'scripts/release-candidate/expo-consumer.cjs',
       'utf8'
     );
 
-    expect(script).toContain("expo: '57.0.32'");
-    expect(script).toContain("'@expo/metro-runtime': '57.0.18'");
+    expect(script).toContain(
+      "expo: exactVersion(playgroundPackage.dependencies?.expo, 'expo')"
+    );
+    expect(script).toContain("'@expo/metro-runtime': exactVersion(");
+    expect(script).toContain(
+      "playgroundPackage.dependencies?.['@expo/metro-runtime']"
+    );
+    expect(script).toContain(
+      "react: exactVersion(playgroundPackage.dependencies?.react, 'react')"
+    );
     expect(script).toContain("expoBin, 'install', '--check'");
+    expect(script).not.toContain("expo: '57.0.32'");
   });
 
   it('guards standard npm installation against reintroducing Picker', () => {
