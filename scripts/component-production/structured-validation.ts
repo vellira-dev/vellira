@@ -1,11 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { qualityFindingSourcePaths } from './finding-path';
 
 import type { ComponentCompletenessResult } from '../checks/component-completeness/types';
 import type { ComponentQualityRunResult } from '../checks/component-quality/types';
 
-import { checkGeneratedPlanContract } from '../generators/component/plan-contract';
+import type { checkGeneratedPlanContract } from '../generators/component/plan-contract';
 import { createComponentGenerationPlan } from '../generators/component/plan';
 
 import {
@@ -16,6 +17,7 @@ import {
 } from './contracts';
 import {
   COMPONENT_PRODUCTION_VALIDATION_WORKER_SCHEMA_VERSION,
+  COMPONENT_PRODUCTION_PLAN_WORKER_SCHEMA_VERSION,
   type ComponentProductionValidationWorkerResult,
 } from './structured-validation-protocol';
 
@@ -54,13 +56,6 @@ export async function runComponentProductionStructuredValidation(params: {
   checkPlanContract?: ComponentProductionPlanContractChecker;
 }): Promise<ComponentProductionStructuredValidationResult> {
   const root = path.resolve(params.root);
-  const plan = createComponentGenerationPlan({
-    root,
-    options: createComponentProductionGeneratorOptions(params.input),
-  });
-  const checkPlanContract =
-    params.checkPlanContract ?? checkGeneratedPlanContract;
-
   let contractStage: ComponentProductionStageResult = {
     id: 'completeness',
     status: 'passed',
@@ -70,7 +65,18 @@ export async function runComponentProductionStructuredValidation(params: {
   };
 
   try {
-    const driftedFiles = await checkPlanContract(plan);
+    // API checking creates TypeScript programs. Keep their heap out of the
+    // long-lived parent before it launches the final validation commands.
+    // Retain this result separately so a later quality-worker crash cannot
+    // discard already observed contract findings.
+    const driftedFiles = params.checkPlanContract
+      ? await params.checkPlanContract(
+          createComponentGenerationPlan({
+            root,
+            options: createComponentProductionGeneratorOptions(params.input),
+          })
+        )
+      : runComponentProductionPlanContractWorker({ root, input: params.input });
     if (driftedFiles.length > 0) {
       contractStage = productionContractMismatchStage({
         root,
@@ -203,6 +209,65 @@ export async function runComponentProductionStructuredValidation(params: {
     completeness: workerResult.completeness,
     quality: workerResult.quality,
   };
+}
+
+export function runComponentProductionPlanContractWorker(params: {
+  root: string;
+  input: ComponentProductionInputV1;
+}): string[] {
+  const toolsRoot = fileURLToPath(new URL('../../', import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [
+      '--import',
+      path.join(toolsRoot, 'node_modules/tsx/dist/loader.mjs'),
+      fileURLToPath(
+        new URL('./structured-validation-worker.ts', import.meta.url)
+      ),
+      '--plan-contract',
+    ],
+    {
+      cwd: params.root,
+      input: JSON.stringify(params.input),
+      encoding: 'utf8',
+      timeout: STRUCTURED_VALIDATION_TIMEOUT_MS,
+      shell: false,
+    }
+  );
+  if (result.error || result.status !== 0 || result.signal) {
+    throw new Error(
+      `Plan contract worker failed: ${result.error?.message ?? result.stderr?.trim() ?? ''} (exit=${String(result.status)}, signal=${String(result.signal)}).`
+    );
+  }
+  const value: unknown = JSON.parse(result.stdout);
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('schemaVersion' in value) ||
+    value.schemaVersion !== COMPONENT_PRODUCTION_PLAN_WORKER_SCHEMA_VERSION ||
+    !('componentName' in value) ||
+    value.componentName !== params.input.componentName ||
+    !('driftedFiles' in value) ||
+    !Array.isArray(value.driftedFiles) ||
+    !value.driftedFiles.every((file: unknown) => {
+      if (
+        typeof file !== 'string' ||
+        !path.isAbsolute(file) ||
+        file.includes('\0')
+      )
+        return false;
+      const relative = path.relative(path.resolve(params.root), file);
+      return (
+        relative !== '' &&
+        relative !== '..' &&
+        !relative.startsWith(`..${path.sep}`) &&
+        !path.isAbsolute(relative)
+      );
+    })
+  ) {
+    throw new Error('Plan contract worker returned an unsupported result.');
+  }
+  return value.driftedFiles;
 }
 
 export function runComponentProductionStructuredValidationWorker(params: {
