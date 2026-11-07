@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1",
+  "entries": [
+    {
+      "slotId": "sample-series",
+      "binding": {
+        "schemaVersion": "1",
+        "kind": "bounded-numeric-series",
+        "data": {
+          "series": [
+            {
+              "id": "sample-value",
+              "label": "Synthetic sample value"
+            }
+          ],
+          "rows": [
+            {
+              "x": 0,
+              "xLabel": "Example A",
+              "values": {
+                "sample-value": 2
+              }
+            },
+            {
+              "x": 1,
+              "xLabel": "Example B",
+              "values": {
+                "sample-value": 4
+              }
+            },
+            {
+              "x": 2,
+              "xLabel": "Example C",
+              "values": {
+                "sample-value": 3
+              }
+            }
+          ]
+        }
+      },
+      "receipt": {
+        "schemaVersion": "1",
+        "disposition": "review-required",
+        "grammarAdmitted": false,
+        "ownerName": "DashboardNumericSourceProbe",
+        "ownerPlatform": "react",
+        "ownerRootId": "Root",
+        "bindingId": "sample-series",
+        "sourceFingerprint": "component-program-source-v1:542ab94763002293d8eba3b7372a372877ef256080249f078ef3b6c361ffc13b",
+        "programFingerprint": "component-program-v1:a3c8c628c6872174d8377e98c07e56e3292aee567774bac895bb23241dc97bc6",
+        "bindingFingerprint": "numeric-series-binding-v1:sha256:b403d7a80a141fbbc50d6a7bf6471cde0575f0a98d41610995e59b9cce09f559",
+        "authorityFingerprint": "numeric-binding-authority-v1:sha256:c38d92cfef2d1da482f9be9a55a098ca1bb54eb7855cd1fed3fcca81a1af159e"
+      }
+    }
+  ]
+}
