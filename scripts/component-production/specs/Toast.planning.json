@@ -1,0 +1,378 @@
+{
+  "schemaVersion": "1",
+  "evidenceId": "toast-product-api-v1",
+  "supportedCapabilities": [
+    "announcement",
+    "auto-dismiss",
+    "dismissible",
+    "reduced-motion",
+    "stacking"
+  ],
+  "platformScope": ["react", "react-native"],
+  "obligations": [
+    {
+      "id": "duration-policy",
+      "kind": "behavior",
+      "capability": "auto-dismiss",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Ordinary non-interactive non-critical feedback available elsewhere defaults to 5000ms; duration=0 persists until dismissal. Positive auto-dismiss duration must be at least 5000ms. Action-bearing feedback defaults to manual dismissal. An action with explicitly positive duration is invalid: reject deterministically, never auto-dismiss or silently override. Other negative, nonfinite, non-number or positive values below 5000ms emit a deterministic development diagnostic and fall back to duration=0. Important information unavailable elsewhere requires duration=0."
+    },
+    {
+      "id": "visible-deadline",
+      "kind": "behavior",
+      "capability": "auto-dismiss",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Start the deadline at first visible activation. Latch duration for the open lifecycle; changes apply on the next closed-to-open lifecycle. Unrelated rerenders, callback updates and motion-preference changes never restart or extend the deadline. Always use the latest callback. Cleanup cancels timers/listeners and prevents post-unmount callbacks."
+    },
+    {
+      "id": "pause-composition",
+      "kind": "behavior",
+      "capability": "auto-dismiss",
+      "platformScope": ["react"],
+      "consequence": "pauseOnHover and pauseOnFocus default true. Pointer and focus pauses compose independently; clearing one reason never resumes while another remains. Resume remaining duration. Disabling a pause prop removes only its reason. Native does not inherit Web pointer/focus laws."
+    },
+    {
+      "id": "queue-capacity",
+      "kind": "behavior",
+      "capability": "stacking",
+      "platformScope": ["react", "react-native"],
+      "consequence": "FIFO registration/promotion, maxVisible=3, integer capacity 1 through 10. Invalid capacity falls back to 3 with deterministic development diagnostics. Queue overflow; never silently drop items. Queued items have no visible-time budget or announcement. First promotion starts the deadline. Capacity shrink pauses hidden visible items, retaining remaining duration. Re-promotion resumes without repeating an announcement. Close/unmount unregisters and promotes the oldest eligible queued item. Rapid insertion/removal is deterministic."
+    },
+    {
+      "id": "open-ownership",
+      "kind": "behavior",
+      "capability": "dismissible",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Choose controlled mode at mount when open is supplied; switching mode requires remount. Otherwise defaultOpen is read once and defaults true. Parent open is authoritative; parent changes emit no close request and opening has no callback. Internal close requests false once per open lifecycle with its exact reason. Parent refusal leaves the item visible without repeated deadline requests. Parent false-to-true starts a fresh lifecycle."
+    },
+    {
+      "id": "terminal-events",
+      "kind": "behavior",
+      "capability": "dismissible",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Close reasons are exactly action, dismiss and timeout; only closing emits. First terminal event wins per lifecycle. Mark consumed before user code. Invoke the latest action.onAction once, then request close with reason action even if the action throws; preserve error propagation. No callback after unmount. Action and dismiss controls are keyboard/touch accessible."
+    },
+    {
+      "id": "announcement-identity",
+      "kind": "accessibility",
+      "capability": "announcement",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Event identity is the mounted React instance plus its open lifecycle, preserved by stable keys. Announce once at first visible activation. Rerenders/content updates and hide/re-promotion do not reannounce; close-to-open is a new event. Separate equal-text events remain distinct. Never steal focus. Web uses polite status semantics for all tones. Native uses its accessibility announcement adapter once, with accessibilityLabel precedence, otherwise textual feedback content excluding action/dismiss labels."
+    },
+    {
+      "id": "motion-composition",
+      "kind": "visual-token",
+      "capability": "reduced-motion",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Reduced motion changes presentation only, never deadlines or open state. Use canonical tokens/layering and keyed React children with Root/Viewport composition. Defaults: tone=neutral, dismissLabel=Dismiss notification (caller localizes), Web placement=bottom-right, Native=bottom-center. Retain supported positions. Web portal defaults on at its default host and honors container; Native uses native presentation. Do not infer equal browser/device/assistive-technology behavior from shared semantics."
+    }
+  ],
+  "apiMembers": [],
+  "contractIr": {
+    "domains": [
+      {
+        "exported": true,
+        "id": "close-reason",
+        "includes": [],
+        "typeSuffix": "CloseReason",
+        "values": [
+          {
+            "transitions": ["to-false"],
+            "value": "action"
+          },
+          {
+            "transitions": ["to-false"],
+            "value": "dismiss"
+          },
+          {
+            "transitions": ["to-false"],
+            "value": "timeout"
+          }
+        ]
+      },
+      {
+        "exported": true,
+        "id": "tone",
+        "includes": [],
+        "typeSuffix": "Tone",
+        "values": [
+          {
+            "transitions": [],
+            "value": "error"
+          },
+          {
+            "transitions": [],
+            "value": "info"
+          },
+          {
+            "transitions": [],
+            "value": "neutral"
+          },
+          {
+            "transitions": [],
+            "value": "success"
+          },
+          {
+            "transitions": [],
+            "value": "warning"
+          }
+        ]
+      },
+      {
+        "exported": false,
+        "id": "viewport-position",
+        "includes": [],
+        "typeSuffix": "ViewportPosition",
+        "values": [
+          {
+            "transitions": [],
+            "value": "bottom-center"
+          },
+          {
+            "transitions": [],
+            "value": "bottom-left"
+          },
+          {
+            "transitions": [],
+            "value": "bottom-right"
+          },
+          {
+            "transitions": [],
+            "value": "top-center"
+          },
+          {
+            "transitions": [],
+            "value": "top-left"
+          },
+          {
+            "transitions": [],
+            "value": "top-right"
+          }
+        ]
+      }
+    ],
+    "members": [
+      {
+        "capabilities": [],
+        "divergenceReason": null,
+        "kind": "react-node",
+        "name": "children",
+        "owner": "Viewport",
+        "platforms": ["react", "react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": [],
+        "divergenceReason": "DOM container targeting is specific to the Web runtime.",
+        "kind": "web-element-nullable",
+        "name": "container",
+        "owner": "Viewport",
+        "platforms": ["react"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["stacking"],
+        "divergenceReason": null,
+        "kind": "number",
+        "name": "maxVisible",
+        "owner": "Viewport",
+        "platforms": ["react", "react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": [],
+        "divergenceReason": "Portal mounting is specific to the DOM runtime.",
+        "kind": "boolean",
+        "name": "portal",
+        "owner": "Viewport",
+        "platforms": ["react"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["stacking"],
+        "divergenceReason": null,
+        "kind": "domain",
+        "name": "position",
+        "owner": "Viewport",
+        "platforms": ["react", "react-native"],
+        "reference": "viewport-position",
+        "required": false
+      },
+      {
+        "capabilities": [],
+        "divergenceReason": "React Native style uses StyleProp<ViewStyle>.",
+        "kind": "native-view-style",
+        "name": "style",
+        "owner": "Viewport",
+        "platforms": ["react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": [],
+        "divergenceReason": "Web style uses CSSProperties.",
+        "kind": "web-style",
+        "name": "style",
+        "owner": "Viewport",
+        "platforms": ["react"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["announcement"],
+        "divergenceReason": "React Native requires an explicit native accessibility label adapter.",
+        "kind": "string",
+        "name": "accessibilityLabel",
+        "owner": "root",
+        "platforms": ["react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["dismissible"],
+        "divergenceReason": null,
+        "kind": "object",
+        "name": "action",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": "action",
+        "required": false
+      },
+      {
+        "capabilities": [],
+        "divergenceReason": null,
+        "kind": "react-node",
+        "name": "children",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["auto-dismiss", "dismissible"],
+        "divergenceReason": null,
+        "kind": "state-value",
+        "name": "defaultOpen",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": "open",
+        "required": false
+      },
+      {
+        "capabilities": ["dismissible"],
+        "divergenceReason": null,
+        "kind": "string",
+        "name": "dismissLabel",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["auto-dismiss"],
+        "divergenceReason": null,
+        "kind": "number",
+        "name": "duration",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["auto-dismiss", "dismissible"],
+        "divergenceReason": null,
+        "kind": "state-change-callback",
+        "name": "onOpenChange",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": "open",
+        "required": false
+      },
+      {
+        "capabilities": ["auto-dismiss", "dismissible"],
+        "divergenceReason": null,
+        "kind": "state-value",
+        "name": "open",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": "open",
+        "required": false
+      },
+      {
+        "capabilities": ["auto-dismiss"],
+        "divergenceReason": "DOM focus pause policy exists only on the Web runtime.",
+        "kind": "boolean",
+        "name": "pauseOnFocus",
+        "owner": "root",
+        "platforms": ["react"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": ["auto-dismiss"],
+        "divergenceReason": "Pointer hover exists only on the Web runtime.",
+        "kind": "boolean",
+        "name": "pauseOnHover",
+        "owner": "root",
+        "platforms": ["react"],
+        "reference": null,
+        "required": false
+      },
+      {
+        "capabilities": [],
+        "divergenceReason": null,
+        "kind": "domain",
+        "name": "tone",
+        "owner": "root",
+        "platforms": ["react", "react-native"],
+        "reference": "tone",
+        "required": false
+      }
+    ],
+    "modelId": "transient-feedback-overlay",
+    "objects": [
+      {
+        "fields": [
+          {
+            "kind": "string",
+            "name": "accessibilityLabel",
+            "required": false
+          },
+          {
+            "kind": "string",
+            "name": "label",
+            "required": true
+          },
+          {
+            "kind": "callback-void",
+            "name": "onAction",
+            "required": true
+          }
+        ],
+        "id": "action",
+        "typeSuffix": "Action"
+      }
+    ],
+    "platforms": ["react", "react-native"],
+    "schemaVersion": "1",
+    "states": [
+      {
+        "changeCallback": "onOpenChange",
+        "changeCallbackTransitions": ["to-false"],
+        "changeReasonDomain": "close-reason",
+        "controlled": true,
+        "controlledMember": "open",
+        "defaultMember": "defaultOpen",
+        "id": "open",
+        "transitions": ["to-false", "to-true"],
+        "uncontrolled": true,
+        "valueKind": "boolean"
+      }
+    ]
+  },
+  "risk": "high"
+}

@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "1",
+  "componentName": "Toast",
+  "platform": "both",
+  "layer": "components",
+  "category": "feedback",
+  "profile": "overlay",
+  "capabilities": ["controlled", "uncontrolled", "compound-api", "portal"],
+  "semanticCapabilities": [
+    "dismissible",
+    "auto-dismiss",
+    "stacking",
+    "announcement",
+    "reduced-motion"
+  ],
+  "componentTokens": "standard",
+  "workItem": {
+    "provider": "github",
+    "repository": "vellira-dev/vellira",
+    "issue": "#564"
+  },
+  "parts": ["Root", "Viewport"],
+  "componentProgram": {
+    "schemaVersion": "1",
+    "anatomy": [
+      {
+        "id": "Root",
+        "role": "root",
+        "parent": null
+      },
+      {
+        "id": "Body",
+        "role": "content",
+        "parent": "Root"
+      },
+      {
+        "id": "Viewport",
+        "role": "viewport",
+        "parent": "Root"
+      },
+      {
+        "id": "Dismiss",
+        "role": "close",
+        "parent": "Root"
+      }
+    ],
+    "states": [
+      {
+        "id": "visible",
+        "domain": "boolean",
+        "ownership": "controlled-uncontrolled",
+        "api": "open",
+        "change": {
+          "schemaVersion": "1",
+          "platforms": ["react", "react-native"],
+          "transitions": ["to-false", "to-true"],
+          "emitTransitions": ["to-false"],
+          "reasonDomain": {
+            "id": "close-reason",
+            "values": [
+              {
+                "value": "action",
+                "transitions": ["to-false"]
+              },
+              {
+                "value": "dismiss",
+                "transitions": ["to-false"]
+              },
+              {
+                "value": "timeout",
+                "transitions": ["to-false"]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "deadline",
+        "domain": "deadline",
+        "ownership": "internal",
+        "api": "none"
+      },
+      {
+        "id": "pauses",
+        "domain": "pause-reasons",
+        "ownership": "internal",
+        "api": "none"
+      },
+      {
+        "id": "items",
+        "domain": "collection",
+        "ownership": "internal",
+        "api": "none"
+      }
+    ],
+    "transitions": [
+      {
+        "state": "visible",
+        "event": "timeout",
+        "action": "close",
+        "platforms": ["react", "react-native"]
+      },
+      {
+        "state": "visible",
+        "event": "press",
+        "action": "close",
+        "platforms": ["react", "react-native"]
+      },
+      {
+        "state": "deadline",
+        "event": "open",
+        "action": "reset",
+        "platforms": ["react", "react-native"]
+      },
+      {
+        "state": "deadline",
+        "event": "close",
+        "action": "cleanup",
+        "platforms": ["react", "react-native"]
+      },
+      {
+        "state": "deadline",
+        "event": "unmount",
+        "action": "cleanup",
+        "platforms": ["react", "react-native"]
+      },
+      {
+        "state": "pauses",
+        "event": "pointer-enter",
+        "action": "pause",
+        "platforms": ["react"]
+      },
+      {
+        "state": "pauses",
+        "event": "pointer-leave",
+        "action": "resume",
+        "platforms": ["react"]
+      },
+      {
+        "state": "pauses",
+        "event": "focus",
+        "action": "pause",
+        "platforms": ["react"]
+      },
+      {
+        "state": "pauses",
+        "event": "blur",
+        "action": "resume",
+        "platforms": ["react"]
+      }
+    ],
+    "modules": [
+      {
+        "id": "state-control",
+        "platforms": ["react", "react-native"],
+        "bindings": {}
+      },
+      {
+        "id": "auto-dismiss",
+        "platforms": ["react", "react-native"],
+        "bindings": {
+          "open": "visible",
+          "clock": "deadline",
+          "pause": "pauses"
+        },
+        "parameters": {
+          "default-duration-ms": 5000
+        }
+      },
+      {
+        "id": "stacking",
+        "platforms": ["react", "react-native"],
+        "bindings": {
+          "items": "items"
+        },
+        "parameters": {
+          "maximum-visible": 3,
+          "overflow": "queue"
+        }
+      },
+      {
+        "id": "announcement",
+        "platforms": ["react", "react-native"],
+        "bindings": {}
+      },
+      {
+        "id": "reduced-motion",
+        "platforms": ["react", "react-native"],
+        "bindings": {}
+      },
+      {
+        "id": "compound",
+        "platforms": ["react", "react-native"],
+        "bindings": {}
+      },
+      {
+        "id": "presentation",
+        "platforms": ["react", "react-native"],
+        "bindings": {}
+      }
+    ]
+  }
+}
