@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1",
+  "evidenceId": "avatar-api-program-v2",
+  "supportedCapabilities": [
+    "accessible-name",
+    "fallback",
+    "image-source",
+    "size-variants"
+  ],
+  "platformScope": ["react", "react-native"],
+  "obligations": [
+    {
+      "id": "avatar-default-geometry",
+      "kind": "visual-token",
+      "capability": "size-variants",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Omitted size resolves to md. Circular, clipping outer geometry uses canonical tokens: sm 24, md 32, lg 40 CSS pixels on Web and layout units on React Native. Center fallback; avoid invented dimensions and duplicate borders."
+    },
+    {
+      "id": "avatar-image-presentation",
+      "kind": "visual-token",
+      "capability": "image-source",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Successful current source uses centered cover cropping without distortion, clipped within the round boundary. Pending, failed or absent source never paints a broken image, unloaded image or overlapping native placeholder."
+    },
+    {
+      "id": "avatar-fallback-overflow",
+      "kind": "behavior",
+      "capability": "fallback",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Render the supplied required fallback string without fabricating or uppercasing initials. Center a single line and truncate overflowing glyphs with ellipsis inside each size; blank or absent image source displays fallback."
+    },
+    {
+      "id": "avatar-accessibility-identity",
+      "kind": "accessibility",
+      "capability": "accessible-name",
+      "platformScope": ["react", "react-native"],
+      "consequence": "The single image role on the Avatar root uses the required name. Web nested img has empty alt and is aria-hidden; fallback is aria-hidden. React Native nested Image/Text must not be independently accessible. Loading and source switches never duplicate the name."
+    },
+    {
+      "id": "avatar-native-image-source",
+      "kind": "api",
+      "capability": "image-source",
+      "platformScope": ["react-native"],
+      "consequence": "React Native supports URI strings and numeric bundled assets, whereas Web accepts URI strings. Source changes reset the current image request identity for either Native source form without stale events."
+    },
+    {
+      "id": "avatar-independent-release-proof",
+      "kind": "test",
+      "capability": "fallback",
+      "platformScope": ["react", "react-native"],
+      "consequence": "Independently test no source, pending, 404/error, success, fast source switch and removal for sm/md/lg in light, dark and high contrast. Chromium proves stable fallback pixels without occlusion and visible loaded image; Native requires device/OS and accessibility proof. Mock-only tests are insufficient."
+    }
+  ],
+  "apiMembers": [
+    {
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "scope": "shared",
+      "capabilities": ["accessible-name"],
+      "owner": "root"
+    },
+    {
+      "name": "fallback",
+      "type": "string",
+      "required": true,
+      "scope": "shared",
+      "capabilities": ["fallback"],
+      "owner": "root"
+    },
+    {
+      "name": "size",
+      "type": "'sm' | 'md' | 'lg'",
+      "required": false,
+      "scope": "shared",
+      "capabilities": ["size-variants"],
+      "owner": "root"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "required": false,
+      "scope": "react",
+      "capabilities": ["image-source"],
+      "owner": "root"
+    },
+    {
+      "name": "source",
+      "type": "string | number",
+      "required": false,
+      "scope": "react-native",
+      "capabilities": ["image-source"],
+      "owner": "root"
+    }
+  ],
+  "divergenceReason": "React accepts URI strings while React Native also accepts numeric bundled or local image assets.",
+  "risk": "medium"
+}

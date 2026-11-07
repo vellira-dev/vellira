@@ -493,6 +493,81 @@ export const componentGrammarV1: readonly GrammarModuleV1[] = [
   }),
 ];
 
+/**
+ * Opt-in successor media grammar. The V1 registry bytes remain immutable for
+ * existing decisions and historical Program fingerprints. New policies select
+ * this registry explicitly through the typed media-presentation module.
+ * Neither family names nor component identities select the successor.
+ */
+export const componentGrammarV2: readonly GrammarModuleV1[] = [
+  ...componentGrammarV1.map((entry): GrammarModuleV1 => {
+    if (entry.id === 'image-source') {
+      return {
+        ...entry,
+        obligations: [
+          ...entry.obligations,
+          proof(
+            'stale-request-proof',
+            'Independently prove overlapping image requests and source removal: late success or error from an obsolete request cannot alter the current image or fallback.',
+            'tests'
+          ),
+        ],
+      };
+    }
+    if (entry.id === 'image-fallback') {
+      return {
+        ...entry,
+        obligations: [
+          proof(
+            'fallback',
+            'Absent, pending and failed image sources select the same deterministic fallback; only a successful current image request replaces it.'
+          ),
+          proof(
+            'unobscured',
+            'Independently compare stable rendered no-source, pending and confirmed failed states: fallback pixels remain unobscured by a pending image, browser broken-image indicator or native image placeholder.',
+            'tests'
+          ),
+          proof(
+            'loaded-replacement',
+            'A successfully loaded current image is visible and replaces the fallback completely; the pending image loader still receives its load/error events.',
+            'tests'
+          ),
+          proof(
+            'accessible-fallback',
+            'When the root has an accessible image name, the nested source image and fallback must not cause duplicate announcements across source, loading, failure and successful load.',
+            'accessibility'
+          ),
+        ],
+      };
+    }
+    return entry;
+  }),
+  module('media-presentation', [], {
+    requires: ['image-source', 'image-fallback', 'size-variants'],
+    parameters: [
+      { id: 'default-size', kind: 'choice', choices: ['sm', 'md', 'lg'] },
+      { id: 'image-fit', kind: 'choice', choices: ['cover', 'contain'] },
+      {
+        id: 'fallback-overflow',
+        kind: 'choice',
+        choices: ['truncate', 'clip'],
+      },
+    ],
+    obligations: [
+      proof(
+        'approved-appearance',
+        'The chosen default size, image fit and fallback overflow are explicit reviewed decisions shared across platforms; absence of a decision is a compilation blocker.',
+        'tokens-theming'
+      ),
+      proof(
+        'size-and-overflow',
+        'At every approved token-owned size, images respect the selected fit and fallback stays centered in one line with the selected overflow policy without escaping its visible bounds.',
+        'tests'
+      ),
+    ],
+  }),
+];
+
 export const componentGrammarInteractionsV1 = [
   {
     kind: 'shared-state',
