@@ -6,6 +6,35 @@ const STAGING = 'deploy-website-cloudflare-staging.yml';
 const PRODUCTION = 'deploy-website-cloudflare-production.yml';
 const OWNER = 'vellira-dev/vellira';
 const RUNTIME_URL = 'https://vellira.dev/__vellira_runtime';
+const MAIN_QUIET_PERIOD_MS = 2 * 60_000;
+const MAX_RECOVERY_DISPATCHES_PER_SHA = 1;
+
+export function assertCompleteRecoveryHistory(result, label) {
+  assert.ok(Number.isSafeInteger(result?.total_count) && result.total_count >= 0,
+    label + ' history count missing');
+  assert.ok(result.total_count < 100, label + ' history requires pagination before safe dispatch');
+  assert.ok(Array.isArray(result.workflow_runs), label + ' history runs missing');
+  return result;
+}
+
+// Scan the bounded lifetime of this candidate, not the cumulative workflow
+// history. Production workflow_run head_sha is NOT candidate identity.
+export async function fetchCandidateProductionRuns(fetchPage, since) {
+  const at = Date.parse(since ?? '');
+  assert.ok(Number.isFinite(at), 'Missing reliable main push observation');
+  const result = await fetchPage(since);
+  assertCompleteRecoveryHistory(result, 'Candidate production');
+  return result.workflow_runs;
+}
+
+export function observedMainPushAt(stagingRuns, mainSha) {
+  const timestamps = stagingRuns.filter(run =>
+    run.head_sha === mainSha && run.event === 'push'
+  ).map(run => Date.parse(run.created_at ?? ''));
+  return timestamps.length && timestamps.every(Number.isFinite)
+    ? new Date(Math.max(...timestamps)).toISOString()
+    : null;
+}
 
 export function decideRecovery({
   mainSha,
@@ -13,6 +42,7 @@ export function decideRecovery({
   stagingRuns,
   productionRuns,
   nowMs = Date.now(),
+  mainUpdatedAt = null,
 }) {
   assert.match(mainSha, SHA);
   assert.match(productionSha, SHA);
@@ -26,6 +56,27 @@ export function decideRecovery({
   }
 
   const sameSha = stagingRuns.filter((run) => run.head_sha === mainSha);
+  const explicitRecoveries = sameSha.filter((run) => run.recoveryAttempt === true);
+  // One explicit recovery per immutable SHA. Newer SHAs get a fresh budget.
+  if (explicitRecoveries.length > MAX_RECOVERY_DISPATCHES_PER_SHA) {
+    return { dispatch: false, reason: 'recovery_budget_exceeded', requiresReview: true };
+  }
+  if (explicitRecoveries.some((run) => run.status === 'completed' && run.conclusion !== 'success')) {
+    return { dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true };
+  }
+  // Never rebuild/redeploy the same SHA automatically after a failed
+  // staging run: deployment may already have succeeded before verification
+  // failed (e.g. a transient Cloudflare/RSC 503). Without immutable
+  // deployment proof, only manual diagnosis can authorize a retry.
+  if (sameSha.some((run) =>
+    (run.event === 'push' || run.recoveryAttempt === true) &&
+    run.status === 'completed' &&
+    run.conclusion !== 'success' &&
+    run.conclusion !== 'skipped'
+  )) {
+    return { dispatch: false, reason: 'failed_staging_requires_review' };
+  }
+
   const qualified = sameSha
     .filter((run) =>
       run.fullStage === true &&
@@ -65,19 +116,6 @@ export function decideRecovery({
     };
   }
 
-  // Never rebuild/redeploy the same SHA automatically after a failed
-  // staging run: deployment may already have succeeded before verification
-  // failed (e.g. a transient Cloudflare/RSC 503). Without immutable
-  // deployment proof, only manual diagnosis can authorize a retry.
-  if (sameSha.some((run) =>
-    (run.event === 'push' || run.recoveryAttempt === true) &&
-    run.status === 'completed' &&
-    run.conclusion !== 'success' &&
-    run.conclusion !== 'skipped'
-  )) {
-    return { dispatch: false, reason: 'failed_staging_requires_review' };
-  }
-
   // Do not create a duplicate staging run while an attempt for this SHA
   // exists. A failed explicit recovery is terminal until manually reviewed.
   if (sameSha.some((run) => run.recoveryAttempt === true || run.fullStage === true ||
@@ -97,6 +135,20 @@ export function decideRecovery({
     return { dispatch: false, reason: 'skipped_staging_requires_review' };
   }
 
+  // A newly merged main SHA is moving-target territory. Defer expensive
+  // recovery staging until a short quiet window has elapsed; normal push
+  // staging and already-verified candidates retain priority.
+  if (mainUpdatedAt === null) {
+    return { dispatch: false, reason: 'main_push_observation_missing', requiresReview: true };
+  }
+  if (mainUpdatedAt !== null) {
+    const updated = Date.parse(mainUpdatedAt);
+    assert.ok(Number.isFinite(updated), 'Invalid immutable main commit date');
+    const elapsed = nowMs - updated;
+    if (elapsed < MAIN_QUIET_PERIOD_MS) {
+      return { dispatch: false, reason: 'main_quiet_period' };
+    }
+  }
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
@@ -139,16 +191,38 @@ async function main(mode) {
   assert.ok(mode === 'plan' || mode === 'dispatch', 'Explicit plan or dispatch mode required');
   executionMode = mode;
   assert.equal(process.env.GITHUB_REPOSITORY, OWNER);
-  const [ref, productionSha, productionResult] = await Promise.all([
+  const [ref, productionSha] = await Promise.all([
     github('/repos/' + OWNER + '/git/ref/heads/main'),
     runtimeSha(),
-    github('/repos/' + OWNER + '/actions/workflows/' + PRODUCTION + '/runs?per_page=100'),
   ]);
   const mainSha = ref.object?.sha;
   assert.match(mainSha, SHA);
-  const stagingResult = await github('/repos/' + OWNER + '/actions/workflows/' + STAGING + '/runs?head_sha=' + mainSha + '&per_page=100');
+  if (productionSha === mainSha) {
+    console.log(JSON.stringify({ mainSha, productionSha, dispatch: false, reason: 'already_deployed' }));
+    if (mode === 'plan') {
+      const output = process.env.GITHUB_OUTPUT;
+      assert.ok(output, 'GITHUB_OUTPUT required for read-only plan');
+      const { appendFileSync } = await import('node:fs');
+      appendFileSync(output,
+        'should_dispatch=false\nmain_sha=' + mainSha + '\ntarget=none\n');
+    }
+    return;
+  }
+  const stagingResult = await github(
+    '/repos/' + OWNER + '/actions/workflows/' + STAGING +
+    '/runs?head_sha=' + mainSha + '&per_page=100');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
-  assert.ok(stagingResult.total_count < 100, 'Staging history requires pagination before safe dispatch');
+  assertCompleteRecoveryHistory(stagingResult, 'Staging');
+  const observedPush = observedMainPushAt(stagingResult.workflow_runs, mainSha);
+  // Missing push evidence must never authorize an unbounded history query.
+  if (observedPush === null) {
+    console.error('::error::No observed push timestamp for current main; cannot prove production replay history.');
+    process.exitCode = 1;
+    return;
+  }
+  const productionResult = await fetchCandidateProductionRuns(since => github(
+      '/repos/' + OWNER + '/actions/workflows/' + PRODUCTION +
+      '/runs?created=' + encodeURIComponent('>=' + since) + '&per_page=100'), observedPush);
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
     const recoveryAttempt = run.event === 'workflow_dispatch' &&
       run.display_title === 'Production recovery ' + mainSha;
@@ -168,7 +242,7 @@ async function main(mode) {
   }));
   // Inspect matching production jobs. A green outer run may skip deployment;
   // the workflow_run GITHUB_SHA is main, not the staging candidate.
-  const productionRuns = await Promise.all(productionResult.workflow_runs.map(async (run) => {
+  const productionRuns = await Promise.all(productionResult.map(async (run) => {
     if (run.display_title !== 'Promote staging ' + mainSha ||
         run.status !== 'completed' || run.conclusion !== 'success') {
       return { ...run, actualDeploy: false };
@@ -183,7 +257,8 @@ async function main(mode) {
       ),
     };
   }));
-  const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns });
+  const mainUpdatedAt = observedMainPushAt(stagingRuns, mainSha);
+  const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns, mainUpdatedAt });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
   if (mode === 'plan') {
     const output = process.env.GITHUB_OUTPUT;
@@ -194,14 +269,23 @@ async function main(mode) {
       'main_sha=' + mainSha + '\n' +
       'target=' + (plan.dispatch ? plan.target : 'none') + '\n'
     );
+    if (plan.requiresReview) {
+      console.error('::error::Production convergence requires review: ' + plan.reason);
+      process.exitCode = 1;
+    }
     return;
   }
-
-  // A privileged dispatch must independently rebuild the complete decision.
-  // Treat the read-only job output as a constraint, never as authorization.
+  // The privileged worker independently recomputes all evidence.
   assert.equal(process.env.EXPECTED_MAIN_SHA, mainSha, 'Plan/main SHA changed; defer recovery');
-  assert.equal(process.env.EXPECTED_TARGET, plan.target, 'Plan/dispatch target changed; defer recovery');
-  if (!plan.dispatch) return;
+  assert.equal(process.env.EXPECTED_TARGET, plan.dispatch ? plan.target : 'none',
+    'Plan/dispatch target changed; defer recovery');
+  if (!plan.dispatch) {
+    if (plan.requiresReview) {
+      console.error('::error::Production convergence blocked: ' + plan.reason);
+      process.exitCode = 1;
+    }
+    return;
+  }
   // Recheck main immediately before dispatch to narrow the TOCTOU window.
   const latest = await github('/repos/' + OWNER + '/git/ref/heads/main');
   assert.equal(latest.object?.sha, mainSha, 'main changed; defer recovery');
