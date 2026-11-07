@@ -63,6 +63,7 @@ overrides:
 patchedDependencies:
   '@opennextjs/cloudflare@1.20.12': a732dbf9d2f20dd280dbfbb69010bdafce732c6c55691553e744f09c4875aed4
   braces@3.0.3: cecdb90ea3f216ffb13f31d757e9e26239b040179ba9235326e1a6041cb3b055
+  deepmerge@4.3.1: ca47e8ee50674b7d4f9fc334801c59b35911f96e1699b173914c81c10ced8b43
   next@16.4.2: dd45e2b9d7ebeab82a91612f5fe53d1d4000a7cb4540d19543af9d899f84c4b6
   sprintf-js@1.0.3: 5ab824202ac5896cae9cee1075a8ca1311ee7c4830bc0b16a2d06553c3707b36
   tr46@0.0.3: 79bdc14cbadfa8868f5ee3574fa637e8f7b9f1fb8fec3d79730d548d680f0131
@@ -16375,7 +16376,7 @@ snapshots:
       '@tmcp/transport-http': 0.8.6(tmcp@1.20.1(typescript@6.0.3))
       commander: 14.0.3
       dedent: 1.7.2
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=ca47e8ee50674b7d4f9fc334801c59b35911f96e1699b173914c81c10ced8b43)
       esbuild-register: 3.6.0(esbuild@0.28.1)(supports-color@10.2.2)
       glob: 14.0.2
       react: 19.3.0
@@ -16415,7 +16416,7 @@ snapshots:
       '@tmcp/transport-http': 0.8.6(tmcp@1.20.1(typescript@6.0.3))
       commander: 14.0.3
       dedent: 1.7.2
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=ca47e8ee50674b7d4f9fc334801c59b35911f96e1699b173914c81c10ced8b43)
       esbuild-register: 3.6.0(esbuild@0.28.1)(supports-color@10.2.2)
       glob: 14.0.2
       react: 19.3.1
@@ -18536,7 +18537,7 @@ snapshots:
 
   deep-is@0.1.4: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.3.1(patch_hash=ca47e8ee50674b7d4f9fc334801c59b35911f96e1699b173914c81c10ced8b43): {}
 
   default-browser-id@5.0.1: {}
 

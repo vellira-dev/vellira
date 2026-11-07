@@ -136,4 +136,5 @@ patchedDependencies:
   # Route those exact bundled imports to the declared userland package until upstream removes them.
   'wrangler@4.136.3': patches/wrangler@4.136.3.patch
   next@16.4.2: patches/next@16.4.2.patch
+  deepmerge@4.3.1: patches/deepmerge@4.3.1.patch
 allowUnusedPatches: false
