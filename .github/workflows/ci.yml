@@ -173,9 +173,9 @@ jobs:
 
           set -e
 
-          if [ "$status" -eq 2 ]; then
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
             echo "::error::Component Quality Checker failed with a runtime/configuration error."
-            exit 2
+            exit "$status"
           fi
 
           if [ "$status" -eq 1 ]; then

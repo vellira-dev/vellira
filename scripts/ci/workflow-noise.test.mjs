@@ -38,7 +38,7 @@ function effectiveJobCacheMode(source, jobName) {
       continue;
     }
 
-    const jobMatch = line.match(/^  ([a-zA-Z0-9_-]+):\s*$/);
+    const jobMatch = line.match(/^ {2}([a-zA-Z0-9_-]+):\s*$/);
     if (jobMatch) {
       inJob = jobMatch[1] === jobName;
       continue;
@@ -46,7 +46,7 @@ function effectiveJobCacheMode(source, jobName) {
 
     if (!inJob) continue;
 
-    const jobModeMatch = line.match(/^    cache-mode:\s*(\S+)\s*$/);
+    const jobModeMatch = line.match(/^ {4}cache-mode:\s*(\S+)\s*$/);
     if (jobModeMatch) return jobModeMatch[1];
   }
 
@@ -374,7 +374,7 @@ test('ready transition does not rerun unchanged-SHA validation', () => {
   // The final performance job inherits CI's exact trigger policy.
   assert.match(
     section(workflow('ci'), 'jobs'),
-    /^  performance-budget:\n {4}name: CI Performance Budget\n/m
+    /^ {2}performance-budget:\n {4}name: CI Performance Budget\n/m
   );
   assert.throws(() => workflow('ci-performance-budget'), { code: 'ENOENT' });
 
@@ -445,7 +445,7 @@ test('production approval wait is separated from the serialized deploy mutex', (
   const production = workflow('deploy-website-cloudflare-production');
   const header = production.split('\njobs:\n')[0];
   assert.doesNotMatch(header, /\nconcurrency:\n/);
-  assert.match(production, /\n  admission:\n/);
+  assert.match(production, /\n {2}admission:\n/);
   assert.match(production, /CURRENT_PRODUCTION_RUN_ID:/);
   assert.match(production, /EXPECTED_CANDIDATE_SHA:/);
   assert.match(production, /cloudflare-production-admission\.mjs/);
@@ -585,11 +585,10 @@ shellTest('diagnostics reject mutable refs, malformed SHAs and arbitrary command
 
 shellTest('diagnostics execute only the selected canonical command and preserve failure through tee', (t) => {
   const cwd = sandbox(t);
-  const bin = path.join(cwd, 'bin');
-  mkdirSync(bin);
   mkdirSync(path.join(cwd, 'vellira-diagnostics'));
-  writeFileSync(path.join(bin, 'pnpm'), '#!/bin/sh\nprintf "%s\\n" "$*"\nexit "${PROBE_EXIT_CODE:-0}"\n', { mode: 0o755 });
-  const source = script(workflow('component-diagnostics'), 'Run selected repository diagnostics');
+  // Do not depend on executing files from a potentially noexec temporary mount.
+  const mock = 'pnpm() { printf "%s\\n" "$*"; return "${PROBE_EXIT_CODE:-0}"; }\n';
+  const source = mock + script(workflow('component-diagnostics'), 'Run selected repository diagnostics');
   const commands = {
     'component-production': 'exec vitest run --config vitest.tooling.config.ts scripts/component-production scripts/generators/component',
     'component-quality': 'check:component-quality --all',
@@ -597,7 +596,7 @@ shellTest('diagnostics execute only the selected canonical command and preserve 
     tooling: 'test:tooling',
   };
   for (const [profile, command] of Object.entries(commands)) {
-    const env = { PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: cwd, DIAGNOSTIC_PROFILE: profile };
+    const env = { RUNNER_TEMP: cwd, DIAGNOSTIC_PROFILE: profile };
     const success = shell(source, cwd, { ...env, PROBE_EXIT_CODE: '0' });
     assert.equal(success.status, 0, success.stderr);
     assert.equal(success.stdout.trim(), command);

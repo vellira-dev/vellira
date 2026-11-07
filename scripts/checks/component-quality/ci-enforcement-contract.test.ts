@@ -1,17 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
 const workflow = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
-const temporaryRoots: string[] = [];
-
-afterEach(() => {
-  for (const root of temporaryRoots.splice(0))
-    fs.rmSync(root, { recursive: true, force: true });
-});
 
 function qualityJob(source: string) {
   const match = source.match(/\n {2}quality:\n([\s\S]*?)(?=\n {2}[\w-]+:\n|$)/);
@@ -35,28 +27,24 @@ function componentQualityStep(source: string) {
 }
 
 function runCheckerStep(checkerStatus: number, enforcement: string) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'component-quality-ci-'));
-  temporaryRoots.push(root);
-  const bin = path.join(root, 'bin');
-  fs.mkdirSync(bin);
-  fs.writeFileSync(
-    path.join(bin, 'pnpm'),
-    `#!/bin/sh\nexit ${checkerStatus}\n`,
-    { mode: 0o755 }
-  );
-
-  return spawnSync(
+  // An interpreter-owned mock works on noexec temporary filesystems. Its
+  // return code and exact invocation still exercise the original shell gate.
+  const mock =
+    'pnpm() { printf "%s\\n" "$*" >&2; return "$PROBE_CHECKER_STATUS"; }\n';
+  const result = spawnSync(
     'bash',
-    ['-euo', 'pipefail', '-c', componentQualityStep(workflow)],
+    ['-euo', 'pipefail', '-c', mock + componentQualityStep(workflow)],
     {
       env: {
         ...process.env,
         COMPONENT_QUALITY_ENFORCEMENT: enforcement,
-        PATH: `${bin}:${process.env.PATH ?? ''}`,
+        PROBE_CHECKER_STATUS: String(checkerStatus),
       },
       encoding: 'utf8',
     }
   );
+  expect(result.stderr).toBe('check:component-quality --all\n');
+  return result;
 }
 
 it('declares blocking enforcement for normal PR CI', () => {
@@ -68,9 +56,19 @@ it('declares blocking enforcement for normal PR CI', () => {
 it('maps checker exit 1 to CI failure in blocking mode while WARN stays non-blocking', () => {
   expect(runCheckerStep(1, 'blocking').status).toBe(1);
   expect(runCheckerStep(0, 'blocking').status).toBe(0);
+  expect(runCheckerStep(1, 'advisory').status).toBe(0);
+  expect(runCheckerStep(0, 'advisory').status).toBe(0);
 });
 
 it('keeps checker exit 2 blocking regardless of enforcement mode', () => {
   expect(runCheckerStep(2, 'blocking').status).toBe(2);
   expect(runCheckerStep(2, 'advisory').status).toBe(2);
 });
+
+it.each([3, 126, 127, 137])(
+  'rejects unexpected execution failure %i in both enforcement modes',
+  (status) => {
+    expect(runCheckerStep(status, 'blocking').status).toBe(status);
+    expect(runCheckerStep(status, 'advisory').status).toBe(status);
+  }
+);
