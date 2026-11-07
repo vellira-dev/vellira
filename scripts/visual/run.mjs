@@ -7,6 +7,11 @@ import { spawnSync } from 'node:child_process';
 import { canonicalScreenshotFonts } from './canonical-fonts.mjs';
 import { boundedVisualEnvironment } from './built-storybook.mjs';
 
+const args = process.argv.slice(2);
+if (args[0] === '--workspace') {
+  args.shift();
+  process.chdir(path.resolve('apps/react-storybook'));
+}
 const storybookRoot = process.cwd();
 const guard = spawnSync(
   process.execPath,
@@ -17,7 +22,6 @@ const guard = spawnSync(
   }
 );
 if (guard.status !== 0) process.exit(guard.status ?? 1);
-const args = process.argv.slice(2);
 const builtStorybook = args[0] === '--built-storybook';
 if (builtStorybook) args.shift();
 const temporary = fs.mkdtempSync(

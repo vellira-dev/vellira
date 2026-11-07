@@ -6,12 +6,10 @@ export function componentProductionVisualCommand(
 ): readonly string[] {
   return environment.VELLIRA_VISUAL_ENVIRONMENT
     ? [
-        'pnpm',
-        '--filter',
-        '@vellira-ui/react-storybook',
-        'exec',
         'node',
+        '--v8-pool-size=1',
         fileURLToPath(new URL('../visual/run.mjs', import.meta.url)),
+        '--workspace',
         '--built-storybook',
       ]
     : [
@@ -24,7 +22,7 @@ export function componentProductionVisualCommand(
         '--volume',
         `${fileURLToPath(new URL('../../', import.meta.url))}:/vellira-validation-tools:ro`,
         '-e',
-        'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs --built-storybook',
+        'PLAYWRIGHT_SCRIPT=exec node --v8-pool-size=1 /vellira-validation-tools/scripts/visual/run.mjs --built-storybook',
         'playwright',
       ];
 }
