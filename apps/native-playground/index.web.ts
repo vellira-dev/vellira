@@ -13,7 +13,9 @@ if (!rootTag) {
 // React Native Web mounts into an HTMLElement. React Native 0.88's native
 // AppRegistry declaration instead types rootTag as an opaque native symbol.
 // Keep the existing web runtime behavior; bridge only this platform boundary.
-type NativeRootTag = Parameters<typeof AppRegistry.runApplication>[1]['rootTag'];
+type NativeRootTag = Parameters<
+  typeof AppRegistry.runApplication
+>[1]['rootTag'];
 
 AppRegistry.runApplication('main', {
   rootTag: rootTag as unknown as NativeRootTag,
