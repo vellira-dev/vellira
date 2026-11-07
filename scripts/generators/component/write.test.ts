@@ -343,6 +343,8 @@ describe('component generator writer', () => {
     expect(barrel.match(/ {2}avatarMetadata,/g)).toHaveLength(1);
   });
 
+  // Two writes and three full contract checks take about 5s on bounded runners.
+  // Preserve the corruption check and allow finite integration-test headroom.
   it('writes semantic metadata that is byte-identical to the generated-plan contract', async () => {
     const root = createTempRoot();
     createLayerBarrels(root, 'components');
@@ -389,7 +391,7 @@ describe('component generator writer', () => {
     );
 
     expect(await checkGeneratedPlanContract(plan)).toContain(plan.metadataFile);
-  });
+  }, 7_500);
 
   it('generates capabilities from the selected profile', async () => {
     const root = createTempRoot();

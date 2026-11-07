@@ -29,7 +29,9 @@ import {
 } from './run';
 import { runComponentProductionStructuredValidation } from './structured-validation';
 
-const FIXTURE_TIMEOUT_MS = 240_000;
+// The compound lifecycle takes about 240s on the bounded single-worker runner.
+// Keep every assertion while leaving finite headroom for that measured workload.
+const FIXTURE_TIMEOUT_MS = 300_000;
 const repositoryRoot = process.cwd();
 const temporaryWorktrees: Array<{ parent: string; root: string }> = [];
 
