@@ -13,25 +13,12 @@ import {
   vi,
 } from 'vitest';
 
+import { copyFixtureSource } from './fixture-source';
+
 const fixtureRoots: string[] = [];
 
 function repoRoot() {
   return process.cwd();
-}
-
-function copyIfExists(root: string, fixture: string, relativePath: string) {
-  const source = path.join(root, relativePath);
-  const target = path.join(fixture, relativePath);
-
-  if (!fs.existsSync(source)) return;
-
-  fs.cpSync(source, target, {
-    recursive: true,
-    filter: (item) =>
-      !item.includes(`${path.sep}.next${path.sep}`) &&
-      !item.includes(`${path.sep}dist${path.sep}`) &&
-      !item.includes(`${path.sep}coverage${path.sep}`),
-  });
 }
 
 function createFixtureRepo() {
@@ -57,7 +44,7 @@ function createFixtureRepo() {
     '.prettierrc.js',
     '.prettierignore',
   ]) {
-    copyIfExists(root, fixture, relativePath);
+    copyFixtureSource(root, fixture, relativePath);
   }
 
   fs.symlinkSync(
