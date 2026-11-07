@@ -33,7 +33,14 @@ function runCheckerStep(checkerStatus: number, enforcement: string) {
     'pnpm() { printf "%s\\n" "$*" >&2; return "$PROBE_CHECKER_STATUS"; }\n';
   const result = spawnSync(
     'bash',
-    ['-euo', 'pipefail', '-c', mock + componentQualityStep(workflow)],
+    [
+      '--noprofile',
+      '--norc',
+      '-euo',
+      'pipefail',
+      '-c',
+      mock + componentQualityStep(workflow),
+    ],
     {
       env: {
         ...process.env,

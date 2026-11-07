@@ -390,3 +390,60 @@ describe('deterministic API-doc Program isolation', () => {
     );
   });
 });
+
+it('preserves interleaved sections sharing a source and detects later source drift', async () => {
+  const first = section('web', '## First', 'FirstProps', 'src/Shared/types.ts');
+  const other = section('web', '## Other', 'OtherProps', 'src/Other/types.ts');
+  const second = section(
+    'web',
+    '## Second',
+    'SecondProps',
+    'src/Shared/types.ts'
+  );
+  const sections = [first, other, second];
+  const files = {
+    'packages/react/src/Shared/types.ts':
+      "export interface FirstProps { mode: 'off' | 'polite' }\nexport interface SecondProps { value: number }\n",
+    'packages/react/src/Other/types.ts':
+      "export interface OtherProps { mode: 'polite' | 'off' }\n",
+  };
+  const root = createApiFixture(files, sections);
+  const reference = createApiFixture(files, sections);
+  await generateApiDocs({ rootDir: root, silent: true, sections });
+  for (const item of sections) {
+    await generateApiDocs({
+      rootDir: reference,
+      silent: true,
+      sections: [item],
+    });
+    expect(readGeneratedBlock(root, item)).toBe(
+      readGeneratedBlock(reference, item)
+    );
+  }
+  const api = path.join(root, first.docPath);
+  const retained = fs.readFileSync(api, 'utf8');
+  expect(
+    await generateApiDocs({
+      rootDir: root,
+      silent: true,
+      check: true,
+      sections,
+    })
+  ).toMatchObject({ status: 'up-to-date', changedFiles: [] });
+  fs.writeFileSync(
+    path.join(root, 'packages/react/src/Shared/types.ts'),
+    files['packages/react/src/Shared/types.ts'].replace(
+      'value: number',
+      'value: string'
+    )
+  );
+  expect(
+    await generateApiDocs({
+      rootDir: root,
+      silent: true,
+      check: true,
+      sections,
+    })
+  ).toMatchObject({ status: 'stale', changedFiles: [first.docPath] });
+  expect(fs.readFileSync(api, 'utf8')).toBe(retained);
+});
