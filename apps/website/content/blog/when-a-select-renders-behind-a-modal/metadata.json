@@ -1,0 +1,9 @@
+{
+  "title": "Why a Select Can Render Behind Its Modal",
+  "description": "A nested Select may own Escape while its options paint behind a Modal. See how Vellira verifies layer order, pointer hit-testing, and keyboard focus.",
+  "slug": "when-a-select-renders-behind-a-modal",
+  "publishedAt": "2026-10-19",
+  "author": "Roman Bakurov",
+  "tags": ["Design Systems", "React", "Accessibility"],
+  "draft": true
+}
