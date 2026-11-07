@@ -1094,11 +1094,16 @@ export async function generateApiDocs(
       : item.sourceFile;
   };
   const sourceFilesByContext = new Map<string, Set<string>>();
+  const remainingSectionsByContext = new Map<string, number>();
   for (const item of sections) {
     const contextKey = getContextKey(item);
     const sources = sourceFilesByContext.get(contextKey) ?? new Set<string>();
     sources.add(item.sourceFile);
     sourceFilesByContext.set(contextKey, sources);
+    remainingSectionsByContext.set(
+      contextKey,
+      (remainingSectionsByContext.get(contextKey) ?? 0) + 1
+    );
   }
   const contexts = new Map<string, ApiDocsContext>();
   const docs = new Map<string, string>();
@@ -1128,6 +1133,13 @@ export async function generateApiDocs(
       item.docPath,
       replaceGeneratedTable(currentDoc, item, renderPropsTable(rows))
     );
+    // A TypeScript checker retains its complete program and dependency graph.
+    // Keep it only while another section still needs that exact context. This
+    // preserves section order and checker inputs without accumulating every
+    // completed compiler graph until the whole documentation pass finishes.
+    const remaining = (remainingSectionsByContext.get(contextKey) ?? 1) - 1;
+    remainingSectionsByContext.set(contextKey, remaining);
+    if (remaining === 0) contexts.delete(contextKey);
   }
 
   const changedFiles: string[] = [];
