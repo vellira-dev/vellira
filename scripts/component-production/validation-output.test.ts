@@ -30,7 +30,7 @@ describe('visual execution transport', () => {
     const command = componentProductionVisualCommand({});
     expect(command.slice(0, 2)).toEqual(['docker', 'compose']);
     expect(command).toContain(
-      'PLAYWRIGHT_SCRIPT=exec node /vellira-validation-tools/scripts/visual/run.mjs'
+      'PLAYWRIGHT_SCRIPT=exec node --v8-pool-size=1 /vellira-validation-tools/scripts/visual/run.mjs --built-storybook'
     );
     expect(command.join(' ')).toContain(':/vellira-validation-tools:ro');
   });
@@ -38,16 +38,25 @@ describe('visual execution transport', () => {
     const command = componentProductionVisualCommand({
       VELLIRA_VISUAL_ENVIRONMENT: 'invalid',
     });
-    expect(command.slice(0, 5)).toEqual([
-      'pnpm',
-      '--filter',
-      '@vellira-ui/react-storybook',
-      'exec',
-      'node',
-    ]);
-    expect(command.at(-1)).toMatch(/scripts\/visual\/run.mjs$/);
+    expect(command.slice(0, 2)).toEqual(['node', '--v8-pool-size=1']);
+    expect(command.at(-3)).toMatch(/scripts\/visual\/run.mjs$/);
+    expect(command.at(-2)).toBe('--workspace');
+    expect(command.at(-1)).toBe('--built-storybook');
     // The existing script rejects invalid declarations; selecting transport is
     // not evidence of a successful visual run.
+  });
+  it('keeps the canonical guard mandatory through the direct workspace transport', () => {
+    const [executable, ...args] = componentProductionVisualCommand({
+      VELLIRA_VISUAL_ENVIRONMENT: 'invalid',
+    });
+    const result = spawnSync(executable, args, {
+      encoding: 'utf8',
+      env: { ...process.env, VELLIRA_VISUAL_ENVIRONMENT: 'invalid' },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'Canonical visual environment check failed'
+    );
   });
   it('rejects an invalid container declaration before running any snapshots', () => {
     const result = spawnSync(

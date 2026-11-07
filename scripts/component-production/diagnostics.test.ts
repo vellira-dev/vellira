@@ -88,7 +88,7 @@ describe('providerless production diagnostics', { timeout: 30_000 }, () => {
     );
     expect(
       commands.find(({ id }) => id === 'canonical-web-visual')?.command[0]
-    ).toBe('pnpm');
+    ).toBe('node');
   });
 
   it('preserves visual environment ownership in providerless replay', () => {
