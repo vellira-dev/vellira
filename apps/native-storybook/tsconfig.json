@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "composite": true,
-    "strict": true
+    "strict": true,
+    "customConditions": ["react-native", "vellira-source"]
   },
   "include": [
     "index.ts",
