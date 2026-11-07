@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
@@ -11,15 +13,18 @@ function qualityJob(source: string) {
   return match?.[1] ?? '';
 }
 
-function componentQualityStep(source: string) {
+function qualityStep(
+  source: string,
+  name: 'Component Quality Checker' | 'Generate Component Quality report'
+) {
   const match = source.match(
-    /\n {6}- name: Component Quality Checker\n([\s\S]*?)(?=\n {6}- name:|$)/
+    new RegExp(`\\n {6}- name: ${name}\\n([\\s\\S]*?)(?=\\n {6}- name:|$)`)
   );
-  expect(match, 'Component Quality Checker step').not.toBeNull();
+  expect(match, `${name} step`).not.toBeNull();
   const step = match?.[1] ?? '';
   const run = step.match(/\n {8}run: \|\n([\s\S]*)/);
-  expect(run, 'Component Quality Checker script').not.toBeNull();
-  if (!run) throw new Error('Component Quality Checker script not found');
+  expect(run, `${name} script`).not.toBeNull();
+  if (!run) throw new Error(`${name} script not found`);
   return run[1]
     .split('\n')
     .map((line) => line.slice(10))
@@ -39,7 +44,7 @@ function runCheckerStep(checkerStatus: number, enforcement: string) {
       '-euo',
       'pipefail',
       '-c',
-      mock + componentQualityStep(workflow),
+      mock + qualityStep(workflow, 'Component Quality Checker'),
     ],
     {
       env: {
@@ -77,5 +82,46 @@ it.each([3, 126, 127, 137])(
   (status) => {
     expect(runCheckerStep(status, 'blocking').status).toBe(status);
     expect(runCheckerStep(status, 'advisory').status).toBe(status);
+  }
+);
+
+it.each([0, 1, 2, 3, 126, 127, 137])(
+  'preserves report runtime failure %i despite a redirected output file',
+  (status) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-report-'));
+    try {
+      const mock = `pnpm() {
+        printf '%s\\n' "$*" >&2
+        if [ "$PROBE_CHECKER_STATUS" -le 1 ]; then printf '{"findings":[]}'; fi
+        return "$PROBE_CHECKER_STATUS"
+      }\n`;
+      const result = spawnSync(
+        'bash',
+        [
+          '--noprofile',
+          '--norc',
+          '-euo',
+          'pipefail',
+          '-c',
+          mock + qualityStep(workflow, 'Generate Component Quality report'),
+        ],
+        {
+          cwd: root,
+          env: { ...process.env, PROBE_CHECKER_STATUS: String(status) },
+          encoding: 'utf8',
+        }
+      );
+      expect(result.stderr).toBe('check:component-quality:json\n');
+      expect(result.status).toBe(status <= 1 ? 0 : status);
+      const report = fs.readFileSync(
+        path.join(root, '.artifacts/component-quality/report.json'),
+        'utf8'
+      );
+      // Redirection creates an empty artifact even when the checker cannot run.
+      // File existence must never turn a runtime error into a successful step.
+      expect(report).toBe(status <= 1 ? '{"findings":[]}' : '');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 );
