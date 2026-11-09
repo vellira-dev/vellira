@@ -15,6 +15,7 @@ import {
 import { componentQualityDimensions } from '../../packages/metadata/src/quality';
 import {
   componentGrammarV1,
+  componentGrammarV2,
   componentGrammarInteractionsV1,
   type GrammarModuleV1,
 } from './grammar';
@@ -306,7 +307,7 @@ function normalizedSource(
 export function compileComponentProgram(
   sourceInput: ComponentProgramSourceV1,
   decisionsInput: unknown,
-  registry: readonly GrammarModuleV1[] = componentGrammarV1
+  registry?: readonly GrammarModuleV1[]
 ): ComponentProgramCompilationV1 {
   const findings: ComponentProgramFindingV1[] = [];
   const finding = (
@@ -329,15 +330,22 @@ export function compileComponentProgram(
     // Capture decisions before inspecting source/grammar; those inputs may
     // contain reflection traps that mutate the caller-owned decision object.
     const parsed = parseComponentProgramDecisions(decisionsInput);
-    const order = validateComponentGrammar(registry);
-    const grammar = new Map(registry.map((item) => [item.id, item]));
+    // Legacy grammar and every derived Program fingerprint stay byte-identical.
+    // Only an explicit reviewed module selection opts into successor proof rules.
+    const activeRegistry =
+      registry ??
+      (parsed.modules.some((item) => item.id === 'media-presentation')
+        ? componentGrammarV2
+        : componentGrammarV1);
+    const order = validateComponentGrammar(activeRegistry);
+    const grammar = new Map(activeRegistry.map((item) => [item.id, item]));
     const source = normalizedSource(sourceInput);
     if (parsed.numericBindingSlots) {
       const { numericBindingSlots, ...baselineDecisions } = parsed;
       const baseline = compileComponentProgram(
         sourceInput,
         baselineDecisions,
-        registry
+        activeRegistry
       );
       if (
         baseline.disposition !== 'compiled' ||
@@ -387,7 +395,7 @@ export function compileComponentProgram(
     }
     for (const requirement of source.capabilities)
       if (
-        !registry.some((module) =>
+        !activeRegistry.some((module) =>
           module.capabilities.includes(requirement.capability)
         )
       )
@@ -893,7 +901,7 @@ export function compileComponentProgram(
     const program: ComponentProgramV1 = {
       schemaVersion: '1',
       grammarFingerprint: programDigest('component-grammar-v1', {
-        modules: sorted(registry),
+        modules: sorted(activeRegistry),
         interactions: componentGrammarInteractionsV1,
       }),
       source,
