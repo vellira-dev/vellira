@@ -208,6 +208,33 @@ Do not count a canceled transport as an uncaught application error, but do not
 silently ignore access-control/page errors either: retain request, navigation,
 error and restoration timelines so the distinction can be reviewed.
 
+### Controlled Playwright WebKit teardown diagnostic (not Safari acceptance)
+
+For the failure class in [#2130](https://github.com/vellira-dev/vellira/issues/2130),
+a separate **opt-in** diagnostic reproduces a genuinely pending native
+Next.js `<Link>` RSC prefetch while a fresh A document navigates to B:
+
+```sh
+node --test apps/website/scripts/cloudflare-migration-prefetch-delay.test.mjs
+MIGRATION_S5_ITERATIONS=20 node apps/website/scripts/cloudflare-migration-rapid-unload.mjs
+```
+
+The diagnostic builds real A/B/C fixtures, waits for a real browser prefetch
+to reach the local HTTP origin, holds **only** that prefetch's response for
+four seconds on the server, then performs an unmodified Next.js Link
+navigation after B is activated. No browser request interception, fake
+Flight response, cache clearing or prefetch disabling is used. It retains
+complete per-attempt navigation, pageerror, console-error, script-error and
+request-failure evidence under `test-results/cloudflare-migration-s5`.
+Missing overlap is **INCONCLUSIVE**; any browser/script error is **FAILED**,
+even if the destination renders. No error is silently reclassified or suppressed.
+
+This is an isolated *Playwright WebKit + localhost* reproduction. It cannot
+prove that the release Safari browser behaves identically, and it does
+**not** replace the manual S5 sequence (especially Back/Page Cache), the
+unchanged full canonical migration matrix, or a tested upstream lifecycle
+correction. Keep #2130 open until those separate proofs exist.
+
 ## Evidence and verdict
 
 At each milestone `save`; after each activation `check`; end with `quit` to flush

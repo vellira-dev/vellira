@@ -16,6 +16,10 @@ import {
   assetInventory,
 } from './cloudflare-static-asset-archive.mjs';
 import {
+  assertMigrationPrefetchDelay,
+  observeHeldPrefetch,
+} from './cloudflare-migration-prefetch-delay.mjs';
+import {
   verifyNextPatch,
   verifyShippedTransport,
 } from './next-rsc-patch-check.mjs';
@@ -137,7 +141,11 @@ export async function buildGenerations(directory) {
 // Real HTTP origin. No Playwright routing, Service Worker, or browser cache
 // emulation. Next servers switch behind one listener, using the production
 // response/archive policy and an actual local R2 runtime.
-export async function startMigrationOrigin(generations, directory) {
+export async function startMigrationOrigin(generations, directory, options = {}) {
+  const prefetchDelayMs = assertMigrationPrefetchDelay(
+    options.prefetchDelayMs ?? 0
+  );
+  const heldPrefetches = [];
   const children = [];
   const logs = [];
   const requests = [];
@@ -193,6 +201,16 @@ export async function startMigrationOrigin(generations, directory) {
       );
       const generation = state.generation;
       const url = new URL(request.url);
+      const proceed = await observeHeldPrefetch({
+        request,
+        url,
+        generation,
+        delayMs: prefetchDelayMs,
+        outgoing,
+        observations: heldPrefetches,
+        wait: pause,
+      });
+      if (!proceed) return;
       const handler = {
         fetch: async (req) => {
           if (url.pathname === '/api/cookie-probe')
@@ -291,6 +309,7 @@ export async function startMigrationOrigin(generations, directory) {
   return {
     url: `http://127.0.0.1:${server.address().port}`,
     requests,
+    heldPrefetches,
     state,
     async activate(generation) {
       // The same ordering as real deployment: verify archive before activation.
