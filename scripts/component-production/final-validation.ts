@@ -75,10 +75,10 @@ export function componentProductionFinalValidationCommands(
         fileURLToPath(new URL('../ci/run-tooling-tests.mjs', import.meta.url)),
         '--source-contracts',
       ],
-      // Protected Factory validation intentionally serializes this suite with
-      // one Vitest worker for memory safety. The old 7-minute process budget
-      // was shorter than a healthy serialized run and produced false runtime blocks.
-      timeoutMs: 900_000,
+      // One worker preserves source-test isolation within the memory bound.
+      // The complete suite takes about 920s on the bounded runner; retain
+      // finite headroom without skipping tests or sharing their isolated state.
+      timeoutMs: 1_100_000,
     },
     {
       id: 'tooling-token-cli',
@@ -108,10 +108,10 @@ export function componentProductionFinalValidationCommands(
         '--maxWorkers=1',
         'scripts/component-production/e2e-fixtures.test.ts',
       ],
-      // This file contains multiple production-shaped fixtures with their own
-      // bounded 240-second test budgets. Keep the exact coverage and one-worker
-      // memory bound, but give the aggregate command enough bounded wall time.
-      timeoutMs: 720_000,
+      // All eight production fixtures take about 820s on the bounded runner.
+      // Preserve their one-worker memory bound and 300s individual deadlines,
+      // with finite aggregate headroom for the complete unchanged coverage.
+      timeoutMs: 1_000_000,
     },
   ];
   for (const group of toolingBuildDependencies) {

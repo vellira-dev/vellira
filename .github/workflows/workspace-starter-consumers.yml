@@ -33,6 +33,7 @@ jobs:
         run: |
           node --test scripts/sync-workspace-starter-lockfiles.test.cjs
           node scripts/sync-workspace-starter-lockfiles.cjs --check
+          node --test scripts/ci/retry-published-npm-ci.test.mjs
       - name: Verify both Starter manifests and README agree with root release
         run: |
           version="$(node -p "require('./package.json').version")"
@@ -52,7 +53,7 @@ jobs:
           node-version: 24.21.0
           registry-url: https://registry.npmjs.org
       - name: Install from published npm packages
-        run: npm ci --no-audit --no-fund
+        run: node ../../../scripts/ci/retry-published-npm-ci.mjs
       - name: Assert all direct Vellira pins resolve from public npm
         run: |
           node <<'NODE'
@@ -83,7 +84,7 @@ jobs:
           node-version: 24.21.0
           registry-url: https://registry.npmjs.org
       - name: Install from published npm packages
-        run: npm ci --no-audit --no-fund
+        run: node ../../../scripts/ci/retry-published-npm-ci.mjs
       - name: Assert Native Vellira pin resolves from public npm
         run: |
           node <<'NODE'
