@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 
 import braces from 'braces';
@@ -55,4 +57,60 @@ test('sprintf-js security backport preserves supported precision boundaries', ()
   assert.doesNotThrow(() => sprintf('%.100e', 1));
   assert.doesNotThrow(() => sprintf('%.0g', 1));
   assert.doesNotThrow(() => sprintf('%.100g', 1));
+});
+
+test('deepmerge security backport rejects unsafe keys across entrypoints', () => {
+  const packageRoot = resolve(dirname(require.resolve('deepmerge')), '..');
+
+  for (const entry of ['dist/cjs.js', 'dist/umd.js']) {
+    const merge = require(resolve(packageRoot, entry));
+
+    for (const key of ['__proto__', 'constructor', 'prototype']) {
+      const source = JSON.parse(`{"${key}":{"isAdmin":true}}`);
+      const result = merge(Object.create(null), source);
+
+      assert.equal(Object.getPrototypeOf(result), Object.prototype, entry);
+      assert.equal(Object.hasOwn(result, key), false, entry);
+      assert.equal(result.isAdmin, undefined, entry);
+
+      const target = Object.create(null);
+      Object.defineProperty(target, key, {
+        value: { isAdmin: true },
+        enumerable: true,
+        configurable: true,
+      });
+
+      const cloned = merge(target, { safe: true });
+
+      assert.equal(Object.getPrototypeOf(cloned), Object.prototype, entry);
+      assert.equal(Object.hasOwn(cloned, key), false, entry);
+      assert.equal(cloned.safe, true, entry);
+    }
+  }
+
+  assert.equal(Object.prototype.isAdmin, undefined);
+});
+
+test('deepmerge source entry retains both unsafe-key guards', () => {
+  const packageRoot = resolve(dirname(require.resolve('deepmerge')), '..');
+  const source = readFileSync(resolve(packageRoot, 'index.js'), 'utf8');
+
+  assert.match(source, /function isUnsafeMergeKey\(key\)/);
+  assert.match(source, /if \(isUnsafeMergeKey\(key\)\) return true;/);
+  assert.match(source, /if \(isUnsafeMergeKey\(key\)\) return;/);
+});
+
+test('deepmerge security backport preserves nested Storybook theme merging', () => {
+  const merge = require('deepmerge');
+
+  assert.deepEqual(
+    merge(
+      { colors: { primary: 'red', secondary: 'blue' } },
+      { colors: { primary: 'green' }, spacing: 8 }
+    ),
+    {
+      colors: { primary: 'green', secondary: 'blue' },
+      spacing: 8,
+    }
+  );
 });
