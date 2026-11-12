@@ -85,7 +85,7 @@ test('queries only read endpoints and returns authoritative deployment ID', asyn
   const result = await verifyCloudflareDeploymentReadOnly(f.options);
   assert.equal(result.deploymentId, deploymentId);
   assert.equal(result.status, 'active-cloudflare-deployment-verified');
-  assert.deepEqual(f.calls.map((x) => x[0]), ['cloudflare', 'cloudflare', 'github']);
+  assert.deepEqual(f.calls.map((x) => x[0]), ['cloudflare', 'cloudflare', 'cloudflare', 'github']);
   assert.ok(f.calls.every((x) => !/POST|wrangler|dispatch/i.test(x[1])));
 });
 
@@ -102,4 +102,25 @@ test('denies stale main, invalid account, failed staging identity and API mismat
     ...invalid.options, accountId: 'invalid',
   }));
   assert.equal(invalid.calls.length, 0);
+});
+
+test('rejects Cloudflare deployment replacement during remote read proof', async () => {
+  const f = fixture();
+  const originalGet = f.options.cloudflareGet;
+  let listReads = 0;
+  await assert.rejects(verifyCloudflareDeploymentReadOnly({
+    ...f.options,
+    cloudflareGet: async (path) => {
+      if (path.endsWith('/deployments?page=1&per_page=2')) {
+        listReads++;
+        if (listReads === 2) {
+          return { success: true, result: { deployments: [{
+            ...active, id: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+          }] } };
+        }
+      }
+      return originalGet(path);
+    },
+  }), /deployment changed between reads/);
+  assert.equal(listReads, 2);
 });
