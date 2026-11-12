@@ -72,6 +72,12 @@ if (optInSubpaths) {
 const platforms = ['ios', 'android'];
 const sourceInventories = {};
 const productionOnly = process.env.VELLIRA_METRO_PRODUCTION_ONLY === '1';
+// Explicit opt-in: retain the actual measured scripts and npm resolution locks.
+// This is never enabled by routine CI and must not replace the JSON receipt.
+const retainDir = process.env.VELLIRA_METRO_RETAIN_DIR;
+if (retainDir && (!path.isAbsolute(retainDir) || fs.existsSync(retainDir))) {
+  throw new Error('VELLIRA_METRO_RETAIN_DIR must be an absolute, unused path.');
+}
 
 function run(command, args, cwd, extraEnv = {}) {
   const result = spawnSync(command, args, {
@@ -194,6 +200,18 @@ function app(kind) {
   );
 }
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-metro-1906-'));
+if (retainDir) fs.mkdirSync(retainDir, { recursive: true });
+function retainArtifact(source, relative) {
+  if (!retainDir) return null;
+  const target = path.join(retainDir, relative);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target, fs.constants.COPYFILE_EXCL);
+  return {
+    relativePath: relative.replaceAll('\\\\', '/'),
+    sha256: createHash('sha256').update(fs.readFileSync(target)).digest('hex'),
+    bytes: fs.statSync(target).size,
+  };
+}
 const evidence = {
   schemaVersion: 2,
   issue: optInSubpaths ? 2082 : 470,
@@ -220,6 +238,10 @@ const evidence = {
         packages: candidate.packages.map(p => ({ name: p.name, version: p.version, sha256: p.sha256 })) }
     : { mode: 'exact-published-npm', version },
   purpose: 'Differential iOS/Android production Metro output; not device startup',
+  ...(retainDir ? { retainedArtifacts: {
+    directory: retainDir,
+    cases: {},
+  } } : {}),
   cases: {},
 };
 try {
@@ -237,6 +259,13 @@ try {
     }
     run('npm', ['install', '--no-audit', '--no-fund'], dir);
     const lockBytes = fs.readFileSync(path.join(dir, 'package-lock.json'));
+    if (retainDir) {
+      evidence.retainedArtifacts.cases[kind] = {
+        lockfile: retainArtifact(path.join(dir, 'package-lock.json'),
+          path.join(kind, 'package-lock.json')),
+        productionScripts: {},
+      };
+    }
     const lock = JSON.parse(lockBytes.toString('utf8'));
     const installedCandidate = candidate && kind !== 'baseline'
       ? assertInstalledCandidatePackages(dir, candidate, NATIVE_PACKAGE_NAMES)
@@ -298,6 +327,12 @@ try {
       if (!files.length) throw new Error(kind + '/' + platform + ': no output files');
       const js = files.filter((file) => /\.(?:js|hbc)$/.test(file));
       if (!js.length) throw new Error(kind + '/' + platform + ': no JS/Hermes files');
+      if (retainDir) {
+        evidence.retainedArtifacts.cases[kind].productionScripts[platform] =
+          js.map((file) => retainArtifact(file, path.join(
+            kind, 'out-' + platform, path.relative(outputDir, file)
+          )));
+      }
       measurements[platform] = {
         outputBytes: files.reduce((sum, file) => sum + fs.statSync(file).size, 0),
         scriptBytes: js.reduce((sum, file) => sum + fs.statSync(file).size, 0),
@@ -436,7 +471,13 @@ try {
   }
   }
   fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');
+  fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\\n');
+  if (retainDir) {
+    // The original JSON receipt is also retained; it carries source revision,
+    // pinned toolchain, tarball digests and the emitted-script hash ledger.
+    fs.copyFileSync(output, path.join(retainDir, 'native-metro-matrix.json'),
+      fs.constants.COPYFILE_EXCL);
+  }
   console.log('[native-metro-1906] evidence:', output);
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
