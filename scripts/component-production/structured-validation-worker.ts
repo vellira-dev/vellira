@@ -1,4 +1,6 @@
 import { pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import type { ComponentMetadata } from '@vellira-ui/metadata';
 
@@ -7,10 +9,36 @@ import { runComponentCompletenessCheck } from '../checks/component-completeness/
 import { runComponentQualityCheck } from '../checks/component-quality/engine';
 
 import {
+  COMPONENT_PRODUCTION_PLAN_WORKER_SCHEMA_VERSION,
   COMPONENT_PRODUCTION_VALIDATION_WORKER_SCHEMA_VERSION,
   type ComponentProductionValidationWorkerPlatform,
   type ComponentProductionValidationWorkerResult,
 } from './structured-validation-protocol';
+import {
+  createComponentProductionGeneratorOptions,
+  parseComponentProductionInput,
+} from './contracts';
+
+export async function runComponentProductionPlanContractWorkerTask(params: {
+  root: string;
+  input: unknown;
+}) {
+  const input = parseComponentProductionInput(params.input);
+  const { createComponentGenerationPlan } =
+    await import('../generators/component/plan');
+  const { checkGeneratedPlanContract } =
+    await import('../generators/component/plan-contract');
+  const plan = createComponentGenerationPlan({
+    root: path.resolve(params.root),
+    options: createComponentProductionGeneratorOptions(input),
+  });
+  const driftedFiles = await checkGeneratedPlanContract(plan);
+  return {
+    schemaVersion: COMPONENT_PRODUCTION_PLAN_WORKER_SCHEMA_VERSION,
+    componentName: input.componentName,
+    driftedFiles,
+  };
+}
 
 export type ComponentProductionStructuredValidationWorkerDependencies = {
   metadata?: readonly ComponentMetadata[];
@@ -70,6 +98,18 @@ export async function runComponentProductionStructuredValidationWorkerTask(param
 
 async function main() {
   const [componentName, platform, ...extraArgs] = process.argv.slice(2);
+
+  if (componentName === '--plan-contract') {
+    if (platform !== undefined || extraArgs.length > 0) {
+      throw new Error('Plan contract worker does not accept extra arguments.');
+    }
+    const result = await runComponentProductionPlanContractWorkerTask({
+      root: process.cwd(),
+      input: JSON.parse(readFileSync(0, 'utf8')),
+    });
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    return;
+  }
 
   if (
     !componentName ||

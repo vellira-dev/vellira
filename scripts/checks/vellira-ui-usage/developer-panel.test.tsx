@@ -19,7 +19,9 @@ import { checkSourceFile } from './checker';
 
 // Exercise the real public native Button through its web
 // renderer; do not replace the canonical control with a test double.
-vi.mock('react-native', async () => vi.importActual('react-native-web'));
+vi.mock('react-native', async () =>
+  vi.importActual('react-native-web/dist/index.js')
+);
 
 afterEach(cleanup);
 
