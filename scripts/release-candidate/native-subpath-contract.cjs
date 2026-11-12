@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const ts = require('typescript');
 
 const ROOT = Object.freeze({
   'vellira-source': './src/index.ts',
@@ -83,7 +84,39 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
   const pending = targets.filter((x) => x.endsWith('.js')).map(
     (x) => path.resolve(rootDir, x)
   );
-  const staticImports = /(?:\bfrom\s*|\bimport\s*(?:\(|)|\brequire\s*\()(['"])(\.{1,2}\/[^'"]+)\1/g;
+  function collectJsImports(file, code) {
+    const parsed = ts.createSourceFile(
+      file, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS
+    );
+    if (parsed.parseDiagnostics.length) {
+      throw new Error('Unparseable packed Native JS: ' + file +
+        ': ' + ts.flattenDiagnosticMessageText(
+          parsed.parseDiagnostics[0].messageText, '\\n'
+        ));
+    }
+    const edges = [];
+    const visit = (node) => {
+      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+          node.moduleSpecifier) {
+        if (!ts.isStringLiteral(node.moduleSpecifier)) {
+          throw new Error('Nonliteral packed Native JS import: ' + file);
+        }
+        edges.push(node.moduleSpecifier.text);
+      }
+      if (ts.isCallExpression(node) &&
+          (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+            (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {
+        if (node.arguments.length !== 1 ||
+            !ts.isStringLiteral(node.arguments[0])) {
+          throw new Error('Nonliteral packed Native JS import: ' + file);
+        }
+        edges.push(node.arguments[0].text);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(parsed);
+    return edges.filter((specifier) => specifier.startsWith('.'));
+  }
   while (pending.length) {
     const file = pending.pop();
     if (seen.has(file)) continue;
@@ -93,10 +126,10 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
     }
     seen.add(file);
     const code = fs.readFileSync(file, 'utf8');
-    for (const match of code.matchAll(staticImports)) {
-      const target = path.resolve(path.dirname(file), match[2]);
+    for (const specifier of collectJsImports(file, code)) {
+      const target = path.resolve(path.dirname(file), specifier);
       if (!target.startsWith(dist + path.sep) || !target.endsWith('.js')) {
-        throw new Error('Unsafe native JS chunk import: ' + file + ' -> ' + match[2]);
+        throw new Error('Unsafe native JS chunk import: ' + file + ' -> ' + specifier);
       }
       pending.push(target);
     }
