@@ -368,7 +368,7 @@ test('active production status queries reject missing or truncated evidence', as
     total_count: status === 'queued' ? 100 : 0,
     workflow_runs: [],
   })), /requires pagination/);
-  await assert.rejects(fetchActiveProductionRuns(async status => ({
+  await assert.rejects(fetchActiveProductionRuns(async () => ({
     total_count: 1,
     workflow_runs: [{ id: 1, status: 'completed' }],
   })), /status mismatch/);
