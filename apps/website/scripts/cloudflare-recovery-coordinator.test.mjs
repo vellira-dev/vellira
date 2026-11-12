@@ -376,10 +376,10 @@ test('active production status queries reject missing or truncated evidence', as
 
 test('any repository push run can supply main movement when staging push was path-filtered', () => {
   const timestamp = observedMainPushAt([
-    { head_sha: b, head_branch: 'main', event: 'push', created_at: '2026-11-01T12:58:00Z',
+    { head_sha: b, head_branch: 'main', event: 'push', created_at: '2026-11-01T12:59:00Z',
       name: 'Push on main' },
   ], b);
-  assert.equal(timestamp, '2026-11-01T12:58:00.000Z');
+  assert.equal(timestamp, '2026-11-01T12:59:00.000Z');
   assert.equal(decideRecovery({
     ...base, stagingRuns: [], mainUpdatedAt: timestamp,
   }).reason, 'main_quiet_period');
