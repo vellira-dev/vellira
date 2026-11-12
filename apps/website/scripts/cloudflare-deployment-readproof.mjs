@@ -63,6 +63,13 @@ export async function verifyCloudflareDeploymentReadOnly({
     detail,
     workerVersion: staging.workerVersion,
   });
+  // Fail closed if Cloudflare was redeployed while detail was being read.
+  const latestDeployment = await cloudflareGet(base + '?page=1&per_page=2');
+  validateCloudflareDeployment({
+    list: latestDeployment,
+    detail,
+    workerVersion: staging.workerVersion,
+  });
   // Prevent old evidence from being accepted after main advances during API reads.
   const latest = await githubGet('/repos/' + OWNER + '/git/ref/heads/main');
   assert.equal(latest.object?.sha, candidateSha, 'Main advanced during Cloudflare verification');
