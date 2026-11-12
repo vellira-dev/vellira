@@ -24,7 +24,7 @@
     "@vellira-ui/icons": "workspace:*",
     "@vellira-ui/react-native": "workspace:*",
     "babel-loader": "^10.1.1",
-    "expo": "58.0.23",
+    "expo": "58.0.24",
     "expo-font": "58.0.11",
     "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "58.0.4",
