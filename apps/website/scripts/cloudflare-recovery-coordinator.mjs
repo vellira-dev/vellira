@@ -27,6 +27,23 @@ export async function fetchCandidateProductionRuns(fetchPage, since) {
   return result.workflow_runs;
 }
 
+// Active publishers can have started *before* the latest main SHA existed.
+// Query their current status independently from candidate-window history.
+export async function fetchActiveProductionRuns(fetchStatus) {
+  const statuses = ['queued', 'in_progress', 'pending', 'requested'];
+  const results = await Promise.all(statuses.map(async status => {
+    const response = await fetchStatus(status);
+    assertCompleteRecoveryHistory(response, 'Active production ' + status);
+    assert.ok(response.workflow_runs.every(run => run.status === status),
+      'Active production status mismatch: ' + status);
+    return response.workflow_runs;
+  }));
+  const runs = results.flat();
+  assert.equal(new Set(runs.map(run => run.id)).size, runs.length,
+    'Duplicate active production run');
+  return runs;
+}
+
 export function observedMainPushAt(stagingRuns, mainSha) {
   const timestamps = stagingRuns.filter(run =>
     run.head_sha === mainSha && run.event === 'push'
@@ -208,12 +225,18 @@ async function main(mode) {
     }
     return;
   }
-  const stagingResult = await github(
-    '/repos/' + OWNER + '/actions/workflows/' + STAGING +
-    '/runs?head_sha=' + mainSha + '&per_page=100');
+  const [stagingResult, pushResult, activeProductionRuns] = await Promise.all([
+    github('/repos/' + OWNER + '/actions/workflows/' + STAGING +
+      '/runs?head_sha=' + mainSha + '&per_page=100'),
+    github('/repos/' + OWNER + '/actions/runs?head_sha=' + mainSha +
+      '&event=push&per_page=100'),
+    fetchActiveProductionRuns(status => github('/repos/' + OWNER +
+      '/actions/workflows/' + PRODUCTION + '/runs?status=' + status + '&per_page=100')),
+  ]);
+  assertCompleteRecoveryHistory(pushResult, 'Main push');
   // Fail closed if pagination could conceal earlier recovery for current SHA.
   assertCompleteRecoveryHistory(stagingResult, 'Staging');
-  const observedPush = observedMainPushAt(stagingResult.workflow_runs, mainSha);
+  const observedPush = observedMainPushAt(pushResult.workflow_runs, mainSha);
   // Missing push evidence must never authorize an unbounded history query.
   if (observedPush === null) {
     console.error('::error::No observed push timestamp for current main; cannot prove production replay history.');
@@ -257,8 +280,18 @@ async function main(mode) {
       ),
     };
   }));
-  const mainUpdatedAt = observedMainPushAt(stagingRuns, mainSha);
-  const plan = decideRecovery({ mainSha, productionSha, stagingRuns, productionRuns, mainUpdatedAt });
+  const mainUpdatedAt = observedPush;
+  // Complete active state is checked even when an older publisher predates
+  // the candidate-window query. Existing replay evidence is de-duplicated.
+  const productionEvidence = [...productionRuns];
+  for (const run of activeProductionRuns) {
+    if (!productionEvidence.some(existing => existing.id === run.id)) {
+      productionEvidence.push(run);
+    }
+  }
+  const plan = decideRecovery({
+    mainSha, productionSha, stagingRuns, productionRuns: productionEvidence, mainUpdatedAt,
+  });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
   if (mode === 'plan') {
     const output = process.env.GITHUB_OUTPUT;
