@@ -162,15 +162,15 @@ test('accepts shared chunks consumed by root and leaf entries once', () => {
 test('rejects missing chunks reached via comments, re-exports and multiline imports', () => {
   const examples = [
     "import(/* comment */ './missing.js');",
-    "import(\\n /* retained */ \\n './missing.js'\\n);",
+    "import(\n /* retained */ \n './missing.js'\n);",
     "require(/* retained */ './missing.js');",
     "export { part } from /* retained */ './missing.js';",
-    "import { part } from\\n './missing.js';",
+    "import { part } from\n './missing.js';",
     "export * from './missing.js';",
   ];
   for (const code of examples) {
     withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
-      fs.writeFileSync(path.join(dir, 'dist/button.js'), code + '\\n');
+      fs.writeFileSync(path.join(dir, 'dist/button.js'), code + '\n');
       assert.throws(
         () => assertNativeSubpathContract(dir),
         /Missing packed native JS chunk/,
@@ -189,7 +189,7 @@ test('rejects computed dynamic import and require expressions, even if string-li
   ];
   for (const code of examples) {
     withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
-      fs.writeFileSync(path.join(dir, 'dist/button.js'), code + '\\n');
+      fs.writeFileSync(path.join(dir, 'dist/button.js'), code + '\n');
       assert.throws(
         () => assertNativeSubpathContract(dir),
         /Nonliteral packed Native JS import/,
@@ -202,9 +202,9 @@ test('rejects computed dynamic import and require expressions, even if string-li
 test('parses comments and strings without creating fake import edges', () => {
   withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
     fs.writeFileSync(path.join(dir, 'dist/button.js'),
-      '// import("./not-an-edge.js")\\n' +
-      'const text = "export * from ./not-an-edge.js";\\n' +
-      'export {};\\n'
+      '// import("./not-an-edge.js")\n' +
+      'const text = "export * from ./not-an-edge.js";\n' +
+      'export {};\n'
     );
     assert.equal(assertNativeSubpathContract(dir).checkedJsFiles, 18);
   });
@@ -212,7 +212,7 @@ test('parses comments and strings without creating fake import edges', () => {
 
 test('rejects syntactically invalid packed JS', () => {
   withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
-    fs.writeFileSync(path.join(dir, 'dist/button.js'), 'import { from;\\n');
+    fs.writeFileSync(path.join(dir, 'dist/button.js'), 'import { from;\n');
     assert.throws(
       () => assertNativeSubpathContract(dir),
       /Unparseable packed Native JS/
