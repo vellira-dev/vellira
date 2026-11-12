@@ -21,6 +21,40 @@ describe('release candidate artifact wiring', () => {
     expect(publisher).toContain('npm integrity mismatch');
   });
 
+  it('requires the complete shared Native graph from one canonical source', () => {
+    const shared = readFileSync('packages/react-native/tsdown.config.ts', 'utf8');
+    const workflow = readFileSync(
+      '.github/workflows/release-candidate-proof.yml',
+      'utf8'
+    );
+    const pkg = JSON.parse(
+      readFileSync('packages/react-native/package.json', 'utf8')
+    );
+    const subpaths = JSON.parse(
+      readFileSync('packages/react-native/native-subpaths.json', 'utf8')
+    );
+
+    expect(Object.keys(subpaths)).toHaveLength(17);
+    expect(shared).toContain("new URL('./native-subpaths.json', import.meta.url)");
+    expect(shared).toContain('codeSplitting: true');
+    expect(pkg.exports['.']['react-native']).toBe('./dist/index.js');
+    expect(pkg.files).toContain('dist/**/*.js');
+    for (const name of Object.keys(subpaths)) {
+      expect(pkg.exports['./' + name]?.['react-native']).toBe(
+        './dist/' + name + '.js'
+      );
+    }
+    expect(workflow).toContain(
+      'Verify canonical Native shared graph before packaging'
+    );
+    expect(workflow).toContain(
+      'Assert exact packed Native subpaths and shared chunks'
+    );
+    expect(workflow).not.toContain(
+      'Subpaths must remain unpublished in this proof workflow'
+    );
+  });
+
   it('checks native subpaths in unpacked exact candidate tarballs', () => {
     const producer = readFileSync(
       'scripts/release-candidate/package-artifacts.cjs',

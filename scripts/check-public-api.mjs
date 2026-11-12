@@ -17,7 +17,7 @@ const packageExportContracts = {
   ],
   'packages/core/package.json': ['.'],
   'packages/icons/package.json': ['.', './lottie', './native', './web'],
-  'packages/react-native/package.json': ['.'],
+  'packages/react-native/package.json': [".", "./accordion", "./button", "./checkbox", "./dropdown", "./form-field", "./input", "./modal", "./popover", "./portal", "./radio", "./radio-group", "./select", "./switch", "./tabs", "./textarea", "./theme", "./tooltip"],
   'packages/tokens/package.json': ['.', './css'],
   'packages/types/package.json': ['.'],
   'packages/react/package.json': ['.', './styles', './styles/button'],
