@@ -183,7 +183,7 @@ test('rejects missing chunks reached via comments, re-exports and multiline impo
 test('rejects computed dynamic import and require expressions, even if string-like', () => {
   const examples = [
     "import('./' + 'missing.js');",
-    "import(`./missing-\\${name}.js`);",
+    "import(`./missing-${name}.js`);",
     "require('./' + name);",
     "import(variable);",
   ];
