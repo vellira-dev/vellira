@@ -138,10 +138,10 @@ test('candidate manifest authority must exist before starting Metro installs', (
 
 test('Metro evidence retention is opt-in and rejects unsafe or existing paths before installing', () => {
   assert.match(script, /VELLIRA_METRO_RETAIN_DIR/);
-  assert.match(script, /fs\\.copyFileSync\\(source, target, fs\\.constants\\.COPYFILE_EXCL\\)/);
-  assert.match(script, /productionScripts\\[platform\\]/);
-  assert.match(script, /path\\.join\\(kind, 'package-lock\\.json'\\)/);
-  assert.match(script, /native-metro-matrix\\.json/);
+  assert.match(script, /fs\.copyFileSync\(source, target, fs\.constants\.COPYFILE_EXCL\)/);
+  assert.match(script, /productionScripts\[platform\]/);
+  assert.match(script, /path\.join\(kind, 'package-lock\.json'\)/);
+  assert.match(script, /native-metro-matrix\.json/);
   const scratch = mkdtempSync(path.join(tmpdir(), 'vellira-metro-retain-test-'));
   try {
     const program = fileURLToPath(new URL('./native-metro-matrix.cjs', import.meta.url));
