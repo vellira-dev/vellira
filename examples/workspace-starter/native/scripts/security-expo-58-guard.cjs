@@ -24,7 +24,7 @@ const LOCKED_CLI = 'node_modules/expo/node_modules/@expo/cli';
 assert.equal(metadata.version, '58.1.19', 'Unsupported Expo CLI: source review required');
 assert.equal(lock.packages[LOCKED_CLI]?.version, '58.1.19');
 assert.equal(lock.packages[LOCKED_CLI]?.integrity, EXPECTED_INTEGRITY);
-assert.equal(lock.packages['node_modules/expo']?.version, '58.0.23');
+assert.equal(lock.packages['node_modules/expo']?.version, '58.0.24');
 assert.equal(lock.packages['node_modules/@expo/metro-config']?.version, '58.0.21');
 assert.equal(lock.packages['node_modules/react-native']?.version, '0.88.1');
 assert.equal(lock.packages['node_modules/@expo/schema-utils']?.version, '58.0.3');
