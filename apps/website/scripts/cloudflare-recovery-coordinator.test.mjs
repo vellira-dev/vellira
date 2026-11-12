@@ -267,7 +267,7 @@ test('candidate-scoped query fails closed on truncated results or missing push',
 
 test('quiet window follows observed push timestamp rather than git committer date', () => {
   const latest = observedMainPushAt([
-    { head_sha: b, event: 'push', created_at: '2026-11-01T12:59:30Z' },
+    { head_sha: b, head_branch: 'main', event: 'push', created_at: '2026-11-01T12:59:30Z' },
     { head_sha: b, event: 'workflow_dispatch', created_at: '2026-11-01T12:59:59Z' },
   ], b);
   assert.equal(latest, '2026-11-01T12:59:30.000Z');
@@ -376,7 +376,7 @@ test('active production status queries reject missing or truncated evidence', as
 
 test('any repository push run can supply main movement when staging push was path-filtered', () => {
   const timestamp = observedMainPushAt([
-    { head_sha: b, event: 'push', created_at: '2026-11-01T12:58:00Z',
+    { head_sha: b, head_branch: 'main', event: 'push', created_at: '2026-11-01T12:58:00Z',
       name: 'Push on main' },
   ], b);
   assert.equal(timestamp, '2026-11-01T12:58:00.000Z');
@@ -418,4 +418,11 @@ test('candidate pagination rejects changing totals and hidden old entries', asyn
     total_count: 1,
     workflow_runs: [{ id: 1, created_at: '2026-11-01T12:49:00Z' }],
   }), '2026-11-01T12:50:00Z'), /earlier run/);
+});
+
+test('a push of the same SHA on another branch is not proof of main movement', () => {
+  assert.equal(observedMainPushAt([
+    { head_sha: b, head_branch: 'feature', event: 'push',
+      created_at: '2026-11-01T12:59:00Z' },
+  ], b), null);
 });
