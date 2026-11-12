@@ -249,6 +249,7 @@ test('candidate-scoped history excludes unrelated accumulated production runs', 
     return { total_count: 1, workflow_runs: [{
       id: 1, display_title: 'Promote staging ' + b,
       event: 'workflow_dispatch', status: 'completed',
+      created_at: '2026-11-01T12:51:00Z',
     }] };
   }, '2026-11-01T12:50:00Z');
   assert.equal(decideRecovery({ ...base, stagingRuns: [stage], productionRuns: result }).reason,
@@ -258,7 +259,7 @@ test('candidate-scoped history excludes unrelated accumulated production runs', 
 test('candidate-scoped query fails closed on truncated results or missing push', async () => {
   await assert.rejects(fetchCandidateProductionRuns(async () => ({
     total_count: 100, workflow_runs: [],
-  }), '2026-11-01T12:50:00Z'), /requires pagination/);
+  }), '2026-11-01T12:50:00Z'), /history incomplete/);
   await assert.rejects(fetchCandidateProductionRuns(async () => ({
     total_count: 0, workflow_runs: [],
   }), null), /Missing reliable main push observation/);
@@ -385,4 +386,36 @@ test('any repository push run can supply main movement when staging push was pat
   assert.equal(decideRecovery({
     ...base, stagingRuns: [], mainUpdatedAt: timestamp, nowMs: now + 120000,
   }).target, 'staging');
+});
+
+test('candidate history with 125 runs is fully paginated and does not lose an older replay', async () => {
+  const all = Array.from({ length: 125 }, (_, index) => ({
+    id: index + 1, created_at: '2026-11-01T12:51:00Z',
+    status: 'completed',
+    display_title: index === 124 ? 'Promote staging ' + b : 'different candidate',
+    event: index === 124 ? 'workflow_dispatch' : 'workflow_run',
+  }));
+  const result = await fetchCandidateProductionRuns(async (since, page) => {
+    assert.equal(since, '2026-11-01T12:50:00Z');
+    return {
+      total_count: all.length,
+      workflow_runs: all.slice((page - 1) * 100, page * 100),
+    };
+  }, '2026-11-01T12:50:00Z');
+  assert.equal(result.length, 125);
+  assert.equal(decideRecovery({
+    ...base, stagingRuns: [stage], productionRuns: result,
+  }).reason, 'verified_replay_already_attempted');
+});
+
+test('candidate pagination rejects changing totals and hidden old entries', async () => {
+  await assert.rejects(fetchCandidateProductionRuns(async (_since, page) => ({
+    total_count: page === 1 ? 101 : 102,
+    workflow_runs: Array.from({ length: page === 1 ? 100 : 1 },
+      (_, i) => ({ id: i + 1, created_at: '2026-11-01T12:51:00Z' })),
+  }), '2026-11-01T12:50:00Z'), /changed during pagination/);
+  await assert.rejects(fetchCandidateProductionRuns(async () => ({
+    total_count: 1,
+    workflow_runs: [{ id: 1, created_at: '2026-11-01T12:49:00Z' }],
+  }), '2026-11-01T12:50:00Z'), /earlier run/);
 });
