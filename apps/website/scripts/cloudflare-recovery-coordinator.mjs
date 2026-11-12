@@ -63,7 +63,7 @@ export async function fetchActiveProductionRuns(fetchStatus) {
 
 export function observedMainPushAt(stagingRuns, mainSha) {
   const timestamps = stagingRuns.filter(run =>
-    run.head_sha === mainSha && run.event === 'push'
+    run.head_sha === mainSha && run.event === 'push' && run.head_branch === 'main'
   ).map(run => Date.parse(run.created_at ?? ''));
   return timestamps.length && timestamps.every(Number.isFinite)
     ? new Date(Math.max(...timestamps)).toISOString()
