@@ -158,3 +158,64 @@ test('accepts shared chunks consumed by root and leaf entries once', () => {
     assert.equal(actual.checkedJsFiles, 19);
   });
 });
+
+test('rejects missing chunks reached via comments, re-exports and multiline imports', () => {
+  const examples = [
+    "import(/* comment */ './missing.js');",
+    "import(\\n /* retained */ \\n './missing.js'\\n);",
+    "require(/* retained */ './missing.js');",
+    "export { part } from /* retained */ './missing.js';",
+    "import { part } from\\n './missing.js';",
+    "export * from './missing.js';",
+  ];
+  for (const code of examples) {
+    withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
+      fs.writeFileSync(path.join(dir, 'dist/button.js'), code + '\\n');
+      assert.throws(
+        () => assertNativeSubpathContract(dir),
+        /Missing packed native JS chunk/,
+        code
+      );
+    });
+  }
+});
+
+test('rejects computed dynamic import and require expressions, even if string-like', () => {
+  const examples = [
+    "import('./' + 'missing.js');",
+    "import(`./missing-\\${name}.js`);",
+    "require('./' + name);",
+    "import(variable);",
+  ];
+  for (const code of examples) {
+    withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
+      fs.writeFileSync(path.join(dir, 'dist/button.js'), code + '\\n');
+      assert.throws(
+        () => assertNativeSubpathContract(dir),
+        /Nonliteral packed Native JS import/,
+        code
+      );
+    });
+  }
+});
+
+test('parses comments and strings without creating fake import edges', () => {
+  withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
+    fs.writeFileSync(path.join(dir, 'dist/button.js'),
+      '// import("./not-an-edge.js")\\n' +
+      'const text = "export * from ./not-an-edge.js";\\n' +
+      'export {};\\n'
+    );
+    assert.equal(assertNativeSubpathContract(dir).checkedJsFiles, 18);
+  });
+});
+
+test('rejects syntactically invalid packed JS', () => {
+  withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
+    fs.writeFileSync(path.join(dir, 'dist/button.js'), 'import { from;\\n');
+    assert.throws(
+      () => assertNativeSubpathContract(dir),
+      /Unparseable packed Native JS/
+    );
+  });
+});
