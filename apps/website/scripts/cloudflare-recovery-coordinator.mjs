@@ -19,12 +19,29 @@ export function assertCompleteRecoveryHistory(result, label) {
 
 // Scan the bounded lifetime of this candidate, not the cumulative workflow
 // history. Production workflow_run head_sha is NOT candidate identity.
-export async function fetchCandidateProductionRuns(fetchPage, since) {
+export async function fetchCandidateProductionRuns(fetchPage, since, { maxPages = 20 } = {}) {
   const at = Date.parse(since ?? '');
   assert.ok(Number.isFinite(at), 'Missing reliable main push observation');
-  const result = await fetchPage(since);
-  assertCompleteRecoveryHistory(result, 'Candidate production');
-  return result.workflow_runs;
+  const first = await fetchPage(since, 1);
+  assert.ok(Number.isSafeInteger(first?.total_count) && first.total_count >= 0,
+    'Candidate production history count missing');
+  const pages = Math.ceil(first.total_count / 100);
+  assert.ok(pages <= maxPages, 'Candidate production history exceeds bounded pagination');
+  assert.ok(Array.isArray(first.workflow_runs), 'Candidate production runs missing');
+  const runs = [...first.workflow_runs];
+  for (let page = 2; page <= pages; page++) {
+    const result = await fetchPage(since, page);
+    assert.equal(result.total_count, first.total_count,
+      'Candidate production history changed during pagination');
+    assert.ok(Array.isArray(result.workflow_runs), 'Candidate production page missing');
+    runs.push(...result.workflow_runs);
+  }
+  assert.equal(runs.length, first.total_count, 'Candidate production history incomplete');
+  assert.equal(new Set(runs.map(run => run.id)).size, runs.length,
+    'Candidate production history contains duplicate runs');
+  assert.ok(runs.every(run => Date.parse(run.created_at ?? '') >= at),
+    'Candidate production history contains an earlier run');
+  return runs;
 }
 
 // Active publishers can have started *before* the latest main SHA existed.
@@ -243,9 +260,9 @@ async function main(mode) {
     process.exitCode = 1;
     return;
   }
-  const productionResult = await fetchCandidateProductionRuns(since => github(
+  const productionResult = await fetchCandidateProductionRuns((since, page) => github(
       '/repos/' + OWNER + '/actions/workflows/' + PRODUCTION +
-      '/runs?created=' + encodeURIComponent('>=' + since) + '&per_page=100'), observedPush);
+      '/runs?created=' + encodeURIComponent('>=' + since) + '&per_page=100&page=' + page), observedPush);
   const stagingRuns = await Promise.all(stagingResult.workflow_runs.map(async (run) => {
     const recoveryAttempt = run.event === 'workflow_dispatch' &&
       run.display_title === 'Production recovery ' + mainSha;
