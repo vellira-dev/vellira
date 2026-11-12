@@ -135,3 +135,33 @@ test('candidate manifest authority must exist before starting Metro installs', (
     rmSync(scratch, { recursive: true, force: true });
   }
 });
+
+test('Metro evidence retention is opt-in and rejects unsafe or existing paths before installing', () => {
+  assert.match(script, /VELLIRA_METRO_RETAIN_DIR/);
+  assert.match(script, /fs\\.copyFileSync\\(source, target, fs\\.constants\\.COPYFILE_EXCL\\)/);
+  assert.match(script, /productionScripts\\[platform\\]/);
+  assert.match(script, /path\\.join\\(kind, 'package-lock\\.json'\\)/);
+  assert.match(script, /native-metro-matrix\\.json/);
+  const scratch = mkdtempSync(path.join(tmpdir(), 'vellira-metro-retain-test-'));
+  try {
+    const program = fileURLToPath(new URL('./native-metro-matrix.cjs', import.meta.url));
+    const execute = (retainPath) => spawnSync(process.execPath, [program], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        VELLIRA_NATIVE_VERSION: '2.191.7',
+        VELLIRA_NATIVE_CANDIDATE_TGZ: '',
+        VELLIRA_NATIVE_CANDIDATE_SHA256: '',
+        VELLIRA_METRO_RETAIN_DIR: retainPath,
+      },
+    });
+    const existing = execute(scratch);
+    assert.notEqual(existing.status, 0);
+    assert.match(existing.stderr, /absolute, unused path/);
+    const relative = execute('relative-not-allowed');
+    assert.notEqual(relative.status, 0);
+    assert.match(relative.stderr, /absolute, unused path/);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
