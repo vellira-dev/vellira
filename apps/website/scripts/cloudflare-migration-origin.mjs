@@ -20,6 +20,10 @@ import {
   observeHeldPrefetch,
 } from './cloudflare-migration-prefetch-delay.mjs';
 import {
+  assertCssHoldDelay,
+  observeHeldCss,
+} from './cloudflare-migration-css-hold.mjs';
+import {
   verifyNextPatch,
   verifyShippedTransport,
 } from './next-rsc-patch-check.mjs';
@@ -146,6 +150,8 @@ export async function startMigrationOrigin(generations, directory, options = {})
     options.prefetchDelayMs ?? 0
   );
   const heldPrefetches = [];
+  const cssDelayMs = assertCssHoldDelay(options.cssDelayMs ?? 0);
+  const heldCssRequests = [];
   const children = [];
   const logs = [];
   const requests = [];
@@ -211,6 +217,16 @@ export async function startMigrationOrigin(generations, directory, options = {})
         wait: pause,
       });
       if (!proceed) return;
+      const cssProceed = await observeHeldCss({
+        request,
+        url,
+        generation,
+        delayMs: cssDelayMs,
+        outgoing,
+        observations: heldCssRequests,
+        wait: pause,
+      });
+      if (!cssProceed) return;
       const handler = {
         fetch: async (req) => {
           if (url.pathname === '/api/cookie-probe')
@@ -310,6 +326,7 @@ export async function startMigrationOrigin(generations, directory, options = {})
     url: `http://127.0.0.1:${server.address().port}`,
     requests,
     heldPrefetches,
+    heldCssRequests,
     state,
     async activate(generation) {
       // The same ordering as real deployment: verify archive before activation.

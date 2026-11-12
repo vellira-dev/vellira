@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { webkit, expect } from '@playwright/test';
 import { buildGenerations, startMigrationOrigin } from './cloudflare-migration-origin.mjs';
 import { assertRapidUnloadResult } from './cloudflare-migration-prefetch-delay.mjs';
+import { cssPendingAtHardNavigation } from './cloudflare-migration-css-hold.mjs';
 import {
   assertTeardownFallbackResult,
   classifyTeardownPrefetchTrace,
@@ -20,8 +21,10 @@ const iterations = Number(process.env.MIGRATION_S5_ITERATIONS ?? 3);
 assert.ok(Number.isInteger(iterations) && iterations >= 1 && iterations <= 20);
 const variant = process.env.MIGRATION_S5_VARIANT ?? 'inflight';
 assert.ok(
-  variant === 'inflight' || variant === 'teardown',
-  'Expected MIGRATION_S5_VARIANT=inflight|teardown'
+  variant === 'inflight' ||
+    variant === 'teardown' ||
+    variant === 'css-pending',
+  'Expected MIGRATION_S5_VARIANT=inflight|teardown|css-pending'
 );
 const delayedMs = 4_000;
 const directory = path.resolve(
@@ -41,6 +44,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
   await fs.mkdir(attemptDirectory, { recursive: true });
   const origin = await startMigrationOrigin(generations, attemptDirectory, {
     prefetchDelayMs: variant === 'inflight' ? delayedMs : 0,
+    cssDelayMs: variant === 'css-pending' ? delayedMs : 0,
   });
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-s5-webkit-'));
   let context;
@@ -51,7 +55,9 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
     diagnostic:
       variant === 'inflight'
         ? 'origin-held-native-Next-prefetch-hard-navigation'
-        : 'old-A-prefetched-page-native-Next-dispatch-during-hard-navigation',
+        : variant === 'css-pending'
+          ? 'old-A-prefetched-page-with-pending-B-CSS'
+          : 'old-A-prefetched-page-native-Next-dispatch-during-hard-navigation',
     variant,
     delayMs: delayedMs,
     events: [],
@@ -61,6 +67,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
     navigationStartedAt: null,
     teardown: null,
     bFlightFromGenerationB: false,
+    cssPendingAtHardNavigation: false,
     status: 'inconclusive',
   };
   try {
@@ -138,7 +145,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
     // The opt-in teardown variant reproduces the original #2128 document:
     // A /target/prefetched -> B /target/fresh with native Link prefetch.
     let held;
-    if (variant === 'teardown') {
+    if (variant !== 'inflight') {
       await page.locator('#prefetched').hover();
       await expect
         .poll(
@@ -182,7 +189,9 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
     result.destination = await page.locator('h1').textContent();
     // Retain events after commit; no route interception or error suppression.
     await page.waitForTimeout(
-      variant === 'inflight' ? delayedMs + 250 : 500
+      variant === 'inflight' || variant === 'css-pending'
+        ? delayedMs + 250
+        : 500
     );
     result.bFlightFromGenerationB = origin.requests.some(
       (request) =>
@@ -191,7 +200,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
         request.url.startsWith('/target/fresh') &&
         request.at >= result.navigationStartedAt
     );
-    if (variant === 'teardown') {
+    if (variant !== 'inflight') {
       result.teardown = classifyTeardownPrefetchTrace({
         events: result.events,
         originRequests: origin.requests,
@@ -207,8 +216,20 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
         result.error =
           'Both old-document native prefetch dispatches were not observed';
       } else {
-        assertTeardownFallbackResult(result);
-        result.status = 'passed';
+        if (variant === 'css-pending') {
+          result.cssPendingAtHardNavigation = cssPendingAtHardNavigation(
+            origin.heldCssRequests,
+            result.teardown.hardNavigationAt
+          );
+        }
+        if (variant === 'css-pending' && !result.cssPendingAtHardNavigation) {
+          result.status = 'inconclusive';
+          result.error =
+            'No generation-B CSS was pending at hard navigation start';
+        } else {
+          assertTeardownFallbackResult(result);
+          result.status = 'passed';
+        }
       }
     } else {
       assertRapidUnloadResult(result);
@@ -229,6 +250,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
   } finally {
     await context?.close();
     result.heldPrefetches = origin.heldPrefetches;
+    result.heldCssRequests = origin.heldCssRequests;
     result.originRequests = origin.requests;
     await fs.writeFile(
       path.join(attemptDirectory, 'evidence.json'),
