@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideRecovery, assertCompleteRecoveryHistory, fetchCandidateProductionRuns, observedMainPushAt } from './cloudflare-recovery-coordinator.mjs';
+import { decideRecovery, assertCompleteRecoveryHistory, fetchCandidateProductionRuns, observedMainPushAt, fetchActiveProductionRuns } from './cloudflare-recovery-coordinator.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
@@ -344,4 +344,45 @@ test('failed push remains terminal even with an older qualified staging run', ()
   assert.deepEqual(plan, {
     dispatch: false, reason: 'failed_staging_requires_review',
   });
+});
+
+test('production publisher for A stays active after main changes to B', async () => {
+  const olderSha = 'a'.repeat(40);
+  const active = await fetchActiveProductionRuns(async status => ({
+    total_count: status === 'in_progress' ? 1 : 0,
+    workflow_runs: status === 'in_progress'
+      ? [{ id: 90, head_sha: olderSha, status, display_title: 'Promote staging ' + olderSha }]
+      : [],
+  }));
+  const result = decideRecovery({
+    ...base, stagingRuns: [stage],
+    // Candidate-scoped completed history is empty. Global active state is not.
+    productionRuns: active,
+  });
+  assert.deepEqual(result, { dispatch: false, reason: 'production_active' });
+});
+
+test('active production status queries reject missing or truncated evidence', async () => {
+  await assert.rejects(fetchActiveProductionRuns(async status => ({
+    total_count: status === 'queued' ? 100 : 0,
+    workflow_runs: [],
+  })), /requires pagination/);
+  await assert.rejects(fetchActiveProductionRuns(async status => ({
+    total_count: 1,
+    workflow_runs: [{ id: 1, status: 'completed' }],
+  })), /status mismatch/);
+});
+
+test('any repository push run can supply main movement when staging push was path-filtered', () => {
+  const timestamp = observedMainPushAt([
+    { head_sha: b, event: 'push', created_at: '2026-11-01T12:58:00Z',
+      name: 'Push on main' },
+  ], b);
+  assert.equal(timestamp, '2026-11-01T12:58:00.000Z');
+  assert.equal(decideRecovery({
+    ...base, stagingRuns: [], mainUpdatedAt: timestamp,
+  }).reason, 'main_quiet_period');
+  assert.equal(decideRecovery({
+    ...base, stagingRuns: [], mainUpdatedAt: timestamp, nowMs: now + 120000,
+  }).target, 'staging');
 });
