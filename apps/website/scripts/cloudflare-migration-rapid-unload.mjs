@@ -7,12 +7,22 @@ import { spawnSync } from 'node:child_process';
 import { webkit, expect } from '@playwright/test';
 import { buildGenerations, startMigrationOrigin } from './cloudflare-migration-origin.mjs';
 import { assertRapidUnloadResult } from './cloudflare-migration-prefetch-delay.mjs';
+import {
+  assertTeardownFallbackResult,
+  classifyTeardownPrefetchTrace,
+  hasBlockingBrowserError,
+} from './cloudflare-migration-teardown-trace.mjs';
 
 // Explicit S5 diagnostic, NOT the normal migration gate or real Safari proof.
 // Delays only the real origin's response to an actual native Next Link RSC
 // prefetch; no Playwright request interception, mocks, or disabled browser cache.
 const iterations = Number(process.env.MIGRATION_S5_ITERATIONS ?? 3);
 assert.ok(Number.isInteger(iterations) && iterations >= 1 && iterations <= 20);
+const variant = process.env.MIGRATION_S5_VARIANT ?? 'inflight';
+assert.ok(
+  variant === 'inflight' || variant === 'teardown',
+  'Expected MIGRATION_S5_VARIANT=inflight|teardown'
+);
 const delayedMs = 4_000;
 const directory = path.resolve(
   process.env.MIGRATION_RESULTS ??
@@ -30,7 +40,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
   const attemptDirectory = path.join(directory, 'webkit-' + attempt);
   await fs.mkdir(attemptDirectory, { recursive: true });
   const origin = await startMigrationOrigin(generations, attemptDirectory, {
-    prefetchDelayMs: delayedMs,
+    prefetchDelayMs: variant === 'inflight' ? delayedMs : 0,
   });
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-s5-webkit-'));
   let context;
@@ -38,11 +48,19 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
     attempt,
     sha,
     browser: 'webkit',
-    diagnostic: 'origin-held-native-Next-prefetch-hard-navigation',
+    diagnostic:
+      variant === 'inflight'
+        ? 'origin-held-native-Next-prefetch-hard-navigation'
+        : 'old-A-prefetched-page-native-Next-dispatch-during-hard-navigation',
+    variant,
     delayMs: delayedMs,
     events: [],
     destination: null,
     heldAtNavigation: false,
+    oldDocument: null,
+    navigationStartedAt: null,
+    teardown: null,
+    bFlightFromGenerationB: false,
     status: 'inconclusive',
   };
   try {
@@ -60,6 +78,24 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
       if (msg.type() === 'error')
         record('console-error', { text: msg.text(), url: page.url() });
     });
+    page.on('request', (req) => {
+      const headers = req.headers();
+      record('request', {
+        url: req.url(),
+        pageUrl: page.url(),
+        document: req.isNavigationRequest(),
+        rsc: headers.rsc ?? null,
+        prefetch: headers['next-router-prefetch'] ?? null,
+      });
+    });
+    page.on('response', (response) =>
+      record('response', {
+        url: response.url(),
+        pageUrl: page.url(),
+        document: response.request().isNavigationRequest(),
+        status: response.status(),
+      })
+    );
     page.on('requestfailed', (req) =>
       record('requestfailed', {
         url: req.url(),
@@ -98,31 +134,95 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
     await page.goto(origin.url);
     await page.waitForFunction(() => typeof window.__migrationTransport === 'function');
     await expect(page.locator('h1')).toHaveText('Generation A');
-    await expect
-      .poll(() => origin.heldPrefetches.length, { timeout: 8_000 })
-      .toBeGreaterThan(0);
-    const held = origin.heldPrefetches.find((entry) => entry.generation === 'A');
-    assert.ok(held, 'No genuine A Next Link RSC prefetch');
-    // An already-resolved prefetch does not exercise the S5 race.
+    // Preserve the previous 20-run, already-accepted-request control.
+    // The opt-in teardown variant reproduces the original #2128 document:
+    // A /target/prefetched -> B /target/fresh with native Link prefetch.
+    let held;
+    if (variant === 'teardown') {
+      await page.locator('#prefetched').hover();
+      await expect
+        .poll(
+          () =>
+            origin.requests.filter(
+              (request) =>
+                request.generation === 'A' &&
+                request.rsc &&
+                request.url.startsWith('/target/prefetched?')
+            ).length,
+          { timeout: 8_000 }
+        )
+        .toBeGreaterThan(0);
+      await page.waitForTimeout(250);
+      await page.locator('#prefetched').click();
+      await expect(page.locator('h1')).toHaveText('Target prefetched A');
+      result.oldDocument = page.url();
+      assert.equal(new URL(result.oldDocument).pathname, '/target/prefetched');
+    } else {
+      await expect
+        .poll(() => origin.heldPrefetches.length, { timeout: 8_000 })
+        .toBeGreaterThan(0);
+      held = origin.heldPrefetches.find(
+        (entry) => entry.generation === 'A'
+      );
+      assert.ok(held, 'No genuine A Next Link RSC prefetch');
+    }
     await origin.activate('B');
-    result.heldAtNavigation = !held.settled;
-    assert.ok(
-      result.heldAtNavigation,
-      'Prefetch completed before hard navigation (INCONCLUSIVE)'
-    );
+    if (variant === 'inflight') {
+      result.heldAtNavigation = !held.settled;
+      assert.ok(
+        result.heldAtNavigation,
+        'Prefetch completed before hard navigation (INCONCLUSIVE)'
+      );
+    }
+    result.navigationStartedAt = Date.now();
     await page.locator('#fresh').click();
     await expect(page.locator('h1')).toHaveText('Target fresh B', {
       timeout: 15_000,
     });
     result.destination = await page.locator('h1').textContent();
-    // Observe terminal browser events after the navigation commit, without
-    // modifying browser routing, cache, error handlers or page state.
-    await page.waitForTimeout(delayedMs + 250);
-    assertRapidUnloadResult(result);
-    result.status = 'passed';
+    // Retain events after commit; no route interception or error suppression.
+    await page.waitForTimeout(
+      variant === 'inflight' ? delayedMs + 250 : 500
+    );
+    result.bFlightFromGenerationB = origin.requests.some(
+      (request) =>
+        request.generation === 'B' &&
+        request.rsc &&
+        request.url.startsWith('/target/fresh') &&
+        request.at >= result.navigationStartedAt
+    );
+    if (variant === 'teardown') {
+      result.teardown = classifyTeardownPrefetchTrace({
+        events: result.events,
+        originRequests: origin.requests,
+        oldDocument: result.oldDocument,
+        navigationStartedAt: result.navigationStartedAt,
+      });
+      if (hasBlockingBrowserError(result.events)) {
+        // A genuine exception is always FAILED, even when a prefetch signal
+        // is missing. Do not use an inconclusive classification to hide it.
+        assertTeardownFallbackResult(result);
+      } else if (!result.teardown.bothObserved) {
+        result.status = 'inconclusive';
+        result.error =
+          'Both old-document native prefetch dispatches were not observed';
+      } else {
+        assertTeardownFallbackResult(result);
+        result.status = 'passed';
+      }
+    } else {
+      assertRapidUnloadResult(result);
+      result.status = 'passed';
+    }
   } catch (error) {
     result.error = error.stack ?? String(error);
-    result.status = result.heldAtNavigation ? 'failed' : 'inconclusive';
+    result.status =
+      hasBlockingBrowserError(result.events) ||
+      (variant === 'teardown' && result.oldDocument && result.navigationStartedAt)
+        ? 'failed'
+        : result.heldAtNavigation
+          ? 'failed'
+          : 'inconclusive';
     console.error(
       'S5 attempt ' + attempt + ': ' + result.status + ': ' + result.error
     );
@@ -145,7 +245,7 @@ for (let attempt = 1; attempt <= iterations; attempt++) {
 }
 await fs.writeFile(
   path.join(directory, 'summary.json'),
-  JSON.stringify({ sha, reports }, null, 2)
+  JSON.stringify({ sha, variant, reports }, null, 2)
 );
 assert.ok(
   reports.every((report) => report.status === 'passed'),
