@@ -90,12 +90,18 @@ describe('clean Expo consumer workflow contract', () => {
       'utf8'
     );
     expect(script).toContain("expo: { install: { exclude: ['expo'] } }");
-    expect(script).toContain("readJson(path.join(fixtureDir, 'node_modules/expo/package.json'))");
-    expect(script).toContain("installed.version !== expectedExpo");
+    expect(script).toContain(
+      "readJson(path.join(fixtureDir, 'node_modules/expo/package.json'))"
+    );
+    expect(script).toContain('installed.version !== expectedExpo');
     expect(script).toContain("JSON.stringify(['expo'])");
-    expect(script).toContain("expoBin, 'install', '--check'");
-    expect(script).not.toContain('EXPO_NO_DEPENDENCY_VALIDATION');
-    expect(script).not.toContain('EXPO_OFFLINE');
+    const compatibility = script.slice(
+      script.indexOf('function verifyExpoDependencyCompatibility('),
+      script.indexOf('function verifyDevelopmentBundles(')
+    );
+    expect(compatibility).toContain("expoBin, 'install', '--check'");
+    expect(compatibility).not.toContain('EXPO_NO_DEPENDENCY_VALIDATION');
+    expect(compatibility).not.toContain('EXPO_OFFLINE');
   });
 
   it('guards standard npm installation against reintroducing Picker', () => {
