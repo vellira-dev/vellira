@@ -137,6 +137,11 @@ function createFixture(candidate) {
         },
         dependencies,
         devDependencies,
+        // The SDK patch is owner-pinned and attested against the actually
+        // installed package below. Expo's remote SDK recommendations can
+        // advance independently of the candidate and supply-chain age gates.
+        // Exclude ONLY expo itself; validate every other native dependency.
+        expo: { install: { exclude: ['expo'] } },
       },
       null,
       2
@@ -361,6 +366,21 @@ function verifyNoPickerPeerInstall(fixtureDir) {
 }
 
 function verifyExpoDependencyCompatibility(fixtureDir, expoBin) {
+  const declared = readJson(path.join(fixtureDir, 'package.json'));
+  const installed = readJson(path.join(fixtureDir, 'node_modules/expo/package.json'));
+  const expectedExpo = exactVersion(declared.dependencies.expo, 'expo');
+  if (installed.version !== expectedExpo) {
+    throw new Error(
+      'Clean consumer installed Expo does not match pinned SDK: ' +
+      installed.version + ' !== ' + expectedExpo
+    );
+  }
+  // Preserve Expo's live compatibility validation for all native modules.
+  // A newer SDK patch recommendation is not a reason to invalidate an
+  // otherwise exact, supply-chain-admitted candidate.
+  if (JSON.stringify(declared.expo?.install?.exclude) !== JSON.stringify(['expo'])) {
+    throw new Error('Clean Expo exemption must contain expo alone');
+  }
   run(process.execPath, [expoBin, 'install', '--check'], {
     cwd: fixtureDir,
     env: {
