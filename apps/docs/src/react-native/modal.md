@@ -42,12 +42,14 @@ API details are generated from `packages/react-native/API.md`.
 
 <!-- api-docgen:start native.ModalTriggerProps.ModalTriggerProps -->
 
-| Prop       | Type                   | Required | Description                            |
-| ---------- | ---------------------- | -------- | -------------------------------------- |
-| `children` | `ReactNode`            | Yes      | Content rendered inside the component. |
-| `asChild`  | `boolean`              | No       | —                                      |
-| `disabled` | `boolean`              | No       | Disables interaction.                  |
-| `style`    | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+| Prop                 | Type                   | Required | Description                            |
+| -------------------- | ---------------------- | -------- | -------------------------------------- |
+| `children`           | `ReactNode`            | Yes      | Content rendered inside the component. |
+| `asChild`            | `boolean`              | No       | —                                      |
+| `disabled`           | `boolean`              | No       | Disables interaction.                  |
+| `style`              | `StyleProp<ViewStyle>` | No       | Extra root style.                      |
+| `accessibilityLabel` | `string`               | No       | Accessible label for screen readers.   |
+| `testID`             | `string`               | No       | —                                      |
 
 <!-- api-docgen:end native.ModalTriggerProps.ModalTriggerProps -->
 

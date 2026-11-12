@@ -23,26 +23,112 @@ API details are generated from `packages/react-native/API.md`.
 
 <!-- api-docgen:start native.RadioGroupProps.RadioGroupProps -->
 
-| Prop               | Type                          | Required | Description                           |
-| ------------------ | ----------------------------- | -------- | ------------------------------------- |
-| `label`            | `ReactNode`                   | No       | Group label.                          |
-| `children`         | `ReactNode`                   | No       | Radio controls rendered by the group. |
-| `error`            | `string`                      | No       | Error message.                        |
-| `orientation`      | `RadioGroupOrientation`       | No       | Layout direction.                     |
-| `style`            | `StyleProp<ViewStyle>`        | No       | Extra group style.                    |
-| `itemsStyle`       | `StyleProp<ViewStyle>`        | No       | Extra items wrapper style.            |
-| `labelStyle`       | `StyleProp<TextStyle>`        | No       | Extra label text style.               |
-| `value`            | `string`                      | No       | Controlled selected value.            |
-| `defaultValue`     | `string`                      | No       | Initial value for uncontrolled usage. |
-| `onValueChange`    | `(value: RadioValue) => void` | No       | Called when selection changes.        |
-| `required`         | `boolean`                     | No       | Marks the group as required.          |
-| `disabled`         | `boolean`                     | No       | Disables the whole group.             |
-| `description`      | `ReactNode`                   | No       | Additional descriptive text.          |
-| `size`             | `RadioSize`                   | No       | Size inherited by child radios.       |
-| `descriptionStyle` | `StyleProp<TextStyle>`        | No       | —                                     |
-| `errorStyle`       | `StyleProp<TextStyle>`        | No       | —                                     |
-| `color`            | `RadioColor`                  | No       | —                                     |
-| `invalid`          | `boolean`                     | No       | —                                     |
+| Prop                                     | Type                                                                                   | Required | Description                                       |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+| `label`                                  | `ReactNode`                                                                            | No       | Group label.                                      |
+| `children`                               | `ReactNode`                                                                            | No       | Radio controls rendered by the group.             |
+| `error`                                  | `string`                                                                               | No       | Error message.                                    |
+| `orientation`                            | `RadioGroupOrientation`                                                                | No       | Layout direction.                                 |
+| `style`                                  | `StyleProp<ViewStyle>`                                                                 | No       | Extra group style.                                |
+| `itemsStyle`                             | `StyleProp<ViewStyle>`                                                                 | No       | Extra items wrapper style.                        |
+| `labelStyle`                             | `StyleProp<TextStyle>`                                                                 | No       | Extra label text style.                           |
+| `value`                                  | `string`                                                                               | No       | Controlled selected value.                        |
+| `defaultValue`                           | `string`                                                                               | No       | Initial value for uncontrolled usage.             |
+| `onValueChange`                          | `(value: RadioValue) => void`                                                          | No       | Called when selection changes.                    |
+| `required`                               | `boolean`                                                                              | No       | Marks the group as required.                      |
+| `disabled`                               | `boolean`                                                                              | No       | Disables the whole group.                         |
+| `description`                            | `ReactNode`                                                                            | No       | Additional descriptive text.                      |
+| `size`                                   | `RadioSize`                                                                            | No       | Size inherited by child radios.                   |
+| `descriptionStyle`                       | `StyleProp<TextStyle>`                                                                 | No       | —                                                 |
+| `errorStyle`                             | `StyleProp<TextStyle>`                                                                 | No       | —                                                 |
+| `color`                                  | `RadioColor`                                                                           | No       | —                                                 |
+| `invalid`                                | `boolean`                                                                              | No       | —                                                 |
+| `hitSlop`                                | `number \| Insets \| null`                                                             | No       | —                                                 |
+| `id`                                     | `string`                                                                               | No       | —                                                 |
+| `needsOffscreenAlphaCompositing`         | `boolean`                                                                              | No       | —                                                 |
+| `onLayout`                               | `(event: LayoutChangeEvent) => void`                                                   | No       | —                                                 |
+| `pointerEvents`                          | `'box-none' \| 'none' \| 'box-only' \| 'auto'`                                         | No       | —                                                 |
+| `removeClippedSubviews`                  | `boolean`                                                                              | No       | —                                                 |
+| `testID`                                 | `string`                                                                               | No       | —                                                 |
+| `nativeID`                               | `string`                                                                               | No       | —                                                 |
+| `collapsable`                            | `boolean`                                                                              | No       | —                                                 |
+| `collapsableChildren`                    | `boolean`                                                                              | No       | —                                                 |
+| `onBlur`                                 | `(e: BlurEvent) => void \| null`                                                       | No       | Called when the trigger loses focus.              |
+| `onFocus`                                | `(e: FocusEvent) => void \| null`                                                      | No       | Called when the trigger receives focus.           |
+| `renderToHardwareTextureAndroid`         | `boolean`                                                                              | No       | —                                                 |
+| `focusable`                              | `boolean`                                                                              | No       | —                                                 |
+| `tabIndex`                               | `0 \| -1`                                                                              | No       | —                                                 |
+| `shouldRasterizeIOS`                     | `boolean`                                                                              | No       | —                                                 |
+| `isTVSelectable`                         | `boolean`                                                                              | No       | —                                                 |
+| `hasTVPreferredFocus`                    | `boolean`                                                                              | No       | —                                                 |
+| `tvParallaxShiftDistanceX`               | `number`                                                                               | No       | —                                                 |
+| `tvParallaxShiftDistanceY`               | `number`                                                                               | No       | —                                                 |
+| `tvParallaxTiltAngle`                    | `number`                                                                               | No       | —                                                 |
+| `tvParallaxMagnification`                | `number`                                                                               | No       | —                                                 |
+| `onStartShouldSetResponder`              | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                 |
+| `onMoveShouldSetResponder`               | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                 |
+| `onResponderEnd`                         | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onResponderGrant`                       | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onResponderReject`                      | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onResponderMove`                        | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onResponderRelease`                     | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onResponderStart`                       | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onResponderTerminationRequest`          | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                 |
+| `onResponderTerminate`                   | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onStartShouldSetResponderCapture`       | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                 |
+| `onMoveShouldSetResponderCapture`        | `(event: GestureResponderEvent) => boolean`                                            | No       | —                                                 |
+| `onTouchStart`                           | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onTouchMove`                            | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onTouchEnd`                             | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onTouchCancel`                          | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onTouchEndCapture`                      | `(event: GestureResponderEvent) => void`                                               | No       | —                                                 |
+| `onPointerEnter`                         | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerEnterCapture`                  | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerLeave`                         | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerLeaveCapture`                  | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerMove`                          | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerMoveCapture`                   | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerCancel`                        | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerCancelCapture`                 | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerDown`                          | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerDownCapture`                   | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerUp`                            | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `onPointerUpCapture`                     | `(event: PointerEvent) => void`                                                        | No       | —                                                 |
+| `accessible`                             | `boolean`                                                                              | No       | —                                                 |
+| `accessibilityActions`                   | `readonly { name: AccessibilityActionName \| string; label?: string \| undefined; }[]` | No       | —                                                 |
+| `accessibilityLabel`                     | `string`                                                                               | No       | Accessible label for screen readers.              |
+| `aria-label`                             | `string`                                                                               | No       | Accessible trigger label.                         |
+| `aria-busy`                              | `boolean`                                                                              | No       | —                                                 |
+| `aria-checked`                           | `boolean \| 'mixed'`                                                                   | No       | —                                                 |
+| `aria-disabled`                          | `boolean`                                                                              | No       | —                                                 |
+| `aria-expanded`                          | `boolean`                                                                              | No       | —                                                 |
+| `aria-selected`                          | `boolean`                                                                              | No       | —                                                 |
+| `accessibilityHint`                      | `string`                                                                               | No       | Additional accessibility hint for screen readers. |
+| `accessibilityValue`                     | `AccessibilityValue`                                                                   | No       | —                                                 |
+| `aria-valuemax`                          | `number`                                                                               | No       | —                                                 |
+| `aria-valuemin`                          | `number`                                                                               | No       | —                                                 |
+| `aria-valuenow`                          | `number`                                                                               | No       | —                                                 |
+| `aria-valuetext`                         | `string`                                                                               | No       | —                                                 |
+| `onAccessibilityAction`                  | `(event: AccessibilityActionEvent) => void`                                            | No       | —                                                 |
+| `importantForAccessibility`              | `'auto' \| 'yes' \| 'no' \| 'no-hide-descendants'`                                     | No       | —                                                 |
+| `aria-hidden`                            | `boolean`                                                                              | No       | —                                                 |
+| `aria-modal`                             | `boolean`                                                                              | No       | —                                                 |
+| `role`                                   | `Role`                                                                                 | No       | —                                                 |
+| `accessibilityLabelledBy`                | `string \| string[]`                                                                   | No       | —                                                 |
+| `aria-labelledby`                        | `string`                                                                               | No       | —                                                 |
+| `accessibilityLiveRegion`                | `'none' \| 'polite' \| 'assertive'`                                                    | No       | —                                                 |
+| `aria-live`                              | `'polite' \| 'assertive' \| 'off'`                                                     | No       | —                                                 |
+| `screenReaderFocusable`                  | `boolean`                                                                              | No       | —                                                 |
+| `accessibilityElementsHidden`            | `boolean`                                                                              | No       | —                                                 |
+| `accessibilityViewIsModal`               | `boolean`                                                                              | No       | —                                                 |
+| `onAccessibilityEscape`                  | `() => void`                                                                           | No       | —                                                 |
+| `onAccessibilityTap`                     | `() => void`                                                                           | No       | —                                                 |
+| `onMagicTap`                             | `() => void`                                                                           | No       | —                                                 |
+| `accessibilityIgnoresInvertColors`       | `boolean`                                                                              | No       | —                                                 |
+| `accessibilityLanguage`                  | `string`                                                                               | No       | —                                                 |
+| `accessibilityShowsLargeContentViewer`   | `boolean`                                                                              | No       | —                                                 |
+| `accessibilityLargeContentTitle`         | `string`                                                                               | No       | —                                                 |
+| `accessibilityRespondsToUserInteraction` | `boolean`                                                                              | No       | —                                                 |
 
 <!-- api-docgen:end native.RadioGroupProps.RadioGroupProps -->
 
@@ -50,24 +136,127 @@ API details are generated from `packages/react-native/API.md`.
 
 <!-- api-docgen:start native.RadioGroupItemProps.RadioGroupItemProps -->
 
-| Prop               | Type                         | Required | Description                               |
-| ------------------ | ---------------------------- | -------- | ----------------------------------------- |
-| `label`            | `ReactNode`                  | No       | Visible label.                            |
-| `description`      | `ReactNode`                  | No       | Additional descriptive text.              |
-| `icon`             | `ReactNode`                  | No       | Icon rendered inside the component.       |
-| `color`            | `RadioColor`                 | No       | —                                         |
-| `error`            | `string`                     | No       | Error message rendered for invalid state. |
-| `containerStyle`   | `StyleProp<ViewStyle>`       | No       | —                                         |
-| `labelStyle`       | `StyleProp<TextStyle>`       | No       | Extra label text style.                   |
-| `descriptionStyle` | `StyleProp<TextStyle>`       | No       | —                                         |
-| `errorStyle`       | `StyleProp<TextStyle>`       | No       | —                                         |
-| `value`            | `string`                     | Yes      | Controlled value.                         |
-| `checked`          | `boolean`                    | No       | —                                         |
-| `defaultChecked`   | `boolean`                    | No       | —                                         |
-| `disabled`         | `boolean`                    | No       | Disables interaction.                     |
-| `required`         | `boolean`                    | No       | Marks the field as required.              |
-| `size`             | `RadioSize`                  | No       | Input size.                               |
-| `onCheckedChange`  | `(checked: boolean) => void` | No       | —                                         |
+| Prop                                     | Type                                                                                    | Required | Description                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+| `label`                                  | `ReactNode`                                                                             | No       | Visible label.                                    |
+| `description`                            | `ReactNode`                                                                             | No       | Additional descriptive text.                      |
+| `icon`                                   | `ReactNode`                                                                             | No       | Icon rendered inside the component.               |
+| `color`                                  | `RadioColor`                                                                            | No       | —                                                 |
+| `error`                                  | `string`                                                                                | No       | Error message rendered for invalid state.         |
+| `containerStyle`                         | `StyleProp<ViewStyle>`                                                                  | No       | —                                                 |
+| `labelStyle`                             | `StyleProp<TextStyle>`                                                                  | No       | Extra label text style.                           |
+| `descriptionStyle`                       | `StyleProp<TextStyle>`                                                                  | No       | —                                                 |
+| `errorStyle`                             | `StyleProp<TextStyle>`                                                                  | No       | —                                                 |
+| `value`                                  | `string`                                                                                | Yes      | Controlled value.                                 |
+| `checked`                                | `boolean`                                                                               | No       | —                                                 |
+| `defaultChecked`                         | `boolean`                                                                               | No       | —                                                 |
+| `disabled`                               | `boolean`                                                                               | No       | Disables interaction.                             |
+| `required`                               | `boolean`                                                                               | No       | Marks the field as required.                      |
+| `size`                                   | `RadioSize`                                                                             | No       | Input size.                                       |
+| `onCheckedChange`                        | `(checked: boolean) => void`                                                            | No       | —                                                 |
+| `children`                               | `React.ReactNode \| ((state: PressableStateCallbackType) => React.ReactNode)`           | No       | Content rendered inside the component.            |
+| `style`                                  | `StyleProp<ViewStyle> \| ((state: PressableStateCallbackType) => StyleProp<ViewStyle>)` | No       | Extra root style.                                 |
+| `hitSlop`                                | `number \| Insets \| null`                                                              | No       | —                                                 |
+| `id`                                     | `string`                                                                                | No       | —                                                 |
+| `needsOffscreenAlphaCompositing`         | `boolean`                                                                               | No       | —                                                 |
+| `onLayout`                               | `(event: LayoutChangeEvent) => void`                                                    | No       | —                                                 |
+| `pointerEvents`                          | `'box-none' \| 'none' \| 'box-only' \| 'auto'`                                          | No       | —                                                 |
+| `removeClippedSubviews`                  | `boolean`                                                                               | No       | —                                                 |
+| `testID`                                 | `string`                                                                                | No       | —                                                 |
+| `nativeID`                               | `string`                                                                                | No       | —                                                 |
+| `collapsable`                            | `boolean`                                                                               | No       | —                                                 |
+| `collapsableChildren`                    | `boolean`                                                                               | No       | —                                                 |
+| `onBlur`                                 | `(event: NativeSyntheticEvent<TargetedEvent>) => void \| null`                          | No       | Called when the trigger loses focus.              |
+| `onFocus`                                | `(event: NativeSyntheticEvent<TargetedEvent>) => void \| null`                          | No       | Called when the trigger receives focus.           |
+| `renderToHardwareTextureAndroid`         | `boolean`                                                                               | No       | —                                                 |
+| `focusable`                              | `boolean`                                                                               | No       | —                                                 |
+| `tabIndex`                               | `0 \| -1`                                                                               | No       | —                                                 |
+| `shouldRasterizeIOS`                     | `boolean`                                                                               | No       | —                                                 |
+| `isTVSelectable`                         | `boolean`                                                                               | No       | —                                                 |
+| `hasTVPreferredFocus`                    | `boolean`                                                                               | No       | —                                                 |
+| `tvParallaxShiftDistanceX`               | `number`                                                                                | No       | —                                                 |
+| `tvParallaxShiftDistanceY`               | `number`                                                                                | No       | —                                                 |
+| `tvParallaxTiltAngle`                    | `number`                                                                                | No       | —                                                 |
+| `tvParallaxMagnification`                | `number`                                                                                | No       | —                                                 |
+| `onStartShouldSetResponder`              | `(event: GestureResponderEvent) => boolean`                                             | No       | —                                                 |
+| `onMoveShouldSetResponder`               | `(event: GestureResponderEvent) => boolean`                                             | No       | —                                                 |
+| `onResponderEnd`                         | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onResponderGrant`                       | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onResponderReject`                      | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onResponderMove`                        | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onResponderRelease`                     | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onResponderStart`                       | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onResponderTerminationRequest`          | `(event: GestureResponderEvent) => boolean`                                             | No       | —                                                 |
+| `onResponderTerminate`                   | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onStartShouldSetResponderCapture`       | `(event: GestureResponderEvent) => boolean`                                             | No       | —                                                 |
+| `onMoveShouldSetResponderCapture`        | `(event: GestureResponderEvent) => boolean`                                             | No       | —                                                 |
+| `onTouchStart`                           | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onTouchMove`                            | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onTouchEnd`                             | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onTouchCancel`                          | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onTouchEndCapture`                      | `(event: GestureResponderEvent) => void`                                                | No       | —                                                 |
+| `onPointerEnter`                         | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerEnterCapture`                  | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerLeave`                         | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerLeaveCapture`                  | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerMove`                          | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerMoveCapture`                   | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerCancel`                        | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerCancelCapture`                 | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerDown`                          | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerDownCapture`                   | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerUp`                            | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `onPointerUpCapture`                     | `(event: PointerEvent) => void`                                                         | No       | —                                                 |
+| `accessible`                             | `boolean`                                                                               | No       | —                                                 |
+| `accessibilityActions`                   | `readonly { name: AccessibilityActionName \| string; label?: string \| undefined; }[]`  | No       | —                                                 |
+| `accessibilityLabel`                     | `string`                                                                                | No       | Accessible label for screen readers.              |
+| `aria-label`                             | `string`                                                                                | No       | Accessible trigger label.                         |
+| `aria-busy`                              | `boolean`                                                                               | No       | —                                                 |
+| `aria-checked`                           | `boolean \| 'mixed'`                                                                    | No       | —                                                 |
+| `aria-disabled`                          | `boolean`                                                                               | No       | —                                                 |
+| `aria-expanded`                          | `boolean`                                                                               | No       | —                                                 |
+| `aria-selected`                          | `boolean`                                                                               | No       | —                                                 |
+| `accessibilityHint`                      | `string`                                                                                | No       | Additional accessibility hint for screen readers. |
+| `accessibilityValue`                     | `AccessibilityValue`                                                                    | No       | —                                                 |
+| `aria-valuemax`                          | `number`                                                                                | No       | —                                                 |
+| `aria-valuemin`                          | `number`                                                                                | No       | —                                                 |
+| `aria-valuenow`                          | `number`                                                                                | No       | —                                                 |
+| `aria-valuetext`                         | `string`                                                                                | No       | —                                                 |
+| `onAccessibilityAction`                  | `(event: AccessibilityActionEvent) => void`                                             | No       | —                                                 |
+| `importantForAccessibility`              | `'auto' \| 'yes' \| 'no' \| 'no-hide-descendants'`                                      | No       | —                                                 |
+| `aria-hidden`                            | `boolean`                                                                               | No       | —                                                 |
+| `aria-modal`                             | `boolean`                                                                               | No       | —                                                 |
+| `role`                                   | `Role`                                                                                  | No       | —                                                 |
+| `accessibilityLabelledBy`                | `string \| string[]`                                                                    | No       | —                                                 |
+| `aria-labelledby`                        | `string`                                                                                | No       | —                                                 |
+| `accessibilityLiveRegion`                | `'none' \| 'polite' \| 'assertive'`                                                     | No       | —                                                 |
+| `aria-live`                              | `'polite' \| 'assertive' \| 'off'`                                                      | No       | —                                                 |
+| `screenReaderFocusable`                  | `boolean`                                                                               | No       | —                                                 |
+| `accessibilityElementsHidden`            | `boolean`                                                                               | No       | —                                                 |
+| `accessibilityViewIsModal`               | `boolean`                                                                               | No       | —                                                 |
+| `onAccessibilityEscape`                  | `() => void`                                                                            | No       | —                                                 |
+| `onAccessibilityTap`                     | `() => void`                                                                            | No       | —                                                 |
+| `onMagicTap`                             | `() => void`                                                                            | No       | —                                                 |
+| `accessibilityIgnoresInvertColors`       | `boolean`                                                                               | No       | —                                                 |
+| `accessibilityLanguage`                  | `string`                                                                                | No       | —                                                 |
+| `accessibilityShowsLargeContentViewer`   | `boolean`                                                                               | No       | —                                                 |
+| `accessibilityLargeContentTitle`         | `string`                                                                                | No       | —                                                 |
+| `accessibilityRespondsToUserInteraction` | `boolean`                                                                               | No       | —                                                 |
+| `onHoverIn`                              | `(event: MouseEvent) => void \| null`                                                   | No       | —                                                 |
+| `onHoverOut`                             | `(event: MouseEvent) => void \| null`                                                   | No       | —                                                 |
+| `onPressIn`                              | `(event: GestureResponderEvent) => void \| null`                                        | No       | —                                                 |
+| `onPressMove`                            | `(event: GestureResponderEvent) => void \| null`                                        | No       | —                                                 |
+| `onPressOut`                             | `(event: GestureResponderEvent) => void \| null`                                        | No       | —                                                 |
+| `onLongPress`                            | `(event: GestureResponderEvent) => void \| null`                                        | No       | —                                                 |
+| `cancelable`                             | `boolean \| null`                                                                       | No       | —                                                 |
+| `delayHoverIn`                           | `number \| null`                                                                        | No       | —                                                 |
+| `delayHoverOut`                          | `number \| null`                                                                        | No       | —                                                 |
+| `delayLongPress`                         | `number \| null`                                                                        | No       | —                                                 |
+| `pressRetentionOffset`                   | `number \| Insets \| null`                                                              | No       | —                                                 |
+| `android_disableSound`                   | `boolean \| null`                                                                       | No       | —                                                 |
+| `android_ripple`                         | `PressableAndroidRippleConfig \| null`                                                  | No       | —                                                 |
+| `testOnly_pressed`                       | `boolean \| null`                                                                       | No       | —                                                 |
+| `unstable_pressDelay`                    | `number`                                                                                | No       | —                                                 |
 
 <!-- api-docgen:end native.RadioGroupItemProps.RadioGroupItemProps -->
 

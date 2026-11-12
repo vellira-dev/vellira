@@ -51,9 +51,9 @@ describe('componentProductionFinalValidationCommands', () => {
       ({ id }) => id === 'tooling-production-fixtures'
     );
 
-    expect(source?.timeoutMs).toBe(900_000);
+    expect(source?.timeoutMs).toBe(1_100_000);
     expect(source?.command).toContain('--source-contracts');
-    expect(fixtures?.timeoutMs).toBe(720_000);
+    expect(fixtures?.timeoutMs).toBe(1_000_000);
     expect(fixtures?.command).toContain('--maxWorkers=1');
     expect(fixtures?.command).toContain(
       'scripts/component-production/e2e-fixtures.test.ts'

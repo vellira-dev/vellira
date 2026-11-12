@@ -10,7 +10,9 @@ const {
   readJson,
   validateCandidateArtifactDirectory,
 } = require('./consumer-artifacts.cjs');
-const { assertNativeSubpathContract } = require('./native-subpath-contract.cjs');
+const {
+  assertNativeSubpathContract,
+} = require('./native-subpath-contract.cjs');
 
 const candidateDir = path.resolve(
   process.env.VELLIRA_CANDIDATE_DIR ?? '.candidate-artifacts'
@@ -87,26 +89,32 @@ function createFixture(candidate) {
   );
 
   const dependencies = {
-    // Pin the exact compatible SDK 57 patch pair for the clean consumer.
-    // The playground's ~57.0.16 range accepts later patches, but stripping
-    // the range with exactVersion would incorrectly lock this proof to .16.
-    '@expo/metro-runtime': '57.0.18',
-    expo: '57.0.32',
-    react: '19.2.3',
+    // Keep the clean consumer aligned with the native Playground SDK.
+    '@expo/metro-runtime': exactVersion(
+      playgroundPackage.dependencies?.['@expo/metro-runtime'],
+      '@expo/metro-runtime'
+    ),
+    expo: exactVersion(playgroundPackage.dependencies?.expo, 'expo'),
+    react: exactVersion(playgroundPackage.dependencies?.react, 'react'),
     'react-native': exactVersion(
       playgroundPackage.dependencies?.['react-native'],
       'react-native'
     ),
-    'react-native-svg': '15.15.4',
+    'react-native-svg': exactVersion(
+      playgroundPackage.dependencies?.['react-native-svg'],
+      'react-native-svg'
+    ),
   };
 
   for (const packageEvidence of candidate.packages) {
-    dependencies[packageEvidence.name] =
-      'file:' + packageEvidence.tarballPath;
+    dependencies[packageEvidence.name] = 'file:' + packageEvidence.tarballPath;
   }
 
   const devDependencies = {
-    '@types/react': '19.2.4',
+    '@types/react': exactVersion(
+      playgroundPackage.devDependencies?.['@types/react'],
+      '@types/react'
+    ),
     typescript: exactVersion(
       playgroundPackage.devDependencies?.typescript,
       'typescript'
@@ -260,9 +268,9 @@ function verifyNativeEntryPoints(fixtureDir) {
     )
   );
 
-  const subpathContract = assertNativeSubpathContract(path.join(
-    fixtureDir, 'node_modules', '@vellira-ui', 'react-native'
-  ));
+  const subpathContract = assertNativeSubpathContract(
+    path.join(fixtureDir, 'node_modules', '@vellira-ui', 'react-native')
+  );
   const reactNativeEntry = reactNativeManifest.exports?.['.']?.['react-native'];
   if (
     reactNativeManifest['react-native'] !== './dist/index.js' ||
@@ -294,16 +302,10 @@ function verifyNativeEntryPoints(fixtureDir) {
     ['@vellira-ui', 'icons', 'dist', 'native.js'],
     ['@vellira-ui', 'icons', 'dist', 'native.d.ts'],
   ]) {
-    const filePath = path.join(
-      fixtureDir,
-      'node_modules',
-      ...relativePath
-    );
+    const filePath = path.join(fixtureDir, 'node_modules', ...relativePath);
     if (!fs.existsSync(filePath)) {
       throw new Error(
-        'Packed native entry point is missing: ' +
-          relativePath.join('/') +
-          '.'
+        'Packed native entry point is missing: ' + relativePath.join('/') + '.'
       );
     }
   }
@@ -345,7 +347,9 @@ function verifyNoPickerPeerInstall(fixtureDir) {
     fs.existsSync(pickerPath) ||
     Object.hasOwn(lockfile.packages ?? {}, 'node_modules/' + pickerName)
   ) {
-    throw new Error('Normal npm clean Expo install unexpectedly pulled Picker.');
+    throw new Error(
+      'Normal npm clean Expo install unexpectedly pulled Picker.'
+    );
   }
 
   return {
@@ -390,10 +394,15 @@ function verifyExpoDependencyCompatibility(fixtureDir, expoBin) {
 
   if (
     typeof config.sdkVersion !== 'string' ||
-    !config.sdkVersion.startsWith('57.')
+    !config.sdkVersion.startsWith(
+      exactVersion(
+        readJson(path.join(fixtureDir, 'package.json')).dependencies.expo,
+        'expo'
+      ).split('.')[0] + '.'
+    )
   ) {
     throw new Error(
-      'Expo public config does not resolve to the expected SDK 57 line.'
+      'Expo public config does not match the clean consumer SDK major.'
     );
   }
 
@@ -504,14 +513,7 @@ function verifyProductionExports(fixtureDir, expoBin) {
 
   run(
     process.execPath,
-    [
-      expoBin,
-      'export',
-      '--platform',
-      'all',
-      '--output-dir',
-      distDir,
-    ],
+    [expoBin, 'export', '--platform', 'all', '--output-dir', distDir],
     {
       cwd: fixtureDir,
       env: {
@@ -537,7 +539,9 @@ function verifyProductionExports(fixtureDir, expoBin) {
     iosFiles.length === 0 ||
     iosFiles.reduce((total, file) => total + file.size, 0) < 10_000
   ) {
-    throw new Error('Expo production export emitted no substantive iOS bundle.');
+    throw new Error(
+      'Expo production export emitted no substantive iOS bundle.'
+    );
   }
 
   if (
@@ -571,11 +575,9 @@ async function main() {
   const fixtureDir = createFixture(candidate);
 
   try {
-    run(
-      'npm',
-      ['install', '--no-audit', '--no-fund', '--package-lock=true'],
-      { cwd: fixtureDir }
-    );
+    run('npm', ['install', '--no-audit', '--no-fund', '--package-lock=true'], {
+      cwd: fixtureDir,
+    });
 
     const installedPackages = assertInstalledCandidatePackages(
       fixtureDir,
@@ -584,13 +586,7 @@ async function main() {
     );
     const nativeEntryPoints = verifyNativeEntryPoints(fixtureDir);
     const pickerPeerContract = verifyNoPickerPeerInstall(fixtureDir);
-    const expoBin = path.join(
-      fixtureDir,
-      'node_modules',
-      'expo',
-      'bin',
-      'cli'
-    );
+    const expoBin = path.join(fixtureDir, 'node_modules', 'expo', 'bin', 'cli');
 
     if (!fs.existsSync(expoBin)) {
       throw new Error('Clean consumer is missing the Expo CLI entry point.');
@@ -625,9 +621,8 @@ async function main() {
         harness: captureConsumerHarness(harness.sha),
         node: process.version,
         npm: run('npm', ['--version'], { cwd: fixtureDir }),
-        expo: readJson(
-          path.join(fixtureDir, 'node_modules/expo/package.json')
-        ).version,
+        expo: readJson(path.join(fixtureDir, 'node_modules/expo/package.json'))
+          .version,
         react: readJson(
           path.join(fixtureDir, 'node_modules/react/package.json')
         ).version,
@@ -654,10 +649,7 @@ async function main() {
     };
 
     fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
-    fs.writeFileSync(
-      evidencePath,
-      JSON.stringify(evidence, null, 2) + '\n'
-    );
+    fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2) + '\n');
 
     console.log(
       '[expo-consumer] Verified exact candidate ' +
