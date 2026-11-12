@@ -84,6 +84,20 @@ describe('clean Expo consumer workflow contract', () => {
     expect(script).not.toContain("expo: '57.0.32'");
   });
 
+  it('attests exact installed Expo version while retaining native compatibility checks', () => {
+    const script = readFileSync(
+      'scripts/release-candidate/expo-consumer.cjs',
+      'utf8'
+    );
+    expect(script).toContain("expo: { install: { exclude: ['expo'] } }");
+    expect(script).toContain("readJson(path.join(fixtureDir, 'node_modules/expo/package.json'))");
+    expect(script).toContain("installed.version !== expectedExpo");
+    expect(script).toContain("JSON.stringify(['expo'])");
+    expect(script).toContain("expoBin, 'install', '--check'");
+    expect(script).not.toContain('EXPO_NO_DEPENDENCY_VALIDATION');
+    expect(script).not.toContain('EXPO_OFFLINE');
+  });
+
   it('guards standard npm installation against reintroducing Picker', () => {
     const script = readFileSync(
       'scripts/release-candidate/expo-consumer.cjs',
