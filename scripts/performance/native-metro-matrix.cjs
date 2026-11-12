@@ -471,7 +471,7 @@ try {
   }
   }
   fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\\n');
+  fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');
   if (retainDir) {
     // The original JSON receipt is also retained; it carries source revision,
     // pinned toolchain, tarball digests and the emitted-script hash ledger.
