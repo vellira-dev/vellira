@@ -39,7 +39,16 @@ function execute(fixture, args = [fixture.destination], environment = {}) {
   return spawnSync(process.execPath, [fixture.generator, ...args], {
     cwd: fixture.repo,
     encoding: 'utf8',
-    env: { ...process.env, VELLIRA_HERMES_SHEET_PROOF: '0', ...environment },
+    env: {
+      ...process.env,
+      VELLIRA_NATIVE_EXPO_PROFILE: 'legacy57',
+      VELLIRA_NATIVE_CANDIDATE_TGZ: '',
+      VELLIRA_NATIVE_CANDIDATE_SHA256: '',
+      VELLIRA_CANDIDATE_DIR: '',
+      VELLIRA_CANDIDATE_SHA: '',
+      VELLIRA_HERMES_SHEET_PROOF: '0',
+      ...environment,
+    },
   });
 }
 
