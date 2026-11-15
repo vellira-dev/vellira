@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -175,13 +175,13 @@ describe('immutable Dependabot decision execution', () => {
     const startMarker =
       "      - name: Validate immutable auto-merge decision";
     const start = source.indexOf(startMarker);
-    const scriptStart = source.indexOf("          node <<'NODE'\\n", start);
-    const scriptEnd = source.indexOf('\\n          NODE', scriptStart);
+    const scriptStart = source.indexOf("          node <<'NODE'\n", start);
+    const scriptEnd = source.indexOf('\n          NODE', scriptStart);
     expect(start).toBeGreaterThan(-1);
     expect(scriptStart).toBeGreaterThan(start);
     expect(scriptEnd).toBeGreaterThan(scriptStart);
-    const script = source.slice(scriptStart + "          node <<'NODE'\\n".length, scriptEnd)
-      .split('\\n').map((line) => line.replace(/^          /, '')).join('\\n');
+    const script = source.slice(scriptStart + "          node <<'NODE'\n".length, scriptEnd)
+      .split('\n').map((line) => line.replace(/^          /, '')).join('\n');
     const dir = mkdtempSync(join(tmpdir(), 'vellira-dependabot-policy-'));
     const sha = 'a'.repeat(40);
     try {
@@ -205,11 +205,11 @@ describe('immutable Dependabot decision execution', () => {
           CI_HEAD_SHA: sha, GITHUB_OUTPUT: output },
       });
       expect(result.status, result.stderr).toBe(shouldPass ? 0 : 1);
-      const actual = readFileSync(output, 'utf8');
+      const actual = existsSync(output) ? readFileSync(output, 'utf8') : '';
       if (updateType === 'version-update:semver-patch' && eligible) {
         expect(actual).toContain('eligible=true');
       } else if (shouldPass) {
-        expect(actual).toBe('eligible=false\\n');
+        expect(actual).toBe('eligible=false\n');
         expect(actual).not.toContain('eligible=true');
       }
     } finally {

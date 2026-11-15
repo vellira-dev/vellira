@@ -199,7 +199,7 @@ jobs:
               throw new Error('Dependabot auto-merge decision is inconsistent');
             }
             if (!patchUpdate) {
-              fs.appendFileSync(process.env.GITHUB_OUTPUT, 'eligible=false\\n');
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, 'eligible=false\n');
               console.log(JSON.stringify({
                 pullRequestNumber: decision.pullRequestNumber,
                 headSha: decision.headSha,
