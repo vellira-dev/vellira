@@ -182,10 +182,34 @@ jobs:
           if (decision.schemaVersion === 1) {
             kind = 'dependabot-patch';
             expectedAuthor = 'dependabot[bot]';
-            eligible =
-              decision.author === expectedAuthor &&
-              decision.eligible === true &&
+            const allowedUpdates = [
+              'version-update:semver-patch',
+              'version-update:semver-minor',
+              'version-update:semver-major',
+            ];
+            const patchUpdate =
               decision.updateType === 'version-update:semver-patch';
+            // An authenticated minor/major denial is a valid no-op, never
+            // permission to merge. Reject contradictory or unknown metadata.
+            if (
+              decision.author !== expectedAuthor ||
+              !allowedUpdates.includes(decision.updateType) ||
+              decision.eligible !== patchUpdate
+            ) {
+              throw new Error('Dependabot auto-merge decision is inconsistent');
+            }
+            if (!patchUpdate) {
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, 'eligible=false\n');
+              console.log(JSON.stringify({
+                pullRequestNumber: decision.pullRequestNumber,
+                headSha: decision.headSha,
+                updateType: decision.updateType,
+                eligible: false,
+                reason: 'non-patch dependency update requires manual review',
+              }));
+              process.exit(0);
+            }
+            eligible = true;
           } else if (
             decision.schemaVersion === 2 &&
             decision.kind === 'security-remediation'
