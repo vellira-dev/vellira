@@ -25,9 +25,9 @@ jobs:
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
           const s = fs.readFileSync('pnpm-lock.yaml','utf8');
-          assert.match(s, /react-server-dom-webpack@19\\.2\\.9:/);
-          assert.doesNotMatch(s, /react-server-dom-webpack@19\\.2\\.8:/);
-          assert.match(s, /'@expo\\/router-server>react-server-dom-webpack': 19\\.2\\.9/);
+          assert.match(s, /react-server-dom-webpack@19\.2\.9:/);
+          assert.doesNotMatch(s, /react-server-dom-webpack@19\.2\.8:/);
+          assert.match(s, /'@expo\/router-server>react-server-dom-webpack': 19\.2\.9/);
           console.log('RSC 19.2.9 replacement graph verified; 19.2.8 absent');
           NODE
           pnpm install --lockfile-only --ignore-scripts --frozen-lockfile
