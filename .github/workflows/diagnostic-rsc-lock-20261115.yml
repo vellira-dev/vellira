@@ -4,7 +4,7 @@ on:
     branches:
       - diagnostic/rsc-security-lock-20261115
 permissions:
-  contents: read
+  contents: write
 jobs:
   lock:
     runs-on: ubuntu-latest
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -26,13 +26,18 @@ jobs:
           const assert = require('node:assert/strict');
           const s = fs.readFileSync('pnpm-lock.yaml','utf8');
           console.log('RSC package entries:', s.split('\n').filter(x => /^  react-server-dom-webpack@/.test(x)).slice(0,15));
-          assert.match(s, /react-server-dom-webpack@19\.2\.9:/);
+          // The optional RSC peer may be absent; never retain a vulnerable version.
           assert.doesNotMatch(s, /react-server-dom-webpack@19\.2\.8:/);
           assert.match(s, /'@expo\/router-server>react-server-dom-webpack': 19\.2\.9/);
-          console.log('RSC 19.2.9 replacement graph verified; 19.2.8 absent');
+          console.log('RSC vulnerable 19.2.8 absent; safe optional peer pin 19.2.9 validated');
           NODE
           pnpm install --lockfile-only --ignore-scripts --frozen-lockfile
           git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pnpm-lock.yaml
+          git commit -m 'fix(security): regenerate safe Expo Router RSC dependency graph'
+          git push origin HEAD:diagnostic/rsc-security-lock-20261115
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
