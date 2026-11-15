@@ -25,6 +25,7 @@ jobs:
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
           const s = fs.readFileSync('pnpm-lock.yaml','utf8');
+          console.log('RSC package entries:', s.split('\n').filter(x => /^  react-server-dom-webpack@/.test(x)).slice(0,15));
           assert.match(s, /react-server-dom-webpack@19\.2\.9:/);
           assert.doesNotMatch(s, /react-server-dom-webpack@19\.2\.8:/);
           assert.match(s, /'@expo\/router-server>react-server-dom-webpack': 19\.2\.9/);
@@ -33,7 +34,7 @@ jobs:
           pnpm install --lockfile-only --ignore-scripts --frozen-lockfile
           git diff --check
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: success()
+        if: always()
         with:
           name: rsc-19-2-9-lock
           path: |
