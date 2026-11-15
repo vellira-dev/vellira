@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideRecovery, assertCompleteRecoveryHistory, fetchCandidateProductionRuns, observedMainPushAt, fetchActiveProductionRuns } from './cloudflare-recovery-coordinator.mjs';
+import {
+  decideRecovery,
+  reconcileSkippedStagingEquivalence,
+  assertCompleteRecoveryHistory,
+  fetchCandidateProductionRuns,
+  observedMainPushAt,
+  fetchActiveProductionRuns,
+} from './cloudflare-recovery-coordinator.mjs';
+import { ProductionCandidateSupersededError } from './cloudflare-production-freshness.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
@@ -130,6 +138,92 @@ test('release-sync-only skipped staging cannot trigger another automatic staging
     ...base,
     stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false }],
   }), { dispatch: false, reason: 'skipped_staging_requires_review' });
+});
+
+test('verified deployed release-sync equivalence closes skipped staging without dispatch', async () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [{
+      head_sha: b, event: 'push', status: 'completed',
+      conclusion: 'success', fullStage: false,
+    }],
+  });
+  assert.equal(plan.reason, 'skipped_staging_requires_review');
+  let options;
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async (input) => {
+      options = input;
+      return {
+        checked: true, mode: 'staging', mainSha: b,
+        deploymentEquivalent: true, changedPaths: ['package.json'],
+        relevantPaths: [],
+      };
+    },
+  });
+  assert.deepEqual(result, {
+    dispatch: false,
+    reason: 'already_deployed_equivalent',
+    deployedSha: a,
+    equivalentMainSha: b,
+  });
+  assert.equal(options.candidateSha, a, 'Proof must bind to the live runtime SHA');
+  assert.equal(options.mainSha, b, 'Proof must bind to exact current main');
+  assert.equal(options.repository, 'vellira-dev/vellira');
+  assert.equal(options.candidateSource, 'staging');
+});
+
+test('deployment-relevant changes retain skipped-staging block', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('runtime files changed', {
+        candidateSha: a,
+        mainSha: b,
+        relevantPaths: ['apps/website/app/page.tsx'],
+      });
+    },
+  });
+  assert.strictEqual(result, plan);
+});
+
+test('other recovery decisions never invoke release-sync equivalence proof', async () => {
+  const plan = decideRecovery(base);
+  assert.strictEqual(await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async () => { throw new Error('Must not fetch'); },
+  }), plan);
+});
+
+test('missing or mismatched release-sync evidence fails closed', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const valid = {
+    checked: true, mode: 'staging', mainSha: b,
+    deploymentEquivalent: true, changedPaths: ['package.json'],
+    relevantPaths: [],
+  };
+  for (const invalid of [
+    { ...valid, checked: false },
+    { ...valid, mode: 'not-production' },
+    { ...valid, mainSha: a },
+    { ...valid, deploymentEquivalent: false },
+    { ...valid, relevantPaths: ['apps/website/app/page.tsx'] },
+    { ...valid, changedPaths: undefined },
+  ]) {
+    await assert.rejects(reconcileSkippedStagingEquivalence({
+      plan, mainSha: b, productionSha: a,
+      assess: async () => invalid,
+    }));
+  }
+});
+
+test('GitHub freshness errors never authorize a production no-op', async () => {
+  await assert.rejects(reconcileSkippedStagingEquivalence({
+    plan: { dispatch: false, reason: 'skipped_staging_requires_review' },
+    mainSha: b, productionSha: a,
+    assess: async () => { throw new Error('GitHub API unavailable'); },
+  }), /GitHub API unavailable/);
 });
 
 test('invalid identifiers and input lists fail closed', () => {
