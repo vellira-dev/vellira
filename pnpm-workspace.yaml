@@ -47,6 +47,8 @@ overrides:
   'glob@13.0.6': 14.0.2
   # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
   'get-uri@6.0.5>basic-ftp': 6.2.1
+  # GHSA-xqc2-xf4c-x3h3: Expo Router RSC 19.2.8 critical; narrow override.
+  '@expo/router-server>react-server-dom-webpack': 19.2.9
 
   'esbuild@<=0.24.2': 0.28.1
   fast-uri: 3.1.8
