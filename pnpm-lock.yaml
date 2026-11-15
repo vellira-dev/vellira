@@ -15,7 +15,8 @@ overrides:
   minimatch@10>brace-expansion: 5.0.12
   minimatch@10.2.6: 11.0.1
   glob@13.0.6: 14.0.2
-  get-uri@6.0.5>basic-ftp: 6.2.1
+  get-uri@6.0.5>basic-ftp: 6.2.4
+  node-forge: 1.4.3
   '@expo/router-server>react-server-dom-webpack': 19.2.9
   esbuild@<=0.24.2: 0.28.1
   fast-uri: 3.1.8
@@ -6242,8 +6243,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  basic-ftp@6.2.1:
-    resolution: {integrity: sha512-bK67isD+lKq46AU8vNtjvMaT2ZqAOAmNCbxUHlFBRD4k15NWxyEjmaKtZPlgce58So4BNTjITGQOVTjL9y0ECA==}
+  basic-ftp@6.2.4:
+    resolution: {integrity: sha512-6ACKOQxSlv5xka4i03ujfncNr9qp5yZNK3u0+yUFTAU4HfG5AeztCC9+R1I9dm8oq+1vt4RZ7cIRTBrdHqL2mw==}
     engines: {node: '>=10.0.0'}
 
   before-after-hook@4.0.0:
@@ -9532,8 +9533,8 @@ packages:
       encoding:
         optional: true
 
-  node-forge@1.4.2:
-    resolution: {integrity: sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ==}
+  node-forge@1.4.3:
+    resolution: {integrity: sha512-P6wzfh6t70avmV8FrVEAd/36sOPJQ+hkaJVX1Laap9J/77m7M0eyozDvc8SwnDf4P7MP94gwbAAo0rg3YVXT+g==}
     engines: {node: '>= 6.13.0'}
 
   node-int64@0.4.0:
@@ -14475,7 +14476,7 @@ snapshots:
       glob: 14.0.2
       lan-network: 0.2.1
       multitars: 1.0.2
-      node-forge: 1.4.2
+      node-forge: 1.4.3
       npm-package-arg: 11.0.3
       ora: 3.4.0
       picomatch: 4.0.7
@@ -14553,7 +14554,7 @@ snapshots:
       fetch-nodeshim: 0.4.10
       lan-network: 0.2.1
       multitars: 1.0.2
-      node-forge: 1.4.2
+      node-forge: 1.4.3
       npm-package-arg: 11.0.3
       ora: 3.4.0
       picomatch: 4.0.7
@@ -14589,7 +14590,7 @@ snapshots:
 
   '@expo/code-signing-certificates@0.0.7':
     dependencies:
-      node-forge: 1.4.2
+      node-forge: 1.4.3
 
   '@expo/config-plugins@58.0.12(supports-color@10.2.2)(typescript@6.0.3)':
     dependencies:
@@ -18922,7 +18923,7 @@ snapshots:
 
   baseline-browser-mapping@2.11.34: {}
 
-  basic-ftp@6.2.1: {}
+  basic-ftp@6.2.4: {}
 
   before-after-hook@4.0.0: {}
 
@@ -21034,7 +21035,7 @@ snapshots:
 
   get-uri@6.0.5(supports-color@10.2.2):
     dependencies:
-      basic-ftp: 6.2.1
+      basic-ftp: 6.2.4
       data-uri-to-buffer: 6.0.2
       debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
@@ -23192,7 +23193,7 @@ snapshots:
     dependencies:
       whatwg-url: 5.0.0(patch_hash=d3aceb628354c7eea07ec15e1f7ceb681ac68b608af00bf2850b9060ef52e058)
 
-  node-forge@1.4.2: {}
+  node-forge@1.4.3: {}
 
   node-int64@0.4.0: {}
 
