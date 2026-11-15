@@ -18,7 +18,9 @@ const locked = (name) => {
   return record.version;
 };
 
-assert.equal(locked('node-forge'), '1.4.2');
+assert.equal(locked('node-forge'), '1.4.3');
+assert.equal(lock.packages['node_modules/node-forge']?.integrity,
+  'sha512-P6wzfh6t70avmV8FrVEAd/36sOPJQ+hkaJVX1Laap9J/77m7M0eyozDvc8SwnDf4P7MP94gwbAAo0rg3YVXT+g==', 'Unreviewed published node-forge integrity');
 assert.equal(locked('expo'), '58.0.23');
 assert.equal(lock.packages['node_modules/expo/node_modules/@expo/cli']?.version, '58.1.19');
 assert.equal(Object.keys(lock.packages).filter((p) => /(^|\/)node_modules\/zod$/.test(p)).length, 0,

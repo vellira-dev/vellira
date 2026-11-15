@@ -52,7 +52,7 @@ jobs:
         run: npm run security:certificate-proof
       - name: Diagnose malformed nested ASN.1 DigestAlgorithm
         run: node scripts/security-asn1-adversarial.cjs
-      - name: Verify published Forge 1.4.2 and guarded Expo lifecycle
+      - name: Verify source-pinned Forge 1.4.3 and guarded Expo lifecycle
         shell: bash
         run: |
           set -euo pipefail

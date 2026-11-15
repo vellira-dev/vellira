@@ -28,7 +28,9 @@ assert.equal(lock.packages['node_modules/expo']?.version, '58.0.23');
 assert.equal(lock.packages['node_modules/@expo/metro-config']?.version, '58.0.21');
 assert.equal(lock.packages['node_modules/react-native']?.version, '0.88.1');
 assert.equal(lock.packages['node_modules/@expo/schema-utils']?.version, '58.0.3');
-assert.equal(lock.packages['node_modules/node-forge']?.version, '1.4.2');
+assert.equal(lock.packages['node_modules/node-forge']?.version, '1.4.3');
+assert.equal(lock.packages['node_modules/node-forge']?.integrity,
+  'sha512-P6wzfh6t70avmV8FrVEAd/36sOPJQ+hkaJVX1Laap9J/77m7M0eyozDvc8SwnDf4P7MP94gwbAAo0rg3YVXT+g==', 'Unreviewed node-forge tarball');
 assert.equal(metadata.dependencies.zod, undefined, 'Expo CLI still depends on vulnerable Zod');
 assert.ok(metadata.dependencies['@expo/schema-utils'], 'Expected published JSON Schema validator');
 const zodPaths = Object.keys(lock.packages).filter((p) => /(^|\/)node_modules\/zod$/.test(p));
