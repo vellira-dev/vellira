@@ -1,0 +1,49 @@
+name: Native Starter lockfile diagnostic (isolated)
+on:
+  push:
+    branches:
+      - diagnostic/native-lock-2147-20261115
+permissions:
+  contents: read
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: examples/workspace-starter/native
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.4
+          registry-url: https://registry.npmjs.org
+      - name: Generate exact npm lock without running lifecycle scripts
+        run: |
+          set -euo pipefail
+          npm pkg set dependencies.expo=58.0.25 'dependencies.expo-blur=~58.0.6'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org
+          npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org
+          node - <<'NODE'
+          const a = require('node:assert/strict');
+          const fs = require('node:fs');
+          const m = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const l = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          a.equal(m.dependencies.expo, '58.0.25');
+          a.equal(m.dependencies['expo-blur'], '~58.0.6');
+          a.equal(l.packages['node_modules/expo']?.version, '58.0.25');
+          a.equal(l.packages['node_modules/expo-blur']?.version, '58.0.6');
+          a.equal(l.packages['node_modules/node-forge']?.version, '1.4.3');
+          a.equal(l.packages['']?.dependencies.react, '19.3.0');
+          a.equal(l.packages['']?.dependencies['react-dom'], '19.3.0');
+          console.log('EXACT NPM LOCK GENERATED; no lifecycle scripts executed.');
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-starter-lock-2147
+          path: |
+            examples/workspace-starter/native/package.json
+            examples/workspace-starter/native/package-lock.json
+          retention-days: 1
