@@ -167,26 +167,39 @@ describe('immutable Dependabot decision execution', () => {
     ['patch passes', 'version-update:semver-patch', true, true],
     ['minor is a no-op', 'version-update:semver-minor', false, true],
     ['major is a no-op', 'version-update:semver-major', false, true],
-    ['minor falsely eligible fails closed', 'version-update:semver-minor', true, false],
-    ['patch falsely denied fails closed', 'version-update:semver-patch', false, false],
+    [
+      'minor falsely eligible fails closed',
+      'version-update:semver-minor',
+      true,
+      false,
+    ],
+    [
+      'patch falsely denied fails closed',
+      'version-update:semver-patch',
+      false,
+      false,
+    ],
     ['unknown update fails closed', 'version-update:semver-unknown', false, false],
   ])('%s', async (_case, updateType, eligible, shouldPass) => {
     const source = await workflowSource();
-    const startMarker =
-      "      - name: Validate immutable auto-merge decision";
+    const startMarker = '      - name: Validate immutable auto-merge decision';
     const start = source.indexOf(startMarker);
     const scriptStart = source.indexOf("          node <<'NODE'\n", start);
     const scriptEnd = source.indexOf('\n          NODE', scriptStart);
     expect(start).toBeGreaterThan(-1);
     expect(scriptStart).toBeGreaterThan(start);
     expect(scriptEnd).toBeGreaterThan(scriptStart);
-    const script = source.slice(scriptStart + "          node <<'NODE'\n".length, scriptEnd)
-      .split('\n').map((line) => line.replace(/^          /, '')).join('\n');
+    const script = source
+      .slice(scriptStart + "          node <<'NODE'\n".length, scriptEnd)
+      .split('\n')
+      .map((line) => line.replace(/^          /, ''))
+      .join('\n');
     const dir = mkdtempSync(join(tmpdir(), 'vellira-dependabot-policy-'));
     const sha = 'a'.repeat(40);
     try {
       mkdirSync(join(dir, '.dependabot-auto-merge'));
-      writeFileSync(join(dir, '.dependabot-auto-merge/decision.json'),
+      writeFileSync(
+        join(dir, '.dependabot-auto-merge/decision.json'),
         JSON.stringify({
           schemaVersion: 1,
           repository: 'vellira-dev/vellira',
@@ -196,13 +209,18 @@ describe('immutable Dependabot decision execution', () => {
           baseRef: 'main',
           updateType,
           eligible,
-        }));
+        })
+      );
       const output = join(dir, 'outputs');
       const result = spawnSync(process.execPath, ['-e', script], {
         cwd: dir,
         encoding: 'utf8',
-        env: { ...process.env, REPOSITORY: 'vellira-dev/vellira',
-          CI_HEAD_SHA: sha, GITHUB_OUTPUT: output },
+        env: {
+          ...process.env,
+          REPOSITORY: 'vellira-dev/vellira',
+          CI_HEAD_SHA: sha,
+          GITHUB_OUTPUT: output,
+        },
       });
       expect(result.status, result.stderr).toBe(shouldPass ? 0 : 1);
       const actual = existsSync(output) ? readFileSync(output, 'utf8') : '';
