@@ -45,8 +45,13 @@ overrides:
   # Candidate for Dependabot #183: limit transition to vulnerable glob 13.0.6.
   # Major 14/path-scurry 3 needs independent CLI, OpenNext and Storybook proofs.
   'glob@13.0.6': 14.0.2
-  # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
-  'get-uri@6.0.5>basic-ftp': 6.2.1
+  # GHSA-c475-qrg2-pj4r and GHSA-5pm8-86m8-9m6r: get-uri 6.x retains
+  # basic-ftp ^5, so keep the narrow override on the patched 6.2.4.
+  'get-uri@6.0.5>basic-ftp': 6.2.4
+  # GHSA-6889-vf6x-f3g5 / GHSA-w4xr-hqv8-ch44 /
+  # GHSA-6cv4-p8m7-4r25 / GHSA-j8rw-jp99-435v:
+  # Expo CLI and Expo code-signing transitively require node-forge.
+  node-forge: 1.4.3
   # GHSA-xqc2-xf4c-x3h3: Expo Router RSC 19.2.8 critical; narrow override.
   '@expo/router-server>react-server-dom-webpack': 19.2.9
 
