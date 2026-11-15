@@ -48,7 +48,6 @@ jobs:
           sha256sum "$RUNNER_TEMP/native-starter-evidence/"*.js
           echo "EXPO CLI METADATA:"
           node -p "JSON.stringify({version:require('./node_modules/expo/node_modules/@expo/cli/package.json').version,zod:require('./node_modules/expo/node_modules/@expo/cli/package.json').dependencies.zod})"
-          NODE
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-starter-lock-2147
