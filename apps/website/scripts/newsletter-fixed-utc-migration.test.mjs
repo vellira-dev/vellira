@@ -93,12 +93,12 @@ test('serialized synthetic cutover admits zero callers until next UTC day', asyn
   assert.equal(fixed.spent, 2);
 });
 
-test('cutover requires durable persistence before any later admission', () => {
-  const fenced = transition();
-  assert.equal(fenced.outcome, 'exhausted');
-  // If the transaction fails, the caller must respond unavailable. It must
-  // not publish a success or reuse a partially written in-memory state.
-  const simulatedStorageCommit = false;
-  const response = simulatedStorageCommit ? fenced.outcome : 'unavailable';
-  assert.equal(response, 'unavailable');
+test('corrupted fixed state cannot be reset by crossing UTC midnight', () => {
+  const corrupt = { dayStart: 0, spent: 99, lastSeen: 1_000 };
+  for (const now of [1_001, UTC_DAY_MS, UTC_DAY_MS + 1_000]) {
+    const result = transition({ fixed: corrupt, now });
+    assert.equal(result.outcome, 'unavailable');
+    assert.equal(result.persist, false);
+    assert.equal(result.next, corrupt);
+  }
 });
