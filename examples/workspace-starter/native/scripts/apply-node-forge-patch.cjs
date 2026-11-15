@@ -25,7 +25,9 @@ if (forgeVersion === '1.4.3') {
   // 1.4.3 security fixes: npm ci must verify the complete pinned tarball.
   const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   assert.equal(lock.packages['']?.devDependencies?.['node-forge'], '1.4.3');
-  assert.equal(lock.packages['']?.overrides?.['node-forge'], '1.4.3');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(manifest.devDependencies?.['node-forge'], '1.4.3');
+  assert.equal(manifest.overrides?.['node-forge'], '1.4.3');
   assert.equal(lock.packages['node_modules/node-forge']?.version, '1.4.3');
   assert.equal(lock.packages['node_modules/node-forge']?.integrity,
     'sha512-P6wzfh6t70avmV8FrVEAd/36sOPJQ+hkaJVX1Laap9J/77m7M0eyozDvc8SwnDf4P7MP94gwbAAo0rg3YVXT+g==', 'Unreviewed published node-forge tarball');
