@@ -1,0 +1,43 @@
+name: Native Playground React 19.3.0 lock diagnostic
+on:
+  push:
+    branches:
+      - diagnostic/rsc-expo-react-2151-20261115
+permissions:
+  contents: write
+jobs:
+  proof:
+    if: "!contains(github.event.head_commit.message, 'lockfile regenerated')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.4
+      - name: Resolve and freeze React pair without lifecycle scripts
+        run: |
+          set -euo pipefail
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+          pnpm install --lockfile-only --ignore-scripts --frozen-lockfile
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync('apps/native-playground/package.json','utf8'));
+          const lock = fs.readFileSync('pnpm-lock.yaml','utf8');
+          assert.equal(p.dependencies.react, '19.3.0');
+          assert.equal(p.dependencies['react-dom'], '19.3.0');
+          assert.ok(!lock.includes('react-server-dom-webpack@19.2.8'));
+          assert.ok(lock.includes("'@expo/router-server>react-server-dom-webpack': 19.2.9"));
+          console.log('Expo React 19.3.0 pair, frozen lockfile and RSC security gate: PASS');
+          NODE
+          git diff --check
+          git diff --stat
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pnpm-lock.yaml
+          git commit -m 'chore(diagnostic): lockfile regenerated for Expo React pair'
+          git push origin HEAD:diagnostic/rsc-expo-react-2151-20261115
