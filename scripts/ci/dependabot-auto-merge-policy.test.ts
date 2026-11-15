@@ -186,7 +186,12 @@ describe('immutable Dependabot decision execution', () => {
       false,
       false,
     ],
-    ['unknown update fails closed', 'version-update:semver-unknown', false, false],
+    [
+      'unknown update fails closed',
+      'version-update:semver-unknown',
+      false,
+      false,
+    ],
   ])('%s', async (_case, updateType, eligible, shouldPass) => {
     const source = await workflowSource();
     const startMarker = '      - name: Validate immutable auto-merge decision';
