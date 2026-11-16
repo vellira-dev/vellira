@@ -1,0 +1,77 @@
+A Select can be the active control in a dialog and still be impossible to use. Its listbox opens, Escape is routed to the right handler, and the React state says the menu is expanded. Yet the user cannot see or click the options because the menu is painted behind its parent Modal.
+
+This is a different failure from accidentally closing two overlays with one Escape keypress. In Vellira, a real nested `Modal → Select` regression exposed the distinction between **interaction order**, **visual stacking**, and **browser hit-testing**. The resulting change was small in scope, but its verification needed all three layers.
+
+## The failure: a portaled listbox behind its dialog
+
+Consider a project-creation dialog with two Select fields: Team and Status. The dialog is open. The user opens Team, selects an option, and continues with Status. That is an ordinary form interaction, not an exotic overlay configuration.
+
+The Select options are rendered through a portal outside the dialog's DOM subtree. That is useful for avoiding clipping, but it introduces a second question: which element wins the browser's paint order? Merely putting the menu later in the DOM or treating it as the latest registered overlay does not answer it.
+
+In the earlier stacking policy, a dropdown's base z-index was roughly 100 while a modal's base was roughly 1000. The overlay manager could recognize the newer Select as the active dismissal target while its DOM element was still painted beneath the Modal. The application could therefore have the correct event owner and the wrong visible result.
+
+This is the core of [the merged nested Select fix, PR #1769](https://github.com/vellira-dev/vellira/pull/1769). It is specifically about the shared stacking contract. The earlier [article about nested Popover Escape dismissal](/blog/when-nested-modal-escape-handling-reaches-the-wrong-overlay) addresses a related but distinct question: whether one Escape press dismisses the active child without also dismissing its parent.
+
+## What changed in the shared overlay store
+
+The fix belongs in the overlay manager's shared store, not in a page-specific CSS override. When it resolves the z-index of a newer overlay **without an explicit override**, it considers both the overlay's preferred token-based level and the highest previously resolved layer, separated by the policy's ordering step.
+
+Conceptually, the rule looks like this:
+
+```ts
+const nextLayer = explicitLayer ?? Math.max(preferredLayer, previousHighest + step);
+```
+
+This is explanatory pseudocode, not a replacement implementation. The [actual pinned store implementation](https://github.com/vellira-dev/vellira/blob/95c74407e6193517c65c1e3bb186f9339033f74f/packages/core/src/behavior/overlay/store.ts#L85-L110) loops over registered overlays in stack order. It preserves a supplied explicit `zIndex`, and only lifts a layer automatically when no explicit value was supplied.
+
+Those distinctions matter. A standalone dropdown should not suddenly require a modal-level z-index. An application that deliberately sets an explicit index should retain that authority. A newly registered child should paint above its parent by default, even when the child's token category normally starts lower. The policy handles those cases centrally rather than teaching every consumer a new number to add to its CSS.
+
+## Make the ordering contract testable
+
+A focused store test registers a Modal, then a Select-like dropdown, then a Popover. For its test policy, the resolved values are 1000, 1010, and 1020 in that order. It then unregisters later layers and verifies that a newly registered dropdown again resolves above the still-open Modal.
+
+Two further tests cover changes that static screenshots would miss. Promoting an earlier overlay from Popover level to Modal level recalculates the newer child's position. Explicit z-index overrides are retained: when the earlier layer is explicitly set to 5000, the next default layer resolves to 5010; when that explicit level is updated to 8000, the next default layer becomes 8010.
+
+These are **values asserted by the pinned test policy**, not recommended universal CSS constants. The important contract is the relationship among registered layers, reordering, and explicit ownership. The [core overlay store regression tests](https://github.com/vellira-dev/vellira/blob/95c74407e6193517c65c1e3bb186f9339033f74f/packages/core/src/behavior/overlay/store.test.ts#L74-L121) make it observable.
+
+A separate React manager test checks that the Web adapter exposes the expected ordering. The [nested component regression](https://github.com/vellira-dev/vellira/blob/95c74407e6193517c65c1e3bb186f9339033f74f/packages/react/src/components/OverlayNested.test.tsx) compares the Select listbox's parent layer against the dialog's resolved layer. This provides evidence above the pure store without pretending that a unit test proves what the user's pointer can reach in a browser.
+
+## The browser must be able to hit the visible option
+
+The next check uses a maintained Storybook example containing a real `Modal` with controlled Team and Status Select fields. It starts by opening the dialog and then the Team Select. The test confirms that the listbox is visible and that it is outside the dialog's DOM subtree—exactly the portal relationship at the heart of the original bug.
+
+But visibility assertions alone are insufficient. A DOM element can be visible according to a selector assertion while another element wins pointer hit-testing at the same coordinates. The browser regression measures the option's bounding rectangle, chooses its center, and calls `document.elementFromPoint`. The check passes only when the target belongs to the option. It then clicks or taps **Mobile** and confirms that the Team value changes while the dialog remains open.
+
+The second half deliberately switches input modes. Status opens via keyboard; Escape closes only its listbox and leaves the parent dialog available. The test reopens Status, navigates to the last option with End, chooses **Shipped** with Enter, and finally uses Escape to close the dialog and return focus to its opener.
+
+This sequence proves a useful end-to-end boundary: the menu can paint on top, accept pointer input, accept keyboard input, dismiss independently, and preserve the dialog until the user intentionally closes it. Read the [pinned cross-browser interaction test](https://github.com/vellira-dev/vellira/blob/95c74407e6193517c65c1e3bb186f9339033f74f/apps/react-storybook/e2e/cross-browser-interactions.spec.ts#L239-L334) for the actual selectors and assertions.
+
+One subtle testing lesson came from WebKit. After a pointer-based Team selection, a stationary cursor could re-activate a hovered Status option during keyboard navigation. The regression explicitly moves the pointer away before starting its keyboard-only sequence. That is not a change to the user's UI behavior; it makes the mixed-input test state reproducible so the keyboard assertion measures the intended action.
+
+## A separate Modal focus proof is useful—but it is not this test
+
+There is another relevant piece of Vellira evidence: [PR #1776](https://github.com/vellira-dev/vellira/pull/1776) added a reviewed `modal-focus` demo to the existing component-capture pipeline. That demo uses the maintained `Components/Modal/Default` Storybook story, rather than a simulated dialog.
+
+Its [pinned browser recorder](https://github.com/vellira-dev/vellira/blob/e03abc58c0e25288fc9bb559922f9e6ed88c8522/scripts/visual/component-demo-modal.mjs#L33-L109) verifies Enter opening the dialog, `role=dialog` with `aria-modal=true`, a real portal, focus beginning on the close control, Tab moving to Cancel, Escape closing the dialog, and focus returning to the trigger. Four post-load capture phases are used to prepare review-only media, including a branded square version. The demo workflow does not automatically publish anything to social platforms.
+
+Those are useful **standalone Modal focus and capture assertions**. They do not prove that the nested Select paints above the Modal, nor that a specific Select option receives a pointer event. The latter claims come from PR #1769's nested Select browser regression. Keeping these evidence categories separate prevents a polished demo from being mistaken for a test it never ran.
+
+## A practical review checklist for nested overlays
+
+When reviewing a Select, Dropdown, or Popover inside a Modal, ask for observations at each boundary rather than only a screenshot of the open menu:
+
+1. **Registration and painting:** Is the active child registered above its parent, and does its resolved layer actually paint above the dialog without a consumer-only z-index patch?
+2. **Portal placement:** Does the listbox render where the implementation expects? Can an automated test inspect the actual DOM relationship rather than assume it?
+3. **Hit-testing:** At an option's visible center, does the browser report that option or one of its descendants as the pointer target?
+4. **Independent dismissal:** Does Escape close the child first without accidentally closing the parent? After the child is dismissed, can the user continue in the dialog?
+5. **Input transition:** Does pointer/touch selection work, and does subsequent keyboard navigation work without stale hover state changing the active option?
+6. **Focus return:** When the dialog itself finally closes, does focus return to its enabled opener?
+7. **Explicit policy:** Do application-supplied z-index overrides remain intentional rather than being silently replaced by automatic stacking?
+
+These checks serve different purposes. The store tests protect arithmetic and ordering. React integration tests protect the component connection. A real browser test protects visible interaction. A separate demo can help explain a focus sequence to developers, but it should carry its own clear proof scope.
+
+## What this evidence does not claim
+
+The two merged PRs document the behavior of their pinned **React web and Storybook** surfaces. They do not establish React Native device behavior, every possible third-party portal composition, or production behavior for every consumer application. PR #1769 also explicitly noted that publishing the patched npm packages had not been verified during its final review; a merged source fix alone should not be presented as proof that a particular installed package already contains it.
+
+The practical lesson is broader than one z-index value: **an overlay can win event routing and still lose the paint order**. A reliable fix needs a shared layering rule and evidence from the place where users actually click, tap, and press keys. Keep those proofs separate, repeatable, and tied to the code revision that was tested.
