@@ -1,8 +1,40 @@
+diff --git a/dist/client/components/app-router.js b/dist/client/components/app-router.js
+index 6b95b72..d9deedb 100644
+--- a/dist/client/components/app-router.js
++++ b/dist/client/components/app-router.js
+@@ -254,6 +254,9 @@ function Head({ headRenderTree }) {
+     if (pushRef.mpaNavigation) {
+         // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
+         if (globalMutable.pendingMpaPath !== canonicalUrl) {
++            // Invalidate prefetches whose async RSC hash started before this MPA.
++            // A new task captures the new epoch even if this navigation is canceled.
++            globalThis[Symbol.for('vellira.next2130.mpaEpoch.v1')] = {};
+             const location = window.location;
+             if (pushRef.pendingPush) {
+                 location.assign(canonicalUrl);
 diff --git a/dist/client/components/router-reducer/fetch-server-response.js b/dist/client/components/router-reducer/fetch-server-response.js
-index b446c3b019af3eeca1858e68338def3be7689ecd..beab4d8051b11f037becac45e1989927b14e24b6 100644
+index b446c3b..4b9facf 100644
 --- a/dist/client/components/router-reducer/fetch-server-response.js
 +++ b/dist/client/components/router-reducer/fetch-server-response.js
-@@ -499,6 +499,7 @@ async function createFetch(url, headers, fetchPriority, shouldImmediatelyDecode,
+@@ -478,6 +478,17 @@ function decodeFlightResponse(fetchPromise, headers, signal) {
+     }
+     return createFromNextFetch(fetchPromise, headers);
+ }
++// Prevent a deferred background RSC prefetch from dispatching after a hard navigation
++// began while its asynchronous _rsc digest was pending. This does not block
++// new prefetches on a document whose navigation was canceled.
++const velliraNext2130MpaEpochKey = Symbol.for('vellira.next2130.mpaEpoch.v1');
++function assertVelliraNext2130PrefetchMayDispatch(headers, epochAtStart) {
++    if (headers['next-router-prefetch'] !== undefined && (
++        isPageUnloading || globalThis[velliraNext2130MpaEpochKey] !== epochAtStart
++    )) {
++        throw new DOMException('Next background RSC prefetch canceled by hard navigation', 'AbortError');
++    }
++}
+ async function createFetch(url, headers, fetchPriority, shouldImmediatelyDecode, signal) {
+     // TODO: In output: "export" mode, the headers do nothing. Omit them (and the
+     // cache busting search param) from the request so they're
+@@ -499,6 +510,7 @@ async function createFetch(url, headers, fetchPriority, shouldImmediatelyDecode,
          headers[_approuterheaders.NEXT_REQUEST_ID_HEADER] = crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
      }
      const fetchOptions = {
@@ -10,11 +42,61 @@ index b446c3b019af3eeca1858e68338def3be7689ecd..beab4d8051b11f037becac45e1989927
          // Backwards compat for older browsers. `same-origin` is the default in modern browsers.
          credentials: 'same-origin',
          headers,
+@@ -509,7 +521,9 @@ async function createFetch(url, headers, fetchPriority, shouldImmediatelyDecode,
+     // search param to it. This should not leak outside of this function, so we
+     // track them separately.
+     let fetchUrl = new URL(url);
++    const velliraNext2130EpochAtStart = globalThis[velliraNext2130MpaEpochKey];
+     await (0, _setcachebustingsearchparam.setCacheBustingSearchParam)(fetchUrl, headers);
++    assertVelliraNext2130PrefetchMayDispatch(headers, velliraNext2130EpochAtStart);
+     let processed = (0, _fetch.fetch)(fetchUrl, fetchOptions).then(processFetch);
+     let fetchPromise = processed.then(({ response })=>response);
+     // Immediately pass the fetch promise to the Flight client so that the debug
+@@ -565,6 +579,7 @@ async function createFetch(url, headers, fetchPriority, shouldImmediatelyDecode,
+             // TODO: We should abort the previous request.
+             fetchUrl = new URL(responseUrl);
+             await (0, _setcachebustingsearchparam.setCacheBustingSearchParam)(fetchUrl, headers);
++            assertVelliraNext2130PrefetchMayDispatch(headers, velliraNext2130EpochAtStart);
+             processed = (0, _fetch.fetch)(fetchUrl, fetchOptions).then(processFetch);
+             fetchPromise = processed.then(({ response })=>response);
+             flightResponsePromise = shouldImmediatelyDecode ? decodeFlightResponse(fetchPromise, headers, signal) : null;
+diff --git a/dist/esm/client/components/app-router.js b/dist/esm/client/components/app-router.js
+index 8124899..0c360c8 100644
+--- a/dist/esm/client/components/app-router.js
++++ b/dist/esm/client/components/app-router.js
+@@ -242,6 +242,9 @@ function Head({ headRenderTree }) {
+     if (pushRef.mpaNavigation) {
+         // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
+         if (globalMutable.pendingMpaPath !== canonicalUrl) {
++            // Invalidate prefetches whose async RSC hash started before this MPA.
++            // A new task captures the new epoch even if this navigation is canceled.
++            globalThis[Symbol.for('vellira.next2130.mpaEpoch.v1')] = {};
+             const location = window.location;
+             if (pushRef.pendingPush) {
+                 location.assign(canonicalUrl);
 diff --git a/dist/esm/client/components/router-reducer/fetch-server-response.js b/dist/esm/client/components/router-reducer/fetch-server-response.js
-index 306f6d58ee69eecb5f2090e198db649c97db71ff..b6cc05828071f0d88afe3f7fcb9800bf997f0a65 100644
+index 306f6d5..bd27aa2 100644
 --- a/dist/esm/client/components/router-reducer/fetch-server-response.js
 +++ b/dist/esm/client/components/router-reducer/fetch-server-response.js
-@@ -495,6 +495,7 @@ export async function createFetch(url, headers, fetchPriority, shouldImmediately
+@@ -474,6 +474,17 @@ function decodeFlightResponse(fetchPromise, headers, signal) {
+     }
+     return createFromNextFetch(fetchPromise, headers);
+ }
++// Prevent a deferred background RSC prefetch from dispatching after a hard navigation
++// began while its asynchronous _rsc digest was pending. This does not block
++// new prefetches on a document whose navigation was canceled.
++const velliraNext2130MpaEpochKey = Symbol.for('vellira.next2130.mpaEpoch.v1');
++function assertVelliraNext2130PrefetchMayDispatch(headers, epochAtStart) {
++    if (headers['next-router-prefetch'] !== undefined && (
++        isPageUnloading || globalThis[velliraNext2130MpaEpochKey] !== epochAtStart
++    )) {
++        throw new DOMException('Next background RSC prefetch canceled by hard navigation', 'AbortError');
++    }
++}
+ export async function createFetch(url, headers, fetchPriority, shouldImmediatelyDecode, signal) {
+     // TODO: In output: "export" mode, the headers do nothing. Omit them (and the
+     // cache busting search param) from the request so they're
+@@ -495,6 +506,7 @@ export async function createFetch(url, headers, fetchPriority, shouldImmediately
          headers[NEXT_REQUEST_ID_HEADER] = crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
      }
      const fetchOptions = {
@@ -22,3 +104,21 @@ index 306f6d58ee69eecb5f2090e198db649c97db71ff..b6cc05828071f0d88afe3f7fcb9800bf
          // Backwards compat for older browsers. `same-origin` is the default in modern browsers.
          credentials: 'same-origin',
          headers,
+@@ -505,7 +517,9 @@ export async function createFetch(url, headers, fetchPriority, shouldImmediately
+     // search param to it. This should not leak outside of this function, so we
+     // track them separately.
+     let fetchUrl = new URL(url);
++    const velliraNext2130EpochAtStart = globalThis[velliraNext2130MpaEpochKey];
+     await setCacheBustingSearchParam(fetchUrl, headers);
++    assertVelliraNext2130PrefetchMayDispatch(headers, velliraNext2130EpochAtStart);
+     let processed = fetch(fetchUrl, fetchOptions).then(processFetch);
+     let fetchPromise = processed.then(({ response })=>response);
+     // Immediately pass the fetch promise to the Flight client so that the debug
+@@ -561,6 +575,7 @@ export async function createFetch(url, headers, fetchPriority, shouldImmediately
+             // TODO: We should abort the previous request.
+             fetchUrl = new URL(responseUrl);
+             await setCacheBustingSearchParam(fetchUrl, headers);
++            assertVelliraNext2130PrefetchMayDispatch(headers, velliraNext2130EpochAtStart);
+             processed = fetch(fetchUrl, fetchOptions).then(processFetch);
+             fetchPromise = processed.then(({ response })=>response);
+             flightResponsePromise = shouldImmediatelyDecode ? decodeFlightResponse(fetchPromise, headers, signal) : null;
