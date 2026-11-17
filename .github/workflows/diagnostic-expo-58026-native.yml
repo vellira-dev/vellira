@@ -1,0 +1,46 @@
+name: Expo 58.0.26 release-sync compatibility diagnostic
+on:
+  push:
+    branches:
+      - diagnostic/expo-58026-release-sync-2161-20261117
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.4
+      - name: Regenerate native npm lock, no lifecycle scripts
+        working-directory: examples/workspace-starter/native
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const assert = require('node:assert/strict');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+          const fields = ['node_modules/expo','node_modules/expo/node_modules/@expo/cli','node_modules/@expo/metro-config','node_modules/@expo/schema-utils','node_modules/react-native','node_modules/node-forge'];
+          for(const path of fields) console.log(JSON.stringify({path,version:lock.packages[path]?.version,integrity:lock.packages[path]?.integrity}));
+          const parser = 'node_modules/expo/node_modules/@expo/cli/build/src/start/server/devtools/DevToolsPluginCliExtensionResults.js';
+          if(fs.existsSync(parser)) console.log('Expo parser published SHA256', crypto.createHash('sha256').update(fs.readFileSync(parser)).digest('hex'));
+          assert.equal(lock.packages['node_modules/expo']?.version,'58.0.26');
+          assert.equal(lock.packages['node_modules/node-forge']?.version,'1.4.3');
+          console.log('version graph resolved, pending independent guard review');
+          NODE
+          npx --no-install expo install --check
+          git diff --check
+          git diff --stat
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: expo-58026-native-lock-diagnostic
+          path: examples/workspace-starter/native/package-lock.json
+          retention-days: 1
