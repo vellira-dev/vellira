@@ -1,0 +1,42 @@
+name: Probe Next 16.4.5 protected RSC patch
+on:
+  push:
+    branches:
+      - diagnostic/next-1645-security-patch-20261117
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: "!contains(github.event.head_commit.message, 'diagnostic lock generated')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.4
+      - name: Regenerate and verify exact patch on installed Next
+        run: |
+          set -euo pipefail
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+          pnpm install --ignore-scripts --frozen-lockfile
+          node apps/website/scripts/next-rsc-patch-check.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const lock = fs.readFileSync('pnpm-lock.yaml','utf8');
+          assert.ok(lock.includes('next@16.4.5'));
+          assert.ok(!lock.includes('next@16.4.2'));
+          assert.ok(lock.includes("next@16.4.5:"));
+          console.log('SAFE: installed Next 16.4.5 transport and lock pass');
+          NODE
+          git diff --check
+          git diff --stat
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pnpm-lock.yaml
+          git commit -m 'chore(diagnostic): next security lock generated'
+          git push origin HEAD:diagnostic/next-1645-security-patch-20261117
