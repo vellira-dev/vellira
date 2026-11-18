@@ -233,3 +233,56 @@ test('a headerless Worker resource termination never becomes a successful native
   assert.equal(calls, 1);
   assert.equal(signal.aborted, true, 'discarded probe releases its transport');
 });
+
+test('abort during discarded probe cleanup does not mask exact-build rejection', async () => {
+  let signal;
+  let cancels = 0;
+  await assert.rejects(
+    fetchWithCloudflareEdgeRetry(
+      'https://example.test/runtime',
+      {},
+      {
+        expectedBuildId: 'build-1',
+        fetchImpl: async (_url, options) => {
+          signal = options.signal;
+          return new Response(
+            new ReadableStream({
+              cancel() {
+                cancels++;
+                if (signal.aborted) {
+                  throw new DOMException('This operation was aborted', 'AbortError');
+                }
+              },
+            }),
+            { headers: { 'x-vellira-build-id': 'different-build' } }
+          );
+        },
+      }
+    ),
+    /build-mismatch/
+  );
+  assert.equal(cancels, 1);
+  assert.equal(signal.aborted, true);
+});
+
+test('discarded probe cleanup still rejects unexpected stream errors', async () => {
+  await assert.rejects(
+    fetchWithCloudflareEdgeRetry(
+      'https://example.test/runtime',
+      {},
+      {
+        expectedBuildId: 'build-1',
+        fetchImpl: async () =>
+          new Response(
+            new ReadableStream({
+              cancel() {
+                throw new Error('unexpected stream cleanup failure');
+              },
+            }),
+            { headers: { 'x-vellira-build-id': 'different-build' } }
+          ),
+      }
+    ),
+    /unexpected stream cleanup failure/
+  );
+});
