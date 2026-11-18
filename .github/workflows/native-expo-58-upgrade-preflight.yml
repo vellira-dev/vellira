@@ -8,6 +8,7 @@ on:
       - 'examples/workspace-starter/native/package-lock.json'
       - 'examples/workspace-starter/native/scripts/security-expo-58-guard.cjs'
       - 'examples/workspace-starter/native/scripts/security-certificate-proof.cjs'
+      - 'examples/workspace-starter/native/scripts/security-picomatch-inventory.cjs'
   workflow_dispatch:
 
 permissions:
@@ -63,6 +64,7 @@ jobs:
           set -euo pipefail
           npm ci --no-audit --no-fund
           npm run security:verify-patch
+          node scripts/security-picomatch-inventory.cjs
           node scripts/security-asn1-adversarial.cjs --require-rejection
           npm run security:certificate-proof
           node scripts/security-expo-certificate-contract.cjs
