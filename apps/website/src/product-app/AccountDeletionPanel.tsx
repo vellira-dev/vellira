@@ -13,9 +13,9 @@ import { localAccountPreview, useAppSession } from './AppSession';
 import profileStyles from './AccountProfilePanel.module.css';
 import styles from './AccountDeletionPanel.module.css';
 
-// Account deletion has no authorized backend contract yet (#196). This card
-// never calls an API or mutates account state. Only the explicit local
-// development fixture can open the non-mutating confirmation preview.
+// The only production request is an authenticated GET for status.
+// Creating or completing an account deletion remains disabled; the local
+// development fixture alone can open a non-mutating confirmation preview.
 type DeletionRead =
   | { kind: 'loading' | 'error'; userId: string; revision: number }
   | {
@@ -30,6 +30,7 @@ export function AccountDeletionPanel() {
   const userId = me?.id ?? '';
   const previewEnabled = localAccountPreview && status === 'ready' && !!userId;
   const [revision, setRevision] = useState(0);
+  const [dialogUserId, setDialogUserId] = useState<string | null>(null);
   const [storedRead, setStoredRead] = useState<DeletionRead>({
     kind: 'loading',
     userId: '',
@@ -66,7 +67,6 @@ export function AccountDeletionPanel() {
     storedRead.revision === revision
       ? storedRead
       : { kind: 'loading', userId, revision };
-  const [dialogUserId, setDialogUserId] = useState<string | null>(null);
   const previewOpen = previewEnabled && dialogUserId === userId;
 
   return (
@@ -155,7 +155,9 @@ export function AccountDeletionPanel() {
             )}
           {visibleRead.kind === 'error' && (
             <div className={styles.statusError}>
-              <p role='alert'>Deletion request status is temporarily unavailable.</p>
+              <p role='alert'>
+                Deletion request status is temporarily unavailable.
+              </p>
               <Button
                 type='button'
                 appearance='link'
