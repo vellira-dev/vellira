@@ -18,15 +18,21 @@ test('React Hooks ESLint resolves patched Zod 4 without a global major override'
 
   const versions = [...lockfile.matchAll(/^  zod@(\d+)\.(\d+)\.(\d+):$/gm)]
     .map((match) => match.slice(1).map(Number));
-  assert.ok(versions.some(([major, minor, patch]) => major === 4 && safeZod(major, minor, patch)));
+  assert.ok(
+    versions.some(
+      ([major, minor, patch]) => major === 4 && safeZod(major, minor, patch)
+    )
+  );
   for (const [major, minor, patch] of versions) {
     if (major >= 4) {
-      assert.ok(safeZod(major, minor, patch), `Unsafe Zod ${major}.${minor}.${patch}`);
+      assert.ok(
+        safeZod(major, minor, patch),
+        `Unsafe Zod ${major}.${minor}.${patch}`
+      );
     }
   }
   assert.match(lockfile, /eslint-plugin-react-hooks@7\.1\.1[\s\S]*?\n      zod: 4\.6\.7/);
 });
-
 
 test('Scorecard #32 tracks only the remaining Chromium BiDi Zod 3 dependency edge', () => {
   // Lockfile package blocks must be matched by exact package keys: historical
@@ -37,7 +43,10 @@ test('Scorecard #32 tracks only the remaining Chromium BiDi Zod 3 dependency edg
     lockfile,
     /^  chromium-bidi@14\.0\.0\([^\n]+\):\n    dependencies:\n      devtools-protocol: [^\n]+\n      mitt: [^\n]+\n      zod: 3\.25\.76$/m
   );
-  assert.match(lockfile, /puppeteer-core@24\.43\.1\([^\n]+\):\n    dependencies:\n      '@puppeteer\/browsers': [^\n]+\n      chromium-bidi: 14\.0\.0\(/);
+  assert.match(
+    lockfile,
+    /puppeteer-core@24\.43\.1\([^\n]+\):\n    dependencies:\n      '@puppeteer\/browsers': [^\n]+\n      chromium-bidi: 14\.0\.0\(/
+  );
 
   // Detect a changed graph before anyone concludes the advisory is gone.
   // This is a deliberately narrow inventory for the current investigated SHA.
