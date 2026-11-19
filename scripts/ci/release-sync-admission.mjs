@@ -35,11 +35,15 @@ const STARTER_FILES = new Set([
 
 export function classifyAdmission(pr, files) {
   assert.ok(pr && Array.isArray(files), 'Missing exact PR and file evidence');
-  const release = pr.title === 'chore(release): sync package versions' ||
-    pr.head.ref.startsWith('chore/sync-release-') ||
-    pr.user.login === 'vellira-release-sync[bot]';
   const starter = pr.head.ref === 'chore/workspace-starter-release-sync' ||
     pr.title.startsWith('chore(starter): sync Vellira to v');
+  // The trusted bot also authors Starter-only syncs. A bot identity alone
+  // must not classify them as atomic release PRs with path-filtered gates.
+  const release = !starter && (
+    pr.title === 'chore(release): sync package versions' ||
+    pr.head.ref.startsWith('chore/sync-release-') ||
+    pr.user.login === 'vellira-release-sync[bot]'
+  );
   if (!release && !starter) return { kind: 'other', checks: [] };
   assert.equal(pr.user.login, 'vellira-release-sync[bot]', 'Untrusted sync PR author');
   assert.equal(pr.base.ref, 'main', 'Sync PR target must be main');
