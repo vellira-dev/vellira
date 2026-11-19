@@ -6,8 +6,8 @@ const lockfile = readFileSync('pnpm-lock.yaml', 'utf8');
 const workspace = readFileSync('pnpm-workspace.yaml', 'utf8');
 
 // GHSA-mrhx-c7xc-m3w5: the first non-vulnerable Zod release is 4.6.6.
-// Chromium BiDi retains the only known root-lockfile Zod 3 path.
-// Never mask the unresolved advisory by silently replacing a major version.
+// LHCI 0.16.1 brings Lighthouse 13.6.0 and Puppeteer 25.x. The candidate
+// must remove the Zod 3 path entirely without a global major override.
 const safeZod = (major, minor, patch) =>
   major > 4 || (major === 4 && (minor > 6 || (minor === 6 && patch >= 6)));
 
@@ -34,28 +34,26 @@ test('React Hooks ESLint resolves patched Zod 4 without a global major override'
   assert.match(lockfile, /eslint-plugin-react-hooks@7\.1\.1[\s\S]*?\n      zod: 4\.6\.7/);
 });
 
-test('Scorecard #32 tracks only the remaining Chromium BiDi Zod 3 dependency edge', () => {
-  // Lockfile package blocks must be matched by exact package keys: historical
-  // Expo CLI 57 paths are gone after the Expo 58 migration.
-  assert.match(lockfile, /^  zod@3\.25\.76:$/m);
+test('Scorecard #32 removes the legacy Zod 3 path via supported Lighthouse tooling', () => {
+  const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+  assert.equal(manifest.devDependencies['@lhci/cli'], '0.16.1');
+  assert.match(lockfile, /^      '@lhci\/cli':\n        specifier: 0\.16\.1\n        version: 0\.16\.1\(/m);
+  assert.match(lockfile, /^  lighthouse@13\.6\.0:/m);
+  assert.match(lockfile, /^  puppeteer-core@25\.\d+\.\d+:/m);
+  assert.match(lockfile, /^  chromium-bidi@157\.0\.8090-0:/m);
+
+  // No Zod 3 may remain anywhere in the single root graph. An unexpected
+  // second introducer is a failure, not an excuse to suppress the GHSA.
+  assert.doesNotMatch(lockfile, /^  zod@3\./m);
+  assert.doesNotMatch(lockfile, /^      zod: 3\./m);
   assert.doesNotMatch(lockfile, /^  '@expo\/cli@57\./m);
   assert.match(
     lockfile,
-    /^  chromium-bidi@14\.0\.0\([^\n]+\):\n    dependencies:\n      devtools-protocol: [^\n]+\n      mitt: [^\n]+\n      zod: 3\.25\.76$/m
-  );
-  assert.match(
-    lockfile,
-    /puppeteer-core@24\.43\.1\([^\n]+\):\n    dependencies:\n      '@puppeteer\/browsers': [^\n]+\n      chromium-bidi: 14\.0\.0\(/
+    /chromium-bidi@157\.0\.8090-0\([^\n]+\):\n    dependencies:\n(?:      [^\n]+\n)*?      zod: 4\.6\.7/m
   );
 
-  // Detect a changed graph before anyone concludes the advisory is gone.
-  // This is a deliberately narrow inventory for the current investigated SHA.
-  const oldZodConsumers = [...lockfile.matchAll(/^      zod: 3\.25\.76$/gm)];
-  assert.equal(
-    oldZodConsumers.length,
-    1,
-    'Unexpected Zod 3 consumer: re-audit every path instead of suppressing the alert'
-  );
+  // No global override or in-place replacement of the Chromium BiDi schema
+  // library. If upstream changes the major line, investigate and revalidate.
   assert.doesNotMatch(workspace, /^  '?zod(?:@<4)?'?: 4\./m);
   assert.doesNotMatch(workspace, /chromium-bidi>zod/);
 });
