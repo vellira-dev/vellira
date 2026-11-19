@@ -95,6 +95,8 @@ try {
   await danger.getByRole('heading', { name: 'Danger zone' }).waitFor();
   const deleteTrigger = danger.getByRole('button', { name: 'Delete account', exact: true });
   assert.equal(await deleteTrigger.isEnabled(), true, 'Only local preview may open the explanatory dialog');
+  assert.equal(await danger.locator('[data-account-deletion-status]').count(), 0,
+    'Local UI preview must never fetch or invent an authenticated deletion request status');
   const dangerLayout = await page.evaluate(() => {
     const profile = document.querySelector('[data-profile-settings]');
     const preferences = profile?.querySelector('[data-account-block="preferences"]');
