@@ -6,7 +6,8 @@ const lockfile = readFileSync('pnpm-lock.yaml', 'utf8');
 const workspace = readFileSync('pnpm-workspace.yaml', 'utf8');
 
 // GHSA-mrhx-c7xc-m3w5: the first non-vulnerable Zod release is 4.6.6.
-// The Expo CLI and Chromium BiDi Zod 3 paths need separate compatibility proof.
+// Chromium BiDi retains the only known root-lockfile Zod 3 path.
+// Never mask the unresolved advisory by silently replacing a major version.
 const safeZod = (major, minor, patch) =>
   major > 4 || (major === 4 && (minor > 6 || (minor === 6 && patch >= 6)));
 
@@ -26,9 +27,26 @@ test('React Hooks ESLint resolves patched Zod 4 without a global major override'
   assert.match(lockfile, /eslint-plugin-react-hooks@7\.1\.1[\s\S]*?\n      zod: 4\.6\.7/);
 });
 
-test('unresolved Expo CLI Zod 3 remains visible and is not silently overridden', () => {
-  assert.match(lockfile, /^  zod@3\.25\.76:/m);
-  assert.match(lockfile, /'@expo\/cli@57\.0\.32[\s\S]*?\n      zod: 3\.25\.76/);
-  assert.match(lockfile, /chromium-bidi@14\.0\.0[\s\S]*?\n      zod: 3\.25\.76/);
-  assert.doesNotMatch(workspace, /^  '?(?:zod@<4|zod)'?: 4\./m);
+
+test('Scorecard #32 tracks only the remaining Chromium BiDi Zod 3 dependency edge', () => {
+  // Lockfile package blocks must be matched by exact package keys: historical
+  // Expo CLI 57 paths are gone after the Expo 58 migration.
+  assert.match(lockfile, /^  zod@3\.25\.76:$/m);
+  assert.doesNotMatch(lockfile, /^  '@expo\/cli@57\./m);
+  assert.match(
+    lockfile,
+    /^  chromium-bidi@14\.0\.0\([^\n]+\):\n    dependencies:\n      devtools-protocol: [^\n]+\n      mitt: [^\n]+\n      zod: 3\.25\.76$/m
+  );
+  assert.match(lockfile, /puppeteer-core@24\.43\.1\([^\n]+\):\n    dependencies:\n      '@puppeteer\/browsers': [^\n]+\n      chromium-bidi: 14\.0\.0\(/);
+
+  // Detect a changed graph before anyone concludes the advisory is gone.
+  // This is a deliberately narrow inventory for the current investigated SHA.
+  const oldZodConsumers = [...lockfile.matchAll(/^      zod: 3\.25\.76$/gm)];
+  assert.equal(
+    oldZodConsumers.length,
+    1,
+    'Unexpected Zod 3 consumer: re-audit every path instead of suppressing the alert'
+  );
+  assert.doesNotMatch(workspace, /^  '?zod(?:@<4)?'?: 4\./m);
+  assert.doesNotMatch(workspace, /chromium-bidi>zod/);
 });
