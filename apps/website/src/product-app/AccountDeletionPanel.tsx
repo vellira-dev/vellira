@@ -149,13 +149,15 @@ export function AccountDeletionPanel() {
           {visibleRead.kind === 'ready' &&
             visibleRead.value === 'pending_review' && (
               <p role='status'>
-                Deletion request pending review. Your account remains active;
-                no data has been erased.
+                Deletion request pending review. Your account remains active; no
+                data has been erased.
               </p>
             )}
           {visibleRead.kind === 'error' && (
             <div className={styles.statusError}>
-              <p role='alert'>Deletion request status is temporarily unavailable.</p>
+              <p role='alert'>
+                Deletion request status is temporarily unavailable.
+              </p>
               <Button
                 type='button'
                 appearance='link'
